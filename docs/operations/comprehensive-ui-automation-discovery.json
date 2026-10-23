@@ -1,0 +1,1617 @@
+{
+  "schemaVersion": 1,
+  "slug": "comprehensive-ui-automation",
+  "title": "Comprehensive Functional UI Automation",
+  "status": "strategy-selected-full-roadmap-proposed",
+  "preparedOn": "2026-10-23",
+  "scope": "All currently mounted product functionality in packaged Windows desktop and local Chrome thin client, with managed identity/PostgreSQL/TLS and installed-runtime cases as explicitly named controlled layers. Also retain reusable tests for intentionally unmounted API/component surfaces without exposing them as product navigation.",
+  "notAQualificationResult": true,
+  "sourceAuthority": [
+    "Implemented host wiring and behavioral tests",
+    "Accepted or superseding ADRs",
+    "Current canonical architecture/standards",
+    "Area README",
+    "Context packs"
+  ],
+  "inventoryMethod": [
+    "Read actual desktop/thin route registries and App page wiring.",
+    "Inspect each mounted page, feature components/hooks, shared presenters and public contracts.",
+    "Trace declared behavior through canonical architecture and current ADR/readiness boundaries.",
+    "Crosswalk existing component, integration, Playwright and physical AI harnesses before proposing missing coverage.",
+    "At implementation start regenerate route/tab/action capability census and explain every unmapped supported action; this preparation is not an exhaustive Cartesian behavior proof."
+  ],
+  "surfaceCensus": {
+    "desktopRouteKeys": [
+      "home",
+      "artifacts",
+      "context",
+      "assets",
+      "models",
+      "image-generation",
+      "settings",
+      "systems"
+    ],
+    "thinClientRouteKeys": [
+      "home",
+      "systems",
+      "artifacts",
+      "context",
+      "assets",
+      "image-generation",
+      "models",
+      "security",
+      "settings"
+    ],
+    "dataTabs": [
+      "Artifact Ingestion",
+      "Artifact Browser",
+      "Dataset Preparation",
+      "Dataset Review"
+    ],
+    "contextTabs": [
+      "RAG Databases",
+      "Context Packs",
+      "Context Browser"
+    ],
+    "assetTabs": [
+      "Browse",
+      "Import Assets",
+      "Studio",
+      "Saved",
+      "Customizations"
+    ],
+    "systemsTabs": [
+      "Manage",
+      "Compose",
+      "Publish"
+    ],
+    "desktopModelTabs": [
+      "Find Models",
+      "Manage Models",
+      "Train Model"
+    ],
+    "thinModelSections": [
+      "Browse models",
+      "Browse results",
+      "Server model inventory",
+      "Model details/files",
+      "Diagnostics"
+    ],
+    "intentionallyUnmounted": [
+      "UserLibraryPage",
+      "EffectiveAssetProjectionsPage",
+      "generic SystemRunWorkflow standalone tab",
+      "LanPairingForm within current SecurityStatusPanel"
+    ],
+    "existingPlaywrightSpecFiles": 20,
+    "countMeaning": "File count is inventory context, not executed coverage or completeness.",
+    "intentionalHostDifferences": [
+      "Desktop has Train Model and native runtime/settings controls; thin Models currently exposes browse/inventory only.",
+      "Thin client exposes Security status and command/read projections of server-owned lifecycle; it does not gain Electron filesystem/window/runtime authority.",
+      "Published desktop runtime renderer currently exposes controlled conversation, not a generic secured-record/review application UI.",
+      "Server has no separate operator graphical application; UI tests cover server-backed functionality through its mounted thin client, while CLI/operator and API-only surfaces retain their own non-UI tests."
+    ]
+  },
+  "requiredCrosscutVariants": [
+    "happy path with actual outcome oracle",
+    "empty/loading/invalid/error/retry",
+    "duplicate action and stale response",
+    "workspace switch and authorization denial",
+    "save/reload/reopen where persistence exists",
+    "cancel/deadline/reconnect only where supported",
+    "keyboard/focus/status/contrast/reflow on relevant controls",
+    "bounded diagnostics and cleanup without private content"
+  ],
+  "scenarioMatrix": [
+    {
+      "id": "workspace-first-run",
+      "area": "Shell and workspace",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Fresh isolated profile exposes create/select workspace; required name and duplicate submission are handled.",
+        "Create two workspaces through UI, select and clear, restart or reload, and verify exact active selection and scoped records.",
+        "Missing workspace gates every workspace route without feature reads or hidden mutations; failure is distinct from empty state."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/App.tsx",
+        "apps/thin-client/src/App.tsx",
+        "docs/architecture/workspace-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/tests/app-workspace-route-boundary.ui.test.tsx",
+        "apps/thin-client/src/tests/app-workspace-route-boundary.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+      ],
+      "identifiedCoverageGap": "Existing host journeys create workspaces as setup; add dedicated selection, clear, failure, restart and cross-workspace late-result assertions.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "navigation-all-mounted-pages",
+      "area": "Shell and workspace",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Visit Home, Data/Artifacts, Context, Assets, Models, Image Generation, Settings and Systems on both hosts, plus Security on thin client.",
+        "Exercise actual supported browser paths, alias resolution, history/back/forward/reload and unknown-path behavior; desktop uses its actual button navigation.",
+        "Inactive tabs and unopened lazy sections perform no heavy reads; loading, rejected lazy import and retry release controls.",
+        "Keep unmounted pages unmounted unless separately approved; do not add obsolete drag interaction or generic Run & Test navigation."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/routes/desktopPages.ts",
+        "apps/thin-client/src/routes/thinClientPages.ts",
+        "apps/desktop/src/renderer/routes/lazyDesktopPages.tsx",
+        "docs/architecture/system-run-workflows.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx",
+        "apps/desktop/src/renderer/tests/app-navigation.ui.test.tsx",
+        "apps/thin-client/src/tests/app-routing.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "Whole-host route reachability, browser history and failed lazy navigation need an explicit route census and current UI observations.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "dashboard-counts",
+      "area": "Shell and workspace",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Page summaries show authoritative available counts and explicit partial/unavailable values without an endless busy state.",
+        "Creating or saving records updates the correct workspace count; filtered internal metadata is excluded exactly as in the browser.",
+        "Settings summary is global; changing workspace fences late summary responses."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/page-dashboard/PageDashboard.tsx",
+        "modules/ui/shared/page-dashboard/dashboardMetrics.ts",
+        "docs/architecture/workspace-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
+      ],
+      "identifiedCoverageGap": "Unmanaged fixture intentionally cannot qualify actual counts; add assertions under authorized managed host and desktop, keeping 503 unavailable behavior.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "existing authorized OIDC/PostgreSQL/TLS host for managed counts"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "notifications-all-task-families",
+      "area": "Notifications",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Download, acquisition, preparation, training, Context and image tasks remain observable after tab navigation and completion.",
+        "Bell unread count, open/close, Escape focus return, mark read, dismiss and clear completed preserve active tasks and workspace filtering.",
+        "Transient routine reads remain quiet; inline authorization/readiness blockers remain actionable; retry does not duplicate terminal activities.",
+        "Hidden-window suspension, temporary disconnect, stale readers, worker failure and refused cancellation retain authoritative ownership."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/notifications/NotificationCenter.tsx",
+        "modules/ui/shared/notifications/TaskObservationProvider.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts"
+      ],
+      "identifiedCoverageGap": "Current host task fixtures cover selected families; map and exercise every mounted bridge plus notification actions and late-workspace behavior.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "settings-public-values",
+      "area": "Settings and operations",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Load definitions only on applicable open section, validate text/select/number settings, save, clear, reload and preserve server/desktop differences.",
+        "Invalid values, failed save and concurrent actions retain the last confirmed value and provide safe retry.",
+        "Member denied administrative mutations remain denied; isolated server restart requires explicit action and observes actual reconnection."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/pages/SettingsPage.tsx",
+        "apps/thin-client/src/pages/SettingsPage.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingsPanel.tsx"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx"
+      ],
+      "identifiedCoverageGap": "No dedicated full-host settings save/clear/restart matrix was found in the twenty existing Playwright spec files.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "settings-secrets-and-model-defaults",
+      "area": "Settings and operations",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Synthetic credential entry/update/clear uses the secret setting boundary and masked configured state, never a normal settings value.",
+        "Default model choices reflect compatible inventory; invalid or missing model settings remain visible and never silently substitute.",
+        "Hugging Face token UI and ingestion token card share the authoritative setting without retaining token in task evidence."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/ModelDefaultSettingField.tsx",
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/features/settings"
+      ],
+      "identifiedCoverageGap": "Create synthetic-only UI cases with capture disabled for credential entry; real provider credential acceptance stays a separately authorized controlled case.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "explicit authority and disposable provider destination only for real credential verification"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "runtime-status-and-explicit-controls",
+      "area": "Settings and operations",
+      "priority": "P1",
+      "hosts": [
+        "desktop"
+      ],
+      "expectedBehavior": [
+        "Software status and Python footer expose bounded readiness, resources and activity; passive reads never start/install/repair runtimes.",
+        "Explicit start/stop/restart/refresh/clear and installer actions expose correct unavailable, pending, failure and retry states.",
+        "Failed or unconfirmed worker stop keeps ownership and prevents false successful cleanup; closing UI does not drop accepted work."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx",
+        "apps/desktop/src/renderer/features/python-runtime/components/PythonRuntimeFooter.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts"
+      ],
+      "identifiedCoverageGap": "Add direct UI controls and degraded/installer/failure assertions; synthetic lifecycle cannot qualify native descendants or physical model cleanup.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "actual owned process exit observations; no authority over retained old offload staging"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "security-status-and-auth-boundaries",
+      "area": "Security",
+      "priority": "P0",
+      "hosts": [
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Thin Security page reports actual listener/mode/certificate state and truthful manual trust notices, without token or key disclosure.",
+        "Unauthenticated, expired/revoked token, missing organization, wrong role and foreign workspace operations show bounded denial without stale private content.",
+        "No invented pairing/login/admin surface: LanPairingForm exists but current SecurityStatusPanel does not mount it.",
+        "Browser token traces, network headers and private content stay out of artifacts; isolated signed-in fixtures preserve actual middleware enforcement."
+      ],
+      "sourceRefs": [
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
+        "apps/thin-client/src/security/secureFetch.ts",
+        "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md",
+        "docs/architecture/organization-tenancy-and-identity.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/thin-client/src/security/tests/secureFetch.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/managed-reference-global-setup.mjs"
+      ],
+      "identifiedCoverageGap": "Current auth assertions are setup checks; add rendered denial/recovery plus cross-workspace UI assertions without duplicating restricted security qualification.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "existing authorized managed identity host; restricted legacy security review remains excluded"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "files-acquisition-resume",
+      "area": "Data acquisition",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Use actual file chooser to acquire single and multiple supported files; show authoritative chunk progress and newly visible scoped artifacts.",
+        "Interrupt/resume, idempotent retry, invalid chunk/source, cancellation and completion reset behave as documented without double registration.",
+        "Success returns to Files source and opens completed activity; failures preserve form for correction; retained unknown bytes are never auto-deleted."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md",
+        "modules/application/use-cases/ingestion-acquisition"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-pdf-preview.e2e.spec.ts"
+      ],
+      "identifiedCoverageGap": "Existing UI PDF upload is one format; add multi-file resumable UI journey with actual disposable storage and bounded fault injection.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "provider-source-acquisition",
+      "area": "Data acquisition",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Find namespace/repository, select exact files/revisions, authenticate when explicitly needed, acquire and inspect immutable source provenance.",
+        "Public no-token browsing remains distinct from private access; unavailable/rejected provider and stale mutable coordinates do not start work.",
+        "Actual provider is never called as a side effect of routine deterministic runs."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "Add real host UI against finite provider boundary and separately named authorized private/public provider checks; mocks are not real provider proof.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "explicit provider network/credential authority for controlled external roundtrip"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "website-acquisition-refresh",
+      "area": "Data acquisition",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Choose explicit pages or one same-origin sitemap, observe progress, raw/readable artifact distinction and immutable capture metadata.",
+        "Refresh shows unchanged/changed/unavailable/removed without duplicate source snapshots; cancellation and reload preserve scoped task state.",
+        "Robots denial, unsafe destination/redirect, oversize/unsupported response and unavailable network show corrective safe errors; no crawler or robots bypass."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts"
+      ],
+      "identifiedCoverageGap": "No comprehensive browser website/sitemap/refresh journey found; use approved contained egress fixtures, with real secure-egress adapter checks separate.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "artifact-browse-preview-and-filter",
+      "area": "Artifacts",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Search, type/source filters, paging, refresh, details and empty/loading/error states retain exact artifact selection and isolation.",
+        "Exercise text/CSV/JSON/JSONL/Markdown/image/PDF/Parquet and unsupported content with bounded format-specific oracles.",
+        "PDF must decode first-page pixels; images must actually decode; Markdown/HTML remains inert; +json and build-internal metadata stay hidden.",
+        "Object URLs are revoked, stale detail results discarded, narrow viewport and modal keyboard controls remain usable."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "modules/ui/shared/artifact-preview/ArtifactPreviewPanel.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-pdf-preview.e2e.spec.ts",
+        "modules/ui/shared/artifact-preview/tests"
+      ],
+      "identifiedCoverageGap": "Existing packaged PDF and headless preview cases do not establish every format on both mounted hosts; add precise real decoder oracles.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "artifact-backing-publish-delete",
+      "area": "Artifacts",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Inspect local/provider backing and provenance, export/download actual supported bytes, publish only after exact explicit destination/repository approval.",
+        "Missing repository requires explicit creation and private/public choice; missing permission produces no provider write.",
+        "Typed deletion confirmation and current ownership are enforced; failure/retry preserves authoritative catalog and user-visible outcome."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/hooks/useArtifactBrowserPublishLogic.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/features/artifact-browser/tests",
+        "apps/thin-client/src/features/artifact-browser/tests"
+      ],
+      "identifiedCoverageGap": "Add actual UI actions and persistence/readback oracles; provider writes only to separately approved disposable destinations, never routine production targets.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "explicit provider publication/repository creation authority if external roundtrip is run"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "dataset-goal-and-input-intent",
+      "area": "Dataset Preparation",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Parameterize all nine authoritative task types and the three supported material divisions; unsupported combinations deny early.",
+        "One ready dataset, compatible dataset merge and source-material creation select correct methods/defaults and only active controls.",
+        "Labels, extraction fields, embeddings/reranker relations, captions/classification and reviewed boxes/masks use task-specific requirements.",
+        "Structured/document/image formats follow the capability registry, with explicit unavailable OCR rather than fabricated pixel inspection."
+      ],
+      "sourceRefs": [
+        "modules/contracts/runtime/dataset-preparation.ts",
+        "modules/contracts/runtime/dataset-preparation-capabilities.ts",
+        "modules/contracts/runtime/dataset-preparation-adaptive.ts",
+        "docs/architecture/data-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+        "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+      ],
+      "identifiedCoverageGap": "Bridge the existing 27 physical creation combinations to parameterized UI decisions and representative whole-host journeys; avoid 27 repeated live model loads.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "dataset-advanced-output-and-memory",
+      "area": "Dataset Preparation",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Edit bounded output fields/types/nesting/examples and protected task purposes; invalid or missing required assignment blocks preparation.",
+        "Generation prompt, model/device/dtype, constrained JSON adaptive state and explicit override carry exact supported settings.",
+        "Default Standard loading and opt-in low-memory settings persist/reopen without silently changing model/profile; unavailable capacity stays unavailable.",
+        "Observe real small installed-model checked output separately from synthetic UI integration; retain 22/24 semantic floor only where owner criterion actually requires it."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/DatasetPreparationOutputShapeEditor.tsx",
+        "modules/contracts/runtime/dataset-preparation-constrained-json.ts",
+        "modules/contracts/runtime/dataset-preparation-memory.ts",
+        "docs/operations/optional-low-memory-inference.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/data-management/tests/DatasetPreparationOutputShapeEditor.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
+      ],
+      "identifiedCoverageGap": "Actual packaged adaptive/override host UI plus bounded valid checked output is missing from optional-constrained owner; existing offload fixture is not that evidence.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "already authorized installed pinned model and sufficient measured resources; native offload owner must qualify before real offload"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "dataset-review-curate-approve",
+      "area": "Dataset Preparation",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Run Standard/Strict checks, inspect ready/quarantine/reason pages, reject/edit rows and verify exact task/report fingerprints.",
+        "No save before explicit approval; duplicate or changed approval conflicts cannot create duplicate datasets.",
+        "Name and approve immutable aggregate/train/validation/test outputs, verify physical nonempty bytes/schema/counts/split lineage, and select exact saved artifact.",
+        "Cancellation/refused stop, stale source, policy denial and save failure preserve safe ownership/retry without false success."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/dataset-review/DatasetReviewModal.tsx",
+        "modules/ui/shared/dataset-review/DatasetReviewWorkspace.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/dataset-review/tests/DatasetReviewModal.interaction.ui.test.tsx",
+        "modules/ui/shared/dataset-review/tests/DatasetReviewWorkspace.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
+      ],
+      "identifiedCoverageGap": "Expand narrow host fixture to normal non-offload review/curation/save/discard/failure and exact reopened output, keeping semantic quality separate.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "dataset-immutable-versioning",
+      "area": "Dataset Review and versions",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Select saved datasets, page rows, edit/reject to create immutable successor version, inspect history/lineage and preserve old version bytes.",
+        "Compare provenance, split counts and publication metadata; stale edit, foreign workspace and malformed row reject without partial version.",
+        "Version controls are tested only where currently mounted; unsupported version/publish operation is recorded as unavailable, not silently invented."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+        "modules/ui/shared/dataset-review/DatasetReviewWorkspace.tsx",
+        "docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx",
+        "modules/ui/shared/dataset-review/tests/DatasetReviewWorkspace.interaction.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "No full host version-history/curation/readback journey found; confirm precise mounted entry and persist successors through actual transport.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "context-manual-pack",
+      "area": "Context",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Create valid bounded manual Markdown pack, review formatted inert content, save/reopen/download the exact artifact, inspect and delete after confirmation.",
+        "Discard leaves no cataloged artifact; invalid/active Markdown, over-limit input and failed save retain correction/retry without disclosure.",
+        "Workspace switch clears manual text, review and selection without leaking another workspace."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "Add complete host journey using real archive/storage/persistence; current component client double is not full host proof.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "context-source-packs",
+      "area": "Context",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Select source artifacts; choose chunking, Standard/Strict cleaning, No Summarization or explicit installed local model; review citations/topics and save/discard.",
+        "Rebuild only if sources remain available and manual text is not lost; source navigation returns to exact Data artifact.",
+        "Missing dependency/model, rejected citation, stale digest and worker failure show actionable safe states and clean confirmed owned staging."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+        "modules/adapters/runtime/python/worker/tests"
+      ],
+      "identifiedCoverageGap": "Add deterministic source-pack UI path plus separately controlled actual local-model output; do not infer summary quality from schema-only fixtures.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "already installed approved local model for real summarization"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "context-rag-create-query-rebuild",
+      "area": "Context",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Convert compatible Data artifact by identifier-only handoff, inspect chunks, choose embedding device/model, generate/review/save a real LanceDB package.",
+        "Already-chunked rows preserve exact lineage; query saved database and assert fixed relevant result/citation, bounded preview and no exposed vectors.",
+        "Detail, source freshness, rebuild, delete, reload/reopen, unavailable CUDA and failed ensure preserve truthful states; passive listing never installs."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/assess_context_environment_budget.py"
+      ],
+      "identifiedCoverageGap": "Existing real embedding/resource qualification can be referenced, but actual create/query/rebuild UI needs whole-host evidence with controlled model layer.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "installed reviewed embedding model and managed dependency; no new download authority"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "models-discover-and-reference",
+      "area": "Models",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Search provider with filters/paging where supported; empty, loading, details, failure/retry and clear behave without automatic download.",
+        "Save exact model reference; inventory reflects lifecycle, correct workspace and compatible task/inference metadata after reload.",
+        "Provider untrusted metadata remains inert and diagnostics sanitized; unavailable remote lookup is distinct from zero results."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/features/models/tests",
+        "apps/thin-client/src/features/model-management/tests"
+      ],
+      "identifiedCoverageGap": "Lifecycle harness seeds the model reference via API/IPC; it does not test browse-to-save user actions or current provider rendering.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "models-download-inventory-validation",
+      "area": "Models",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Start bounded explicit download, observe queue/progress/errors, navigate away and return; retry and completed registration stay idempotent.",
+        "Manage inventory/details/files, exact validation/warnings and permitted metadata changes; delete record and actual file effects remain separate.",
+        "Show model files/folder only through supported opaque host operations; no path/identity substitution or false physical deletion success."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/ManageModelsTab.tsx",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/controlled-runtime-preparation.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts"
+      ],
+      "identifiedCoverageGap": "Synthetic no-weights download covers host routing, not real model integrity or native effects; test UI and retain restricted/native owner gaps.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "approved exact model cache; qualified native identity/effects for destructive or reveal operations"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "desktop-model-training",
+      "area": "Model Training",
+      "priority": "P0",
+      "hosts": [
+        "desktop"
+      ],
+      "expectedBehavior": [
+        "Select compatible actual prepared dataset and model; configure approach/schedule/advanced/output choices for all nine task types through desktop UI.",
+        "Train to private review-required candidate, inspect results, save or discard explicitly; no auto publication or registration.",
+        "Navigate/restart observation, cancel/refused cancellation, worker failure, save retry and unavailable publishing retain exact owned task and safe state.",
+        "Use deterministic finite worker for full UI variants and existing tiny one-epoch matrix for physical training; controlled UI witness does not claim broad semantic performance."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx",
+        "docs/architecture/runtime-model.md",
+        "docs/standards/testing-standards.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/testing/run-model-training-e2e.mjs",
+        "apps/desktop/src/renderer/features/models/hooks/useModelTrainingFeature.ts"
+      ],
+      "identifiedCoverageGap": "No full desktop Train Model wizard-to-review/save/discard Playwright journey found. Thin client has no mounted Train tab despite page copy; treat as documented discrepancy, not new feature.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "existing approved tiny training assets/runtime, sufficient measured resources"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "image-generation-create-and-register",
+      "area": "Image Generation",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Select downloaded compatible checkpoint and optional owned latent/reference artifacts, configure prompt/negative prompt/seed/dimensions/sampler/schedule/output.",
+        "FaceID controls and dependencies are explicit; missing node/model or invalid references fail safely without ambient unapproved setup.",
+        "Submit once, observe task and actual decodable image outputs, finalize registration, navigate to Artifacts and reopen exact result."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/image-generation/components/ImageGenerationForm.tsx",
+        "apps/thin-client/src/features/image-generation/components/ImageGenerationFeature.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/features/image-generation/tests",
+        "apps/thin-client/src/features/image-generation/tests"
+      ],
+      "identifiedCoverageGap": "Existing component/adapter tests do not cover whole-host image-generation UI; use synthetic image worker for UI then named physical ComfyUI witness when provisioned.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "qualified ComfyUI/checkpoint for physical generation; new FaceID assets/setup need separate authority"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "image-generation-recovery",
+      "area": "Image Generation",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Retain workspace draft and same generation identity after navigation/reload and failed finalization; explicit retry never duplicates persisted artifacts.",
+        "Queued cancellation is confirmed only by runtime evidence; running cancellation stays pending, deadline keeps consumed inputs until owned stop.",
+        "Cross-workspace late result, missing runtime, corrupted image and storage failure show no false terminal success or leaked prompt/path."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "apps/thin-client/src/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "docs/architecture/runtime-model.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/hosts/shared/shutdownOwnedTasks.ts"
+      ],
+      "identifiedCoverageGap": "Add host rendered recovery cases, including refused running cancellation; no global ComfyUI interruption permitted.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "assets-browse-and-inspect",
+      "area": "Assets",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Browse packs/definitions with search/type/family/filter/paging and exact details, safe backing-resource descriptors, provenance and supported preview.",
+        "Large/sparse results preserve all matches and page scope; failed detail/search and workspace change cannot overwrite current authorized selection.",
+        "Readonly system-owned assets cannot be edited in place; Customize hands off exact base/version."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",
+        "apps/thin-client/src/features/asset-library/components/AssetLibraryFeature.tsx",
+        "modules/ui/shared/asset-library/assetLibraryBrowser.ts"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts"
+      ],
+      "identifiedCoverageGap": "Reuse existing browse driver and oracle; expand missing detail/error/visibility conditions rather than clone the suite.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "asset-package-import-trust",
+      "area": "Assets",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Download canonical starter, choose bounded package, inspect issues/provenance/capabilities without execution, then explicit install scoped to workspace.",
+        "Tampered/malformed/oversized/unsupported package and authorization denial preserve existing assets and sanitize errors.",
+        "Activation/rollback/revocation controls run only when actually exposed and qualified; installed authored code never executes without sandbox authority."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-package/AssetPackageManager.tsx",
+        "docs/asset-package-authoring-guide.md",
+        "docs/architecture/asset-implementations-and-packages.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts"
+      ],
+      "identifiedCoverageGap": "Existing import happy path does not exhaust denial/retry/trust actions; add inert synthetic package variants and exact no-execution witnesses.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "asset-studio-saved-lifecycle",
+      "area": "Assets",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Create resource-backed definition from scratch through all ordered sections, validate JSON/resources, save, reopen from Saved and compare exact source/semantic fields.",
+        "Review immutable snapshot and publish explicitly; changed reviewed draft must save/review again, and publication grants no install/activate/execute.",
+        "Legacy Saved draft upgrade is lazy/idempotent and preserves original; partial listing failure retains available data and retry."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
+        "modules/ui/shared/asset-studio/README.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
+        "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx"
+      ],
+      "identifiedCoverageGap": "Extend existing actual save/reopen/restart witness with invalid resource, stale revision, failed review/publication and legacy Saved branches.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "asset-derived-customization",
+      "area": "Assets",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Customize exact Foundation and imported base as a new workspace copy; resource edits, save, review, publish, history and reopen preserve original bytes.",
+        "Unsaved target change requires explicit discard/keep; duplicate submissions and stale save/review/publish/list/detail responses are fenced.",
+        "Abandon leaves source unchanged; missing/foreign base, invalid revision and unqualified implementation remain denied."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
+        "docs/architecture/asset-authoring-customization-and-overrides.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts"
+      ],
+      "identifiedCoverageGap": "Reuse actual cross-host customization lifecycle and add negative asynchronous owner/failure branches; preserve pending independent security/native qualification.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "systems-manage-lifecycle",
+      "area": "Systems",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Create named blank/template systems, list/search/filter/page active and archived records with exact immutable revision/release summaries.",
+        "Preview/open in Compose, duplicate, archive recoverably, restore; active Compose index refreshes without losing another active draft.",
+        "Archived or foreign systems cannot be built/run and stale lifecycle revision never broadens authority."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+        "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        "docs/architecture/system-builder.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+      ],
+      "identifiedCoverageGap": "Whole-host Manage search/paging/duplicate/archive/restore combinations need explicit matrix instead of only lifecycle setup.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "systems-scratch-multi-component",
+      "area": "Systems",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Construct request-intake, operations-dashboard and conversation-interface systems from empty workspace using at least six distinct useful component definitions each.",
+        "Configure real labels/required fields/options/model resource where supported; test validation/input/status/table/collapse/transcript regions and exact hierarchy.",
+        "Add modal, typed compatible candidate search/paging, reorder/move/reparent, subtree removal, undo/redo, saved checkpoint and repeated system switching preserve content.",
+        "Save/reopen/restart compares exact definitions/versions/configuration/placement; do not call nonexecuting preview a persisted business action or actual inference."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+        "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
+        "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "Existing useful-system drivers should be reused. Add missing properties/style/validation/recovery branches; current click/modal editor supersedes old drag roadmap.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "systems-layout-properties-and-migration",
+      "area": "Systems",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Select supported predefined layout; configure nested schema-driven properties and bounded styling with preview variant oracle.",
+        "Upgrade legacy flat/Foundation versions explicitly with preview, preserve unmatched assets and immutable old revisions, then save a new revision.",
+        "Missing model/resource remains blocked with corrective action; Advanced JSON cannot forge resource authority or arbitrary CSS/executable content."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemComposerInspector.tsx",
+        "modules/ui/shared/system-builder/SystemComposerStylingPanel.tsx",
+        "docs/architecture/system-builder.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts"
+      ],
+      "identifiedCoverageGap": "Add actual host inspector/style/migration roundtrips, preserving exact current layout and parser restrictions.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "systems-build-approve-publish",
+      "area": "Systems",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Build & test only exact current saved revision; dirty/archived/unqualified systems are blocked with actionable diagnostics.",
+        "Deterministic build verifies owned target capabilities and immutable artifact digests; publish requires confirmation naming exact system/build.",
+        "Missing implementation, changed digest, stale lock, duplicate publish, failed artifact read and denied actor never create a false release."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
+        "modules/ui/shared/system-builder/SystemBuildReleaseWorkflow.tsx",
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx",
+        "docs/architecture/system-build-and-release.md"
+      ],
+      "existingEvidenceToReuse": [
+        "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+      ],
+      "identifiedCoverageGap": "Reuse current full lifecycle; extend exact negative build/approval/publication branches and UI state after reload.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "systems-published-runtime-and-persistence",
+      "area": "Systems",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Publish lifecycle shows only projected install/start/stop/activate/deactivate/uninstall actions; explicit runtime opens/focuses exact revision without user-entered IDs.",
+        "Exercise each actually mounted published runtime: desktop controlled-chatbot supports message input, button/Enter/Shift+Enter, bounded transcript and restart persistence; thin client controls the server host and does not gain a local runtime window.",
+        "Secured-entry/review application handlers have boundary tests but their generic Run & Test UI is intentionally unmounted. Keep those tests and report absent user-facing record/review runtime as a product gap; a new runtime UI requires a separate approved decision.",
+        "Keep from-scratch useful previews separate where UI cannot author required runtime policy; record absent authoring capability as product finding requiring scope decision.",
+        "Multiple installed systems keep data/session isolation; stop closes/revokes exact runtime window/session and retained transcript survives restart.",
+        "Denied capability, revoked release, unavailable model, launch compensation and repeated click cannot bypass approval or create an orphaned runtime."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",
+        "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx",
+        "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedLifecycleClient.ts",
+        "docs/architecture/system-build-and-release.md",
+        "docs/architecture/controlled-conversational-system-execution.md",
+        "docs/architecture/system-builder.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+        "modules/hosts/shared/composition/tests/secured-reference-system.e2e.test.ts"
+      ],
+      "identifiedCoverageGap": "Existing chatbot lifecycle uses synthetic worker; add missing supported runtime/rejection/recovery outcomes and a real installed-model witness only under qualification owner. Do not invent absent record/review runtime UI.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "actual installed qualified model for inference; native process/window observations; no imported/authored sandbox execution authority"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "shared-accessibility-and-responsive-contract",
+      "area": "Cross-surface",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Every reachable major form/dialog/tab/tree/menu/notification has role/name/state, keyboard completion, focus trap/return where applicable and meaningful errors/status.",
+        "Assert real viewport320px control access, native zoom where supported, computed reduced-motion/forced-colors, theme/contrast and no overlapped action labels.",
+        "Accessibility scan incomplete/indeterminate results require resolution or explicit pending technical finding; no manual screen-reader or participant task is a roadmap criterion."
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/components/ModalDialog.tsx",
+        "modules/ui/shared/components/TabbedPanel.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+        "AGENTS.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+        "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.mjs"
+      ],
+      "identifiedCoverageGap": "Existing automated qualification focuses Assets/Composer/runtime; extend critical form/dialog coverage to Data/Context/Models/Settings/Image on actual hosts.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "startup-responsiveness-and-recovery",
+      "area": "Cross-surface",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Measure initial shell/first page, cold/warm Canvas, large/sparse picker, representative artifact/model lists and UI edit-to-paint with declared workloads.",
+        "Reuse recorded budgets/reference profiles; new targets are predeclared after diagnostic baselines, account for laptop memory and distinguish readiness timeout from latency goal.",
+        "Retain failures, p50/p95/repeat counts/source identity; synthetic clocks cannot claim real latency. Run serially with no competing model/build workload."
+      ],
+      "sourceRefs": [
+        "docs/diagnostics/system-builder-canvas-testing.md",
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/visual-composer/canvas-draft-performance.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts"
+      ],
+      "identifiedCoverageGap": "Reuse completed Canvas measurements as historical support; measure new UI-critical paths on named host rather than reopening completed roadmap or asserting generic laptop speed.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [
+        "named actual reference host for performance claims"
+      ],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "failure-observability-and-runner-integrity",
+      "area": "Cross-surface",
+      "priority": "P0",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Every scenario reports exact source, scenario/host/profile, executed/skipped/failed status, expected outcome, assertion stage, safe error code and owned cleanup.",
+        "Setup/teardown/crash/empty discovery/unexecuted critical cases fail or remain pending; retry never erases first failure or converts an unavailable environment to pass.",
+        "Interrupted standalone collection can restart without stale locks killing future runs; preserve old artifacts and only rerun missing evidence by source/criterion identity.",
+        "Use allowlisted numeric/finite diagnostics, bounded retention and synthetic fixtures; disable traces/capture where they would retain tokens/prompts/content."
+      ],
+      "sourceRefs": [
+        "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-core.mjs",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/scripts/qualification/run_model_blocker_tests.py",
+        "dev-tools/scripts/qualification/visual-composer/tests/composer-protocol-evidence.unit.test.ts"
+      ],
+      "identifiedCoverageGap": "Extend the existing bounded harness with a finite UI manifest and coverage admission, not arbitrary command execution, another runner, or a bypass of old native staging protections.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "shell-menus-and-help",
+      "area": "Shell and workspace",
+      "priority": "P1",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "expectedBehavior": [
+        "Logo/Home, header menu, sidebar collapse and Build/Manage/Admin group toggles remain keyboard accessible and retain only declared presentation preferences.",
+        "Outside click and Escape dismiss where the current interaction contract requires it; current-page indicators and accessible names survive collapsed navigation.",
+        "Glossary hints and shared help explain controls without obscuring required actions or exposing internal implementation details."
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/components/layout/AppShell.tsx",
+        "apps/thin-client/src/components/layout/AppShell.tsx",
+        "modules/ui/shared/glossary/GlossaryHint.tsx"
+      ],
+      "existingEvidenceToReuse": [
+        "apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx",
+        "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx"
+      ],
+      "identifiedCoverageGap": "Dedicated whole-host collapsed/group/menu/help cases are needed outside the broad page reachability checks.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    },
+    {
+      "id": "contributor-review-site",
+      "area": "Contributor review UI",
+      "priority": "P1",
+      "hosts": [
+        "review-site-browser"
+      ],
+      "expectedBehavior": [
+        "Keep existing read-only review site regression coverage for Open/Completed sections, original creation-date sorting, canonical completion status and dynamic refresh.",
+        "Expand roadmap increments to work chunks and acceptance evidence, navigate linked supporting work and show pending/failed/blocked distinctly.",
+        "Default dark mode, light/dark toggle, persisted validated preference and storage failure remain usable; the site never grants approval or mutation authority."
+      ],
+      "sourceRefs": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/helpers/control_plane"
+      ],
+      "existingEvidenceToReuse": [
+        "dev-tools/helpers/tests"
+      ],
+      "identifiedCoverageGap": "Auxiliary contributor UI already has bounded DOM/controller tests; verify their exact mapping and add only uncovered regressions, separate from product-host qualification.",
+      "requiredLayers": [
+        "behavioral UI interaction",
+        "real host UI journey"
+      ],
+      "controlledDependencies": [],
+      "status": "proposed-not-executed"
+    }
+  ],
+  "ownershipAndReuse": [
+    {
+      "owner": "system-builder-canvas-reliability",
+      "handling": "Completed; reuse meaningful-system, cold Canvas and browse oracles. New UI roadmap extends missing regressions and current host coverage without reopening historical state."
+    },
+    {
+      "owner": "functionality-optimization",
+      "handling": "Preserve model quality/resource and final qualification gaps. Use existing approved protocols and accepted historical evidence; UI fixture success does not replace real model evidence."
+    },
+    {
+      "owner": "optional-constrained-json-generation",
+      "handling": "Add candidate-bound actual adaptive-state/explicit-override UI witness and link only if it meets representative-resource-and-usability-qualification. Latest direct-adapter 0.5B constrained CPU/GPU resource/structural evidence is support, not host UI or semantic-quality pass."
+    },
+    {
+      "owner": "optional-low-memory-inference",
+      "handling": "Reuse explicit profile UI and failure tests. Native guarded restart/accounting/protection and real offload outcomes stay in owning roadmap; do not acquire a lease or touch retained old staging to make this plan pass."
+    },
+    {
+      "owner": "data-management-quality-and-usability",
+      "handling": "Reuse task/capability, creation matrix, row-review and publication protocols; crosslink new UI evidence, leave unavailable OCR/private-provider/advanced quality claims pending in owner."
+    },
+    {
+      "owner": "asset-experience-layered-customization",
+      "handling": "Reuse actual asset authoring/reopen/native-zoom tests. Do not retry restricted independent legacy security review or imply current fixtures resolve native gaps."
+    },
+    {
+      "owner": "security-findings-refresh",
+      "handling": "Add only authorized functional denial regressions for changed paths. Security policy, native identity and restricted review remain separately owned; never duplicate or bypass blocked restricted work."
+    },
+    {
+      "owner": "systems-publish-runtime-lifecycle",
+      "handling": "Current accepted behavior supersedes standalone Run & Test mounting. Reuse exact lifecycle driver and preserve automatic visual runtime launch."
+    },
+    {
+      "owner": "context-management and lancedb-rag-replacement",
+      "handling": "Completed historical implementations; extend real UI create/review/query/rebuild/delete evidence with existing artifact/model protocols, not a second Context pipeline."
+    }
+  ],
+  "discrepanciesForImplementationReconciliation": [
+    {
+      "id": "thin-training-copy",
+      "sources": [
+        "apps/thin-client/src/pages/ModelsPage.tsx",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx"
+      ],
+      "finding": "Page description advertises training, while mounted thin-client feature exposes browse/inventory only. Test present UI and record copy or missing capability decision before adding functionality."
+    },
+    {
+      "id": "obsolete-run-and-test-prose",
+      "sources": [
+        "docs/architecture/system-builder.md",
+        "docs/architecture/system-run-workflows.md",
+        "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        "apps/thin-client/src/pages/SystemBuilderPage.tsx"
+      ],
+      "finding": "Older System Builder sections describe Run & Test as mounted, while later accepted lifecycle behavior and current pages use Publish and intentionally leave generic workflow unmounted. Reconcile canonical wording; do not resurrect obsolete tab."
+    },
+    {
+      "id": "old-drag-wording",
+      "sources": [
+        ".implementation-roadmaps/visual-system-composer/state.json",
+        ".implementation-roadmaps/system-composer-modal-composition/state.json",
+        "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx"
+      ],
+      "finding": "Historic visual-composer intent mentions drag; newer completed modal-composition workflow governs current pointer/keyboard Add/Move controls. New tests target current implementation."
+    },
+    {
+      "id": "scratch-preview-execution-boundary",
+      "sources": [
+        "docs/diagnostics/system-builder-canvas-testing.md",
+        "docs/architecture/system-builder.md"
+      ],
+      "finding": "Useful systems built from scratch are nonexecuting previews and some required closed runtime policy cannot be authored from blank UI. Assert honest build/denial states; use supported closed reference systems for runtime outcomes, and escalate any expanded authoring design."
+    },
+    {
+      "id": "legacy-human-qualification-prose",
+      "sources": [
+        "AGENTS.md",
+        "docs/standards/testing-standards.md",
+        "modules/ui/shared/README.md"
+      ],
+      "finding": "Some older support prose still describes manual screen-reader/review qualification. New technical acceptance is agent-executable only; user owns manual acceptance offline. Retain actual automated accessibility/native/performance/security checks."
+    }
+  ],
+  "securityImpact": {
+    "disposition": "security-relevant",
+    "summary": "The proposed harness drives authenticated API/IPC, credentials, untrusted files/packages/model output, persistence and runtime side effects. Preparation changes documentation only; implementation must preserve every authority and isolation boundary.",
+    "assets": [
+      "Synthetic test artifacts and exact immutable provenance",
+      "Workspace/organization identity and authorizations",
+      "Model/provider secrets and private user content excluded from retained evidence",
+      "Owned host processes, files and resource budgets"
+    ],
+    "trustBoundaries": [
+      "Browser/renderer to authenticated API or sender-bound preload/IPC",
+      "Application policy to persistence/storage/provider/runtime",
+      "Untrusted source/package/model content to inert UI preview",
+      "Runner to disposable host/profile and sanitized evidence"
+    ],
+    "abuseCases": [
+      "A fixture bypasses auth or injects hidden composition and falsely qualifies user workflow",
+      "Traces/screenshots retain tokens, prompts or private data",
+      "Cancellation or restart deletes unknown old stage or loses owned worker",
+      "Repeated external publication/download consumes authority not granted",
+      "A skipped/empty/failing child is reported as complete"
+    ],
+    "controls": [
+      "Use actual mounted UI and public typed boundaries with least privilege synthetic fixtures",
+      "Finite scenario/operation allowlists and contained disposable owned profiles",
+      "Keep resource admission and safe-weight integrity unchanged unless separately reviewed",
+      "Disable sensitive capture and retain finite numeric/status metadata",
+      "No new provider/model/dependency/native-effect authority from test planning",
+      "Keep fixture, actual host, physical runtime and external qualification separate"
+    ],
+    "verification": [
+      "Positive plus denial/malformed/stale/scope/failure behavior at each owned boundary",
+      "Safe evidence schema/path/content checks and runner failure/empty/teardown regressions",
+      "Current source-bound executed receipts and genuine independent review per increment",
+      "Threat model delta and safe rollback reviewed before each product fix"
+    ],
+    "residualRisks": [
+      "Physical native/offload protection, unavailable provider credentials and model capacity cannot be proven by UI fixtures",
+      "Restricted security review remains outside agent authority",
+      "New product capabilities uncovered by tests require separate explicit scope decisions"
+    ]
+  },
+  "executionStrategyOptions": [
+    {
+      "id": "layered-existing-toolchain",
+      "label": "Extend the existing layered UI toolchain",
+      "recommended": true,
+      "summary": "A finite source-linked scenario manifest maps every mounted supported capability to behavioral UI tests and a real desktop/thin-client journey. Parameterized variants run at the narrowest meaningful layer; named managed/native/physical-runtime witnesses remain separate. Reuse existing Playwright/Vitest and owned host harnesses.",
+      "tradeoffs": [
+        "Keeps real UI coverage while avoiding repeated large model loads and duplicate workflows",
+        "Requires explicit classification so deterministic workers are never mislabeled real inference",
+        "Fits the current laptop by running one browser/desktop worker and serial resource-heavy checks"
+      ],
+      "consequences": [
+        "Add missing scenarios, execute them and repair reproduced defects in cohesive vertical slices",
+        "Publish a machine-readable coverage/evidence ledger with genuine gaps visible",
+        "No new automation framework dependency or product architecture is needed"
+      ]
+    },
+    {
+      "id": "whole-host-all-variants",
+      "label": "Require complete host/runtime execution for every UI variant",
+      "recommended": false,
+      "summary": "Use the same scenario inventory but make full packaged desktop and managed-browser real-runtime journeys the primary gate for each supported task, input, settings and failure variation.",
+      "tradeoffs": [
+        "More direct integration coverage for every combination",
+        "Much longer and more fragile runs, repeated model loading and higher RAM/VRAM demands",
+        "Unavailable native/provider/runtime environments block a larger part of the roadmap"
+      ],
+      "consequences": [
+        "Requires a provisioned qualification environment for many variants and more external execution authority",
+        "Fewer isolated failures; diagnostics and rerun costs increase",
+        "Existing component and adapter checks still remain necessary for owned invariants"
+      ]
+    }
+  ],
+  "proposedOutlineNotGovernedIncrements": [
+    {
+      "proposedId": "data-to-model-and-context",
+      "title": "Data-to-model and Context UI journeys",
+      "dependsOn": [],
+      "outcome": "Extend bounded manifest/harness with first consumers, cover workspace, acquisition/artifacts, preparation/review/versioning, Context, models, desktop training and images; execute and fix discovered defects with regressions.",
+      "deliverables": [
+        "Finite source-linked scenario manifest and bounded extensions to existing owned host harness",
+        "Cross-host Data/Context/Models/Image journeys plus desktop training and focused task/format branching",
+        "Reproduced defect oracles, red regressions, owning-layer fixes and current rerun evidence",
+        "Updated user guidance and behavior/code discrepancy disposition"
+      ],
+      "proposedAcceptance": [
+        "Every supported task/input path has an explicit UI coverage mapping and truthful host applicability",
+        "Representative upload-to-prepare/review/save/reopen, manual/source Context and real artifact-preview journeys pass through actual UI/transport/persistence",
+        "Model/training/image forms and terminal review/error/recovery outcomes execute under finite worker fixtures; real-model evidence remains separately labeled",
+        "No duplicate publication, lost workspace ownership, unsafe output rendering or implicit new authority",
+        "security-impact-reviewed"
+      ],
+      "verification": [
+        "Run exact new or reused component/client files per chunk, then exact relevant desktop/thin/managed Playwright cases",
+        "Verify reopened artifact bytes/schema/counts and bounded failure/redaction evidence, not just visible success copy",
+        "Independent current-candidate review of all proposed criteria; no broad all-suite before every implementation slice is ready"
+      ],
+      "rollback": "Revert scoped tests/harness extensions and owning product fixes as one reviewed slice, preserving existing artifact/runtime schemas and all security denials; retain collected failures.",
+      "exclusions": [
+        "No new provider/model/dependency downloads or real publication authority",
+        "No generic new training UI on thin client solely to satisfy misleading copy"
+      ],
+      "boundaryReason": "Independently useful daily data/AI workflows with actual persisted artifacts and separate controlled inference authority."
+    },
+    {
+      "proposedId": "asset-to-running-system",
+      "title": "Asset-to-running-system UI journeys",
+      "dependsOn": [
+        "data-to-model-and-context"
+      ],
+      "outcome": "Reuse and complete Assets/Studio/import/customization and multi-component system construction/build/publish/lifecycle paths; execute cross-host tests and repair defects without expanding unqualified executable authoring.",
+      "deliverables": [
+        "Reused and expanded package/Studio/customization and useful-system drivers with exact current UI behavior",
+        "Actual Manage/Compose/Publish/published-runtime scenarios and negative lifecycle cases",
+        "Owning-layer defect fixes, regression evidence, immutable source/release preservation and code/doc reconciliation"
+      ],
+      "proposedAcceptance": [
+        "Three useful multi-type systems are built from blank UI, edited, saved, reopened and compared against meaningful control/hierarchy oracles on both hosts",
+        "Mounted published conversation runtime demonstrates supported input/transcript/persistence outcomes separately from nonexecuting custom previews; API-only secured record/review handlers retain boundary tests and missing runtime UI is explicit",
+        "Immutable base/customized resources, exact saved revision/build/release and application-projected lifecycle actions survive restart",
+        "Dirty/archived/stale/unauthorized/unqualified actions fail safely without orphaned runtime or hidden authority",
+        "security-impact-reviewed"
+      ],
+      "verification": [
+        "Run focused Assets/System shared UI and changed use-case/transport tests",
+        "Execute exact packaged desktop and thin/managed journey cases with isolated owned state and all setup/teardown failures retained",
+        "Observe real runtime windows/transcript or data readback where supported; synthetic model responses never qualify model quality"
+      ],
+      "rollback": "Revert scoped authoring/lifecycle test and product fixes without rewriting immutable existing versions/releases or restoring insecure execution paths.",
+      "exclusions": [
+        "No arbitrary authored/imported execution sandbox or new policy-authoring product design",
+        "No restoring obsolete drag or standalone Run & Test navigation",
+        "No restricted legacy independent review retry"
+      ],
+      "boundaryReason": "Independently useful authoring-to-release outcome, separate immutable asset/release and runtime-window rollback boundary."
+    },
+    {
+      "proposedId": "operational-and-controlled-qualification",
+      "title": "Secure operational recovery and controlled qualification",
+      "dependsOn": [
+        "data-to-model-and-context",
+        "asset-to-running-system"
+      ],
+      "outcome": "Complete settings/secret/readiness/security/notification/accessibility/fault matrix; execute named actual host/runtime/performance witnesses, reconcile coverage and fix failures; run final applicable all-suite and repository gates once.",
+      "deliverables": [
+        "Cross-surface operational, rendered authorization, fault/reconnect and automated accessibility UI regressions",
+        "Explicit managed/native/physical-runtime environment admission and remaining-only collection plan using current bounded helpers",
+        "Current finite coverage ledger, unresolved genuine technical gaps and exact source-bound qualification receipts/reviews"
+      ],
+      "proposedAcceptance": [
+        "All mounted action families and required scenario variants map to executed current tests or an explicit unresolved technical blocker; no unaccounted supported UI capability",
+        "Settings/secret controls, background tasks, readiness, recovery, resource bounds and safe diagnostics meet actual current contracts on each applicable host",
+        "Actual packaged adaptive state/explicit override and checked output are witnessed under installed-model authority where required; no fixture-to-physical evidence promotion",
+        "Automated keyboard/focus/status/contrast/reflow checks cover all critical forms/dialogs; manual testing is outside technical acceptance",
+        "Final all-suite, applicable documentation/architecture/build/package gates and named controlled checks pass before final closure",
+        "security-impact-reviewed"
+      ],
+      "verification": [
+        "Execute exact focused recovery/settings/notification/security/accessibility files while repairing failures",
+        "Run one worker and serial declared host/model/performance workloads; retain cold startup, input-to-paint and long inference measurements separately",
+        "After every implementation chunk is recorded, run npm run test:all and applicable repository completion gates once, plus explicit packaged/managed/physical checks not included in all-suite",
+        "Obtain genuine independent final review; blocked environment or failed native cleanup remains unresolved"
+      ],
+      "rollback": "Revert bounded operational UI and harness changes while retaining safe defaults/guards, immutable failure evidence and exact owned resources; never delete unknown stage or weaken authorization to recover.",
+      "exclusions": [
+        "No participant/manual acceptance criteria",
+        "No native offload stage adoption or new lease before owning proof qualifies",
+        "No treating unavailable provider, model or native tests as passed"
+      ],
+      "boundaryReason": "Controlled identity/native/physical runtime qualification and cross-surface recovery require separate environment admission and can remain explicitly blocked without invalidating deterministic implementation evidence."
+    }
+  ],
+  "adjacentCohesionAuditProposal": [
+    "The scenario manifest and harness are delivered with first Data/Context/AI consumers, not as a separate test-only foundation increment.",
+    "The authoring-to-release slice delivers independently useful Assets/System coverage over immutable definition/release boundaries; separating it from Data/Context avoids one unreasonably large review across independent subsystems.",
+    "The last slice is justified by actual managed/native/physical environment admission and cross-surface recovery qualification, not merely final report writing. Keep its operational UI consumers and their recovery regressions together."
+  ],
+  "closureContractProposal": [
+    "Regenerate the finite route/tab/action/task/host census at implementation start and map every supported capability to stable scenario IDs, exact assertions, test file and evidence tier. No unaccounted reachable action is complete.",
+    "Every scenario has an actual user-visible outcome oracle; business data, immutable bytes/digests, reopened values or verified denial are observed through authoritative boundaries, not only click success or snapshots.",
+    "Execute all applicable new/reused scenarios on current source, diagnose each reproduced failure, repair in-scope defects at the owning layer and rerun relevant regressions. Unexpected missing capability becomes a recorded finding, never an invented pass.",
+    "No unresolved in-scope defect is hidden by retries/skips/quarantine. Deferred product decisions or unavailable technical environments remain explicit blockers until actually resolved or user revises scope.",
+    "All criteria are executable by agents. Human acceptance remains offline and never makes the technical roadmap incomplete.",
+    "Do not change existing completion statuses or accepted historical evidence as part of this planning pass. Exact new evidence can support an existing owner only through its own governed process.",
+    "Each reproduced defect first has an owning expected contract and red regression when practical, then an owning-layer fix and successful rerun. A missing product capability or new authority/design remains an explicit decision gate.",
+    "Each approved increment includes security-impact-reviewed, candidate-bound focused check receipts and separate-invocation review. As AI functionality is in scope, initialize completionSuite all; reserve aggregate run until all implementation chunks are complete.",
+    "Use focused component/client/host tests while implementing. At final boundary run npm run test:all, docs:check, architecture:check and affected builds/package plus agent-support/dependency gates only when their trigger changes. Named physical/managed/packaged tests remain explicit and cannot be inferred from test:all."
+  ],
+  "ciAndFailurePolicyProposal": [
+    "Reuse Node/Vitest focused UI gates and the one-worker Playwright harness. Add a finite capability/scenario coverage check rather than a new automation stack.",
+    "Run deterministic synthetic UI branching in normal focused feedback; packaged Windows, managed OIDC/PostgreSQL/TLS, physical runtime and named performance profiles remain explicit opt-in gates.",
+    "Keep fixtures deterministic with declared seeds/time seams, unique owned profile/storage/listener identities, exact current source identity and independent test order.",
+    "Treat flakiness as a defect. Retain the first failure and every retry; quarantine requires tracked owner/reason/expiry and cannot satisfy required closure.",
+    "Report skipped-not-applicable separately from blocked-environment, not-run, failed and passed. Missing applicable critical tests prevent completion.",
+    "Setup/teardown failure, native unconfirmed exit and artifact freshness mismatch invalidate the run; never hide them behind passing children."
+  ],
+  "realisticResourcePolicyProposal": [
+    "One Playwright worker, no parallel AI/build/performance work.",
+    "Use small synthetic inputs and deterministic boundary workers for exhaustive UI branching; keep physical generation/training/model quality as separately named installed-model witnesses.",
+    "Retain approved memory guards and measured host budgets, including 3 GiB small CPU and 3.5 GiB larger CPU admission only for their exact pinned profiles; do not lower further as a testing convenience.",
+    "Separate cold startup and readiness, UI input-to-paint responsiveness, and long-running inference/training deadlines; a 30-minute model delivery budget is not an acceptable blocking UI response time.",
+    "Do not impose arbitrary global UI runtime targets. Freeze meaningful local baselines and prospective named-profile budgets before optimization, preserving original failures.",
+    "Use idempotent owned setup/teardown, interruption-safe immutable run directories and remaining-only reruns based on exact source and missing criterion identity."
+  ],
+  "explicitExclusions": [
+    "No implementation before actual option and complete-roadmap approval",
+    "No human testing criteria",
+    "No public marketplace, arbitrary workflows/imported code sandbox, hybrid synchronization or new advanced diagnostic UI",
+    "No new model/dependency/provider download or credential use without authority",
+    "No restricted independent legacy security review retry by another tool/agent",
+    "No inspection/adoption/deletion/move/ACL change of retained old offload staging and no fresh lease until owning native protection/accounting/process proof qualifies"
+  ],
+  "nextStep": "Publish exact existing strategy approval and this full roadmap through serialized source-claimed work, execute documentation/roadmap/agent-support checks, obtain genuine separate planning review and present the complete roadmap for actual approval before implementation.",
+  "selectedStrategy": "layered-existing-toolchain",
+  "implementationPlanArtifact": "docs/operations/comprehensive-ui-automation-plan.json",
+  "ownerScopeClarification": "Physical native/offload, model semantic accuracy, private-provider operations and restricted independent review retain their existing owners. This UI roadmap requires its own applicable actual host assertions and truthful UI readiness/denial, not those roadmaps to close. New valid UI evidence may be linked later only through each owner current qualification process."
+}

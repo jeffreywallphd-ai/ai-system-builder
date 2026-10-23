@@ -1,0 +1,710 @@
+{
+  "schemaVersion": 1,
+  "slug": "comprehensive-ui-automation",
+  "status": "proposed-awaiting-full-roadmap-approval",
+  "strategy": "layered-existing-toolchain",
+  "scope": "Comprehensive current supported mounted UI functionality, with meaningful actual-host journeys and focused deterministic variation tests. The roadmap creates tests, executes them and repairs in-scope defects; it does not silently expand product/authority boundaries.",
+  "sourceInventory": "docs/operations/comprehensive-ui-automation-discovery.json",
+  "executionOrder": [
+    "daily-data-and-ai-journeys",
+    "asset-to-published-system-journeys",
+    "operational-ui-and-coverage-qualification"
+  ],
+  "scenarioOwnership": [
+    {
+      "scenarioId": "workspace-first-run",
+      "area": "Shell and workspace",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/App.tsx",
+        "apps/thin-client/src/App.tsx",
+        "docs/architecture/workspace-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "navigation-all-mounted-pages",
+      "area": "Shell and workspace",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/routes/desktopPages.ts",
+        "apps/thin-client/src/routes/thinClientPages.ts",
+        "apps/desktop/src/renderer/routes/lazyDesktopPages.tsx",
+        "docs/architecture/system-run-workflows.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "dashboard-counts",
+      "area": "Shell and workspace",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/page-dashboard/PageDashboard.tsx",
+        "modules/ui/shared/page-dashboard/dashboardMetrics.ts",
+        "docs/architecture/workspace-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "notifications-all-task-families",
+      "area": "Notifications",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/notifications/NotificationCenter.tsx",
+        "modules/ui/shared/notifications/TaskObservationProvider.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "settings-public-values",
+      "area": "Settings and operations",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/pages/SettingsPage.tsx",
+        "apps/thin-client/src/pages/SettingsPage.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingsPanel.tsx"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "settings-secrets-and-model-defaults",
+      "area": "Settings and operations",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/ModelDefaultSettingField.tsx",
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "runtime-status-and-explicit-controls",
+      "area": "Settings and operations",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx",
+        "apps/desktop/src/renderer/features/python-runtime/components/PythonRuntimeFooter.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "security-status-and-auth-boundaries",
+      "area": "Security",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
+        "apps/thin-client/src/security/secureFetch.ts",
+        "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md",
+        "docs/architecture/organization-tenancy-and-identity.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "files-acquisition-resume",
+      "area": "Data acquisition",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md",
+        "modules/application/use-cases/ingestion-acquisition"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "provider-source-acquisition",
+      "area": "Data acquisition",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "website-acquisition-refresh",
+      "area": "Data acquisition",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "artifact-browse-preview-and-filter",
+      "area": "Artifacts",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "modules/ui/shared/artifact-preview/ArtifactPreviewPanel.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "artifact-backing-publish-delete",
+      "area": "Artifacts",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/hooks/useArtifactBrowserPublishLogic.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "dataset-goal-and-input-intent",
+      "area": "Dataset Preparation",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/contracts/runtime/dataset-preparation.ts",
+        "modules/contracts/runtime/dataset-preparation-capabilities.ts",
+        "modules/contracts/runtime/dataset-preparation-adaptive.ts",
+        "docs/architecture/data-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "dataset-advanced-output-and-memory",
+      "area": "Dataset Preparation",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/data-management/DatasetPreparationOutputShapeEditor.tsx",
+        "modules/contracts/runtime/dataset-preparation-constrained-json.ts",
+        "modules/contracts/runtime/dataset-preparation-memory.ts",
+        "docs/operations/optional-low-memory-inference.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "dataset-review-curate-approve",
+      "area": "Dataset Preparation",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/dataset-review/DatasetReviewModal.tsx",
+        "modules/ui/shared/dataset-review/DatasetReviewWorkspace.tsx",
+        "docs/architecture/data-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "dataset-immutable-versioning",
+      "area": "Dataset Review and versions",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+        "modules/ui/shared/dataset-review/DatasetReviewWorkspace.tsx",
+        "docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "context-manual-pack",
+      "area": "Context",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "context-source-packs",
+      "area": "Context",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "context-rag-create-query-rebuild",
+      "area": "Context",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "docs/architecture/context-management.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "models-discover-and-reference",
+      "area": "Models",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "models-download-inventory-validation",
+      "area": "Models",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/ManageModelsTab.tsx",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "desktop-model-training",
+      "area": "Model Training",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx",
+        "docs/architecture/runtime-model.md",
+        "docs/standards/testing-standards.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "image-generation-create-and-register",
+      "area": "Image Generation",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/image-generation/components/ImageGenerationForm.tsx",
+        "apps/thin-client/src/features/image-generation/components/ImageGenerationFeature.tsx",
+        "docs/architecture/runtime-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "image-generation-recovery",
+      "area": "Image Generation",
+      "incrementId": "daily-data-and-ai-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "apps/thin-client/src/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "docs/architecture/runtime-model.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "assets-browse-and-inspect",
+      "area": "Assets",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",
+        "apps/thin-client/src/features/asset-library/components/AssetLibraryFeature.tsx",
+        "modules/ui/shared/asset-library/assetLibraryBrowser.ts"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "asset-package-import-trust",
+      "area": "Assets",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-package/AssetPackageManager.tsx",
+        "docs/asset-package-authoring-guide.md",
+        "docs/architecture/asset-implementations-and-packages.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "asset-studio-saved-lifecycle",
+      "area": "Assets",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
+        "modules/ui/shared/asset-studio/README.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "asset-derived-customization",
+      "area": "Assets",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
+        "docs/architecture/asset-authoring-customization-and-overrides.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "systems-manage-lifecycle",
+      "area": "Systems",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+        "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        "docs/architecture/system-builder.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "systems-scratch-multi-component",
+      "area": "Systems",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+        "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "systems-layout-properties-and-migration",
+      "area": "Systems",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemComposerInspector.tsx",
+        "modules/ui/shared/system-builder/SystemComposerStylingPanel.tsx",
+        "docs/architecture/system-builder.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "systems-build-approve-publish",
+      "area": "Systems",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
+        "modules/ui/shared/system-builder/SystemBuildReleaseWorkflow.tsx",
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx",
+        "docs/architecture/system-build-and-release.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "systems-published-runtime-and-persistence",
+      "area": "Systems",
+      "incrementId": "asset-to-published-system-journeys",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",
+        "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx",
+        "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedLifecycleClient.ts",
+        "docs/architecture/system-build-and-release.md",
+        "docs/architecture/controlled-conversational-system-execution.md",
+        "docs/architecture/system-builder.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "shared-accessibility-and-responsive-contract",
+      "area": "Cross-surface",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "modules/ui/shared/components/ModalDialog.tsx",
+        "modules/ui/shared/components/TabbedPanel.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+        "AGENTS.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "startup-responsiveness-and-recovery",
+      "area": "Cross-surface",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "docs/diagnostics/system-builder-canvas-testing.md",
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "failure-observability-and-runner-integrity",
+      "area": "Cross-surface",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-core.mjs",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "shell-menus-and-help",
+      "area": "Shell and workspace",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "desktop",
+        "thin-client"
+      ],
+      "sourceRefs": [
+        "apps/desktop/src/renderer/components/layout/AppShell.tsx",
+        "apps/thin-client/src/components/layout/AppShell.tsx",
+        "modules/ui/shared/glossary/GlossaryHint.tsx"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    },
+    {
+      "scenarioId": "contributor-review-site",
+      "area": "Contributor review UI",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "hosts": [
+        "review-site-browser"
+      ],
+      "sourceRefs": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/helpers/control_plane"
+      ],
+      "evidencePolicy": "Every applicable behavior is tested at a focused layer and through a representative real UI/transport/persistence host journey; no fixture-to-model/native/provider promotion."
+    }
+  ],
+  "cohesionAudit": [
+    "Increment 1 delivers independently useful daily source-to-artifact/AI workflow coverage and fixes, including first consumers of its finite manifest/harness; there is no separate test-only foundation increment.",
+    "Increment 2 delivers an independent asset-to-system/release outcome over immutable asset/build/runtime boundaries. Its breadth and safe rollback justify a separate review from the independent Data/Context/model subsystems.",
+    "Increment 3 owns actual operational UI consumers and cross-surface fault/accessibility behavior plus current host/managed environment admission. It is not merely a report or test-only tail; its environment and recovery risks justify the qualification boundary."
+  ],
+  "defectLoop": [
+    "Locate the current implemented/tested contract and exact user outcome.",
+    "Reproduce through the relevant actual UI or focused architectural boundary and retain the failing result.",
+    "Add a red regression when practical; distinguish product bug from fixture, unsupported capability, environment and new design decision.",
+    "Repair the owning layer without weakening authority, integrity, resource bounds or existing functionality.",
+    "Run the exact regression and relevant host journey; retain first failure/retries and document the changed behavior.",
+    "Obtain current scoped checks and genuine independent review; commit only coherent owned reviewed changes after all live claims are released."
+  ],
+  "resourcePlan": {
+    "workers": 1,
+    "inferenceParallelism": "No concurrent model inference, performance sampling or package/build workload.",
+    "inputBounds": "Small synthetic files/rows/images and finite deterministic worker responses for exhaustive UI branching; reuse existing task/source/byte/time limits.",
+    "timing": "Separate cold shell/Canvas readiness, warm UI input-to-paint and long-running inference/training delivery. Preserve existing budgets; establish any new local baseline prospectively with exact source, profile and workload before candidate optimization.",
+    "memory": "Keep actual RAM/VRAM/process/lease guards and supported model profile controls. No further guard lowering, offload lease or model-accuracy rerun is authorized by this UI plan.",
+    "remainingOnly": "Reuse exact source-matching passed evidence when admissible; rerun only missing relevant scenarios/changed regressions and the mandatory final current aggregate once. Source changes cannot relabel stale results current.",
+    "cleanup": "Own isolated profiles/listeners/processes; wait for confirmed exit and check setup/teardown. Preserve unknown staging/ownership and report explicit pending/blocked state."
+  },
+  "statusSemantics": {
+    "passed": "Actual applicable assertions executed successfully on the bound source/profile.",
+    "failed": "An executed required assertion, setup, teardown or freshness check failed.",
+    "blocked": "Applicable technical evidence cannot run or qualify because its declared environment/authority is unavailable.",
+    "not-run": "Applicable work has not executed; it cannot satisfy closure.",
+    "not-applicable": "Exact implemented/ADR authority shows no supported mounted behavior on that host; include that reference. A missing desired feature is a finding, not a free skip."
+  },
+  "ownerBoundaries": [
+    {
+      "owner": "system-builder-canvas-reliability",
+      "handling": "Completed; reuse meaningful-system, cold Canvas and browse oracles. New UI roadmap extends missing regressions and current host coverage without reopening historical state."
+    },
+    {
+      "owner": "functionality-optimization",
+      "handling": "Preserve model quality/resource and final qualification gaps. Use existing approved protocols and accepted historical evidence; UI fixture success does not replace real model evidence."
+    },
+    {
+      "owner": "optional-constrained-json-generation",
+      "handling": "Add candidate-bound actual adaptive-state/explicit-override UI witness and link only if it meets representative-resource-and-usability-qualification. Latest direct-adapter 0.5B constrained CPU/GPU resource/structural evidence is support, not host UI or semantic-quality pass."
+    },
+    {
+      "owner": "optional-low-memory-inference",
+      "handling": "Reuse explicit profile UI and failure tests. Native guarded restart/accounting/protection and real offload outcomes stay in owning roadmap; do not acquire a lease or touch retained old staging to make this plan pass."
+    },
+    {
+      "owner": "data-management-quality-and-usability",
+      "handling": "Reuse task/capability, creation matrix, row-review and publication protocols; crosslink new UI evidence, leave unavailable OCR/private-provider/advanced quality claims pending in owner."
+    },
+    {
+      "owner": "asset-experience-layered-customization",
+      "handling": "Reuse actual asset authoring/reopen/native-zoom tests. Do not retry restricted independent legacy security review or imply current fixtures resolve native gaps."
+    },
+    {
+      "owner": "security-findings-refresh",
+      "handling": "Add only authorized functional denial regressions for changed paths. Security policy, native identity and restricted review remain separately owned; never duplicate or bypass blocked restricted work."
+    },
+    {
+      "owner": "systems-publish-runtime-lifecycle",
+      "handling": "Current accepted behavior supersedes standalone Run & Test mounting. Reuse exact lifecycle driver and preserve automatic visual runtime launch."
+    },
+    {
+      "owner": "context-management and lancedb-rag-replacement",
+      "handling": "Completed historical implementations; extend real UI create/review/query/rebuild/delete evidence with existing artifact/model protocols, not a second Context pipeline."
+    }
+  ],
+  "ownerScopeClarification": "Physical native/offload, model semantic accuracy, private-provider operations and restricted independent review retain their existing owners. This UI roadmap requires its own applicable actual host assertions and truthful UI readiness/denial, not those roadmaps to close. New valid UI evidence may be linked later only through each owner current qualification process.",
+  "securityImpact": {
+    "disposition": "security-relevant",
+    "summary": "The proposed harness drives authenticated API/IPC, credentials, untrusted files/packages/model output, persistence and runtime side effects. Preparation changes documentation only; implementation must preserve every authority and isolation boundary.",
+    "assets": [
+      "Synthetic test artifacts and exact immutable provenance",
+      "Workspace/organization identity and authorizations",
+      "Model/provider secrets and private user content excluded from retained evidence",
+      "Owned host processes, files and resource budgets"
+    ],
+    "trustBoundaries": [
+      "Browser/renderer to authenticated API or sender-bound preload/IPC",
+      "Application policy to persistence/storage/provider/runtime",
+      "Untrusted source/package/model content to inert UI preview",
+      "Runner to disposable host/profile and sanitized evidence"
+    ],
+    "abuseCases": [
+      "A fixture bypasses auth or injects hidden composition and falsely qualifies user workflow",
+      "Traces/screenshots retain tokens, prompts or private data",
+      "Cancellation or restart deletes unknown old stage or loses owned worker",
+      "Repeated external publication/download consumes authority not granted",
+      "A skipped/empty/failing child is reported as complete"
+    ],
+    "controls": [
+      "Use actual mounted UI and public typed boundaries with least privilege synthetic fixtures",
+      "Finite scenario/operation allowlists and contained disposable owned profiles",
+      "Keep resource admission and safe-weight integrity unchanged unless separately reviewed",
+      "Disable sensitive capture and retain finite numeric/status metadata",
+      "No new provider/model/dependency/native-effect authority from test planning",
+      "Keep fixture, actual host, physical runtime and external qualification separate"
+    ],
+    "verification": [
+      "Positive plus denial/malformed/stale/scope/failure behavior at each owned boundary",
+      "Safe evidence schema/path/content checks and runner failure/empty/teardown regressions",
+      "Current source-bound executed receipts and genuine independent review per increment",
+      "Threat model delta and safe rollback reviewed before each product fix"
+    ],
+    "residualRisks": [
+      "Physical native/offload protection, unavailable provider credentials and model capacity cannot be proven by UI fixtures",
+      "Restricted security review remains outside agent authority",
+      "New product capabilities uncovered by tests require separate explicit scope decisions"
+    ]
+  },
+  "completionPolicy": "control-plane-v1; completionSuite all; no roadmap approval or implementation is created by this proposal.",
+  "nextCheckpoint": "Publish exact existing strategy approval and this full roadmap through serialized source-claimed work, execute documentation/roadmap/agent-support checks, obtain genuine separate planning review and present the complete roadmap for actual approval before implementation."
+}
