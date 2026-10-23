@@ -24,6 +24,17 @@ binding for current aggregate qualification. The final increment may be verifyin
 while all predecessors are implemented. Pending controlled qualification never
 becomes a pass and still prevents final roadmap closure.
 
+For an explicitly authorized change to a pending technical acceptance policy,
+use `technical-acceptance-revised` as documented in `references/events.md`.
+This governed replacement-only event preserves criterion identity/qualification,
+archives the prior definition/plan/approval and invalidates old approval/bindings.
+It cannot remove criteria, amend security criteria, qualify a measurement or clear
+a blocker. Independently review the exact superseded/retained requirements and
+policy digest. Record the actual narrowly authorized reapproval; an earlier explicit
+user instruction may supply that authority without another question. Obtain fresh
+current checks/review for technical closure. Human-only scope events cannot revise
+model accuracy or other technical policy. Keep real resource/native/runtime gaps.
+
 When the human explicitly takes human acceptance testing offline, use
 `human-acceptance-transferred` as documented in `references/events.md`. Close only
 legacy implemented increments whose sole remaining criteria are human acceptance.
@@ -46,6 +57,13 @@ performance, model, hardware, native and security checks. This event never close
 an increment, changes evidence or qualifies a test. Independently review the exact
 classification, record actual narrow user reapproval, then obtain fresh current
 receipts/review for technical closure. Unavailable technical checks stay pending.
+For legacy mixed criteria, use the separate `legacy-acceptance-scope-revised`
+event with the same current-approval, complete-chunk and pending-controlled guards.
+It archives to `legacyAcceptanceScopeRevisions`, retains the legacy evidence
+policy and every technical status/evidence/blocker, invalidates approval, and
+never closes an increment. Do not use the human-only closure event for mixed
+criteria. Product human review/approval controls are separate from human acceptance
+testing and must remain intact.
 Governed evidence declarations never auto-complete an implemented-pending
 increment, even when an overall review exists. After actual technical checks pass,
 record the exact evidence/reports, create fresh work bound to that pending target
@@ -228,6 +246,11 @@ For every approved increment, repeat this loop:
    remains in JSON state and the roadmap. Provide the user a clickable report link
    after a user-visible slice or natural checkpoint, not after every file change or
    minor internal chunk.
+   Commit a coherent completed, tested and independently reviewed chunk before
+   continuing to the next chunk, following the owned-change checkpoint procedure
+   in `references/workflow.md`. Pending parent work, increment or roadmap
+   qualification does not defer a safe local commit; a chunk checkpoint does not
+   qualify its parent. Do not wait for whole-roadmap completion.
 8. Attach evidence to every acceptance criterion, including the security impact
    criterion. A `not-security-relevant` criterion uses review evidence with its
    concrete rationale; a `security-relevant` criterion cites implemented controls,
@@ -292,7 +315,11 @@ Before claiming completion:
    explicit final approval of the completed overall work.
 5. Only after the user gives that final approval, record
    `final-approval-recorded`. The engine removes only the generated temporary
-   report and retains the roadmap and canonical JSON state.
+   report and retains the roadmap and canonical JSON state. Status stays
+   `completed`; `finalApproval` separately records final approval and makes the
+   record immutable. For user-authorized legacy `final-approved` conversion,
+   use `completion-status-normalized` as documented in the event reference;
+   never rewrite history or treat normalization as new qualification.
 6. Provide permanent roadmap/state references and report commands run, failures,
    evidence that remains external, and work not done.
 

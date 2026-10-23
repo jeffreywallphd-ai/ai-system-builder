@@ -24,6 +24,15 @@ implementation, exact passing evidence/reports, fresh target-bound checks coveri
 every criterion and separate accepted review. Other active work remains intact;
 overall review cannot substitute for target-specific qualification.
 
+Explicit user changes to a pending technical policy use the governed
+`technical-acceptance-revised` event. It replaces one controlled nonsecurity
+criterion under the same identity/qualification after implementation, archives
+the original definition/plan/approval and policy reference/digest, and invalidates
+old approval and semantic receipt bindings. Actual narrow reapproval may rely on
+the user's already explicit direction. Independent semantic review and fresh
+checks remain mandatory. Neither amendment nor reapproval clears blockers or
+qualifies a measurement; human-only scope events cannot change model targets.
+
 Agents must route to the skill by intent, not only by exact name. Use it when a
 user:
 
@@ -78,6 +87,14 @@ criterion while retaining compatibility with existing stored roadmap state.
 
 Use **increment**, not phase, in roadmap and status artifacts.
 
+Commit coherent completed, tested and reviewed chunks before continuing, using
+the skill's owned-change checkpoint procedure. Pending parent work, increment or
+roadmap qualification does not defer a safe checkpoint. Inspect actual scoped
+evidence and dependency closure, preserve unrelated index/worktree changes,
+release source claims before Git changes and start later work from a fresh
+baseline. Report the actual commit identity. This grants no parent pass, push,
+history rewrite, main advancement or release authority.
+
 ## Economical increment sizing
 
 Use the fewest substantial increments that preserve meaningful approval,
@@ -105,6 +122,13 @@ suffix through `roadmap-revised`, render the consolidated proposal, and obtain
 renewed roadmap approval before continuing.
 
 ## Durable tracking and temporary reports
+
+Mixed legacy criteria use `legacy-acceptance-scope-revised` to archive human
+acceptance portions while preserving technical IDs/qualification, pending
+evidence, chunks and blockers. It cannot close an increment or amend governed
+state. The governed event keeps its strict policy gate. Independently review
+classification and record actual narrow user reapproval. Product data/publishing
+approval controls remain intact.
 
 If the user takes human acceptance offline, review all open increments and use
 `human-acceptance-transferred` only where that is the sole remaining qualification.
@@ -145,6 +169,12 @@ report, and waits for explicit final overall approval. Only then does
 Python engine validates events, confines output paths to the repository, writes
 files atomically, refuses to delete non-generated content, and never executes a
 recorded command.
+
+Final approval retains the canonical `completed` status and records its separate
+`finalApproval` fact, which also governs immutability and report removal. An
+explicitly authorized legacy conversion uses `completion-status-normalized`;
+it preserves creation time, approvals, history, criteria, chunks, evidence and
+the approved fingerprint. It cannot qualify incomplete work or recreate reports.
 
 ## Skill and helper boundary
 

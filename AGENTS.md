@@ -50,12 +50,17 @@ This file is the repository entry point for coding agents. Keep it short; use th
 - Keep repository skills portable across supported coding agents. Add or update
   skill tests, routing documentation, and installation guidance in the same
   change as a skill behavior change.
+- Commit coherent completed, tested and reviewed roadmap chunks before continuing;
+  pending parent qualification does not defer a safe checkpoint. Follow the skill's
+  owned-change and source-claim safeguards; a checkpoint grants no release authority.
 - Keep roadmap implementation reports concise and temporary under ignored
   `docs/tmp/`. Preserve the full roadmap and JSON state, and remove the
   generated report only after the user explicitly approves the completed
   overall work.
 - When the user takes human acceptance testing offline, use the roadmap skill's
-  explicit legacy handoff event. Receipt-governed scope changes still require
+  explicit legacy handoff event for solely human criteria, or
+  `legacy-acceptance-scope-revised` for mixed legacy descriptions without
+  technical closure. Receipt-governed scope changes still require
   current candidate-bound qualification. Keep offline human acceptance separate from technical
   closure; retain security, performance, runtime and other technical gaps.
   After actual qualification passes, use `increment-qualified` with fresh exact-target

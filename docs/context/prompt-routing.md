@@ -101,11 +101,29 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 
 ## Implementation Roadmap Routing
 
+Requests to commit completed and tested roadmap chunks also use the roadmap
+skill. Its scoped checkpoint procedure preserves unrelated changes and pending
+parent qualification; a checkpoint grants no publication or main advancement.
+
+Use `completed` as the single current roadmap completion status. Final approval
+is the separate immutable `finalApproval` fact. For explicit legacy status
+conversion, route to the skill's `completion-status-normalized` event; retain
+history, approvals, evidence and creation dates without inventing qualification.
+
 When the user assigns human acceptance offline, route to the skill's explicit
 handoff event; retain technical checks and archived history without invented passes.
+Mixed legacy criteria use `legacy-acceptance-scope-revised`; keep technical
+identity, pending evidence and completion status unchanged. Product approval
+controls remain requirements, not acceptance testing to remove.
 For agent-only acceptance on started governed roadmaps, use the skill's
 `acceptance-scope-revised` event, independent classification review and fresh
 candidate qualification. Retain automated UI and actual technical/native checks.
+For explicit numeric or other technical policy amendments, use the separate
+`technical-acceptance-revised` event. Preserve the controlled criterion identity,
+archive original policy/plan/approval and independently verify actual user authority
+and policy digest. It supplies no pass, removes no criterion/security control and
+retains genuine resource/runtime/native qualification. Existing explicit narrow
+authority can supply reapproval without another question; fresh checks/review remain.
 
 Requests to prepare, implement, continue, resume, or review an implementation
 roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or

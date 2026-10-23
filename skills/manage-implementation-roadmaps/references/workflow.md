@@ -1,5 +1,13 @@
 # Implementation roadmap workflow
 
+User-directed agent-only acceptance uses `acceptance-scope-revised` for governed
+state and the separate `legacy-acceptance-scope-revised` event for mixed legacy
+criteria. Both archive exact human scope without technical closure. Preserve
+automated UI/accessibility, model, hardware, provider, performance and security
+checks, and all product human-approval controls. Independently review the semantic
+classification and record actual narrow user reapproval. A legacy human-only
+transfer may close only when every retained technical criterion already passes.
+
 ## Invariants
 
 - Repository instructions and implemented behavior remain authoritative.
@@ -263,6 +271,37 @@ surfaces. Do not run the complete standard suite, complete end-to-end suite, AI
 suite, or aggregate matrix while roadmap increments remain; add or run a focused
 regression instead.
 
+#### Commit reviewed chunks
+
+Commit a coherent completed, tested and independently reviewed chunk before
+continuing to the next chunk on the authorized branch. Pending parent work,
+increment or roadmap qualification does not defer an otherwise safe checkpoint.
+A separate scoped local component receipt/review can establish that boundary;
+parent work need not be complete. A recorded chunk or status alone proves neither
+successful execution nor review.
+
+1. Inspect the actual diff, unrelated staged/unstaged changes, and the chunk's
+   dependency closure. Include its behavior, focused tests and documentation.
+   Use exact paths or reviewed selected hunks for mixed files; never stage the
+   whole dirty worktree. If a dependency is unfinished or unreviewed, isolate and
+   qualify a coherent patch or retain that specific chunk as uncommitted.
+2. Run the chunk's focused checks and obtain its required independent scoped
+   review. Keep the actual receipt/review references and pending parent criteria.
+   Do not rerun model accuracy or aggregate suites merely to create a commit.
+3. Finish the candidate's check/review recording and release every live source
+   claim in the checkout before staging or committing. A commit changes HEAD and
+   source identity. Never mutate Git during another writer's candidate review.
+4. Stage only the owned changes, inspect the staged diff and paths, then create
+   the local checkpoint commit. Preserve unrelated staged/unstaged work; isolate
+   the index when needed. Include no ignored reports, raw evidence or secrets.
+5. Report the real commit identity, covered chunks, verification and remaining
+   qualification. Begin subsequent work from a fresh source baseline; retain old
+   receipts as historical evidence rather than treating them as current.
+
+A checkpoint supplies no parent pass and grants no push, history rewrite, main
+advancement or release authority. Those actions retain their separate user and
+repository gates. The roadmap state engine records facts; it does not execute Git.
+
 ### 5. Verify and complete
 
 Only after every planned chunk is implemented and its focused tests pass, run the
@@ -313,8 +352,21 @@ for explicit user approval of the overall completed work. Record
 `final-approval-recorded` only after that response. That transition removes the
 generated report from `docs/tmp/` while retaining the durable roadmap and JSON
 state. New scope after final approval requires a successor roadmap.
+The canonical completion status stays `completed` after final approval. The separate
+`finalApproval` fact governs immutability and report removal. Explicit legacy
+conversion uses `completion-status-normalized`; preserve every original approval,
+evidence record and history entry, and never infer a new qualification pass.
 
 ## Feedback loop
+
+Explicit technical policy changes use `technical-acceptance-revised`, not the
+human-only scope events. It replaces one pending governed controlled nonsecurity
+criterion under the same identity/qualification after all chunks are implemented.
+Archive the exact old/new definitions, original plan/approval, actual policy
+identity/digest and superseded/retained requirements. Independently review the user
+authority and semantic limits, record the actual narrow reapproval and obtain fresh
+checks/review. Preserve evidence, blockers, resource/native/runtime requirements
+and completion policy; no test pass follows from changing an expectation.
 
 Technical acceptance uses agent-executable tests, including automated UI journeys.
 User-owned human acceptance stays offline. For approved started governed work,

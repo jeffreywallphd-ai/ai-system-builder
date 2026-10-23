@@ -115,7 +115,28 @@ with `{ "finding_id": "...", "receipt_digest": "fresh receipt" }` in a new
 review round. New verification cannot erase an open finding. Completed work
 requires a successor task for corrections.
 
+## Checkpoint reviewed work
+
+Use the roadmap skill's scoped commit procedure for coherent completed, tested
+and reviewed chunks. A separately reviewed local component can checkpoint while
+parent work or qualification stays pending; status alone is insufficient. Finish
+the candidate's check/review recording and release every source claim in the
+checkout before changing Git. Stage only owned paths or reviewed hunks with a
+verified dependency closure, preserve unrelated changes and report the commit.
+Later work starts from a fresh baseline; existing receipts remain historical.
+Local checkpoint authority does not include push, history rewrite, main advancement,
+parent completion or release.
+
 ## Roadmaps and qualification
+
+An explicit user-authorized technical-policy change uses the roadmap skill's
+replacement-only `technical-acceptance-revised` event. It preserves criterion
+identity/qualification, original evidence/chunks/blockers and completion policy,
+archives exact old/new definitions and policy identity/digest, and invalidates old
+approval/bindings. Independently review actual authority and retained obligations,
+record the actual narrow reapproval and obtain fresh current checks/review. An
+opaque reference/digest is an operator assertion, never authenticated permission
+or passing hardware evidence. Human-only scope events are separate.
 
 For agent-only acceptance on a started governed roadmap, use the skill's
 `acceptance-scope-revised` event after independently reviewing the exact human-only

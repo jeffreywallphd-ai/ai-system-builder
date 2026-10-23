@@ -74,6 +74,15 @@ explicitly declarative.
 - Run the dependency security gate when manifests, lockfiles, dependency resolution, workflows, containers, SBOMs, build/install scripts, or release dependency inputs change.
 - Never claim a check passed unless its command completed successfully; report environment limitations and raw failures separately from normalized repository-runner results.
 
+Checkpoint coherent completed, tested and reviewed work chunks before continuing
+to the next chunk on the authorized branch. Pending parent work, increment or
+roadmap qualification does not defer a safe local commit. Review the actual owned
+diff and dependency closure; preserve unrelated staged and unstaged work. Finish
+the candidate's checks/review and release its source claim before changing Git,
+then begin later work from a fresh baseline. Report the real commit identity.
+A checkpoint supplies no parent pass, push, history rewrite or main advancement
+authority. The roadmap skill defines the scoped checkpoint procedure.
+
 ### 8. Reconcile knowledge
 
 - Update canonical docs in the same change when behavior, boundaries, or standards change.

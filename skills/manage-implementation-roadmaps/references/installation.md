@@ -1,5 +1,12 @@
 # Installing the implementation-roadmap skill
 
+Install the engine, tests and references together. The explicit
+`legacy-acceptance-scope-revised` event archives mixed legacy human acceptance
+without qualifying technical work; it cannot substitute for the governed event.
+Keep both policy-specific denial paths and semantic classification tests on all
+supported agent hosts. Product human approval controls are never acceptance-test
+scope to remove.
+
 The canonical skill lives at
 `skills/manage-implementation-roadmaps/SKILL.md` and follows the open Agent Skills
 format. Keep one canonical copy in this repository. Let installers place or adapt it
@@ -81,6 +88,11 @@ when every implementation chunk and predecessor is done, approval is current and
 no blocker is open. Pending external criteria still prevent final closure.
 Keep exclusive unpredictable temporary publication and failure-cleanup tests;
 portable installation does not attest OS-native ACL/reparse race qualification.
+Preserve canonical completion regression tests: final approval keeps `completed`,
+while its separate fact makes records immutable and removes the temporary report.
+The user-authorized legacy normalization event must retain exact prior history,
+approval, criteria, evidence and fingerprints, reject incomplete/malformed/repeated
+conversion and preserve serialized publication and report non-recreation.
 Preserve the explicit offline human-acceptance handoff tests and documentation.
 The user-directed handoff archives original criteria and invalidates approval;
 it never supplies a human test pass or bypasses technical/security/current-receipt
@@ -89,6 +101,24 @@ Keep the denial test proving this legacy metadata event refuses receipt-governed
 roadmaps; it cannot replace their current candidate-bound completion evidence.
 
 Before publishing or changing the skill:
+
+Preserve the reviewed-chunk checkpoint procedure across hosts. Completed, tested
+and independently reviewed chunks commit on the authorized branch before later
+chunks even when parent qualification is pending. Verify owned paths/hunks and
+dependency closure, protect unrelated index/worktree changes, release source
+claims before Git changes and require a fresh baseline afterward. Installation
+does not grant push, history rewrite, main advancement or release authority.
+Test a mixed dirty worktree with accepted local work and a pending parent check;
+the checkpoint must neither capture unrelated changes nor complete the parent.
+
+Keep `technical-acceptance-revised` engine, archive validation, rendering and denial
+tests together with portable routing. It is governed and replacement-only; require
+current approval, complete unique chunks, pending controlled nonsecurity identity,
+unchanged qualification and explicit policy authority/digest. Test stale/unsafe
+amendment denial, preserved evidence/history/blockers, approval invalidation and
+blocked reapproval. Review actual policy semantics independently; an operator
+reference/digest does not authenticate a user or qualify hardware. Keep human-only
+events separate and require fresh current qualification after an amendment.
 
 Preserve governed `acceptance-scope-revised` regression coverage: explicit narrow
 human scope, immutable history/evidence/completion policy, stale-receipt denial,

@@ -271,6 +271,28 @@
       "acceptanceSignals": ["The verified loopback review URL is shared, site data is JSON, work is scoped to outcomes, and executed evidence plus real separate-invocation review govern completion."]
     },
     {
+      "id": "explicit-technical-roadmap-policy-amendment",
+      "task": "Apply an already explicit user model-quality threshold change to a pending governed roadmap criterion using the development control plane, preserving actual offload security and runtime qualification.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/scripts/roadmap.py", "docs/diagnostics/ai-development-control-plane.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/events.md", "docs/security/ai-development-control-plane-threat-model.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Use the replacement-only technical-acceptance-revised event, not a human-only scope handoff. Preserve identity, qualification, historical evidence and real resource/native/runtime obligations, archive the old policy, record actual narrow reapproval and require fresh independent qualification without inventing a pass."]
+    },
+    {
+      "id": "reviewed-roadmap-chunk-checkpoint",
+      "task": "Commit completed and tested roadmap chunks on the authorized branch, preserving security authority and source integrity. One local component has passing focused execution and accepted independent review, an unrelated file is dirty, and its parent hardware qualification is pending.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/SKILL.md", "docs/diagnostics/implementation-roadmap-skill.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/workflow.md", "docs/standards/ai-agent-development-standards.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Checkpoint only the reviewed chunk's owned dependency-complete paths or hunks after releasing source claims. Preserve unrelated index/worktree changes, report the actual commit identity and create a fresh baseline for later work. Parent hardware qualification stays pending; no accuracy rerun, parent completion, push, history rewrite or main advancement is inferred."]
+    },
+    {
       "id": "agent-governance-change",
       "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
       "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],

@@ -50,6 +50,16 @@ showing a roadmap chunk cannot manufacture a receipt or reviewer identity.
 
 ## Residual risk and recovery
 
+Completion-status normalization is a narrow metadata transition for explicitly
+authorized legacy `final-approved` records. Valid prior completion and final
+approval, completed increments, no active increment and no open blocker are
+required. Only current status, update timestamp and an appended history event
+change; approval, creation, evidence, plans, chunks and approved fingerprint stay
+unchanged. Missing/malformed facts, overrides, repeat conversion and later edits
+fail closed. `finalApproval` governs terminal immutability/report removal for both
+legacy and canonical `completed` status. This supplies no new qualification and
+does not authenticate approval against hostile same-user filesystem tampering.
+
 An explicit offline human-acceptance transfer changes scope, not test truth.
 The roadmap engine requires the current approved fingerprint, explicit authority
 reference and human-only attestation, complete implementation, no blocker, pending
@@ -93,6 +103,19 @@ and Windows ACL/privacy qualification remain controlled-platform obligations,
 consistent with this cooperative infrastructure's existing trust boundary.
 
 ## Implementation and qualification boundary
+
+Technical acceptance amendments use a distinct replacement-only governed event.
+Current approved fingerprint, complete unique implementation chunks and one pending
+controlled nonsecurity criterion are required. Identity/qualification, evidence,
+chunks, blockers and completion policy remain unchanged; exact old/new definitions,
+plan/approval and explicit policy identity/digest are archived. Local/security,
+passed/failed/missing, changed-ID, removal and malformed requests deny. The archive
+is neither offline human acceptance nor qualification. It invalidates approval and
+semantic bindings; actual narrowly authorized reapproval preserves open blockers,
+and fresh current checks/separate review remain mandatory. Authority/policy fields
+are cooperative operator declarations; independent review must verify actual user
+direction, policy bytes and retained security/resource/runtime obligations. This
+cannot authorize removing controls or turn Standard model output into offload proof.
 
 Acceptance-scope revision is security-relevant evidence authority. Its governed-only
 event requires current approved fingerprint, explicit user human-only attestation,

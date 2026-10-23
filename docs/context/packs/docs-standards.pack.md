@@ -30,6 +30,11 @@
   and read-only source-bound assessor. Preserve owner history and pending external
   environments; an automated assessment never grants approval or release status.
 
+- Explicit technical policy amendments use the roadmap skill's separate
+  `technical-acceptance-revised` event, never human-only scope transfer. Preserve
+  criterion identity/qualification, archive original policy/approval, independently
+  review actual authority and obtain fresh checks; no technical pass is inferred.
+
 - Route contributor workflow requests through `AGENTS.md` and
   `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its review
   server and share the verified URL; site data comes from versioned JSON.

@@ -411,6 +411,65 @@ pending. Approval is invalidated. Record `roadmap-approved` only for the actual
 user-authorized narrow change. Changed fingerprints invalidate old bound receipts;
 fresh checks and separate review remain mandatory. No pass or closure is created.
 
+### `legacy-acceptance-scope-revised`
+
+Use the same fields and protections as `acceptance-scope-revised`, with this
+explicit type only for a legacy roadmap without an evidence policy. The governed
+event still refuses legacy state, and this legacy event refuses governed state.
+Archive originals under `legacyAcceptanceScopeRevisions`; retain technical
+criterion IDs and qualification, pending evidence, plan/chunks, increment status,
+blockers and legacy completion policy. Approval is invalidated and the exact
+user-authorized narrow scope needs `roadmap-approved` before further work.
+This event never qualifies a test or closes an increment. Archive only acceptance
+testing performed by people; product data review, publishing authorization and
+other human approval controls remain product requirements.
+
+### `technical-acceptance-revised`
+
+Use only for an explicitly user-authorized technical policy amendment on governed,
+fully implemented work. Unlike human-only scope events, this replaces exactly one
+pending controlled nonsecurity criterion description without changing its identity
+or qualification. It removes no criterion and supplies no passing evidence.
+
+```json
+{
+  "type": "technical-acceptance-revised",
+  "incrementId": "implemented-slice",
+  "approvedFingerprint": "current-roadmap-fingerprint",
+  "authorityRef": "explicit-user-technical-policy",
+  "policyRef": "versioned-quality-contract",
+  "policyDigest": "replace-with-64-lowercase-hex-sha256",
+  "criterion": {
+    "id": "model-outcomes",
+    "description": "Use the explicitly approved output-quality contract; actual feature resources and cleanup still need qualification.",
+    "qualification": "controlled-environment"
+  },
+  "supersededRequirements": ["The earlier numeric output-quality threshold"],
+  "retainedRequirements": ["Native authority, bounded resources and actual feature execution/cleanup"],
+  "summary": "Apply the explicit narrow policy amendment without a test pass."
+}
+```
+
+Admission requires `control-plane-v1`, current approval/fingerprint, all unique
+planned chunks complete, and a verifying, implemented-pending or blocked target.
+Only known controlled nonsecurity criteria with latest pending evidence qualify.
+Local, missing, failed, passed, unknown, unchanged and security-targeted criteria,
+changed identities/qualification, removals and unknown fields are refused. Authority
+and policy references are opaque identifiers; the digest must be 64 lowercase hex
+characters. They are operator declarations, not authenticated user authority or
+automatic proof of the referenced bytes. Independent review must verify the actual
+user direction, policy artifact/digest and retained software/security obligations.
+
+`technicalAcceptanceRevisions` archives the exact old/new criterion, original plan,
+previous approval, policy identity/digest and superseded/retained requirements.
+Evidence, chunks, increment status, blockers and completion policy remain intact.
+The event invalidates approval and old semantic receipt bindings. Record
+`roadmap-approved` only for the actual narrow user authority, which may already have
+been explicitly supplied; reapproval preserves open blockers. Fresh current checks
+and separate review still govern qualification. Neither amendment nor reapproval
+is a measurement, hardware result, pass or completion. Never use this event to
+remove a security control or conceal a genuine feature/runtime/resource failure.
+
 ### `increment-completed`
 
 ```json
@@ -496,7 +555,32 @@ Use only after `roadmap-completed` and an explicit user approval response.
 ```
 
 This makes the roadmap final and immutable, removes the generated temporary report,
-and preserves the roadmap and canonical JSON state.
+and preserves the roadmap and canonical JSON state. The status remains `completed`;
+`finalApproval` is a separate approval fact, not another completion status. Any
+finally approved record is immutable regardless of its legacy or canonical status.
+
+### `completion-status-normalized`
+
+For explicit user-directed conversion of an existing legacy `final-approved`
+record, apply this narrow event through the ordinary serialized engine:
+
+```json
+{
+  "type": "completion-status-normalized",
+  "authorityRef": "user-single-completion-status",
+  "summary": "Use the canonical completed status while preserving final approval."
+}
+```
+
+Admission requires the legacy status, valid existing completion and final approval,
+all increments completed, no active increment and no open blocker. It changes only
+the current status to `completed`, the update timestamp and one appended history
+entry. Original creation time, approval, completion, plans, chunks, criteria,
+evidence, history entries and approved fingerprint remain unchanged. Missing or
+malformed facts, incomplete work, overrides and repeat conversion are refused.
+This event never creates approval, test evidence or current qualification. Final
+immutability and report removal are keyed on `finalApproval`; render cannot
+recreate a finally approved report. New work still requires a successor roadmap.
 
 ## Feedback and recovery events
 
