@@ -144,6 +144,7 @@ function prepareThinClientQualificationIdentity(launchPlan) {
             tokenHashAlgorithm: "sha256",
             scopes: [
               "artifact:read",
+              "artifact:write",
               "asset:read",
               "asset:write",
               "model:read",

@@ -226,6 +226,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["artifact:read"] },
   ],
   [
+    "GET /api/dataset-preparation/tasks/:requestId/review-page",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
     "POST /api/dataset-preparation/tasks/:requestId/approve",
     { public: false, scopes: ["artifact:write"] },
   ],

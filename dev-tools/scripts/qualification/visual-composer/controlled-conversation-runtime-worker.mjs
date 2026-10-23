@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { mkdir, lstat, open, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createControlledDatasetResult, validateControlledDatasetRequest } from "./controlled-dataset-preparation.mjs";
 
 const LOOPBACK_HOST = "127.0.0.1";
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -18,7 +19,7 @@ export function createControlledConversationRuntimeWorker(options) {
   const port = Number(options.port);
   const token = String(options.token ?? "").trim();
   const scenario = options.scenario ?? "immediate";
-  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
+  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download", "dataset-profile"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
   if (host !== LOOPBACK_HOST) {
     throw new Error(
       "Controlled runtime qualification must remain on loopback.",
@@ -38,6 +39,9 @@ export function createControlledConversationRuntimeWorker(options) {
 
   const tasks = new Map();
   const pending = new Map();
+  const datasetAdmissions = new Set();
+  const admissionCompletions = new Map();
+  const datasetExecutions = new Set();
   let stopped = false;
   const server = createServer(async (request, response) => {
     try {
@@ -70,6 +74,7 @@ export function createControlledConversationRuntimeWorker(options) {
             "model-status",
             "unload-model",
             ...(options.modelCacheRoot ? ["ensure-model-download"] : []),
+            ...(scenario === "dataset-profile" ? ["dataset-preparation.offload-v1"] : []),
           ],
         });
       }
@@ -80,15 +85,46 @@ export function createControlledConversationRuntimeWorker(options) {
         });
       }
       if (request.method === "POST" && url.pathname === "/models/unload") {
+        if (pending.size || datasetAdmissions.size || datasetExecutions.size) return sendJson(response, 409, { error: { code: "model_unload_blocked", message: "Owned tasks are active; unload is unavailable." } });
         return sendJson(response, 200, {
           unloadedModels: [],
           activeTaskCount: 0,
         });
       }
       if (request.method === "POST" && url.pathname === "/tasks/start") {
+        if (stopped) return sendJson(response, 503, { error: { code: "runtime.stopping", message: "Runtime admission is closed." } });
         const body = await readJsonBody(request);
-        if (scenario !== "immediate" && tasks.has(body?.requestId)) return sendJson(response, 409, {error:{code:"runtime.duplicate-task",message:"The task identity is already owned."}});
-        if (scenario !== "immediate" && body?.taskType === "ensure-model-download") {
+        if (stopped) return sendJson(response, 503, { error: { code: "runtime.stopping", message: "Runtime admission is closed." } });
+        if (!SAFE_REQUEST_ID.test(body?.requestId ?? "")) throw new Error("invalid bounded task identity");
+        if (tasks.has(body.requestId) || datasetAdmissions.has(body.requestId) || tasks.size + datasetAdmissions.size >= MAX_TASKS) return sendJson(response, 409, {error:{code:"runtime.duplicate-task",message:"The task identity is already owned or capacity is full."}});
+        datasetAdmissions.add(body.requestId);
+        let admissionDone;
+        admissionCompletions.set(body.requestId, new Promise(resolve => { admissionDone = resolve; }));
+        try {
+        if (scenario === "dataset-profile" && body?.taskType === "prepare-training-dataset") {
+          await validateControlledDatasetRequest(body.payload);
+          if (stopped || tasks.has(body.requestId)) throw new Error("dataset admission closed");
+          const attempt = [...tasks.values()].filter(task => task.taskType === "prepare-training-dataset").length + 1;
+          const now = new Date().toISOString();
+          const task = { requestId: body.requestId, taskType: body.taskType, status: attempt === 3 ? "queued" : "running", ...(attempt === 3 ? {} : { progress: { stage: "generation", message: "Synthetic dataset execution is running." } }), startedAt: now, updatedAt: now };
+          tasks.set(body.requestId, task);
+          const timer = setTimeout(() => {
+            // Establish noncancellable execution before the first awaited I/O.
+            task.status = "running";
+            const execution = (async () => {
+            try {
+              if (attempt === 1) tasks.set(body.requestId, { ...task, status: "failed", error: { code: "generation_insufficient_resources", message: "Synthetic resource denial: insufficient available memory for the selected profile.", details: { stage: "generation", reasonCode: "generation_insufficient_resources", memoryShortfall: { resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0 } } }, completedAt: new Date().toISOString() });
+              else tasks.set(body.requestId, { ...task, status: "succeeded", data: await createControlledDatasetResult(body.payload), completedAt: new Date().toISOString() });
+            } catch { tasks.set(body.requestId, { ...task, status: "failed", error: { code: "controlled_dataset_failed", message: "Synthetic dataset fixture validation failed." }, completedAt: new Date().toISOString() }); }
+            finally { pending.delete(body.requestId); }
+            })();
+            datasetExecutions.add(execution);
+            void execution.finally(() => datasetExecutions.delete(execution));
+          }, attempt === 1 ? 250 : 6000);
+          pending.set(body.requestId, [timer]);
+          return sendJson(response, 200, { requestId: body.requestId, taskType: body.taskType, accepted: true, status: task.status, startedAt: now, updatedAt: now });
+        }
+        if (["observed-download", "worker-failure-download", "disconnect-download"].includes(scenario) && body?.taskType === "ensure-model-download") {
           validateControlledDownload(body.payload, options.modelCacheRoot);
           if (!SAFE_REQUEST_ID.test(body.requestId ?? "") || tasks.size >= MAX_TASKS) throw new Error("invalid bounded task identity");
           const now = new Date().toISOString();
@@ -132,6 +168,7 @@ export function createControlledConversationRuntimeWorker(options) {
           return sendJson(response,200,{requestId:body.requestId,taskType:body.taskType,accepted:true,status:"running",startedAt:now,updatedAt:now});
         }
         const task = await createCompletedTask(body, options.modelCacheRoot);
+        if (stopped) throw new Error("runtime admission closed");
         if (tasks.size >= MAX_TASKS) tasks.delete(tasks.keys().next().value);
         tasks.set(task.requestId, task);
         return sendJson(response, 200, {
@@ -142,6 +179,9 @@ export function createControlledConversationRuntimeWorker(options) {
           startedAt: task.startedAt,
           updatedAt: task.updatedAt,
         });
+        } finally {
+          datasetAdmissions.delete(body.requestId); admissionCompletions.delete(body.requestId); admissionDone();
+        }
       }
       const taskMatch = /^\/tasks\/([A-Za-z0-9._:-]{1,128})$/.exec(
         url.pathname,
@@ -151,6 +191,9 @@ export function createControlledConversationRuntimeWorker(options) {
         const id=cancelMatch[1]; const task=tasks.get(id);
         if(!task) return sendJson(response,404,{error:{code:"runtime.task-not-found",message:"The runtime task is unavailable."}});
         const timers=pending.get(id);
+        if (scenario === "dataset-profile" && task.taskType === "prepare-training-dataset" && task.status === "running") {
+          return sendJson(response,200,{requestId:id,cancelled:false,status:"running",message:"Running dataset preparation is not cancellable; continue observing."});
+        }
         if(timers) {
           for(const timer of timers) clearTimeout(timer);pending.delete(id);
           tasks.set(id,{...task,status:"cancelled",progress:undefined,updatedAt:new Date().toISOString(),completedAt:new Date().toISOString()});
@@ -212,6 +255,8 @@ export function createControlledConversationRuntimeWorker(options) {
       stopped = true;
       for(const timers of pending.values()) for(const timer of timers) clearTimeout(timer);
       pending.clear();
+      server.closeAllConnections();
+      await Promise.allSettled([...admissionCompletions.values(), ...datasetExecutions]);
       if (!server.listening) return;
       server.closeAllConnections();
       await new Promise((resolve, reject) => {

@@ -190,10 +190,10 @@
 
 ## Adjacent Packs
 
+- Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin.
 - `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
 - `runtime` or `runtime-task-registry` for worker execution/lifecycle.
 - `desktop-implementation` for renderer and thin-client experience.
 - `server-host` for Express/API composition.
-- `security` whenever authority, untrusted parsing, provider access,
-  diagnostics, or publication changes.
+- `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.

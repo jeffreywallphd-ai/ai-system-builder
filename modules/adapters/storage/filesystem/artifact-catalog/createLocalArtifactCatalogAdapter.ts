@@ -4,6 +4,7 @@ import path from "node:path";
 import { resolveArtifactFamily } from "../../../../application/shared/artifact-family-classifier";
 import type {
   ArtifactCatalogAppendPort,
+  ArtifactCatalogCreatePort,
   ArtifactCatalogDeletePort,
   ArtifactCatalogReadPort,
   ArtifactCatalogRecord,
@@ -19,6 +20,7 @@ import { normalizeArtifactFamily } from "../../../../domain/artifact";
 import { mutateDocumentRecord, readDocumentRecord, type StructuredDocumentStore } from "../../../persistence/shared";
 
 const DEFAULT_CATALOG_FILE = ".catalog/artifact-catalog.ndjson";
+class ConditionalCatalogConflict extends Error {}
 
 type ArtifactCatalogRecordLine = ArtifactCatalogRecord | { workspaceId: string; storageKey: string; deletedAt: string };
 
@@ -29,7 +31,7 @@ export interface CreateLocalArtifactCatalogPersistenceAdapterOptions {
 }
 
 export interface LocalArtifactCatalogPersistenceAdapter
-  extends ArtifactCatalogAppendPort, ArtifactCatalogReadPort, ArtifactCatalogDeletePort {}
+  extends ArtifactCatalogAppendPort, ArtifactCatalogCreatePort, ArtifactCatalogReadPort, ArtifactCatalogDeletePort {}
 
 function normalizeRecord(record: ArtifactCatalogRecord): ArtifactCatalogRecord {
   const storedFamily = normalizeArtifactFamily(record.artifactFamily);
@@ -174,6 +176,26 @@ export function createLocalArtifactCatalogPersistenceAdapter(
   }
 
   return {
+    async createArtifactCatalogRecordIfAbsent(request, context = {}) {
+      if (!options.documents) return createFailureResult(createContractError("unavailable", "Conditional catalog publication requires structured persistence."), context);
+      try {
+        const selected = options.documents;
+        const organizationId = selected.organizationId;
+        const documents = organizationId ? selected.forOrganization(organizationId) : selected;
+        if (context.organizationId !== undefined && context.organizationId !== organizationId) throw new Error("Organization differs");
+        const record = normalizeRecord(request.record);
+        if (!isWorkspaceId(record.workspaceId) || context.workspaceId !== record.workspaceId) return createFailureResult(createContractError("validation", "Conditional catalog publication requires its workspace context."), context);
+        const created = await mutateDocumentRecord({ rootDirectory, documents }, catalogFile, [] as ArtifactCatalogRecordLine[], stored => {
+          if (!Array.isArray(stored)) throw new Error("Invalid catalog state");
+          const parsed = stored.map(entry => parseRecordLine(JSON.stringify(entry)));
+          if (parsed.some(entry => !entry)) throw new Error("Invalid catalog state");
+          const exists = parsed.some(entry => entry!.workspaceId === record.workspaceId && entry!.storageKey === record.storageKey);
+          if (exists) throw new ConditionalCatalogConflict();
+          return { value: [...stored, record], result: true };
+        });
+        return created ? createSuccessResult({ storageKey: record.storageKey }, context) : createFailureResult(createContractError("conflict", "Artifact catalog identity already exists."), context);
+      } catch (error) { return createFailureResult(createContractError(error instanceof ConditionalCatalogConflict ? "conflict" : "unavailable", error instanceof ConditionalCatalogConflict ? "Artifact catalog identity already exists." : "Conditional catalog publication could not be confirmed."), context); }
+    },
     async appendArtifactCatalogRecord(request, context = {}) {
       try {
         const record = normalizeRecord(request.record);

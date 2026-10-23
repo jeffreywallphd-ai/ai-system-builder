@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import io
 import json
 import os
@@ -134,7 +135,13 @@ class InstalledGenerationQualificationTests(unittest.TestCase):
 
     def test_selected_baseline_modules_load_in_a_genuinely_fresh_process(self):
         with tempfile.TemporaryDirectory() as directory:
-            folder=Path(directory);qualification.prepare_baseline(folder)
+            # Test historical module substitution independently of the driver
+            # guard, which must refuse today's changed common inference runtime.
+            folder=Path(directory);base=folder/"baseline";base.mkdir()
+            for name,digest in qualification.BASELINE_FILES.items():
+                content=subprocess.check_output(["git","show",f"{qualification.BASELINE}:modules/adapters/runtime/python/worker/tasks/{name}"],cwd=qualification.ROOT,timeout=10)
+                self.assertEqual(hashlib.sha256(content).hexdigest(),digest)
+                (base/name).write_bytes(content)
             code='''import sys,json
 from pathlib import Path
 sys.path.insert(0,str(Path.cwd()/"dev-tools/scripts/qualification"))
@@ -145,6 +152,14 @@ print(json.dumps({"generation":Path(generation.__file__).parent==Path(sys.argv[1
             result=subprocess.run([sys.executable,"-s","-B","-c",code,str(folder)],cwd=qualification.ROOT,env={**os.environ,"PYTHONNOUSERSITE":"1"},capture_output=True,text=True,timeout=60)
             self.assertEqual(result.returncode,0,result.stderr[-2000:])
             self.assertEqual(json.loads(result.stdout),{"generation":True,"runtime":True,"binding":True})
+
+    def test_historical_driver_refuses_changed_common_runtime(self):
+        original=Path.read_bytes
+        runtime=qualification.ROOT/"modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+        def read(path):return b"changed common inference runtime" if path==runtime else original(path)
+        with tempfile.TemporaryDirectory() as directory,patch.object(Path,"read_bytes",new=read):
+            with self.assertRaisesRegex(ValueError,"runtime changed"):
+                qualification.prepare_baseline(Path(directory))
 
 
 if __name__=="__main__":unittest.main()

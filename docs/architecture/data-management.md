@@ -538,6 +538,18 @@ agent-executable qualification are specified in
 curation, workspace/source authority and truthful running-cancellation behavior
 remain authoritative.
 
+Fresh generated uploads record a workspace-owned primary local storage binding
+at their verified write origin before catalog success. Desktop/server inject the
+binding writer for buffered and streamed uploads with structured persistence.
+Distinct create-if-absent operations use each metadata family's revision CAS;
+the check is repeated on conflict and cannot fall back to append/upsert. Existing
+append/upsert callers remain compatible. Non-authoritative JSON compatibility
+does not acquire this conditional capability. This repairs preparation of
+new sources without adopting explicit-key/legacy records or relaxing missing-
+binding denial. Failed metadata publication reports failure; retained unregistered
+owned bytes and native publication/reparse races remain distinct recovery and
+qualification concerns.
+
 ## Memory admission notifications
 
 Dataset Preparation memory-admission failures use the workspace notification

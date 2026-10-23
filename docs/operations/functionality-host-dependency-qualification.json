@@ -1,0 +1,361 @@
+{
+  "schema_version": "functionality-host-dependency-qualification-v1",
+  "status": "qualified-bounded-host-support",
+  "work_id": "functionality-host-dependency-candidate-v4",
+  "baseline_commit": "65be1b96218e252c6c6482956f2cb1fcb2ad0bfc",
+  "scope": "Selected immediate-upload ownership adapters, the existing read-only prepared-row route and controlled host fixtures. Actual packaged desktop and browser UI, with synthetic runtime outputs only. Separate overall, target, native, offload and security-owner qualification remains required.",
+  "product_source_identity": "source.0ba9679e0f638a2b0a8579e84f5ce8c11822f421de7f1b632e43839d9ed21d66",
+  "source_files": [
+    {
+      "path": "dev-tools/README.md",
+      "sha256": "3b1f12f4318b5a83e389fc4edc84d76beb3112012975f99a1af0c717580bd69a"
+    },
+    {
+      "path": "dev-tools/config/contributor-check-profiles.json",
+      "sha256": "59f18577553fbbe10eca3833bee970ad822ca0dcb95672ea28bbbc297837093c"
+    },
+    {
+      "path": "dev-tools/helpers/control_plane/catalog.py",
+      "sha256": "37fcbfd1c6fe1d202b6e64daff557e6597be98d7ba1527b11f86543521699e5e"
+    },
+    {
+      "path": "dev-tools/helpers/tests/test_control_plane_delivery.py",
+      "sha256": "af8e296777bb1b04512dcfde217050cbd9c77ffabc0dfd77b23648e66500027b"
+    },
+    {
+      "path": "dev-tools/helpers/tests/test_control_plane_site.py",
+      "sha256": "0991b8a06d707ea9b1da37c46c25e914941d0a791c8be7da087bb82bf74b42f4"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+      "sha256": "f93c91925553e300d748967a49dd4b77a3366ab773d8b3627f2354970a4e466d"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
+      "sha256": "272d2f221df39263816e68ca8fde2266ee41fbe60ecbf45b3287bb931ef2d0d3"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_installed_generation_qualification.py",
+      "sha256": "12f748f07b514b4859cfdc837830cf77a4640bd28b66697090c429d909acb457"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
+      "sha256": "457e104ad56bda16ad80029719852bdc4704d6f324f1a6def779a7ba63831637"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/controlled-dataset-preparation.mjs",
+      "sha256": "c42953150be83bdc0a161772f0014c9e5cb951a6bb4f40994f9f95a8756f116d"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts",
+      "sha256": "055feb6b64618ee17fd67ea75fa878a6fe926a103d3ee86276be5969bc553deb"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts",
+      "sha256": "167536747830705c5cf9fb183f561ee218900d3aa70826fb743dd7637a945193"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
+      "sha256": "8948d7268c07daf06f1d0dbacca362f26cecfeaf6532d8ab4359ea2b9143c984"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
+      "sha256": "5151b1d49aee580a049d6b71ec85eaecaa8bcb832066ca90a4e699872b2e3b85"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+      "sha256": "9694e38dfcb31b557dc391b4d88f3e17a3567e37907f7ca23381bc0c9a730568"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/visual-composer-server-entry.ts",
+      "sha256": "f4add0cbf8bf3a053b28ec6cfcd3e3f7d9ec4c39ee57450cce0d22b2c2bb20a8"
+    },
+    {
+      "path": "docs/architecture/data-management.md",
+      "sha256": "9f96ec1a859b6bf6c5d754e977fda0a411aec72bc7cc262d59387685f8f9f257"
+    },
+    {
+      "path": "docs/context/packs/data-management.pack.md",
+      "sha256": "728a26bf8794ca8f2fc0e9257d62a8108181a7c3d95033872f1c41e1cdd14a02"
+    },
+    {
+      "path": "docs/diagnostics/ai-development-control-plane.md",
+      "sha256": "ad30169585d6dbe9d82d9e48554703dd55faf6554b9621bb682033c2d019d47c"
+    },
+    {
+      "path": "docs/operations/current-host-memory-notification-qualification.json",
+      "sha256": "39e18855a8c48c6145bcdc40ff0543128724b8e767c13da2d15992742195c3a2"
+    },
+    {
+      "path": "docs/operations/functionality-outcome-qualification.md",
+      "sha256": "79863aea7e6c79715325f3c661cea7ddc5fea73107f6d73d155118d717b04c77"
+    },
+    {
+      "path": "docs/security/data-management-threat-model.md",
+      "sha256": "a94724d3825f7bf0da65ae9b79e68f7b117a57c889063b67ecca83692c1af4cb"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-catalog/createLocalArtifactCatalogAdapter.ts",
+      "sha256": "c1b64fd99f7bb67b7ed5a78f58aad6355ee78fcd4153cf92490aeba201f618cc"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter.ts",
+      "sha256": "4a590af3bfb39b3963bcfc32260461e1e90920c5363ce4094d1b8315aa78f1a5"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-catalog/tests/conditional-artifact-origin.unit.test.ts",
+      "sha256": "baf8770429a9648bd96c5ddcbf47f263769717414efb19672d117b7765ef0341"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-store/README.md",
+      "sha256": "32a1a6587c1a9c4791430f71ddb395570bfe6299429793614c7ff9f9310b4436"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-store/createFilesystemArtifactStorageAdapter.ts",
+      "sha256": "36597ef8012b665c58b7d1f51d990268f67e33251a1c3fa5dbe30aed261e69af"
+    },
+    {
+      "path": "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-upload-binding.integration.test.ts",
+      "sha256": "f1e3aaa9bef5bbe9a87951ed142a7000de914c9a72038fc8c7f53ae2f132e1f4"
+    },
+    {
+      "path": "modules/adapters/transport/api-express/README.md",
+      "sha256": "936cfbe3cfe97d0d0f96757581674884788e0fde46aa06cc61123201939351bf"
+    },
+    {
+      "path": "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+      "sha256": "7b2cacf91f2cc8aa0cadad222cc310115a4b3e6c380d6d05d3f67ecd178b213a"
+    },
+    {
+      "path": "modules/adapters/transport/api-express/tests/dataset-preparation-review-policy.unit.test.ts",
+      "sha256": "f43c6200d68af34cdf07eb58d4dfdc467a38b17aba5ee187654af6116b86d0b9"
+    },
+    {
+      "path": "modules/application/ports/artifact-catalog/artifact-catalog.port.ts",
+      "sha256": "dde81fa7d6af3d61f33eaaaf88064bb7b910be812135807fa673a35610bd2df8"
+    },
+    {
+      "path": "modules/application/ports/storage/artifact-storage-binding.port.ts",
+      "sha256": "e769c24ee8a72d96598c9515522e7582030b46e1cc29349543927b4c71f5e588"
+    },
+    {
+      "path": "modules/hosts/desktop/composition/composeDesktopArtifactFeature.ts",
+      "sha256": "ff4e86972204ffb036dd0a73b58cc52722f72c3516ae0140aee6278a8fdc3485"
+    },
+    {
+      "path": "modules/hosts/server/composition/composeServerHost.ts",
+      "sha256": "be08b2a24861e35027df2da9f5728ced6609a0a1c891129dfc3032919cd80ebb"
+    }
+  ],
+  "host_report": {
+    "path": "artifacts/qualification/visual-composer/runs/2026-10-23t20-50-50-792z-7b8dcd5c/evidence.json",
+    "sha256": "db73c15c2d4c83bec6413f859a30411fd90fda3dd1fe6f032a6313a625fbcf07",
+    "status": "passed",
+    "checks": [
+      {
+        "id": " / thin-chrome / thin-client-browse.e2e.spec.ts / thin client preserves the complete browse authoring journey",
+        "target": "thin-chrome",
+        "status": "passed",
+        "durationMs": 6678
+      },
+      {
+        "id": " / thin-chrome / thin-client-low-memory.e2e.spec.ts / thin client retains optional profile through resource denial, cancellation observation and approved dataset persistence",
+        "target": "thin-chrome",
+        "status": "passed",
+        "durationMs": 17554
+      },
+      {
+        "id": " / packaged-desktop / packaged-desktop-browse.e2e.spec.ts / packaged desktop preserves the complete browse authoring journey",
+        "target": "packaged-desktop",
+        "status": "passed",
+        "durationMs": 9266
+      },
+      {
+        "id": " / packaged-desktop / packaged-desktop-low-memory.e2e.spec.ts / packaged desktop retains optional profile through resource denial, cancellation observation and approved dataset persistence",
+        "target": "packaged-desktop",
+        "status": "passed",
+        "durationMs": 26484
+      }
+    ]
+  },
+  "low_memory_host_reports": [
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t20-50-50-792z-7b8dcd5c/low-memory-dataset/desktop.json",
+      "sha256": "bad6cc2d1cbb72b07e0786aafb68c3d0d563c87d157ce2c0b4d2fc616c111b67",
+      "observed": {
+        "schemaVersion": "low-memory-dataset-host-journey-v1",
+        "status": "passed",
+        "host": "desktop",
+        "sourceRevision": "source.0ba9679e0f638a2b0a8579e84f5ce8c11822f421de7f1b632e43839d9ed21d66",
+        "resourceDenial": true,
+        "notificationCenter": true,
+        "notificationRecordCount": 1,
+        "measuredRamShortfallMiB": 243,
+        "inlineMemoryDuplicate": false,
+        "rawWorkerMessageExposed": false,
+        "sameSettingsRetry": true,
+        "runningCancellationNotClaimed": true,
+        "readyRowsReviewed": true,
+        "approvedArtifactVisible": true,
+        "queuedCancellationAndRetry": true,
+        "evidence": "real host plumbing with synthetic worker; model qualification separate"
+      }
+    },
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t20-50-50-792z-7b8dcd5c/low-memory-dataset/thin.json",
+      "sha256": "84ab0b3da155a362a90023787959afadf518fd1ea9419b79781ae5dd4ea7bfab",
+      "observed": {
+        "schemaVersion": "low-memory-dataset-host-journey-v1",
+        "status": "passed",
+        "host": "thin",
+        "sourceRevision": "source.0ba9679e0f638a2b0a8579e84f5ce8c11822f421de7f1b632e43839d9ed21d66",
+        "resourceDenial": true,
+        "notificationCenter": true,
+        "notificationRecordCount": 1,
+        "measuredRamShortfallMiB": 243,
+        "inlineMemoryDuplicate": false,
+        "rawWorkerMessageExposed": false,
+        "sameSettingsRetry": true,
+        "runningCancellationNotClaimed": true,
+        "readyRowsReviewed": true,
+        "approvedArtifactVisible": true,
+        "queuedCancellationAndRetry": true,
+        "evidence": "real host plumbing with synthetic worker; model qualification separate"
+      }
+    }
+  ],
+  "focused_tests": [
+    {
+      "log": ".local-codex/immediate-upload-focused-stdout.log",
+      "sha256": "30c9744d5bf88e53ba6b7aa66748000f8ac7327a88183ed053dae52c5ea49418",
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "log": ".local-codex/host-memory-fixture-stdout.log",
+      "sha256": "a9fdf2f34c099aa79363df3de09b239351802a16ea413e2b5b5859c367f161c9",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "log": ".local-codex/dataset-review-policy-after-fix-stdout.log",
+      "sha256": "d033788f076e4c6b8ca9be4448bd9509ea7f65fde0c7433852a1358b29b08e1c",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "failed_history": [
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t20-31-37-680z-339288ef/evidence.json",
+      "sha256": "edf1207028e43999cf274e34a932810aa51fee68c3b51858588e9ad48f2a2590",
+      "status": "failed",
+      "passed_journeys": 3,
+      "explanation": "Browser dataset review lacked the exact existing read-only route permission. A focused test reproduced the denial; the guarded permission row was added."
+    },
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t20-38-55-877z-f84b62a9/evidence.json",
+      "sha256": "03023f54c8660be3e2dd3672ea174b0cdc819a0cfceb2b6ff00e06838ad9eb2b",
+      "status": "failed",
+      "passed_journeys": 3,
+      "explanation": "Browser model-task bootstrap lost a local fetch connection. Its cause remains unknown. The focused diagnostic passed without reproducing it; do not infer a cause from the later passing run."
+    }
+  ],
+  "review_route_regression": {
+    "before_fix": {
+      "log": ".local-codex/dataset-review-policy-before-fix-stdout.log",
+      "sha256": "834d639dd73e4d443fdbc081b7de415047ea41790e404584efe2e3ec81d146c2",
+      "passed": 0,
+      "failed": 1
+    },
+    "after_fix": "Eight policy, middleware and handler tests passed. Anonymous401, wrong-scope403 and allowed read200 are middleware checks; the actual browser journey supplies host proof. Mutations still require artifact:write."
+  },
+  "historical_verifier_regression": {
+    "log": ".local-codex/historical-verifier-regression-stderr.log",
+    "sha256": "d7416510fdcf4597418319825e6bfc6976ca294e6cb8232ca245bff84b925894",
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "Model-free tests of frozen historical module hashes/substitution and current-runtime denial. The original runtime/driver remains unchanged; no generation or accuracy test."
+  },
+  "registered_failure_history": {
+    "receipt": "8f78f11f9f88f8fbba79bbd638b6371821c31d9cca96671c118b60ccd5f7888b",
+    "status": "failed",
+    "causes": [
+      "The selected context pack exceeded its 200-line guard by one line; a routing bullet was folded without removing any trigger.",
+      "A historical baseline substitution test incorrectly required the current shared runtime to equal frozen old code. The corrected test verifies immutable historical hashes independently and separately proves changed-runtime denial."
+    ]
+  },
+  "production_build_checks": [
+    {
+      "check": "desktop-production-types",
+      "exit_code": 0,
+      "seconds": 8.359,
+      "logs": [
+        {
+          "path": ".local-codex/host-dependency-desktop-production-types-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/host-dependency-desktop-production-types-stderr.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "check": "build-server",
+      "exit_code": 0,
+      "seconds": 12.266,
+      "logs": [
+        {
+          "path": ".local-codex/host-dependency-build-server-stdout.log",
+          "sha256": "71b2e5a237a7fdd4ddec68af43bc509960ebcbc0cff1cfe89a5b5b40e2ee8ccd",
+          "bytes": 65
+        },
+        {
+          "path": ".local-codex/host-dependency-build-server-stderr.log",
+          "sha256": "ee8b5ccd8d8886a4b69ed8cb2b5db4a5070239129b8430805dcc8ec30ecbe362",
+          "bytes": 217
+        }
+      ]
+    },
+    {
+      "check": "build-thin-client",
+      "exit_code": 0,
+      "seconds": 9.282,
+      "logs": [
+        {
+          "path": ".local-codex/host-dependency-build-thin-client-stdout.log",
+          "sha256": "4112024eff55b9dc774c4a39cd4810ac561619ce27e0cf13e0f7641e477d8e3c",
+          "bytes": 744
+        },
+        {
+          "path": ".local-codex/host-dependency-build-thin-client-stderr.log",
+          "sha256": "25c33b1f02b29be7e5114cf7c47c6eaf8fed2f6dcb1d192548f6d8beba922eac",
+          "bytes": 559
+        }
+      ]
+    }
+  ],
+  "exploratory_root_typecheck": {
+    "status": "failed",
+    "log": ".local-codex/host-dependency-typecheck-stdout.log",
+    "sha256": "4c6d1284331b1e819d3caa4803aab921fc55a1ef6f659434242ee075a32641f3",
+    "diagnostics": 839,
+    "affected_files": 205,
+    "selected_path_diagnostics": 0,
+    "scope": "An extra check with the root all-source/test CommonJS configuration; not a registered gate. No baseline comparison was performed. Actual production desktop types and configured server/thin builds are reported separately; this failure is not suppressed or called a pass."
+  },
+  "resource_fact_interpretation": "The 243 MiB shortfall rendered by each host is a fixed synthetic fixture value. It is not measured physical available RAM or real model memory. These journeys qualify notification/retry/review/save plumbing, not model or optional offload execution.",
+  "limits": [
+    "No model accuracy tests were repeated.",
+    "No provider requests, downloads, retained staging access or offload lease was used.",
+    "Earlier failed full runs are retained; the generic fetch failure remains unexplained.",
+    "Passing support does not complete any parent roadmap, criterion, work chunk or final aggregate gate.",
+    "The complete source identity covers modules, apps, dev-tools and dependency manifests. This documentation record is written afterward and does not change that product identity."
+  ]
+}

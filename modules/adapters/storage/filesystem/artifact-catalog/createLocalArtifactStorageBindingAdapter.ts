@@ -4,6 +4,7 @@ import path from "node:path";
 import type {
   ArtifactStorageBindingBatchReadPort,
   ArtifactStorageBindingPort,
+  ArtifactStorageBindingCreatePort,
 } from "../../../../application/ports/storage";
 import { createContractError, createFailureResult, createSuccessResult } from "../../../../contracts/shared";
 import {
@@ -13,6 +14,7 @@ import {
 import { mutateDocumentRecord, readDocumentRecord, type StructuredDocumentStore } from "../../../persistence/shared";
 
 const DEFAULT_BINDINGS_FILE = ".catalog/artifact-storage-bindings.ndjson";
+class ConditionalBindingConflict extends Error {}
 
 export interface CreateLocalArtifactStorageBindingAdapterOptions {
   rootDirectory: string;
@@ -66,7 +68,7 @@ function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined 
 
 export function createLocalArtifactStorageBindingAdapter(
   options: CreateLocalArtifactStorageBindingAdapterOptions,
-): ArtifactStorageBindingPort & ArtifactStorageBindingBatchReadPort {
+): ArtifactStorageBindingPort & ArtifactStorageBindingBatchReadPort & ArtifactStorageBindingCreatePort {
   const rootDirectory = path.resolve(options.rootDirectory);
   const bindingsFile = options.bindingsFile ?? DEFAULT_BINDINGS_FILE;
   const bindingsPath = path.join(rootDirectory, bindingsFile);
@@ -141,6 +143,26 @@ export function createLocalArtifactStorageBindingAdapter(
   }
 
   return {
+    async createArtifactStorageBindingIfAbsent(request, context = {}) {
+      if (!options.documents) return createFailureResult(createContractError("unavailable", "Conditional binding publication requires structured persistence."), context);
+      try {
+        const selected = options.documents;
+        const organizationId = selected.organizationId;
+        const documents = organizationId ? selected.forOrganization(organizationId) : selected;
+        if (context.organizationId !== undefined && context.organizationId !== organizationId) throw new Error("Organization differs");
+        const binding = normalizeArtifactStorageBinding(request.binding);
+        if (!binding.workspaceId || binding.workspaceId !== context.workspaceId) return createFailureResult(createContractError("validation", "Conditional binding publication requires its workspace context."), context);
+        const created = await mutateDocumentRecord({ rootDirectory, documents }, bindingsFile, [] as ArtifactStorageBindingLine[], stored => {
+          if (!Array.isArray(stored)) throw new Error("Invalid binding state");
+          const parsed = stored.map(entry => parseBindingLine(JSON.stringify(entry)));
+          if (parsed.some(entry => !entry)) throw new Error("Invalid binding state");
+          const exists = parsed.some(entry => entry!.workspaceId === binding.workspaceId && entry!.artifactId === binding.artifactId);
+          if (exists) throw new ConditionalBindingConflict();
+          return { value: [...stored, binding], result: true };
+        });
+        return created ? createSuccessResult({ binding }, context) : createFailureResult(createContractError("conflict", "Artifact binding identity already exists."), context);
+      } catch (error) { return createFailureResult(createContractError(error instanceof ConditionalBindingConflict ? "conflict" : "unavailable", error instanceof ConditionalBindingConflict ? "Artifact binding identity already exists." : "Conditional binding publication could not be confirmed."), context); }
+    },
     async upsertArtifactStorageBinding(request, context = {}) {
       try {
         const normalizedBinding = normalizeArtifactStorageBinding(request.binding);

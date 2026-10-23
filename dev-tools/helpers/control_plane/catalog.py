@@ -13,7 +13,7 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site",
+    "review-site", "host-memory-fixture",
 )
 
 

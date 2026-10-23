@@ -250,6 +250,23 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                 with self.assertRaises(ControlError):
                     run_focused_checks.profile_commands(self.root, "review-site")
 
+    def test_host_memory_profile_stays_model_free_and_does_not_hide_other_impact(self):
+        root = HELPERS.parents[1]
+        profiles = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"]
+        profile = profiles["host-memory-fixture"]
+        self.assertEqual(profile["test_paths"], [
+            "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+        ])
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
+        self.assertIn(source, profile["source_paths"])
+        self.put("dev-tools/config/contributor-check-profiles.json", json.dumps({
+            "schema_version": "contributor-check-profiles-v1", "profiles": {"host-memory-fixture": profile},
+        }))
+        for paths, focused in [([source], False), ([source, "modules/other/source.ts"], True)]:
+            planned = catalog.plan(self.root, paths, ["host-memory-fixture"], "candidate")
+            self.assertEqual("focused-tests" in [c["id"] for c in planned["selected"]], focused)
+
     def test_vitest_adapter_executes_exact_ts_path_without_tsx_sibling(self):
         self.put("modules/example/owned.test.ts", 'import {test,expect} from "vitest"; test("selected",()=>expect(1).toBe(1));')
         self.put("modules/example/owned.test.tsx", '// @test-suite ai\nimport {test} from "vitest"; test("excluded",()=>{throw new Error("unselected sibling executed")});')

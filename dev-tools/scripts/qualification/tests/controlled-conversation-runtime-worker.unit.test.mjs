@@ -153,8 +153,8 @@ test("controlled download uses one opaque fixture handle and refuses caller path
   const { port } = await worker.start();
   const origin = `http://127.0.0.1:${port}`;
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
-  const start = payload => fetch(`${origin}/tasks/start`, { method: "POST", headers,
-    body: JSON.stringify({ requestId: "download.synthetic", taskType: "ensure-model-download", payload }) });
+  const start = (payload, requestId = "download.synthetic") => fetch(`${origin}/tasks/start`, { method: "POST", headers,
+    body: JSON.stringify({ requestId, taskType: "ensure-model-download", payload }) });
   try {
     const capabilities = await (await fetch(`${origin}/capabilities`, { headers })).json();
     assert.ok(capabilities.capabilities.includes("ensure-model-download"));
@@ -175,9 +175,10 @@ test("controlled download uses one opaque fixture handle and refuses caller path
     const snapshot = path.join(modelCacheRoot, status.data.modelHandle);
     assert.deepEqual(await readdir(snapshot), ["QUALIFICATION-ONLY.txt"]);
     assert.match(await readFile(path.join(snapshot, "QUALIFICATION-ONLY.txt"), "utf8"), /contains no model weights and does not qualify inference/);
-    assert.equal((await start(payload)).status, 200, "repeat download retains the exact controlled fixture");
+    assert.equal((await start(payload)).status, 409, "an existing task identity cannot be reused");
+    assert.equal((await start(payload, "download.repeat")).status, 200, "a new task retains the exact controlled fixture");
     await writeFile(path.join(snapshot, "QUALIFICATION-ONLY.txt"), "x".repeat(128 * 1024));
-    assert.equal((await start(payload)).status, 400, "unexpected marker size is denied before bounded content read");
+    assert.equal((await start(payload, "download.invalid-marker")).status, 400, "unexpected marker size is denied before bounded content read");
   } finally { await worker.stop(); await rm(directory, { recursive: true, force: true }); }
 });
 

@@ -8,6 +8,7 @@ import {
 } from "../../../../apps/server/src/createServer";
 import { createVisualComposerQualificationRuntimeDatabase } from "./visual-composer-runtime-database";
 import { createControlledRuntimeEnvironmentPreparer } from "./controlled-runtime-preparation.mjs";
+import { createOrganizationId } from "../../../../modules/contracts/organization";
 
 let listener: ServerListener | undefined;
 let closePersistence: (() => Promise<void>) | undefined;
@@ -30,7 +31,9 @@ async function start(): Promise<void> {
   }
   const created = await createServer({
     env: process.env,
-    structuredDocuments: createInMemoryStructuredDocumentStore(),
+    structuredDocuments: process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile"
+      ? createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("qualification.local"))
+      : createInMemoryStructuredDocumentStore(),
     runtimeDatabases: createVisualComposerQualificationRuntimeDatabase(),
     pythonRuntimeEnvironmentPreparer: createControlledRuntimeEnvironmentPreparer({
       repoRoot: process.cwd(), runRoot: runtimeRoot, environment: process.env,

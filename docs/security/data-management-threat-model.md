@@ -327,6 +327,24 @@ stronger loading/ownership/cleanup controls and failed evidence. The exact suppo
 and prospective measurement protocol are in
 `docs/operations/optional-low-memory-inference.md`.
 
+Composed-host tests exposed fresh uploaded catalog entries without the explicit
+local binding now required by source staging. Desktop/server storage composition
+therefore injects a binding writer at the verified write origin for newly generated
+workspace upload keys only. Workspace/catalog presence is checked before I/O;
+no-overwrite creation precedes the primary binding and catalog success. Persisted
+binding/catalog identity must be absent before publication and again before
+binding; metadata-only collisions deny. Key/workspace/overwrite snapshots cannot
+be changed by an asynchronous producer. Distinct conditional metadata operations
+repeat absence checks inside their owning revision CAS and preserve competing
+records; JSON compatibility refuses those operations. No unassigned organization
+is invented. Failed
+binding persistence fails closed. Explicit keys and existing missing/foreign
+bindings are not adopted, and preparation retains its pre-I/O denial. Failed
+or uncertain metadata acknowledgement can retain unregistered owned bytes; the operation reports
+failure and does not delete another file. This is not an atomic publication or a
+replacement for pending native ACL/reparse qualification. Rollback preserves the
+missing-binding denial even if upload availability is reduced.
+
 ## Memory-denial diagnostic delta
 
 Notification history is a public diagnostic sink. On the exact

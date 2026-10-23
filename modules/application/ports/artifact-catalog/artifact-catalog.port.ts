@@ -28,6 +28,14 @@ export interface ArtifactCatalogAppendPort {
   ): Promise<ContractResult<{ storageKey: string }>>;
 }
 
+/** Atomic create only; unsupported persistence must fail closed. */
+export interface ArtifactCatalogCreatePort {
+  createArtifactCatalogRecordIfAbsent(
+    request: AppendArtifactCatalogRecordRequest,
+    context?: ApplicationRequestContext,
+  ): Promise<ContractResult<{ storageKey: string }>>;
+}
+
 export interface ArtifactCatalogReadPort {
   browseArtifactCatalogRecords(
     request: BrowseArtifactCatalogRecordsRequest,

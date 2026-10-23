@@ -978,6 +978,7 @@ export function composeServerHost(
         logging: loggingPort,
         now: options.now,
         artifactCatalogAppend: artifactCatalog,
+        ...(organizationDocuments ? { artifactBindingWrite: artifactBindings } : {}),
         organizationContextProvider: options.organizationContextProvider,
       });
       const artifactBrowserRead = createFilesystemArtifactBrowserReadAdapter({

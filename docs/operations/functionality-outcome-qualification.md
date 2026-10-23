@@ -564,3 +564,36 @@ prove a loader fix. Nested stages overlap, two samplers can observe different
 peaks, and instrumentation adds overhead. One query per arm supplies neither
 statistical qualification nor a replacement for the retained four RSS failures.
 
+## Current model quality and memory-notification checks
+
+The [completed model-quality assessment](model-software-quality-qualification.json)
+uses the explicitly approved floors of30% for the0.5B model and80% for the1.5B
+model. It counts all requested cases in each completed phase. Earlier failures
+and denied runs remain historical evidence; this work does not repeat accuracy
+tests or reinstate the superseded23of24 target. Model quality, measured Standard
+resource budgets, actual host behavior and native/offload qualification are
+separate obligations.
+
+Current host checks use the existing finite synthetic Dataset Preparation worker
+on packaged desktop and thin client. Its fixed3.5GiB required and approximately
+3.26GiB available facts must produce exactly one notification-center record
+instructing the user to free at least243MiB of RAM, with the point-in-time caveat.
+Raw worker copy and inline duplicates must be absent. The journeys retain the
+selected profile and settings, retry, truthful running cancellation, ready-row
+review, explicit save, reopening, queued cancellation and retry. The two existing
+Canvas browse journeys refresh automated accessibility after source changes.
+
+Use the bounded `host-memory-fixture` checks and the existing serial Playwright
+host commands. Synthetic rows exercise real host plumbing without loading a
+model or acquiring an offload lease. Actual native termination, protected
+staging/accounting and model offload resource/lifecycle gaps retain their owning
+qualification; these checks cannot grant them a pass. Human acceptance is offline.
+
+The [current host assessment](current-host-memory-notification-qualification.json)
+records four passed actual journeys on one stable source: desktop/browser Canvas
+browse and desktop/browser memory-notification recovery. Both memory journeys
+verified one243MiB center record and no inline/raw duplicate, then completed the
+retry, cancellation, review, save and reopen paths. It retains both earlier failed
+test runs, exact report/source hashes and controlled-worker shutdown evidence.
+This is current synthetic-host support; owning and final roadmap qualification
+remain separate.

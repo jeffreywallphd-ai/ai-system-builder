@@ -4,8 +4,8 @@ import path from "node:path";
 
 // Each case exercises a fresh installed profile; a preceding case's persisted
 // workspace selection must not hide startup or change another case's outcome.
-export function prepareIsolatedDesktopCase(caseId: "browse" | "meaningful" | "lifecycle" | "pdf" | "tasks" | "reference" | "worker-exit" | "worker-disconnect" | "cold", sampleIndex?: number) {
-  assert.ok(["browse", "meaningful", "lifecycle", "pdf", "tasks", "reference", "worker-exit", "worker-disconnect", "cold"].includes(caseId));
+export function prepareIsolatedDesktopCase(caseId: "browse" | "meaningful" | "lifecycle" | "pdf" | "dataset" | "tasks" | "reference" | "worker-exit" | "worker-disconnect" | "cold", sampleIndex?: number) {
+  assert.ok(["browse", "meaningful", "lifecycle", "pdf", "dataset", "tasks", "reference", "worker-exit", "worker-disconnect", "cold"].includes(caseId));
   assert.ok(caseId === "cold" ? Number.isInteger(sampleIndex) && sampleIndex! >= 0 && sampleIndex! < 35 : sampleIndex === undefined);
   const base = process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT!;
   assert.ok(base && path.isAbsolute(base));

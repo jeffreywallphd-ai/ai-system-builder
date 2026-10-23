@@ -104,6 +104,13 @@ not claim a desktop closure, model result or native security pass.
 Focused Node/Vitest routing follows actual test imports, rather than words in
 test descriptions or fixture strings; controlled AI tests remain opt-in.
 
+The `host-memory-fixture` profile runs only the two fixed synthetic worker/fixture
+test files for memory-notification host journeys. It does not run models, accuracy
+or native/offload qualification. Execute and retain the actual packaged-desktop
+and thin-client Playwright journeys separately before claiming host delivery.
+The broader `functionality-outcomes` profile remains intact; a narrow profile
+cannot cover unrelated changed paths or grant a parent qualification.
+
 Claims last at most four hours. Use `renew` while working, `release` to hand off,
 and `recover-claim` explicitly after expiry/release. Recovery issues a new claim
 identity and retains contributor history. One source-writing claim is admitted

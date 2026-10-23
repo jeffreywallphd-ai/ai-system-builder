@@ -25,3 +25,17 @@ Current behavior:
 - keeps browser contracts storage-key based and path-agnostic,
 - keeps `artifact.content.read` descriptor-oriented,
 - serves actual image bytes through the separate `/artifact/media/view` retrieval path.
+
+Desktop and server inject the local binding writer for fresh generated upload
+keys. A verified new buffered or streamed upload records its workspace-owned
+primary local binding before catalog success. Missing workspace/catalog or failed
+binding persistence denies the operation. Persisted catalog/binding identity is
+checked before publication and again before binding; metadata-only collisions
+deny too. Final create-if-absent operations use each owning metadata CAS and
+refuse an older or unsupported conditional writer. Request key/workspace/overwrite are captured before awaits, and a fresh
+binding always uses no-overwrite publication. Explicit-key writes do not adopt a
+binding, and preparation still rejects missing/foreign bindings before source I/O.
+Publication is not a metadata transaction: a failed or uncertain metadata write can
+leave unregistered owned bytes for normal recovery; it never reports success or
+deletes unrelated files. Native publication/parent-substitution qualification
+remains separate from these cooperative ownership checks.

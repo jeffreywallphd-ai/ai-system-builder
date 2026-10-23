@@ -4,11 +4,15 @@ Dataset preparation exposes authenticated asynchronous lifecycle routes:
 
 - `POST /api/dataset-preparation/start`
 - `GET /api/dataset-preparation/tasks/:requestId`
+- `GET /api/dataset-preparation/tasks/:requestId/review-page`
 - `POST /api/dataset-preparation/tasks/:requestId/approve`
 - `POST /api/dataset-preparation/tasks/:requestId/cancel`
 
-The central deny-by-default route policy assigns artifact write/read/write
-scopes respectively, including artifact write for approval. Handlers derive principal and organization context from
+The central deny-by-default route policy requires artifact write for start,
+approval and cancellation. Task status and the exact GET review-page route require
+artifact read. Review-page handlers also require the owning workspace, principal
+and current report fingerprint; the application bounds the requested page.
+Other review-page methods and child paths remain denied. Handlers derive principal and organization context from
 security middleware, normalize workspace context, return sanitized envelopes,
 and delegate ownership and business rules to the application use case.
 

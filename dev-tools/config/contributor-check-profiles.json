@@ -986,6 +986,19 @@
         "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
         "dev-tools/config/contributor-check-profiles.json"
       ]
+    },
+    "host-memory-fixture": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
+        "dev-tools/scripts/qualification/visual-composer/controlled-dataset-preparation.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts"
+      ]
     }
   }
 }
