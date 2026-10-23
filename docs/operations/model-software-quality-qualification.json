@@ -1,0 +1,553 @@
+{
+  "schema_version": "model-software-quality-qualification-v1",
+  "status": "completed",
+  "qualification": "passed",
+  "authority_ref": "user-explicit-30percent-small-80percent-larger-software-quality-and-close-model-quality-tests",
+  "requirements": {
+    "qwen05-float32_minimum_accuracy_percent": 30,
+    "qwen15-bfloat16_minimum_accuracy_percent": 80,
+    "evaluate": "Completed model-output tests; report every device/decoder/repetition/phase separately.",
+    "conservative_denominator": "All24requestedcases per completed phase, including rejected outputs. Accepted-output accuracy is separately retained.",
+    "environment_resource_denials": "No accuracy result; not model-quality failures or blockers to this software-quality closure.",
+    "operational_failures": "Do not hide crashes, invalid accepted output, unknown exit/cleanup or software defects as hardware exclusions.",
+    "small_model_use": "Testing and low-quality free local fallback; existing validation/review controls remain.",
+    "changes_to_production_safety_guards": false
+  },
+  "evidence": {
+    "bundle": "1283a33f1a7a4d3ca7bf0864d13b3557",
+    "plan_sha256": "370d15288f80c95e5a3b4fa4a17ba94292f0b431e07b414948e65a873d885e2c",
+    "summary_sha256": "e58abaf16d0d03daef817cada95be41761143699cb4c37963056676140b71dff",
+    "index_sha256": "73a7afbfac0c4dd96e7ad39ec505ddec7302417835164d20981d2661394e5ebb",
+    "new_inference_during_review": false,
+    "completed_cohorts": 14,
+    "completed_case_rows": 672,
+    "distinct_exposed_cases": 24
+  },
+  "profiles": [
+    {
+      "profile": "qwen15-bfloat16",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "precision": "bfloat16",
+      "memory_mode": "standard",
+      "quality_test_status": "completed",
+      "quality_qualification": "passed",
+      "required_accuracy_percent": 80,
+      "integer_minimum_correct_per24": 20,
+      "completed_cohorts": 2,
+      "accuracy_range_percent": [
+        91.66666666666667,
+        91.66666666666667
+      ],
+      "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+      "run_id": "60f3f42bb91d4c3eb86fa0bda7883f2e",
+      "plan_sha256": "46b16878eea9e247bd71a363199506d9877b36dae716e75b821cc84e62ec690d",
+      "report_sha256": "e81c4e0cab1aabf34305fa871ebc241e3eab12bbbf71b3071421c0a8c1fa3cc4",
+      "evidence_index_sha256": "5c7bd1cfc83199e5d23156fdbe8da553da10f8ea5c6f771621785e817da14a29",
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "phases": {
+            "first": {
+              "correct": 22,
+              "requested_cases": 24,
+              "accepted_outputs": 24,
+              "accuracy_all_requested_percent": 91.66666666666667,
+              "accuracy_accepted_outputs_percent": 91.66666666666667,
+              "invalid_accepted": 0,
+              "required_percent": 80,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 22,
+              "requested_cases": 24,
+              "accepted_outputs": 24,
+              "accuracy_all_requested_percent": 91.66666666666667,
+              "accuracy_accepted_outputs_percent": 91.66666666666667,
+              "invalid_accepted": 0,
+              "required_percent": 80,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "phases": {
+            "first": {
+              "correct": 22,
+              "requested_cases": 24,
+              "accepted_outputs": 24,
+              "accuracy_all_requested_percent": 91.66666666666667,
+              "accuracy_accepted_outputs_percent": 91.66666666666667,
+              "invalid_accepted": 0,
+              "required_percent": 80,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 22,
+              "requested_cases": 24,
+              "accepted_outputs": 24,
+              "accuracy_all_requested_percent": 91.66666666666667,
+              "accuracy_accepted_outputs_percent": 91.66666666666667,
+              "invalid_accepted": 0,
+              "required_percent": 80,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        }
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "precision": "float32",
+      "memory_mode": "standard",
+      "quality_test_status": "completed",
+      "quality_qualification": "passed",
+      "required_accuracy_percent": 30,
+      "integer_minimum_correct_per24": 8,
+      "completed_cohorts": 12,
+      "accuracy_range_percent": [
+        37.5,
+        50.0
+      ],
+      "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+      "run_id": "de231b2e772a4e648516215ab517a4f2",
+      "plan_sha256": "c404942e999f7dd04c53d029c4c640c462e06d851e9351b28bd4395266daf427",
+      "report_sha256": "5a5311b39c471b9246f02530bc9ccfa13a53074aceda64c4968126a909eccb49",
+      "evidence_index_sha256": "a2f0277c05381d7506c74a13e8527a4b34c99a5492952675c866d8ceeba2ca8e",
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 12,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 100.0,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "phases": {
+            "first": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "phases": {
+            "first": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "phases": {
+            "first": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 10,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 41.666666666666664,
+              "accuracy_accepted_outputs_percent": 45.45454545454545,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "phases": {
+            "first": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "phases": {
+            "first": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "phases": {
+            "first": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 9,
+              "requested_cases": 24,
+              "accepted_outputs": 11,
+              "accuracy_all_requested_percent": 37.5,
+              "accuracy_accepted_outputs_percent": 81.81818181818181,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "phases": {
+            "first": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            },
+            "warm": {
+              "correct": 12,
+              "requested_cases": 24,
+              "accepted_outputs": 22,
+              "accuracy_all_requested_percent": 50.0,
+              "accuracy_accepted_outputs_percent": 54.54545454545455,
+              "invalid_accepted": 0,
+              "required_percent": 30,
+              "quality_passed": true
+            }
+          },
+          "status": "passed",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        }
+      ]
+    }
+  ],
+  "environment_observations": [
+    {
+      "profile": "qwen15-bfloat16",
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 1,
+      "status": "environment-resource-denied",
+      "accuracy": "not-applicable-no-model-output",
+      "blocks_model_quality_closure": false,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "profile": "qwen15-bfloat16",
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 2,
+      "status": "environment-resource-denied",
+      "accuracy": "not-applicable-no-model-output",
+      "blocks_model_quality_closure": false,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "profile": "qwen15-bfloat16",
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 3,
+      "status": "environment-resource-denied",
+      "accuracy": "not-applicable-no-model-output",
+      "blocks_model_quality_closure": false,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    }
+  ],
+  "prior_source_reference": {
+    "artifact": "docs/operations/model-blocker-evidence-assessment.json",
+    "sha256": "b70056210a045a6758b1000e013c5056acea837dfdbdb49ee290d7c5016e71c3",
+    "scope": "Earlier7completedlargerCPU/GPUcandidateobservations score22\u201323/24. They remain separately reviewed historical sources, not spliced fresh repetitions or new current hardware qualification."
+  },
+  "supersession": "This user-approved absolute software/model-quality contract supersedes earlier quality thresholds only for these model-quality test closures. Original23/24,22/24,9/24,paired-comparison, memory-denial and failed/interrupted evidence remain unchanged historical records.",
+  "preserved_assessments": [
+    "docs/operations/small-model-qualification.json",
+    "docs/operations/remaining-model-evidence-assessment.json",
+    "docs/operations/model-blocker-evidence-assessment.json",
+    "docs/operations/standard-generation-qualification.json"
+  ],
+  "closure_boundary": "Model-quality tests are passed and completed. No general population accuracy, full canonical composite criterion, entire roadmap, unsupported host, native/offload correctness or physical memory guarantee is granted. Unrelated software acceptance still needs its actual evidence.",
+  "remaining_quality_memory_tests": [],
+  "remaining_product_qualification": [
+    "Actual packaged-host adaptive-state, explicit override and visual-builder interaction where required.",
+    "Optional offload requires actual feature execution and qualified staging protection/accounting/worker-exit/crash guarantees; Standard output cannot certify it.",
+    "Current owning aggregate/build/review gates and separate authorized provider/OCR/security concerns remain."
+  ],
+  "security_review": {
+    "disposition": "security-relevant",
+    "controls": "Exact hashed bundle/subrun/index/measurement and owning raw-case replay; finite numeric/status/digest outputs and genuine independent review. No prompts/rawoutputs/credentials/private absolute paths, inference/downloads, retained staging or restricted security review.",
+    "residual_risk": "Same-user operator evidence is not cryptographically authenticated;24exposed regression cases do not establish unseen population accuracy."
+  }
+}

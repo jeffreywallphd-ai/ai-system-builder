@@ -1,0 +1,82 @@
+{
+  "schema_version": "standalone-model-assessment-v1",
+  "assessed_at": "2026-10-22",
+  "evidence_id": "608aab71e8e44e20a2239010123dad68",
+  "evidence_integrity": {
+    "all_indexed_files_rehashed": true,
+    "completed_case_correctness_independently_replayed": true,
+    "files": {
+      "plan.json": "74aa572065de75782b224078bd4f3a0647bd248d4eaccf545a929cd125911d4b",
+      "summary.json": "9bbd02f0e9afd9aa04511dacc1def0a9053ee933cf51b988f28515228eb10c78",
+      "cpu-unchecked-1/cohort.json": "dd45949bdb0efb3f5aa780ad8f8eb3d1d8ec7840edf4abcd925b78ca8a81cd2c",
+      "cpu-constrained-1/cohort.json": "427c74cd6f133e3e4991f8cf5cf503fb9e3744c564f9d69e0c66eaa52c8959d2"
+    },
+    "limitation": "Digest replay detects accidental edits against the supplied index; it does not authenticate an operator-controlled evidence directory."
+  },
+  "source_binding": "source.0dd5388e8f21f74b7e4df4bf04781740c8e642a5e4a95dc22703407b71c86449",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "device": "cpu",
+  "precision": "bfloat16",
+  "memory_mode": "standard",
+  "repetitions": 1,
+  "requested_cases_per_phase": 24,
+  "deadline_seconds_per_cohort": 1200,
+  "cohorts": [
+    {
+      "mode": "unchecked", "status": "failed-supervision", "reason": "execution-deadline",
+      "first": {"recorded": 24, "correct": 22, "case_seconds": 691.1894998},
+      "warm": {"recorded": 17, "correct": 15, "case_seconds": 489.3265952},
+      "peak_observed_rss_bytes": 3770314752,
+      "native_exit_confirmed": true, "native_exit_code": 1, "model_cleanup": "not-observed"
+    },
+    {
+      "mode": "constrained", "status": "failed-supervision", "reason": "execution-deadline",
+      "first": {"recorded": 24, "correct": 22, "case_seconds": 668.817657},
+      "warm": {"recorded": 18, "correct": 16, "case_seconds": 500.5014129},
+      "peak_observed_rss_bytes": 3951468544,
+      "native_exit_confirmed": true, "native_exit_code": 1, "model_cleanup": "not-observed"
+    }
+  ],
+  "findings": [
+    "Both CPU bfloat16 cohorts passed production admission and loaded the pinned model; neither exceeded the sampled 4 GiB RSS ceiling.",
+    "Both first phases accepted all 24 outputs but classified only 22 correctly. The same two synthetic cases were wrong in both modes and in recorded warm results; structural validity is not task correctness.",
+    "At the measured case cost, 48 deliveries require approximately 1340 to 1380 seconds before cleanup. The 1200-second watchdog correctly ended the cohorts.",
+    "The elapsed cost lies inside generation, not model loading or evidence saves. Missing token and forward-stage measurements prevent attributing it to output length, shared prompt prefill or CPU bfloat16 execution.",
+    "A child record left running by forced termination must not override the parent terminal failure. Partial progress is useful diagnostic evidence, not a smaller-denominator qualification pass."
+  ],
+  "action": "Improve numeric generation observations, partial summary reporting, scoped placement hooks and explicitly smaller diagnostics with cooperative stopping; preserve the watchdog and original evidence.",
+  "followup_diagnostics": [
+    {
+      "evidence_id": "3c02f6525aa947428d535f2306599591",
+      "summary_sha256": "85381c294435d4a5b7e2f3a6bb0c468e384089610641535880682ba3e5d21637",
+      "source_stable": true,
+      "disposition": "Preserved failed diagnostic. Both current CPU admissions denied memory; unchecked CUDA measured. Constrained CUDA exposed a new observer return-contract defect, corrected with ModelOutput/Tensor regressions. All four children unloaded and exited zero; this does not turn denied/failed measurement into qualification."
+    },
+    {
+      "evidence_id": "1f9b3d4c807249849d56b42790c37bba",
+      "summary_sha256": "21440a6fe10d2e6b44c3ae2a1c3758a0e89f1a69d3b248dd860d7c3c0bb254f5",
+      "all_indexed_files_rehashed": true,
+      "source_stable": true,
+      "selected_cases_per_phase": 1,
+      "device": "cuda",
+      "unchecked": {"first_seconds": 1.3500333999982104, "warm_seconds": 1.0223542000167072, "input_tokens": 644, "generated_tokens": 47, "termination": "eos"},
+      "constrained": {"first_seconds": 2.3096064999699593, "warm_seconds": 0.7490407999139279, "input_tokens": 644, "generated_tokens": 33, "termination": "eos"},
+      "both_modes_correct_first_and_warm": true,
+      "both_model_cleanup_passed": true,
+      "both_native_exit_codes": [0, 0],
+      "disposition": "Corrected observer exercised with actual supplier Tensor and structured results. One exposed case is feasibility/contract evidence only; no full quality, throughput or CPU cause inference."
+    }
+  ],
+  "roadmap_disposition": {
+    "criteria_closed": [], "current_candidate_qualification": false,
+    "affected_roadmaps": ["functionality-optimization", "optional-constrained-json-generation", "optional-low-memory-inference"],
+    "remaining": [
+      "Complete declared first/warm cohorts with observed model cleanup and confirmed native exit.",
+      "Prospectively declared matched quality and throughput/resource comparison, repeated CPU and accelerator profiles on the exact candidate.",
+      "Exposed diagnostic cases cannot become a fresh holdout or establish general capability.",
+      "CPU bfloat16 admission cannot replace historical float32 CPU denial or qualify another precision/device.",
+      "No offload lease, guarded restart, retained-file safety or security qualification was exercised."
+    ]
+  }
+}
