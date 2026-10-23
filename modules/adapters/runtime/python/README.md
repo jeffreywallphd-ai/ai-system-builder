@@ -99,9 +99,24 @@ need task/model-specific evidence in addition to unchanged contract tests.
   most 50 sanitized row values per read, and requires the exact canonical row
   fingerprint before streaming a rejected-row copy. The adapter always removes
   its temporary directory and never returns runtime paths.
-- Cancellation ends the selected task but does not stop the shared Python
-  runtime or unrelated tasks. Long deadlines reduce false failures; they do not
-  remove task progress, cancellation, terminal cleanup, or hard resource bounds.
+- Cancellation reports the selected task's actual lifecycle without stopping the
+  shared Python runtime or unrelated tasks. Queued Dataset Preparation can cancel;
+  running preparation remains active until observed completion. Other families
+  retain their supported cooperative cancellation. Deadlines do not turn an
+  unconfirmed cancellation into terminal success or remove resource bounds.
+
+Dataset ownership is reserved before its task POST, including a delayed or lost
+acknowledgement. At most 256 such private reservations are retained; capacity or
+duplicate identity denies a new dispatch without evicting uncertain work. Unknown,
+misidentified or contradictory replies do not release ownership. An exact terminal
+read, consistent confirmed cancellation, or the currently owned worker's actual
+exit does. A late acknowledgement cannot resurrect a completed task.
+Both automatic recovery paths (task cancellation/deadline and direct model-download
+timeout) share one admission fence. Recovery cannot restart protected Dataset work;
+new starts are refused while recovery runs. Unconfirmed recovery failure keeps
+admission fenced while status observation continues. A healthy read alone is not
+recovery proof. These controls do not authorize stopping retained offload workers or
+relax native shutdown and staging qualification.
 
 Dependency setup publishes only finite `python-dependency-outcomes-v1` outcomes.
 `readPythonRuntimeDependencySessionOutcomes` exposes at most the two latest
@@ -123,4 +138,49 @@ exit from its owned supervisor fails unfinished accepted tasks with a safe retry
 error, including admission/read races. Transport errors alone do not establish
 failure. Old process events cannot affect a new generation; observed terminal
 results and confirmed cancellation recovery remain authoritative.
+
+## Explicit bounded offload
+
+Idle generation unload releases its last cache-iteration reference before garbage
+collection and allocator cleanup, including Standard generators. A failed offload
+close retains the cache owner. Model unload does not reset process-global CUDA
+library state; qualification records initialized runtime floors separately from
+model/staging release and confirms actual owned process exit.
+
+Dataset Preparation's default-off `offload-v1` route validates native Qwen2 safe
+weights/tokenizer inputs, creates a tied meta-model and admits explicit bounded
+CPU/CUDA maps before loading. It does not grant overflow or change precision.
+PEFT discovery configuration/weight families, including case variants, deny
+before tokenizer/model reads; unsupported local adapters cannot redirect sources.
+Forward headroom denials retain the existing insufficient-resource task error
+and bounded numeric diagnostics; they never become format failures or poison an
+unstarted forward. Placement and execution reserve checks remain unchanged.
+The exact versioned capability gates host dispatch; passive reads do not load or
+install. Cached-generator leases retain source/staging references across tasks,
+serialize forwards, preserve request-specific generation settings and release only
+after confirmed reference cleanup. Teardown drops the graph rather than invoking
+Accelerate detach hooks that can rematerialize weights. Original inputs are never
+deleted. See `docs/operations/optional-low-memory-inference.md` for finite limits,
+initial model/template/version support, truthful cancellation and pending physical
+qualification.
+
+## Memory admission notifications
+
+Dataset Preparation memory-admission failures use the workspace notification
+center in desktop and thin client, without a duplicate inline memory error.
+Desktop preflight denial publishes before dispatch; post-start desktop failures
+remain in the existing background task activity. Thin-client observed task
+failures publish to notification history. Contextual form validation and other
+security/readiness blockers keep their existing presentation and enforcement.
+
+The worker projects only the known memory-failure code and a bounded numeric
+shortfall: resource kind (RAM, VRAM or combined), required bytes, currently
+available bytes and explicitly permitted overflow. API/IPC and UI normalize
+these facts again. Guidance rounds the remaining shortfall upward to MiB after
+subtracting already permitted overflow. It describes a point-in-time observation,
+not a guarantee that a later retry will fit. Unknown or malformed measurements
+use safe smaller-model/retry guidance without inventing an amount. No exception
+text, model/source details, filesystem paths, prompts or raw logs enter the new
+public field. Existing guards, limits, admission, cleanup and offload opt-in
+controls remain unchanged; notifications never authorize a denied model load.
 

@@ -1,3 +1,4 @@
+import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
 import {
   getDesktopApi,
   type DesktopPrepareTrainingDatasetInput,
@@ -327,6 +328,7 @@ function mapDatasetPreparationTaskFailure(
     | {
         code?: string;
         stage?: string;
+        memoryShortfall?: unknown;
       }
     | undefined,
 ): {
@@ -346,8 +348,10 @@ function mapDatasetPreparationTaskFailure(
   return {
     code,
     message:
-      DATASET_PREPARATION_FAILURE_MESSAGES[code] ??
-      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+      code === "generation_insufficient_resources"
+        ? getDatasetPreparationMemoryFailureMessage(error?.memoryShortfall)
+        : DATASET_PREPARATION_FAILURE_MESSAGES[code] ??
+          "Dataset preparation could not finish. Review the selected files and settings, then retry.",
     ...(stage ? { details: { stage, reasonCode: code } } : {}),
   };
 }
@@ -498,7 +502,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
                 details?: Record<string, unknown>;
               };
               result?: DesktopPreparedTrainingDatasetResult;
-              error?: { code?: string; stage?: string; message?: string };
+              error?: { code?: string; stage?: string; message?: string; memoryShortfall?: unknown };
             }
           | undefined;
         if (

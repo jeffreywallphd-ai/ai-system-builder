@@ -269,3 +269,9 @@ browser; the presenter does not own an alternative visibility rule.
   stops after finding the required Minimal layout; compatible browsing remains
   paged. Record local algorithm and browser-paint observations separately from
   pending reference/manual qualification; retain failures and source identity.
+
+Dataset Preparation memory-admission errors are a notification-center outcome
+without an inline duplicate, including preflight rejection. Shared memory copy
+uses validated numeric RAM/VRAM shortfalls, subtracts permitted overflow and rounds
+upward. Missing facts never produce an invented amount or bypass a guard.
+Other contextual validation and security/readiness blockers remain unchanged.

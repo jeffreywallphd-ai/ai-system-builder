@@ -9,10 +9,12 @@ import {
   createDatasetPreparationAdvancedConfigForMethod,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
+  normalizeDatasetPreparationMemoryMode,
   type DatasetPreparationTaskRecipe,
   type DatasetPreparationAdvancedPreset,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationMemoryOverflowPolicy,
+  type DatasetPreparationMemoryMode,
   type DatasetPreparationTaskType,
   type DatasetPreparationTextInputMode,
   type DatasetPreparationVisualOutputShape,
@@ -60,6 +62,7 @@ export interface BuildDatasetPreparationRequestInput {
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
   modelMemoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
+  modelMemoryMode?: DatasetPreparationMemoryMode;
   failurePolicy: "" | "fail" | "skip";
   shuffle: boolean;
   outputFormat: "jsonl" | "json" | "csv" | "parquet";
@@ -232,6 +235,7 @@ function resolveHuggingFaceRepository(
 export function buildDatasetPreparationRequest(
   input: BuildDatasetPreparationRequestInput,
 ) {
+  const memoryMode = normalizeDatasetPreparationMemoryMode(input.modelMemoryMode);
   const defaultAdvanced = input.preparation
     ? createDatasetPreparationAdvancedConfigForMethod(input.preparation.method)
     : createDatasetPreparationAdvancedConfig(
@@ -356,8 +360,13 @@ export function buildDatasetPreparationRequest(
                 inferenceMode: effectiveInferenceMode,
                 device: effectiveDevice || undefined,
                 torchDtype: effectiveTorchDtype || undefined,
+                ...(memoryMode === "offload-v1"
+                  ? { memoryMode: "offload-v1" as const }
+                  : {}),
                 memoryOverflowPolicy:
-                  input.modelMemoryOverflowPolicy ?? "limited",
+                  memoryMode === "offload-v1"
+                    ? "none"
+                    : input.modelMemoryOverflowPolicy ?? "limited",
               },
               ...(!input.preparation && input.parsed.maxExamplesPerChunk
                 ? {

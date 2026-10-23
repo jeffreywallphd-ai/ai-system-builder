@@ -14,6 +14,14 @@ import {
 } from "..";
 
 describe("desktop python runtime ipc contract", () => {
+  it("round trips explicit loaded mode and denies unrecognized mode metadata", () => {
+    const payload = {
+      supervisorStatus: "ready" as const, healthy: true, runtimeStatus: "ready", capabilities: [], logs: [],
+      loadedModels: [{ provider: "transformers" as const, modelId: "fixture/model", inferenceMode: "chat" as const, memoryMode: "offload-v1" as const }],
+    };
+    expect(createDesktopPythonRuntimeStatusReadSuccessResponse(payload).value.loadedModels?.[0]?.memoryMode).toBe("offload-v1");
+    expect(() => createDesktopPythonRuntimeStatusReadSuccessResponse({ ...payload, loadedModels: [{ ...payload.loadedModels[0], memoryMode: "unsupported" as any }] })).toThrow();
+  });
   it("defines operation and channel identities", () => {
     expect(DESKTOP_PYTHON_RUNTIME_STATUS_READ_OPERATION).toBe("runtime.python-status-read");
     expect(DESKTOP_PYTHON_RUNTIME_CONTROL_OPERATION).toBe("runtime.python-control");

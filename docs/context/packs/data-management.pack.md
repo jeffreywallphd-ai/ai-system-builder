@@ -16,6 +16,7 @@
 
 ## Core Guidance
 
+- Memory denials notify globally without inline duplication; preserve guards, project bounded numeric shortfalls, subtract permitted overflow, round upward, and never invent missing measurements.
 - Preserve ADR-0008 staged-artifact semantics and ADR-0009's separation of internal artifact identity from local and remote backing.
 - `modules/contracts/runtime/dataset-preparation-capabilities.ts` owns
   advertised source/task support; do not create host-specific allowlists.

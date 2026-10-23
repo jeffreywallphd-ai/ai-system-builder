@@ -1228,7 +1228,8 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         with patch(
             "modules.adapters.runtime.python.worker.tasks.example_generation.get_or_create_local_text_generator",
             side_effect=GenerationInsufficientResourcesError(
-                "The selected model cannot fit in available memory."
+                "The selected model cannot fit in available memory.",
+                memory_shortfall={"resource": "ram", "requiredBytes": 100, "availableBytes": 50, "allowedOverflowBytes": 0},
             ),
         ):
             with self.assertRaises(ValueError) as context:
@@ -1241,6 +1242,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             "generation_insufficient_resources",
         )
         self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
+        self.assertEqual(error.details["memoryShortfall"], {"resource": "ram", "requiredBytes": 100, "availableBytes": 50, "allowedOverflowBytes": 0})
 
     def test_skip_policy_continues_after_a_batch_level_output_format_failure(self) -> None:
         payload = self._build_payload("jsonl")

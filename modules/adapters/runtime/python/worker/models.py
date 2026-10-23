@@ -60,6 +60,7 @@ class LoadedModelDescriptor(BaseModel):
     adapterModelId: str | None = None
     adapterRevision: str | None = None
     localPath: str | None = None
+    memoryMode: Literal["standard", "offload-v1"] = "standard"
 
 
 class ModelStatusResult(BaseModel):
@@ -176,6 +177,7 @@ class LocalModelConfig(BaseModel):
     adapterModelId: str | None = None
     adapterRevision: str | None = None
     memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
+    memoryMode: Literal["standard", "offload-v1"] = "standard"
 
 
 class ExampleGenerationConfig(BaseModel):

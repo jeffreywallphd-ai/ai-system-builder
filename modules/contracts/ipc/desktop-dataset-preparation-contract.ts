@@ -5,6 +5,7 @@ import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
 import type {
   DatasetPreparationAdvancedReport,
   DatasetPreparationSummary,
+  DatasetPreparationMemoryShortfall,
   DatasetPreparationWarning,
   DatasetQualityReport,
   DatasetQualityReviewLineId,
@@ -187,6 +188,7 @@ export type DesktopPrepareTrainingDatasetTaskReadSuccessValue =
       error: {
         code?: string;
         message: string;
+        memoryShortfall?: DatasetPreparationMemoryShortfall;
         details?: Record<string, unknown>;
       };
       startedAt?: string;

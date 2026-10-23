@@ -1,8 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDatasetPreparationRequest } from "../hooks/datasetPreparationRequestBuilder";
+import { buildDatasetPreparationRequest, type BuildDatasetPreparationRequestInput } from "../hooks/datasetPreparationRequestBuilder";
 
 describe("datasetPreparationRequestBuilder", () => {
+  it("preserves the explicit offload profile and disables only its overflow allowance", () => {
+    const input: BuildDatasetPreparationRequestInput = {
+      selectedArtifactIds: ["source"], taskType: "llm-instruction",
+      unsupportedDocumentPolicy: "fail", normalizationMode: "strict",
+      preserveDocumentBoundaries: true, modelId: "Qwen/Qwen2.5-1.5B-Instruct",
+      modelInferenceMode: "chat", modelDevice: "cpu", modelTorchDtype: "bfloat16",
+      modelMemoryOverflowPolicy: "extended", modelMemoryMode: "offload-v1",
+      failurePolicy: "fail", shuffle: true, outputFormat: "parquet", outputBaseName: "",
+      localDestinationEnabled: true, huggingFaceDestinationEnabled: false,
+      huggingFaceRepository: "", huggingFaceRevision: "", huggingFacePathPrefix: "",
+      parsed: { chunkSize: 1000, chunkOverlap: 200, trainRatio: 0.8, testRatio: 0.2 },
+      resolvedDefault: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct", inferenceMode: "chat", source: "global" },
+    };
+    expect(buildDatasetPreparationRequest(input).recipe.generation?.model).toMatchObject({
+      modelId: input.modelId, device: "cpu", torchDtype: "bfloat16",
+      memoryMode: "offload-v1", memoryOverflowPolicy: "none",
+    });
+    for (const modelMemoryMode of [undefined, "standard"] as const) {
+      const model = buildDatasetPreparationRequest({ ...input, modelMemoryMode }).recipe.generation?.model;
+      expect(model?.memoryMode).toBeUndefined();
+      expect(model?.memoryOverflowPolicy).toBe("extended");
+    }
+    expect(() => buildDatasetPreparationRequest({ ...input, modelMemoryMode: "unknown" as any })).toThrow();
+  });
   it("includes optional numeric values when provided", () => {
     const request = buildDatasetPreparationRequest({
       selectedArtifactIds: ["artifact-1"],

@@ -174,6 +174,8 @@ function WorkspaceDatasetPreparationFeature({
     modelDevice,
     modelTorchDtype,
     modelMemoryOverflowPolicy,
+    modelMemoryMode,
+    lowMemoryAvailable,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -241,6 +243,7 @@ function WorkspaceDatasetPreparationFeature({
     setModelDevice,
     setModelTorchDtype,
     setModelMemoryOverflowPolicy,
+    setModelMemoryMode,
     setMaxExamplesPerChunk,
     setBatchSize,
     setFailurePolicy,
@@ -1347,6 +1350,7 @@ function WorkspaceDatasetPreparationFeature({
                                 </span>
                                 <input
                                   className="ui-input"
+                                  aria-label="Model ID"
                                   value={modelId}
                                   onChange={(event) =>
                                     setModelId(event.target.value)
@@ -1361,6 +1365,7 @@ function WorkspaceDatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Inference mode"
                                   value={modelInferenceMode}
                                   onChange={(event) =>
                                     setModelInferenceMode(
@@ -1383,6 +1388,7 @@ function WorkspaceDatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Model device"
                                   value={modelDevice}
                                   onChange={(event) =>
                                     setModelDevice(
@@ -1404,6 +1410,7 @@ function WorkspaceDatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Torch dtype"
                                   value={modelTorchDtype}
                                   onChange={(event) =>
                                     setModelTorchDtype(
@@ -1420,10 +1427,31 @@ function WorkspaceDatasetPreparationFeature({
                                 </select>
                               </label>
                               <label className="ui-stack ui-stack--sm">
+                                <span>Model memory mode</span>
+                                <select
+                                  className="ui-input"
+                                  value={modelMemoryMode}
+                                  onChange={(event) => setModelMemoryMode(event.target.value as typeof modelMemoryMode)}
+                                >
+                                  <option value="standard">Standard</option>
+                                  <option value="offload-v1" disabled={!lowMemoryAvailable}>Optional low-memory (offload v1)</option>
+                                </select>
+                                <small className="ui-text-muted">
+                                  Optional mode limits weight placement to 1 GiB RAM and 2 GiB VRAM,
+                                  with up to 12 GiB of private disk staging. These are not process-memory
+                                  limits. Disk transfers can make generation slower. Select CPU or CUDA
+                                  and an explicit precision; unsupported models or insufficient resources
+                                  fail safely. Memory overflow is disabled for this profile.
+                                  Initial support covers native Qwen2/Qwen2.5 text models and the standard Qwen2.5 chat template.
+                                </small>
+                                {!lowMemoryAvailable ? <small role="status">Optional low-memory inference is unavailable in the current worker.</small> : null}
+                              </label>
+                              <label className="ui-stack ui-stack--sm">
                                 <span>When memory is full</span>
                                 <select
                                   className="ui-input"
-                                  value={modelMemoryOverflowPolicy}
+                                  value={modelMemoryMode === "offload-v1" ? "none" : modelMemoryOverflowPolicy}
+                                  disabled={modelMemoryMode === "offload-v1"}
                                   onChange={(event) =>
                                     setModelMemoryOverflowPolicy(
                                       event.target
@@ -1644,6 +1672,7 @@ function WorkspaceDatasetPreparationFeature({
                             </span>
                             <select
                               className="ui-input"
+                              aria-label="Output format"
                               value={outputFormat}
                               onChange={(event) =>
                                 setOutputFormat(
@@ -1901,6 +1930,7 @@ function WorkspaceDatasetPreparationFeature({
                         </span>
                         <input
                           className="ui-input"
+                          aria-label="Dataset save name (optional)"
                           value={outputBaseName}
                           maxLength={DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH}
                           disabled={reviewActionInFlight}
@@ -1997,7 +2027,7 @@ function WorkspaceDatasetPreparationFeature({
           ) : null}
         </form>
 
-        {status.message && !transientStatusMessage ? (
+        {status.message && !transientStatusMessage && !status.memoryNotification ? (
           <p
             className="dataset-preparation__status"
             role={status.kind === "error" ? "alert" : "status"}
@@ -2006,9 +2036,9 @@ function WorkspaceDatasetPreparationFeature({
           </p>
         ) : null}
         <TransientNotificationPublisher
-          message={transientStatusMessage ? status.message : undefined}
-          title="Dataset preparation updated"
-          tone="success"
+          message={transientStatusMessage || status.memoryNotification === "page" ? status.message : undefined}
+          title={status.memoryNotification ? "Model needs more memory" : "Dataset preparation updated"}
+          tone={status.memoryNotification ? "error" : "success"}
           source="Dataset Preparation"
           workspaceId={workspaceId}
         />
@@ -2052,6 +2082,7 @@ function WorkspaceDatasetPreparationFeature({
           currentIndex={qualityReviewIndex}
           decisions={qualityReviewDecisions}
           busy={reviewActionInFlight || qualityReviewPageLoading}
+          message={qualityReviewPageError}
           approveLabel="Approve"
           rejectLabel="Reject"
           absoluteIndex={

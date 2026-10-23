@@ -88,6 +88,28 @@ def _safe_task_error_stage(error: Exception) -> str | None:
     return candidate if candidate in _TASK_ERROR_STAGES else None
 
 
+def _safe_task_error_details(error: Exception) -> dict:
+    details = {"diagnosticClass": type(error).__name__}
+    # Notification history is a public diagnostic sink. Copy no arbitrary details.
+    if _safe_task_error_code(error) != "generation_insufficient_resources":
+        return details
+    raw = getattr(error, "details", None)
+    value = raw.get("memoryShortfall") if isinstance(raw, dict) else None
+    if not isinstance(value, dict):
+        return details
+    resource = value.get("resource")
+    fields = ("requiredBytes", "availableBytes", "allowedOverflowBytes")
+    if type(resource) is not str or resource not in {"ram", "vram", "combined"} or not all(
+        type(value.get(key)) is int and 0 <= value[key] <= 1024 ** 5 for key in fields
+    ):
+        return details
+    required, available, overflow = (value[key] for key in fields)
+    if required <= available + overflow or resource == "vram" and overflow != 0:
+        return details
+    details["memoryShortfall"] = {"resource": resource, **{key: value[key] for key in fields}}
+    return details
+
+
 def _safe_task_error_message(error: Exception) -> str:
     if getattr(error, "error_code", None) == "model_download_invalid_snapshot":
         return "Downloaded files did not form a complete model. Retry to resume and verify the saved files."
@@ -99,6 +121,7 @@ app = FastAPI(title="ai-system-builder python runtime worker", version=WORKER_VE
 TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 TASK_REGISTRY_LOCK = Lock()
 TASK_REGISTRY: dict[str, dict[str, Any]] = {}
+MODEL_UNLOAD_IN_PROGRESS = False
 TASK_WAIT_POLL_SECONDS = 1.0
 TASK_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
@@ -419,6 +442,7 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
                 model
                 for model in describe_loaded_generation_models()
                 if model.get("modelId") == runtime_model_id
+                and model.get("memoryMode", "standard") == "standard"
                 and model.get("adapterModelId") == adapter_model_id
                 and model.get("adapterRevision") == adapter_revision
             ),
@@ -538,6 +562,8 @@ def _ensure_model_download_data(
 
 def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
     with TASK_REGISTRY_LOCK:
+        if MODEL_UNLOAD_IN_PROGRESS:
+            raise RuntimeError("Generation model cleanup is in progress. Retry after completion.")
         if not TASK_REQUEST_ID_PATTERN.fullmatch(request.requestId):
             raise RuntimeError("Runtime task request identifier is invalid.")
         _prune_terminal_tasks_locked()
@@ -616,7 +642,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                     errorCode=error_code,
                     stage=error_stage,
                     message=_safe_task_error_message(error),
-                    details={"diagnosticClass": type(error).__name__},
+                    details=_safe_task_error_details(error),
                     retryable=getattr(error, "retryable", False) is True,
                 ),
                 completedAt=_now_iso(),
@@ -644,6 +670,7 @@ def health() -> PythonRuntimeHealthCheckResult:
 
 @app.get("/capabilities", response_model=PythonRuntimeCapabilitiesResult)
 def capabilities() -> PythonRuntimeCapabilitiesResult:
+    from .tasks.bounded_model_loader import offload_runtime_available
     supported = [
         "prepare-training-dataset",
         "review-dataset",
@@ -659,6 +686,8 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
     ]
     if get_constrained_json_decoder_runtime_status().available:
         supported.append("dataset-preparation.constrained-json")
+    if offload_runtime_available():
+        supported.append("dataset-preparation.offload-v1")
     return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=supported)
 
 
@@ -795,8 +824,18 @@ def model_status() -> ModelStatusResult:
 
 @app.post("/models/unload", response_model=UnloadModelsResult)
 def unload_models() -> UnloadModelsResult | JSONResponse:
-    active_task_count = _active_task_count()
-    if active_task_count > 0:
-        return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
-    unloaded = unload_generation_models()
-    return UnloadModelsResult(unloadedModels=[LoadedModelDescriptor.model_validate(model) for model in unloaded], activeTaskCount=0)
+    global MODEL_UNLOAD_IN_PROGRESS
+    from .tasks.local_model_offload import OffloadAdmissionError
+    with TASK_REGISTRY_LOCK:
+        active_task_count = sum(task.get("status") in {"queued", "running"} for task in TASK_REGISTRY.values())
+        if active_task_count > 0 or MODEL_UNLOAD_IN_PROGRESS:
+            return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task or cleanup is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
+        MODEL_UNLOAD_IN_PROGRESS = True
+    try:
+        unloaded = unload_generation_models()
+        return UnloadModelsResult(unloadedModels=[LoadedModelDescriptor.model_validate(model) for model in unloaded], activeTaskCount=0)
+    except OffloadAdmissionError:
+        return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_cleanup_pending", message="Model cleanup could not be confirmed. Ownership is retained; retry unloading after completion.", retryable=True).model_dump(mode="json")})
+    finally:
+        with TASK_REGISTRY_LOCK:
+            MODEL_UNLOAD_IN_PROGRESS = False

@@ -182,12 +182,16 @@ function asPythonRuntimeTaskStatus(value: unknown, field: string): PythonRuntime
 
 function parseLoadedModel(value: unknown, field: string): PythonRuntimeLoadedModel {
   const payload = asObject(value, field);
+  if (payload.memoryMode !== undefined && payload.memoryMode !== "standard" && payload.memoryMode !== "offload-v1") {
+    throw new Error("Invalid python runtime payload: model memory mode is unsupported.");
+  }
   return {
     provider: "transformers",
     modelId: asString(payload.modelId, `${field}.modelId`),
     inferenceMode: asLoadedModelInferenceMode(payload.inferenceMode, `${field}.inferenceMode`),
     device: asOptionalLoadedModelDevice(payload.device, `${field}.device`),
     torchDtype: asOptionalLoadedModelTorchDtype(payload.torchDtype, `${field}.torchDtype`),
+    ...(payload.memoryMode === undefined ? {} : { memoryMode: payload.memoryMode }),
     localPath: asOptionalString(payload.localPath, `${field}.localPath`),
   };
 }

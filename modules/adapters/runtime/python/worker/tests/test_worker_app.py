@@ -21,6 +21,39 @@ class WorkerAppTests(unittest.TestCase):
         with worker_app.TASK_REGISTRY_LOCK:
             worker_app.TASK_REGISTRY.clear()
 
+    def test_unload_fences_new_admission_and_releases_after_confirmed_completion(self) -> None:
+        request = StartPythonRuntimeTaskRequest(requestId="after-unload", taskType="prepare-training-dataset", payload={})
+        def unload():
+            with self.assertRaisesRegex(RuntimeError, "cleanup is in progress"):
+                worker_app._start_async_task(request)
+            self.assertFalse(worker_app.TASK_REGISTRY)
+            self.assertEqual(worker_app.unload_models().status_code, 409)
+            return []
+        with patch.object(worker_app, "unload_generation_models", side_effect=unload):
+            response = worker_app.unload_models()
+        self.assertEqual(response.activeTaskCount, 0)
+        self.assertFalse(worker_app.MODEL_UNLOAD_IN_PROGRESS)
+        with patch.object(worker_app.TASK_EXECUTOR, "submit", return_value=SimpleNamespace()):
+            admitted = worker_app._start_async_task(request)
+        self.assertTrue(admitted.accepted)
+
+    def test_unload_failure_retains_safe_pending_response_and_releases_admission_fence(self) -> None:
+        from modules.adapters.runtime.python.worker.tasks.local_model_offload import OffloadAdmissionError
+        with patch.object(worker_app, "unload_generation_models", side_effect=OffloadAdmissionError()):
+            response = worker_app.unload_models()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(json.loads(response.body)["error"]["code"], "model_cleanup_pending")
+        self.assertFalse(worker_app.MODEL_UNLOAD_IN_PROGRESS)
+
+    def test_queued_and_running_tasks_block_unload_before_model_graph_changes(self) -> None:
+        for status in ("queued", "running"):
+            with self.subTest(status=status):
+                worker_app.TASK_REGISTRY["active"] = {"status": status}
+                with patch.object(worker_app, "unload_generation_models") as unload:
+                    response = worker_app.unload_models()
+                self.assertEqual(response.status_code, 409)
+                unload.assert_not_called()
+
     def test_capabilities_advertise_constrained_json_only_when_ready(self) -> None:
         with patch(
             "modules.adapters.runtime.python.worker.app.get_constrained_json_decoder_runtime_status",
@@ -35,6 +68,14 @@ class WorkerAppTests(unittest.TestCase):
 
         self.assertIn("dataset-preparation.constrained-json", ready.capabilities)
         self.assertNotIn("dataset-preparation.constrained-json", unavailable.capabilities)
+
+    def test_capabilities_advertise_exact_offload_version_only_when_supported(self) -> None:
+        with patch("modules.adapters.runtime.python.worker.tasks.bounded_model_loader.offload_runtime_available", return_value=True):
+            ready = worker_app.capabilities()
+        with patch("modules.adapters.runtime.python.worker.tasks.bounded_model_loader.offload_runtime_available", return_value=False):
+            unavailable = worker_app.capabilities()
+        self.assertIn("dataset-preparation.offload-v1", ready.capabilities)
+        self.assertNotIn("dataset-preparation.offload-v1", unavailable.capabilities)
 
     def test_model_download_success_emits_lifecycle_logs(self) -> None:
         request = EnsureModelDownloadRequest(

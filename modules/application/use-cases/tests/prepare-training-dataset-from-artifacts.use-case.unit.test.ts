@@ -1105,6 +1105,91 @@ it("rejects dataset preparation start when runtime capability is not ready", asy
 });
 
 
+describe("optional low-memory operation admission", () => {
+  const offloadCommand = {
+    ...command,
+    recipe: {
+      ...command.recipe,
+      task: { taskType: "llm-instruction" as const, textInputMode: "generate" as const },
+      generation: {
+        ...command.recipe.generation,
+        model: { ...command.recipe.generation.model, memoryMode: "offload-v1" as const },
+      },
+    },
+  };
+
+  for (const [name, readWorkerCapabilities] of [
+    ["missing reader", undefined],
+    ["old worker", async () => ({ runtimeId: "fixture", capabilities: ["prepare-training-dataset"] })],
+    ["wrong version", async () => ({ runtimeId: "fixture", capabilities: ["dataset-preparation.offload-v2"] })],
+    ["whitespace token", async () => ({ runtimeId: "fixture", capabilities: ["dataset-preparation.offload-v1 "] })],
+    ["failed read", async () => { throw new Error("Private runtime detail must not escape."); }],
+  ] as const) {
+    it(`denies ${name} before source, staging, task or power side effects`, async () => {
+      const startTask = testDouble.fn();
+      const readBindings = testDouble.fn();
+      const retrieveArtifact = testDouble.fn();
+      const lifecycle = createLifecycleFake();
+      const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+        runtimeTaskRegistry: createRegistry({ startTask }),
+        storageBindings: { readArtifactStorageBindings: readBindings, upsertArtifactStorageBinding: testDouble.fn(), deleteArtifactStorageBindings: testDouble.fn() },
+        storage: { retrieveArtifact, storeArtifact: testDouble.fn(), hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn() },
+        taskPowerLifecycle: lifecycle,
+        readWorkerCapabilities,
+      });
+      const result = await useCase.startPrepareTrainingDataset(offloadCommand, { workspaceId: "workspace-a" });
+      expect(result).toMatchObject({ ok: false, error: { code: "unavailable", message: "Low-memory model loading is unavailable in the selected runtime." } });
+      expect(readBindings).not.toHaveBeenCalled();
+      expect(retrieveArtifact).not.toHaveBeenCalled();
+      expect(startTask).not.toHaveBeenCalled();
+      expect(lifecycle.startTask).not.toHaveBeenCalled();
+    });
+  }
+
+  it("rejects an unknown profile before capability or source reads", async () => {
+    const readWorkerCapabilities = testDouble.fn();
+    const readBindings = testDouble.fn();
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry(),
+      storageBindings: { readArtifactStorageBindings: readBindings, upsertArtifactStorageBinding: testDouble.fn(), deleteArtifactStorageBindings: testDouble.fn() },
+      storage: { retrieveArtifact: testDouble.fn(), storeArtifact: testDouble.fn(), hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn() },
+      taskPowerLifecycle: createLifecycleFake(), readWorkerCapabilities,
+    });
+    const malformed = { ...offloadCommand, recipe: { ...offloadCommand.recipe, generation: { ...offloadCommand.recipe.generation, model: { ...offloadCommand.recipe.generation.model, memoryMode: "auto" } } } };
+    const result = await useCase.startPrepareTrainingDataset(malformed as any, { workspaceId: "workspace-a" });
+    expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
+    expect(readWorkerCapabilities).not.toHaveBeenCalled();
+    expect(readBindings).not.toHaveBeenCalled();
+  });
+
+  it("passes an exact supported profile unchanged through real staging and releases terminal resources", async () => {
+    const reconciler = new OwnedTaskReconcilerService();
+    let dispatched: any;
+    const readWorkerCapabilities = testDouble.fn(async () => ({ runtimeId: "fixture", capabilities: ["dataset-preparation.offload-v1"] }));
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      taskReconciler: reconciler,
+      readWorkerCapabilities,
+      runtimeTaskRegistry: createRegistry({
+        startTask: testDouble.fn(async (request: any) => { dispatched = request; return { requestId: "offload-positive", accepted: true, status: "queued" }; }),
+        getTaskStatus: testDouble.fn(async () => ({ requestId: "offload-positive", status: "failed", taskType: "dataset-preparation", workspaceId: "workspace-a", concurrencyClass: "unknown" })),
+      }),
+      storageBindings: { readArtifactStorageBindings: testDouble.fn(async () => ({ ok: true, value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] } })), upsertArtifactStorageBinding: testDouble.fn(), deleteArtifactStorageBindings: testDouble.fn() },
+      storage: { retrieveArtifact: testDouble.fn(async () => ({ ok: true, value: { descriptor: { key: "a1", mediaType: "text/markdown", metadata: {} }, content: new TextEncoder().encode("Synthetic useful local source.") } })), storeArtifact: testDouble.fn(), hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn() },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+    try {
+      const result = await useCase.startPrepareTrainingDataset(offloadCommand, { workspaceId: "workspace-a" });
+      expect(result.ok).toBe(true);
+      expect(readWorkerCapabilities).toHaveBeenCalledTimes(1);
+      expect(dispatched.payload.recipe.generation.model.memoryMode).toBe("offload-v1");
+      expect(await exists(dispatched.payload.runtime.runtimeWorkingDirectory)).toBe(true);
+    } finally {
+      await reconciler.reconcileNow();
+      if (dispatched) expect(await exists(dispatched.payload.runtime.runtimeWorkingDirectory)).toBe(false);
+    }
+  });
+});
+
 it("denies unbound or conflicting dataset source authority before storage or provider I/O", async () => {
   for (const bindings of [[], [{ workspaceId: "workspace-b", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "foreign" } }],
     [{ workspaceId: "workspace-a", artifactId: "other", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "foreign" } }]]) {

@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DatasetPreparationFeature as DatasetPreparationFeatureComponent } from "../components/DatasetPreparationFeature";
-import { resetDatasetPreparationPageStateForTests } from "../hooks/useDatasetPreparationFeature";
+import { resetDatasetPreparationPageStateForTests, useDatasetPreparationFeature } from "../hooks/useDatasetPreparationFeature";
 import {
   NotificationProvider,
   NotificationViewport,
@@ -83,6 +83,39 @@ describe("DatasetPreparationFeature", () => {
     container = undefined;
     resetDatasetPreparationPageStateForTests();
     delete window.desktopApi;
+  });
+
+  it.each(["standard", "offload-v1"] as const)("rejects an unsupported reused profile without partially replacing %s setup", async (initialMode) => {
+    const dispatch = vi.fn();
+    const client = { browseSourceArtifacts: async () => [], startPrepareTrainingDataset: dispatch } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    let memoryMode: unknown = "offload-v99";
+    function ReuseProbe() {
+      feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient });
+      return <button onClick={() => feature.onReuseDatasetVersion({
+        sourceArtifactIds: ["replacement-source"],
+        recipeSnapshot: { recipe: { generation: { model: { modelId: "fixture/replacement", memoryMode } } } },
+      } as any)}>Reuse saved setup</button>;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => { root!.render(<ReuseProbe />); await flushAsyncWork(); });
+    await act(async () => { feature.setModelMemoryMode(initialMode); await flushAsyncWork(); });
+    const original = { modelId: feature.modelId, mode: feature.modelMemoryMode, sources: [...feature.selectedArtifactIds] };
+    await act(async () => { container!.querySelector("button")!.click(); await flushAsyncWork(); });
+    expect(feature.status.kind).toBe("error");
+    expect(feature.status.message).toContain("It was not restored; your current setup is unchanged");
+    expect({ modelId: feature.modelId, mode: feature.modelMemoryMode, sources: feature.selectedArtifactIds }).toEqual(original);
+    expect(dispatch).not.toHaveBeenCalled();
+    // Valid explicit reuse remains available, and legacy omission restores Standard.
+    for (const validMode of ["offload-v1", undefined]) {
+      memoryMode = validMode;
+      await act(async () => { container!.querySelector("button")!.click(); await flushAsyncWork(); });
+      expect(feature.status.kind).toBe("idle");
+      expect(feature.modelId).toBe("fixture/replacement");
+      expect(feature.modelMemoryMode).toBe(validMode ?? "standard");
+      expect(feature.selectedArtifactIds).toEqual(["replacement-source"]);
+      expect(dispatch).not.toHaveBeenCalled();
+    }
   });
 
   it.each(["running", "unknown", "error", "delayed"])("keeps observing when cancellation is %s", async (mode) => {

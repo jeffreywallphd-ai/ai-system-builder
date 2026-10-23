@@ -65,6 +65,7 @@ export interface DatasetReviewNavigatorProps {
   readonly currentIndex: number;
   readonly decisions: Readonly<Record<string, ReviewDecision>>;
   readonly busy?: boolean;
+  readonly message?: string;
   readonly approveLabel?: string;
   readonly rejectLabel?: string;
   readonly editLabel?: string;
@@ -91,6 +92,7 @@ export function DatasetReviewNavigator({
   currentIndex,
   decisions,
   busy = false,
+  message,
   approveLabel = "Approve",
   rejectLabel = "Reject",
   editLabel = "Edit",
@@ -114,8 +116,9 @@ export function DatasetReviewNavigator({
     Math.max(0, items.length - 1),
   );
   const item = items[boundedIndex];
+  if (message) return <p role="alert">{message}</p>;
   if (!item) {
-    return <p className="ui-text-muted">There is nothing to review.</p>;
+    return <p className="ui-text-muted" role={busy ? "status" : undefined}>{busy ? "Loading review records..." : "There is nothing to review."}</p>;
   }
   const decision =
     decisions[item.id] ?? (item.approvalLocked ? "approved" : undefined);

@@ -430,7 +430,7 @@ def generate_text_value(
     *,
     constrained_json_schema: dict[str, Any] | None = None,
 ) -> str:
-    generator = get_or_create_local_text_generator(config)
+    generator = get_or_create_local_text_generator(config, allow_offload=True)
     return _strip_reasoning_blocks(
         generator.generate_text(
             prompt,
@@ -447,7 +447,7 @@ def generate_qa_examples_for_chunks(
     if config.mode != "qa":
         raise ValueError(f"Unsupported generation mode: {config.mode}")
 
-    generator = get_or_create_local_text_generator(config)
+    generator = get_or_create_local_text_generator(config, allow_offload=True)
 
     examples: list[GeneratedQaExample] = []
     for chunk in chunks:
@@ -479,7 +479,7 @@ def generate_qa_examples_for_chunks(
             raise GenerationOutputValidationError(
                 "The model response did not match the required training output."
             ) from error
-        except (GenerationModelLoadError, ConstrainedJsonDecoderError):
+        except (GenerationModelLoadError, GenerationInsufficientResourcesError, ConstrainedJsonDecoderError):
             raise
         except Exception as error:
             _log_chunk_generation_failure(
@@ -933,6 +933,7 @@ def generate_task_examples_for_chunks(
     generator = get_or_create_local_text_generator(
         config,
         on_memory_overflow=on_memory_overflow,
+        allow_offload=True,
     )
     examples: list[GeneratedQaExample] = []
     for processed_chunk_count, chunk in enumerate(chunks, start=1):
@@ -1012,7 +1013,7 @@ def generate_task_examples_for_chunks(
                     )
                 continue
             question, answer, structured_fields = parsed
-        except (GenerationModelLoadError, ConstrainedJsonDecoderError):
+        except (GenerationModelLoadError, GenerationInsufficientResourcesError, ConstrainedJsonDecoderError):
             raise
         except ValueError as error:
             _log_generation_diagnostic(

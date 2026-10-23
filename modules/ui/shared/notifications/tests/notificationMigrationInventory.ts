@@ -43,7 +43,9 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
   ].map((path) => ({
     path,
     classification: "migrated-with-contextual-state" as const,
-    rationale: "Transient action outcomes publish globally; validation, loading, diagnostics, progress, result detail, or retry context remains inline.",
+    rationale: path.includes("/dataset-preparation/")
+      ? "Memory-admission errors publish in the notification center without inline duplication; contextual validation, progress and other readiness controls remain inline."
+      : "Transient action outcomes publish globally; validation, loading, diagnostics, progress, result detail, or retry context remains inline.",
   })),
   ...[
     "apps/thin-client/src/pages/SettingsPage.tsx",
@@ -72,6 +74,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "modules/ui/shared/foundation-assets/FoundationAssetPreview.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx",
     "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+    "modules/ui/shared/dataset-review/DatasetReviewModal.tsx",
     "modules/ui/shared/page-dashboard/PageDashboard.tsx",
     "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
     "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",

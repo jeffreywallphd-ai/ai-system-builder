@@ -29,6 +29,7 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     _SystemMemorySnapshot,
     _create_structured_snapshot_tqdm,
     _ensure_model_load_resources,
+    _calibrated_cpu_memory_requirement,
     _start_snapshot_cache_progress_monitor,
     _resolve_snapshot_download_profile,
     _structured_huggingface_file_progress,
@@ -1079,6 +1080,50 @@ class LocalTextGenerationTests(unittest.TestCase):
             "The selected generation model could not be loaded by the local runtime.",
         )
         self.assertNotIn(private_error, str(context.exception))
+
+    def test_calibrated_cpu_estimates_require_exact_safe_weights_profile_and_size(self) -> None:
+        import hashlib
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'model.safetensors').write_bytes(b'fixture')
+            (root / 'config.json').write_bytes(b'config')
+            for model, dtype, sha, config_sha, required in (
+                ('Qwen/Qwen2.5-0.5B-Instruct','float32','fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe',
+                 '18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45',3*1024**3),
+                ('Qwen/Qwen2.5-1.5B-Instruct','bfloat16','dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee',
+                 '98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670',7*1024**3//2)):
+                config = LocalModelConfig(provider='transformers',modelId=model,torchDtype=dtype,device='cpu',inferenceMode='chat')
+                def digest(stream, algorithm):
+                    return SimpleNamespace(hexdigest=lambda:config_sha if Path(stream.name).name=='config.json' else sha)
+                with patch.object(hashlib, 'file_digest', side_effect=digest):
+                    self.assertEqual(_calibrated_cpu_memory_requirement(config,root,7), required)
+                    for change in ({'device':'cuda'},{'device':'auto'},{'torchDtype':'auto'}, {'memoryMode':'offload-v1'},
+                                   {'adapterModelId':'other/adapter'}, {'modelId':'other/model'}, {'inferenceMode':'causal'}):
+                        self.assertIsNone(_calibrated_cpu_memory_requirement(config.model_copy(update=change),root,7))
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,8))
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,4*1024**3))
+                with patch.object(hashlib, 'file_digest', return_value=SimpleNamespace(hexdigest=lambda:sha)):
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,7))
+                self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,7))
+
+    def test_calibrated_cpu_admission_denies_below_exact_threshold_without_overflow(self) -> None:
+        with TemporaryDirectory() as directory:
+            config = LocalModelConfig(provider='transformers',modelId='Qwen/Qwen2.5-0.5B-Instruct',
+                                      torchDtype='float32',device='cpu',inferenceMode='chat')
+            prefix = 'modules.adapters.runtime.python.worker.tasks.local_text_generation.'
+            for required in (3*1024**3,7*1024**3//2):
+                with patch(prefix+'_resolved_model_reference_for',return_value=directory), \
+                     patch(prefix+'_snapshot_model_weight_bytes',return_value=1024**3), \
+                     patch(prefix+'_calibrated_cpu_memory_requirement',return_value=required):
+                    with patch(prefix+'_read_system_memory_snapshot',return_value=_SystemMemorySnapshot(16*1024**3,required)):
+                        self.assertIsNone(_ensure_model_load_resources(config))
+                    with patch(prefix+'_read_system_memory_snapshot',return_value=_SystemMemorySnapshot(16*1024**3,required-1)):
+                        with self.assertRaises(GenerationInsufficientResourcesError) as raised:
+                            _ensure_model_load_resources(config)
+                        self.assertEqual(raised.exception.memory_shortfall, {
+                            "resource": "ram", "requiredBytes": required,
+                            "availableBytes": required - 1, "allowedOverflowBytes": 0,
+                        })
 
     def test_model_load_rejects_implicit_disk_offload_when_memory_is_insufficient(self) -> None:
         with TemporaryDirectory() as directory:

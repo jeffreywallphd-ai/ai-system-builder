@@ -1,7 +1,9 @@
 import { createTransportOperation } from "../transport";
 import {
   normalizeDatasetPreparationGenerationCapacitySnapshot,
+  normalizeDatasetPreparationMemoryMode,
   type DatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationMemoryMode,
 } from "../runtime";
 import { createIpcChannel, type IpcChannel, type IpcChannelValue } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
@@ -51,6 +53,7 @@ export interface DesktopPythonRuntimeLoadedModel {
   inferenceMode: "text2text" | "causal" | "chat" | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
+  memoryMode?: DatasetPreparationMemoryMode;
   localPath?: string;
 }
 
@@ -165,6 +168,7 @@ function normalizeStatusPayload(
       inferenceMode: model.inferenceMode,
       device: model.device,
       torchDtype: model.torchDtype,
+      ...(model.memoryMode === undefined ? {} : { memoryMode: normalizeDatasetPreparationMemoryMode(model.memoryMode) }),
       localPath: model.localPath?.trim(),
     })),
     activeTaskCount: payload.activeTaskCount ?? 0,

@@ -40,6 +40,8 @@ export interface DatasetPreparationGenerationCapacitySnapshot {
   capturedAt: string;
   decoderAvailable: boolean;
   schemaSupported: boolean;
+  /** Exact worker feature availability; absence never grants offload support. */
+  offloadAvailable?: boolean;
   logicalProcessorCount?: number;
   totalSystemMemoryBytes?: number;
   availableSystemMemoryBytes?: number;
@@ -114,6 +116,9 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
     capturedAt,
     decoderAvailable: value.decoderAvailable,
     schemaSupported: value.schemaSupported,
+    ...(typeof value.offloadAvailable === "boolean"
+      ? { offloadAvailable: value.offloadAvailable }
+      : {}),
     ...(logicalProcessorCount ? { logicalProcessorCount } : {}),
     ...(totalSystemMemoryBytes ? { totalSystemMemoryBytes } : {}),
     ...(availableSystemMemoryBytes ? { availableSystemMemoryBytes } : {}),

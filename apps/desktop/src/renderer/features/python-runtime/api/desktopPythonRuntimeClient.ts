@@ -34,6 +34,7 @@ function toStatusSnapshot(value: unknown): DesktopPythonRuntimeStatusSnapshot {
       ? payload.loadedModels.filter((entry): entry is DesktopPythonRuntimeStatusSnapshot["loadedModels"][number] =>
         typeof entry?.modelId === "string"
         && entry?.provider === "transformers"
+        && (entry.memoryMode === undefined || entry.memoryMode === "standard" || entry.memoryMode === "offload-v1")
         && (entry?.inferenceMode === "text2text" || entry?.inferenceMode === "causal" || entry?.inferenceMode === "chat"))
       : [],
     activeTaskCount: typeof payload.activeTaskCount === "number" ? payload.activeTaskCount : 0,

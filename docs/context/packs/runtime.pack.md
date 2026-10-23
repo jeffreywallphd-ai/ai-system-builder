@@ -20,6 +20,11 @@
 
 ## Core Guidance
 
+- For the two exact pinned Qwen CPU/chat/Standard trials, memory admission uses
+  user-directed3GiB/3.5GiB estimates only after safe-weight hash and size checks;
+  all other profiles retain conservative admission. Read the runtime model and
+  offline qualification guide before extending or interpreting these estimates.
+
 - Node.js + TypeScript is the default core runtime path.
 - Python/ComfyUI and other runtimes are adapter paths under `modules/adapters/runtime`.
 - Shared runtime vocabulary belongs in `modules/contracts/runtime`.
@@ -159,3 +164,12 @@
   explicit update approval and consistent installed/missing target/root status
   before Python/pip or fallback effects. Marker consistency does not establish
   current tree integrity or immutable source provenance; retain pending proof.
+
+## Optional generation loading
+
+ADR-0045 and `docs/operations/optional-low-memory-inference.md` govern the explicit
+default-off Dataset Preparation offload profile. Use exact capability gating,
+finite native model/tokenizer support, pre-supplier PEFT discovery denial and separate weight/process/staging budgets.
+Cached-generator ownership survives task completion; teardown cannot rematerialize
+weights or declare unsupported running cancellation complete. Passive reads never
+install/load. Installed-model and native filesystem evidence remain separate.

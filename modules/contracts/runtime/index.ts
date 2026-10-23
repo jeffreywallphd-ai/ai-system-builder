@@ -41,6 +41,8 @@ export * from "./dataset-preparation-capabilities";
 export * from "./dataset-preparation-advanced";
 export * from "./dataset-preparation-adaptive";
 export * from "./dataset-preparation-constrained-json";
+export * from "./dataset-preparation-memory";
+export * from "./dataset-preparation-memory-shortfall";
 export * from "./dataset-preparation-output-shape";
 export * from "./prepare-training-dataset-request";
 export * from "./prepare-training-dataset-result";

@@ -140,6 +140,7 @@ import type {
 } from "../../../contracts/ipc";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  supportsDatasetPreparationOffload,
   type DatasetPreparationGenerationCapacitySnapshot,
 } from "../../../contracts/runtime";
 import type { HuggingFaceFetchImplementation } from "../../../adapters/storage/huggingface";
@@ -528,10 +529,12 @@ export function composeDesktopHost(
     async (): Promise<DesktopPythonRuntimeStatusPayload> => {
       const createGenerationCapacity = (
         decoderAvailable: boolean,
+        offloadAvailable = false,
       ): DatasetPreparationGenerationCapacitySnapshot => ({
         schemaVersion: "1",
         capturedAt: (now ?? (() => new Date().toISOString()))(),
         decoderAvailable,
+        offloadAvailable,
         schemaSupported: true,
         logicalProcessorCount: cpus().length,
         totalSystemMemoryBytes: totalmem(),
@@ -622,6 +625,8 @@ export function composeDesktopHost(
           capabilities.includes(
             PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
           ),
+          supervisorStatus === "ready" && healthy &&
+            supportsDatasetPreparationOffload(capabilities),
         ),
         systemResources: {
           memoryUsagePercent: readMemoryUsagePercent(),
@@ -987,6 +992,8 @@ export function composeDesktopHost(
               module.composeDesktopDatasetPreparationFeature({
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
+                readWorkerCapabilities: async () =>
+                  (await getPythonRuntimeFoundation()).runtimePort.getCapabilities(),
                 getArtifactRemoteFeatures,
                 documents: organizationDocuments,
                 workspaceRepository: startupWorkspaceShell.workspaceRepository,

@@ -7,9 +7,16 @@ import {
   mapStartTaskRequest,
   mapStartTaskResponse,
   mapTaskStatusResponse,
+  mapModelStatusResponseFromHttpPayload,
 } from "../protocol/pythonRuntimeHttpProtocol";
 
 describe("pythonRuntimeHttpProtocol", () => {
+  it("preserves loaded memory profiles and rejects unknown profiles without paths", () => {
+    const model = { provider: "transformers", modelId: "fixture/model", inferenceMode: "chat" };
+    expect(mapModelStatusResponseFromHttpPayload({ loadedModels: [model], activeTaskCount: 0 }).loadedModels[0]?.memoryMode).toBeUndefined();
+    expect(mapModelStatusResponseFromHttpPayload({ loadedModels: [{ ...model, memoryMode: "offload-v1" }], activeTaskCount: 0 }).loadedModels[0]?.memoryMode).toBe("offload-v1");
+    expect(() => mapModelStatusResponseFromHttpPayload({ loadedModels: [{ ...model, memoryMode: "unknown-private-value" }], activeTaskCount: 0 })).toThrow("model memory mode is unsupported");
+  });
   it("keeps contract payloads canonical when mapping to/from HTTP payloads", () => {
     const request = {
       requestId: "req-python-1",

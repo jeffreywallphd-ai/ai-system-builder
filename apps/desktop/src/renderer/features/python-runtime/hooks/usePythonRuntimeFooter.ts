@@ -62,7 +62,7 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
       snapshot.healthy ? "healthy" : "unhealthy",
       snapshot.capabilities.join("|"),
       String(snapshot.activeTaskCount),
-      snapshot.loadedModels.map((model) => `${model.provider}:${model.modelId}:${model.inferenceMode}:${model.localPath ?? ""}`).join("|"),
+      snapshot.loadedModels.map((model) => `${model.provider}:${model.modelId}:${model.inferenceMode}:${model.memoryMode ?? "standard"}:${model.localPath ?? ""}`).join("|"),
       String(snapshot.logs.length),
       lastLogEntry?.timestamp ?? "",
       lastLogEntry?.level ?? "",

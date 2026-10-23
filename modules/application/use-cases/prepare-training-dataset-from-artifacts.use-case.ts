@@ -54,6 +54,7 @@ import type {
   DatasetQualityReviewRow,
   DatasetQualityRequestedConfig,
   DatasetQualityRuntimeConfig,
+  PythonRuntimeCapabilitiesResult,
   PrepareTrainingDatasetRequest,
   PrepareTrainingDatasetResult,
 } from "../../contracts/runtime";
@@ -68,6 +69,8 @@ import {
   evaluateDatasetPreparationSourceReadiness,
   isDatasetPreparationTaskType,
   normalizeLegacyDatasetPreparationMethod,
+  normalizeDatasetPreparationMemoryMode,
+  supportsDatasetPreparationOffload,
   resolveDatasetPreparationAdaptivePlan,
   resolveDatasetPreparationSourceCapability,
   resolveDatasetPreparationTaskProfileDefinition,
@@ -242,6 +245,14 @@ function validateDatasetPreparationCommand(
         !isRecord(command.recipe.generation.model)))
   ) {
     return "Dataset preparation settings contain an invalid active section.";
+  }
+  const requestedModel = command.recipe.generation?.model;
+  try {
+    normalizeDatasetPreparationMemoryMode(
+      isRecord(requestedModel) ? requestedModel.memoryMode : undefined,
+    );
+  } catch {
+    return "The local-model memory profile is unsupported.";
   }
   const structuredOutput = command.recipe.generation?.structuredOutput;
   if (
@@ -442,6 +453,8 @@ export interface PrepareTrainingDatasetFromArtifactsUseCaseDependencies {
   artifactCatalog?: ArtifactCatalogReadPort;
   taskPowerLifecycle: TaskPowerLifecyclePort;
   taskReconciler?: OwnedTaskReconcilerService;
+  /** Explicit execution admission; older workers may ignore unknown model fields. */
+  readWorkerCapabilities?: () => Promise<PythonRuntimeCapabilitiesResult>;
   runtimeCapabilityGuard?: Pick<
     RuntimeCapabilityGuardService,
     "requireCapabilityReady"
@@ -1652,6 +1665,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   }
   private readonly reads = new Map<string, Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performReadPrepareTrainingDataset"]>>>>();
   private readonly taskReconciler?: OwnedTaskReconcilerService;
+  private readonly readWorkerCapabilities?: () => Promise<PythonRuntimeCapabilitiesResult>;
   private readonly runtimeTaskRegistry: RuntimeTaskRegistryPort;
   private readonly storageBindings: ArtifactStorageBindingPort;
   private readonly storage: ArtifactObjectStoragePort;
@@ -1702,6 +1716,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     this.artifactCatalog = dependencies.artifactCatalog;
     this.taskPowerLifecycle = dependencies.taskPowerLifecycle;
     this.taskReconciler = dependencies.taskReconciler;
+    this.readWorkerCapabilities = dependencies.readWorkerCapabilities;
     this.runtimeCapabilityGuard = dependencies.runtimeCapabilityGuard;
     this.datasetQualityPolicyProvider =
       dependencies.datasetQualityPolicyProvider;
@@ -1768,6 +1783,27 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
 
     let normalizedCommand = normalizeDatasetPreparationCommand(command);
+    if (
+      normalizedCommand.recipe.task?.textInputMode === "generate" &&
+      normalizedCommand.recipe.generation?.model.memoryMode === "offload-v1"
+    ) {
+      let supported = false;
+      try {
+        const available = await this.readWorkerCapabilities?.();
+        supported = supportsDatasetPreparationOffload(available?.capabilities);
+      } catch {
+        // A failed/old-worker read cannot grant the requested loading policy.
+      }
+      if (!supported) {
+        return createFailureResult(
+          createContractError(
+            "unavailable",
+            "Low-memory model loading is unavailable in the selected runtime.",
+          ),
+          context,
+        );
+      }
+    }
     let quality: PrepareTrainingDatasetRequest["quality"];
     if (normalizedCommand.quality) {
       if (!this.datasetQualityPolicyProvider) {

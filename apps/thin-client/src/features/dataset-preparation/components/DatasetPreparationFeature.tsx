@@ -1,3 +1,4 @@
+import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -20,6 +21,7 @@ import {
   resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   validateDatasetPreparationSaveName,
+  isDatasetPreparationOffloadAvailable,
   type DatasetPreparationAdvancedReport,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationMethodId,
@@ -28,6 +30,8 @@ import {
   type DatasetPreparationTaskType,
   type DatasetPreparationVisualOutputShape,
   type DatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationMemoryMode,
+  type LocalModelConfig,
   type DatasetQualityPreset,
   type DatasetQualityReport,
   type DatasetQualityReviewLineId,
@@ -69,7 +73,7 @@ export interface DatasetPreparationFeatureProps {
 type Status =
   | { kind: "idle"; message?: string }
   | { kind: "loading"; message: string }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: string; memoryNotification?: boolean }
   | { kind: "success"; message: string };
 
 const waitForNextPoll = () =>
@@ -132,6 +136,9 @@ const splitLabels = (value: string): string[] | undefined => {
 
 interface PersistedStructuredOutputSettings {
   constrainedDecodingPreference?: boolean;
+  memoryMode?: DatasetPreparationMemoryMode;
+  memorySettingsInvalid?: boolean;
+  localModel?: Pick<LocalModelConfig, "modelId" | "device" | "torchDtype">;
   shapes?: Partial<
     Record<DatasetPreparationTaskType, DatasetPreparationVisualOutputShape>
   >;
@@ -143,12 +150,29 @@ const structuredOutputStorageKey = (workspaceId: string) =>
 function readPersistedStructuredOutputSettings(
   workspaceId: string,
 ): PersistedStructuredOutputSettings {
+  let saved: string | null;
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(structuredOutputStorageKey(workspaceId)) ??
-        "{}",
-    ) as Record<string, unknown>;
+    saved = window.localStorage.getItem(structuredOutputStorageKey(workspaceId));
+  } catch {
+    // Storage access is optional. No saved override was restored or downgraded.
+    return {};
+  }
+  try {
+    const value = JSON.parse(saved ?? "{}") as unknown;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { memorySettingsInvalid: true };
+    }
+    const parsed = value as Record<string, unknown>;
     return {
+      memorySettingsInvalid: parsed.memorySettingsInvalid === true
+        || (parsed.memoryMode !== undefined && parsed.memoryMode !== "standard" && parsed.memoryMode !== "offload-v1")
+        || (parsed.localModel !== undefined && !isValidLocalModelSettings(parsed.localModel)),
+      ...(parsed.memoryMode === "standard" || parsed.memoryMode === "offload-v1"
+        ? { memoryMode: parsed.memoryMode }
+        : {}),
+      ...(parsed.localModel && typeof parsed.localModel === "object" && !Array.isArray(parsed.localModel)
+        ? { localModel: readLocalModelSettings(parsed.localModel as Record<string, unknown>) }
+        : {}),
       ...(typeof parsed.constrainedDecodingPreference === "boolean"
         ? {
             constrainedDecodingPreference: parsed.constrainedDecodingPreference,
@@ -164,8 +188,24 @@ function readPersistedStructuredOutputSettings(
         : {}),
     };
   } catch {
-    return {};
+    return { memorySettingsInvalid: true };
   }
+}
+
+function isValidLocalModelSettings(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const model = value as Record<string, unknown>;
+  return typeof model.modelId === "string" && model.modelId.length <= 193
+    && (model.device === undefined || model.device === "auto" || model.device === "cpu" || model.device === "cuda")
+    && (model.torchDtype === undefined || ["auto", "float32", "float16", "bfloat16"].includes(model.torchDtype as string));
+}
+
+function readLocalModelSettings(value: Record<string, unknown>): PersistedStructuredOutputSettings["localModel"] {
+  return {
+    modelId: typeof value.modelId === "string" && value.modelId.length <= 193 ? value.modelId : "",
+    device: value.device === "cpu" || value.device === "cuda" ? value.device : "auto",
+    torchDtype: value.torchDtype === "float32" || value.torchDtype === "float16" || value.torchDtype === "bfloat16" ? value.torchDtype : "auto",
+  };
 }
 
 function writePersistedStructuredOutputSettings(
@@ -323,6 +363,8 @@ function buildCommand(
     visualShape: DatasetPreparationVisualOutputShape;
     constrainedDecoding: boolean;
     promptTemplate: string;
+    memoryMode?: DatasetPreparationMemoryMode;
+    localModel?: PersistedStructuredOutputSettings["localModel"];
   },
   adaptive: {
     chunkSize: number;
@@ -407,6 +449,12 @@ function buildCommand(
                 inferenceMode: model?.inferenceMode ?? "chat",
                 device: model?.device ?? "auto",
                 torchDtype: model?.torchDtype ?? "auto",
+                ...(structuredOutput.localModel !== undefined
+                  ? structuredOutput.localModel
+                  : {}),
+                ...(structuredOutput.memoryMode === "offload-v1"
+                  ? { memoryMode: "offload-v1" as const, memoryOverflowPolicy: "none" as const }
+                  : {}),
               },
               failurePolicy: "skip" as const,
               structuredOutput,
@@ -436,7 +484,11 @@ function buildCommand(
   };
 }
 
-export function DatasetPreparationFeature({
+export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps) {
+  return <WorkspaceDatasetPreparationFeature key={props.workspaceId} {...props} />;
+}
+
+function WorkspaceDatasetPreparationFeature({
   workspaceId,
   artifactClient,
   preparationClient,
@@ -576,6 +628,13 @@ export function DatasetPreparationFeature({
     );
   const [generationCapacity, setGenerationCapacity] =
     useState<DatasetPreparationGenerationCapacitySnapshot>();
+  const [localInference, setLocalInference] = useState(() => ({
+    workspaceId,
+    memoryMode: initialStructuredOutputSettings.memoryMode ?? "standard",
+    memorySettingsInvalid: initialStructuredOutputSettings.memorySettingsInvalid === true,
+    localModel: initialStructuredOutputSettings.localModel,
+  }));
+  const lowMemoryAvailable = isDatasetPreparationOffloadAvailable(generationCapacity);
   const [preparationMethodId, setPreparationMethodId] =
     useState<DatasetPreparationMethodId>();
   const [qualityPreset, setQualityPreset] =
@@ -679,8 +738,10 @@ export function DatasetPreparationFeature({
         effectivePreparationMethodId,
       )
     : undefined;
-  const generationModel =
-    resolveDefaultDatasetPreparationTextGenerationModel(taskType);
+  const generationModel = {
+    ...resolveDefaultDatasetPreparationTextGenerationModel(taskType),
+    ...(localInference.workspaceId === workspaceId ? localInference.localModel : {}),
+  };
   const outputShapeCompilation = useMemo(
     () =>
       compileDatasetPreparationVisualOutputShape(visualOutputShape, {
@@ -734,28 +795,38 @@ export function DatasetPreparationFeature({
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
     if (!preparation.readGenerationCapacity) {
       setGenerationCapacity(undefined);
       return () => {
         cancelled = true;
       };
     }
-    void preparation
-      .readGenerationCapacity({ workspaceId })
-      .then((capacity) => {
-        if (!cancelled) setGenerationCapacity(capacity);
-      })
-      .catch(() => {
+    const refresh = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const capacity = await preparation.readGenerationCapacity!({ workspaceId });
+        if (!cancelled) setGenerationCapacity(capacity ? { ...capacity } : undefined);
+      } catch {
         if (!cancelled) setGenerationCapacity(undefined);
-      });
+      } finally {
+        inFlight = false;
+      }
+    };
+    setGenerationCapacity(undefined);
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 5_000);
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
   }, [preparation, workspaceId]);
 
   useEffect(() => {
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
     setConstrainedDecodingPreference(persisted.constrainedDecodingPreference);
+    setLocalInference({ workspaceId, memoryMode: persisted.memoryMode ?? "standard", memorySettingsInvalid: persisted.memorySettingsInvalid === true, localModel: persisted.localModel });
     const saved = persisted.shapes?.[taskType];
     const compiled = saved
       ? compileDatasetPreparationVisualOutputShape(saved, {
@@ -820,12 +891,15 @@ export function DatasetPreparationFeature({
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
     writePersistedStructuredOutputSettings(workspaceId, {
       constrainedDecodingPreference,
+      ...(localInference.workspaceId === workspaceId
+        ? { memoryMode: localInference.memoryMode, memorySettingsInvalid: localInference.memorySettingsInvalid, localModel: localInference.localModel }
+        : { memoryMode: persisted.memoryMode, memorySettingsInvalid: persisted.memorySettingsInvalid, localModel: persisted.localModel }),
       shapes: {
         ...(persisted.shapes ?? {}),
         [taskType]: visualOutputShape,
       },
     });
-  }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId]);
+  }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId, localInference]);
   useEffect(() => {
     mounted.current = true;
     cancelRequest.current = undefined;
@@ -910,9 +984,12 @@ export function DatasetPreparationFeature({
       }
       setStatus({
         kind: "error",
+        memoryNotification: task.status === "failed" && task.error.code === "generation_insufficient_resources",
         message:
           task.status === "failed"
-            ? task.error.message
+            ? task.error.code === "generation_insufficient_resources"
+              ? getDatasetPreparationMemoryFailureMessage(task.error.memoryShortfall)
+              : task.error.message
             : "Dataset preparation could not be found. Start it again.",
       });
       return;
@@ -1002,6 +1079,23 @@ export function DatasetPreparationFeature({
       });
       return;
     }
+    if (preparationPlan.generationMode !== "none" && (localInference.workspaceId !== workspaceId || localInference.memorySettingsInvalid)) {
+      setStatus({ kind: "error", message: "Saved local inference settings are unsupported. Choose a valid memory mode and review the model, device and precision before continuing." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.localModel !== undefined && !localInference.localModel.modelId.trim()) {
+      setStatus({ kind: "error", message: "Enter a local generation model identifier before continuing." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.memoryMode === "offload-v1" && !lowMemoryAvailable) {
+      setStatus({ kind: "error", message: "Optional low-memory inference is unavailable in the current worker. Choose Standard or reconnect a supported runtime." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.memoryMode === "offload-v1"
+      && (generationModel.device !== "cpu" && generationModel.device !== "cuda" || !["float32", "float16", "bfloat16"].includes(generationModel.torchDtype ?? "auto"))) {
+      setStatus({ kind: "error", message: "Optional low-memory inference requires an explicit CPU or CUDA device and precision." });
+      return;
+    }
     setResult(undefined);
     setQualityReview(undefined);
     setStatus({ kind: "loading", message: "Starting dataset preparation..." });
@@ -1039,6 +1133,8 @@ export function DatasetPreparationFeature({
             visualShape: visualOutputShape,
             constrainedDecoding: constrainedDecodingEnabled,
             promptTemplate: textGenerationPrompt,
+            memoryMode: localInference.memoryMode,
+            localModel: localInference.localModel,
           },
           adaptiveValues,
         ),
@@ -1054,10 +1150,15 @@ export function DatasetPreparationFeature({
       if (mounted.current && pollingSession.current === session) {
         activeRequestRef.current = undefined;
         setActiveRequestId(undefined);
+        const failure = error as { code?: unknown; details?: { memoryShortfall?: unknown } } | undefined;
+        const memoryFailure = failure?.code === "generation_insufficient_resources";
         setStatus({
           kind: "error",
+          memoryNotification: memoryFailure,
           message:
-            error instanceof Error
+            memoryFailure
+              ? getDatasetPreparationMemoryFailureMessage(failure?.details?.memoryShortfall)
+              : error instanceof Error
               ? error.message
               : "Dataset preparation could not be started.",
         });
@@ -1508,6 +1609,37 @@ export function DatasetPreparationFeature({
             {preparationPlan && preparationPlan.generationMode !== "none" ? (
               <section className="ui-stack ui-stack--sm">
                 <h3>Generation prompt</h3>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Local generation model</span>
+                  <input className="ui-input" value={generationModel.modelId ?? ""} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { ...current.localModel, modelId: event.target.value } }))} />
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Model device</span>
+                  <select className="ui-input" value={generationModel.device ?? "auto"} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { modelId: generationModel.modelId ?? "", ...current.localModel, device: event.target.value as "auto" | "cpu" | "cuda" } }))}>
+                    <option value="auto">Auto</option><option value="cpu">CPU</option><option value="cuda">CUDA</option>
+                  </select>
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Torch dtype</span>
+                  <select className="ui-input" value={generationModel.torchDtype ?? "auto"} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { modelId: generationModel.modelId ?? "", ...current.localModel, torchDtype: event.target.value as "auto" | "float16" | "bfloat16" | "float32" } }))}>
+                    <option value="auto">Auto</option><option value="float32">float32</option><option value="bfloat16">bfloat16</option><option value="float16">float16</option>
+                  </select>
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Model memory mode</span>
+                  <select className="ui-input" value={localInference.memoryMode} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, memoryMode: event.target.value as DatasetPreparationMemoryMode, memorySettingsInvalid: false }))}>
+                    <option value="standard">Standard</option>
+                    <option value="offload-v1" disabled={!lowMemoryAvailable}>Optional low-memory (offload v1)</option>
+                  </select>
+                  <small className="ui-text-muted">Optional mode limits weight placement to 1 GiB RAM and 2 GiB VRAM with up to 12 GiB of private disk staging. These are not process-memory limits. Disk transfers can make generation slower. Select CPU or CUDA and an explicit precision; unsupported models or insufficient resources fail safely. Memory overflow is disabled for this profile.</small>
+                  <small className="ui-text-muted">Initial support covers native Qwen2/Qwen2.5 text models and the standard Qwen2.5 chat template.</small>
+                  {!lowMemoryAvailable ? <small role="status">Optional low-memory inference is unavailable in the current worker.</small> : null}
+                  {localInference.memorySettingsInvalid ? <small role="alert">Saved local inference settings are unsupported. Choose a valid memory mode and review the model, device and precision.</small> : null}
+                </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>System prompt instructions</span>
                   <textarea
@@ -1965,15 +2097,15 @@ export function DatasetPreparationFeature({
           </WorkflowStep>
         </WorkflowSequence>
 
-        {status.message && status.kind !== "success" ? (
+        {status.message && status.kind !== "success" && !(status.kind === "error" && status.memoryNotification) ? (
           <p role={status.kind === "error" ? "alert" : "status"}>
             {status.message}
           </p>
         ) : null}
         <TransientNotificationPublisher
-          message={status.kind === "success" ? status.message : undefined}
-          title="Dataset preparation"
-          tone="success"
+          message={status.kind === "success" || status.kind === "error" && status.memoryNotification ? status.message : undefined}
+          title={status.kind === "error" ? "Model needs more memory" : "Dataset preparation"}
+          tone={status.kind === "error" ? "error" : "success"}
           source="Dataset Preparation"
           workspaceId={workspaceId}
         />
@@ -2021,6 +2153,7 @@ export function DatasetPreparationFeature({
           currentIndex={qualityReviewIndex}
           decisions={qualityReviewDecisions}
           busy={reviewActionInFlight || qualityReviewPageLoading}
+          message={qualityReviewPageError}
           approveLabel="Approve"
           rejectLabel="Reject"
           absoluteIndex={

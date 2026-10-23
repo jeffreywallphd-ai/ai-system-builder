@@ -293,4 +293,14 @@ describe("dataset preparation constrained JSON recommendation", () => {
     assert.equal(normalizeConstrainedJsonDecodingPreference(false), false);
     assert.throws(() => normalizeConstrainedJsonDecodingPreference("yes"));
   });
+
+  it("round-trips only boolean offload availability and leaves legacy snapshots unchanged", () => {
+    for (const offloadAvailable of [true, false]) {
+      assert.equal(normalizeDatasetPreparationGenerationCapacitySnapshot(capacity({ offloadAvailable }))?.offloadAvailable, offloadAvailable);
+    }
+    assert.equal(normalizeDatasetPreparationGenerationCapacitySnapshot(capacity())?.offloadAvailable, undefined);
+    for (const offloadAvailable of ["true", 1, {}, null]) {
+      assert.equal(normalizeDatasetPreparationGenerationCapacitySnapshot({ ...capacity(), offloadAvailable })?.offloadAvailable, undefined);
+    }
+  });
 });

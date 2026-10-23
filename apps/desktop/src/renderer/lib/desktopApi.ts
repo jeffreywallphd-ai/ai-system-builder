@@ -359,6 +359,7 @@ export interface DesktopPythonRuntimeLoadedModel {
   inferenceMode: "text2text" | "causal" | "chat" | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
+  memoryMode?: "standard" | "offload-v1";
   localPath?: string;
 }
 

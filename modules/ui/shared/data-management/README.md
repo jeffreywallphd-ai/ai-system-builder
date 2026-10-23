@@ -139,3 +139,23 @@ shape. Desktop startup prefers an installed decoder-compatible Python version
 when no operator command is configured. Desktop and thin client keep the
 control disabled when capability is unavailable, so a saved or stale checked
 preference cannot send a known-unsupported constrained request.
+
+## Memory admission notifications
+
+Dataset Preparation memory-admission failures use the workspace notification
+center in desktop and thin client, without a duplicate inline memory error.
+Desktop preflight denial publishes before dispatch; post-start desktop failures
+remain in the existing background task activity. Thin-client observed task
+failures publish to notification history. Contextual form validation and other
+security/readiness blockers keep their existing presentation and enforcement.
+
+The worker projects only the known memory-failure code and a bounded numeric
+shortfall: resource kind (RAM, VRAM or combined), required bytes, currently
+available bytes and explicitly permitted overflow. API/IPC and UI normalize
+these facts again. Guidance rounds the remaining shortfall upward to MiB after
+subtracting already permitted overflow. It describes a point-in-time observation,
+not a guarantee that a later retry will fit. Unknown or malformed measurements
+use safe smaller-model/retry guidance without inventing an amount. No exception
+text, model/source details, filesystem paths, prompts or raw logs enter the new
+public field. Existing guards, limits, admission, cleanup and offload opt-in
+controls remain unchanged; notifications never authorize a denied model load.

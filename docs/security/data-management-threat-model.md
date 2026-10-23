@@ -293,3 +293,67 @@ absolute/non-symlink output-directory check remains in force. These controls do
 not qualify source-path authority, parent substitution, identity-preserving native
 file operations or controlled resource behavior; those R30 gaps remain pending.
 Rollback retains stronger naming denial.
+
+## Optional offload delta
+
+The explicit `offload-v1` mode adds a settings-to-worker resource boundary and
+private host-cache staging. Default Standard behavior and existing workspace/task
+authority remain. An exact versioned capability check precedes staging/start;
+unknown or malformed saved profiles cannot downgrade silently. Native Qwen2
+configuration, safe-weight indexes/offsets/shapes, tokenizer paths/classes and the
+inspected bounded chat template are checked before supplier loading. Parsed bytes
+are bound to full-file digests; source rebind/drift denies cached reuse/forward.
+Adapter configuration and weight-name families are rejected case-insensitively
+before supplier reads: native model classes can otherwise discover installed
+PEFT support and redirect the base path despite explicit local-only configuration.
+No remote code, pickle, network, implicit overflow or precision fallback is used.
+
+Placement is not a process-memory or disk quota. Separate admission covers
+loading source/conversion transients, execution/KV/prefill/runtime headroom and
+finite owned staging. Specific insufficient-resource failures retain bounded numeric
+observations without prompts, outputs or paths. An unstarted forward retains
+safe retry ownership. One exclusive slot, cached-input leases, serialized request
+views, native task-admission/unload fencing, weak-reference release and recorded
+per-file cleanup progress preserve ownership through load/OOM/decoder/deletion
+failures. Stale or foreign slots and recreated files are retained and denied,
+not adopted or recursively deleted. Queued cancellation and unsupported running
+Dataset Preparation cancellation remain truthful; the shared worker is not killed.
+
+Focused failure-path/UI evidence is local control evidence. Actual installed-model
+resource/quality qualification, native parent-substitution/ACL recovery and other
+hardware profiles remain distinct; cooperative identity/hash observations do not
+prove native immutability. Rollback withdraws only optional support and retains
+stronger loading/ownership/cleanup controls and failed evidence. The exact support
+and prospective measurement protocol are in
+`docs/operations/optional-low-memory-inference.md`.
+
+## Memory-denial diagnostic delta
+
+Notification history is a public diagnostic sink. On the exact
+`generation_insufficient_resources` code, the worker/transport/UI allowlist only
+the RAM/VRAM/combined resource enum and nonnegative safe-integer required,
+available and permitted-overflow byte counts, bounded to 1 PiB. Reject
+contradictory/nonfinite facts and VRAM overflow; discard unrelated fields.
+Only fixed copy and those numeric facts reach memory notifications. Unknown
+measurements do not invent an amount. The existing model-admission decision,
+workspace authority, runtime/source containment, resource limits and retained
+offload ownership are unchanged. Automated denial, numeric-bound, private-field
+non-disclosure and two-host notification tests cover this delta. Native staging
+protection and actual optional offload qualification retain their separate gaps.
+
+## Admission and saved-profile failure handling
+
+A Dataset POST can have taken effect before its response is delivered. The runtime
+foundation retains bounded private ownership before dispatch and after transport,
+parse or identity uncertainty. No automatic sibling cancellation/deadline or
+model-download recovery may stop that protected worker. A shared recovery fence
+also rejects new dispatch during stop/start and after unconfirmed recovery failure.
+Exact task/type/generation observations and actual owned exit govern release;
+contradictory cancellation, unknown status and late acknowledgements cannot erase
+or resurrect ownership. Deterministic deferred-response and fake-child tests cover
+these timelines without accessing retained offload staging or claiming native proof.
+
+Saved-version reuse validates the memory mode before any form setters. Unsupported
+profiles produce fixed validation and leave the visible original setup unchanged,
+without dispatch. Explicit valid profiles and omitted legacy Standard remain
+supported; invalid mode input never silently substitutes an earlier selection.

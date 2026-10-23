@@ -734,4 +734,20 @@ describe("desktop dataset preparation client", () => {
       }),
     );
   });
+  it("formats only validated memory facts from task errors", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const previous = hostWindow.window.desktopApi;
+    try {
+      hostWindow.window.desktopApi = { ...previous, readPrepareTrainingDatasetTask: async () => ({ ok: true, value: { status: "failed", error: {
+        code: "generation_insufficient_resources", stage: "generation", message: "private-fixture",
+        memoryShortfall: { resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0, path: "private-fixture" },
+      } } }) } as any;
+      const result = await createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask("memory-task");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).toContain("Free at least 243 MiB of RAM");
+      expect(JSON.stringify(result)).not.toContain("private-fixture");
+    } finally { hostWindow.window.desktopApi = previous; }
+  });
+
 });

@@ -86,6 +86,57 @@ class TaskLifecycleTests(unittest.TestCase):
         self.assertEqual(status.error.stage, "normalization")
         self.assertNotIn("private source detail", str(status.error.model_dump()))
 
+    def test_memory_failure_round_trips_numeric_facts_without_private_details(self) -> None:
+        memory = {"resource": "ram", "requiredBytes": 3758096384,
+                  "availableBytes": 3503902720, "allowedOverflowBytes": 0}
+        failure = DatasetPreparationStageError(
+            "generation", "private exception fixture", "generation_insufficient_resources",
+            details={"memoryShortfall": {**memory, "path": "private fixture"}, "modelId": "private fixture"},
+        )
+        with patch("modules.adapters.runtime.python.worker.app._run_task", side_effect=failure):
+            worker_app.start_task(StartPythonRuntimeTaskRequest(
+                requestId="memory-denial", taskType="prepare-training-dataset", payload={
+                    "sourceInputs": [], "recipe": {},
+                    "split": {"trainRatio": 0.8, "testRatio": 0.2}, "output": {"format": "jsonl"},
+                },
+            ))
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                status = worker_app.read_task_status("memory-denial")
+                if status.status == "failed":
+                    break
+                time.sleep(0.01)
+        self.assertEqual(status.status, "failed")
+        self.assertEqual(status.error.details["memoryShortfall"], memory)
+        self.assertNotIn("private", str(status.error.model_dump()))
+
+    def test_malformed_memory_diagnostics_still_record_a_terminal_failure(self) -> None:
+        for index, resource in enumerate(([], {})):
+            with self.subTest(resource=resource):
+                failure = DatasetPreparationStageError(
+                    "generation", "private fixture", "generation_insufficient_resources",
+                    details={"memoryShortfall": {"resource": resource,
+                        "requiredBytes": 100, "availableBytes": 0, "allowedOverflowBytes": 0}},
+                )
+                request_id = f"malformed-memory-{index}"
+                with patch("modules.adapters.runtime.python.worker.app._run_task", side_effect=failure):
+                    worker_app.start_task(StartPythonRuntimeTaskRequest(
+                        requestId=request_id, taskType="prepare-training-dataset", payload={
+                            "sourceInputs": [], "recipe": {},
+                            "split": {"trainRatio": 0.8, "testRatio": 0.2}, "output": {"format": "jsonl"},
+                        },
+                    ))
+                    deadline = time.monotonic() + 2
+                    while time.monotonic() < deadline:
+                        status = worker_app.read_task_status(request_id)
+                        if status.status == "failed":
+                            break
+                        time.sleep(0.01)
+                self.assertEqual(status.status, "failed")
+                self.assertEqual(status.error.code, "generation_insufficient_resources")
+                self.assertNotIn("memoryShortfall", status.error.details)
+                self.assertNotIn("private", str(status.error.model_dump()))
+
     def test_dataset_progress_updates_registry(self) -> None:
         def fake_prepare(_payload, on_generation_progress, output_directory=None):
             del output_directory

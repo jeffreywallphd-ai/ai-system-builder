@@ -1,5 +1,16 @@
 # Runtime Model
 
+Standard CPU admission retains a narrowly calibrated estimate for two
+user-approved pinned safe-weight trials:3GiB available physical RAM for
+Qwen2.5-0.5B Float32 (at most2GiB estimated loaded weights), and3.5GiB for
+Qwen2.5-1.5B BF16 (at most3GiB loaded weights). Explicit CPU/chat/Standard mode,
+no adapter, regular safe-weight/config files and their exact approved SHA256 are
+required; other inputs retain the conservative estimate. Available RAM is checked
+after verification. This estimate changes no precision, loading mode, overflow
+policy, native ownership or execution deadline. It is an empirical qualification
+candidate, not a physical quota or evidence of successful inference. New model
+measurements and sampled4GiB qualification-process limits remain independent.
+
 Desktop compilation follows ADR-0044: the pinned Forge Vite pipeline emits a
 self-contained Node/Electron main, independent sandbox-compatible CJS preloads
 and separate product/published-runtime renderers. Relative asset URLs and the
@@ -489,3 +500,34 @@ explicit cancellation recovery. A network failure remains transport uncertainty.
 UI notifications retain bounded identities of live work across workspace changes
 so returning reconciles its terminal outcome without replaying unrelated history.
 
+## Optional bounded generation profile
+
+ADR-0045 adds the explicit Dataset Preparation `offload-v1` profile. Standard
+remains default. Exact worker capability checks precede staging/start, and loaded
+model status preserves the profile identity through HTTP/IPC. The shared runtime
+does not silently reuse the profile for conversation, training or Context.
+
+The native Qwen2 path independently checks safe-weight/tokenizer source bindings,
+meta-model tensor shapes/ties and finite CPU/CUDA placement. Admission separates
+weight residency, source/conversion transients, largest-layer execution, bounded
+prefill/KV/runtime headroom and owned disk staging. One exclusive cached-generator
+slot owns original-input references and private staging; task completion alone
+does not remove referenced files. Per-request views retain distinct generation
+parameters. Atomic unload/task-admission fencing and serialized model execution
+prevent teardown racing another user of the same cached model. Unconfirmed cleanup
+retains ownership, with exact removal-progress retry and no ambient slot adoption.
+The owning limits, support matrix and qualification boundaries are in
+`docs/operations/optional-low-memory-inference.md`. These cooperative controls do
+not qualify pending native filesystem/ACL races or impose a kernel memory quota.
+
+## Automatic recovery and admission ordering
+
+Reserve non-cancellable Dataset admission before its HTTP POST. An uncertain
+acknowledgement retains that bounded owner until an exact terminal observation,
+consistent cancellation or actual owned exit; unknown responses and elapsed time
+are not release evidence. Task and direct-download automatic recovery share one
+synchronous admission fence. No Dataset owner may exist when recovery commits,
+and new starts cannot enter its stop/start interval. Unconfirmed recovery failure
+continues to deny admission while allowing status reads. Actual owned lifecycle
+recovery, rather than a healthy read, clears the fence. Existing native ownership
+and offload staging requirements remain separate.

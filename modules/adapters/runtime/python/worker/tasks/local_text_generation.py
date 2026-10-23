@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 import gc
+import hashlib
 import importlib.metadata as importlib_metadata
 import importlib.util
 import inspect
@@ -14,6 +15,7 @@ from os import environ
 from pathlib import Path
 import re
 import shutil
+import stat
 from threading import Event, Lock, Thread
 import time
 from typing import Any, Callable
@@ -23,6 +25,14 @@ from .constrained_json_decoder import (
     ConstrainedJsonDecoder,
     ConstrainedJsonDecoderError,
 )
+from .bounded_model_loader import (
+    load_bounded_local_model,
+    release_offload_lease,
+    retry_retained_offload_cleanup,
+    validate_generation_limits,
+    validate_offload_config,
+)
+from .local_model_offload import OffloadAdmissionError
 
 DEFAULT_MAX_NEW_TOKENS = 256
 DEFAULT_HUGGINGFACE_DOWNLOAD_TIMEOUT_SECONDS = "60"
@@ -100,7 +110,12 @@ class GenerationModelLoadError(RuntimeError):
 
 
 class GenerationInsufficientResourcesError(RuntimeError):
-    '''Raised when loading a model exceeds the configured memory-overflow bound.'''
+    """Admission denial with optional numeric facts, never private model details."""
+
+    def __init__(self, message: str, *, memory_shortfall: dict | None = None):
+        super().__init__(message)
+        self.memory_shortfall = memory_shortfall
+
 
 
 @dataclass(frozen=True)
@@ -1040,6 +1055,136 @@ class TransformersChatGenerator(TransformersCausalGenerator):
         )
 
 
+class BoundedOffloadGenerator(TransformersCausalGenerator):
+    def __init__(self, model_config: LocalModelConfig, generation_params: dict[str, Any]):
+        reference = _RESOLVED_MODEL_REFERENCES.get(model_config.modelId)
+        cache_root = _resolve_huggingface_cache_root()
+        _assert_huggingface_model_id(model_config.modelId)
+        if reference is None or cache_root is None:
+            raise OffloadAdmissionError()
+        _validate_huggingface_snapshot_path(reference)
+        self._owner = self
+        self._model_id = model_config.modelId
+        self._operation_lock = Lock()
+        self._closed = False
+        self._poisoned = False
+        self._decoder = None
+        self._generation_params = dict(generation_params)
+        self._bundle = load_bounded_local_model(
+            model_config, generation_params, reference=Path(reference), cache_root=cache_root,
+            read_memory=_read_system_memory_snapshot, read_cuda_memory=_available_cuda_memory_bytes,
+        )
+
+    @property
+    def _model(self):
+        return self._owner._bundle.model
+
+    @property
+    def _tokenizer(self):
+        return self._owner._bundle.tokenizer
+
+    @property
+    def _constrained_json_decoder(self):
+        return self._owner._decoder
+
+    @_constrained_json_decoder.setter
+    def _constrained_json_decoder(self, value):
+        self._owner._decoder = value
+
+    def for_request(self, generation_params: dict[str, Any]):
+        if self._owner._closed or self._owner._poisoned:
+            raise OffloadAdmissionError()
+        # Share owned weights/decoder/lock, not another request's generation
+        # settings. No task may silently inherit the first request's token cap.
+        view = object.__new__(BoundedOffloadGenerator)
+        view._owner = self._owner
+        view._generation_params = dict(generation_params)
+        return view
+
+    def assert_reusable(self):
+        if self._owner._closed or self._owner._poisoned:
+            raise OffloadAdmissionError()
+        current = _RESOLVED_MODEL_REFERENCES.get(self._owner._model_id)
+        if current is None or Path(current) != self._owner._bundle.inventory.root:
+            raise OffloadAdmissionError()
+        _validate_huggingface_snapshot_path(current)
+        self._owner._bundle.inventory.verify_unchanged()
+
+    def _generate_new_tokens_text(self, input_ids, generation_inputs, constrained_json_schema=None):
+        validate_generation_limits(self._model, input_ids, self._generation_params)
+        plan = self._owner._bundle.resources
+        memory = _read_system_memory_snapshot()
+        cpu_reserve = plan.cpu_required_bytes - plan.cpu_weight_bytes
+        cuda_reserve = plan.cuda_required_bytes - plan.cuda_weight_bytes
+        cuda_available = _available_cuda_memory_bytes() if cuda_reserve else 0
+        if memory is None or memory.available_bytes < cpu_reserve or cuda_available < cuda_reserve:
+            print(json.dumps({"event": "runtime.generation_model.forward_resources_insufficient",
+                "availableMemoryBytes": None if memory is None else memory.available_bytes,
+                "requiredMemoryBytes": cpu_reserve, "availableAcceleratorMemoryBytes": cuda_available,
+                "requiredAcceleratorMemoryBytes": cuda_reserve}), flush=True)
+            shortfall = None
+            if memory is not None and memory.available_bytes < cpu_reserve:
+                shortfall = {"resource": "ram", "requiredBytes": cpu_reserve,
+                    "availableBytes": memory.available_bytes, "allowedOverflowBytes": 0}
+            elif cuda_available < cuda_reserve:
+                shortfall = {"resource": "vram", "requiredBytes": cuda_reserve,
+                    "availableBytes": cuda_available, "allowedOverflowBytes": 0}
+            raise GenerationInsufficientResourcesError(
+                "The selected model cannot fit in the memory currently available to the local runtime.",
+                memory_shortfall=shortfall,
+            )
+        try:
+            return super()._generate_new_tokens_text(input_ids, generation_inputs, constrained_json_schema)
+        except ConstrainedJsonDecoderError as error:
+            # These fixed decoder output codes are produced only after generate
+            # returns and its offload post-hooks have completed. Preserve the
+            # existing bounded output-repair path for malformed/truncated text.
+            if error.code not in {"decoder-output-invalid", "decoder-output-empty", "decoder-output-truncated"}:
+                self._owner._poisoned = True
+            raise
+        except Exception:
+            # A failed supplier forward may skip an offload post-hook. Retain
+            # its ownership and refuse another forward until observed unload.
+            self._owner._poisoned = True
+            raise
+
+    def generate_text(self, prompt, system_prompt=None, *, constrained_json_schema=None):
+        owner = self._owner
+        with owner._operation_lock:
+            if owner._closed or len(prompt) + len(system_prompt or "") > 64 * 1024:
+                raise OffloadAdmissionError()
+            owner.assert_reusable()
+            if owner._bundle.inference_mode == "chat":
+                messages = []
+                if system_prompt and system_prompt.strip():
+                    messages.append({"role": "system", "content": system_prompt.strip()})
+                messages.append({"role": "user", "content": prompt})
+                tokenized = _apply_chat_template_for_generation(self._tokenizer, messages, maximum_input_tokens=2048)
+                generation_inputs = dict(tokenized) if isinstance(tokenized, Mapping) else {"input_ids": tokenized}
+            else:
+                generation_inputs = dict(self._tokenizer(
+                    _compose_non_chat_prompt(prompt, system_prompt), return_tensors="pt",
+                    truncation=True, max_length=2049,
+                ))
+            input_ids = generation_inputs["input_ids"]
+            # The extra token is an overflow sentinel. No truncated input can
+            # reach a model call or return a successful result.
+            validate_generation_limits(self._model, input_ids, self._generation_params)
+            generation_inputs = _move_tokenized_inputs_to_model_device(generation_inputs, self._model)
+            return self._generate_new_tokens_text(input_ids, generation_inputs, constrained_json_schema)
+
+    def close(self):
+        owner = self._owner
+        with owner._operation_lock:
+            owner._closed = True
+            owner._decoder = None
+            owner._bundle.model = None
+            owner._bundle.tokenizer = None
+            # Dropping the graph and collecting cycles does not invoke Accelerate
+            # detach hooks, model.to/cpu, save or full state reconstruction.
+            release_offload_lease(owner._bundle.lease, owner._bundle.model_references)
+
+
 def ensure_generation_model_downloaded(
     model_config: LocalModelConfig,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
@@ -1406,16 +1551,14 @@ def ensure_generation_adapter_is_available(
     )
 
 
-_GENERATOR_CACHE: dict[
-    tuple[str, str, str, str, str, str, str], LocalTextGenerator
-] = {}
+_GENERATOR_CACHE: dict[tuple[str, ...], LocalTextGenerator] = {}
 _GENERATOR_CACHE_LOCK = Lock()
 _RESOLVED_MODEL_REFERENCES: dict[str, str] = {}
 
 
 def _generator_cache_key(
     model: LocalModelConfig,
-) -> tuple[str, str, str, str, str, str, str]:
+) -> tuple[str, ...]:
     return (
         model.provider,
         model.modelId,
@@ -1424,6 +1567,7 @@ def _generator_cache_key(
         model.torchDtype or "auto",
         model.adapterModelId or "no-adapter",
         model.adapterRevision or "no-adapter-revision",
+        model.memoryMode,
     )
 
 
@@ -1510,18 +1654,70 @@ def _available_cuda_memory_bytes() -> int:
         return 0
 
 
+def _calibrated_cpu_memory_requirement(model_config: LocalModelConfig, path: Path, weight_bytes: int) -> int | None:
+    """User-directed trial estimates for two pinned safe-weight profiles only.
+
+    This is admission headroom, not a process quota or a qualified model result.
+    Never key a reduced estimate on a caller-supplied model name alone.
+    """
+    profiles = {
+        ('Qwen/Qwen2.5-0.5B-Instruct', 'float32'):
+            ('fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe',
+             '18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45',2 * GIBIBYTE, 3 * GIBIBYTE),
+        ('Qwen/Qwen2.5-1.5B-Instruct', 'bfloat16'):
+            ('dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee',
+             '98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670',3 * GIBIBYTE, 7 * GIBIBYTE // 2),
+    }
+    profile = profiles.get((model_config.modelId, model_config.torchDtype))
+    if (profile is None or model_config.device != 'cpu' or model_config.memoryMode != 'standard'
+            or model_config.inferenceMode != 'chat' or model_config.adapterModelId or model_config.adapterRevision):
+        return None
+    expected_sha, config_sha, maximum_loaded_weights, required = profile
+    loaded_weights = weight_bytes * (2 if model_config.torchDtype == 'float32' else 1)
+    if not 0 < loaded_weights <= maximum_loaded_weights:
+        return None
+    weights = path / 'model.safetensors'
+    try:
+        facts = weights.lstat()
+        if (not stat.S_ISREG(facts.st_mode) or weights.is_symlink()
+                or getattr(facts, 'st_file_attributes', 0) & 0x400 or facts.st_size != weight_bytes):
+            return None
+        with weights.open('rb') as stream:
+            observed_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
+        if observed_sha != expected_sha:
+            return None
+        config_file = path / 'config.json'
+        config_facts = config_file.lstat()
+        if (not stat.S_ISREG(config_facts.st_mode) or config_file.is_symlink()
+                or getattr(config_facts, 'st_file_attributes', 0) & 0x400 or not 0 < config_facts.st_size <= 65536):
+            return None
+        with config_file.open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != config_sha:
+                return None
+    except OSError:
+        return None
+    return required
+
+
 def _ensure_model_load_resources(model_config: LocalModelConfig) -> dict[str, int] | None:
     resolved_reference = Path(_resolved_model_reference_for(model_config.modelId))
     if not resolved_reference.is_absolute() or not resolved_reference.exists():
         return
 
     weight_bytes = _snapshot_model_weight_bytes(resolved_reference)
-    memory = _read_system_memory_snapshot()
-    if weight_bytes <= 0 or memory is None:
+    if weight_bytes <= 0:
         return
 
     dtype_multiplier = 2.0 if model_config.torchDtype == 'float32' else 1.0
     required_bytes = math.ceil(weight_bytes * dtype_multiplier * 1.25) + GIBIBYTE
+    calibrated = _calibrated_cpu_memory_requirement(model_config, resolved_reference, weight_bytes)
+    if calibrated is not None:
+        required_bytes = calibrated
+    # Hashing a multi-GiB checkpoint can take time. Admission must use a fresh
+    # observation after that read, not the RAM available before verification.
+    memory = _read_system_memory_snapshot()
+    if memory is None:
+        return
     device = model_config.device or 'auto'
     cuda_available_bytes = _available_cuda_memory_bytes() if device != 'cpu' else 0
     if device == 'cuda':
@@ -1530,6 +1726,13 @@ def _ensure_model_load_resources(model_config: LocalModelConfig) -> dict[str, in
         available_bytes = memory.available_bytes
     else:
         available_bytes = memory.available_bytes + cuda_available_bytes
+
+    print(json.dumps({'event':'runtime.generation_model.memory_admission',
+        'requiredMemoryBytes':required_bytes, 'availableMemoryBytes':available_bytes,
+        'totalSystemMemoryBytes':memory.total_bytes,
+        'estimatedWeightMemoryBytes':math.ceil(weight_bytes * dtype_multiplier),
+        'memoryHeadroomBytes':required_bytes - math.ceil(weight_bytes * dtype_multiplier),
+        'calibratedCpuEstimate':calibrated is not None}), flush=True)
 
     if available_bytes >= required_bytes:
         return None
@@ -1576,7 +1779,12 @@ def _ensure_model_load_resources(model_config: LocalModelConfig) -> dict[str, in
             'The selected model requires CUDA, but the local runtime does not have CUDA available.'
         )
     raise GenerationInsufficientResourcesError(
-        'The selected model cannot fit in the memory currently available to the local runtime.'
+        'The selected model cannot fit in the memory currently available to the local runtime.',
+        memory_shortfall={
+            'resource': 'vram' if device == 'cuda' else 'combined' if cuda_available_bytes > 0 else 'ram',
+            'requiredBytes': required_bytes, 'availableBytes': available_bytes,
+            'allowedOverflowBytes': allowed_overflow_bytes,
+        },
     )
 
 
@@ -1648,7 +1856,7 @@ def _filter_supported_generation_params(params: dict[str, Any], generate_callabl
     return {key: value for key, value in params.items() if key in supported}
 
 
-def _apply_chat_template_for_generation(tokenizer: Any, messages: list[dict[str, str]]) -> Any:
+def _apply_chat_template_for_generation(tokenizer: Any, messages: list[dict[str, str]], *, maximum_input_tokens: int | None = None) -> Any:
     apply_chat_template = getattr(tokenizer, "apply_chat_template", None)
     if not callable(apply_chat_template):
         raise RuntimeError(
@@ -1660,6 +1868,8 @@ def _apply_chat_template_for_generation(tokenizer: Any, messages: list[dict[str,
         "add_generation_prompt": True,
         "return_tensors": "pt",
     }
+    if maximum_input_tokens is not None:
+        base_kwargs.update(truncation=True, max_length=maximum_input_tokens + 1)
     accepts_enable_thinking = _callable_accepts_keyword(apply_chat_template, "enable_thinking")
     attempts = (
         [
@@ -1814,10 +2024,35 @@ def _move_tokenized_inputs_to_model_device(tokenized: dict[str, Any], model: Any
 def get_or_create_local_text_generator(
     config: ExampleGenerationConfig,
     on_memory_overflow: Callable[[dict[str, int]], None] | None = None,
+    *,
+    allow_offload: bool = False,
 ) -> LocalTextGenerator:
     key = _generator_cache_key(config.model)
 
     with _GENERATOR_CACHE_LOCK:
+        if config.model.memoryMode == "offload-v1":
+            try:
+                if not allow_offload:
+                    raise OffloadAdmissionError()
+                params = _resolve_generation_params(config)
+                validate_offload_config(config.model, params)
+                for cached_key, generator in _GENERATOR_CACHE.items():
+                    if isinstance(generator, BoundedOffloadGenerator):
+                        if cached_key[:8] != key:
+                            raise OffloadAdmissionError()
+                        generator.assert_reusable()
+                        return generator.for_request(params)
+                created = BoundedOffloadGenerator(config.model, params)
+                _GENERATOR_CACHE[(*key, created._bundle.inventory.source_digest)] = created
+                return created.for_request(params)
+            except OffloadAdmissionError:
+                raise GenerationInsufficientResourcesError(
+                    "The optional low-memory profile could not be admitted. Check supported model settings and available resources; unload the model before retrying uncertain cleanup."
+                ) from None
+            except Exception:
+                raise GenerationModelLoadError(
+                    "The optional low-memory model could not be loaded safely."
+                ) from None
         existing = _GENERATOR_CACHE.get(key)
         if existing:
             return existing
@@ -1878,12 +2113,14 @@ def _describe_loaded_generation_models_unlocked() -> list[dict[str, str | None]]
         {
             "provider": provider,
             "modelId": model_id,
-            "inferenceMode": inference_mode,
+            "inferenceMode": generator._bundle.inference_mode if isinstance(generator, BoundedOffloadGenerator) else inference_mode,
             "device": device,
             "torchDtype": torch_dtype,
             "adapterModelId": adapter_model_id,
             "adapterRevision": adapter_revision,
+            **({"memoryMode": "offload-v1"} if key[7] == "offload-v1" else {}),
         }
+        for key, generator in _GENERATOR_CACHE.items()
         for (
             provider,
             model_id,
@@ -1892,7 +2129,8 @@ def _describe_loaded_generation_models_unlocked() -> list[dict[str, str | None]]
             torch_dtype,
             adapter_model_id,
             adapter_revision,
-        ) in _GENERATOR_CACHE.keys()
+        ) in (key[:7],)
+        if not isinstance(generator, BoundedOffloadGenerator) or not generator._closed
     ]
 
 
@@ -1910,6 +2148,12 @@ def describe_loaded_generation_models() -> list[dict[str, str | None]]:
 def unload_generation_models() -> list[dict[str, str | None]]:
     with _GENERATOR_CACHE_LOCK:
         unloaded = _describe_loaded_generation_models_unlocked()
+        for generator in _GENERATOR_CACHE.values():
+            if isinstance(generator, BoundedOffloadGenerator):
+                generator.close()
+        # Release the loop's last Standard owner before collection/cache release.
+        generator = None
+        retry_retained_offload_cleanup()
         _GENERATOR_CACHE.clear()
     gc.collect()
     try:

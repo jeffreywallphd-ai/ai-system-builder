@@ -2178,6 +2178,7 @@ def _build_generated_rows(
                     "provider": generation.model.provider,
                     "modelId": generation.model.modelId,
                     "failedChunkCount": len(chunk_batch),
+                    "memoryShortfall": error.memory_shortfall,
                 },
             ) from error
         except GenerationModelLoadError as error:

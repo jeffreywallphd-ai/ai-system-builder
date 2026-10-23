@@ -16,11 +16,13 @@ import type { StructuredDocumentStore } from "../../../adapters/persistence/shar
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createPythonParquetDatasetReviewAdapter } from "../../../adapters/runtime/python";
 import { asyncLazyObject } from "./lazyProxy";
+import type { PythonRuntimeCapabilitiesResult } from "../../../contracts/runtime";
 
 export interface ComposeDesktopDatasetPreparationFeatureOptions {
   artifacts: any;
   runtime: any;
   getArtifactRemoteFeatures: () => Promise<any>;
+  readWorkerCapabilities?: () => Promise<PythonRuntimeCapabilitiesResult>;
   documents?: StructuredDocumentStore;
   workspaceRepository?: any;
   workspaceAuthorization?: any;
@@ -149,6 +151,7 @@ export function composeDesktopDatasetPreparationFeature(
         now: options.now,
         taskPowerLifecycle: options.runtime.taskPowerLifecycle,
         runtimeCapabilityGuard: options.runtime.runtimeCapabilityGuard,
+        readWorkerCapabilities: options.readWorkerCapabilities,
         datasetQualityPolicyProvider:
           createDefaultDatasetQualityPolicyProvider(),
         datasetVersioning,

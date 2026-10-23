@@ -34,6 +34,7 @@ import {
 } from "../../../adapters/runtime/python";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  supportsDatasetPreparationOffload,
   TaskType,
 } from "../../../contracts/runtime";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
@@ -2119,6 +2120,7 @@ export function composeServerHost(
         : undefined;
       const prepareTrainingDatasetUseCase =
         new PrepareTrainingDatasetFromArtifactsUseCase({
+          readWorkerCapabilities: () => pythonRuntimeFoundation.runtimePort.getCapabilities(),
           taskReconciler,
           runtimeTaskRegistry,
           storageBindings: artifactBindings,
@@ -2399,6 +2401,7 @@ export function composeServerHost(
         contextManagement,
         readDatasetPreparationGenerationCapacity: async () => {
           let decoderAvailable = false;
+          let offloadAvailable = false;
           if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {
             try {
               const capabilities =
@@ -2406,6 +2409,7 @@ export function composeServerHost(
               decoderAvailable = capabilities.capabilities.includes(
                 PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
               );
+              offloadAvailable = supportsDatasetPreparationOffload(capabilities.capabilities);
             } catch {
               decoderAvailable = false;
             }
@@ -2414,6 +2418,7 @@ export function composeServerHost(
             schemaVersion: "1" as const,
             capturedAt: options.now?.() ?? new Date().toISOString(),
             decoderAvailable,
+            offloadAvailable,
             schemaSupported: true,
             logicalProcessorCount: cpus().length,
             totalSystemMemoryBytes: totalmem(),

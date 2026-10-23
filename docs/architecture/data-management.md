@@ -523,3 +523,37 @@ absolute/non-symlink output-directory check remains in force. These controls do
 not qualify source-path authority, parent substitution, identity-preserving native
 file operations or controlled resource behavior; those R30 gaps remain pending.
 Rollback retains stronger naming denial.
+
+## Optional local generation memory mode
+
+Dataset Preparation carries the default-off versioned memory profile through its
+recipe, saved/reproduction settings, request builders, runtime capacity and model
+status. Desktop and thin client preserve an explicit selection across reload and
+show unavailable/invalid settings instead of silently changing profile or model.
+The application rechecks exact worker support before source staging/start.
+Optional loading limits weight placement separately from total process memory;
+fixed native-model/tokenizer support, resource denial, cached model ownership and
+agent-executable qualification are specified in
+`docs/operations/optional-low-memory-inference.md`. Existing output validation,
+curation, workspace/source authority and truthful running-cancellation behavior
+remain authoritative.
+
+## Memory admission notifications
+
+Dataset Preparation memory-admission failures use the workspace notification
+center in desktop and thin client, without a duplicate inline memory error.
+Desktop preflight denial publishes before dispatch; post-start desktop failures
+remain in the existing background task activity. Thin-client observed task
+failures publish to notification history. Contextual form validation and other
+security/readiness blockers keep their existing presentation and enforcement.
+
+The worker projects only the known memory-failure code and a bounded numeric
+shortfall: resource kind (RAM, VRAM or combined), required bytes, currently
+available bytes and explicitly permitted overflow. API/IPC and UI normalize
+these facts again. Guidance rounds the remaining shortfall upward to MiB after
+subtracting already permitted overflow. It describes a point-in-time observation,
+not a guarantee that a later retry will fit. Unknown or malformed measurements
+use safe smaller-model/retry guidance without inventing an amount. No exception
+text, model/source details, filesystem paths, prompts or raw logs enter the new
+public field. Existing guards, limits, admission, cleanup and offload opt-in
+controls remain unchanged; notifications never authorize a denied model load.
