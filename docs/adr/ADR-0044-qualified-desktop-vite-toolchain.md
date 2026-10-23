@@ -29,6 +29,11 @@ Development listeners use separate loopback ports with CORS disabled and a sourc
 and dependency filesystem allowlist; private ignored evidence and runtime roots
 are excluded. Runtime development uses ordinary Vite reload because its CSP
 forbids React Refresh's inline preamble.
+Give each renderer a separate dependency optimizer cache under the ignored
+`node_modules/.vite/desktop/<renderer-name>` root. Concurrent servers with different
+entry/plugin graphs must not overwrite a shared cache and invalidate modules
+already referenced by the other window. This changes no listener, filesystem
+allowlist, CSP, preload, credential or packaging authority.
 
 Preserve the original guarded optional `pg-native` require; do not synthesize a
 native implementation or make that optional peer mandatory during dev startup.

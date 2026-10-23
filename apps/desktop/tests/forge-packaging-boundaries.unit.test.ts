@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire, isBuiltin } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
@@ -78,6 +79,65 @@ test("development renderer listeners remain loopback only with distinct fixed po
     assert.equal(config.server?.strictPort, true);
     assert.equal(config.server?.cors, false);
     assert.equal(config.server?.fs?.strict, true);
+  }
+});
+
+test("development renderers keep independent dependency optimizer caches", async () => {
+  const { resolveConfig } = await import("vite");
+  const { renderers } = await generatedConfigs(false);
+  const resolved = await Promise.all(renderers.map(config =>
+    resolveConfig({ ...config, configFile: false }, "serve"),
+  ));
+  assert.notEqual(resolved[0].cacheDir, resolved[1].cacheDir,
+    "concurrent renderer optimizers must not invalidate each other's React modules");
+  for (const config of resolved) {
+    const cache = path.resolve(config.cacheDir);
+    assert.equal(path.dirname(cache), path.resolve("node_modules/.vite/desktop"));
+    assert.ok(config.server.fs.allow.some(root => path.resolve(root) === path.resolve("node_modules")));
+  }
+});
+
+test("starting the runtime renderer preserves the editor's already-issued optimized module URLs", { timeout: 30_000 }, async () => {
+  const { createServer } = await import("vite");
+  const { renderers } = await generatedConfigs(false);
+  const parent = path.resolve("node_modules/.vite");
+  await mkdir(parent, { recursive: true });
+  const fixture = await mkdtemp(path.join(parent, "desktop-cache-regression-"));
+  assert.equal(path.dirname(fixture), parent);
+  const servers: Awaited<ReturnType<typeof createServer>>[] = [];
+  try {
+    const urls: string[] = [];
+    for (const config of renderers) {
+      const server = await createServer({
+        ...config, configFile: false, logLevel: "silent",
+        // Keep the real configured cache identities inside a disposable fixture.
+        cacheDir: path.join(fixture, path.basename(config.cacheDir!)),
+        server: { ...config.server, port: 0, strictPort: false, watch: null, hmr: false },
+        optimizeDeps: { noDiscovery: true, include: ["react", "react-dom/client", "react/jsx-dev-runtime"] },
+      });
+      servers.push(server);
+      await server.listen();
+      const address = server.httpServer!.address();
+      assert.ok(address && typeof address === "object");
+      const origin = `http://127.0.0.1:${address.port}`;
+      const entry = await fetch(`${origin}/main.tsx`, { signal: AbortSignal.timeout(10_000) });
+      assert.equal(entry.status, 200);
+      const source = await entry.text();
+      await server.waitForRequestsIdle();
+      const imports = [...source.matchAll(/from "([^"]*\/deps\/[^"?]+\.js\?v=[^"]+)"/g)];
+      assert.ok(imports.length >= 2, "exercise actual optimized React imports");
+      urls.push(...imports.map(match => new URL(match[1], origin).href));
+      // Reuse the editor URLs after the differently configured runtime starts.
+      for (const url of urls) {
+        const dependency = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        assert.equal(dependency.status, 200, "an already-issued dependency URL must remain valid");
+        assert.match(await dependency.text(), /react/i);
+      }
+    }
+  } finally {
+    await Promise.all(servers.map(server => server.close()));
+    assert.equal(path.dirname(fixture), parent);
+    await rm(fixture, { recursive: true, force: true });
   }
 });
 

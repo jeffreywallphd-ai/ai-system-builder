@@ -25,6 +25,11 @@ Both preload bundles run without Node integration; the published runtime keeps
 its minimal bridge and sandbox. Dev servers bind only to loopback ports3005/3006
 and serve declared source/dependency roots. The runtime keeps its CSP and uses
 ordinary reload instead of React Refresh's inline development preamble.
+Each renderer keeps its own dependency optimizer cache under
+`node_modules/.vite/desktop/<renderer-name>`. Sharing Vite's default repository
+cache can invalidate React modules in the other dev server and leave a blank
+window with an `Outdated Optimize Dep` response. Restart `npm run dev:desktop`
+after updating this configuration; no settings or credential reset is needed.
 `tsconfig.desktop.json` defines the shared desktop type-checking boundary.
 The official Hub clients use bundler-visible lazy imports so packaged provider
 features require no checkout-local dependencies. The optional PostgreSQL native
