@@ -2,6 +2,13 @@
 
 # Developer tools
 
+The review site's `review-site` source-owned check profile runs the complete fixed
+Node DOM/controller test file for exact HTML/JavaScript/CSS/test ownership. It
+preserves all UI assertions while avoiding unrelated directory-owned desktop
+typechecks. Catalog and profile data are policy-bound; uncovered impact and an
+explicit `focused-tests` requirement retain the generic gate. This scoped UI
+result grants no whole-application, native, model or parent roadmap qualification.
+
 Repository-owned scripts live under `dev-tools/scripts`. Portable contributor
 helpers for recurring Codex and verification loops live under
 `dev-tools/helpers`; see its README for configuration and safety boundaries.

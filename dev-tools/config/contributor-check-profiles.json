@@ -973,6 +973,19 @@
         "modules/ui/shared/styles/components/home.css",
         "modules/ui/shared/styles/README.md"
       ]
+    },
+    "review-site": {
+      "test_paths": [
+        "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"
+      ],
+      "source_paths": [
+        "dev-tools/review-site/index.html",
+        "dev-tools/review-site/app.js",
+        "dev-tools/review-site/style.css",
+        "dev-tools/review-site/README.md",
+        "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+        "dev-tools/config/contributor-check-profiles.json"
+      ]
     }
   }
 }

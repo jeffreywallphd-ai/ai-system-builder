@@ -146,6 +146,22 @@ class SiteTests(unittest.TestCase):
         self.assertNotEqual(before["source_digest"], after["source_digest"])
         self.assertFalse(any(self.root.rglob("*.md")))
 
+    def test_theme_is_local_fixed_asset_behavior_without_new_mutation_routes(self):
+        status, headers, html = self.request("/")
+        self.assertEqual(status, 200)
+        self.assertIn(b'data-theme="dark"', html)
+        self.assertIn(b'id="theme-toggle" type="button"', html)
+        self.assertIn(b'aria-label="Switch to light mode. Current theme: dark."', html)
+        self.assertNotIn("unsafe-inline", headers["Content-Security-Policy"])
+        status, _, css = self.request("/style.css")
+        self.assertEqual(status, 200)
+        self.assertIn(b'color-scheme:dark', css)
+        self.assertIn(b':root[data-theme="light"]', css)
+        self.assertIn("›".encode("utf-8"), css)
+        self.assertNotIn("â€º".encode("utf-8"), css)
+        self.assertEqual(self.request("/api/theme", method="POST")[0], 405)
+        self.assertEqual(self.request("/api/review?theme=light")[0], 404)
+
     def test_private_notes_and_paths_are_not_projected(self):
         p = self.root / ".implementation-roadmaps/example/state.json"
         p.parent.mkdir(parents=True)
@@ -206,6 +222,33 @@ class SiteTests(unittest.TestCase):
         self.assertEqual([w["id"] for w in data["work_items"]], ["complete-new", "z-new/increment/chunk", "active-old", "a-old/increment/chunk"])
         self.assertEqual(data["roadmaps"][0]["created_at"], "2026-10-20T09:30:00.000000Z")
         self.assertNotIn("invalid private timestamp", json.dumps(data))
+
+    def test_roadmap_order_keeps_creation_ties_and_undated_stable_across_completion(self):
+        fixtures = [
+            ("z-undated", "completed", None),
+            ("b-tie", "final-approved", "2026-10-20T10:00:00Z"),
+            ("a-tie", "executing", "2026-10-20T06:00:00-04:00"),
+            ("a-undated", "blocked", "invalid"),
+            ("new-completed", "completed", "2026-10-21T10:00:00Z"),
+        ]
+        for slug, status, created in fixtures:
+            p = self.root / (".implementation-roadmaps/" + slug + "/state.json")
+            p.parent.mkdir(parents=True)
+            p.write_text(json.dumps({"schemaVersion": 1, "slug": slug, "name": slug,
+                "objective": "Review original chronology", "status": status, "createdAt": created,
+                "updatedAt": "2099-01-01T00:00:00Z", "completion": {"completedAt": "2099-01-01T00:00:00Z"}, "increments": []}))
+        before = json.loads(self.request()[2])
+        expected = ["new-completed", "a-tie", "b-tie", "a-undated", "z-undated"]
+        self.assertEqual([r["id"] for r in before["roadmaps"]], expected)
+        p = self.root / ".implementation-roadmaps/a-tie/state.json"
+        value = json.loads(p.read_text())
+        value["status"] = "completed"
+        p.write_text(json.dumps(value))
+        after = json.loads(self.request()[2])
+        self.assertEqual([r["id"] for r in after["roadmaps"]], expected)
+        self.assertEqual([r["created_at"] for r in before["roadmaps"]], [r["created_at"] for r in after["roadmaps"]])
+        self.assertEqual(after["roadmaps"][1]["status"], "completed")
+        self.assertNotEqual(before["source_digest"], after["source_digest"])
 
 
 if __name__ == "__main__": unittest.main()

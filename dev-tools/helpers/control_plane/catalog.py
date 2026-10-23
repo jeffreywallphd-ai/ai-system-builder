@@ -13,6 +13,7 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
+    "review-site",
 )
 
 
@@ -22,7 +23,7 @@ def definitions(root: Path) -> list[dict]:
     return [
         {"id": "completion-standardande2e", "patterns": [], "argv": [node, "dev-tools/scripts/testing/run-test-suite.mjs", "--suite=standardande2e"], "timeout": 1800},
         {"id": "completion-all", "patterns": [], "argv": [node, "dev-tools/scripts/testing/run-test-suite.mjs", "--suite=all"], "timeout": 1800},
-        *[{"id": name, "patterns": [], "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--profile", name], "timeout": 300} for name in QUALIFICATION_PROFILES],
+        *[{"id": name, "patterns": ["dev-tools/review-site/index.html", "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"] if name == "review-site" else [], "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--profile", name], "timeout": 300} for name in QUALIFICATION_PROFILES],
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 180},
@@ -58,7 +59,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         refuse("verification.unclassified-impact", "Every changed path must have a tracked verification rule.", "Add a bounded catalog rule and a regression test for the uncovered impact.")
     selected = [c for c in checks if c["id"] in required or any(c["id"] in matches for matches in covered.values())]
     for profile_id in QUALIFICATION_PROFILES:
-        if profile_id not in required:
+        if profile_id not in {c["id"] for c in selected}:
             continue
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))
         profile = data.get("profiles", {}).get(profile_id)

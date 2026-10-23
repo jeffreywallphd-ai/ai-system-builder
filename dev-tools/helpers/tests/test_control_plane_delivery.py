@@ -219,6 +219,37 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             with self.assertRaises(ControlError):
                 run_focused_checks.profile_commands(self.root, "owned")
 
+    def test_review_profile_auto_selects_only_exact_ui_ownership_and_keeps_denials(self):
+        config = "dev-tools/config/contributor-check-profiles.json"
+        dom = "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"
+        profile = {"test_paths": [dom], "source_paths": [dom, config]}
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"review-site": profile}}))
+        for paths, required, focused in [([dom, config], ["control-plane"], False),
+                                         ([dom, config], ["control-plane", "focused-tests"], True),
+                                         ([dom, "modules/unknown/source.ts"], ["control-plane"], True)]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                ids = {c["id"] for c in selected}
+                self.assertIn("review-site", ids)
+                self.assertEqual("focused-tests" in ids, focused)
+                self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), {"review-site"})
+        for path in ["dev-tools/scripts/testing/unrelated.test.mjs", "dev-tools/review-site/other.js", "docs/review.md"]:
+            ids = {c["id"] for c in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertNotIn("review-site", ids)
+        with self.assertRaises(ControlError):
+            catalog.plan(self.root, [dom], ["unregistered-ui-check"], "candidate")
+
+    def test_review_profile_cannot_execute_ai_or_unsafe_test_paths(self):
+        import run_focused_checks
+        config = "dev-tools/config/contributor-check-profiles.json"
+        for path in ["../outside.test.mjs", "dev-tools/review-site/source.js", "modules/model/a.ai.test.ts",
+                     "modules/runtime/tests/test_context_generation_ai_e2e.py"]:
+            self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                "review-site": {"test_paths": [path], "source_paths": ["dev-tools/review-site/app.js"]}}}))
+            with self.subTest(path=path), patch.object(run_focused_checks, "snapshot", return_value={"files": {path: "a"}}):
+                with self.assertRaises(ControlError):
+                    run_focused_checks.profile_commands(self.root, "review-site")
+
     def test_vitest_adapter_executes_exact_ts_path_without_tsx_sibling(self):
         self.put("modules/example/owned.test.ts", 'import {test,expect} from "vitest"; test("selected",()=>expect(1).toBe(1));')
         self.put("modules/example/owned.test.tsx", '// @test-suite ai\nimport {test} from "vitest"; test("excluded",()=>{throw new Error("unselected sibling executed")});')
