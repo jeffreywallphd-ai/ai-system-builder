@@ -99,6 +99,12 @@ unload action remains available for a supported idle runtime to retry cleanup.
 
 ## Evidence and limits
 
+The separate [owned Windows worker fixture](../../dev-tools/scripts/native-owned-job/README.md)
+tests a fixed harmless worker and supervisor loss without starting a model or
+accessing retained staging. It is uncomposed qualification support. Actual file
+protection, protected accounting and protection lifetime across a crash remain
+pending agent work; a worker-exit test cannot supply those guarantees.
+
 Focused contract, application, model-input, resource, map, supplier-call,
 partial-load, reference-release, cleanup-retry and UI tests exercise local controls.
 Empty-model diagnostics admit CPU/CUDA maps for both approved models. These
