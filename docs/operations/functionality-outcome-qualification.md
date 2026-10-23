@@ -35,9 +35,10 @@ active crosswalk retains eleven controlled technical or mixed criteria, and exac
 coverage against active owner criteria still fails closed on missing or stale maps.
 
 Asset experience, remaining Data Management and optional constrained JSON retain
-their technical qualification requirements. Security remediation retains its own
-blocked file-effect qualification and independent work. The active-source Run &
-Test proposal retains its approval gate. This procedure grants none of those
+their technical qualification requirements. Security remediation retains pending
+native file-effect tests and separate work. Its restricted legacy Assets review
+requires a separately permitted reviewer; that human action does not prevent
+other approved agent work. The completed Publish lifecycle owns the retired active-source Run and Test draft through `retired-run-test-roadmap.json`; do not restore that superseded surface. This procedure grants none of those
 owners new authority. OCR remains unavailable; hardware availability alone
 cannot satisfy the advanced-capability criterion.
 
@@ -70,12 +71,16 @@ supporting coverage. Their current journey/axe results do not prove every contra
 non-color or reduced-motion obligation: missing exact assertions/profile coverage
 remain pending. Never relabel old passes under revised semantics.
 
-Asset experience and other owners retain their independent original criteria;
-this narrow three-roadmap scope change does not rewrite their manual or technical
-requirements. The crosswalk inventories these owners and does not require their
+Asset experience, Data Management and constrained JSON now also have explicit legacy mixed-criterion amendments: human acceptance is archived offline, while the same technical IDs, controlled qualification and product approval controls remain. No participant or manual-operator environment remains an active prerequisite in the crosswalk. The crosswalk inventories these owners and does not require their
 qualification to pass merely to prove accurate ownership mapping.
 
 ## Model and resource cohorts
+
+The separate [Standard-only protocol](standard-generation-qualification.md) uses
+verified historical selected algorithms over the identical current guarded
+runtime. It preserves the original numeric gates and reports actual remaining
+gaps in [versioned JSON](standard-generation-qualification.json); it never reruns
+offload recovery or transfers a historical/diagnostic pass.
 
 Use only separately authorized, already-installed fixed models. Declare model
 revision, task/corpus/held-out digest, seed, schema, metric and statistical
@@ -92,6 +97,27 @@ better accepted-output throughput, or demonstrated compliance with the approved
 resource budget. Do not choose a tolerance after seeing results. Compare only
 matching cohorts; unavailable or skipped runs stay pending. Deterministic Context
 conformance and Python fixtures are not installed-model quality evidence.
+
+For current F4 closure, the later approved policy takes precedence over the
+original comparison rules above. Completed pinned Standard model quality is
+closed at30percent for0.5B and80percent for1.5B; do not repeat those accuracy
+checks. Resource qualification accepts either the original20percent throughput
+improvement or measured compliance with the approved per-profile budgets. See
+[accepted quality](model-software-quality-qualification.json) and the separate
+[Standard resource assessment](functionality-standard-resource-qualification.json).
+Keep original failed relative comparisons, unknown historical flags and denied
+attempts visible. A pre-load denial has no output-quality result. Measurements
+from different source reports stay separate and do not become a new matrix.
+
+The existing Standard harness identifies the measured algorithms and protocol;
+its presence in the crosswalk is an evidence route, not an instruction to rerun
+accepted accuracy. Training and deterministic Context fixtures belong to their
+own tasks. The two real Canvas browse specifications assert the F4 accessibility
+requirements; broader meaningful-system journeys provide additional coverage.
+Actual current host evidence must match the product and driver bytes. Before
+roadmap completion, verify that the committed candidate contains the tested
+dependencies, then obtain fresh overall and exact-target checks and separate
+review. An uncommitted-worktree pass alone does not qualify committed HEAD.
 
 ### Task and model expectations
 
@@ -597,3 +623,24 @@ retry, cancellation, review, save and reopen paths. It retains both earlier fail
 test runs, exact report/source hashes and controlled-worker shutdown evidence.
 This is current synthetic-host support; owning and final roadmap qualification
 remain separate.
+
+## Measured Standard model resource budgets
+
+The [resource assessment](functionality-standard-resource-qualification.json)
+rehashes the existing indexed reports without rerunning inference. All21
+completed candidate cohorts met their original absolute budgets:600seconds for
+0.5B CPU delivery,1800seconds for1.5B CPU delivery, and300seconds for CUDA
+delivery. The declared sampled process-RSS ceiling is4GiB and CUDA reserved-memory
+budget is6GiB. Model-delivery timing excludes common imports, input verification,
+algorithm selection and CUDA initialization; launcher-to-confirmed-exit timing
+is retained separately.
+
+The reports retain14later and7earlier measurements as separate source cohorts.
+Eight denied attempts have no delivery/accuracy/resource result. The earlier
+larger-model CUDA relative ratios1.0265 and1.0715 missed the original1.20 target;
+the approved absolute-budget alternative does not rewrite those failures.
+Missing historical flags remain unknown, and invalid-output rates count all
+attempts including repairs. Structurally accepted outputs per minute are distinct
+from correct answers per minute. These measured budgets are neither native hard
+limits nor the3/3.5GiB available-RAM admission estimates, and they do not qualify
+actual optional offload or close the composite criterion by themselves.

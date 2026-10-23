@@ -241,6 +241,13 @@ test("repository crosswalk resolves every actual controlled criterion and availa
   const accessibility = result.criteria.find((c) =>
     c.owner === "functionality-optimization" && c.criterion_id === "accessibility-outcomes-qualified");
   assert.deepEqual(accessibility.environment_requirements, ["automated-accessibility-hosts"]);
+  for (const criterion of result.criteria) {
+    assert.ok(!criterion.environment_requirements.includes("representative-participants"));
+    assert.ok(!criterion.environment_requirements.includes("manual-assistive-technology"));
+  }
+  for (const owner of ["asset-experience-layered-customization", "optional-constrained-json-generation"]) {
+    assert.ok(result.criteria.some(c => c.owner === owner && c.environment_requirements.includes("automated-accessibility-hosts")));
+  }
   assert.equal(result.release_readiness, "unqualified");
   assert.match(result.source_identity, /^[a-f0-9]{64}$/u);
 });

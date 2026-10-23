@@ -9,7 +9,7 @@
           "increment_id": "production-qualification",
           "criterion_id": "desktop-thin-accessibility",
           "environment_requirements": [
-            "manual-assistive-technology"
+            "automated-accessibility-hosts"
           ],
           "procedures": [
             "docs/operations/functionality-outcome-qualification.md"
@@ -68,8 +68,8 @@
           "criterion_id": "controlled-advanced-capabilities-are-qualified",
           "environment_requirements": [
             "installed-models-and-hardware",
-            "representative-participants",
-            "ocr-supported-runtime"
+            "ocr-supported-runtime",
+            "automated-accessibility-hosts"
           ],
           "procedures": [
             "docs/operations/functionality-outcome-qualification.md"
@@ -87,7 +87,8 @@
           "increment_id": "production-hardening-and-qualification",
           "criterion_id": "representative-resource-and-usability-qualification",
           "environment_requirements": [
-            "installed-models-and-hardware"
+            "installed-models-and-hardware",
+            "automated-accessibility-hosts"
           ],
           "procedures": [
             "docs/operations/functionality-outcome-qualification.md"
@@ -159,6 +160,8 @@
             "docs/operations/functionality-outcome-qualification.md"
           ],
           "supporting_harnesses": [
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
             "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
             "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-meaningful-systems.e2e.spec.ts",
             "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts"
@@ -171,11 +174,13 @@
             "installed-models-and-hardware"
           ],
           "procedures": [
-            "docs/operations/functionality-outcome-qualification.md"
+            "docs/operations/functionality-outcome-qualification.md",
+            "docs/operations/standard-generation-qualification.md",
+            "docs/operations/model-software-quality-qualification.json",
+            "docs/operations/functionality-standard-resource-qualification.json"
           ],
           "supporting_harnesses": [
-            "modules/adapters/runtime/python/worker/tests/test_model_training_task_matrix_e2e.py",
-            "dev-tools/scripts/qualification/run_context_efficiency_qualification.py"
+            "dev-tools/scripts/qualification/run_standard_generation_qualification.py"
           ]
         }
       ]
@@ -184,16 +189,14 @@
   "separate_owners": [
     {
       "slug": "security-findings-refresh",
-      "role": "Security successor retains independent criteria and blocker."
+      "role": "Security successor retains its independent technical criteria and the separately required human action for the restricted legacy Assets review."
     },
     {
-      "slug": "systems-run-workflow-active-source",
-      "role": "Proposal retains its own approval gate; this ledger grants no implementation authority."
+      "slug": "systems-publish-runtime-lifecycle",
+      "role": "Completed Publish lifecycle owns the six mapped concerns from the retired unapproved Run/Test draft. Preserve docs/operations/retired-run-test-roadmap.json history; do not restore the removed standalone surface. This ledger grants no new pass or implementation authority."
     }
   ],
   "environments": {
-    "representative-participants": "At least five representative nondeveloper participants, consent and synthetic task scripts; no participant records or session content in repository evidence.",
-    "manual-assistive-technology": "Named supported desktop and thin-client profiles, actual keyboard and screen-reader operators, 320 CSS-pixel reflow, focus/contrast/noncolor/reduced-motion checks.",
     "private-provider-credentials": "Separately authorized private provider test repository and credentials; real commit/render/retry/denial/cleanup evidence without retained credentials.",
     "representative-scale-fixtures": "Approved multi-gigabyte synthetic sources and test website/provider; measured bytes, RSS, resume/cancel and cleanup.",
     "installed-models-and-hardware": "Authorized already-installed model identities and representative CPU/accelerator/constrained-memory cohorts; held-out quality and actual RAM/VRAM/throughput measurements.",
@@ -201,11 +204,24 @@
     "whole-host-runtime-profiles": "Controlled desktop and server/thin-client runtime leave/reopen/disconnect/cancel/failure/shutdown measurements with physical worker cleanup evidence.",
     "controlled-security-target": "Authorized disposable target-environment security assessment; source review alone is insufficient.",
     "ocr-supported-runtime": "OCR remains explicitly unavailable; do not declare advanced qualification passed from hardware availability alone.",
-    "automated-accessibility-hosts": "Declared packaged-desktop and thin-client builds/profiles with automated keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, non-color status and reduced motion. Retain actual DOM/semantic/visual results and zero-data-loss/authority-confusion journey invariants. Existing journey/axe coverage is supporting evidence; unasserted contrast/non-color/reduced-motion or unavailable profiles remain pending."
+    "automated-accessibility-hosts": "Declared packaged-desktop and thin-client builds/profiles with automated keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, non-color status and reduced motion. Retain actual DOM/semantic/visual results and zero-data-loss/authority-confusion journey invariants. Existing journey/axe coverage is supporting evidence; unasserted contrast/non-color/reduced-motion or unavailable profiles remain pending. Where the owning criterion requires actual400-percent zoom, use native browser/desktop zoom with observed factor/DPR and CSS viewport, separately from320CSSpixel reflow. No CSS scaling, device emulation or human operator substitutes for the declared technical check."
   },
   "targets": {
     "accepted_output_throughput_improvement_minimum_percent": 20,
-    "quality": "Predeclare held-out metric and statistical tolerance per task; no material quality regression. CPU/accelerator and constrained/unchecked cohorts remain separate.",
-    "technical_journey_invariants": "Zero critical data loss or authority confusion in automated supported task journeys; human study scoring is offline and excluded from technical closure."
+    "quality": "For original comparative experiments, predeclare the held-out metric and statistical tolerance and retain the no-material-regression comparison. Current F4 Standard quality instead follows the approved absolute30percent/80percent contract below. Keep CPU/accelerator and constrained/unchecked cohorts and historical failures separate; other owners retain their own canonical criteria.",
+    "technical_journey_invariants": "Zero critical data loss or authority confusion in automated supported task journeys; human study scoring is offline and excluded from technical closure.",
+    "comparison_route_scope": "The20percent accepted-output-throughput number is the retained comparison route, not the sole current F4 gate. Neither this inventory nor a supporting harness grants qualification or directs accepted accuracy checks to run again.",
+    "current_f4_contract": {
+      "owner": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "quality": "Completed pinned Standard0.5B/1.5B output-quality tests are closed under the approved30percent/80percent floors. Preserve source-separated outcomes, failed history and pre-load denials as not applicable; do not repeat accepted accuracy.",
+      "resources": "At least20percent better accepted-output throughput OR actual adherence to the approved per-profile resource budgets. Retain failed relative comparisons and unknown historical flags. Sampled RSS is not a hard native quota; available-RAM admission estimates are not process budgets.",
+      "evidence": [
+        "docs/operations/model-software-quality-qualification.json",
+        "docs/operations/functionality-standard-resource-qualification.json"
+      ],
+      "qualification_limits": "Source-separated historical model evidence is not a fresh matrix or optional-offload/native pass. Current host delivery, committed-candidate dependency closure and fresh final overall/target checks and separate review remain required."
+    }
   }
 }

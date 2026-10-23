@@ -1,0 +1,1245 @@
+{
+  "schema_version": "functionality-standard-resource-assessment-v1",
+  "status": "measured-standard-budgets-met",
+  "owner": "functionality-optimization",
+  "increment": "qualified-user-and-model-outcomes",
+  "selection": "Approved measured absolute per-profile budget alternative; no new inference or accuracy tests. Completed Standard quality remains closed under existing30%/80% artifact.",
+  "budgets": {
+    "qwen05_cpu_delivery_seconds": 600,
+    "qwen15_cpu_delivery_seconds": 1800,
+    "cuda_delivery_seconds": 300,
+    "cuda_reserved_bytes": 6442450944,
+    "sampled_process_rss_safety_ceiling_bytes": 4294967296,
+    "limitation": "3GiB/3.5GiB are available-RAM admission estimates, not process quotas.4GiB is sampled observed safety, not hard native enforcement.6GiB pertains declared generation profile, never the separate Context512MiBbudget."
+  },
+  "reports": [
+    {
+      "profile": "qwen15-bfloat16",
+      "run_id": "0d0322c4a9264a6990c2d1ef9e0f519d",
+      "source": "source.1ecc8a1630b75b7af07c4b288c508414702ebb7558eb82de306e9db7ac1c600c",
+      "report_sha256": "ecf18a4654fddd6829f606e08ad9273e2b097244dc1d33bab4658835bf7f2b90",
+      "plan_sha256": "0e05726703854e5aee13e62df09d9c0ddbf829c2d7fe8e6e7800f455df32de70",
+      "sampled_rss_ceiling_bytes": 4294967296,
+      "host_limits": {
+        "devices": [
+          "cpu",
+          "cuda"
+        ],
+        "deadline_seconds_by_device": {
+          "cpu": 2400,
+          "cuda": 1200
+        },
+        "cooperative_stop_seconds_by_device": {
+          "cpu": 2160,
+          "cuda": 1080
+        },
+        "primary_delivery_budget_seconds": {
+          "cpu": 1800,
+          "cuda": 300
+        },
+        "reserved_vram_budget_bytes": {
+          "cpu": 0,
+          "cuda": 6442450944
+        },
+        "intended_use": "measured-task-proposals",
+        "automatic_label_quality_floor": 23,
+        "scope": "Prospective absolute host budgets; original1.20 comparison and23of24 automation gates remain separate and unchanged."
+      },
+      "measured": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "c91cdcb8c3667628964f8872dd204707a66948f48a9d3c4e45d20a42af9aafc8",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 1388.0814126000041,
+          "delivery_budget_seconds": 1800,
+          "peak_sampled_rss_bytes": 3770601472,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cpu-unchecked-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 1398.534688099986,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 2.0748062569366845
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "8d2b49eba4580731b4320abee58a09a3c888c9879460a9b7eaf45afdfc1fab98",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 50.42906029999722,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3904274432,
+          "peak_reserved_vram_bytes": 3368026112,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-unchecked-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 57.7897911000764,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 57.10992794367336
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "97d5c39d90ff981c925e02ad3cf0bae292f891bce0959c3296e7c2fc78fd238f",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 49.986830099951476,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3903225856,
+          "peak_reserved_vram_bytes": 3368026112,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-unchecked-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 57.2960225000279,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 57.61517572211077
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "9d15e9f6747b5dd4bc345967f369592262fc02c36060605e49d26c976132ed91",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 51.22324469999876,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3915120640,
+          "peak_reserved_vram_bytes": 3368026112,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-unchecked-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 58.353879099944606,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 56.224474198528654
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "ccb9aed1f2be5168d493e0298717f424239a19c24b4d15048bdc1c72001d48e2",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 41.71239370002877,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3907756032,
+          "peak_reserved_vram_bytes": 3363831808,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-constrained-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 49.0949690999696,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 69.04422749534064
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "eece20492bd07a5e6c5e3eee3327869ebd31cd6179d8e1c6567726718ba399b0",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 41.533953699981794,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3905150976,
+          "peak_reserved_vram_bytes": 3363831808,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-constrained-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 48.94889430003241,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 69.34085834456117
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "ff5dddceb2d9d6837eb4d2583e52b113053a1937d722b3a90c34d99a962b5478",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 41.27983750007115,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3900788736,
+          "peak_reserved_vram_bytes": 3363831808,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": null,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/cuda-constrained-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 48.02399230003357,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 69.76771650312422
+        }
+      ],
+      "denied": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "status": "denied-memory",
+          "measurement_sha256": "59d5ffb73c662e205e58e1a91ad8539b1b39a0592fd3426727463312f1273ea5",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "status": "denied-memory",
+          "measurement_sha256": "18d9cde4bd35b786c19c274367a321c2ba6973899d8108bf728434e62b5b6c87",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "status": "denied-memory",
+          "measurement_sha256": "21625bdff07c4ec59f960f979c0ea6e4d50695908e37eb8eb2c8df530786e730",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "status": "denied-memory",
+          "measurement_sha256": "bccbc84c10dbf8d26d6853c6f371cf779cb6461a363d6da085e59ec52869aa13",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "status": "denied-memory",
+          "measurement_sha256": "30e65f8e92e3eb6d6152c280f3f2f0fa3124457ab90db30ca72f32571294ddeb",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        }
+      ],
+      "not_transferred": [],
+      "evidence_root": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d",
+      "report_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/report.json",
+      "plan_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/plan.json",
+      "index_path": ".local-codex/standard-generation-qualification/0d0322c4a9264a6990c2d1ef9e0f519d/evidence-index.json",
+      "index_sha256": "fbdf6213f9f6af09d109b40a5794b1d4d7fa64bdc2ea9c7a95b89aa82d0b31ee",
+      "primary_timing": "Model load through all first24/warm24 requests, attempts, repairs, evidence and one unload; common imports, input verification, algorithm selection and CUDA runtime initialization excluded identically. Launcher-to-confirmed-native-exit timing is separate.",
+      "original_protocol_status": {
+        "status": "not-qualified-see-cohorts",
+        "qualification_complete": false,
+        "comparisons": [
+          {
+            "device": "cpu",
+            "mode": "unchecked",
+            "status": "incomplete-or-failed-evidence",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cpu",
+            "mode": "constrained",
+            "status": "incomplete-or-failed-evidence",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cuda",
+            "mode": "unchecked",
+            "status": "measured-quality-passed",
+            "throughput_target_met": false,
+            "median_delivery_ratio": 1.0265259108730365
+          },
+          {
+            "device": "cuda",
+            "mode": "constrained",
+            "status": "measured-quality-passed",
+            "throughput_target_met": false,
+            "median_delivery_ratio": 1.0715321978725236
+          }
+        ]
+      },
+      "plan_file_sha256": "0e05726703854e5aee13e62df09d9c0ddbf829c2d7fe8e6e7800f455df32de70",
+      "plan_sha256_kind": "Original report canonical plan binding; exact plan-file bytes have separate plan_file_sha256."
+    },
+    {
+      "profile": "qwen15-bfloat16",
+      "run_id": "60f3f42bb91d4c3eb86fa0bda7883f2e",
+      "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+      "report_sha256": "e81c4e0cab1aabf34305fa871ebc241e3eab12bbbf71b3071421c0a8c1fa3cc4",
+      "plan_sha256": "46b16878eea9e247bd71a363199506d9877b36dae716e75b821cc84e62ec690d",
+      "sampled_rss_ceiling_bytes": 4294967296,
+      "host_limits": {
+        "devices": [
+          "cpu",
+          "cuda"
+        ],
+        "deadline_seconds_by_device": {
+          "cpu": 2400,
+          "cuda": 1200
+        },
+        "cooperative_stop_seconds_by_device": {
+          "cpu": 2160,
+          "cuda": 1080
+        },
+        "primary_delivery_budget_seconds": {
+          "cpu": 1800,
+          "cuda": 300
+        },
+        "reserved_vram_budget_bytes": {
+          "cpu": 0,
+          "cuda": 6442450944
+        },
+        "intended_use": "measured-task-proposals",
+        "automatic_label_quality_floor": 23,
+        "scope": "Prospective absolute host budgets; original1.20 comparison and23of24 automation gates remain separate and unchanged."
+      },
+      "measured": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "32951412f6269cb598a9a759cceeed2b12e0d05bd4f7533d438ff67a96b45b1a",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 1323.4361096000066,
+          "delivery_budget_seconds": 1800,
+          "peak_sampled_rss_bytes": 3777417216,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e/cpu-unchecked-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 1331.5627194000408,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 2.1761534078667744
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "807c435b3760c8091fb40af066aec35c485d537b5bc083208ecc27159acb57b4",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 1320.6683041000506,
+          "delivery_budget_seconds": 1800,
+          "peak_sampled_rss_bytes": 3772071936,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 24,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e/cpu-unchecked-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 1331.7916006000014,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 2.1807141059257362
+        }
+      ],
+      "denied": [
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "status": "denied-memory",
+          "measurement_sha256": "d964178e21bd7831af80b333c1916384960dc5068426cd09b0802e3f72470cbc",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "status": "denied-memory",
+          "measurement_sha256": "e2e1b5890a8b7276dd1351f44d2d9268145ed1fd5e5b9e26b7eeed2f9162640e",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "status": "denied-memory",
+          "measurement_sha256": "bb8ff5c8a2c3357196ddff799698bf1db95de9a81d69487f4214cb20680988f8",
+          "native_exit_code": 0,
+          "cleanup_observed": true
+        }
+      ],
+      "not_transferred": [],
+      "evidence_root": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e",
+      "report_path": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e/report.json",
+      "plan_path": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e/plan.json",
+      "index_path": ".local-codex/standard-generation-qualification/60f3f42bb91d4c3eb86fa0bda7883f2e/evidence-index.json",
+      "index_sha256": "5c7bd1cfc83199e5d23156fdbe8da553da10f8ea5c6f771621785e817da14a29",
+      "primary_timing": "Model load through all first24/warm24 requests, attempts, repairs, evidence and one unload; common imports, input verification, algorithm selection and CUDA runtime initialization excluded identically. Launcher-to-confirmed-native-exit timing is separate.",
+      "original_protocol_status": {
+        "status": "not-qualified-see-cohorts",
+        "qualification_complete": false,
+        "comparisons": [
+          {
+            "device": "cpu",
+            "mode": "unchecked",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cpu",
+            "mode": "constrained",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cuda",
+            "mode": "unchecked",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cuda",
+            "mode": "constrained",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          }
+        ]
+      },
+      "plan_file_sha256": "46b16878eea9e247bd71a363199506d9877b36dae716e75b821cc84e62ec690d",
+      "plan_sha256_kind": "Original report canonical plan binding; exact plan-file bytes have separate plan_file_sha256."
+    },
+    {
+      "profile": "qwen05-float32",
+      "run_id": "de231b2e772a4e648516215ab517a4f2",
+      "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+      "report_sha256": "5a5311b39c471b9246f02530bc9ccfa13a53074aceda64c4968126a909eccb49",
+      "plan_sha256": "c404942e999f7dd04c53d029c4c640c462e06d851e9351b28bd4395266daf427",
+      "sampled_rss_ceiling_bytes": 4294967296,
+      "host_limits": {
+        "devices": [
+          "cpu",
+          "cuda"
+        ],
+        "deadline_seconds_by_device": {
+          "cpu": 1200,
+          "cuda": 1200
+        },
+        "cooperative_stop_seconds_by_device": {
+          "cpu": 1080,
+          "cuda": 1080
+        },
+        "primary_delivery_budget_seconds": {
+          "cpu": 600,
+          "cuda": 300
+        },
+        "reserved_vram_budget_bytes": {
+          "cpu": 0,
+          "cuda": 6442450944
+        },
+        "intended_use": "reviewed-proposals-only",
+        "automatic_label_quality_floor": 23,
+        "scope": "Prospective absolute host budgets; original1.20 comparison and23of24 automation gates remain separate and unchanged."
+      },
+      "measured": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "9a51757fcc689a2a158ab780942f9a81d6e5adbfe27fa9e36dbf7a6ed09c8f2c",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 244.61978129995987,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3551821824,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-unchecked-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 252.97733339993283,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 5.886686646302861
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "0ea9b1ac82e815ed576358ff6e4ddd9f0ab29f491278765885c129703c7cddcc",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 243.83935620007105,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3561775104,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-unchecked-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 250.67335169995204,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 5.905527403125503
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "efd2d8b4e6eb921356cf744d980d5ce5ba16d70a26783ec5c4c30036386eb80c",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 243.14636969997082,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3560378368,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 12,
+              "invalid_attempts": 24,
+              "repair_attempts": 12,
+              "invalid_accepted": 0,
+              "output_attempts": 36,
+              "invalid_output_rate": 0.6666666666666666,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-unchecked-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 249.05278149992228,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 5.922358626110192
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "152130f389a4764052baea51755fe64f54d42582d56063f4fca3a45bb320eb2d",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 153.0596465000417,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3558166528,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-constrained-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 159.51306909997948,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 17.248177820659482
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "d795903a48eb900e805b6b06c5160baa3ec1f155fbb9314de55271a558e4c760",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 152.71188620000612,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3557257216,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-constrained-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 159.48645530000795,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 17.28745591251753
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "94fb3c8eeabd56d8ba6d76137efcb4e979258e1e4beb7aa1c2d6e807888ca301",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 153.72319499996956,
+          "delivery_budget_seconds": 600,
+          "peak_sampled_rss_bytes": 3555635200,
+          "peak_reserved_vram_bytes": 0,
+          "reserved_vram_budget_bytes": 0,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cpu-constrained-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 160.58022270002402,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 17.173725799808693
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "e732fcb0e7695d796554a607e94e83362d3c0b6e34834709fddf87c81983dc39",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 57.63168820005376,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3796418560,
+          "peak_reserved_vram_bytes": 2218786816,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-unchecked-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 64.60721659997944,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 22.9040661696037
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "4391d14bdedc3069977cd27a988d141f3f2b4a1974b343449540ac9eaccbfd69",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 58.63001309998799,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3781394432,
+          "peak_reserved_vram_bytes": 2218786816,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-unchecked-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 65.41571910004131,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 22.51406626413103
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "9aef94a808e0e45d76232cbacc0ae45ba391950fb0bf02186c0c6a6adfa43f69",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 56.26817089994438,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3802406912,
+          "peak_reserved_vram_bytes": 2218786816,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 11,
+              "invalid_attempts": 26,
+              "repair_attempts": 13,
+              "invalid_accepted": 0,
+              "output_attempts": 37,
+              "invalid_output_rate": 0.7027027027027027,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-unchecked-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 63.19084350008052,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 23.45908848445089
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "status": "measured",
+          "measurement_sha256": "449d74dc37da9cfe3e723fb0beb8c17d94daf69f7bef8c800328f6e5471d54a2",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 36.78265619999729,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3787288576,
+          "peak_reserved_vram_bytes": 2214592512,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-constrained-1-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 42.61332979996223,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 71.772956951385
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "status": "measured",
+          "measurement_sha256": "e5fab32a3a28cda88c3d1c27b754d9d5f143ae1ad99fd386c60d164ad7d42e90",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 36.3913545999676,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3798618112,
+          "peak_reserved_vram_bytes": 2214592512,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-constrained-2-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 42.14551729999948,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 72.5447026916209
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "status": "measured",
+          "measurement_sha256": "b4293ac2651f36561303daf7f2b72b5cd14787a29c669f3672233294a89e92d4",
+          "native_exit_code": 0,
+          "cleanup_observed": true,
+          "delivery_seconds": 37.04904269997496,
+          "delivery_budget_seconds": 300,
+          "peak_sampled_rss_bytes": 3786350592,
+          "peak_reserved_vram_bytes": 2214592512,
+          "reserved_vram_budget_bytes": 6442450944,
+          "phases": {
+            "first": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            },
+            "warm": {
+              "requested": 24,
+              "accepted": 22,
+              "invalid_attempts": 0,
+              "repair_attempts": 0,
+              "invalid_accepted": 0,
+              "output_attempts": 24,
+              "invalid_output_rate": 0.0,
+              "rate_denominator": "output_attempts, including repairs; not requested cases"
+            }
+          },
+          "absolute_budget_met": true,
+          "variant": "candidate",
+          "cohort_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/cuda-constrained-3-candidate/cohort.json",
+          "launcher_to_confirmed_exit_seconds": 43.279762999969535,
+          "rate_kind": "Structurally accepted examples per model-delivery minute; not semantically correct outcomes per minute.",
+          "accepted_examples_per_model_delivery_minute": 71.25690186866242
+        }
+      ],
+      "denied": [],
+      "not_transferred": [],
+      "evidence_root": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2",
+      "report_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/report.json",
+      "plan_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/plan.json",
+      "index_path": ".local-codex/standard-generation-qualification/de231b2e772a4e648516215ab517a4f2/evidence-index.json",
+      "index_sha256": "a2f0277c05381d7506c74a13e8527a4b34c99a5492952675c866d8ceeba2ca8e",
+      "primary_timing": "Model load through all first24/warm24 requests, attempts, repairs, evidence and one unload; common imports, input verification, algorithm selection and CUDA runtime initialization excluded identically. Launcher-to-confirmed-native-exit timing is separate.",
+      "original_protocol_status": {
+        "status": "not-qualified-see-cohorts",
+        "qualification_complete": false,
+        "comparisons": [
+          {
+            "device": "cpu",
+            "mode": "unchecked",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cpu",
+            "mode": "constrained",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cuda",
+            "mode": "unchecked",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          },
+          {
+            "device": "cuda",
+            "mode": "constrained",
+            "status": "pending",
+            "throughput_target_met": false,
+            "median_delivery_ratio": null
+          }
+        ]
+      },
+      "plan_file_sha256": "c404942e999f7dd04c53d029c4c640c462e06d851e9351b28bd4395266daf427",
+      "plan_sha256_kind": "Original report canonical plan binding; exact plan-file bytes have separate plan_file_sha256."
+    }
+  ],
+  "scope_limits": [
+    "Standard inference only; not actual optional offload.",
+    "Reports remain separate source cohorts; no merged fresh matrix or historical current-host qualification transfer.",
+    "Denied-memory attempts are safe denial/attempt cleanup only, with no model delivery/accuracy/resource result.",
+    "Sampled RSS is observed process usage, not native hard limit or available-RAM admission threshold.",
+    "Unconfirmed historical child exits and retained offload/native/security gaps remain unchanged.",
+    "Model-delivery timing excludes common imports, input verification, algorithm selection and CUDA initialization. It is separate from launcher-to-confirmed-native-exit and from application startup.",
+    "Original relative speedup protocol remains failed/pending: historical larger CUDA median ratios1.0265259108730365unchecked and1.0715321978725236constrained miss1.20. Absolute budget support does not retroactively pass that protocol.",
+    "Three larger CPU unchecked measurements span one earlier and two later sources; they are not a fresh single-source three-repeat matrix. Larger constrained CPU was denied, with no delivery measurement.",
+    "Historical missing invalid_accepted fields remain null/unknown; structural acceptance is separate from correct answers."
+  ],
+  "summary": {
+    "completed_candidate_cohorts": 21,
+    "denied_candidate_cohorts": 8,
+    "every_measured_candidate_within_its_original_budget": true,
+    "accuracy_benchmarks_rerun": false,
+    "owning_criterion_closed": false
+  },
+  "completed_quality_artifact": {
+    "path": "docs/operations/model-software-quality-qualification.json",
+    "sha256": "d239d080e0a9f6b29ca50d2ca7bfc590bae0d7cee89a38e1c8c06dd8b3a60cbd"
+  },
+  "source_impact_review": {
+    "path": ".local-codex/functionality-f4-remaining-independent-assessment-20261023.json",
+    "sha256": "eef5c3c7ea0c685b993e1e25db21893c916fa06f4657c416b54a60aa55250b14",
+    "scope": "Independent byte-level source-impact assessment; not a parent pass.",
+    "later_coordination_correction": {
+      "work_id": "dataset-admission-recovery-and-restoration",
+      "receipt": "3c55bbbc186bb2324e70beb7670b8945be8f1e6f6c03b31e016ad105ecd68964",
+      "review": "91a7be6c03fccba71ac7a2c5d19e6275da31d696baf1fdb36c1b06dfdec79ea0",
+      "scope": "TypeScript task-admission/recovery coordination and saved-profile validation; no weight, prompt, decoder, inference or original measurement change. Qualifies that local correction only. Current host and owning/final technical qualification remain separate."
+    }
+  },
+  "rate_method": "Structurally accepted examples across first and warm phases per model-delivery minute, including generation attempts/repairs and one unload. Not semantically correct outcomes per minute, whole application startup or complete launcher elapsed time.",
+  "assessment_scope": "Existing measured Standard observations only; current-target and final qualification remain separate. No new inference or accuracy checks."
+}
