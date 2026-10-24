@@ -2,6 +2,12 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Available RAM accepts a nonnegative safe integer, including zero. Zero is an
+observed exhausted capacity and must not become missing data or fall back to an
+installed-memory estimate. Installed RAM, accelerator totals and processor counts
+still require positive safe integers. These advisory facts do not replace the
+worker's memory admission, explicit overflow policy or capability checks.
+
 Shared runtime execution contracts live in this module.
 
 The contract family is intentionally thin and adapter-oriented:

@@ -101,6 +101,59 @@ describe("dataset preparation constrained JSON recommendation", () => {
     );
   });
 
+  it("preserves zero available RAM instead of replacing it with installed memory", () => {
+    const exhausted = capacity({
+      availableSystemMemoryBytes: 0,
+      totalAcceleratorMemoryBytes: undefined,
+    });
+    const normalized = normalizeDatasetPreparationGenerationCapacitySnapshot(exhausted);
+    assert.equal(normalized?.availableSystemMemoryBytes, 0);
+    for (const snapshot of [exhausted, normalized]) for (const selectedDevice of ["cpu", "auto"] as const) {
+      const result = resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice,
+        estimatedModelBytes: 3 * GIBIBYTE,
+        capacity: snapshot,
+      });
+      assert.equal(result.supported, false);
+      assert.equal(result.reason, "capacity-insufficient");
+      assert.equal(result.availableMemoryBytes, 0);
+      assert.equal(result.estimatedMemoryShortfallBytes, 4.75 * GIBIBYTE);
+      assert.equal(resolveDatasetPreparationConstrainedJson({
+        selectedDevice, estimatedModelBytes: 3 * GIBIBYTE,
+        capacity: snapshot, now: NOW,
+      }).enabled, false);
+    }
+    assert.equal(resolveDatasetPreparationGenerationModelCapacity({
+      selectedDevice: "cpu", estimatedModelBytes: 3 * GIBIBYTE,
+      capacity: exhausted, memoryOverflowPolicy: "extended",
+    }).supported, false);
+    assert.equal(resolveDatasetPreparationConstrainedJson({
+      preference: true, selectedDevice: "cpu", estimatedModelBytes: 3 * GIBIBYTE,
+      capacity: exhausted, now: NOW,
+    }).source, "explicit");
+    assert.equal(resolveDatasetPreparationGenerationModelCapacity({
+      selectedDevice: "cpu", estimatedModelBytes: 3 * GIBIBYTE,
+      capacity: capacity({ totalAcceleratorMemoryBytes: undefined }),
+    }).reason, "capacity-sufficient-cpu");
+  });
+
+  it("accepts only nonnegative safe available RAM while totals remain positive", () => {
+    for (const invalid of [-1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, "0", null]) {
+      const result = normalizeDatasetPreparationGenerationCapacitySnapshot({
+        ...capacity(), availableSystemMemoryBytes: invalid,
+      });
+      assert.equal(result?.availableSystemMemoryBytes, undefined);
+    }
+    const result = normalizeDatasetPreparationGenerationCapacitySnapshot({
+      ...capacity(), availableSystemMemoryBytes: 0, totalSystemMemoryBytes: 0,
+      logicalProcessorCount: 0, totalAcceleratorMemoryBytes: 0,
+    });
+    assert.equal(result?.availableSystemMemoryBytes, 0);
+    assert.equal(result?.totalSystemMemoryBytes, undefined);
+    assert.equal(result?.logicalProcessorCount, undefined);
+    assert.equal(result?.totalAcceleratorMemoryBytes, undefined);
+  });
+
   it("permits only the selected bounded CPU memory overflow", () => {
     const moderatelyBusyMachine = capacity({
       totalSystemMemoryBytes: 16 * GIBIBYTE,

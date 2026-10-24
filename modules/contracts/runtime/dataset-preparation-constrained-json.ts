@@ -72,6 +72,11 @@ const boundedPositiveInteger = (value: unknown): number | undefined =>
     ? value
     : undefined;
 
+const boundedAvailableMemory = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : undefined;
+
 const normalizedTimestamp = (value: unknown): string | undefined => {
   if (typeof value !== "string" || value.length > 64) return undefined;
   const milliseconds = Date.parse(value);
@@ -104,7 +109,7 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
   const totalSystemMemoryBytes = boundedPositiveInteger(
     value.totalSystemMemoryBytes,
   );
-  const availableSystemMemoryBytes = boundedPositiveInteger(
+  const availableSystemMemoryBytes = boundedAvailableMemory(
     value.availableSystemMemoryBytes,
   );
   const totalAcceleratorMemoryBytes = boundedPositiveInteger(
@@ -121,7 +126,7 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
       : {}),
     ...(logicalProcessorCount ? { logicalProcessorCount } : {}),
     ...(totalSystemMemoryBytes ? { totalSystemMemoryBytes } : {}),
-    ...(availableSystemMemoryBytes ? { availableSystemMemoryBytes } : {}),
+    ...(availableSystemMemoryBytes !== undefined ? { availableSystemMemoryBytes } : {}),
     ...(totalAcceleratorMemoryBytes ? { totalAcceleratorMemoryBytes } : {}),
   };
 }
@@ -182,7 +187,7 @@ export function resolveDatasetPreparationGenerationModelCapacity(input: {
   const totalSystemMemoryBytes = boundedPositiveInteger(
     input.capacity.totalSystemMemoryBytes,
   );
-  const availableSystemMemoryBytes = boundedPositiveInteger(
+  const availableSystemMemoryBytes = boundedAvailableMemory(
     input.capacity.availableSystemMemoryBytes,
   );
   const totalAcceleratorMemoryBytes = boundedPositiveInteger(
