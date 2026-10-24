@@ -649,3 +649,25 @@ organization context provider together. Server application composition connects
 its authenticated request scope for explicitly injected scoped stores and for
 PostgreSQL. Missing context leaves ingestion unavailable before acquisition;
 raw or global document storage is not an ingestion fallback.
+
+## Bounded replaceable OCR provider boundary
+
+[ADR-0046](../adr/ADR-0046-replaceable-local-document-ocr.md) records the owner's
+Windows OCR selection. The managed runtime adapter owns `ocr/protocol.py`;
+application orchestration keeps its existing runtime and task-registry ports.
+WinRT, helper processes and future supplier details must remain adapter-owned.
+
+Immutable source requests and result types preserve exact source SHA-256,
+provider/version, language and original page identities. Line rectangles are
+finite, positive and inside bounded decoded pages. Total recognized pages,
+lines and text are limited. Empty recognition is retained without inventing
+text or confidence. Recognized content is untrusted source data, not executable
+instructions or diagnostic material.
+
+The protocol and its portable tests are a foundation, not provider readiness.
+Windows helper/resource, lifecycle, installed-language checks, normalization,
+readiness and host UI wiring still need implementation and actual qualification.
+Existing OCR requests remain unavailable until that work passes. Standard
+extraction, supported task/source compatibility and accepted model quality stay
+unchanged. A future Tesseract or service adapter must satisfy this same boundary
+and separately establish its supply-chain, execution and egress authority.

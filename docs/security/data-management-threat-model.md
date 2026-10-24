@@ -590,3 +590,27 @@ authoritative context provider. An injected scoped store receives the same
 authenticated request context as PostgreSQL storage. A store name or body field
 cannot supply authority. Missing context returns unavailable before acquisition;
 organization mismatch remains denied. Unscoped stores never become a fallback.
+
+## Replaceable OCR request and result contract
+
+The approved Windows provider direction is documented in
+[ADR-0046](../adr/ADR-0046-replaceable-local-document-ocr.md). This first boundary
+is pure managed-runtime data validation; it adds no process, file, model,
+language-pack, credential or network operation and does not advertise readiness.
+
+Protected assets are source content and identity, original page lineage, resource
+availability and safe diagnostics. Inputs and provider results can be oversized,
+mutable, duplicated, swapped, malformed, non-finite or instruction-bearing.
+Immutable bytes/tuples and frozen records, exact digest/provider/version/language/
+page matching, strictly ordered original pages, finite contained rectangles,
+per-page pixel limits and aggregate line/text limits fail closed. Booleans are
+not accepted as numeric dimensions or page numbers. Recognized line control and
+surrogate characters are rejected; content is not copied into error messages or
+representations. Empty recognition remains empty and no confidence is fabricated.
+
+Application workspace/source authorization is still required before a provider
+call. Text remains untrusted data when later consumed by generation. These
+portable checks do not qualify a Windows parser, native isolation, trusted helper
+identity, timeouts, cancellation, cleanup, model quality or host UI. Those controls
+and measured failure paths remain required before enabling actual OCR. No cloud
+fallback, arbitrary executable/path or supplier download is authorized here.

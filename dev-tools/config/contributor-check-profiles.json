@@ -1100,6 +1100,27 @@
         "apps/server/src/createServer.ts",
         "modules/hosts/server/README.md"
       ]
+    },
+    "ocr-provider-contract": {
+      "test_paths": [
+        "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
+      ],
+      "source_paths": [
+        "modules/adapters/runtime/python/worker/ocr/__init__.py",
+        "modules/adapters/runtime/python/worker/ocr/protocol.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py",
+        "modules/adapters/runtime/python/worker/README.md",
+        "docs/adr/ADR-0046-replaceable-local-document-ocr.md",
+        "docs/adr/decision-readiness.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/data-management.pack.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "dev-tools/README.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }

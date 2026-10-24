@@ -64,3 +64,13 @@ authenticated reviewer identity and public hosting require successor decisions.
 5. If `proposed` or `decision-required`, stop before implementation and present decision options, consequences, and affected boundaries.
 
 When a decision is accepted, superseded, or materially constrained, update this register in the same change as the ADR and affected architecture/context docs.
+
+## Optional local document OCR
+
+[ADR-0046](ADR-0046-replaceable-local-document-ocr.md) accepts Windows OCR behind
+a replaceable managed-runtime provider boundary. Implementation can proceed
+within that explicit choice and the existing application runtime/task ports.
+The portable contract does not make OCR available: trusted helper/build,
+native lifetime, normalization, installed-language readiness and actual host
+qualification remain required. New suppliers, remote transfer or expanded
+source/task support require their own applicable review.

@@ -512,3 +512,13 @@ The role-budget revision uses the separate fixed
 exact native 3 GiB UI-budget readback. Readback allocates no such amount and
 grants no UI pass. A new separately reviewed actual host run is still required.
 No product, model, retained-file or offload guard changes with this test profile.
+
+## Portable OCR provider checks
+
+`ocr-provider-contract` is a fixed source-owned profile for the bounded request,
+readiness and result protocol inside the managed Python runtime. Changes in
+`worker/ocr/` or its exact portable test select it automatically. Its explicit
+coverage never suppresses unknown source impact or a required generic check.
+The profile executes one standard-library test module and does not load models,
+launch Windows OCR, access provider credentials or qualify the Data roadmap.
+Use actual native/provider and product checks for the later implementation.

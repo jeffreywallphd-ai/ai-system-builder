@@ -287,6 +287,41 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                 with self.assertRaises(ControlError):
                     run_focused_checks.profile_commands(self.root, "review-site")
 
+    def test_ocr_contract_profile_auto_selects_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        name = "ocr-provider-contract"
+        profile = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"][name]
+        test_path = "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
+        source = "modules/adapters/runtime/python/worker/ocr/protocol.py"
+        self.assertEqual(profile["test_paths"], [test_path])
+        self.assertIn(source, profile["source_paths"])
+        commands = run_focused_checks.profile_commands(root, name)
+        self.assertEqual(commands, [[sys.executable, "-B", "-m", "unittest", "discover",
+                                   "-s", "modules/adapters/runtime/python/worker/tests",
+                                   "-p", "test_ocr_protocol.py"]])
+        config = "dev-tools/config/contributor-check-profiles.json"
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
+        for paths, required, expected_ocr, expected_generic in [
+            ([source], ["documentation"], True, False),
+            ([test_path], ["documentation"], True, False),
+            ([source, "modules/other/source.ts"], ["documentation"], True, True),
+            ([source], ["documentation", "focused-tests"], True, True),
+            (["modules/other/source.ts"], ["documentation"], False, True),
+            (["modules/adapters/runtime/python/worker/tasks/other.py"], ["documentation"], False, True),
+        ]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                self.assertEqual(name in [row["id"] for row in selected], expected_ocr)
+                self.assertEqual("focused-tests" in [row["id"] for row in selected], expected_generic)
+                if expected_ocr:
+                    self.assertEqual(next(row for row in selected if row["id"] == name)["argv"][-2:], ["--profile", name])
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+            name: {**profile, "source_paths": [test_path]},
+        }}))
+        selected = catalog.plan(self.root, [source], ["documentation"], "candidate")["selected"]
+        self.assertIn("focused-tests", [row["id"] for row in selected])
+
     def test_host_memory_profile_stays_model_free_and_does_not_hide_other_impact(self):
         root = HELPERS.parents[1]
         profiles = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"]

@@ -332,3 +332,25 @@ absolute/non-symlink output-directory check remains in force. These controls do
 not qualify source-path authority, parent substitution, identity-preserving native
 file operations or controlled resource behavior; those R30 gaps remain pending.
 Rollback retains stronger naming denial.
+
+## Replaceable OCR provider contract
+
+`ocr/protocol.py` defines immutable bounded source requests, explicit readiness,
+and page/line results for optional text recognition. It uses only the standard
+library and has no Windows, process, file or provider-client imports. The existing
+application runtime/task ports remain the inward boundary.
+
+A result must match the request's exact byte digest, language and selected original
+pages, and the ready provider/version. Geometry must be finite and inside the
+bounded decoded page. Aggregate page, line and text limits apply across the
+result. Source bytes and recognized line text are excluded from representations;
+contract errors contain one fixed message. Empty recognition remains empty.
+There is no fabricated OCR confidence or accuracy score.
+
+The initial Windows provider direction is accepted in
+[ADR-0046](../../../../../docs/adr/ADR-0046-replaceable-local-document-ocr.md).
+The protocol does not install or start a provider and does not make OCR ready.
+Native helper/build/lifetime, normalization, capability and UI integration still
+need actual qualification. Standard extraction and accepted model accuracy are
+unchanged. Future adapters require the same bounds and separate supplier/egress
+review; the protocol grants no arbitrary executable or service configuration.
