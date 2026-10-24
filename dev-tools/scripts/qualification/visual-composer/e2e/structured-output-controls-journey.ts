@@ -60,6 +60,13 @@ export async function qualifyStructuredOutputControls(
   };
   try {
     await openStructuredOutputControls(current, host);
+    stage = "declared-sufficient-accelerator-default";
+    await model().fill("Qwen/Qwen2.5-1.5B-Instruct");
+    if (host === "desktop") await current.getByRole("combobox", { name: /^Inference mode/ }).selectOption("chat");
+    await current.getByRole("combobox", { name: /^Model device/ }).selectOption("cuda");
+    await expect(checked()).toBeEnabled({ timeout: 30000 });
+    await expect(checked()).toBeChecked();
+    completed.push("declared-sufficient-accelerator-adaptive-on");
     stage = "unknown-capacity-and-override";
     await model().fill("qualification/unknown-model");
     if (host === "desktop") await current.getByRole("combobox", { name: /^Inference mode/ }).selectOption("chat");
@@ -135,7 +142,7 @@ export async function qualifyStructuredOutputControls(
   } finally {
     const report = { schemaVersion: "structured-output-host-controls-v1", host, stage, completed,
       sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
-      evidence: "Actual isolated host UI with synthetic runtime capability; no generation, model quality, physical resource or parent qualification." };
+      evidence: "Actual isolated host UI with synthetic decoder capability and declared 8 GiB accelerator total; no generation, model quality, physical resource or parent qualification." };
     const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!;
     expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
     expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);

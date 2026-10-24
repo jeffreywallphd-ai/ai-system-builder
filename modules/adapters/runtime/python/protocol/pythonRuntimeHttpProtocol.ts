@@ -13,6 +13,7 @@ import type {
   PythonRuntimeStatus,
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
+import { normalizePythonRuntimeAcceleratorMemoryBytes } from "../../../../contracts/runtime";
 
 const PYTHON_RUNTIME_STATUS_VALUES: ReadonlySet<PythonRuntimeStatus> = new Set([
   "starting",
@@ -274,9 +275,11 @@ export function mapCapabilitiesResponseFromHttpPayload(
   payload: unknown,
 ): PythonRuntimeCapabilitiesResult {
   const response = asObject(payload, "capabilities response");
+  const totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(response.totalAcceleratorMemoryBytes);
   return {
     runtimeId: asString(response.runtimeId, "runtimeId"),
     capabilities: parseCapabilities(response.capabilities),
+    ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
   };
 }
 

@@ -18,8 +18,23 @@ from modules.adapters.runtime.python.worker.models import StartPythonRuntimeTask
 
 class WorkerAppTests(unittest.TestCase):
     def setUp(self) -> None:
+        capacity = patch.object(worker_app, "read_local_accelerator_memory_bytes", return_value=None)
+        self.capacity = capacity.start()
+        self.addCleanup(capacity.stop)
         with worker_app.TASK_REGISTRY_LOCK:
             worker_app.TASK_REGISTRY.clear()
+
+    def test_capabilities_report_only_the_current_worker_capacity_when_decoder_ready(self) -> None:
+        self.capacity.return_value = 8 * 1024 ** 3
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=True)):
+            self.assertEqual(worker_app.capabilities().totalAcceleratorMemoryBytes, 8 * 1024 ** 3)
+        self.capacity.return_value = None
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=True)):
+            self.assertIsNone(worker_app.capabilities().totalAcceleratorMemoryBytes)
+        self.capacity.reset_mock()
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=False)):
+            self.assertIsNone(worker_app.capabilities().totalAcceleratorMemoryBytes)
+        self.capacity.assert_not_called()
 
     def test_unload_fences_new_admission_and_releases_after_confirmed_completion(self) -> None:
         request = StartPythonRuntimeTaskRequest(requestId="after-unload", taskType="prepare-training-dataset", payload={})

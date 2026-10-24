@@ -140,6 +140,7 @@ import type {
 } from "../../../contracts/ipc";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  normalizePythonRuntimeAcceleratorMemoryBytes,
   supportsDatasetPreparationOffload,
   type DatasetPreparationGenerationCapacitySnapshot,
 } from "../../../contracts/runtime";
@@ -530,6 +531,7 @@ export function composeDesktopHost(
       const createGenerationCapacity = (
         decoderAvailable: boolean,
         offloadAvailable = false,
+        totalAcceleratorMemoryBytes?: number,
       ): DatasetPreparationGenerationCapacitySnapshot => ({
         schemaVersion: "1",
         capturedAt: (now ?? (() => new Date().toISOString()))(),
@@ -539,6 +541,7 @@ export function composeDesktopHost(
         logicalProcessorCount: cpus().length,
         totalSystemMemoryBytes: totalmem(),
         availableSystemMemoryBytes: freemem(),
+        ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
       });
       if (!pythonRuntimeFoundationPromise) {
         const status = createUnavailablePythonRuntimeStatus({
@@ -570,6 +573,7 @@ export function composeDesktopHost(
       let runtimeStatus =
         supervisorStatus === "ready" ? "ready" : supervisorStatus;
       let capabilities: string[] = [];
+      let totalAcceleratorMemoryBytes: number | undefined;
       let loadedModels: DesktopPythonRuntimeStatusPayload["loadedModels"] = [];
       let activeTaskCount = 0;
       if (supervisorStatus === "starting" || supervisorStatus === "ready") {
@@ -582,6 +586,7 @@ export function composeDesktopHost(
           healthy = health.healthy;
           runtimeStatus = health.status.status;
           capabilities = runtimeCapabilities.capabilities;
+          totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(runtimeCapabilities.totalAcceleratorMemoryBytes);
           loadedModels = modelStatus.loadedModels;
           activeTaskCount = modelStatus.activeTaskCount;
         } catch (error) {
@@ -627,6 +632,7 @@ export function composeDesktopHost(
           ),
           supervisorStatus === "ready" && healthy &&
             supportsDatasetPreparationOffload(capabilities),
+          totalAcceleratorMemoryBytes,
         ),
         systemResources: {
           memoryUsagePercent: readMemoryUsagePercent(),

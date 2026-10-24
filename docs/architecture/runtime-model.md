@@ -1,5 +1,15 @@
 # Runtime Model
 
+Generation's optional accelerator total originates in the authenticated worker's
+existing capability response, not the JS host's device namespace. The worker uses
+a lazy fixed read-only system-driver query with bounded public waiting/output,
+worker-local cache and one active probe retained through actual exit/output
+retirement. Unsupported or ambiguous visibility and MIG configurations stay
+unknown. Hosts copy only the current sanitized positive-safe-integer fact.
+This advisory total establishes neither free VRAM, Torch compatibility, process
+ownership nor task admission. Existing model, memory and offload guards remain
+authoritative; telemetry never imports a model or changes runtime topology.
+
 Standard CPU admission retains a narrowly calibrated estimate for two
 user-approved pinned safe-weight trials:3GiB available physical RAM for
 Qwen2.5-0.5B Float32 (at most2GiB estimated loaded weights), and3.5GiB for

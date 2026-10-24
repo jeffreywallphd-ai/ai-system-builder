@@ -2,6 +2,30 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+When the decoder is ready, `/capabilities` may report a minimized accelerator
+total from `generation_capacity.py`. The lazy read uses only the trusted system
+NVIDIA tool with a fixed memory/MIG query, no shell, a fixed working directory,
+a minimal environment and no inherited provider/runtime credentials.
+Windows resolves the required `ProgramFiles` value through the OS folder API;
+it never copies an inherited folder value or searches the caller's `PATH`.
+The probe imports neither Torch nor a model. Public waiting is at most one second;
+the child-process wait has a 750 ms deadline. Output capture stops at 4097 bytes
+for a 4096-byte frame.
+A timeout requests termination but never proves it. One active probe remains
+reserved until actual child exit and output retirement; uncertain exit cannot
+start a successor. Known and unknown completed observations are cached for
+30 seconds and device-visibility settings are checked before cache reuse.
+
+Only one reported GPU and unambiguous unset or zero-index visibility are supported.
+Empty/UUID/MIG/multiple-index masks, MPS, multiple devices, enabled or pending MIG,
+inconsistent MIG states, errors and malformed output report no total. NVIDIA's
+`N/A` marker is supported for non-MIG device fields; a total remains advisory and
+does not establish CUDA compatibility or free VRAM. Unsupported platforms and
+missing drivers stay unknown. Existing memory admission and offload guards remain
+authoritative. No driver install or model work occurs during this read. See
+[NVIDIA SMI](https://docs.nvidia.com/deploy/nvidia-smi/index.html) and
+[CUDA visibility](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/environment-variables.html).
+
 This directory contains the managed Python sidecar worker.
 
 The worker must be launched by a host supervisor on `127.0.0.1`, `localhost`, or

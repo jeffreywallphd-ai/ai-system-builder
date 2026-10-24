@@ -2,6 +2,13 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The capabilities mapper preserves only a positive safe integer for the optional
+worker-reported accelerator total. Invalid optional telemetry becomes unknown;
+it cannot bypass strict runtime identity or capability validation. The observation
+comes from the actual authenticated worker, including an attached worker. It is
+advisory installed capacity and never model readiness, available VRAM, process
+ownership or an offload capability. No JS-host hardware substitution is allowed.
+
 Foundation for the managed Python sidecar runtime adapter:
 
 - HTTP client

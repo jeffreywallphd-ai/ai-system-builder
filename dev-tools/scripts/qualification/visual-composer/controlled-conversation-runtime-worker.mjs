@@ -77,6 +77,8 @@ export function createControlledConversationRuntimeWorker(options) {
             ...(scenario === "dataset-profile" ? ["dataset-preparation.offload-v1"] : []),
             ...(scenario === "structured-output-controls" ? ["dataset-preparation.constrained-json"] : []),
           ],
+          // Declared UI fixture capacity, never a physical-device observation.
+          ...(scenario === "structured-output-controls" ? { totalAcceleratorMemoryBytes: 8 * 1024 ** 3 } : {}),
         });
       }
       if (request.method === "GET" && url.pathname === "/models/status") {

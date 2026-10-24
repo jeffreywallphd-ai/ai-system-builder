@@ -18,6 +18,7 @@ test("structured output fixture declares controls readiness without performing d
       assert.equal((await fetch(`${origin}/capabilities`)).status, 401);
       const capabilities = await (await fetch(`${origin}/capabilities`, { headers })).json();
       assert.equal(capabilities.capabilities.includes("dataset-preparation.constrained-json"), scenario === "structured-output-controls");
+      assert.equal(capabilities.totalAcceleratorMemoryBytes, scenario === "structured-output-controls" ? 8 * 1024 ** 3 : undefined);
       assert.equal(capabilities.capabilities.includes("dataset-preparation.offload-v1"), false);
       const refused = await fetch(`${origin}/tasks/start`, { method: "POST", headers,
         body: JSON.stringify({ requestId: "dataset.controls-only", taskType: "prepare-training-dataset", payload: {} }) });

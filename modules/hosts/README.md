@@ -1,5 +1,12 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Generation snapshots in desktop and server copy only the optional sanitized
+accelerator total from the current authenticated Python capabilities response.
+They do not query an ambient GPU or carry a prior worker's total across reads.
+Missing, malformed or failed worker observations stay unknown. Installed capacity
+guides an initial recommendation; live worker admission, readiness and offload
+ownership remain separate mandatory checks.
+
 
 The shared workspace-summary composition uses repository-owned scalar/identity
 projections with explicit workspace and group authority. Both hosts bind it to

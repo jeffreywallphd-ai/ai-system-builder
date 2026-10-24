@@ -106,6 +106,7 @@ test descriptions or fixture strings; controlled AI tests remain opt-in.
 
 The `host-memory-fixture` profile runs the two fixed synthetic worker/fixture
 test files and the shared, desktop and thin-client output-mode renderer tests.
+It also runs the fixed runtime protocol, worker-capacity and worker-app tests.
 It checks memory notifications, stable initial recommendations and explicit
 choices during readiness loss. It does not run models, accuracy, physical-resource
 or native/offload qualification. Execute and retain the actual packaged-desktop

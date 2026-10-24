@@ -11,6 +11,27 @@ import {
 } from "../protocol/pythonRuntimeHttpProtocol";
 
 describe("pythonRuntimeHttpProtocol", () => {
+  it("keeps only a valid worker-reported accelerator total", () => {
+    const base = { runtimeId: "python-sidecar", capabilities: ["dataset-preparation.constrained-json"] };
+    expect(mapCapabilitiesResponseFromHttpPayload({ ...base, totalAcceleratorMemoryBytes: 8 * 1024 ** 3 }))
+      .toEqual({ ...base, totalAcceleratorMemoryBytes: 8 * 1024 ** 3 });
+    for (const total of [undefined, null, true, false, 0, -1, 1.5, "8589934592", NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, {}]) {
+      expect(mapCapabilitiesResponseFromHttpPayload({ ...base, totalAcceleratorMemoryBytes: total }))
+        .toEqual(base);
+    }
+    expect(mapCapabilitiesResponseFromHttpPayload(base)).toEqual(base);
+  });
+
+  it("never lets optional capacity bypass core capability validation or expose extra facts", () => {
+    expect(() => mapCapabilitiesResponseFromHttpPayload({ runtimeId: "python", capabilities: [1], totalAcceleratorMemoryBytes: 8 * 1024 ** 3 }))
+      .toThrow("capabilities[0] must be a non-empty string");
+    expect(() => mapCapabilitiesResponseFromHttpPayload({ runtimeId: 1, capabilities: [], totalAcceleratorMemoryBytes: 8 * 1024 ** 3 }))
+      .toThrow("runtimeId must be a non-empty string");
+    expect(mapCapabilitiesResponseFromHttpPayload({ runtimeId: "python", capabilities: [], totalAcceleratorMemoryBytes: 1,
+      hardwareName: "private-fixture-marker", driverPath: "private-fixture-marker" }))
+      .toEqual({ runtimeId: "python", capabilities: [], totalAcceleratorMemoryBytes: 1 });
+  });
+
   it("preserves loaded memory profiles and rejects unknown profiles without paths", () => {
     const model = { provider: "transformers", modelId: "fixture/model", inferenceMode: "chat" };
     expect(mapModelStatusResponseFromHttpPayload({ loadedModels: [model], activeTaskCount: 0 }).loadedModels[0]?.memoryMode).toBeUndefined();

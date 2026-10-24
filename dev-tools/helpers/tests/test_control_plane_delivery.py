@@ -260,6 +260,9 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/ui/shared/data-management/tests/useDatasetPreparationConstrainedJson.ui.test.tsx",
             "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
             "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
+            "modules/adapters/runtime/python/tests/pythonRuntimeHttpProtocol.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/test_generation_capacity.py",
+            "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
         ])
         source = "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
         self.assertIn(source, profile["source_paths"])

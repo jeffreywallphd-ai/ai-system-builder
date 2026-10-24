@@ -20,6 +20,13 @@
 
 ## Core Guidance
 
+- Generation accelerator totals come only from the current authenticated worker
+  capability response. The lazy driver query has bounded waiting/output and one
+  probe retained until actual exit/output retirement; unknown masks, MIG and
+  unsupported observations remain unknown. Do not substitute JS-host hardware or
+  confuse advisory total capacity with free VRAM, Torch readiness, admission or
+  native/offload ownership. See the runtime architecture and worker README.
+
 - For the two exact pinned Qwen CPU/chat/Standard trials, memory admission uses
   user-directed3GiB/3.5GiB estimates only after safe-weight hash and size checks;
   all other profiles retain conservative admission. Read the runtime model and

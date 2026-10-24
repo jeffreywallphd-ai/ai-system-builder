@@ -44,6 +44,7 @@ from .models import (
 )
 from .tasks.example_generation import ensure_generation_model_downloaded
 from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
+from .generation_capacity import read_local_accelerator_memory_bytes
 from .tasks.local_text_generation import (
     describe_loaded_generation_models,
     ensure_generation_adapter_is_available,
@@ -684,11 +685,15 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "validate-model",
         "conversation-text-generation",
     ]
-    if get_constrained_json_decoder_runtime_status().available:
+    decoder_available = get_constrained_json_decoder_runtime_status().available
+    if decoder_available:
         supported.append("dataset-preparation.constrained-json")
     if offload_runtime_available():
         supported.append("dataset-preparation.offload-v1")
-    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=supported)
+    return PythonRuntimeCapabilitiesResult(
+        runtimeId=RUNTIME_ID, capabilities=supported,
+        totalAcceleratorMemoryBytes=read_local_accelerator_memory_bytes() if decoder_available else None,
+    )
 
 
 @app.post("/tasks/start", response_model=StartPythonRuntimeTaskResult)

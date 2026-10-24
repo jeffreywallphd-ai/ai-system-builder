@@ -15,4 +15,11 @@ export const PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES = [
 export interface PythonRuntimeCapabilitiesResult {
   runtimeId: string;
   capabilities: string[];
+  /** Advisory total reported by this worker; never free VRAM or admission. */
+  totalAcceleratorMemoryBytes?: number;
+}
+
+export function normalizePythonRuntimeAcceleratorMemoryBytes(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value : undefined;
 }

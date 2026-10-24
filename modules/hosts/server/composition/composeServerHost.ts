@@ -34,6 +34,7 @@ import {
 } from "../../../adapters/runtime/python";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  normalizePythonRuntimeAcceleratorMemoryBytes,
   supportsDatasetPreparationOffload,
   TaskType,
 } from "../../../contracts/runtime";
@@ -2403,6 +2404,7 @@ export function composeServerHost(
         readDatasetPreparationGenerationCapacity: async () => {
           let decoderAvailable = false;
           let offloadAvailable = false;
+          let totalAcceleratorMemoryBytes: number | undefined;
           if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {
             try {
               const capabilities =
@@ -2411,6 +2413,7 @@ export function composeServerHost(
                 PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
               );
               offloadAvailable = supportsDatasetPreparationOffload(capabilities.capabilities);
+              totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(capabilities.totalAcceleratorMemoryBytes);
             } catch {
               decoderAvailable = false;
             }
@@ -2424,6 +2427,7 @@ export function composeServerHost(
             logicalProcessorCount: cpus().length,
             totalSystemMemoryBytes: totalmem(),
             availableSystemMemoryBytes: freemem(),
+            ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
           };
         },
         datasetVersionUseCases,

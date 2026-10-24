@@ -27,10 +27,11 @@ test("thin client reports available RAM and restores edited output shapes and ex
       const body = await response.json();
       return { status: response.status, ok: body.ok, decoderAvailable: body.value?.decoderAvailable === true,
         availableRamReported: Number.isSafeInteger(body.value?.availableSystemMemoryBytes) && body.value.availableSystemMemoryBytes > 0,
+        declaredAcceleratorForwarded: body.value?.totalAcceleratorMemoryBytes === 8 * 1024 ** 3,
         availableRamWithinTotal: body.value?.availableSystemMemoryBytes <= body.value?.totalSystemMemoryBytes };
     }, workspaceId);
     await test.info().attach("safe-generation-capacity", { body: JSON.stringify(capacity), contentType: "application/json" });
-    expect(capacity).toEqual({ status: 200, ok: true, decoderAvailable: true, availableRamReported: true, availableRamWithinTotal: true });
+    expect(capacity).toEqual({ status: 200, ok: true, decoderAvailable: true, availableRamReported: true, availableRamWithinTotal: true, declaredAcceleratorForwarded: true });
     await page.goto(new URL("/artifacts", process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!).href);
     await uploadLowMemorySource(page, "thin");
     await qualifyStructuredOutputControls(page, test.info(), "thin", async () => {

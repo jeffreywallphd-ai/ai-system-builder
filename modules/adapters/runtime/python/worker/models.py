@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 
 class PythonRuntimeError(BaseModel):
@@ -33,6 +33,7 @@ class PythonRuntimeHealthCheckResult(BaseModel):
 class PythonRuntimeCapabilitiesResult(BaseModel):
     runtimeId: str
     capabilities: list[str]
+    totalAcceleratorMemoryBytes: StrictInt | None = Field(default=None, gt=0, le=2 ** 53 - 1)
 
 
 class EnsureModelDownloadRequest(BaseModel):

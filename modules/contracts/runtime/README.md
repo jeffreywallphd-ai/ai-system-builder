@@ -2,6 +2,14 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The authenticated Python capabilities response can include one optional
+`totalAcceleratorMemoryBytes` fact from that worker. Only a positive safe integer
+is admitted; malformed optional facts are omitted while core identity/capability
+validation remains strict. Old workers remain compatible. Desktop and server copy
+only that current response into the advisory generation snapshot. A host-local
+GPU, earlier worker or synthetic test profile cannot supply a missing fact.
+This total is not free VRAM, Torch compatibility or permission to allocate memory.
+
 Available RAM accepts a nonnegative safe integer, including zero. Zero is an
 observed exhausted capacity and must not become missing data or fall back to an
 installed-memory estimate. Installed RAM, accelerator totals and processor counts

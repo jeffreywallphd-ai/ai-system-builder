@@ -9,6 +9,14 @@ fixture through the existing authorized host boundary. The explicit
 refuses dataset generation. It does not load a model, run accuracy tests, use
 provider credentials or acquire an offload lease.
 
+This scenario explicitly declares an 8 GiB accelerator total in its authenticated
+capabilities response. Both actual hosts must forward that declared fact and
+initialize an untouched known 1.5B CUDA model with checked output on, before
+switching to the unknown-model/default-off and explicit-choice journey. This is
+software integration evidence for a declared profile, not a physical GPU reading
+or a claim that the fixture can decode. Verify the production worker's read-only
+capacity observation separately and keep its source/environment identity distinct.
+
 Run one host at a time from the repository root:
 
 ```powershell
@@ -28,7 +36,9 @@ checks. Shared provider declarations must compile with the server's non-browser
 TypeScript configuration; a desktop-only typecheck cannot establish that result.
 
 The bounded `host-memory-fixture` check profile also executes the owning desktop,
-thin-client and shared recommendation regressions. Run it with:
+thin-client and shared recommendation regressions, the runtime protocol mapper,
+and the model-free Python capacity/worker-app tests. The Python tests mock all
+driver process effects; they do not run a hardware benchmark. Run it with:
 
 ```powershell
 python dev-tools/helpers/run_focused_checks.py --profile host-memory-fixture
@@ -41,7 +51,8 @@ dispatch after checked mode loses readiness. They do not qualify physical
 accelerator telemetry or model execution. Keep both real host journeys below as
 separate regression evidence after the final source is frozen.
 
-The journeys check an unknown model's unchecked recommendation, an explicit
+The journeys check the declared sufficient accelerator default, an unknown
+model's unchecked recommendation, an explicit
 checked choice, protected training purposes, keyboard focus, renamed fields,
 a nested numeric field, the schema preview, invalid duplicate-field refusal and
 repair, reset, and restored settings after a renderer reload. Desktop also saves
@@ -61,6 +72,6 @@ decoder-readiness evidence.
 These controls tests are separate from the already reviewed
 [CPU/GPU structural and resource measurements](../../../../docs/operations/remaining-model-evidence-assessment.json).
 They do not rerun accepted model quality, qualify actual inference or native
-offload, prove accelerator-capacity reporting, or close a parent criterion by
+offload, prove physical accelerator-capacity reporting, or close a parent criterion by
 themselves. Final owning qualification still needs current checks and independent
 review against all of that criterion's requirements.
