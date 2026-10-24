@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -10766,6 +10766,159 @@
           "OCR is not available in the app yet.",
           "The agent must still build the task file map from application-authorized data and test public task readiness, cancellation, chunking, desktop and browser journeys, and a full desktop package.",
           "Earlier source, reader, preparation and build descriptions remain as historical snapshots."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3804d5d1204a8443436e0f4e9d02175b4b01aa680e726dc665f045ee7ac61d30",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The source-file checks are committed and independently reviewed.",
+          "Both apps supply the file checks separately from dataset versioning.",
+          "Tests check the exact PDF contents, workspace access and compatible recognition settings.",
+          "Missing or out-of-date runtime and file checks stop the task.",
+          "These results apply to the reviewed source-file checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "56912a986c779682489a3d1e6b7eb42a3590cc34b9aa61880ecf5a68e4c32a6c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still verify complete desktop and browser OCR delivery and the remaining advanced Data capabilities. No action is needed from the user."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5a39e726ed14a5a6a4253d10da67c310774c17c5a6fecc5feace592ea967e715",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This support does not complete a parent criterion, work chunk, increment or roadmap. It does not rerun or qualify model accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "955e251945f56c2b2fa92bfcf72caa1d98c1360c0de3fa6016102828f373c04c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The PDF-reading task is committed and independently reviewed.",
+          "It uses the installed Windows text reader and keeps the original page numbers and text locations.",
+          "Completed tasks report the actual language, page count and line count.",
+          "Eleven groups of Windows tests checked documents, cancellation, unavailable languages and confirmed process cleanup.",
+          "The tests used synthetic example generation."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "52544d2dcaf8bc7f01d7584d979f5fdfe5ed295b27fcaccbcdb1770c38e11a85",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Complete desktop and browser OCR task delivery and full package checks are still agent work. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e81b36ea23f2f980b2b91e0dea440bd7d02b10613117bcc7b61570b605d41cbe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results qualify the tested local task/reader snapshot only. They do not complete a parent criterion or qualify model output accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8d597b2a2dcd066951f1a2b405c79ff13cd1170606d40d811d6012610be73102",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The scanned-PDF controls are committed and independently reviewed in both apps.",
+          "The setting starts off and requires a language, PDF files and a compatible preparation method.",
+          "Tests cover saved settings, incompatible saved setups and settings locked until cancellation finishes.",
+          "Completed-task reader counts have a separate display.",
+          "The reviewed source passed 441 focused tests, routing checks and the required repository checks.",
+          "The browser production build passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "79dba237a9ce55177ea2bc5877db90f914c8ff99896e86c18ce4c5171f3a2be9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must run the complete real desktop and browser OCR task journeys and finish the remaining Data qualification. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "953fcaacfc4d25cecb7e0f17ce3da78350142dcc5dbcbe3a7728dc745ba4eab1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Form tests and the browser build do not qualify a complete packaged-host journey, model accuracy or a parent criterion."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "783287384d8527891ed5635fc8f83492ac70c0be96b1f8bead3c2c21b2b9a7e7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The committed PDF chooser works when the browser omits the file media type.",
+          "Its regression checks that the transfer keeps the existing bounded file slices.",
+          "Fresh component checks and separate review passed.",
+          "Seventeen earlier interaction cases apply to these exact selected inputs; those cases were not run again for this checkpoint."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7965ecb94c70592bd338710574bd66ed4d16d83a3c76e0adeb499f091157f57a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both apps' method controls and the shared language control now reference short captions separately from help text.",
+          "Fresh component checks and separate review passed.",
+          "Nineteen earlier DOM test cases apply to these exact selected inputs; those cases were not run again for this checkpoint."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a3d7eabe0ec430db7aec674b1a43886c08be8cee33db031684ad8e99e55c47e7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover reviewed components at their recorded code snapshots.",
+          "They do not establish a successful current OCR journey in both apps, a real-browser accessible-name check, a full package or completion of a parent roadmap requirement.",
+          "Model accuracy was not tested again."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5de076647ecc37fdb437bb7bb9539cea115d97a77c0a5811f2bbe3b9d46bb3e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The latest full package attempt stopped because the system drive ran out of space, before either OCR app journey ran.",
+          "The user has been asked to make about 5 GB available for another attempt; that request is still pending.",
+          "The agent can continue other Data code work meanwhile.",
+          "Earlier statements that no user action was needed refer to their recorded component checks."
         ]
       }
     }

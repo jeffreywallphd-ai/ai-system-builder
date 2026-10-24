@@ -3288,6 +3288,230 @@
         "This staged-source capture is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
         "OCR is not available in the app yet. The agent must compile the application-authorized task source map and qualify public task readiness, cancellation and chunking, actual desktop/browser journeys and a full desktop package. Earlier source, reader, normalization and build descriptions remain historical snapshots."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-authorized-task-source-map-qualified",
+      "work_criteria": [
+        "authorized-task-map-preserves-exact-source-bytes"
+      ],
+      "receipt_digest": "da118bb28503b518471b2954b650e664a2b244631b6e9c9c1561f017e1f5b767",
+      "review_digest": "78c6f0f0270c4bc4f052131ba8ff6e48933ffd872bd59aab0ee9eb70ea279ea6",
+      "scope": "Application-authorized scanned-PDF task maps are committed in 234af8d. Both hosts supply a separate integrity-hashing port. Exact staged source bytes, workspace authority, strict opt-in/language/method settings and missing or stale protocol/hash denial have focused tests, applicable gates and separate review. This is source-map support at its reviewed snapshot.",
+      "limitations": [
+        "The agent must still verify complete desktop and browser OCR delivery and the remaining advanced Data capabilities. No action is needed from the user.",
+        "This support does not complete a parent criterion, work chunk, increment or roadmap. It does not rerun or qualify model accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-authorized-task-source-map-qualified",
+      "work_criteria": [
+        "authorized-task-map-preserves-exact-source-bytes"
+      ],
+      "receipt_digest": "da118bb28503b518471b2954b650e664a2b244631b6e9c9c1561f017e1f5b767",
+      "review_digest": "78c6f0f0270c4bc4f052131ba8ff6e48933ffd872bd59aab0ee9eb70ea279ea6",
+      "scope": "Application-authorized scanned-PDF task maps are committed in 234af8d. Both hosts supply a separate integrity-hashing port. Exact staged source bytes, workspace authority, strict opt-in/language/method settings and missing or stale protocol/hash denial have focused tests, applicable gates and separate review. This is source-map support at its reviewed snapshot.",
+      "limitations": [
+        "The agent must still verify complete desktop and browser OCR delivery and the remaining advanced Data capabilities. No action is needed from the user.",
+        "This support does not complete a parent criterion, work chunk, increment or roadmap. It does not rerun or qualify model accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-authorized-task-source-map-qualified",
+      "work_criteria": [
+        "authorized-task-map-preserves-exact-source-bytes"
+      ],
+      "receipt_digest": "da118bb28503b518471b2954b650e664a2b244631b6e9c9c1561f017e1f5b767",
+      "review_digest": "78c6f0f0270c4bc4f052131ba8ff6e48933ffd872bd59aab0ee9eb70ea279ea6",
+      "scope": "Application-authorized scanned-PDF task maps are committed in 234af8d. Both hosts supply a separate integrity-hashing port. Exact staged source bytes, workspace authority, strict opt-in/language/method settings and missing or stale protocol/hash denial have focused tests, applicable gates and separate review. This is source-map support at its reviewed snapshot.",
+      "limitations": [
+        "The agent must still verify complete desktop and browser OCR delivery and the remaining advanced Data capabilities. No action is needed from the user.",
+        "This support does not complete a parent criterion, work chunk, increment or roadmap. It does not rerun or qualify model accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-task-consumption",
+      "work_criteria": [
+        "task-consumes-exact-ocr-sources-with-cancellation-and-bounds"
+      ],
+      "receipt_digest": "60097d150b4f2a2a5a64f726314d9c61685c2de5c63ec005a336f07189275425",
+      "review_digest": "a9a1f0988316604d5290ff4e5ab36a979d887a3cdd910dc4fa466b23eaef32ae",
+      "scope": "The managed task consumes exact authorized PDF sources in committed c56b0a0. It preserves original page and text spans, uses the installed Windows reader and reports actual language/page/line counts. Selected tests and separate review passed. Eleven actual Windows document/task case groups included cancellation and absent-language refusal, with recorded native retirement. Generation was a synthetic fixture.",
+      "limitations": [
+        "Complete desktop and browser OCR task delivery and full package checks are still agent work. No user action is needed.",
+        "These results qualify the tested local task/reader snapshot only. They do not complete a parent criterion or qualify model output accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-task-consumption",
+      "work_criteria": [
+        "task-consumes-exact-ocr-sources-with-cancellation-and-bounds"
+      ],
+      "receipt_digest": "60097d150b4f2a2a5a64f726314d9c61685c2de5c63ec005a336f07189275425",
+      "review_digest": "a9a1f0988316604d5290ff4e5ab36a979d887a3cdd910dc4fa466b23eaef32ae",
+      "scope": "The managed task consumes exact authorized PDF sources in committed c56b0a0. It preserves original page and text spans, uses the installed Windows reader and reports actual language/page/line counts. Selected tests and separate review passed. Eleven actual Windows document/task case groups included cancellation and absent-language refusal, with recorded native retirement. Generation was a synthetic fixture.",
+      "limitations": [
+        "Complete desktop and browser OCR task delivery and full package checks are still agent work. No user action is needed.",
+        "These results qualify the tested local task/reader snapshot only. They do not complete a parent criterion or qualify model output accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-task-consumption",
+      "work_criteria": [
+        "task-consumes-exact-ocr-sources-with-cancellation-and-bounds"
+      ],
+      "receipt_digest": "60097d150b4f2a2a5a64f726314d9c61685c2de5c63ec005a336f07189275425",
+      "review_digest": "a9a1f0988316604d5290ff4e5ab36a979d887a3cdd910dc4fa466b23eaef32ae",
+      "scope": "The managed task consumes exact authorized PDF sources in committed c56b0a0. It preserves original page and text spans, uses the installed Windows reader and reports actual language/page/line counts. Selected tests and separate review passed. Eleven actual Windows document/task case groups included cancellation and absent-language refusal, with recorded native retirement. Generation was a synthetic fixture.",
+      "limitations": [
+        "Complete desktop and browser OCR task delivery and full package checks are still agent work. No user action is needed.",
+        "These results qualify the tested local task/reader snapshot only. They do not complete a parent criterion or qualify model output accuracy."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-host-controls",
+      "work_criteria": [
+        "both-hosts-offer-explicit-safe-ocr-controls"
+      ],
+      "receipt_digest": "ffe4ddd006be154eed33da712e8fdb101032be70e1695ca6a70e5983f04409ba",
+      "review_digest": "627354e8854f70dabc43c1d0e28230e1fe455441be783f64fe784cf9164b1f0e",
+      "scope": "Commit 40c6213 adds shared, off-by-default scanned-PDF controls to desktop and browser. Language and PDF/method checks, saved settings, contradictory version replay, pending cancellation and actual reader-count display have focused tests. The selected candidate passed 239 Python, 112 Node and 90 UI tests plus routing and applicable gates. The browser production build and separate review passed.",
+      "limitations": [
+        "The agent must run the complete real desktop and browser OCR task journeys and finish the remaining Data qualification. No user action is needed.",
+        "Form tests and the browser build do not qualify a complete packaged-host journey, model accuracy or a parent criterion."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-host-controls",
+      "work_criteria": [
+        "both-hosts-offer-explicit-safe-ocr-controls"
+      ],
+      "receipt_digest": "ffe4ddd006be154eed33da712e8fdb101032be70e1695ca6a70e5983f04409ba",
+      "review_digest": "627354e8854f70dabc43c1d0e28230e1fe455441be783f64fe784cf9164b1f0e",
+      "scope": "Commit 40c6213 adds shared, off-by-default scanned-PDF controls to desktop and browser. Language and PDF/method checks, saved settings, contradictory version replay, pending cancellation and actual reader-count display have focused tests. The selected candidate passed 239 Python, 112 Node and 90 UI tests plus routing and applicable gates. The browser production build and separate review passed.",
+      "limitations": [
+        "The agent must run the complete real desktop and browser OCR task journeys and finish the remaining Data qualification. No user action is needed.",
+        "Form tests and the browser build do not qualify a complete packaged-host journey, model accuracy or a parent criterion."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-host-controls",
+      "work_criteria": [
+        "both-hosts-offer-explicit-safe-ocr-controls"
+      ],
+      "receipt_digest": "ffe4ddd006be154eed33da712e8fdb101032be70e1695ca6a70e5983f04409ba",
+      "review_digest": "627354e8854f70dabc43c1d0e28230e1fe455441be783f64fe784cf9164b1f0e",
+      "scope": "Commit 40c6213 adds shared, off-by-default scanned-PDF controls to desktop and browser. Language and PDF/method checks, saved settings, contradictory version replay, pending cancellation and actual reader-count display have focused tests. The selected candidate passed 239 Python, 112 Node and 90 UI tests plus routing and applicable gates. The browser production build and separate review passed.",
+      "limitations": [
+        "The agent must run the complete real desktop and browser OCR task journeys and finish the remaining Data qualification. No user action is needed.",
+        "Form tests and the browser build do not qualify a complete packaged-host journey, model accuracy or a parent criterion."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-options-do-not-complicate-the-default-path",
+      "work_id": "windows-ocr-host-controls",
+      "work_criteria": [
+        "both-hosts-offer-explicit-safe-ocr-controls"
+      ],
+      "receipt_digest": "ffe4ddd006be154eed33da712e8fdb101032be70e1695ca6a70e5983f04409ba",
+      "review_digest": "627354e8854f70dabc43c1d0e28230e1fe455441be783f64fe784cf9164b1f0e",
+      "scope": "Commit 40c6213 adds shared, off-by-default scanned-PDF controls to desktop and browser. Language and PDF/method checks, saved settings, contradictory version replay, pending cancellation and actual reader-count display have focused tests. The selected candidate passed 239 Python, 112 Node and 90 UI tests plus routing and applicable gates. The browser production build and separate review passed.",
+      "limitations": [
+        "The agent must run the complete real desktop and browser OCR task journeys and finish the remaining Data qualification. No user action is needed.",
+        "Form tests and the browser build do not qualify a complete packaged-host journey, model accuracy or a parent criterion."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-pdf-picker-ui",
+      "work_criteria": [
+        "pdf-picker-preserves-bounded-source-transfer"
+      ],
+      "receipt_digest": "50ae89816d2d80ae30b86a876ee4dbb4b8061047c4743bd8686e6c177f49fc73",
+      "review_digest": "27a316c9ce4be7e2b360ae8d2bb40850ef73aeaa47a0b2dcdff4f9c28a90c943",
+      "scope": "Commit 12df299 adds PDF selection and a filename-based media-type fallback when the browser omits MIME metadata. The regression checks bounded slicing and source transfer. Fresh component checks and separate review accepted the three-file projection. Seventeen previously executed Guided interaction cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
+      "limitations": [
+        "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
+        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-pdf-picker-ui",
+      "work_criteria": [
+        "pdf-picker-preserves-bounded-source-transfer"
+      ],
+      "receipt_digest": "50ae89816d2d80ae30b86a876ee4dbb4b8061047c4743bd8686e6c177f49fc73",
+      "review_digest": "27a316c9ce4be7e2b360ae8d2bb40850ef73aeaa47a0b2dcdff4f9c28a90c943",
+      "scope": "Commit 12df299 adds PDF selection and a filename-based media-type fallback when the browser omits MIME metadata. The regression checks bounded slicing and source transfer. Fresh component checks and separate review accepted the three-file projection. Seventeen previously executed Guided interaction cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
+      "limitations": [
+        "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
+        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-options-do-not-complicate-the-default-path",
+      "work_id": "windows-ocr-control-captions",
+      "work_criteria": [
+        "ocr-captions-have-stable-names-and-separate-help"
+      ],
+      "receipt_digest": "4aa6064ddd1c76817092aebfd08222636acf6a164d4bada16576d5dead26c8e1",
+      "review_digest": "eeb58bb67cb963960d711f73eef79841ade656198845d277637d69ac4ec0b995",
+      "scope": "Commit ae102cc gives both apps' method controls and the shared language control stable caption references, with help text referenced separately. Fresh component checks and separate review accepted the seven-file projection. Nineteen previously executed DOM cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
+      "limitations": [
+        "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
+        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-control-captions",
+      "work_criteria": [
+        "ocr-captions-have-stable-names-and-separate-help"
+      ],
+      "receipt_digest": "4aa6064ddd1c76817092aebfd08222636acf6a164d4bada16576d5dead26c8e1",
+      "review_digest": "eeb58bb67cb963960d711f73eef79841ade656198845d277637d69ac4ec0b995",
+      "scope": "Commit ae102cc gives both apps' method controls and the shared language control stable caption references, with help text referenced separately. Fresh component checks and separate review accepted the seven-file projection. Nineteen previously executed DOM cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
+      "limitations": [
+        "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
+        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+      ]
     }
   ]
 }
