@@ -2934,6 +2934,108 @@
         "The native readback fixture establishes the configured test-process limits and ownership mechanics, not a memory allocation stress test, hostile filesystem protection, real model-worker/offload restart or old-process recovery.",
         "The earlier 2 GiB UI failures remain failed history. This profile does not clear any old fence, authorize quota tuning or qualify parent ingestion scale."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "bounded-replaceable-ocr-provider-contract",
+      "work_criteria": [
+        "ocr-provider-results-are-bounded-and-source-bound"
+      ],
+      "receipt_digest": "56b0174da4bd0f4780244ad44f97570a0b5405c66536c30681433dbb24996332",
+      "review_digest": "762295fa98f378b367ff816533b98c356237e1a78056e40d9b3031bf287d60b5",
+      "scope": "Committed OCR adapter contract: 12 portable tests and five checks passed with separate review. Requests and results have fixed size limits and keep exact document, page, language and provider identity. Windows-specific code stays outside application and UI layers. The same boundary supports later engines.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "bounded-replaceable-ocr-provider-contract",
+      "work_criteria": [
+        "ocr-provider-results-are-bounded-and-source-bound"
+      ],
+      "receipt_digest": "56b0174da4bd0f4780244ad44f97570a0b5405c66536c30681433dbb24996332",
+      "review_digest": "762295fa98f378b367ff816533b98c356237e1a78056e40d9b3031bf287d60b5",
+      "scope": "Committed OCR adapter contract: 12 portable tests and five checks passed with separate review. Requests and results have fixed size limits and keep exact document, page, language and provider identity. Windows-specific code stays outside application and UI layers. The same boundary supports later engines.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "bounded-replaceable-ocr-provider-contract",
+      "work_criteria": [
+        "ocr-provider-results-are-bounded-and-source-bound"
+      ],
+      "receipt_digest": "56b0174da4bd0f4780244ad44f97570a0b5405c66536c30681433dbb24996332",
+      "review_digest": "762295fa98f378b367ff816533b98c356237e1a78056e40d9b3031bf287d60b5",
+      "scope": "Committed OCR adapter contract: 12 portable tests and five checks passed with separate review. Requests and results have fixed size limits and keep exact document, page, language and provider identity. Windows-specific code stays outside application and UI layers. The same boundary supports later engines.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "bounded-windows-ocr-helper-framing",
+      "work_criteria": [
+        "ocr-helper-frames-and-source-are-bounded"
+      ],
+      "receipt_digest": "6895e0313ac100be4b8e0887be851cb554e5058d5b337fb2c56ab4af7d598b44",
+      "review_digest": "6170ab8b0268808b75099df3003a22ff3251694afb6d84298564ff58e1418acb",
+      "scope": "Committed private OCR messages and Windows helper source: 26 portable tests, routing, five checks and separate review passed. The source compiles with the installed SDK. It refuses a different resolved language and limits input, pages, pixels and output. No helper executable or OCR engine ran in this component.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "bounded-windows-ocr-helper-framing",
+      "work_criteria": [
+        "ocr-helper-frames-and-source-are-bounded"
+      ],
+      "receipt_digest": "6895e0313ac100be4b8e0887be851cb554e5058d5b337fb2c56ab4af7d598b44",
+      "review_digest": "6170ab8b0268808b75099df3003a22ff3251694afb6d84298564ff58e1418acb",
+      "scope": "Committed private OCR messages and Windows helper source: 26 portable tests, routing, five checks and separate review passed. The source compiles with the installed SDK. It refuses a different resolved language and limits input, pages, pixels and output. No helper executable or OCR engine ran in this component.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "bounded-windows-ocr-helper-framing",
+      "work_criteria": [
+        "ocr-helper-frames-and-source-are-bounded"
+      ],
+      "receipt_digest": "6895e0313ac100be4b8e0887be851cb554e5058d5b337fb2c56ab4af7d598b44",
+      "review_digest": "6170ab8b0268808b75099df3003a22ff3251694afb6d84298564ff58e1418acb",
+      "scope": "Committed private OCR messages and Windows helper source: 26 portable tests, routing, five checks and separate review passed. The source compiles with the installed SDK. It refuses a different resolved language and limits input, pages, pixels and output. No helper executable or OCR engine ran in this component.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
+        "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
+      ]
     }
   ]
 }

@@ -10546,6 +10546,58 @@
           "Earlier failed UI runs stay recorded. The agent must finish the remaining import checks within the fixed limits."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6658090ff87feec7f1e2ff598dcaa21922aa990e5d8847b69a1fa926d7cd640b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent completed and tested the rules for sending a document to a text-reading engine and checking the returned text.",
+          "This keeps the Windows engine replaceable."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8a1b8d8dc4ed57fcaa5db400bbcbe026e1a766df2f0aeab23b4172a63538034a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added and tested the private message format and wrote the Windows text-reading code.",
+          "The code compiles, but the Windows engine has not yet run through the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8bf90bba48b7416a3a5f85ad069c4eb73d06fa0e929f9ba37986ff2e857361ae",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are tested parts of the work. The full scanned-document feature is still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "45b7078f245cd56d6262aa2f43ba2d46c586ea1438d08324a57e0a606993e509",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must add safe start, stop and cancellation controls. The agent must then test scanned files in the desktop app and browser app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9bf08ee097b0de07fd6257b4070dbf2db496e651632141c5d422911467ef766b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The accepted model-accuracy tests stay closed and were not repeated."
+        ]
+      }
     }
   ]
 }
