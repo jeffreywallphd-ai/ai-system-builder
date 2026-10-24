@@ -57,5 +57,57 @@
     "Immediate application retry is qualified only against the same in-memory version repository. Process-restart durable retry, meaningful cleanup and failure recovery, mounted-host UI, governed ingestion, large-file/website scale and advanced runtime/model/OCR remain pending agent work. No native/offload/model pass is asserted."
   ],
   "parent_qualification": false,
-  "human_action_required": false
+  "human_action_required": false,
+  "visibility_guard": {
+    "status": "reviewed-local-support-parent-pending",
+    "work_id": "private-provider-existing-visibility-guard",
+    "receipt_digest": "5a12372181cd8cac5f3143757e4cad1869e934837f1aa0bb5369bf339b9f65d6",
+    "review_digest": "f2174807a8a60fa3e74e7ba40b9f61f47e367147e5a35697cf6db40baeca8026",
+    "commit": "a42ad7c7e32a4eacb9d09bf7d33adb19b9e3d25d",
+    "final_live_summary_sha256": "5d1eb5ebf7738e8163c9351123b9b8287b43e20743f6a0163f5b8daa926452ad",
+    "final_private_revision": "c2d197f31531ec00b71de734cc29f254b372f2d9",
+    "actual_transport": {
+      "requests": 8,
+      "commits": 1,
+      "creates": 0
+    },
+    "immutable_files": [
+      {
+        "sha256": "2f0a396feb5a6ccecffb94769067c4eead4141ddb422f30ec23defa73e719885",
+        "size_bytes": 362
+      },
+      {
+        "sha256": "c1ae6ccd4b0b33fae34cd138cf8e1e2782a7409ae8b54f8c3922cad50261b50f",
+        "size_bytes": 1085
+      },
+      {
+        "sha256": "7a2b64de472410eb36499d6033879667ec792613909b0c82245b8acc8799a0d4",
+        "size_bytes": 96
+      }
+    ],
+    "application_retry_added_requests": 0,
+    "anonymous_denied": true,
+    "invalid_credential_denied": true,
+    "remote_files_deleted": 0,
+    "offline_tests": 53,
+    "offline_failures": 0,
+    "offline_skips": 0,
+    "implemented_controls": [
+      "Exact destination visibility checked before publication, after approved creation and after the returned immutable commit.",
+      "Unknown, malformed or mismatched visibility cannot authorize a commit; uncertain final visibility cannot become local success.",
+      "Metadata reads refuse redirects and mismatched final URLs, bound streamed bytes and deadline, cancel resources and return fixed safe errors."
+    ],
+    "review_history": {
+      "changes_requested_review": "620918798e92a5e9279fd1139bb9d2abba3e454167e696b1e819f60459d0db0f",
+      "finding": "provider-visibility-redirect-target-unbound",
+      "finding_closed_by": "f2174807a8a60fa3e74e7ba40b9f61f47e367147e5a35697cf6db40baeca8026"
+    },
+    "scope_limits": [
+      "Actual private replay ran the recorded working source graph. Offline committed-source compatibility is separate evidence; neither is a parent pass.",
+      "Provider owners can change visibility during or after a request. A final unconfirmed result may already have created a remote commit; no automatic deletion, visibility change or hidden retry is performed.",
+      "Provider rendering, durable host retry, meaningful cleanup/failure recovery, mounted UI, ingestion scale and advanced/native/model checks remain pending. Completed Standard model quality is not rerun."
+    ],
+    "parent_qualification": false,
+    "human_action_required": false
+  }
 }

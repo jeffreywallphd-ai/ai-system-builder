@@ -2476,6 +2476,25 @@
         "The provider returned the generated documentation bytes correctly. Separate website requests returned HTTP 401, so website rendering remains unqualified; the existing token still works for approved API transfers. No extra credential request is inferred.",
         "Three synthetic files remain in the private test repository for replay. No remote files were deleted. Durable host retry, meaningful cleanup/failure recovery, mounted UI, governed ingestion, scale and advanced/native/model checks remain pending agent work."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "controlled-provider-publication-is-qualified",
+      "work_id": "private-provider-existing-visibility-guard",
+      "work_criteria": [
+        "matching-visibility-before-commit",
+        "bounded-safe-provider-truth",
+        "preserved-operator-and-supported-flows"
+      ],
+      "receipt_digest": "5a12372181cd8cac5f3143757e4cad1869e934837f1aa0bb5369bf339b9f65d6",
+      "review_digest": "f2174807a8a60fa3e74e7ba40b9f61f47e367147e5a35697cf6db40baeca8026",
+      "scope": "Production dataset publication now verifies the exact destination visibility before commit, after approved creation and after commit. Redirected or wrong-target metadata, unknown/mismatched visibility and uncertain final truth cannot authorize a commit or become local success. Fifty-three isolated compatibility tests, all three registered checks, production typechecks and the final authorized private synthetic replay passed; a substantive redirect finding was corrected and independently closed.",
+      "limitations": [
+        "This is reviewed local production support at its recorded working-source snapshot. Isolated committed-source compatibility does not rebind the live run or qualify the parent criterion, increment or roadmap.",
+        "A provider owner can still change visibility during or after publication. If the final check fails, remote files may already exist; the app retains the local version, withholds success and does not automatically delete, change visibility or retry the commit.",
+        "Three small synthetic files remain in the private test repository. Website rendering, durable host retry, meaningful cleanup/failure recovery, mounted UI, ingestion scale and advanced/native/model checks remain pending agent work. Accepted model accuracy remains closed; no user action is needed."
+      ]
     }
   ]
 }

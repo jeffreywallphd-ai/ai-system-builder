@@ -10046,6 +10046,59 @@
           "The agent must also finish the relevant app screens, import, scale and advanced checks. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "44de209dca4de380a00cd79180edc3dbea92cfbdb2ae26ccfbb34c9f81b91a1e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app checks the selected repository and privacy setting before it publishes files.",
+          "It checks again after approved repository creation and after publication.",
+          "Redirects and replies from another repository cannot confirm privacy.",
+          "If privacy cannot be confirmed, the app does not record success.",
+          "The corrected change passed 53 compatibility tests, the required checks, production typechecks and a real private-repository test.",
+          "Independent review confirmed that the redirect issue was fixed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "94cd66af4b77b99f016d8b4cea77bb19bbd736ddae49ffb698c85c409d9aff75",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is completed supporting work from its recorded source version.",
+          "The isolated compatibility tests and live provider test are separate evidence.",
+          "The agent must finish the remaining requirements before closing the parent roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "716a34f6ff12225ad823c51ee904dddecbfc96a9db0e3e2e0102709846ac81d3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A repository owner can still change its privacy setting during or after publication.",
+          "If the final check fails, remote files may already exist.",
+          "The app keeps the local version and reports an unconfirmed result.",
+          "It does not automatically delete files, change privacy or repeat the commit."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0c06cc5ea67448020379b8a43f6402bb21cf4ae452b0a244ef39248504f967d8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Three small test files remain in the private repository.",
+          "The agent must still test website rendering, retry after restart, failure recovery, cleanup and the mounted interface.",
+          "Large-scale ingestion and advanced runtime, native and model checks remain separate work.",
+          "Accepted model accuracy stays closed. No action is needed from you."
+        ]
+      }
     }
   ]
 }
