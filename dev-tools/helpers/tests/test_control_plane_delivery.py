@@ -257,6 +257,9 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         self.assertEqual(profile["test_paths"], [
             "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
             "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+            "modules/ui/shared/data-management/tests/useDatasetPreparationConstrainedJson.ui.test.tsx",
+            "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+            "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
         ])
         source = "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
         self.assertIn(source, profile["source_paths"])
