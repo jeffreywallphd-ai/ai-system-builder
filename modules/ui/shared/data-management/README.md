@@ -227,3 +227,8 @@ its contents; the existing task, upload policy, source digest and actual reader
 checks remain authoritative. PDF bytes use the same bounded slice, checksum,
 workspace and acknowledged-finalization path. A regression covers a PDF with no
 browser MIME without whole-file allocation.
+
+Preparation method captions and the recognition-language caption have stable,
+short accessible names. Associate changing instructions as descriptions rather
+than including them in the control name. Use component-generated IDs so multiple
+forms do not share label or help targets.

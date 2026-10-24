@@ -44,6 +44,16 @@ describe("scanned-PDF controls and completed reading facts", () => {
     expect(container.querySelector("fieldset")?.disabled).toBe(true);
     for (const input of container.querySelectorAll("input")) expect(input.matches(":disabled")).toBe(true);
   });
+  it("keeps the language name separate from its limits and language guidance", async () => {
+    await render(<DatasetPreparationOcrSettings enabled language="en-US" eligible busy={false} onEnabledChange={() => {}} onLanguageChange={() => {}} />);
+    const language = container.querySelector('input:not([type="checkbox"])')!;
+    expect(document.getElementById(language.getAttribute("aria-labelledby")!)?.textContent).toBe("Text recognition language");
+    const descriptions = language.getAttribute("aria-describedby")!.split(/\s+/);
+    expect(new Set(descriptions).size).toBe(2);
+    const guidance = descriptions.map(id => document.getElementById(id)?.textContent).join(" ");
+    expect(guidance).toContain("16 MiB and 16 pages");
+    expect(guidance).toContain("exact Windows language tag");
+  });
   it("shows completed counts and explains that character checks do not prove OCR accuracy", async () => {
     await render(<dl><DatasetPreparationTextReadingChecks content={{ strategy: "layout", algorithmVersion: "bounded-ocr-lines-v1", sourceSpanCount: 5, lowConfidenceSourceCount: 0, meanExtractionQuality: 1,
       ocr: { provider: "private-path-must-not-display", version: "private-version", language: "en-US", documentCount: 1, pageCount: 5, lineCount: 5 } }} /></dl>);

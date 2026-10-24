@@ -42,6 +42,19 @@ describe("browser scanned-PDF preparation", () => {
   }
   afterEach(async () => { await act(async () => root?.unmount()); root = undefined; container?.remove(); window.localStorage.clear(); vi.useRealTimers(); });
 
+  it("keeps the method name short and exposes changing help separately", async () => {
+    await render();
+    const select = field("Preparation method");
+    const caption = document.getElementById(select.getAttribute("aria-labelledby")!);
+    const help = document.getElementById(select.getAttribute("aria-describedby")!);
+    expect(caption?.textContent).toBe("Preparation method");
+    expect(help?.textContent?.trim().length).toBeGreaterThan(0);
+    const previousHelp = help!.textContent;
+    await change("Preparation method", "structure-aware");
+    expect(caption?.textContent).toBe("Preparation method");
+    expect(document.getElementById(select.getAttribute("aria-describedby")!)?.textContent).not.toBe(previousHelp);
+  });
+
   it("requires an explicit language and sends no host-private bindings", async () => {
     const { submit } = await render();
     expect(field("Read text from scanned PDF pages")).toBeUndefined();

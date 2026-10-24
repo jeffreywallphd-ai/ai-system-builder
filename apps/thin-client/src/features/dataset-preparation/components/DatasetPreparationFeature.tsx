@@ -1,6 +1,6 @@
 import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
 import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import type {
   ApiDatasetPreparationCommand,
@@ -505,6 +505,8 @@ function WorkspaceDatasetPreparationFeature({
   preparationClient,
   onPrepared,
 }: DatasetPreparationFeatureProps) {
+  const preparationMethodCaptionId = useId();
+  const preparationMethodHelpId = useId();
   const browser = useMemo(
     () => artifactClient ?? createApiArtifactBrowserClient(),
     [artifactClient],
@@ -1457,9 +1459,11 @@ function WorkspaceDatasetPreparationFeature({
             ) : null}
             {preparationResolution.methods.length > 1 ? (
               <label className="ui-stack ui-stack--sm">
-                <span>Preparation method</span>
+                <span id={preparationMethodCaptionId}>Preparation method</span>
                 <select
                   className="ui-input"
+                  aria-labelledby={preparationMethodCaptionId}
+                  aria-describedby={preparationMethodHelpId}
                   value={effectivePreparationMethodId}
                   disabled={status.kind === "loading"}
                   onChange={(event) => {
@@ -1473,7 +1477,7 @@ function WorkspaceDatasetPreparationFeature({
                     </option>
                   ))}
                 </select>
-                <small className="ui-text-muted">
+                <small id={preparationMethodHelpId} className="ui-text-muted">
                   {effectivePreparationMethodId
                     ? getDatasetPreparationMethodCopy(
                         effectivePreparationMethodId,

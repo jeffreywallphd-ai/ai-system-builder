@@ -44,6 +44,19 @@ describe("desktop scanned-PDF preparation", () => {
   }
   afterEach(async () => { await act(async () => root?.unmount()); root = undefined; container?.remove(); resetDatasetPreparationPageStateForTests(); });
 
+  it("keeps the method name short and exposes changing help separately", async () => {
+    await render();
+    const select = field("How should the source material be divided?");
+    const caption = document.getElementById(select.getAttribute("aria-labelledby")!);
+    const help = document.getElementById(select.getAttribute("aria-describedby")!);
+    expect(caption?.textContent).toBe("How should the source material be divided?");
+    expect(help?.textContent?.trim().length).toBeGreaterThan(0);
+    const previousHelp = help!.textContent;
+    await change("How should the source material be divided?", "structure-aware");
+    expect(caption?.textContent).toBe("How should the source material be divided?");
+    expect(document.getElementById(select.getAttribute("aria-describedby")!)?.textContent).not.toBe(previousHelp);
+  });
+
   it("requires a language, sends only public options, and clears the opt-in on an explicit method change", async () => {
     const submit = await render();
     expect(field("Read text from scanned PDF pages")).toBeUndefined();

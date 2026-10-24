@@ -1,5 +1,5 @@
 import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import {
   createDesktopDatasetPreparationClient,
@@ -290,6 +290,8 @@ function WorkspaceDatasetPreparationFeature({
     onPrepared,
     workspaceId,
   });
+  const preparationMethodCaptionId = useId();
+  const preparationMethodHelpId = useId();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
   );
@@ -982,9 +984,11 @@ function WorkspaceDatasetPreparationFeature({
                     </div>
                     {preparationResolution.methods.length > 1 ? (
                       <label className="ui-stack ui-stack--sm">
-                        <span>How should the source material be divided?</span>
+                        <span id={preparationMethodCaptionId}>How should the source material be divided?</span>
                         <select
                           className="ui-input"
+                          aria-labelledby={preparationMethodCaptionId}
+                          aria-describedby={preparationMethodHelpId}
                           value={preparationMethodId}
                           disabled={formLocked}
                           onChange={(event) => {
@@ -998,7 +1002,7 @@ function WorkspaceDatasetPreparationFeature({
                             </option>
                           ))}
                         </select>
-                        <small className="ui-text-muted">
+                        <small id={preparationMethodHelpId} className="ui-text-muted">
                           {
                             getDatasetPreparationMethodCopy(preparationMethodId)
                               .description

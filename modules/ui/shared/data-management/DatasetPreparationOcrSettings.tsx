@@ -56,6 +56,8 @@ export function DatasetPreparationOcrSettings({
   onLanguageChange,
 }: DatasetPreparationOcrSettingsProps) {
   const helpId = useId();
+  const languageCaptionId = useId();
+  const languageHelpId = useId();
   return (
     <fieldset className="ui-stack ui-stack--sm" disabled={busy}>
       <legend>Scanned PDF pages</legend>
@@ -83,17 +85,18 @@ export function DatasetPreparationOcrSettings({
       ) : null}
       {enabled === true ? (
         <label className="ui-stack ui-stack--sm">
-          <span>Text recognition language</span>
+          <span id={languageCaptionId}>Text recognition language</span>
           <input
             className="ui-input"
             value={language}
             maxLength={35}
             spellCheck={false}
             placeholder="For example, en-US"
-            aria-describedby={helpId}
+            aria-labelledby={languageCaptionId}
+            aria-describedby={`${helpId} ${languageHelpId}`}
             onChange={(event) => onLanguageChange(event.target.value)}
           />
-          <small className="ui-text-muted">
+          <small id={languageHelpId} className="ui-text-muted">
             Enter the exact Windows language tag installed on the computer
             running the task. No language is selected automatically.
           </small>
