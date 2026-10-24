@@ -3192,6 +3192,54 @@
         "The required dependency audit passed on the working checkout. The isolated snapshot SBOM phase failed because its shared installed dependency paths belong to that checkout. Independent review bound all fourteen dependency inputs and the installed graph to apply the genuine passing audit. The isolated failure remains recorded; no isolated SBOM or clean-install pass is asserted.",
         "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-scanned-pdf-normalization",
+      "work_criteria": [
+        "scanned-pdf-normalization-preserves-bounded-lineage"
+      ],
+      "receipt_digest": "95f7ee963eb0d0f381c6067ed7244e126a9710fb7ffc9d31a682b45fc7705907",
+      "review_digest": "c132e58a01f0e0926679c948c0966b56012f2d74f5a6f6f7251294364fa31c53",
+      "scope": "Committed Windows OCR scanned-PDF normalization preserves bounded all-page source, page, text-span and geometry lineage. Selected-source 119 Python tests, seven Node tests, one routing test, required gates and separate review passed. Eight actual local native case groups included five product-resource normalization exchanges. Standard extraction is unchanged; OCR confidence was not invented.",
+      "limitations": [
+        "This is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must still qualify authorized source-file native capture, public task and cancellation handling, readiness, actual desktop/browser journeys and a full desktop package. Earlier provider and build limits remain historical snapshots."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-scanned-pdf-normalization",
+      "work_criteria": [
+        "scanned-pdf-normalization-preserves-bounded-lineage"
+      ],
+      "receipt_digest": "95f7ee963eb0d0f381c6067ed7244e126a9710fb7ffc9d31a682b45fc7705907",
+      "review_digest": "c132e58a01f0e0926679c948c0966b56012f2d74f5a6f6f7251294364fa31c53",
+      "scope": "Committed Windows OCR scanned-PDF normalization preserves bounded all-page source, page, text-span and geometry lineage. Selected-source 119 Python tests, seven Node tests, one routing test, required gates and separate review passed. Eight actual local native case groups included five product-resource normalization exchanges. Standard extraction is unchanged; OCR confidence was not invented.",
+      "limitations": [
+        "This is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must still qualify authorized source-file native capture, public task and cancellation handling, readiness, actual desktop/browser journeys and a full desktop package. Earlier provider and build limits remain historical snapshots."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-scanned-pdf-normalization",
+      "work_criteria": [
+        "scanned-pdf-normalization-preserves-bounded-lineage"
+      ],
+      "receipt_digest": "95f7ee963eb0d0f381c6067ed7244e126a9710fb7ffc9d31a682b45fc7705907",
+      "review_digest": "c132e58a01f0e0926679c948c0966b56012f2d74f5a6f6f7251294364fa31c53",
+      "scope": "Committed Windows OCR scanned-PDF normalization preserves bounded all-page source, page, text-span and geometry lineage. Selected-source 119 Python tests, seven Node tests, one routing test, required gates and separate review passed. Eight actual local native case groups included five product-resource normalization exchanges. Standard extraction is unchanged; OCR confidence was not invented.",
+      "limitations": [
+        "This is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must still qualify authorized source-file native capture, public task and cancellation handling, readiness, actual desktop/browser journeys and a full desktop package. Earlier provider and build limits remain historical snapshots."
+      ]
     }
   ]
 }

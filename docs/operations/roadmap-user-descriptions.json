@@ -10697,6 +10697,41 @@
           "These checks do not change normal document extraction. They do not check old temporary model files, other text-reading engines or the separate restricted security work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "81378f50b2ee61e3fcc693bdbe9351717c111cd80885f6ff59f0d74e89d9e3cf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Scanned PDF preparation passed checks for every page, the original source and page numbers, text positions and page geometry.",
+          "The selected code passed 119 Python tests, seven Node tests, one routing test, the required checks and separate review. Eight local Windows test groups included five preparation exchanges using the built reader.",
+          "Standard extraction is unchanged. No OCR confidence score was invented."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5b31ced3186050acbb46c77f95ab001b38a494abbca151cfd181648dd2d0badc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records a reviewed, tested part at its recorded code snapshot.",
+          "It does not finish the parent requirement, work item, increment or roadmap. Model accuracy was not tested again."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d64ead392789d2090fab31b8ddcb1d71c1fddd266591bae086c2c2f58b6fc0c3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "OCR is not available in the app yet.",
+          "The agent must still test authorized capture of the source file, the public task and cancellation flow, readiness, both desktop and browser journeys, and a full desktop package.",
+          "Earlier descriptions of reader and build limits remain as historical snapshots."
+        ]
+      }
     }
   ]
 }
