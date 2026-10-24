@@ -14,7 +14,6 @@ from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder impor
     ConstrainedJsonDecoder,
     ConstrainedJsonDecoderError,
     _CompiledConstraint,
-    _configure_windows_eager_outlines_torch_kernel,
     compile_constrained_json_schema,
     get_constrained_json_decoder_runtime_status,
 )
@@ -102,52 +101,34 @@ class ConstrainedJsonSchemaTests(unittest.TestCase):
             def __init__(self,schema):self.schema=schema
             def validate(self,value):validate_json_schema_value(value,self.schema)
         processor = _FakeProcessor()
-        backend = Mock(return_value=processor)
+        compiler = Mock()
+        compiler.compile_regex.return_value = processor
+        compiler_factory = Mock(return_value=compiler)
+        regex_builder = Mock(side_effect=lambda text: "original-regex:" + text)
         wrapper = SimpleNamespace(tensor_library_name="torch")
         modules = {
             "jsonschema":SimpleNamespace(Draft202012Validator=Validator),
-            "outlines.backends":SimpleNamespace(get_json_schema_logits_processor=backend),
+            "outlines_core.json_schema":SimpleNamespace(build_regex_from_schema=regex_builder),
+            "modules.adapters.runtime.python.worker.tasks.constrained_json_logits_processor":SimpleNamespace(BoundedLazyTokenMaskCompiler=compiler_factory),
             "outlines.models.transformers":SimpleNamespace(Transformers=lambda *_args:wrapper),
         }
         values = ['two words','quoted "value" and slash \\',"line one\nline two\tspace","braces { } café ✓"]
-        with patch.dict(sys.modules,modules),patch.object(decoder_module,"get_constrained_json_decoder_runtime_status",return_value=SimpleNamespace(available=True)),patch.object(decoder_module,"_configure_windows_eager_outlines_torch_kernel"):
+        with patch.dict(sys.modules,modules),patch.object(decoder_module,"get_constrained_json_decoder_runtime_status",return_value=SimpleNamespace(available=True)):
             decoder = ConstrainedJsonDecoder(_FakeModel(),_FakeTokenizer())
             for value in values:
                 schema = _schema(const_value=value)
                 plan = compile_constrained_json_schema(schema)
                 compiled = decoder._build_outlines_constraint(plan)
-                # Lexically equivalent formatting changed real-model label
-                # quality. Keep the pinned backend default, not an override.
-                backend.assert_called_with("outlines_core",wrapper,plan.constraint_schema)
+                # Preserve the exact pinned Core regex, not another serializer.
+                regex_builder.assert_called_with(plan.constraint_schema)
+                compiler.compile_regex.assert_called_with("original-regex:" + plan.constraint_schema)
+                compiler_factory.assert_called_once_with(wrapper, ConstrainedJsonDecoderError)
                 self.assertIs(compiled.processor,processor)
                 self.assertEqual(checked[-1],schema)
                 compact = json.dumps({"answer":value},ensure_ascii=False,separators=(",",":"))
                 compiled.validate(json.loads(compact))
                 self.assertEqual(json.loads(compact)["answer"],value)
                 with self.assertRaises(ValueError):compiled.validate({"answer":value+"wrong"})
-
-    def test_uses_outlines_eager_mask_kernel_on_windows(self) -> None:
-        def eager_kernel(*_args):
-            return None
-
-        compiled_kernel = SimpleNamespace(_torchdynamo_orig_callable=eager_kernel)
-        kernels = SimpleNamespace(_apply_token_bitmask_inplace_kernel=compiled_kernel)
-        with (
-            patch.object(decoder_module.sys, "platform", "win32"),
-            patch.object(decoder_module.importlib, "import_module", return_value=kernels),
-        ):
-            _configure_windows_eager_outlines_torch_kernel()
-
-        self.assertIs(kernels._apply_token_bitmask_inplace_kernel, eager_kernel)
-
-    def test_leaves_outlines_mask_kernel_unchanged_off_windows(self) -> None:
-        with (
-            patch.object(decoder_module.sys, "platform", "linux"),
-            patch.object(decoder_module.importlib, "import_module") as import_module,
-        ):
-            _configure_windows_eager_outlines_torch_kernel()
-
-        import_module.assert_not_called()
 
     def test_reports_dependency_and_python_readiness_without_throwing(self) -> None:
         with patch.object(decoder_module.sys, "version_info", (3, 14, 1)):
@@ -159,6 +140,7 @@ class ConstrainedJsonSchemaTests(unittest.TestCase):
             "jsonschema": "4.26.0",
             "outlines": "1.3.2",
             "outlines-core": "0.2.14",
+            "llguidance": "1.9.1",
         }
         with (
             patch.object(decoder_module.sys, "version_info", (3, 12, 9)),
@@ -168,6 +150,20 @@ class ConstrainedJsonSchemaTests(unittest.TestCase):
             ready = get_constrained_json_decoder_runtime_status()
         self.assertTrue(ready.available)
         self.assertEqual(ready.reason, "ready")
+
+        for distribution in versions:
+            with (
+                self.subTest(distribution=distribution),
+                patch.object(decoder_module.sys, "version_info", (3, 12, 9)),
+                patch.object(decoder_module.importlib.util, "find_spec", return_value=SimpleNamespace()),
+                patch.object(decoder_module.importlib_metadata, "version", side_effect=lambda name: "wrong" if name == distribution else versions[name]),
+            ):
+                self.assertEqual(get_constrained_json_decoder_runtime_status().reason, "dependency-version-mismatch")
+        with (
+            patch.object(decoder_module.sys, "version_info", (3, 12, 9)),
+            patch.object(decoder_module.importlib.util, "find_spec", side_effect=lambda name: None if name == "llguidance" else SimpleNamespace()),
+        ):
+            self.assertEqual(get_constrained_json_decoder_runtime_status().reason, "dependency-unavailable")
 
         with (
             patch.object(decoder_module.sys, "version_info", (3, 12, 9)),

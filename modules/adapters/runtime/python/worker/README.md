@@ -99,10 +99,10 @@ normal validation and an error for publication; it is distinct from corrupt data
 Reports retain the opaque registered-model reference and omit the model path.
 
 Optional token-constrained JSON generation uses exact, conditionally installed
-pins in `requirements.txt`: Outlines `1.3.2`, Outlines Core `0.2.14`, and
-jsonschema `4.26.0`. These packages are installed and probed only for Python
+pins in `requirements.txt`: Outlines `1.3.2`, Outlines Core `0.2.14`,
+jsonschema `4.26.0`, and LLGuidance `1.9.1`. These packages are installed and probed only for Python
 3.10 through 3.13, the Python range supported by this reviewed Outlines release.
-Outlines and Outlines Core are Apache-2.0 and jsonschema is MIT licensed. The
+Outlines and Outlines Core are Apache-2.0; jsonschema and LLGuidance are MIT licensed. The
 worker continues to boot on supported baseline Python versions outside that
 range, but omits `dataset-preparation.constrained-json` from `/capabilities`.
 When no explicit `PYTHON_RUNTIME_COMMAND` is configured, the desktop host
@@ -112,7 +112,9 @@ operator configuration still wins. If no decoder-compatible interpreter is
 installed, the baseline worker remains available and the UI keeps the
 token-formatting control unavailable instead of sending a known-unsupported
 request.
-Dependency setup repairs missing or mismatched pins; capability reads never
+LLGuidance installation is wheel-only. If no compatible wheel exists, setup
+fails safely rather than building native source. Other packages keep their
+existing format policy. Dependency setup repairs missing or mismatched pins; capability reads never
 install or repair packages. `npm run security:dependencies` also verifies this
 direct decoder inventory, its Package URLs, reviewed licenses, and exact Python
 marker; the deployment's full Python environment and container still require
@@ -183,13 +185,14 @@ Implemented task:
     generated-example prompt and requires exactly one JSON object with no prose,
     Markdown, code fence, unrequested reasoning, or other pre/post output
   - can pass an exact bounded Draft 2020-12 schema to the local causal/chat
-    generator; the model-bound Outlines Core processor masks every next-token
+    generator; the model-bound lazy Outlines adapter masks every next-token
     choice, requires EOS at an accepting state, and then parses and validates
     the same schema before returning canonical JSON
   - preserves the desired example's field order when serializing the grammar
-    while retaining an order-independent fingerprint; on Windows it uses the
-    pinned Outlines kernel's identical eager callable so end-user hosts do not
-    invoke Torch's optional MSVC compilation probe
+    while retaining an order-independent fingerprint; it preserves the pinned
+    Core regex, default whitespace and token-to-string projection. Bounded
+    LLGuidance matchers disable forced canonical tokenization. Eager Torch
+    byte-mask operations avoid both native backends' compiled kernel imports
   - bounds decoder schemas, properties, choices, output bytes, and a model-local
     four-entry LRU processor cache; processor compilation and public errors
     exclude prompts, source content, generated output, paths, and stack details

@@ -304,7 +304,7 @@ paths so later training can reject mixed or substituted layouts instead of
 guessing columns.
 
 When token constraints are checked, the Python adapter compiles only the
-compiler-owned exact schema subset into a model-bound Outlines Core processor.
+compiler-owned exact schema subset into a model-bound lazy Outlines adapter.
 It masks every next-token choice, requires EOS at an accepting state, and then
 parses and validates the same schema. Schema bytes, depth, nodes, properties,
 allowed choices, output bytes, and the model-local compiled-processor cache have
@@ -315,9 +315,12 @@ correction attempt that retains the same schema and constrained/unconstrained
 mode; checked generation never falls back. Every attempt runs the same strict
 structural and semantic checks. Grammar serialization preserves the desired
 example field order even though its integrity fingerprint remains
-order-independent. Windows workers use the pinned Outlines mask kernel's eager
-callable to avoid Torch's optional compiler probe; the mask and post-validation
-contract are unchanged.
+order-independent. The private compiler preserves the exact pinned Core regex,
+default whitespace and singleton-token string projection, including EOS-alias
+removal. Bounded LLGuidance matchers disable forced tokenization and construct
+only reached states. Eager Torch operations apply safe byte masks without
+importing either backend's optional compiled kernel. The original schema remains
+the final validator. See the limits in [Runtime Model](runtime-model.md).
 
 The desktop Python host respects an explicit `PYTHON_RUNTIME_COMMAND`.
 Without one, it uses bounded fixed version probes and prefers an installed

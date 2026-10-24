@@ -209,7 +209,7 @@ import sys
 required = ["accelerate", "docx", "fastapi", "hf_xet", "huggingface_hub", "markdownify", "peft", "pyarrow", "pypdf", "safetensors", "transformers", "uvicorn"]
 decoder_supported = (3, 10) <= sys.version_info[:2] < (3, 14)
 if decoder_supported:
-  required.extend(["jsonschema", "outlines", "outlines_core"])
+  required.extend(["jsonschema", "outlines", "outlines_core", "llguidance"])
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 if missing:
   raise ModuleNotFoundError(f"No module named '{missing[0]}'")
@@ -218,7 +218,7 @@ core_mismatched = [name for name, expected in core_expected_versions.items() if 
 if core_mismatched:
   raise RuntimeError("Core dependency version mismatch")
 if decoder_supported:
-  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14"}
+  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14", "llguidance": "1.9.1"}
   mismatched = [name for name, expected in expected_versions.items() if importlib.metadata.version(name) != expected]
   if mismatched:
     raise RuntimeError("Decoder dependency version mismatch")
@@ -632,6 +632,7 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
     for (const probeFailure of [
       "RuntimeError: Core dependency version mismatch",
       "ModuleNotFoundError: No module named 'outlines'",
+      "ModuleNotFoundError: No module named 'llguidance'",
       "RuntimeError: Decoder dependency version mismatch",
     ]) {
       const spawnSyncImplementation = createSpawnSyncImplementation(
@@ -833,6 +834,10 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
     expect(requirementsText).toContain(
       'jsonschema==4.26.0; python_version >= "3.10" and python_version < "3.14"',
     );
+    expect(requirementsText).toContain(
+      'llguidance==1.9.1; python_version >= "3.10" and python_version < "3.14"',
+    );
+    expect(requirementsText).toContain("--only-binary=llguidance");
   });
 
   it("installs and re-probes exact text-training dependencies on demand", () => {

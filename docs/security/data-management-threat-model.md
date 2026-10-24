@@ -436,3 +436,33 @@ Saved-version reuse validates the memory mode before any form setters. Unsupport
 profiles produce fixed validation and leave the visible original setup unchanged,
 without dispatch. Explicit valid profiles and omitted legacy Standard remain
 supported; invalid mode input never silently substitutes an earlier selection.
+
+
+## Lazy constrained-decoder token masks
+
+Security-relevant: native parsing and dependency execution protect worker
+availability, exact output intent and qualification integrity. Compiler-owned
+bounded schemas and already admitted local tokenizers cross into a native
+matcher; generated text remains untrusted until the original schema validates.
+The eager Core all-state token index exhausted memory on an ordinary instruction
+layout. Replace only that private index with bounded reached-state matching.
+Preserve the original regex, whitespace, token projection and EOS-alias removal;
+disable forced canonical tokenization. Reject excessive IDs, sparse extremes,
+projected bytes before native tokenizer construction. Bound regex input before
+conversion, generated grammar before matcher construction, and batch count
+before per-row matcher copies.
+Enforce wheel-only installation for the exact optional native pin. Use explicit
+parser limits, silent native logging, nonverbose errors, checked
+constructor/consume/mask results, healthy accepting EOS and fixed public errors.
+Mask holes, aliases and padded score positions. Use safe owned byte masks and
+eager Torch operations; never import the compiled native mask kernels.
+
+Verification includes malformed/oversized vocabulary and grammar denial,
+native error/consume/mask failure, reset/cache isolation, invalid prefixes,
+EOS and empty finite-score denial, full-token comparisons for small layouts,
+and the original full instruction tokenizer-only case with observed owned-child
+memory/exit. These controls bound complexity, not physical process memory.
+Model admission, final validation and fail-closed behavior remain required.
+No provider authority, credential access, retained staging, offload lease,
+restricted Assets review or accepted model-accuracy rerun is authorized here.
+Actual model/native/GPU/parent qualification remains separate.

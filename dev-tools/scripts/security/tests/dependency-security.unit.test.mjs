@@ -303,6 +303,7 @@ test("conditional Python decoder dependencies retain exact reviewed inventory", 
         license: "Apache-2.0",
       },
       { name: "jsonschema", version: "4.26.0", license: "MIT" },
+      { name: "llguidance", version: "1.9.1", license: "MIT" },
     ],
   );
   assert.throws(
@@ -312,6 +313,18 @@ test("conditional Python decoder dependencies retain exact reviewed inventory", 
       ),
     /reviewed exact version/,
   );
+  for (const replacement of ["llguidance==1.9.2", "llguidance>=1.9.1", "llguidance==1.9.1 --extra-index-url https://invalid.example"]) {
+    assert.throws(
+      () => validatePythonDecoderDependencyInventory(requirements.replace("llguidance==1.9.1", replacement)),
+      /reviewed exact version|incomplete/,
+    );
+  }
+  for (const replacement of ["", "--no-binary=llguidance", "--only-binary=:all:", "--only-binary=llguidance\n--no-binary=:all:"]) {
+    assert.throws(
+      () => validatePythonDecoderDependencyInventory(requirements.replace("--only-binary=llguidance", replacement)),
+      /wheel-only policy/,
+    );
+  }
   assert.throws(
     () =>
       validatePythonDecoderDependencyInventory(

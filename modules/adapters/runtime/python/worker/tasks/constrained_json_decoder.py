@@ -18,6 +18,7 @@ from typing import Any
 OUTLINES_VERSION = "1.3.2"
 OUTLINES_CORE_VERSION = "0.2.14"
 JSONSCHEMA_VERSION = "4.26.0"
+LLGUIDANCE_VERSION = "1.9.1"
 
 CONSTRAINED_JSON_MAX_SCHEMA_BYTES = 64 * 1024
 CONSTRAINED_JSON_MAX_SCHEMA_DEPTH = 20
@@ -112,8 +113,9 @@ def get_constrained_json_decoder_runtime_status() -> ConstrainedJsonDecoderRunti
         "jsonschema": JSONSCHEMA_VERSION,
         "outlines": OUTLINES_VERSION,
         "outlines-core": OUTLINES_CORE_VERSION,
+        "llguidance": LLGUIDANCE_VERSION,
     }
-    modules = ("jsonschema", "outlines", "outlines_core")
+    modules = ("jsonschema", "outlines", "outlines_core", "llguidance")
     try:
         if any(importlib.util.find_spec(module_name) is None for module_name in modules):
             return ConstrainedJsonDecoderRuntimeStatus(False, "dependency-unavailable")
@@ -546,25 +548,6 @@ def _to_integer_token(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
-def _configure_windows_eager_outlines_torch_kernel() -> None:
-    """Avoid Outlines' optional Torch compiler path on Windows.
-
-    The pinned outlines-core kernel is decorated with ``torch.compile``. On a
-    normal end-user Windows installation, Torch may spend substantial memory
-    probing for an MSVC compiler before falling back to eager execution. The
-    original eager callable is retained by Torch, so use it directly on
-    Windows without changing the token mask or schema enforcement behavior.
-    """
-
-    if sys.platform != "win32":
-        return
-    torch_kernels = importlib.import_module("outlines_core.kernels.torch")
-    compiled_kernel = getattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", None)
-    eager_kernel = getattr(compiled_kernel, "_torchdynamo_orig_callable", None)
-    if callable(eager_kernel):
-        setattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", eager_kernel)
-
-
 class ConstrainedJsonDecoder:
     def __init__(
         self,
@@ -584,6 +567,7 @@ class ConstrainedJsonDecoder:
             logits_processor_list_factory or self._build_logits_processor_list
         )
         self._outlines_model: Any | None = None
+        self._token_mask_compiler: Any | None = None
 
     @property
     def cache_stats(self) -> ConstrainedJsonProcessorCacheStats:
@@ -601,18 +585,22 @@ class ConstrainedJsonDecoder:
             )
         try:
             from jsonschema import Draft202012Validator
-            from outlines.backends import get_json_schema_logits_processor
+            from outlines_core.json_schema import build_regex_from_schema
+            from .constrained_json_logits_processor import BoundedLazyTokenMaskCompiler
             from outlines.models.transformers import Transformers
 
-            _configure_windows_eager_outlines_torch_kernel()
             Draft202012Validator.check_schema(plan.schema)
             validator = Draft202012Validator(plan.schema)
             if self._outlines_model is None:
                 self._outlines_model = Transformers(self._model, self._tokenizer)
-            processor = get_json_schema_logits_processor(
-                "outlines_core",
-                self._outlines_model,
-                plan.constraint_schema,
+            if self._token_mask_compiler is None:
+                self._token_mask_compiler = BoundedLazyTokenMaskCompiler(
+                    self._outlines_model, ConstrainedJsonDecoderError,
+                )
+            # Preserve Core serialization, whitespace and token projection. Only
+            # the eager all-state Index is replaced by bounded lazy masks.
+            processor = self._token_mask_compiler.compile_regex(
+                build_regex_from_schema(plan.constraint_schema),
             )
             return _CompiledConstraint(processor=processor, validate=validator.validate)
         except ConstrainedJsonDecoderError:

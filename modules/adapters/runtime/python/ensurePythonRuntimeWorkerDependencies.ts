@@ -136,7 +136,7 @@ import sys
 required = ["accelerate", "docx", "fastapi", "hf_xet", "huggingface_hub", "markdownify", "peft", "pyarrow", "pypdf", "safetensors", "transformers", "uvicorn"]
 decoder_supported = (3, 10) <= sys.version_info[:2] < (3, 14)
 if decoder_supported:
-  required.extend(["jsonschema", "outlines", "outlines_core"])
+  required.extend(["jsonschema", "outlines", "outlines_core", "llguidance"])
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 if missing:
   raise ModuleNotFoundError(f"No module named '{missing[0]}'")
@@ -145,7 +145,7 @@ core_mismatched = [name for name, expected in core_expected_versions.items() if 
 if core_mismatched:
   raise RuntimeError("Core dependency version mismatch")
 if decoder_supported:
-  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14"}
+  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14", "llguidance": "1.9.1"}
   mismatched = [name for name, expected in expected_versions.items() if importlib.metadata.version(name) != expected]
   if mismatched:
     raise RuntimeError("Decoder dependency version mismatch")
@@ -717,7 +717,7 @@ function installWorkerRequirementsIfNeeded(
   }
 
   const missingDependencyPattern =
-    /(?:No module named ['"](?:accelerate|docx|fastapi|hf_xet|huggingface_hub|jsonschema|markdownify|outlines|outlines_core|peft|pyarrow|pypdf|safetensors|transformers|uvicorn)['"]|Core dependency version mismatch|Decoder dependency version mismatch)/i;
+    /(?:No module named ['"](?:accelerate|docx|fastapi|hf_xet|huggingface_hub|jsonschema|llguidance|markdownify|outlines|outlines_core|peft|pyarrow|pypdf|safetensors|transformers|uvicorn)['"]|Core dependency version mismatch|Decoder dependency version mismatch)/i;
   if (!missingDependencyPattern.test(probeOutput)) {
     throw new Error(
       `Python dependency probe failed for an unexpected reason; aborting startup. ${probeOutput}`,

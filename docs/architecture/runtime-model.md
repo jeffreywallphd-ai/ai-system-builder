@@ -274,10 +274,33 @@ and must retain strict parsing plus every semantic, grounding, safety,
 quarantine, and approval check.
 
 The worker advertises `dataset-preparation.constrained-json` only when exact
-reviewed Outlines, Outlines Core, and jsonschema pins are available on Python
+reviewed Outlines, Outlines Core, jsonschema and LLGuidance pins are available on Python
 3.10 through 3.13. Baseline worker support outside that conditional range does
 not imply decoder support. Capability reads are bounded import/version checks;
 they do not install dependencies, load a model, or compile a schema.
+
+The private lazy token-mask compiler shares one projected tokenizer per loaded
+model. It preserves Core's singleton-token conversion, excludes EOS aliases and
+vocabulary holes, and masks padded model-score positions. It accepts at most
+1,048,576 vocabulary entries/IDs, 64 MiB of projected bytes, 64 KiB per token,
+256 KiB of regex and 512 KiB of generated grammar. Vocabulary bounds precede
+native tokenizer construction; regex bounds precede grammar conversion, and
+generated-grammar bounds precede matcher construction. The existing four-processor/256 KiB schema cache remains. Each
+processor permits at most eight batch rows; the current dataset host uses one.
+Explicit native limits allow 2,000 items per row, 1,000,000 initial lexer fuel,
+200,000 step fuel, 50,000 step items, 65,536 lexer states and 500,000 grammar
+symbols. Large lexemes are not precomputed. These are complexity limits, not a
+hard process RAM guarantee or a replacement for model-memory admission.
+
+Native log level is zero and verbose errors are disabled. Constructor, consume
+and mask errors fail before sampling with fixed public codes. EOS additionally
+requires a healthy accepting state. The processor imports no compiled mask
+kernel and uses owned byte masks with ordinary eager Torch operations. This
+changes no inference engine, prompt, schema language, whitespace rule, final
+validator, worker topology, offload authority or model-loading policy.
+Tokenizer-only comparisons and footprint checks do not qualify model accuracy,
+GPU memory, retained staging or parent roadmap completion.
+
 
 The model schema contains only fields the model may generate. If source
 attribution is selected, the UI displays its locked companion fields, and the

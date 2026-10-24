@@ -11,6 +11,7 @@ const reviewedDecoderDependencies = [
   { name: "outlines", version: "1.3.2", license: "Apache-2.0" },
   { name: "outlines-core", version: "0.2.14", license: "Apache-2.0" },
   { name: "jsonschema", version: "4.26.0", license: "MIT" },
+  { name: "llguidance", version: "1.9.1", license: "MIT" },
 ];
 const reviewedParquetDependencies = [
   { name: "pyarrow", version: "25.0.0", license: "Apache-2.0" },
@@ -38,6 +39,10 @@ export function validatePythonDecoderDependencyInventory(requirementsText) {
       line.toLowerCase().startsWith(`${name}==`),
     ),
   );
+  const formatOptions = lines.filter((line) => /^--(?:only|no)-binary\b/u.test(line));
+  if (formatOptions.length !== 1 || formatOptions[0] !== "--only-binary=llguidance") {
+    throw new Error("Python decoder native dependency requires the reviewed wheel-only policy.");
+  }
   if (decoderLines.length !== reviewedDecoderDependencies.length) {
     throw new Error(
       "Python decoder dependency inventory is incomplete or duplicated.",

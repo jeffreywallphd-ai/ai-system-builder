@@ -100,7 +100,7 @@
   decoder. With none, keep the baseline worker available, advertise decoder
   capability as unavailable, disable constraints in both hosts, and return a
   distinct safe unavailable reason for stale requests.
-- Preserve desired-example field order in decoder grammar serialization while keeping integrity fingerprints order-independent. On Windows, use the pinned Outlines mask kernel's eager callable to avoid Torch's optional compiler probe without changing masking or mandatory post-validation.
+- Preserve desired-example field order and the pinned Core regex, default whitespace and singleton-token projection, with order-independent fingerprints. Use the bounded lazy LLGuidance processor with forced tokenization disabled, explicit native limits, sanitized failures and eager safe-byte Torch masks. Do not import either backend's compiled mask kernel. Keep mandatory original-schema validation; see the canonical Runtime Model for bounds.
 - Example output layouts are edited through bounded visual fields and
   plain-language sample values, never raw schema. Compile one deterministic
   schema, schema-valid example envelope, and protected training-purpose map for

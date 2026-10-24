@@ -78,6 +78,19 @@ override is permitted only after its affected command paths pass compatibility
 tests. Network or malformed-registry responses fail the check rather than
 producing a false pass.
 
+The optional decoder adds original-supplier LLGuidance `1.9.1` (MIT), with the
+same Python 3.10–3.13 marker as the existing three decoder pins. The reviewed
+Windows ABI3 wheel SHA-256 is
+`8aaa55958adb4871016700e9140543ccbd9d6b5136d0a1756a114af706cc50c1`.
+Its PyPI trusted-publisher provenance identifies supplier commit
+`f0971424ec072d3e4d4196bcc7f31a2f60527df9`; the reviewed wheel declares no
+additional dependencies. This artifact review does not qualify other platform
+wheels or replace the deployment environment scan. Readiness and repair require
+the exact pin. The requirements file enforces `--only-binary=llguidance`; absence
+of a compatible wheel fails installation instead of executing a source build.
+Other packages retain their existing format policy. No remote model code or
+alternate supplier is used.
+
 ## SBOM and workflow integrity
 
 - The dependency security check generates and validates a production SPDX 2.3
