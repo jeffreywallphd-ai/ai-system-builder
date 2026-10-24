@@ -669,3 +669,14 @@ retryable whole-collection mutation. Inputs are passively captured before awaits
 organization context is bound for the operation, and all comparisons rerun against
 the current collection on conflicts. A batch is atomic for the definition
 collection; manifest refresh remains a separate existing operational write.
+
+## In-memory callback isolation
+
+One in-memory root serializes transactions and ordinary operations across its
+organization views. An outer callback commits its snapshot only on success;
+failure releases ownership without replacing committed state. Nested callbacks
+reuse the active owner and do not create an independent savepoint. Only the
+supplied transaction store is valid within that callback. Foreign contexts,
+expired handles and captured-root reentry deny. Queued writes capture nested
+payloads, revision conditions and timestamps before waiting; reads and returned
+write results are detached copies.

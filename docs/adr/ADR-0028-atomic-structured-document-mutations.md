@@ -65,3 +65,14 @@ deadlock victim, requiring the complete transaction to be retried.
   and in-memory revision tests do not replace it.
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
+## In-memory callback ownership
+
+The in-memory implementation uses one FIFO owner per root, shared by all its
+organization views and ordinary operations. Commit replaces the snapshot only
+after the outer callback succeeds. Nested callbacks reuse that same owner rather
+than creating savepoints. Transaction views expire at callback exit and reject
+foreign async contexts; captured-root operations reject reentry. Writes capture
+nested JSON values, revision conditions and timestamps before queue waits, and
+returned records cannot mutate persisted state. These rules implement the
+existing atomic-mutation decision without adding a public transaction API.

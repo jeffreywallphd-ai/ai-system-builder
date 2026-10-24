@@ -164,3 +164,12 @@
 - Add `asset-kernel` for resource-backed Asset Registry or Asset Library work.
 - Add `security` when storage reads/writes expose public diagnostics, credentials, tokens, paths, or provider metadata.
 - Add `desktop-host` or `server-host` only when host-specific root composition, API/IPC wiring, or thin-client behavior changes.
+
+## In-memory transaction guidance
+
+- A root and its organization views share FIFO operation ownership. Use only the
+  supplied active transaction view; nested calls reuse it without a savepoint.
+- Preserve detached caller data and write options before waits, copied read/write
+  results, outer-callback rollback, and expired/foreign/root-reentry denial.
+- See `docs/architecture/persistence-and-storage.md` and ADR-0028 for the owning
+  semantics; do not infer physical database qualification from an in-memory test.

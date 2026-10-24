@@ -24,3 +24,10 @@ Asset definition repositories optionally support bounded atomic batch registrati
 with aligned expected original bodies. Validate/capture before awaits, bind owner
 context, and recheck every expectation inside each retryable collection mutation.
 Never turn this optimization into an unguarded bulk overwrite or schema migration.
+
+The in-memory structured-document adapter serializes root operations and
+organization views through one FIFO queue. A callback uses only its supplied
+transaction store; nested calls reuse that owner without creating a savepoint.
+Foreign, expired and captured-root calls deny. Queued writes capture nested
+values, revision conditions and timestamps before waiting, and returned records
+are detached from stored state.
