@@ -205,6 +205,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["artifact:write"] },
   ],
   ["POST /api/artifact/upload", { public: false, scopes: ["artifact:write"] }],
+  ["POST /api/ingestion/tasks/execute", { public: false, scopes: ["artifact:write"] }],
   [
     "POST /api/artifact/ingest-website-page",
     { public: false, scopes: ["artifact:write"] },

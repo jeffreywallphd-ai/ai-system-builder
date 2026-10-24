@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
+  normalizeIngestionTaskTransportCommand,
   type IngestionTaskRecord,
   type IngestionTaskTransportCommand,
   type IngestionTaskTransportValue,
@@ -460,6 +461,7 @@ export function GuidedIngestionTaskPanel({
     setError(undefined);
     cancelledRef.current = false;
     try {
+      if (task.kind === "file-batch") normalizedSelectedFiles(files);
       const resumed = acceptTask(
         await client.execute({
           workspaceId,
@@ -578,8 +580,8 @@ export function GuidedIngestionTaskPanel({
                     : `${files.length} files selected`}
                 </p>
                 <ul>
-                  {files.map((file) => (
-                    <li key={`${file.name}-${file.size}-${file.lastModified}`}>
+                  {files.map((file, index) => (
+                    <li key={`${index}:${file.name}`}>
                       {file.name}
                     </li>
                   ))}
@@ -987,6 +989,33 @@ export function GuidedIngestionTaskPanel({
   );
 }
 
+function fileIdentity(name: string, size: number): string {
+  return JSON.stringify([name, size]);
+}
+
+function normalizedSelectedFiles(files: readonly File[]) {
+  const command = normalizeIngestionTaskTransportCommand({
+    action: "create-files",
+    files: files.map(file => ({
+      fileName: file.name,
+      mediaType: file.type || mediaTypeFromName(file.name.trim()),
+      sizeBytes: file.size,
+    })),
+  });
+  if (command.action !== "create-files") throw new Error("The file selection is invalid.");
+  const byIdentity = new Map<string, File>();
+  for (const [index, file] of command.files.entries()) {
+    const key = fileIdentity(file.fileName, file.sizeBytes);
+    if (byIdentity.has(key)) {
+      throw new Error(
+        "Two selected files have the same name and size. Rename one file and select the files again.",
+      );
+    }
+    byIdentity.set(key, files[index]!);
+  }
+  return { command, byIdentity };
+}
+
 async function addFiles(
   client: GuidedIngestionTaskClient,
   workspaceId: string,
@@ -994,17 +1023,13 @@ async function addFiles(
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
 ): Promise<IngestionTaskRecord> {
+  // Use the contract's canonical names for both admission and byte selection.
+  // Raw File names can differ while the server normalizes them to one name.
+  const { command } = normalizedSelectedFiles(files);
   const task = accept(
     await client.execute({
       workspaceId,
-      command: {
-        action: "create-files",
-        files: files.map((file) => ({
-          fileName: file.name,
-          mediaType: file.type || mediaTypeFromName(file.name),
-          sizeBytes: file.size,
-        })),
-      },
+      command,
     }),
   );
   return transferFilesToTask(
@@ -1024,14 +1049,14 @@ async function transferFilesToTask(
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
 ): Promise<IngestionTaskRecord> {
+  const { byIdentity } = normalizedSelectedFiles(files);
   let task = startingTask;
+  if (new Set(task.files.map(file => fileIdentity(file.fileName, file.totalBytes))).size !== task.files.length) {
+    throw new Error("This task contains files with the same name and size. Start a new task with renamed files.");
+  }
   for (const taskFile of task.files) {
     if (taskFile.status === "finalized") continue;
-    const file = files.find(
-      (candidate) =>
-        candidate.name === taskFile.fileName &&
-        candidate.size === taskFile.totalBytes,
-    );
+    const file = byIdentity.get(fileIdentity(taskFile.fileName, taskFile.totalBytes));
     if (!file)
       throw new Error(
         `Select ${taskFile.fileName} again to resume its transfer.`,

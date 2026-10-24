@@ -11,9 +11,10 @@ import {
   testDouble,
 } from "../../../../testing/node-test";
 
-import type {
-  IngestionTaskRecord,
-  IngestionTaskTransportCommand,
+import {
+  normalizeIngestionTaskTransportCommand,
+  type IngestionTaskRecord,
+  type IngestionTaskTransportCommand,
 } from "../../../../contracts/ingestion";
 import { NotificationViewport } from "../../notifications/NotificationCenter";
 import {
@@ -338,6 +339,126 @@ describe("GuidedIngestionTaskPanel", () => {
     );
     expect(container.textContent).toContain(
       "You are responsible for following the data use and web scraping policies of the sites you enter above.",
+    );
+  });
+
+  for (const [secondName, secondModified] of [["same.csv", 1000], ["same.csv", 2000], [" same.csv", 1000], ["same.csv ", 1000]] as const) {
+    it(`refuses ambiguous normalized-name and equal-size files before creating a task (${JSON.stringify(secondName)}, modified ${secondModified})`, async () => {
+      const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+        normalizeIngestionTaskTransportCommand(command);
+        throw new Error("Unexpected ingestion effect.");
+      });
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+      await act(async () => root?.render(
+        <GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />,
+      ));
+      const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(input, "files", { configurable: true, value: [
+        new File(["A,B"], "same.csv", { type: "text/csv", lastModified: 1000 }),
+        new File(["C,D"], secondName, { type: "text/csv", lastModified: secondModified }),
+      ] });
+      const normalized = normalizeIngestionTaskTransportCommand({ action: "create-files", files: Array.from(input.files!).map(file => ({ fileName: file.name, mediaType: file.type, sizeBytes: file.size })) });
+      expect(normalized.action === "create-files" && normalized.files.map(file => file.fileName)).toEqual(["same.csv", "same.csv"]);
+      await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+      const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+      await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+      expect(execute).toHaveBeenCalledTimes(0);
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Two selected files have the same name and size. Rename one file and select the files again.",
+      );
+      expect(container.textContent).toContain("2 files selected");
+      expect(input.files?.length).toBe(2);
+      expect(add.disabled).toBe(false);
+    });
+  }
+
+  for (const selectedNames of [["same.csv", "same.csv"], [" same.csv", "same.csv "]] as const) {
+  it(`keeps normalized equal names with different sizes distinct during transfer (${JSON.stringify(selectedNames)})`, async () => {
+    const onComplete = testDouble.fn();
+    const appended: { fileId: string; bytes: number[] }[] = [];
+    const rows = [3, 4].map((size, index) => ({ ...task("queued", 0, "pending").files[0]!,
+      fileName: "same.csv", fileId: `file.${index}` as never, checkpointId: `checkpoint.${index}`, totalBytes: size,
+    }));
+    const execute = testDouble.fn(async ({ command }: { workspaceId: string; command: IngestionTaskTransportCommand }) => {
+      if (command.action === "append-chunk") {
+        const row = rows.find(file => file.fileId === command.fileId)!;
+        appended.push({ fileId: command.fileId, bytes: Array.from(command.bytes) });
+        row.acceptedBytes = command.bytes.byteLength;
+      }
+      if (command.action === "finalize-file") rows.find(file => file.fileId === command.fileId)!.status = "finalized";
+      const completed = rows.filter(file => file.status === "finalized").length;
+      return { kind: "task" as const, task: { ...task(completed === 2 ? "succeeded" : "transferring", 0, "pending"),
+        files: rows.map(file => ({ ...file })), progress: { acceptedBytes: rows.reduce((n, file) => n + file.acceptedBytes, 0), totalBytes: 7,
+          completedItems: completed, totalItems: 2, percent: completed * 50, message: completed === 2 ? "All files are ready." : "Adding files." },
+      } };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} onComplete={onComplete} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [
+      new File([new Uint8Array([1, 2, 3])], selectedNames[0], { type: "text/csv" }),
+      new File([new Uint8Array([4, 5, 6, 7])], selectedNames[1], { type: "text/csv" }),
+    ] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(appended).toEqual([{ fileId: "file.0", bytes: [1, 2, 3] }, { fileId: "file.1", bytes: [4, 5, 6, 7] }]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+  }
+
+  it("refuses a newly ambiguous normalized selection before resuming a failed file task", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const failedSeed = task("failed", 0, "failed");
+    const failed = { ...failedSeed, files: failedSeed.files.map(file => ({ ...file,
+      error: { code: "temporary-storage-failure", message: "Try again.", retryable: true },
+    })) };
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(normalizeIngestionTaskTransportCommand(command));
+      return { kind: "task" as const, task: command.action === "create-files" ? task("queued", 0, "pending") : failed };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.some(command => command.action === "append-chunk")).toBe(true);
+    const beforeRetry = commands.length;
+    Object.defineProperty(input, "files", { configurable: true, value: [
+      new File(["A,B"], "train.csv", { type: "text/csv" }),
+      new File(["C,D"], " train.csv", { type: "text/csv" }),
+    ] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const retry = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Try again")!;
+    expect(Boolean(retry)).toBe(true);
+    await act(async () => { retry.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.length).toBe(beforeRetry);
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      "Two selected files have the same name and size. Rename one file and select the files again.",
+    );
+  });
+
+  it("refuses an ambiguous saved task before transferring any selected bytes", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const ambiguous = task("queued", 0, "pending");
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(command);
+      return { kind: "task" as const, task: { ...ambiguous, files: [ambiguous.files[0]!, { ...ambiguous.files[0]!, fileId: "file.other" as never }] } };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.map(command => command.action)).toEqual(["create-files"]);
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      "This task contains files with the same name and size. Start a new task with renamed files.",
     );
   });
 

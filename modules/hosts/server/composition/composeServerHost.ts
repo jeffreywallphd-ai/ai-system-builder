@@ -1097,7 +1097,7 @@ export function composeServerHost(
         now: options.now,
         artifactIdFactory: new SystemArtifactIdFactory(),
       });
-      const ingestionTasks = organizationDocuments
+      const ingestionTasks = organizationDocuments && options.organizationContextProvider
         ? (() => {
             const repository = createStructuredIngestionAcquisitionRepository(
               organizationDocuments,

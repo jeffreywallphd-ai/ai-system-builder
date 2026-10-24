@@ -1053,7 +1053,11 @@
         "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
         "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
         "modules/adapters/transport/api-express/tests/register-ingestion-task-api-route.unit.test.ts",
-        "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts"
+        "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+        "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
+        "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
+        "apps/server/src/tests/create-server.integration.test.ts"
       ],
       "source_paths": [
         "modules/application/shared/ingestion-file-publication.ts",
@@ -1083,7 +1087,18 @@
         "dev-tools/config/contributor-check-profiles.json",
         "dev-tools/helpers/control_plane/catalog.py",
         "dev-tools/helpers/tests/test_control_plane_delivery.py",
-        "docs/diagnostics/ai-development-control-plane.md"
+        "docs/diagnostics/ai-development-control-plane.md",
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/ingestion-source-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts",
+        "dev-tools/README.md",
+        "modules/ui/shared/data-management/README.md",
+        "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+        "modules/adapters/transport/README.md",
+        "apps/server/src/createServer.ts",
+        "modules/hosts/server/README.md"
       ]
     }
   }

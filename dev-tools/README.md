@@ -109,3 +109,17 @@ The supervisor pulls read-only handles from its exact retained guardian handle
 into its own process. Partial handoffs stay locally owned. A fixed natural-expiry
 negative control must be rejected by the same strict shutdown oracle; ordinary
 fixture expiry and errors cannot count as successful job shutdown.
+
+The ordinary ingestion host journeys use real Add data controls and IPC/HTTP
+publication. Run
+`npm run test:visual-composer -- --project thin-chrome --project packaged-desktop --grep "imports distinct multi-chunk"`.
+They use three synthetic CSV/JSON/JSONL files, one larger than 8 MiB, and observe
+bounded renderer reads, progress, completion and source discovery after renderer
+reload. Ambiguous same-name/same-size inputs must stop before task creation with
+a correction action. Profiles and temporary data are isolated; traces, video and
+screenshots are off for these credential-bearing host journeys. The browser uses
+only a generated local qualification credential. No saved user credential,
+provider publication, model or retained offload slot is used. Slice-size
+observations do not measure whole-process RSS or qualify the full
+provider/website/scale/native matrix. The `ingestion-publication` profile also
+runs focused shared-panel interaction tests; real host journeys remain opt-in.

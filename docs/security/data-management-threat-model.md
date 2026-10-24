@@ -545,3 +545,48 @@ actual offload-worker integration or malicious same-user isolation. It never
 accesses retained staging, changes the unknown 12 GiB charge, reopens accepted
 accuracy or conducts the restricted Assets assessment. Physical evidence is
 explicitly opt-in; a skip is not qualification or a parent roadmap pass.
+
+## Selected-file ambiguity and real host qualification
+
+Use the contract normalizer's filename for both uniqueness and transfer lookup.
+Leading/trailing spaces are removed by that contract; comparing raw File names
+would allow a collision and could select the first source twice. Normalize the
+whole selection, reject duplicate canonical name/size pairs before create/resume,
+and select original bytes by that exact map. Reject ambiguous saved task entries
+before transfer. No independent UI filename-normalization policy is introduced.
+
+Security impact: security-relevant source integrity and bounded evidence. The
+shared Add data panel matches task files by name and size during transfer/resume.
+Reject duplicate pairs before any task creation, byte read or host mutation,
+including pairs with different modification times. Keep the user's selection
+and provide a fixed rename-and-select correction. Distinct sizes remain valid.
+This prevents choosing the first file twice and silently importing the wrong
+source. Server checks, checksum verification, acknowledged publication and
+workspace/organization authorization still apply independently.
+
+Model-free real desktop/browser journeys use only isolated synthetic files and
+production IPC/HTTP controls. They observe numeric slice sizes and progress;
+whole-file reads, ambiguous admission, missing outputs and failed source discovery
+cannot pass. Bearer-bearing traces, screenshots and video are disabled. No saved
+credential, provider request, model or retained staging is needed. These checks
+are not protected native/crash, real provider, whole-process memory or parent
+qualification; they never reopen accepted model accuracy.
+
+The separately admitted exact `POST /api/ingestion/tasks/execute` uses existing
+`artifact:write` coarse scope for every action, including read/list. It does not
+infer ownership from the request body. Normal authentication and dedicated-tenant
+checks run before JSON parsing; application authorization repeats the active
+organization, workspace and exact task/file checks before effects. Missing or
+invalid credentials, reader-only scope and another organization cannot reach
+parsing or acquisition. A task from another workspace stays not found. Malformed
+commands cannot run an effect. Unknown paths/methods and other unsupported API
+families remain denied. Real HTTP tests use synthetic token verification and
+real composed local publication; the host UI separately uses its generated
+device credential. These tests supply no broader route, provider or native pass.
+Rollback denies this route and retains the application's authority checks.
+
+The server composes ingestion only with organization-scoped documents and an
+authoritative context provider. An injected scoped store receives the same
+authenticated request context as PostgreSQL storage. A store name or body field
+cannot supply authority. Missing context returns unavailable before acquisition;
+organization mismatch remains denied. Unscoped stores never become a fallback.

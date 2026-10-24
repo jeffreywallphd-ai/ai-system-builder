@@ -619,3 +619,33 @@ use safe smaller-model/retry guidance without inventing an amount. No exception
 text, model/source details, filesystem paths, prompts or raw logs enter the new
 public field. Existing guards, limits, admission, cleanup and offload opt-in
 controls remain unchanged; notifications never authorize a denied model load.
+
+## Ordinary file import and HTTP admission
+
+The shared panel reuses the ingestion command normalizer for the complete file
+selection. It checks canonical name/size pairs before create/resume and uses the
+same map for byte lookup. Whitespace aliases cannot bypass uniqueness. Unique
+canonical names and equal names with distinct sizes remain valid. Ambiguous
+saved task entries fail before byte transfer.
+
+The shared Add data panel refuses two selected files with the same name and size
+before creating a task. Otherwise its transfer/resume match could choose the
+first file twice. It preserves the selection and asks for a rename and reselection;
+equal names with different sizes remain supported. Real host journeys cover
+multi-file chunked transfer, completion and source discovery after renderer reload.
+Observed bounded slices do not establish whole-process memory use.
+
+The exact `POST /api/ingestion/tasks/execute` endpoint uses the existing
+`artifact:write` coarse permission, including read/list actions in that
+multiplexer. Authentication and organization middleware precede body parsing.
+The owning application repeats organization, workspace, task and file checks;
+the route permission does not supply resource ownership. Unknown methods/paths
+and other unsupported task families stay denied. A read-only task API is not
+introduced. Rollback denies this exact route while preserving all application,
+byte-integrity, publication and isolation controls.
+
+Ingestion host composition requires organization-scoped documents and the active
+organization context provider together. Server application composition connects
+its authenticated request scope for explicitly injected scoped stores and for
+PostgreSQL. Missing context leaves ingestion unavailable before acquisition;
+raw or global document storage is not an ingestion fallback.

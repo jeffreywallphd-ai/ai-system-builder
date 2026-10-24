@@ -184,12 +184,12 @@
 - Exact normalized-span lineage, bounded semantic comparison, source-cap and
   mixing invariants, synthetic schema/citation/grounding/critic/safety/diversity
   denial paths, and aggregate-only evidence tests.
-- Default-schema completeness, fingerprint/purpose-path denial, custom mappings,
-  trusted attribution, sanitized URLs, and unselected absence.
+- Default-schema completeness, fingerprint/purpose-path denial, custom mappings, trusted attribution, sanitized URLs, and unselected absence.
 - Desktop/thin-client UX checks plus applicable repository gates.
 
 ## Adjacent Packs
 
+- Exact `POST /api/ingestion/tasks/execute` needs `artifact:write`, including read/list. Application organization/workspace/task/file checks still apply; other unsupported paths and methods stay denied. See the canonical Data architecture and transport README.
 - Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin. Resumable files use pre-reservation checksum checks, exclusive writing CAS, durable bytes and one acknowledged origin-issued CAS before conditional metadata and atomic task/snapshot/receipt commit. Recovery verifies existing exact origin without recreating missing/deleted records. Unknown effects stay retained; completed retry is read-only. Native/crash/parent qualification stays separate; see canonical architecture/threat model and artifact-store README.
 - `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.

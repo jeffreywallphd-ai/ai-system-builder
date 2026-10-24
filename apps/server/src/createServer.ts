@@ -346,7 +346,7 @@ export async function createServer(
       logSink: options.logSink,
       now: options.now,
       restartServer: options.restartServer,
-      organizationContextProvider: postgresDatabase
+      organizationContextProvider: postgresDatabase || options.structuredDocuments?.organizationId
         ? security.organizationContextScope
         : undefined,
       organizationAuthorizer,

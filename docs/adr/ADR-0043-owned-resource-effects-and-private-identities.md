@@ -70,9 +70,14 @@ complete existing origin; missing/partial/deleted origin stays pending without
 recreation, and lost issuance acknowledgements grant no effect authority. The
 structured task/snapshot transaction also commits
 the private publication receipt. Uncertain writing cannot be adopted, retried or
-deleted; no legacy receipt is inferred. This local implementation preserves host
-byte mapping and task route policy and does not establish native protection or
-filesystem/metadata atomicity.
+deleted; no legacy receipt is inferred. This publication component preserves host
+byte mapping but does not itself admit a route or establish native protection or
+filesystem/metadata atomicity. The separately tested exact POST ingestion-task
+endpoint uses existing `artifact:write` coarse scope, including read/list actions,
+and repeats owning application organization/workspace/task/file authorization.
+Unknown paths/methods and unsupported families remain denied; there is no blanket
+task admission or read-only task API. Real HTTP denial/positive tests and real
+host import journeys are separate from native, provider and scale qualification.
 
 Implement through existing contracts, application ports, adapters and host wiring.
 Use bounded source-writing claims and actual separate-invocation review. Test

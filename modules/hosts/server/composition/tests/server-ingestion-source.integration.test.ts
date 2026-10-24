@@ -16,6 +16,35 @@ import { composeServerHost } from "../composeServerHost";
 
 // In-process route/composition proof only: no HTTP authentication, model,
 // provider credential or hostile native-filesystem qualification is inferred.
+test("composed server refuses ingestion without an authoritative organization context provider", { timeout: 45_000 }, async () => {
+  const parent = await realpath(tmpdir());
+  const fixture = await realpath(await mkdtemp(path.join(parent, "server-ingestion-unavailable-")));
+  const documents = createInMemoryStructuredDocumentStore();
+  const organizationId = createOrganizationId("organization-a");
+  const app = { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() };
+  const host = composeServerHost({ env: { NODE_ENV: "test" },
+    persistence: { documents, organizationDocuments: documents.forOrganization(organizationId) },
+    settings: { localSettingsFilePath: path.join(fixture, "settings.json") },
+    artifactRepo: { providerCredentialRootDirectory: path.join(fixture, "credentials"),
+      huggingFaceTokenConfigFilePath: path.join(fixture, "no-legacy-token.json") }, logSink() {},
+  });
+  try {
+    host.registerApi({ app, storageRootDirectory: path.join(fixture, "storage"), runtimeRootDirectory: path.join(fixture, "runtime") });
+    await host.waitForAssetFoundation();
+    const registration = app.post.mock.calls.find(call => call[0] === "/api/ingestion/tasks/execute");
+    assert.ok(registration);
+    let status = 0, body: ApiIngestionTaskExecuteResponse | undefined;
+    const response = { status(value: number) { status = value; return response; }, json(value: ApiIngestionTaskExecuteResponse) { body = value; } };
+    await (registration.at(-1) as Function)({ body: { workspaceId: "workspace-a", command: { action: "create-files", files: [{ fileName: "denied.csv", mediaType: "text/csv", sizeBytes: 4 }] } } }, response);
+    assert.equal(status, 503); assert.ok(body && !body.ok); assert.equal(body.error.code, "unavailable");
+  } finally {
+    await host.closeRuntimeDatabases();
+    const target = await realpath(fixture); assert.equal(target, fixture); assert.equal(path.dirname(target), parent);
+    assert.ok(path.basename(target).startsWith("server-ingestion-unavailable-"));
+    await rm(target, { recursive: true, force: true });
+  }
+});
+
 test("composed server local ingestion publishes one scoped primary source and denies foreign task access", {timeout: 45_000}, async () => {
   const parent = await realpath(tmpdir());
   const fixture = await mkdtemp(path.join(parent, "server-owned-source-"));

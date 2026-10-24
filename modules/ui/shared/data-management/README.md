@@ -173,3 +173,20 @@ use safe smaller-model/retry guidance without inventing an amount. No exception
 text, model/source details, filesystem paths, prompts or raw logs enter the new
 public field. Existing guards, limits, admission, cleanup and offload opt-in
 controls remain unchanged; notifications never authorize a denied model load.
+
+## Distinct selected files
+
+Use the existing command normalizer before matching files. It trims names. Check
+duplicate normalized name/size pairs before creating or resuming a file task,
+and use the same pairs to select the original bytes. Leading/trailing spaces
+cannot distinguish two otherwise identical pairs. Reject ambiguous saved task
+entries before byte transfer. A unique normalized name still supports transfer.
+
+File transfer and resume bind each task entry to a selected file name and size.
+Two distinct files can have both values in common, even with different dates.
+Reject that ambiguous selection before creating a task. Keep the selection and
+ask the user to rename one file and select again. Equal names with different
+sizes remain supported. Selection rows have independent keys even for identical
+metadata. Existing chunk limits, task ownership, checksum and publication guards
+remain authoritative. Real host journeys exercise multi-file import and source
+discovery; observing bounded file slices does not establish process RSS.
