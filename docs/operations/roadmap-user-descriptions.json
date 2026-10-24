@@ -10443,6 +10443,46 @@
           "Earlier failures and remaining roadmap checks stay visible. Accepted model accuracy stays closed. The separate restricted Assets security assessment was not performed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "eeae0089734011e29eae38e0ad4336701ae2488e9342ad4ee743f094e28b478e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "An additional Windows test helper now distinguishes job shutdown from natural process expiry. It also fixes process-identity and handle-cleanup errors. Eighteen software tests passed. One further test ran three Windows shutdown cases and a natural-expiry control. The tested and reviewed helper is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a51a3925c7112a7f9f59f31dc17cbc4e293b3022cb194608c633836e9d28e7d2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This completes a supporting component only. It does not complete a parent criterion, increment or roadmap, or qualify the current parent version. Earlier native test history stays available."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3dac6517cf894def2769dd7e185793bc526ef9c7c8e2ab70fd397f5473f9faf4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to protect retained files, prove saved disk accounting and test the real model worker and offloading. Restart remains unavailable. Until the retained data can be measured safely, it reserves the full 12 GiB disk allowance. No action is needed from you for these pending tasks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d0fa714e26374eb97e31f3fe3d5a209d513771656552e52c97a806459047369f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed tests and the failed control-plane check stay in the evidence. Accepted Standard model accuracy stays closed. Those accuracy tests were not run again."
+        ]
+      }
     }
   ]
 }

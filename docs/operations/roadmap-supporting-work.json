@@ -2849,6 +2849,23 @@
         "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
         "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "native-owned-qualification-job-proof",
+      "work_criteria": [
+        "owned-native-fixture-exit-is-observed"
+      ],
+      "receipt_digest": "4e8c73d574396007893caffec694a8b86f6ac2bf267bcc9d98ba169ad4b4c6a4",
+      "review_digest": "ebab86abac8ec880b80eea9c2bcbb88b5f591d599f6246e2fcd0b2f9951d1fa9",
+      "scope": "Additional installed-Python model-free Windows fixture checks passed: 18 portable tests and one native test containing three positive shutdown cases and a real natural-expiry negative control. The reviewed corrections bind the exact guardian handle, track local duplicates immediately, retain failed thread closure and require exact integer-zero exit counts. The five-file component is committed.",
+      "limitations": [
+        "This is reviewed component support at its recorded snapshot, not current parent criterion, increment or roadmap qualification. Existing native fixture history is preserved.",
+        "No actual model worker or offload delivery is qualified. Retained-tree protection and protected durable accounting remain unfinished; actual restart stays denied and unknown retained data still consumes the full 12 GiB budget.",
+        "Earlier failed observations and the failed control-plane receipt remain preserved. Completed Standard model accuracy stays closed and was not rerun."
+      ]
     }
   ]
 }
