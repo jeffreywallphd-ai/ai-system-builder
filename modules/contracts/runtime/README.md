@@ -18,6 +18,16 @@ worker's memory admission, explicit overflow policy or capability checks.
 
 Shared runtime execution contracts live in this module.
 
+`dataset-preparation-ocr.ts` defines the internal `staged-pdf-ocr-v1` map and
+exact protocol capability. Each selected PDF has one generated direct-child name,
+artifact id, byte count and raw lowercase SHA256 under the task's owned runtime
+root. The application accepts no public `runtime` or `ocrSources` command field.
+It validates the source port's canonical `sha256:` digest before extracting the
+raw hash. Explicit `ocrLanguage` is valid only with enabled, structure-aware PDF
+normalization and layout. Language syntax and protocol support do not establish
+installed-engine readiness. Worker advertisement and app OCR stay unavailable
+until the remaining task and delivery checks pass.
+
 The contract family is intentionally thin and adapter-oriented:
 
 - runtime target identity (`runtime-kind`, `runtime-target`)

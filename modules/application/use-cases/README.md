@@ -49,6 +49,17 @@ Use cases in this folder own application orchestration and remain adapter-agnost
     candidates;
   - resolves workspace-scoped local bindings and explicitly localizes supported
     remote repository sources;
+  - compiles a private OCR source map only from copied, authorized PDF bytes,
+    with exact length and SHA256, short generated names and an independent
+    source hasher in both hosts; requires explicit language/structure-aware
+    settings and the exact worker protocol before source access. Caller runtime
+    maps cannot grant authority. Public OCR remains unavailable until worker
+    consumption and actual app delivery are qualified;
+  - retains a private process-wide owner after unknown OCR allocation, cleanup
+    or task-start effects. A cleanup attempt is terminal and never retried;
+    recorded task/stage maps clear only after confirmed filesystem cleanup.
+    Ambiguous starts keep their files and exact host-issued request identity.
+    This does not claim durable crash recovery or native/task retirement;
   - owns asynchronous task start/read/cancel orchestration and enforces recorded
     workspace plus optional organization ownership;
   - validates and materializes role-tagged aggregate/train/validation/test

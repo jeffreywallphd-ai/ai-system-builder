@@ -1113,7 +1113,17 @@
         "modules/adapters/runtime/python/worker/tests/test_document_normalization.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py",
         "dev-tools/scripts/native/tests/test_build_windows_ocr.py",
-        "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
+        "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs",
+        "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case-typecheck.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1157,7 +1167,29 @@
         "modules/adapters/runtime/python/worker/tests/test_document_normalization.py",
         "modules/adapters/runtime/python/worker/ocr/source_snapshot.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py",
-        "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py"
+        "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py",
+        "modules/contracts/runtime/dataset-preparation-ocr.ts",
+        "modules/contracts/runtime/dataset-preparation-advanced.ts",
+        "modules/contracts/runtime/prepare-training-dataset-request.ts",
+        "modules/contracts/runtime/index.ts",
+        "modules/contracts/runtime/README.md",
+        "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+        "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts",
+        "modules/application/ports/runtime/index.ts",
+        "modules/application/ports/runtime/README.md",
+        "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case-typecheck.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+        "modules/application/use-cases/README.md",
+        "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts",
+        "modules/hosts/server/composition/composeServerHost.ts"
       ]
     }
   }

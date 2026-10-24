@@ -39,6 +39,7 @@ export * from "./dataset-preparation";
 export * from "./dataset-quality";
 export * from "./dataset-preparation-capabilities";
 export * from "./dataset-preparation-advanced";
+export * from "./dataset-preparation-ocr";
 export * from "./dataset-preparation-adaptive";
 export * from "./dataset-preparation-constrained-json";
 export * from "./dataset-preparation-memory";

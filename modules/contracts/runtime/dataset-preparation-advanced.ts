@@ -54,6 +54,8 @@ export interface DatasetPreparationAdvancedContentConfig {
   semanticBoundaryThreshold?: number;
   layoutEnabled?: boolean;
   ocrEnabled?: boolean;
+  /** Required only for explicit scanned-PDF OCR; no inferred language. */
+  ocrLanguage?: string;
 }
 
 export interface DatasetPreparationSemanticCurationConfig {

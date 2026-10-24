@@ -155,6 +155,7 @@ export function composeDesktopDatasetPreparationFeature(
         datasetQualityPolicyProvider:
           createDefaultDatasetQualityPolicyProvider(),
         datasetVersioning,
+        sourceIntegrityHasher: datasetVersionHasher,
       }),
     ...datasetVersionUseCases,
   };

@@ -55,12 +55,15 @@ import type {
   DatasetQualityRequestedConfig,
   DatasetQualityRuntimeConfig,
   PythonRuntimeCapabilitiesResult,
+  DatasetPreparationRuntimeOcrSources,
   PrepareTrainingDatasetRequest,
   PrepareTrainingDatasetResult,
 } from "../../contracts/runtime";
 import {
   DEFAULT_DATASET_PREPARATION_TASK_TYPE,
   DATASET_QUALITY_REASON_CODES,
+  DATASET_PREPARATION_OCR_MAX_SOURCE_BYTES,
+  DATASET_PREPARATION_OCR_PROTOCOL,
   createDefaultDatasetPreparationTaskRecipe,
   compileDatasetPreparationVisualOutputShape,
   resolveDatasetPreparationVisualOutputShape,
@@ -68,9 +71,12 @@ import {
   createDatasetPreparationExecutionPlan,
   evaluateDatasetPreparationSourceReadiness,
   isDatasetPreparationTaskType,
+  isDatasetPreparationOcrArtifactId,
+  isDatasetPreparationOcrLanguage,
   normalizeLegacyDatasetPreparationMethod,
   normalizeDatasetPreparationMemoryMode,
   supportsDatasetPreparationOffload,
+  supportsDatasetPreparationOcr,
   resolveDatasetPreparationAdaptivePlan,
   resolveDatasetPreparationSourceCapability,
   resolveDatasetPreparationTaskProfileDefinition,
@@ -83,6 +89,7 @@ import type { ApplicationRequestContext } from "../ports";
 import type { DatasetVersionHasherPort } from "../ports/dataset-version";
 import type { RuntimeTaskRegistryPort } from "../ports/runtime";
 import type { DatasetQualityPolicyProviderPort } from "../ports/runtime";
+import type { DatasetPreparationSourceHasherPort } from "../ports/runtime";
 import type { ArtifactCatalogReadPort } from "../ports/artifact-catalog";
 import type {
   ArtifactStorageBindingPort,
@@ -206,11 +213,71 @@ interface PendingDatasetQualityReview {
 
 const MAX_DATASET_PREPARATION_SOURCE_COUNT = 256;
 
+interface OcrTaskStageOwner {
+  readonly allocationPrefix: string;
+  allocationOperation?: Promise<string>;
+  root?: string;
+  retirement?: Promise<boolean>;
+  removalOperation?: Promise<void>;
+  startUnconfirmed?: boolean;
+  leaseStarted?: boolean;
+  startAttempt?: {
+    request: Parameters<RuntimeTaskRegistryPort["startTask"]>[0];
+    operation?: ReturnType<RuntimeTaskRegistryPort["startTask"]>;
+    lease?: OwnedTaskLease;
+  };
+}
+
+// Fresh OCR attempts only. Unknown allocation, cleanup or RPC effects retain
+// their exact owner. No reset, adoption, stale retry or old-tree interface.
+const UNCONFIRMED_OCR_STAGES = new Set<OcrTaskStageOwner>();
+const OCR_STAGE_UNCONFIRMED =
+  "An earlier scanned-PDF operation could not be confirmed. No new task was started.";
+const OCR_CLEANUP_UNCONFIRMED =
+  "Temporary-file cleanup was not confirmed. Scanned-PDF preparation cannot continue.";
+
+function retainUnconfirmedOcrStart(owner: OcrTaskStageOwner): void {
+  owner.startUnconfirmed = true;
+  UNCONFIRMED_OCR_STAGES.add(owner);
+  if (owner.startAttempt?.lease && !owner.leaseStarted) {
+    // Keep the real reservation, not just a reference to its wrapper. Unknown
+    // start effects cannot justify another dispatch, cancellation or retirement.
+    owner.startAttempt.lease.start(async () => false, async () => undefined);
+    owner.leaseStarted = true;
+  }
+}
+
+function retireOcrStage(owner: OcrTaskStageOwner): Promise<boolean> {
+  if (owner.retirement) return owner.retirement;
+  let settle!: (confirmed: boolean) => void;
+  owner.retirement = new Promise<boolean>((resolve) => { settle = resolve; });
+  UNCONFIRMED_OCR_STAGES.add(owner);
+  if (!owner.root || owner.startUnconfirmed) {
+    settle(false);
+    return owner.retirement;
+  }
+  // Register the owner and terminal promise before invoking the one operation.
+  void (async () => {
+    try {
+      owner.removalOperation = rm(owner.root!, { recursive: true, force: true });
+      await owner.removalOperation;
+      UNCONFIRMED_OCR_STAGES.delete(owner);
+      settle(true);
+    } catch {
+      settle(false);
+    }
+  })();
+  return owner.retirement;
+}
+
 function validateDatasetPreparationCommand(
   command: PrepareTrainingDatasetFromArtifactsCommand,
 ): string | undefined {
   if (!isRecord(command)) {
     return "Dataset preparation settings are required.";
+  }
+  if ("runtime" in command || "ocrSources" in command) {
+    return "Internal runtime settings cannot be supplied in a preparation command.";
   }
   if (
     !Array.isArray(command.sourceArtifactIds) ||
@@ -371,11 +438,14 @@ function validateDatasetPreparationCommand(
   }
   if (command.advanced !== undefined) {
     const advanced = command.advanced;
+    if (!isRecord(advanced)) {
+      return "Advanced preparation settings are invalid.";
+    }
     const content = advanced.content;
     const semantic = advanced.semantic;
     const synthetic = advanced.synthetic;
+    const ocrPlan = command.preparation;
     if (
-      !isRecord(advanced) ||
       ![
         "standard",
         "better-document-understanding",
@@ -393,6 +463,8 @@ function validateDatasetPreparationCommand(
             "semantic",
             "layout",
           ].includes(String(content.strategy)) ||
+          (content.ocrEnabled !== undefined && typeof content.ocrEnabled !== "boolean") ||
+          (content.layoutEnabled !== undefined && typeof content.layoutEnabled !== "boolean") ||
           (content.maxTokensPerChunk !== undefined &&
             (!Number.isInteger(content.maxTokensPerChunk) ||
               content.maxTokensPerChunk < 32 ||
@@ -424,8 +496,23 @@ function validateDatasetPreparationCommand(
     ) {
       return "Advanced preparation settings are invalid.";
     }
-    if (content?.ocrEnabled) {
-      return "Text recognition for scanned images is not available. Use a text-based source or add reviewed text.";
+    if (content?.ocrEnabled !== true && content?.ocrLanguage !== undefined) {
+      return "Choose text recognition before setting its language.";
+    }
+    if (content?.ocrEnabled === true && (
+      !isDatasetPreparationOcrLanguage(content.ocrLanguage) ||
+      advanced.preset !== "structure-aware" ||
+      !ocrPlan || ocrPlan.schemaVersion !== "1" ||
+      ocrPlan.method !== "structure-aware" ||
+      ocrPlan.inputIntent !== "create-from-source-material" ||
+      ocrPlan.generationMode !== "task-examples" ||
+      !Array.isArray(ocrPlan.sourceKinds) || ocrPlan.sourceKinds.length !== 1 ||
+      ocrPlan.sourceKinds[0] !== "document" ||
+      content.strategy !== "layout" || content.layoutEnabled !== true ||
+      command.recipe.normalization?.targetFormat !== "markdown" ||
+      command.sourceArtifactIds.some((id) => !isDatasetPreparationOcrArtifactId(id))
+    )) {
+      return "Text recognition requires structure-aware PDF preparation and an explicit valid language.";
     }
     if (
       synthetic?.enabled &&
@@ -460,6 +547,8 @@ export interface PrepareTrainingDatasetFromArtifactsUseCaseDependencies {
     "requireCapabilityReady"
   >;
   datasetQualityPolicyProvider?: DatasetQualityPolicyProviderPort;
+  /** Required for OCR even when immutable dataset versioning is not composed. */
+  sourceIntegrityHasher?: DatasetPreparationSourceHasherPort;
   datasetVersioning?: {
     finalizer: DatasetVersionFinalizationService;
     hasher: DatasetVersionHasherPort;
@@ -585,9 +674,12 @@ function buildRuntimeSourceInputPath(
   mediaType: string,
   originalName: string | undefined,
   sourceIndex: number,
+  boundedPdfName = false,
 ): string {
   const sourceName = originalName?.trim() || basename(artifactId);
-  const stem = sanitizeRuntimeSourceFileSegment(
+  // Runtime names are private. OCR needs no display stem; a fixed short name
+  // avoids Windows path-length failures and keeps source titles out of paths.
+  const stem = boundedPdfName ? "source" : sanitizeRuntimeSourceFileSegment(
     parse(sourceName).name || sourceName,
   );
   const prefix = `${String(sourceIndex + 1).padStart(4, "0")}-${stem}`;
@@ -1677,10 +1769,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     "requireCapabilityReady"
   >;
   private readonly datasetQualityPolicyProvider?: DatasetQualityPolicyProviderPort;
+  private readonly sourceIntegrityHasher?: DatasetPreparationSourceHasherPort;
   private readonly datasetVersionFinalizer?: DatasetVersionFinalizationService;
   private readonly datasetVersionHasher?: DatasetVersionHasherPort;
   private readonly now: () => string;
   private readonly runtimeWorkingDirsByRequestId = new Map<string, string>();
+  private readonly runtimeOcrStageOwnersByRequestId = new Map<string, OcrTaskStageOwner>();
   private readonly commandByRequestId = new Map<
     string,
     PrepareTrainingDatasetFromArtifactsCommand
@@ -1720,6 +1814,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     this.runtimeCapabilityGuard = dependencies.runtimeCapabilityGuard;
     this.datasetQualityPolicyProvider =
       dependencies.datasetQualityPolicyProvider;
+    this.sourceIntegrityHasher = dependencies.sourceIntegrityHasher;
     this.datasetVersionFinalizer = dependencies.datasetVersioning?.finalizer;
     this.datasetVersionHasher = dependencies.datasetVersioning?.hasher;
     this.now = dependencies.now ?? (() => new Date().toISOString());
@@ -1762,11 +1857,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       );
     }
 
+    if (command.advanced?.content?.ocrEnabled === true && UNCONFIRMED_OCR_STAGES.size) {
+      return createFailureResult(createContractError("unavailable", OCR_STAGE_UNCONFIRMED), context);
+    }
+
     try {
       await this.runtimeCapabilityGuard?.requireCapabilityReady(
         "dataset-preparation",
       );
     } catch (error) {
+      if (command.advanced?.content?.ocrEnabled === true) {
+        return createFailureResult(createContractError(
+          "unavailable", "Scanned-PDF preparation is unavailable in the selected runtime.",
+        ), context);
+      }
       if (
         error instanceof Error &&
         "code" in error &&
@@ -1783,6 +1887,25 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
 
     let normalizedCommand = normalizeDatasetPreparationCommand(command);
+    if (normalizedCommand.advanced?.content?.ocrEnabled === true) {
+      if (!this.sourceIntegrityHasher) {
+        return createFailureResult(createContractError(
+          "unavailable", "Source integrity verification is unavailable. Text recognition was not started.",
+        ), context);
+      }
+      let supported = false;
+      try {
+        const available = await this.readWorkerCapabilities?.();
+        supported = supportsDatasetPreparationOcr(available?.capabilities);
+      } catch {
+        // A failed or old-worker read cannot authorize a new source protocol.
+      }
+      if (!supported) {
+        return createFailureResult(createContractError(
+          "unavailable", "Scanned-PDF preparation is unavailable in the selected runtime.",
+        ), context);
+      }
+    }
     if (
       normalizedCommand.recipe.task?.textInputMode === "generate" &&
       normalizedCommand.recipe.generation?.model.memoryMode === "offload-v1"
@@ -1852,14 +1975,13 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         staged.value.sourceInputs,
       );
     } catch (error) {
-      await rm(staged.value.runtimeWorkingDir, {
-        recursive: true,
-        force: true,
-      });
+      const retired = staged.value.ocrOwner
+        ? await retireOcrStage(staged.value.ocrOwner)
+        : (await rm(staged.value.runtimeWorkingDir, { recursive: true, force: true }), true);
       return createFailureResult(
         createContractError(
-          "validation",
-          error instanceof Error
+          retired ? "validation" : "unavailable",
+          !retired ? OCR_CLEANUP_UNCONFIRMED : error instanceof Error
             ? error.message
             : "The selected preparation method is not compatible with these sources.",
         ),
@@ -1870,14 +1992,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     const runtimeStructuredOutput =
       compileRuntimeStructuredOutput(normalizedCommand);
     if (!runtimeStructuredOutput.ok) {
-      await rm(staged.value.runtimeWorkingDir, {
-        recursive: true,
-        force: true,
-      });
+      const retired = staged.value.ocrOwner
+        ? await retireOcrStage(staged.value.ocrOwner)
+        : (await rm(staged.value.runtimeWorkingDir, { recursive: true, force: true }), true);
       return createFailureResult(
-        createContractError("validation", runtimeStructuredOutput.message),
+        createContractError(retired ? "validation" : "unavailable",
+          retired ? runtimeStructuredOutput.message : OCR_CLEANUP_UNCONFIRMED),
         context,
       );
+    }
+
+    if (staged.value.ocrOwner && UNCONFIRMED_OCR_STAGES.size) {
+      const retired = await retireOcrStage(staged.value.ocrOwner);
+      return createFailureResult(createContractError("unavailable",
+        retired ? OCR_STAGE_UNCONFIRMED : OCR_CLEANUP_UNCONFIRMED), context);
     }
 
     const runtimeRequest: PrepareTrainingDatasetRequest = {
@@ -1894,12 +2022,15 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       runtime: {
         runtimeWorkingDirectory: staged.value.runtimeWorkingDir,
         structuredOutput: runtimeStructuredOutput.value,
+        ...(staged.value.ocrSources ? { ocrSources: staged.value.ocrSources } : {}),
       },
     };
 
     try {
-      const started = await this.runtimeTaskRegistry.startTask({
-        requestId: context?.requestId,
+      const startRequest: Parameters<RuntimeTaskRegistryPort["startTask"]>[0] = {
+        // OCR keeps a host-issued identity even if the start acknowledgement
+        // is lost. A caller correlation id cannot select an existing task.
+        requestId: staged.value.ocrOwner ? randomUUID() : context?.requestId,
         taskType: TaskType.DATASET_PREPARATION,
         payload: runtimeRequest,
         workspaceId: context.workspaceId,
@@ -1909,11 +2040,25 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             ? { organizationId: String(context.organizationId) }
             : {}),
         },
-      });
+      };
+      if (staged.value.ocrOwner) {
+        staged.value.ocrOwner.startAttempt = { request: startRequest, lease };
+      }
+      const startOperation = this.runtimeTaskRegistry.startTask(startRequest);
+      if (staged.value.ocrOwner?.startAttempt) {
+        staged.value.ocrOwner.startAttempt.operation = startOperation;
+      }
+      const started = await startOperation;
       if (
         typeof started.requestId !== "string" ||
-        started.requestId.trim().length === 0
+        started.requestId.trim().length === 0 ||
+        (staged.value.ocrOwner && started.requestId !== startRequest.requestId)
       ) {
+        if (staged.value.ocrOwner) {
+          retainUnconfirmedOcrStart(staged.value.ocrOwner);
+          return createFailureResult(createContractError("internal",
+            "Scanned-PDF preparation could not be started safely."), context);
+        }
         lease?.release();
         await rm(staged.value.runtimeWorkingDir, {
           recursive: true,
@@ -1931,6 +2076,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         started.requestId,
         staged.value.runtimeWorkingDir,
       );
+      if (staged.value.ocrOwner) {
+        this.runtimeOcrStageOwnersByRequestId.set(started.requestId, staged.value.ocrOwner);
+      }
       this.commandByRequestId.set(started.requestId, normalizedCommand);
       if (this.datasetVersionFinalizer) {
         this.sourceVersionLineageByRequestId.set(
@@ -1966,6 +2114,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         await this.taskPowerLifecycle.completeTask(started.requestId, "failed");
         if (!this.pendingQualityReviewsByRequestId.has(started.requestId)) await this.cleanupRuntimeWorkingDir(started.requestId);
       });
+      if (staged.value.ocrOwner && lease) staged.value.ocrOwner.leaseStarted = true;
       return createSuccessResult(
         {
           requestId: started.requestId,
@@ -1976,13 +2125,28 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         context,
       );
     } catch (error) {
+      if (staged.value.ocrOwner) {
+        if (staged.value.ocrOwner.startAttempt) {
+          // A rejected RPC does not prove that no worker started. Retain the
+          // exact attempt and stage; deletion is not task retirement.
+          retainUnconfirmedOcrStart(staged.value.ocrOwner);
+          return createFailureResult(createContractError("internal",
+            "Scanned-PDF preparation could not be started safely."), context);
+        }
+        lease?.release();
+        const retired = await retireOcrStage(staged.value.ocrOwner);
+        return createFailureResult(createContractError(retired ? "internal" : "unavailable",
+          retired ? "Scanned-PDF preparation could not be started safely." : OCR_CLEANUP_UNCONFIRMED), context);
+      }
       lease?.release();
       await rm(staged.value.runtimeWorkingDir, {
         recursive: true,
         force: true,
       });
       const message =
-        error instanceof Error
+        normalizedCommand.advanced?.content?.ocrEnabled === true
+          ? "Scanned-PDF preparation could not be started safely."
+          : error instanceof Error
           ? error.message
           : "Failed to start dataset preparation.";
       const normalizedMessage = message.includes(
@@ -3348,8 +3512,14 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
 
   private async cleanupRuntimeWorkingDir(requestId: string): Promise<void> {
     const runtimeWorkingDir = this.runtimeWorkingDirsByRequestId.get(requestId);
-    if (runtimeWorkingDir) await rm(runtimeWorkingDir, { recursive: true, force: true });
+    const ocrOwner = this.runtimeOcrStageOwnersByRequestId.get(requestId);
+    if (ocrOwner) {
+      if (!await retireOcrStage(ocrOwner)) throw new Error(OCR_CLEANUP_UNCONFIRMED);
+    } else if (runtimeWorkingDir) {
+      await rm(runtimeWorkingDir, { recursive: true, force: true });
+    }
     this.runtimeWorkingDirsByRequestId.delete(requestId);
+    this.runtimeOcrStageOwnersByRequestId.delete(requestId);
     this.commandByRequestId.delete(requestId);
     this.runtimeQualityByRequestId.delete(requestId);
     this.sourceVersionLineageByRequestId.delete(requestId);
@@ -3406,22 +3576,52 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       runtimeWorkingDir: string;
       sourceInputs: PrepareTrainingDatasetRequest["sourceInputs"];
       sourceVersionLineage: readonly DatasetVersionSource[];
+      ocrSources?: DatasetPreparationRuntimeOcrSources;
+      ocrOwner?: OcrTaskStageOwner;
     }>
   > {
     if (!isWorkspaceId(context?.workspaceId)) {
       return createFailureResult(createContractError("validation", "Workspace context is required for source staging."), context);
     }
     const workspaceId = createWorkspaceId(context.workspaceId);
-    const runtimeWorkingDir = await mkdtemp(
-      join(tmpdir(), "ai-system-builder-runtime-"),
-    );
+    const ocrEnabled = command.advanced?.content?.ocrEnabled === true;
+    let ocrOwner: OcrTaskStageOwner | undefined;
+    let runtimeWorkingDir: string;
+    if (ocrEnabled) {
+      if (UNCONFIRMED_OCR_STAGES.size) {
+        return createFailureResult(createContractError("unavailable", OCR_STAGE_UNCONFIRMED), context);
+      }
+      ocrOwner = { allocationPrefix: join(tmpdir(), "ai-system-builder-runtime-") };
+      UNCONFIRMED_OCR_STAGES.add(ocrOwner);
+      try {
+        ocrOwner.allocationOperation = mkdtemp(ocrOwner.allocationPrefix);
+        runtimeWorkingDir = await ocrOwner.allocationOperation;
+        ocrOwner.root = runtimeWorkingDir;
+        UNCONFIRMED_OCR_STAGES.delete(ocrOwner);
+      } catch {
+        return createFailureResult(createContractError("unavailable",
+          "Scanned-PDF preparation could not create temporary files safely."), context);
+      }
+    } else {
+      runtimeWorkingDir = await mkdtemp(join(tmpdir(), "ai-system-builder-runtime-"));
+    }
     const sourceInputs: PrepareTrainingDatasetRequest["sourceInputs"] = [];
     const sourceVersionLineage: DatasetVersionSource[] = [];
+    const ocrSources: DatasetPreparationRuntimeOcrSources = {
+      protocol: DATASET_PREPARATION_OCR_PROTOCOL,
+      sources: [],
+    };
     try {
       const failAndCleanup = async (
         error: ReturnType<typeof createContractError>,
       ) => {
-        await rm(runtimeWorkingDir, { recursive: true, force: true });
+        if (ocrOwner) {
+          if (!await retireOcrStage(ocrOwner)) {
+            return createFailureResult(createContractError("unavailable", OCR_CLEANUP_UNCONFIRMED), context);
+          }
+        } else {
+          await rm(runtimeWorkingDir, { recursive: true, force: true });
+        }
         return createFailureResult(error, context);
       };
       for (const [
@@ -3536,6 +3736,19 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             return failAndCleanup(retrieveResult.error);
           }
         }
+        // Own the exact authorized bytes before any further awaited metadata
+        // operation. The storage-returned buffer may be reused by its adapter.
+        let ocrBytes: Buffer | undefined;
+        if (ocrEnabled) {
+          const content = retrieveResult.value.content;
+          if (!(content instanceof Uint8Array) || content.byteLength < 1 ||
+              content.byteLength > DATASET_PREPARATION_OCR_MAX_SOURCE_BYTES) {
+            return failAndCleanup(createContractError(
+              "validation", "Each scanned PDF must contain between 1 byte and 16 MiB.",
+            ));
+          }
+          ocrBytes = Buffer.from(content);
+        }
         const descriptorMediaType = retrieveResult.value.descriptor.mediaType;
         const descriptorMetadata = retrieveResult.value.descriptor.metadata;
         const metadataOriginalName =
@@ -3583,7 +3796,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             ),
           );
         }
-        const mediaType =
+        if (ocrEnabled && sourceReadiness.capability?.format !== "pdf") {
+          return failAndCleanup(createContractError(
+            "validation", "Text recognition requires PDF sources only.",
+          ));
+        }
+        const mediaType = ocrEnabled ? "application/pdf" :
           sourceMediaType ??
           sourceReadiness.capability?.mediaTypes[0] ??
           "application/octet-stream";
@@ -3592,7 +3810,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             sourceArtifactId: artifactId,
             artifactKey: storageKey,
             digest: this.datasetVersionHasher.digest(
-              retrieveResult.value.content as Uint8Array,
+              ocrBytes ?? retrieveResult.value.content as Uint8Array,
             ),
             mediaType,
           });
@@ -3603,10 +3821,28 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           mediaType,
           resolvedOriginalName,
           sourceIndex,
+          ocrEnabled,
         );
+        if (ocrBytes) {
+          let digest: unknown;
+          try {
+            digest = this.sourceIntegrityHasher?.digest(ocrBytes);
+          } catch {
+            // Adapter exceptions may contain private input or local paths.
+          }
+          if (typeof digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(digest)) {
+            return failAndCleanup(createContractError(
+              "unavailable", "The scanned PDF could not be verified safely.",
+            ));
+          }
+          ocrSources.sources.push({
+            artifactId, fileName: basename(localPath), byteLength: ocrBytes.byteLength,
+            sha256: digest.slice(7),
+          });
+        }
         await writeFile(
           localPath,
-          Buffer.from(retrieveResult.value.content as Uint8Array),
+          ocrBytes ?? Buffer.from(retrieveResult.value.content as Uint8Array),
         );
         sourceInputs.push({
           artifactId,
@@ -3622,15 +3858,22 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         });
       }
       return createSuccessResult(
-        { runtimeWorkingDir, sourceInputs, sourceVersionLineage },
+        { runtimeWorkingDir, sourceInputs, sourceVersionLineage,
+          ...(ocrEnabled ? { ocrSources, ocrOwner } : {}) },
         context,
       );
     } catch (error) {
-      await rm(runtimeWorkingDir, { recursive: true, force: true });
+      if (ocrOwner) {
+        if (!await retireOcrStage(ocrOwner)) {
+          return createFailureResult(createContractError("unavailable", OCR_CLEANUP_UNCONFIRMED), context);
+        }
+      } else {
+        await rm(runtimeWorkingDir, { recursive: true, force: true });
+      }
       return createFailureResult(
         createContractError(
           "internal",
-          error instanceof Error
+          ocrEnabled ? "The scanned PDF could not be staged safely." : error instanceof Error
             ? error.message
             : "Failed to stage runtime dataset preparation source inputs.",
         ),

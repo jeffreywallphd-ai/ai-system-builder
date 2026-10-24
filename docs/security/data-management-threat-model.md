@@ -773,3 +773,39 @@ A mapped network drive can have a canonical drive letter and disk-file type.
 The snapshot adapter therefore requires a typed `GetDriveTypeW` result of
 `DRIVE_FIXED` for the explicit anchor before opening files. All other or failed
 queries deny; no current-drive fallback or network-share probe is performed.
+
+## OCR application-to-runtime source identity
+
+Protect source authorization and byte identity against forged caller maps,
+cross-workspace bindings, misleading metadata, adapter buffer reuse and ignored
+options on an old worker. Public runtime/source-map fields deny. The application
+requires strict opt-in/language/method coherence, an independent hasher and the
+exact versioned worker protocol before source I/O. Binding identity remains
+authority; catalog records must match the workspace/key and cannot authorize a
+different source.
+
+Copy final retrieved bytes before further awaited work. Derive the bounded PDF
+map and staged file from that copy; validate `sha256:` plus 64 lowercase hex
+before passing the raw hash to native capture. Both hosts compose the port even
+without version storage. Fixed short ordinal names avoid display-title leakage
+and needless long paths. Invalid, empty, excessive or non-PDF inputs cannot
+dispatch. Hashing, capability-check and task-start exceptions use fixed public
+errors; private paths, source maps and native details cannot enter those errors.
+
+An allocation or recursive removal can fail after partial effects. Register a
+private OCR owner before invoking the operation, retain its exact promise/attempt
+on uncertainty and deny successors across use-case instances. A cleanup attempt
+is terminal; repeat reads cannot retry removal or discard task/stage maps without
+confirmation. A rejected start RPC is not evidence that a worker did not run.
+OCR therefore issues its own fresh task identity and requires an exact request-id
+echo. An ambiguous acknowledgement retains the stage, exact start attempt and
+actual task reservation. Passive reconciliation cannot cancel, retry or retire
+this unknown task. There is no old-tree inspection, adoption, reset or retry interface.
+The ledger is process-local; durable crash and native/task reconciliation remain
+qualification work. Filesystem cleanup alone supplies no worker-retirement pass.
+
+These controls compile identity but do not yet qualify runtime map consumption,
+OCR task cancellation/readiness, both-host UI or full packaging. No protocol is
+advertised yet, no engine is probed on ordinary startup and no model-quality test
+is rerun. Existing native/retained-offload and broader security gaps remain
+separate. Rollback must keep OCR denied, not silently ignore a requested map.

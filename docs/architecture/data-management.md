@@ -785,8 +785,8 @@ remain required before product availability or parent-roadmap closure.
 ## OCR staged-source snapshot boundary
 
 The managed-runtime adapter owns private native PDF capture, not source
-authorization. Its exact stage/artifact/child/length/digest binding must later be
-compiled from the application's authorized retrieved bytes. It reuses the OCR
+authorization. Its exact stage/artifact/child/length/digest binding is compiled
+only from the application's authorized retrieved bytes. It reuses the OCR
 native read lease while keeping the trusted helper-resource factory fixed.
 Pinned non-reparse ancestors and a single-link file deny write/delete and
 ancestor replacement through the bounded capture. Every close must acknowledge
@@ -797,3 +797,34 @@ does not make OCR available or qualify public task, capability or host delivery.
 
 Before file acquisition, the adapter queries the explicit drive anchor and
 requires fixed local media. Drive-letter syntax is not a network-drive guard.
+
+## Application-owned OCR task source map
+
+The application now compiles the internal versioned map from each authorized
+storage retrieval. It copies bytes before later asynchronous catalog work and
+uses that same copy for staging, the independent source-integrity hash and
+optional version lineage. Both hosts inject the source hasher even when version
+storage is absent. Only validated canonical prefixed SHA256 is converted to the
+native reader's raw hash representation.
+
+OCR requires explicit structure-aware/layout/PDF-normalization settings and a
+language. Missing hashing or the exact worker protocol denies before source
+access. Workspace/artifact binding and catalog scope checks remain authoritative;
+caller maps and metadata cannot supply source identity. All selected sources must
+be PDFs of 1 byte through 16 MiB. Generated ordinal names are short and omit
+private display titles. Standard staging keeps its existing behavior.
+
+This map component does not advertise worker support, probe an installed engine,
+consume the map in normalization or enable app OCR. Actual runtime cancellation,
+readiness, line chunking, desktop/browser journeys and full packaging remain
+agent-owned qualification work.
+
+Fresh OCR staging retains a private owner before allocation or removal. Cleanup
+uses one terminal result per owner; rejected or synchronously thrown effects
+retain the owner and prevent admission across use-case instances. Task maps clear
+only after confirmed cleanup. OCR starts use a fresh host-issued identity and
+require the same request identity in the response. Ambiguous or missing start
+acknowledgements preserve files, exact request/promise and real task reservation.
+They cannot be interpreted as proof that no worker ran. This is process-local
+failure containment, not durable crash recovery, worker retirement or an old-tree
+recovery path. Public errors contain no private paths or source-map diagnostics.

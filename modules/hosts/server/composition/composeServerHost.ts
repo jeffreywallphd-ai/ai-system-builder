@@ -2134,6 +2134,7 @@ export function composeServerHost(
         : undefined;
       const prepareTrainingDatasetUseCase =
         new PrepareTrainingDatasetFromArtifactsUseCase({
+          sourceIntegrityHasher: datasetVersionHasher,
           readWorkerCapabilities: () => pythonRuntimeFoundation.runtimePort.getCapabilities(),
           taskReconciler,
           runtimeTaskRegistry,

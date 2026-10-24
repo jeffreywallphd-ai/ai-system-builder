@@ -193,7 +193,7 @@
 - Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin. Resumable files use pre-reservation checksum checks, exclusive writing CAS, durable bytes and one acknowledged origin-issued CAS before conditional metadata and atomic task/snapshot/receipt commit. Recovery verifies existing exact origin without recreating missing/deleted records. Unknown effects stay retained; completed retry is read-only. Native/crash/parent qualification stays separate; see canonical architecture/threat model and artifact-store README.
 - `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
-- `runtime` or `runtime-task-registry` for worker execution/lifecycle.
+- `runtime` or `runtime-task-registry` for worker execution/lifecycle. ADR-0046 requires authorized copied PDFs, a separate SHA256 port in both hosts, explicit language/structure-aware settings and a host-only `staged-pdf-ocr-v1` map; caller maps deny. Protocol support is not reader readiness. App OCR stays unavailable until task/host delivery qualifies.
 - `desktop-implementation` for renderer and thin-client experience.
 - `server-host` for Express/API composition.
 - `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.

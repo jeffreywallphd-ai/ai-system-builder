@@ -312,7 +312,23 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         source_test = "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py"
         source_native = "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py"
         source_capture = "modules/adapters/runtime/python/worker/ocr/source_snapshot.py"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test])
+        staging_tests = [
+            "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case-typecheck.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+        ]
+        ocr_contract_source = "modules/contracts/runtime/dataset-preparation-ocr.ts"
+        ocr_port_source = "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts"
+        ocr_app_test = "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts"
+        host_source = "modules/hosts/server/composition/composeServerHost.ts"
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
@@ -322,7 +338,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         self.assertIn(source_capture, profile["source_paths"])
         self.assertIn(source, profile["source_paths"])
         commands = run_focused_checks.profile_commands(root, name)
-        self.assertEqual(commands, [["node", "--test", "--", hook_test],
+        self.assertEqual(commands, [["node", "--import", "tsx", "--test", "--", hook_test, *sorted(staging_tests)],
                                    [sys.executable, "-B", "-m", "unittest", "discover",
                                     "-s", "dev-tools/scripts/native/tests",
                                     "-p", "test_build_windows_ocr.py"],
@@ -349,6 +365,13 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([source_test], ["documentation"], True, False),
             ([source_native], ["documentation"], True, False),
             ([source_capture], ["documentation"], True, False),
+            ([ocr_contract_source], ["documentation"], True, False),
+            ([ocr_port_source], ["documentation"], True, False),
+            ([ocr_app_test], ["documentation"], True, False),
+            # Shared host/barrel paths are covered only when this bounded OCR
+            # profile is selected. They must not auto-own unrelated host work.
+            ([host_source], ["documentation"], False, True),
+            ([ocr_contract_source, host_source], ["documentation"], True, False),
             ([build_test], ["documentation"], True, False),
             ([hook_test], ["documentation"], True, False),
             ([build_source], ["documentation"], True, False),

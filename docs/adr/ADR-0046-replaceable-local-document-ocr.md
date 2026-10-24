@@ -185,3 +185,27 @@ before acquiring file handles. Drive-letter syntax and `FILE_TYPE_DISK` alone
 do not establish local media. Unknown, remote, removable and failed queries deny.
 See the [Windows drive-type API](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdrivetypew)
 and [file-type API](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfiletype).
+
+## Application source-map composition
+
+Use a separate application-owned integrity-hashing port, always composed in both
+hosts, rather than making OCR depend on optional version finalization. Derive one
+internal `staged-pdf-ocr-v1` entry per selected, authorized PDF from an immediate
+private copy of retrieved bytes. Hash, write and retain optional version lineage
+from the same copy. Validate the port's canonical prefixed SHA256 before mapping
+it to the native raw digest. Generated short ordinal filenames omit display data.
+
+Reject public runtime/source-map fields. Require explicit language, compatible
+structure-aware/layout/PDF settings and exact worker-protocol support before
+source access. Preserve Standard behavior. Protocol support is not provider or
+installed-language readiness. Keep worker advertisement and product OCR
+unavailable until actual task consumption, cancellation and host delivery pass.
+
+Keep a private owner before OCR staging allocation and its one cleanup attempt.
+Unconfirmed effects retain that owner process-wide and deny new OCR across
+use-case instances. Repeat cleanup calls reuse the recorded result. Confirmed
+cleanup can release task/stage maps; unknown effects have no reset or retry.
+Use a fresh host-issued task identity and require its exact request-id echo.
+Ambiguous start effects retain the stage, exact request/promise and real task
+reservation instead of deleting files as a substitute for worker proof. These controls do not
+qualify native/task retirement or durable crash recovery. Standard is unchanged.
