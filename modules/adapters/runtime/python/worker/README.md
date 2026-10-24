@@ -28,6 +28,19 @@ authoritative. No driver install or model work occurs during this read. See
 
 This directory contains the managed Python sidecar worker.
 
+Scanned-PDF preparation uses the host-only `staged-pdf-ocr-v1` source map and an
+explicit installed Windows recognition language. `ocr/task_sources.py` validates
+the complete map before source/model/output access. Normalization captures exact
+bound bytes through native read leases; display titles cannot select another
+parser. Standard extraction loads no OCR supplier or native capture. The Windows
+capability means protocol support, not installed-engine readiness. Actual tasks
+check the reader/language and report only measured provider/page/line facts.
+Running cancellation remains pending until the current operation unwinds; native
+retirement must be confirmed. Existing quality, review and model guards stay active.
+Long-line spans count Unicode code points; token counts remain word estimates,
+with separate actual tokenizer limits in generation. See
+[ADR-0046](../../../../../docs/adr/ADR-0046-replaceable-local-document-ocr.md).
+
 Direct script startup loads `app` and its relative modules from the directory
 that contains `main.py`. It uses one fixed private package and does not add
 ancestor directories to the interpreter search path or require a repository

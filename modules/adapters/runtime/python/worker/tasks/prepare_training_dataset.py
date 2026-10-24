@@ -19,6 +19,8 @@ from ..models import (
     PythonRuntimeOutputDescriptor,
     normalize_dataset_output_base_name,
 )
+from ..ocr.protocol import OcrCancelled, OcrContractError, OcrUnavailable
+from ..ocr.task_sources import OcrTaskSources, task_ocr_sources
 from .document_normalization import normalize_sources_to_markdown
 from .example_generation import (
     GeneratedQaExample,
@@ -47,6 +49,22 @@ from .structured_output_runtime import (
 )
 
 DEFAULT_MAX_CHUNK_COUNT = 10000
+
+
+class DatasetPreparationCancellationRequested(RuntimeError):
+    """Raised only between completed owned operations, never as exit proof."""
+
+
+def _check_preparation_cancelled(cancelled: Callable[[], bool]) -> None:
+    try:
+        value = cancelled()
+        if type(value) is not bool:
+            raise ValueError()
+    except Exception:
+        raise RuntimeError("Dataset preparation could not check cancellation safely.") from None
+    if value:
+        raise DatasetPreparationCancellationRequested("Dataset preparation was cancelled.")
+
 SUPPORTED_RUNTIME_TASK_TYPES = {
     "llm-instruction",
     "llm-classification",
@@ -344,8 +362,10 @@ def _resolve_and_validate_preparation_plan(
     payload: PrepareTrainingDatasetRequest,
     task_type: str,
     task_recipe: dict[str, Any],
+    ocr_sources: OcrTaskSources | None = None,
 ) -> dict[str, object]:
-    source_kinds = sorted({_source_kind(source) for source in payload.sourceInputs})
+    source_kinds = (["document"] if ocr_sources is not None else
+                    sorted({_source_kind(source) for source in payload.sourceInputs}))
     if len(source_kinds) != 1:
         raise DatasetPreparationStageError(
             "normalization",
@@ -367,7 +387,7 @@ def _resolve_and_validate_preparation_plan(
     elif source_kind == "document":
         intent = "create-from-source-material"
         allowed_methods = {"fixed-length", "topic-aware"}
-        if any(_source_extension(source) != ".txt" for source in payload.sourceInputs):
+        if ocr_sources is not None or any(_source_extension(source) != ".txt" for source in payload.sourceInputs):
             allowed_methods.add("structure-aware")
     else:
         intent = "create-from-source-material"
@@ -1768,6 +1788,8 @@ def _build_generated_rows(
     structured_output: RuntimeStructuredOutput | None,
     preparation_plan: dict[str, object],
     on_generation_progress: Callable[[dict[str, Any]], None] | None = None,
+    ocr_sources: OcrTaskSources | None = None,
+    cancelled: Callable[[], bool] = lambda: False,
 ) -> tuple[
     list[dict[str, object]],
     list[DatasetPreparationWarning],
@@ -1777,11 +1799,14 @@ def _build_generated_rows(
     list[dict[str, object]],
     dict[str, object] | None,
 ]:
-    structured_rows, consumed_structured_artifact_ids, structured_warnings, mapping_quarantine = _load_structured_task_rows(
-        payload,
-        task_type,
-        task_recipe,
-    )
+    _check_preparation_cancelled(cancelled)
+    if ocr_sources is None:
+        structured_rows, consumed_structured_artifact_ids, structured_warnings, mapping_quarantine = _load_structured_task_rows(
+            payload, task_type, task_recipe,
+        )
+    else:
+        # A display name must not redirect a bound PDF into CSV/JSON loading.
+        structured_rows, consumed_structured_artifact_ids, structured_warnings, mapping_quarantine = [], set(), [], []
 
     if task_type in IMAGE_MANIFEST_TASK_TYPES:
         if _resolve_text_input_mode(task_type, task_recipe) == "generate":
@@ -1881,12 +1906,19 @@ def _build_generated_rows(
     )
 
     _ensure_generation_model_ready(generation)
+    _check_preparation_cancelled(cancelled)
 
     try:
         normalization = normalize_sources_to_markdown(
             source_inputs_for_generation,
             normalization_config,
+            ocr=ocr_sources,
+            cancelled=cancelled,
         )
+    except OcrCancelled:
+        raise DatasetPreparationCancellationRequested("Dataset preparation was cancelled.") from None
+    except (OcrContractError, OcrUnavailable):
+        raise
     except Exception as error:
         raise DatasetPreparationStageError(
             "normalization",
@@ -1899,6 +1931,7 @@ def _build_generated_rows(
             },
         ) from error
 
+    _check_preparation_cancelled(cancelled)
     try:
         chunks = chunk_markdown_documents(
             normalization.documents,
@@ -1998,11 +2031,13 @@ def _build_generated_rows(
             }
         )
     for start in range(0, len(chunks), batch_size):
+        _check_preparation_cancelled(cancelled)
         chunk_batch = chunks[start : start + batch_size]
         granular_progress_emitted = False
 
         def report_completed_chunk(chunk_progress: dict[str, int]) -> None:
             nonlocal granular_progress_emitted
+            _check_preparation_cancelled(cancelled)
             granular_progress_emitted = True
             completed_count = min(
                 processed_chunk_count + chunk_progress["processedChunkCount"],
@@ -2039,6 +2074,7 @@ def _build_generated_rows(
         try:
             generated_examples: list[GeneratedQaExample] = []
             for candidate_index in range(candidates_per_chunk):
+                _check_preparation_cancelled(cancelled)
                 candidate_examples = (
                     generator(chunk_batch, generation)
                     if generator is not None
@@ -2091,6 +2127,7 @@ def _build_generated_rows(
                         ),
                     )
                 )
+                _check_preparation_cancelled(cancelled)
                 generated_examples.extend(
                     (
                         replace(example, candidate_index=candidate_index)
@@ -2169,6 +2206,8 @@ def _build_generated_rows(
                         "generatedRowCount": generated_row_count,
                     }
                 )
+        except DatasetPreparationCancellationRequested:
+            raise
         except GenerationInsufficientResourcesError as error:
             raise DatasetPreparationStageError(
                 "generation",
@@ -2335,7 +2374,11 @@ def prepare_training_dataset(
     text_value_generator: Callable[[str, object], str] = generate_text_value,
     on_generation_progress: Callable[[dict[str, Any]], None] | None = None,
     output_directory: Path | None = None,
+    cancelled: Callable[[], bool] = lambda: False,
 ) -> PrepareTrainingDatasetResult:
+    # The host map must qualify before planning, source/model reads or output.
+    ocr_sources = task_ocr_sources(payload)
+    _check_preparation_cancelled(cancelled)
     # Revalidate even constructed/mutated models, before task planning, source
     # reads, generation or output effects. A private primitive survives callbacks.
     base_name = normalize_dataset_output_base_name(
@@ -2352,6 +2395,7 @@ def prepare_training_dataset(
         payload,
         task_type,
         task_recipe,
+        ocr_sources,
     )
     validation_ratio = float(payload.split.validationRatio or 0)
     try:
@@ -2389,6 +2433,8 @@ def prepare_training_dataset(
         structured_output,
         preparation_plan,
         on_generation_progress,
+        ocr_sources,
+        cancelled,
     )
     if (
         payload.advanced is not None
@@ -2523,6 +2569,7 @@ def prepare_training_dataset(
     if advanced_report is not None:
         output_metadata["advancedPreparation"] = advanced_report
 
+    _check_preparation_cancelled(cancelled)
     outputs: list[PythonRuntimeOutputDescriptor] = []
     if partitioned_rows:
         outputs.append(_emit_rows(
@@ -2535,6 +2582,7 @@ def prepare_training_dataset(
             output_directory,
         ))
     for role in ("train", "validation", "test"):
+        _check_preparation_cancelled(cancelled)
         role_rows = split_rows[role]
         if not role_rows:
             continue
@@ -2553,6 +2601,7 @@ def prepare_training_dataset(
                 output_directory,
             )
         )
+    _check_preparation_cancelled(cancelled)
     if quality_report is not None:
         if rows:
             outputs.append(
@@ -2616,6 +2665,7 @@ def prepare_training_dataset(
         quarantinedRowCount=len(quarantine_records),
     )
 
+    _check_preparation_cancelled(cancelled)
     return PrepareTrainingDatasetResult(
         outputs=outputs,
         summary=summary,

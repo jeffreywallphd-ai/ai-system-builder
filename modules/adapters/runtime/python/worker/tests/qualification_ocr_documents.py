@@ -88,6 +88,12 @@ class WindowsOcrDocuments(unittest.TestCase):
                                      "windows_api.py", "windows_process.py", "native/WindowsOcrHelper.cs")],
             ROOT / "modules/adapters/runtime/python/worker/tasks/document_normalization.py",
             ROOT / "modules/adapters/runtime/python/worker/models.py",
+            *[ROOT / "modules/adapters/runtime/python/worker" / name for name in (
+                "ocr/source_snapshot.py", "ocr/task_sources.py", "tasks/prepare_training_dataset.py",
+                "tasks/markdown_chunking.py", "tasks/advanced_capabilities.py",
+                "tests/test_prepare_training_dataset_ocr.py", "tests/test_ocr_task_sources.py",
+                "tests/test_document_normalization_ocr.py", "tests/test_dataset_quality.py",
+                "tests/structured_output_test_fixtures.py")],
             Path(__file__).absolute(),
             ROOT / "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"]}
         cls.product_resource = product_resource_identity()
@@ -211,8 +217,13 @@ class WindowsOcrDocuments(unittest.TestCase):
             DatasetPreparationSourceInput, DocumentNormalizationConfig,
         )
         from modules.adapters.runtime.python.worker.tasks.document_normalization import normalize_sources_to_markdown
+        from modules.adapters.runtime.python.worker.ocr.source_snapshot import OcrSourceBinding
+        from modules.adapters.runtime.python.worker.ocr.task_sources import OcrTaskSources
 
-        source = self.folder / "normalized-source.pdf"
+        stage = self.folder / ("ai-system-builder-runtime-" + uuid.uuid4().hex[:8])
+        need(not stage.exists() and not stage.is_symlink(), "fresh-ocr-stage-required")
+        directory(stage, create=True)
+        source = stage / "0001-source.pdf"
         with source.open("xb") as stream:
             stream.write(self.inputs["pdf"])
         # This case exercises the actual installed resource path, not the
@@ -224,7 +235,8 @@ class WindowsOcrDocuments(unittest.TestCase):
                 [DatasetPreparationSourceInput(artifactId="synthetic-scan", localPath=str(source),
                                                originalName="synthetic.pdf", mediaType="application/pdf")],
                 DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="skip"),
-                ocr_language="en-US")
+                ocr=OcrTaskSources("en-US", str(stage), (OcrSourceBinding(str(stage), source.name,
+                    "synthetic-scan", len(self.inputs["pdf"]), hashlib.sha256(self.inputs["pdf"]).hexdigest()),)))
         finally:
             self.resource_patch.start()
         self.assertEqual(result.skipped_document_count, 0)
@@ -247,6 +259,96 @@ class WindowsOcrDocuments(unittest.TestCase):
         self.assertTrue(all(label not in repr(document) for label in LABELS))
         self.assertEqual(len(self.journals), 5)
         self.assertTrue(all(journal["passed"] for journal in self.journals))
+
+    def task_input(self):
+        from modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_ocr import payload
+        from modules.adapters.runtime.python.worker.models import DatasetPreparationSourceInput
+        value = payload()
+        stage = self.folder / ("ai-system-builder-runtime-" + uuid.uuid4().hex[:8])
+        need(not stage.exists() and not stage.is_symlink(), "fresh-ocr-stage-required")
+        directory(stage, create=True)
+        source = stage / "0001-source.pdf"
+        with source.open("xb") as stream: stream.write(self.inputs["pdf"])
+        value.sourceInputs = [DatasetPreparationSourceInput(artifactId="synthetic-scan", localPath=str(source),
+                                                           originalName="display.csv", mediaType=None)]
+        value.runtime["runtimeWorkingDirectory"] = str(stage)
+        value.runtime["ocrSources"]["sources"] = [{"artifactId": "synthetic-scan", "fileName": source.name,
+            "byteLength": len(self.inputs["pdf"]), "sha256": hashlib.sha256(self.inputs["pdf"]).hexdigest()}]
+        return value, stage
+
+    def test_09_fixed_product_reader_flows_through_task_and_review_outputs(self):
+        import importlib
+        from modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_ocr import generate
+        task = importlib.import_module("modules.adapters.runtime.python.worker.tasks.prepare_training_dataset")
+        value, stage = self.task_input()
+        self.resource_patch.stop()
+        try:
+            with patch.object(task, "ensure_generation_model_is_available"):
+                result = task.prepare_training_dataset(value, example_generator=generate, output_directory=stage)
+        finally:
+            self.resource_patch.start()
+        facts = result.advancedReport["content"]["ocr"]
+        self.assertEqual((facts["provider"], facts["version"], facts["language"], facts["documentCount"], facts["pageCount"]),
+                         ("windows", "1", "en-US", 1, 5))
+        self.assertGreaterEqual(facts["lineCount"], 5)
+        self.assertGreater(result.summary.datasetRowCount, 0)
+        reviewed = 0
+        for output in result.outputs:
+            if output.role != "review": continue
+            rows = [json.loads(line) for line in Path(output.tempPath).read_text(encoding="utf-8").splitlines()]
+            for row in rows:
+                lineage = row["sourceLineage"]
+                self.assertEqual((lineage["regionKind"], lineage["sourceArtifactId"]), ("line", "synthetic-scan"))
+                self.assertIn(lineage["pageNumber"], (1, 2, 3, 4, 5))
+                self.assertGreater(lineage["normalizedEnd"], lineage["normalizedStart"])
+                reviewed += 1
+        self.assertEqual(reviewed, result.summary.datasetRowCount)
+        self.assertEqual(len(self.journals), 5)
+        save(self.folder / "task-result.json", {"schema_version": "native-ocr-task-observation-v1",
+            "actual_reader": facts, "reviewed_rows": reviewed, "models_used": False,
+            "generator": "synthetic-grounded-contract-fixture", "model_quality_claim": False,
+            "parent_qualification": False})
+
+    def test_10_task_cancel_during_native_recognition_waits_for_retirement(self):
+        import importlib
+        from modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_ocr import generate
+        task = importlib.import_module("modules.adapters.runtime.python.worker.tasks.prepare_training_dataset")
+        value, stage = self.task_input()
+        calls = []
+        def during():
+            if len(self.journals) == 2:
+                calls.append(True)
+                return len(calls) > 1
+            return False
+        self.resource_patch.stop()
+        try:
+            with patch.object(task, "ensure_generation_model_is_available"), self.assertRaises(task.DatasetPreparationCancellationRequested):
+                task.prepare_training_dataset(value, example_generator=generate, output_directory=stage, cancelled=during)
+        finally:
+            self.resource_patch.start()
+        self.assertEqual({file.name for file in stage.iterdir()}, {"0001-source.pdf"})
+        journal = self.journals[-1]
+        self.assertEqual(journal["reason"], "cancelled")
+        self.assertTrue(journal["resumed_after_membership"])
+        self.assertTrue(journal["cleanup_confirmed"])
+        self.assertTrue(journal["all_handles_closed"])
+        self.assertEqual(journal["accounting"]["active"], 0)
+
+    def test_11_task_unavailable_language_does_not_fallback_or_emit_output(self):
+        import importlib
+        from modules.adapters.runtime.python.worker.ocr.protocol import OcrUnavailable
+        from modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_ocr import generate
+        task = importlib.import_module("modules.adapters.runtime.python.worker.tasks.prepare_training_dataset")
+        value, stage = self.task_input()
+        value.advanced.content.ocrLanguage = "zz-ZZ"
+        self.resource_patch.stop()
+        try:
+            with patch.object(task, "ensure_generation_model_is_available"), self.assertRaises(OcrUnavailable):
+                task.prepare_training_dataset(value, example_generator=generate, output_directory=stage)
+        finally:
+            self.resource_patch.start()
+        self.assertEqual({file.name for file in stage.iterdir()}, {"0001-source.pdf"})
+        self.assertEqual(len(self.journals), 1)
 
 
 if __name__ == "__main__":

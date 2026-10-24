@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator
 
 
 class PythonRuntimeError(BaseModel):
@@ -315,8 +315,10 @@ class AdvancedContentProcessingConfig(BaseModel):
     maxTokensPerChunk: int | None = Field(default=None, ge=32, le=4096)
     maxSourceSpans: int | None = Field(default=None, ge=1, le=100_000)
     semanticBoundaryThreshold: float | None = Field(default=None, ge=0.0, le=1.0)
-    layoutEnabled: bool | None = None
-    ocrEnabled: bool | None = None
+    layoutEnabled: StrictBool | None = None
+    ocrEnabled: StrictBool | None = None
+    ocrLanguage: str | None = Field(default=None, strict=True, max_length=35,
+                                   pattern=r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$")
 
 
 class AdvancedSemanticCurationConfig(BaseModel):

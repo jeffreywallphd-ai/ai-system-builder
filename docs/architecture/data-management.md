@@ -814,10 +814,9 @@ caller maps and metadata cannot supply source identity. All selected sources mus
 be PDFs of 1 byte through 16 MiB. Generated ordinal names are short and omit
 private display titles. Standard staging keeps its existing behavior.
 
-This map component does not advertise worker support, probe an installed engine,
-consume the map in normalization or enable app OCR. Actual runtime cancellation,
-readiness, line chunking, desktop/browser journeys and full packaging remain
-agent-owned qualification work.
+The map grants no reader readiness. The managed preparation task consumes it as
+described below. App controls, desktop/browser journeys and full packaging remain
+agent-owned implementation and qualification work.
 
 Fresh OCR staging retains a private owner before allocation or removal. Cleanup
 uses one terminal result per owner; rejected or synchronously thrown effects
@@ -828,3 +827,26 @@ acknowledgements preserve files, exact request/promise and real task reservation
 They cannot be interpreted as proof that no worker ran. This is process-local
 failure containment, not durable crash recovery, worker retirement or an old-tree
 recovery path. Public errors contain no private paths or source-map diagnostics.
+
+## Managed scanned-PDF preparation
+
+`ocr/task_sources.py` validates the complete ordered host map before any task file
+or model access. The API validates it before resolving the output directory, and
+direct preparation validates it again. Strict OCR/layout booleans reject coerced
+strings and numbers. Bindings select PDF capture independently of display names;
+the structured-source loader and metadata-only OCR read path cannot run here.
+Native capture checks the exact bytes and closes its read leases before recognition.
+
+The Windows capability identifies protocol support, without an engine probe on
+ordinary startup. Every recognition checks the installed reader and exact chosen
+language. Successful reports contain actual supplier/version/language and complete
+document, page and line counts. The extraction score describes text hygiene; it
+does not estimate OCR accuracy or supply a confidence value.
+
+Long lines split within character and word-estimate limits while retaining exact
+Unicode code-point offsets and original page identity. Actual model tokenization
+keeps its existing input bound. Quality, critic, diversity and review checks remain
+active. Cancellation is cooperative between completed operations, and the worker
+keeps the task running until those operations unwind. A failed native retirement
+does not count as cancellation. Synthetic generation fixtures test task plumbing;
+they grant no model-quality, app UI, packaging or parent-roadmap pass.

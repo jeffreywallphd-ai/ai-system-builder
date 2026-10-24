@@ -209,3 +209,27 @@ Use a fresh host-issued task identity and require its exact request-id echo.
 Ambiguous start effects retain the stage, exact request/promise and real task
 reservation instead of deleting files as a substitute for worker proof. These controls do not
 qualify native/task retirement or durable crash recovery. Standard is unchanged.
+
+## Managed preparation task
+
+Validate the complete host-issued map before output-root resolution in the worker
+API and before planning or source/model access in direct task execution. Use strict
+raw booleans and an explicit language. Revalidate immutable ordered bindings at
+normalization and pass them to native capture. Remove the metadata-only OCR reader.
+An original display name cannot select structured loading or Standard extraction.
+Missing MIME metadata is allowed for a bound ordinal PDF; declared non-PDF media
+denies. The fixed native helper always decodes this path as PDF.
+
+Windows workers advertise protocol support without probing an engine or language.
+Each actual recognition checks the installed supplier and exact language anew.
+Only completed recognition supplies ready status and aggregate provider, language,
+page and line facts. Text hygiene scores are not OCR confidence or accuracy.
+
+Split long recognized lines within the existing word-based token estimate and
+character bound. Keep exact Unicode code-point spans, original page numbers and
+line identity; do not invent finer geometry. The generation adapter retains its
+separate actual tokenizer/input limits. Cancellation checks run between completed
+source, native recognition, generation and output operations. Running cancellation
+remains a request until execution unwinds; uncertain native retirement is a failure,
+not a successful cancellation. Keep app controls, both-host journeys, full delivery,
+unknown-start reconciliation and durable recovery separate from local task proof.

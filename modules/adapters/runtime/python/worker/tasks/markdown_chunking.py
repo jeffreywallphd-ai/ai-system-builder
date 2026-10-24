@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import re
 
 from ..models import AdvancedContentProcessingConfig, MarkdownChunkingConfig
+from ..ocr.protocol import OcrDocument
 from .document_normalization import NormalizedDocument, NormalizedRegion
 
 
@@ -186,12 +187,37 @@ def _advanced_spans(
     document: NormalizedDocument,
     advanced: AdvancedContentProcessingConfig,
 ) -> list[tuple[int, int, str, int | None]]:
-    if advanced.ocrEnabled:
-        raise RuntimeError(
-            "OCR text recognition is unavailable. Use a text-based source or add reviewed text before preparation."
-        )
     max_tokens = int(advanced.maxTokensPerChunk or 320)
     max_characters = max(256, max_tokens * 8)
+    if advanced.ocrEnabled:
+        if (advanced.strategy != "layout" or advanced.layoutEnabled is not True or
+                type(document.ocr_document) is not OcrDocument or
+                document.ocr_document.language != advanced.ocrLanguage):
+            raise RuntimeError("Verified scanned-PDF text is required for this preparation method.")
+        OcrDocument.__post_init__(document.ocr_document)
+        lines = [(page.number, line) for page in document.ocr_document.pages for line in page.lines]
+        regions = document.regions or []
+        if len(lines) != len(regions):
+            raise ValueError("Scanned-PDF line positions could not be verified.")
+        spans: list[tuple[int, int, str, int | None]] = []
+        for (page, line), region in zip(lines, regions, strict=True):
+            if (region.kind != "line" or region.page_number != page or
+                    not 0 <= region.start < region.end <= len(document.markdown) or
+                    document.markdown[region.start:region.end] != line.text):
+                raise ValueError("Scanned-PDF line positions could not be verified.")
+            cursor = region.start
+            while cursor < region.end:
+                end = min(cursor + max_characters, region.end)
+                # Match the existing word-based token estimate. The generation
+                # adapter separately enforces its actual tokenizer/input limit.
+                tokens = list(_TOKEN_PATTERN.finditer(document.markdown, cursor, end))
+                if len(tokens) > max_tokens:
+                    end = tokens[max_tokens].start()
+                start, bounded_end = _trimmed_span(document.markdown, cursor, end)
+                if start < bounded_end:
+                    spans.append((start, bounded_end, "line", page))
+                cursor = end
+        return spans
     strategy = advanced.strategy
     if strategy == "token":
         return _token_spans(document.markdown, max_tokens)

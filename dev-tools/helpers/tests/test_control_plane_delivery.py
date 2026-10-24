@@ -325,10 +325,13 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
         ]
         ocr_contract_source = "modules/contracts/runtime/dataset-preparation-ocr.ts"
+        task_tests = ["modules/adapters/runtime/python/worker/tests/" + name for name in [
+            "test_ocr_task_sources.py", "test_markdown_chunking.py", "test_prepare_training_dataset_ocr.py",
+            "test_worker_app.py", "test_prepare_training_dataset_task.py", "test_advanced_dataset_preparation.py"]]
         ocr_port_source = "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts"
         ocr_app_test = "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts"
         host_source = "modules/hosts/server/composition/composeServerHost.ts"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests])
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests, *task_tests])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
@@ -344,9 +347,10 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                                     "-p", "test_build_windows_ocr.py"],
                                    *[[sys.executable, "-B", "-m", "unittest", "discover",
                                       "-s", "modules/adapters/runtime/python/worker/tests", "-p", name]
-                                     for name in ["test_document_normalization.py", "test_document_normalization_ocr.py",
+                                     for name in sorted(["test_document_normalization.py", "test_document_normalization_ocr.py",
                                                   "test_ocr_process.py", "test_ocr_protocol.py", "test_ocr_provider.py",
-                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_source_snapshot.py", "test_ocr_wire.py"]]])
+                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_source_snapshot.py", "test_ocr_wire.py",
+                                                  *[Path(path).name for path in task_tests]])]])
         config = "dev-tools/config/contributor-check-profiles.json"
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
         for paths, required, expected_ocr, expected_generic in [
@@ -368,6 +372,9 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([ocr_contract_source], ["documentation"], True, False),
             ([ocr_port_source], ["documentation"], True, False),
             ([ocr_app_test], ["documentation"], True, False),
+            (["modules/adapters/runtime/python/worker/ocr/task_sources.py"], ["documentation"], True, False),
+            ([task_tests[0]], ["documentation"], True, False),
+            ([task_tests[2]], ["documentation"], True, False),
             # Shared host/barrel paths are covered only when this bounded OCR
             # profile is selected. They must not auto-own unrelated host work.
             ([host_source], ["documentation"], False, True),

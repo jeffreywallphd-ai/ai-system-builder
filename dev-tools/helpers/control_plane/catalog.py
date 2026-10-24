@@ -25,7 +25,10 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/contracts/runtime/dataset-preparation-ocr.ts",
         "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
         "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts",
-        "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts"],
+        "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
+        "modules/adapters/runtime/python/worker/ocr/task_sources.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_task_sources.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py"],
 }
 
 

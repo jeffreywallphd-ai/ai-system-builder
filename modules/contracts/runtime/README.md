@@ -25,8 +25,11 @@ root. The application accepts no public `runtime` or `ocrSources` command field.
 It validates the source port's canonical `sha256:` digest before extracting the
 raw hash. Explicit `ocrLanguage` is valid only with enabled, structure-aware PDF
 normalization and layout. Language syntax and protocol support do not establish
-installed-engine readiness. Worker advertisement and app OCR stay unavailable
-until the remaining task and delivery checks pass.
+installed-engine readiness. Windows workers advertise protocol support without an
+engine probe; actual tasks check the installed reader/language. App controls and
+whole-host delivery qualification remain separate. OCR source spans include line
+identity and Unicode code-point offsets. A completed report can include aggregate
+reader, language, document, page and line facts; these are not accuracy scores.
 
 The contract family is intentionally thin and adapter-oriented:
 

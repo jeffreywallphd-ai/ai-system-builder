@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass, field
-import os
 from pathlib import Path
 import re
-import stat
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 from zipfile import BadZipFile, ZipFile
 
 from ..ocr.protocol import (
-    MAX_SOURCE_BYTES, OcrCancelled, OcrContractError, OcrDocument,
-    validate_language,
+    OcrCancelled, OcrContractError, OcrDocument,
 )
+
+if TYPE_CHECKING:
+    from ..ocr.task_sources import OcrTaskSources
 from ..models import (
     DatasetPreparationSourceInput,
     DatasetPreparationWarning,
@@ -202,51 +202,14 @@ def _check_cancelled(cancelled: Callable[[], bool]) -> None:
         raise OcrCancelled("Text recognition was cancelled.")
 
 
-def _read_ocr_pdf(path: Path, cancelled: Callable[[], bool]) -> bytes:
-    """Capture bounded bytes from an upstream-authorized staged source.
-
-    This does not replace application source authorization or native path-race
-    qualification. Compare file metadata to refuse observed read-time changes.
-    """
-    _check_cancelled(cancelled)
-    try:
-        initial = path.lstat()
-        if (not stat.S_ISREG(initial.st_mode) or path.is_symlink() or
-                getattr(initial, "st_file_attributes", 0) & 0x400 or
-                not 0 < initial.st_size <= MAX_SOURCE_BYTES):
-            raise ValueError()
-        with path.open("rb") as stream:
-            before = os.fstat(stream.fileno())
-            if (not stat.S_ISREG(before.st_mode) or
-                    getattr(before, "st_file_attributes", 0) & 0x400 or
-                    not 0 < before.st_size <= MAX_SOURCE_BYTES):
-                raise ValueError()
-            source = stream.read(MAX_SOURCE_BYTES + 1)
-            after = os.fstat(stream.fileno())
-        # Windows stat/lstat can report creation time in st_ctime while fstat
-        # reports change time. Compare compatible path/handle fields, then
-        # compare change time only between the same open-handle API readings.
-        identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
-                                  info.st_mtime_ns, getattr(info, "st_birthtime_ns", None))
-        if (identity(initial) != identity(before) or identity(before) != identity(after) or
-                before.st_ctime_ns != after.st_ctime_ns or
-                type(source) is not bytes or len(source) != before.st_size or
-                not 0 < len(source) <= MAX_SOURCE_BYTES):
-            raise ValueError()
-    except Exception:
-        raise OcrContractError("The scanned PDF could not be read safely with text recognition.") from None
-    _check_cancelled(cancelled)
-    return source
-
-
-def _normalize_scanned_pdf(path: Path, language: str,
+def _normalize_scanned_pdf(source: bytes, language: str,
                            cancelled: Callable[[], bool]) -> _NormalizedContent:
+    _check_cancelled(cancelled)
     # Windows/process composition is loaded only for explicit PDF OCR. Standard
     # normalization and module import never probe or construct a supplier.
     from ..ocr.provider import local_provider
     from ..ocr.recognition import recognize_pdf_document
 
-    source = _read_ocr_pdf(path, cancelled)
     result = recognize_pdf_document(source, language, local_provider(), cancelled)
     parts: list[str] = []
     regions: list[NormalizedRegion] = []
@@ -339,27 +302,39 @@ def normalize_sources_to_markdown(
     source_inputs: list[DatasetPreparationSourceInput],
     config: DocumentNormalizationConfig,
     *,
-    ocr_language: str | None = None,
+    ocr: OcrTaskSources | None = None,
     cancelled: Callable[[], bool] = lambda: False,
 ) -> DocumentNormalizationResult:
     if config.targetFormat != "markdown":
         raise ValueError(f"Unsupported normalization target format: {config.targetFormat}")
     if not callable(cancelled):
         raise OcrContractError("Document preparation could not check cancellation safely.")
-    if ocr_language is not None:
-        validate_language(ocr_language)
+    if ocr is not None:
+        from ..ocr.task_sources import OcrTaskSources
+        if type(ocr) is not OcrTaskSources:
+            raise OcrContractError("Scanned-PDF source identities could not be verified.")
+        ocr.assert_inputs(source_inputs)  # Validate every pair before the first read.
 
     policy = config.unsupportedDocumentPolicy or "fail"
     warnings: list[DatasetPreparationWarning] = []
     normalized: list[NormalizedDocument] = []
     skipped = 0
 
-    for source in source_inputs:
+    for source_index, source in enumerate(source_inputs):
         _check_cancelled(cancelled)
-        if ocr_language is not None and _extension_for_source(source) == ".pdf":
+        if ocr is not None:
             # OCR admission, I/O, integrity, cancellation and supplier failures
             # are never eligible for the unsupported-document skip policy.
-            content = _normalize_scanned_pdf(Path(source.localPath), ocr_language, cancelled)
+            from ..ocr.source_snapshot import capture_source
+            try:
+                captured = capture_source(ocr.bindings[source_index], stage_root=ocr.stage_root,
+                                          local_path=source.localPath, artifact_id=source.artifactId,
+                                          cancelled=cancelled)
+            except OcrCancelled:
+                raise OcrCancelled("Text recognition was cancelled.") from None
+            except Exception:
+                raise OcrContractError("The staged PDF could not be verified for text recognition.") from None
+            content = _normalize_scanned_pdf(captured, ocr.language, cancelled)
         else:
             try:
                 content = _normalize_source_to_markdown(source)

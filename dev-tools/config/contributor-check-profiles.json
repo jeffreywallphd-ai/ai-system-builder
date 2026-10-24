@@ -1123,7 +1123,13 @@
         "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case-typecheck.unit.test.ts",
         "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
         "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
-        "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts"
+        "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_task_sources.py",
+        "modules/adapters/runtime/python/worker/tests/test_markdown_chunking.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py",
+        "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
+        "modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1189,7 +1195,19 @@
         "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
         "modules/application/use-cases/README.md",
         "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts",
-        "modules/hosts/server/composition/composeServerHost.ts"
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_task_sources.py",
+        "modules/adapters/runtime/python/worker/tests/test_markdown_chunking.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py",
+        "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
+        "modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py",
+        "modules/adapters/runtime/python/worker/ocr/task_sources.py",
+        "modules/adapters/runtime/python/worker/models.py",
+        "modules/adapters/runtime/python/worker/app.py",
+        "modules/adapters/runtime/python/worker/tasks/markdown_chunking.py",
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "modules/adapters/runtime/python/worker/tasks/advanced_capabilities.py"
       ]
     }
   }

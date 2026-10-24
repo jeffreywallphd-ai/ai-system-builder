@@ -804,8 +804,31 @@ this unknown task. There is no old-tree inspection, adoption, reset or retry int
 The ledger is process-local; durable crash and native/task reconciliation remain
 qualification work. Filesystem cleanup alone supplies no worker-retirement pass.
 
-These controls compile identity but do not yet qualify runtime map consumption,
-OCR task cancellation/readiness, both-host UI or full packaging. No protocol is
-advertised yet, no engine is probed on ordinary startup and no model-quality test
-is rerun. Existing native/retained-offload and broader security gaps remain
-separate. Rollback must keep OCR denied, not silently ignore a requested map.
+These source-map controls do not qualify both-host UI or full packaging. The
+managed task now consumes the map as described below. No engine is probed on
+ordinary startup and no model-quality test is rerun. Existing retained-offload,
+unknown-start recovery and broader security gaps remain separate. Rollback must
+keep OCR denied, not silently ignore a requested map.
+
+## OCR managed task consumption
+
+Reject malformed or inactive maps, unbounded or reordered sources, mismatched
+identities/paths and incompatible method/language settings before task I/O. Validate
+raw OCR/layout booleans strictly. Repeat map admission before API output-root
+resolution and direct preparation. Immutable bindings select native PDF capture;
+display names cannot redirect into CSV/JSON loading or a Standard/skip fallback.
+Absent MIME does not replace the host identity; explicit incompatible MIME denies.
+
+Use the qualified native capture and fixed PDF decoder. Native read/recognition
+retirement guards remain authoritative. Propagate unavailable language/reader and
+capture failures without partial success. Public errors contain fixed useful
+actions, no raw supplier errors, source paths or map payloads. Reports mark OCR
+ready only after actual complete recognition and contain aggregate facts, not text,
+source hashes, paths, invented confidence or inferred accuracy.
+
+Cooperative preparation cancellation checks run between completed operations.
+The asynchronous API returns running/requested until execution unwinds. Unknown
+native retirement overrides cancellation rather than supplying an exit pass.
+Preserve Standard behavior and all existing generation, quality, review and memory
+controls. Local task fixtures, even with actual OCR, do not qualify model accuracy,
+whole-host UI, package delivery, unknown-start recovery or durable crash recovery.

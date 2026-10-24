@@ -86,9 +86,10 @@ export interface DatasetPreparationAdvancedConfig {
 
 export interface DatasetPreparationSourceSpanLineage {
   sourceArtifactId: string;
+  /** Offsets count Unicode code points in normalized text, not UTF-16 units. */
   normalizedStart: number;
   normalizedEnd: number;
-  regionKind: "text" | "heading" | "paragraph" | "table" | "page";
+  regionKind: "text" | "heading" | "paragraph" | "table" | "page" | "line";
   pageNumber?: number;
 }
 
@@ -102,6 +103,15 @@ export interface DatasetPreparationAdvancedReport {
     sourceSpanCount: number;
     lowConfidenceSourceCount: number;
     meanExtractionQuality: number;
+    /** Present only after every requested PDF has actually been recognized. */
+    ocr?: {
+      provider: string;
+      version: string;
+      language: string;
+      documentCount: number;
+      pageCount: number;
+      lineCount: number;
+    };
   };
   semantic?: {
     embeddingAlgorithm: "hashed-token-v1";

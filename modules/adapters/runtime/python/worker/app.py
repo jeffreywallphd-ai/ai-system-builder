@@ -61,7 +61,9 @@ from .tasks.context_artifact_operation import (
     ContextArtifactOperationCancellationRequested,
     operate_on_context_artifact,
 )
-from .tasks.prepare_training_dataset import prepare_training_dataset
+from .tasks.prepare_training_dataset import DatasetPreparationCancellationRequested, prepare_training_dataset
+from .ocr.protocol import OcrContractError, OcrUnavailable
+from .ocr.task_sources import CAPABILITY as OCR_TASK_CAPABILITY, task_ocr_sources
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
 
@@ -76,6 +78,10 @@ _TASK_ERROR_STAGES = {"normalization", "chunking", "generation", "split"}
 
 
 def _safe_task_error_code(error: Exception) -> str:
+    if isinstance(error, OcrUnavailable):
+        return "ocr_unavailable"
+    if isinstance(error, OcrContractError):
+        return "ocr_input_invalid"
     candidate = getattr(error, "error_code", None)
     return (
         candidate
@@ -85,6 +91,8 @@ def _safe_task_error_code(error: Exception) -> str:
 
 
 def _safe_task_error_stage(error: Exception) -> str | None:
+    if isinstance(error, (OcrUnavailable, OcrContractError)):
+        return "normalization"
     candidate = getattr(error, "stage", None)
     return candidate if candidate in _TASK_ERROR_STAGES else None
 
@@ -112,6 +120,10 @@ def _safe_task_error_details(error: Exception) -> dict:
 
 
 def _safe_task_error_message(error: Exception) -> str:
+    if isinstance(error, OcrUnavailable):
+        return "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition."
+    if isinstance(error, OcrContractError):
+        return "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language."
     if getattr(error, "error_code", None) == "model_download_invalid_snapshot":
         return "Downloaded files did not form a complete model. Retry to resume and verify the saved files."
     if getattr(error, "error_code", None) == "model_download_interrupted":
@@ -309,6 +321,12 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
 
     if request.taskType == "prepare-training-dataset":
         payload = PrepareTrainingDatasetRequest.model_validate(request.payload)
+        # Validate the complete source map before resolving even the output root.
+        task_ocr_sources(payload)
+
+        def preparation_cancelled() -> bool:
+            with TASK_REGISTRY_LOCK:
+                return TASK_REGISTRY.get(request.requestId, {}).get("cancellationRequested") is True
 
         def on_generation_progress(progress: dict[str, Any]) -> None:
             processed = progress.get("processedChunkCount") or 0
@@ -364,6 +382,7 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
             payload,
             on_generation_progress=on_generation_progress,
             output_directory=_runtime_output_directory(payload),
+            cancelled=preparation_cancelled,
         ).model_dump(mode="json")
 
     if request.taskType == "generate-context-artifact":
@@ -608,6 +627,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                     completedAt=_now_iso(),
                 )
         except (
+            DatasetPreparationCancellationRequested,
             TrainingCancellationRequested,
             ContextGenerationCancellationRequested,
             ContextArtifactOperationCancellationRequested,
@@ -690,6 +710,9 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         supported.append("dataset-preparation.constrained-json")
     if offload_runtime_available():
         supported.append("dataset-preparation.offload-v1")
+    if platform.system() == "Windows":
+        # Protocol support only; no engine/process/language probe at startup.
+        supported.append(OCR_TASK_CAPABILITY)
     return PythonRuntimeCapabilitiesResult(
         runtimeId=RUNTIME_ID, capabilities=supported,
         totalAcceleratorMemoryBytes=read_local_accelerator_memory_bytes() if decoder_available else None,
@@ -727,6 +750,7 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
             "train-model",
             "generate-context-artifact",
             "context-artifact-operation",
+            "prepare-training-dataset",
         }:
             with TASK_REGISTRY_LOCK:
                 current = TASK_REGISTRY.get(request_id)
@@ -735,6 +759,9 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
                     current["progress"] = {
                         "stage": "cancelling",
                         "message": (
+                            "Stopping dataset preparation after the current bounded operation."
+                            if record.get("taskType") == "prepare-training-dataset"
+                            else
                             "Stopping context generation after the current chunk."
                             if record.get("taskType") == "generate-context-artifact"
                             else "Stopping context retrieval."
@@ -744,6 +771,9 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
                     }
                     current["updatedAt"] = _now_iso()
             message = (
+                "Dataset preparation cancellation requested."
+                if record.get("taskType") == "prepare-training-dataset"
+                else
                 "Context generation cancellation requested."
                 if record.get("taskType") == "generate-context-artifact"
                 else "Context retrieval cancellation requested."

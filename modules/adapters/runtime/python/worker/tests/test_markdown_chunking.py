@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from modules.adapters.runtime.python.worker.models import AdvancedContentProcessingConfig, MarkdownChunkingConfig
 from modules.adapters.runtime.python.worker.tasks.document_normalization import NormalizedDocument, NormalizedRegion
 from modules.adapters.runtime.python.worker.tasks.markdown_chunking import chunk_markdown_documents
+from modules.adapters.runtime.python.worker.ocr.protocol import OcrDocument, OcrLine, OcrPage
 
 
 class MarkdownChunkingTests(unittest.TestCase):
@@ -104,7 +106,7 @@ class MarkdownChunkingTests(unittest.TestCase):
                     self.assertLessEqual(chunk.normalized_end, len(text))
                     self.assertEqual(chunk.extraction_quality, 0.95)
 
-    def test_advanced_processing_rejects_ocr_and_unbounded_spans(self) -> None:
+    def test_advanced_processing_rejects_unverified_ocr_and_unbounded_spans(self) -> None:
         document = NormalizedDocument(
             "a1",
             " ".join(
@@ -120,7 +122,7 @@ class MarkdownChunkingTests(unittest.TestCase):
             chunkOverlap=0,
             preserveDocumentBoundaries=True,
         )
-        with self.assertRaisesRegex(RuntimeError, "OCR text recognition is unavailable"):
+        with self.assertRaisesRegex(RuntimeError, "Verified scanned-PDF text is required"):
             chunk_markdown_documents(
                 [document],
                 baseline,
@@ -168,6 +170,43 @@ class MarkdownChunkingTests(unittest.TestCase):
         self.assertGreater(len(chunks), 1)
         self.assertLess(len(chunks), 30)
         self.assertTrue(all(chunk.token_count <= 320 for chunk in chunks))
+
+    def _ocr_document(self):
+        text = "prefix\U0001f642 " + "token " * 200 + "漢" * 1000
+        recognized = OcrDocument("a" * 64, 2, "test", "1", "en-US", (
+            OcrPage(1, 200, 100, ()), OcrPage(2, 200, 100, (OcrLine(text, 1, 2, 190, 20),))))
+        document = NormalizedDocument("scan", text, "application/pdf", "private-source", [
+            NormalizedRegion("line", 0, len(text), 2, None)], ocr_document=recognized)
+        advanced = AdvancedContentProcessingConfig(strategy="layout", layoutEnabled=True,
+            ocrEnabled=True, ocrLanguage="en-US", maxTokensPerChunk=32, maxSourceSpans=100)
+        return document, advanced
+
+    def test_long_ocr_lines_have_bounded_chunks_and_exact_unicode_page_spans(self):
+        document, advanced = self._ocr_document()
+        chunks = chunk_markdown_documents([document], None, advanced)
+        self.assertGreater(len(chunks), 5)
+        for chunk in chunks:
+            self.assertEqual(chunk.text, document.markdown[chunk.normalized_start:chunk.normalized_end])
+            self.assertEqual((chunk.page_number, chunk.region_kind, chunk.artifact_id), (2, "line", "scan"))
+            self.assertLessEqual(len(chunk.text), 32 * 8)
+            self.assertLessEqual(chunk.token_count, 32)  # Existing word-based estimate, not a tokenizer claim.
+        self.assertEqual(document.ocr_document.pages[1].lines[0].text, document.markdown)
+        self.assertIsNone(document.regions[0].confidence)
+
+    def test_ocr_chunking_denies_inconsistent_line_or_language_metadata(self):
+        document, advanced = self._ocr_document()
+        for changed in (replace(document, regions=[]), replace(document, markdown="changed"),
+                        replace(document, regions=[NormalizedRegion("line", 0, len(document.markdown), 1, None)])):
+            with self.subTest(kind=changed.markdown[:7]), self.assertRaises(ValueError):
+                chunk_markdown_documents([changed], None, advanced)
+        advanced.ocrLanguage = "fr-FR"
+        with self.assertRaises(RuntimeError): chunk_markdown_documents([document], None, advanced)
+
+    def test_ocr_chunk_count_limit_denies_instead_of_truncating_text(self):
+        document, advanced = self._ocr_document()
+        advanced.maxSourceSpans = 1
+        with self.assertRaisesRegex(ValueError, "safe limit"):
+            chunk_markdown_documents([document], None, advanced)
 
 
 if __name__ == "__main__":
