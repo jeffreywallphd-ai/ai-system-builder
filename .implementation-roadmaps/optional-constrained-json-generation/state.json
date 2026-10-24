@@ -1080,6 +1080,17 @@
       "outcome": "passed",
       "recordedAt": "2026-10-24T02:18:48Z",
       "summary": "The actual dependency gate now passes with zero runtime and toolchain advisories, validated SPDX inventory and reviewed Python inventory after compatible original-supplier body-parser2.4.0 and scoped undici7.30.1 patches. Script-disabled candidate installation and bounded parser/downloader compatibility passed; affected builds and both host UI journeys passed separately. Preserve the earlier failed audit and pending final technical qualification. No model accuracy rerun or parent completion follows."
+    },
+    {
+      "artifact": ".local-codex/constrained-current-final-qualification/all-suite-observation-01.json",
+      "command": "npm run test:all",
+      "criterionId": "full-short-and-long-suites",
+      "id": "evidence-36",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-24T02:48:43Z",
+      "summary": "The current final all-suite preserved source bytes and passed standard Node/UI and E2E Node/UI coverage. The controlled Python AI delegate failed with a native memory allocation error; empty AI delegates are not passed test cases. The agent is locating the schema-compilation cost with bounded diagnostics. Final qualification stays pending; accepted model accuracy is not rerun and no user action is required."
     }
   ],
   "feedback": [
@@ -1716,6 +1727,12 @@
       "eventFingerprint": "4a4779b28398221739bbd490f66fef6fa08009e516f45f9fe8af2314b3f4d4df",
       "recordedAt": "2026-10-24T02:18:48Z",
       "sequence": 97,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d2e8b6b92fa8ef2d6e058c34f0a98ccdfb5d9174c70469973bc2e3cdab1af42a",
+      "recordedAt": "2026-10-24T02:48:43Z",
+      "sequence": 98,
       "type": "evidence-recorded"
     }
   ],
@@ -2526,7 +2543,8 @@
       "number": 5,
       "objective": "Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented.",
       "pendingCriteria": [
-        "representative-resource-and-usability-qualification"
+        "representative-resource-and-usability-qualification",
+        "full-short-and-long-suites"
       ],
       "plan": {
         "assumptions": [
@@ -2829,5 +2847,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T02:18:48Z"
+  "updatedAt": "2026-10-24T02:48:43Z"
 }

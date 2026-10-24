@@ -3,7 +3,7 @@
 # Optional Constrained JSON Generation Implementation Roadmap
 
 - Status: `implementation-complete-qualification-pending`
-- Updated: `2026-10-24T02:18:48Z`
+- Updated: `2026-10-24T02:48:43Z`
 
 ## Objective
 
@@ -351,7 +351,7 @@ Human portions of the original work packages, deliverables, verification and com
 | `packaged-host-readiness`: Desktop and server packages install and start the pinned dependency, advertise truthful decoder and schema readiness, and preserve fail-closed checked behavior. | local | passed (test) |
 | `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence. | controlled-environment | pending (external) |
 | `documentation-and-dependency-gates`: Architecture, security, context, README, guidance, dependency provenance, license, audit, and SBOM checks describe and validate the shipped behavior and residual risks. | local | passed (test) |
-| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | passed (test) |
+| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | failed (test) |
 | `security-impact-reviewed`: Final review confirms protected task purposes and envelope fields, bounded schema and resource use, no silent fallback, safe diagnostics, dependency integrity, and documented risk for unchecked generation and user-added fields. | local | passed (review) |
 
 ### Human scope handled offline
