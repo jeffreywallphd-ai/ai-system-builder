@@ -63,3 +63,14 @@ Fixed fixture counts and native retirement proof stay strict. A separately
 reviewed source-revision family can test a correction after proven retirement
 of the earlier owned job; its failed journal and fence remain immutable. No
 generic reset or exception for an unidentified process is introduced.
+
+The fixed combined ingestion UI profile may use a separately qualified 3 GiB
+aggregate commit ceiling after actual 2 GiB limit failures. Fixture/package jobs
+retain 2 GiB, each process remains at 1 GiB and active membership remains 32.
+Only exact issued immutable fixed intents select these budgets; no caller quota,
+environment override or public execution flag is introduced. Keep every existing
+ownership, inheritance, failure, output, deadline and unknown-retirement guard.
+The separate fixed source family adds exact UI-budget native readback to the
+seven lifetime cases. Readback is no allocation or workload-fit guarantee and
+cannot qualify product, model, offload or retained-file behavior. Preserve failed
+observations and require a new separately reviewed actual UI outcome.

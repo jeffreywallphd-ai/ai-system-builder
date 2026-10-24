@@ -17,17 +17,61 @@ job=importlib.util.module_from_spec(spec);sys.modules[spec.name]=job;spec.loader
 
 class PortableNativePolicyTests(unittest.TestCase):
     def setUp(self):
-        self.pending=dict(job._PENDING);self.live=dict(job._LIVE)
+        self.pending=dict(job._PENDING);self.live=dict(job._LIVE);self.issued=dict(job._ISSUED)
 
     def tearDown(self):
         # Restore only injected test objects; production has no reset API.
         job._PENDING.clear();job._PENDING.update(self.pending)
         job._LIVE.clear();job._LIVE.update(self.live)
+        job._ISSUED.clear();job._ISSUED.update(self.issued)
+
+    def issued_intent(self,phase):
+        return job._remember(job._Intent(phase,(),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
 
     def fake_owned(self):
         native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
         with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native):
-            return job._OwnedJob(SimpleNamespace(seconds=.01),SOURCE.parent)
+            return job._OwnedJob(self.issued_intent("fixture:stdio"),SOURCE.parent)
+
+    def test_job_memory_profiles_are_fixed_and_require_an_issued_identity(self):
+        for phase in ("package", "fixture:stdio", "fixture:failure", "fixture:hold"):
+            self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),2*1024**3)
+        for phase in ("ui", "fixture:ui-budget"):
+            self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),3*1024**3)
+        for phase in ("shell", "ui:custom", "fixture:unknown", None, True):
+            with self.subTest(phase=phase),self.assertRaises(job.NativeFailure):
+                job._job_memory_limit(self.issued_intent(phase))
+        unissued=job._Intent("ui",(),SOURCE.parent,{},.01,SOURCE.parent,{},{})
+        with self.assertRaises(job.NativeFailure):job._job_memory_limit(unissued)
+
+    def test_job_limit_readback_rejects_a_different_profile_or_other_ceiling(self):
+        for phase,reported,flags,members,process_bytes,passes in (
+            ("ui",3*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("fixture:ui-budget",3*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("package",2*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("ui",2*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("package",3*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("fixture:stdio",3*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS,33,1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS,32,2*1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS & ~job.KILL_CLOSE,32,1024**3,False),
+        ):
+            with self.subTest(phase=phase,reported=reported,passes=passes):
+                def query(handle,kind,pointer,size,returned):
+                    value=ctypes.cast(pointer,ctypes.POINTER(job.Limits)).contents
+                    value.basic.flags=flags;value.basic.active_limit=members
+                    value.process_memory=process_bytes;value.job_memory=reported
+                    return 1
+                owned=object.__new__(job._OwnedJob);owned.job=123;owned.owned={"job":123}
+                owned.intent=self.issued_intent(phase)
+                owned.n=SimpleNamespace(k=SimpleNamespace(QueryInformationJobObject=query))
+                if passes:self.assertEqual(owned.limits().job_memory,reported)
+                else:
+                    with self.assertRaises(job.NativeFailure):owned.limits()
+
+    def test_cli_cannot_select_a_numeric_memory_budget(self):
+        with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+            job._parser().parse_args(["--native-selftest","--job-bytes",str(4*1024**3)])
 
     def test_zero_shutdown_oracle_is_strict_about_count_and_type(self):
         self.assertTrue(job.strict_shutdown_codes([0,0],2))
@@ -215,7 +259,7 @@ class PortableNativePolicyTests(unittest.TestCase):
             calls["flags"]=args[5];calls["inherit"]=args[4]
             return 0  # Stop at the boundary; no native command is launched.
         native=SimpleNamespace(k=SimpleNamespace(CreateJobObjectW=lambda *args:1,SetInformationJobObject=lambda *args:1,CreateIoCompletionPort=lambda *args:2,CreatePipe=pipe,SetHandleInformation=lambda *args:1,CreateFileW=lambda *args:30,InitializeProcThreadAttributeList=initialize,UpdateProcThreadAttribute=attribute,CreateProcessW=create,DeleteProcThreadAttributeList=lambda *args:None),inheritable=lambda handle:handle in inherited or handle==30)
-        intent=SimpleNamespace(argv=("fixed-python","-I"),environment={},cwd=SOURCE.parent)
+        intent=job._remember(job._Intent("fixture:stdio",("fixed-python","-I"),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
         with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native),patch.object(job.c,"get_last_error",return_value=122,create=True):
             owned=job._OwnedJob(intent,SOURCE.parent)
             with patch.object(owned,"limits"),self.assertRaisesRegex(job.NativeFailure,"atomic-process-create"):owned.prepare()
@@ -238,8 +282,9 @@ class PortableNativePolicyTests(unittest.TestCase):
         self.assertEqual(len(job._PENDING),1)
 
     def test_detached_revision_family_does_not_reuse_old_failed_fences(self):
-        self.assertEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-detached-command-selftests-v2")
+        self.assertEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-ui-budget-command-selftests-v3")
         self.assertNotEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-command-selftests")
+        self.assertNotEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-detached-command-selftests-v2")
 
     def test_protocol_reader_uses_polling_not_daemon_thread(self):
         # The callable owns no asynchronous reader whose stream could be closed
@@ -255,10 +300,11 @@ class PortableNativePolicyTests(unittest.TestCase):
 
 class ControlledWindowsNativeTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("AISB_RUN_FIXED_NATIVE_QUALIFICATION")=="1" and os.name=="nt" and ctypes.sizeof(ctypes.c_void_p)==8,"pending physical Windows qualification; explicit model-free native opt-in required")
-    def test_actual_seven_native_lifecycle_cases(self):
+    def test_actual_eight_native_lifecycle_and_ui_budget_cases(self):
         result=job.run_native_selftests()
-        self.assertTrue(result["passed"]);self.assertEqual(result["expected_native_cases"],7)
-        self.assertEqual(len(result["cases"]),7);self.assertTrue(all(item["passed"] for item in result["cases"]))
+        self.assertTrue(result["passed"]);self.assertEqual(result["expected_native_cases"],8)
+        self.assertEqual(len(result["cases"]),8);self.assertTrue(all(item["passed"] for item in result["cases"]))
+        self.assertEqual(result["limits"],{"process_bytes":1024**3,"job_bytes":2*1024**3,"ui_job_bytes":3*1024**3,"active_limit":32})
         self.assertFalse(result["portable_pass_claimed"])
 
 

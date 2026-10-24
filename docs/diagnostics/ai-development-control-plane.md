@@ -489,8 +489,11 @@ retirement is still a failed test. Unknown retirement prevents a successor
 phase and retains the new run's failure record. No PID/name-based cleanup,
 old-fence override or partial-package reuse is permitted.
 
-The limits are 32 active job processes, 1 GiB commit per process, 2 GiB job commit and
-8 MiB saved output per stream. They are ceilings, not reservations. Use finite
+The limits are 32 active job processes, 1 GiB commit per process and 8 MiB saved
+output per stream. Fixture/package jobs retain 2 GiB aggregate commit. Only the
+fixed combined ingestion UI role has a 3 GiB job ceiling, selected by an exact
+issued immutable intent. No caller quota, environment override or CLI budget
+exists. These are ceilings, not reservations. Use finite
 reviewed deadlines and a short fresh confined temporary path. Keep earlier
 attempts and their logs intact. This local support does not pass a parent
 roadmap, model, offload, native file-protection or disk-accounting criterion.
@@ -500,3 +503,12 @@ expected counts. If a test fails, inspect its actual native journal and obtain
 independent review before a corrected source revision starts a separate family.
 Preserve old failures and fences. A possible Windows console helper is an
 explanation to test, not authority to loosen counts or adopt an old process.
+
+Two actual thin UI attempts hit the earlier 2 GiB job ceiling before desktop
+started. A fixed 256 MiB Node old-space sub-budget lowered a single-process peak
+but did not make the combined topology fit. Keep those failed observations.
+The role-budget revision uses the separate fixed
+`native-ui-budget-command-selftests-v3` family: the seven lifetime cases plus
+exact native 3 GiB UI-budget readback. Readback allocates no such amount and
+grants no UI pass. A new separately reviewed actual host run is still required.
+No product, model, retained-file or offload guard changes with this test profile.

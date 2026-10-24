@@ -322,8 +322,11 @@ An unnamed, noninherited Windows job owns the new tree at process creation.
 The root starts suspended with both the job-list and explicit standard-handle
 attributes. Only private output pipes and null input can be inherited. Read back
 membership, handle flags and finite limits before resuming. The prospective
-limits are 32 active processes, 1 GiB process commit and 2 GiB job commit; these are hard
-ceilings, not reservations or guaranteed workload capacity. Failed admission or
+limits are 32 active processes and 1 GiB process commit. Fixture/package jobs
+retain 2 GiB aggregate commit; the fixed combined ingestion UI role alone has
+a 3 GiB job ceiling. Its exact issued immutable intent selects the profile;
+no caller numeric quota, environment override or public budget flag is allowed.
+These are hard ceilings, not reservations or guaranteed workload capacity. Failed admission or
 an observed limit failure cannot qualify a workload.
 
 Lifecycle completion requires the exact root's native exit, zero active job
@@ -348,3 +351,10 @@ and [console initialization](https://github.com/microsoft/terminal/blob/main/doc
 A corrected source revision uses a separately reviewed fixed self-test family.
 Prior failed journals and fences remain intact; a new pass cannot identify an
 unobserved old process or turn the previous failure into a pass.
+
+The role-budget revision retains the two observed 2 GiB UI-limit failures and
+uses the fixed `native-ui-budget-command-selftests-v3` family. Its additional
+closed UI-budget case reads back exactly 3 GiB; all seven existing lifetime
+cases retain their scope and assertions. This calibrates a bounded test topology,
+not product/model/offload policy. Native readback establishes neither physical
+allocation nor successful UI behavior; real host qualification remains separate.

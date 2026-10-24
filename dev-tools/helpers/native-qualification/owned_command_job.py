@@ -24,11 +24,11 @@ import uuid
 
 _MODULE=Path(__file__).resolve()
 _REPO=_MODULE.parents[3]
-_SELFTEST_RUNS=_REPO/".local-codex/native-detached-command-selftests-v2"
+_SELFTEST_RUNS=_REPO/".local-codex/native-ui-budget-command-selftests-v3"
 _PENDING={}
 _LIVE={}
 _ISSUED={}
-_FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry"))
+_FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
 
 
@@ -134,10 +134,20 @@ def _validate_intent(intent,folder):
     _regular_directory(folder,_REPO)
 
 
+def _job_memory_limit(intent):
+    # A caller value, environment setting or lookalike role cannot select a
+    # quota. Only an exact already-issued immutable intent reaches readback.
+    need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
+    phase=intent.phase
+    need(type(phase) is str and (phase in ("package","ui") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    return UI_JOB_BYTES if phase in ("ui","fixture:ui-budget") else JOB_BYTES
+
+
 KILL_CLOSE = 0x2000
 LIMIT_FLAGS = KILL_CLOSE | 0x100 | 0x200 | 0x8
 PROCESS_BYTES = 1024**3
 JOB_BYTES = 2 * 1024**3
+UI_JOB_BYTES = 3 * 1024**3
 MEMBERS = 32
 LOG_CAP = 8 * 1024**2
 FORCED_EXIT = 0xE0000042
@@ -278,8 +288,9 @@ class _OwnedJob:
 
     def limits(self):
         need(self.job is not None and self.owned.get("job")==self.job,"owned-job-ledger-required")
+        expected_job_bytes=_job_memory_limit(self.intent)
         value=Limits();need(self.n.k.QueryInformationJobObject(self.job,9,c.byref(value),c.sizeof(value),None),"limits-readback")
-        need(value.basic.flags==LIMIT_FLAGS and value.basic.active_limit==MEMBERS and value.process_memory==PROCESS_BYTES and value.job_memory==JOB_BYTES,"limits-drift")
+        need(value.basic.flags==LIMIT_FLAGS and value.basic.active_limit==MEMBERS and value.process_memory==PROCESS_BYTES and value.job_memory==expected_job_bytes,"limits-drift")
         return value
 
     def accounting(self):
@@ -322,7 +333,7 @@ class _OwnedJob:
         self.phase="preparing"
         _validate_intent(self.intent,self.folder)
         k=self.n.k;self.job=self.hold("job",k.CreateJobObjectW(None,None));need(not self.n.inheritable(self.job),"job-inherit")
-        value=Limits();value.basic.flags=LIMIT_FLAGS;value.basic.active_limit=MEMBERS;value.process_memory=PROCESS_BYTES;value.job_memory=JOB_BYTES
+        value=Limits();value.basic.flags=LIMIT_FLAGS;value.basic.active_limit=MEMBERS;value.process_memory=PROCESS_BYTES;value.job_memory=_job_memory_limit(self.intent)
         need(k.SetInformationJobObject(self.job,9,c.byref(value),c.sizeof(value)),"limits-set");self.limits()
         port=self.hold("completion-port",k.CreateIoCompletionPort(c.c_void_p(-1).value,None,0,1));need(not self.n.inheritable(port),"completion-port-inherit")
         association=CompletionAssociation(COMPLETION_KEY,port)
@@ -428,7 +439,7 @@ class _OwnedJob:
         else:
             _LIVE.pop(id(self),None)
             self.job=None;self.process=None
-        self.final_result={"root_exit_code":code,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
+        self.final_result={"root_exit_code":code,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
         self.phase="finished"
         return copy.deepcopy(self.final_result)
 
@@ -509,6 +520,8 @@ def bounded_eof(stream,seconds,maximum):
 
 
 def fixture(role):
+    if role=="ui-budget":
+        os.write(1,b"fixed-native-ui-budget\n");return 0
     if role=="stdio":
         os.write(1,b"fixed-native-stdout\n");os.write(2,b"fixed-native-stderr\n");return 0
     if role=="failure":return 23
@@ -654,7 +667,7 @@ def native_selftest():
     source=_implementation_hashes();suite=_SELFTEST_RUNS/uuid.uuid4().hex;suite.mkdir()
     cases=[];all_passed=False;current_case=None
     try:
-        for role in ("stdio","failure","natural-expiry","timeout","overflow"):
+        for role in ("stdio","failure","natural-expiry","timeout","overflow","ui-budget"):
             current_case=role
             folder=suite/role;folder.mkdir()
             result=_OwnedJob(_fixture_intent(role,folder),folder).run()
@@ -670,17 +683,19 @@ def native_selftest():
                 need(result["reason"]=="timeout" and not result["command_passed"] and result["forced_owned_job_termination"] and result["job_accounting"]["total"]==2 and result["peak_active_observed"]==2,"actual-descendant-timeout-retired")
             elif role=="overflow":
                 need(result["reason"]=="log-overflow" and not result["command_passed"] and result["log_overflow"] and result["logs"]["stdout"]["bytes"]==LOG_CAP and result["forced_owned_job_termination"],"actual-log-overflow-bounded-retired")
+            elif role=="ui-budget":
+                need(result["command_passed"] and result["job_accounting"]["total"]==1 and result["limits"]=={"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":UI_JOB_BYTES,"active_limit":MEMBERS} and (folder/"stdout.log").read_bytes()==b"fixed-native-ui-budget\n" and (folder/"stderr.log").read_bytes()==b"","actual-fixed-ui-budget-readback")
             cases.append({"case":role,"passed":True,"observation":str(folder/"observation.json"),"sha256":_digest(folder/"observation.json"),"root_exit_code":result["root_exit_code"],"job_total":result["job_accounting"]["total"],"job_active":result["job_accounting"]["active"]})
         for mode in ("before-resume","after-descendant"):
             current_case="guardian-crash-"+mode
             cases.append(crash_case(mode))
         need(_implementation_hashes()==source,"native-source-changed")
-        all_passed=len(cases)==7 and all(case["passed"] for case in cases)
+        all_passed=len(cases)==8 and all(case["passed"] for case in cases)
     except BaseException as error:
         cases.append({"case":current_case,"passed":False,"error_type":type(error).__name__,"diagnostic":str(error)[:500]})
         raise
     finally:
-        report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":7,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":1024**3,"job_bytes":2*1024**3,"active_limit":32},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics only; no old-process cleanup, native filesystem/offload, model, parent or product qualification."}
+        report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":8,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"ui_job_bytes":UI_JOB_BYTES,"active_limit":MEMBERS},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics and fixed UI-budget readback only; no old-process cleanup, native filesystem/offload, model, parent or product qualification."}
         dump(suite/"observation.json",report)
         if not all_passed:
             dump(suite/"FENCED.json",{"reason":"native-selftest-failed-or-unconfirmed","repeat_authority":False,"fixture_retained":True})
@@ -699,7 +714,7 @@ def _parser():
     parser=argparse.ArgumentParser(description=__doc__)
     group=parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--native-selftest",action="store_true")
-    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf"),help=argparse.SUPPRESS)
+    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget"),help=argparse.SUPPRESS)
     group.add_argument("--guardian",choices=("before-resume","after-descendant"),help=argparse.SUPPRESS)
     return parser
 

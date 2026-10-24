@@ -325,3 +325,21 @@ correction can qualify a separately reviewed fixed revision family after actual
 old-job retirement is independently established. Preserve the failed journal
 and fence. This is not an arbitrary reset, process-name exception or permission
 to retry unknown cleanup; no observed identity follows from a plausible cause.
+
+### Fixed combined-UI budget
+
+Two actual thin UI jobs reached the original 2 GiB aggregate commit limit before
+desktop began. Preserve those failures; reducing the Node old-space budget did
+not qualify the combined topology. Fixture/package jobs keep 2 GiB; only an exact
+issued fixed UI intent and its closed native readback fixture select 3 GiB.
+Every process remains at 1 GiB, with 32 active members, the same finite deadlines,
+8 MiB streams, creation-time membership, noninheritance, native readback and exact
+retirement/fencing. Unknown or unissued roles and mismatched readback fail.
+No numeric budget, environment override or new caller execution route exists.
+
+This is a finite cooperative-local test budget, not a reservation, machine-wide
+bound or proof that the workload fits this PC. The new fixed source family must
+qualify the unchanged seven lifecycle cases and exact UI-budget readback before
+any separately reviewed real host run. It grants no old-process, retained-slot,
+model, offload, product or parent-roadmap qualification. A failed new workload
+remains failed; no automatic additional cap increase follows.
