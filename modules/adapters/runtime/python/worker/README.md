@@ -28,6 +28,17 @@ authoritative. No driver install or model work occurs during this read. See
 
 This directory contains the managed Python sidecar worker.
 
+Direct script startup loads `app` and its relative modules from the directory
+that contains `main.py`. It uses one fixed private package and does not add
+ancestor directories to the interpreter search path or require a repository
+checkout. Conflicting or orphan private cached modules are refused. Existing
+private modules must match their exact deployed file or namespace directory
+before reuse. This prevents accidental cache adoption; it does not defend against
+Python code that can forge all module metadata in the same process. Normal package-mode
+imports remain supported. The same entrypoint is used in the flat desktop
+resource directory; launch authentication, loopback binding and port checks
+apply before serving requests.
+
 The worker must be launched by a host supervisor on `127.0.0.1`, `localhost`, or
 `::1` with a non-privileged port and a `PYTHON_RUNTIME_AUTH_TOKEN` of at least 32
 characters. Startup rejects remote/wildcard binding and missing authentication.

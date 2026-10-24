@@ -1,5 +1,12 @@
 # Runtime Model
 
+The Python worker's direct script entrypoint binds relative imports to its own
+deployment directory through a fixed private package. The flat packaged worker
+does not depend on repository ancestor paths or modify `sys.path`. A conflicting
+private package or cached submodule fails startup. Every reused private module
+must match its exact deployed file or namespace directory. Package-mode imports and the existing authenticated
+loopback launch configuration remain unchanged.
+
 Generation's optional accelerator total originates in the authenticated worker's
 existing capability response, not the JS host's device namespace. The worker uses
 a lazy fixed read-only system-driver query with bounded public waiting/output,

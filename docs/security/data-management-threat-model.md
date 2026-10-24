@@ -1,5 +1,17 @@
 # Data Management Threat Model
 
+The direct Python worker entrypoint loads relative application and task modules
+only from its own deployment directory, using a fixed private package. It does
+not search repository ancestors or change the interpreter search path. A missing
+deployed app, conflicting private package or orphan private submodule fails
+startup. Cached private files and namespace directories must match their exact
+deployed locations before reuse. This does not isolate arbitrary code running
+inside the Python process. A cached repository
+app is not a fallback. Flat-deployment subprocess tests cover these denials.
+Loopback-only binding, launch authentication and nonprivileged port validation
+remain mandatory. A model-free packaged-start observation is separate from
+model execution, free-memory admission and native/offload qualification.
+
 Accelerator-capacity recommendations accept only a minimized positive-safe-integer
 total from the authenticated worker. Optional malformed facts become unknown
 without weakening core capability validation. A lazy fixed system-driver query

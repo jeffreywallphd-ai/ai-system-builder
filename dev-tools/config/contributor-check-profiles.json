@@ -996,7 +996,8 @@
         "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
         "modules/adapters/runtime/python/tests/pythonRuntimeHttpProtocol.unit.test.ts",
         "modules/adapters/runtime/python/worker/tests/test_generation_capacity.py",
-        "modules/adapters/runtime/python/worker/tests/test_worker_app.py"
+        "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
+        "modules/adapters/runtime/python/worker/tests/test_main.py"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1036,7 +1037,9 @@
         "docs/architecture/runtime-model.md",
         "docs/context/packs/runtime.pack.md",
         "docs/diagnostics/ai-development-control-plane.md",
-        "docs/security/data-management-threat-model.md"
+        "docs/security/data-management-threat-model.md",
+        "modules/adapters/runtime/python/worker/main.py",
+        "modules/adapters/runtime/python/worker/tests/test_main.py"
       ]
     }
   }
