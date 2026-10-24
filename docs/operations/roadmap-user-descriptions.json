@@ -10373,6 +10373,76 @@
           "Accepted model accuracy stays closed. Testing actual low-memory mode and safe restart remains separate pending work. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d1fe439abd5b7471957f51f3ed37b5ab007e2cb4fcb3e9ed83f32a1e2f560592",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file storage change checks the full size and checksum before making a file available. It cannot replace an existing file. Eleven storage tests passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "95b6c7f3049f41a69b77492bc2792f511ddce851624e28c8f3b505c2c2ec32fd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The memory-backed store keeps overlapping saves in order. It preserves rollback and separate copies of stored values. Twelve ownership and compatibility tests passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f1073287aa5eccabb4971bb7b1654890831db1de05c64c4af45d628cfa9acd73",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The SQLite store keeps overlapping saves in order. If it cannot confirm a rollback, it refuses further operations on that connection. Twelve top-level tests passed; seven nested Electron cases were included and are not an extra seven top-level tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "19c24f9377004636476bfd33130286fdc2341a5444b67b47f6381b5c22b11623",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Local file imports now work through the desktop and server. The checks cover write acknowledgements, matching source records and workspace-bound dataset staging. All 108 import cases and one routing test passed. Server compilation, desktop type checks and desktop packaging also passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "27c1af90bbeb741cbf9ea30464db3a765bd5ea350dce1501d9702cb50524be5d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are reviewed component results at their recorded source versions. They do not complete a parent criterion, work item, increment or roadmap, or prove that the current parent version has passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b2a811f87788b2d28d25bf15e9619565286e5ee83ee6b68cc7713d746c2b1a2c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Separate tests are still needed for native file races, crash recovery, actual low-memory offloading, large-file memory use and real provider workflows. These synthetic component tests do not prove those behaviors."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "50bf302fe714d52a85889be5962efd731d054655ec9dc1b08992b486073222bf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failures and remaining roadmap checks stay visible. Accepted model accuracy stays closed. The separate restricted Assets security assessment was not performed."
+        ]
+      }
     }
   ]
 }

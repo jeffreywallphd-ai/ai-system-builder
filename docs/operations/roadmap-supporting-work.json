@@ -2713,6 +2713,142 @@
         "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
         "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "bounded-ingestion-byte-storage-component",
+      "work_criteria": [
+        "bounded-private-ingestion-byte-storage"
+      ],
+      "receipt_digest": "f969c2f2e5c2dc1cd2750575d904bfb9cde1553563c6b4d93f534c25583b3278",
+      "review_digest": "ff6802d4706d2dd3d285438f926d15c1f9ec041441dfb5adf5df9eaece3a1a50",
+      "scope": "Committed bounded byte storage checks complete size/digest before exclusive target publication; existing targets remain unchanged. Actual selected11 synthetic byte cases passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "security-ingestion-bounds-and-egress-reviewed",
+      "work_id": "bounded-ingestion-byte-storage-component",
+      "work_criteria": [
+        "bounded-private-ingestion-byte-storage"
+      ],
+      "receipt_digest": "f969c2f2e5c2dc1cd2750575d904bfb9cde1553563c6b4d93f534c25583b3278",
+      "review_digest": "ff6802d4706d2dd3d285438f926d15c1f9ec041441dfb5adf5df9eaece3a1a50",
+      "scope": "Committed bounded byte storage checks complete size/digest before exclusive target publication; existing targets remain unchanged. Actual selected11 synthetic byte cases passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "in-memory-transaction-owned-checkpoint",
+      "work_criteria": [
+        "in-memory-owned-fifo-and-rollback"
+      ],
+      "receipt_digest": "b83a50f054743ddf26525de68723ce537e9557e12c5c5a5cf51967511939b86f",
+      "review_digest": "95bc90752b4ca1ccfd767fde283d90f6e90ca5795d9ea5e6020dcd19073668b7",
+      "scope": "Committed in-memory transaction ownership serializes scoped work and preserves rollback and detached values. Actual selected12 ownership and compatibility cases passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "security-ingestion-bounds-and-egress-reviewed",
+      "work_id": "in-memory-transaction-owned-checkpoint",
+      "work_criteria": [
+        "in-memory-owned-fifo-and-rollback"
+      ],
+      "receipt_digest": "b83a50f054743ddf26525de68723ce537e9557e12c5c5a5cf51967511939b86f",
+      "review_digest": "95bc90752b4ca1ccfd767fde283d90f6e90ca5795d9ea5e6020dcd19073668b7",
+      "scope": "Committed in-memory transaction ownership serializes scoped work and preserves rollback and detached values. Actual selected12 ownership and compatibility cases passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "sqlite-transaction-owned-checkpoint",
+      "work_criteria": [
+        "sqlite-owned-fifo-and-rollback"
+      ],
+      "receipt_digest": "68d988fec249506563354296b5b59e9ae1f908df492a6ebbcd2c0f236686f741",
+      "review_digest": "c899edc4eb188f363d27c0f4f4463870a07ad7f5e6b99e267ebd679c7638b379",
+      "scope": "Committed SQLite transaction ownership fences a connection after an unconfirmed rollback. Actual Node7 and Electron5 outer cases passed; nested Electron child7 are not extra outer cases.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "security-ingestion-bounds-and-egress-reviewed",
+      "work_id": "sqlite-transaction-owned-checkpoint",
+      "work_criteria": [
+        "sqlite-owned-fifo-and-rollback"
+      ],
+      "receipt_digest": "68d988fec249506563354296b5b59e9ae1f908df492a6ebbcd2c0f236686f741",
+      "review_digest": "c899edc4eb188f363d27c0f4f4463870a07ad7f5e6b99e267ebd679c7638b379",
+      "scope": "Committed SQLite transaction ownership fences a connection after an unconfirmed rollback. Actual Node7 and Electron5 outer cases passed; nested Electron child7 are not extra outer cases.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "ordinary-ingestion-composed-publication-checkpoint-v3",
+      "work_criteria": [
+        "owned-local-file-ingestion-remains-usable"
+      ],
+      "receipt_digest": "130d5449bc44bf059a620daa2e10c7b44b81c88e2c228f2cf346861925913d9c",
+      "review_digest": "0b7e8e8298f55263dea877aa7079a408b0b29cdee9bbcc263345f253016fec74",
+      "scope": "Committed desktop/server local-file publication preserves acknowledged byte/origin authority, exact source records and workspace-bound staging. Actual isolated108 cases plus routing1, server compile, desktop typecheck and offline production package passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "security-ingestion-bounds-and-egress-reviewed",
+      "work_id": "ordinary-ingestion-composed-publication-checkpoint-v3",
+      "work_criteria": [
+        "owned-local-file-ingestion-remains-usable"
+      ],
+      "receipt_digest": "130d5449bc44bf059a620daa2e10c7b44b81c88e2c228f2cf346861925913d9c",
+      "review_digest": "0b7e8e8298f55263dea877aa7079a408b0b29cdee9bbcc263345f253016fec74",
+      "scope": "Committed desktop/server local-file publication preserves acknowledged byte/origin authority, exact source records and workspace-bound staging. Actual isolated108 cases plus routing1, server compile, desktop typecheck and offline production package passed.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "Cooperative synthetic checks do not qualify hostile native file races, protected crash recovery, actual offload, controlled large-input memory bounds or real provider workflows.",
+        "Earlier failures and unresolved parent qualification remain. Accepted model accuracy is unchanged; no restricted legacy Assets assessment was performed."
+      ]
     }
   ]
 }
