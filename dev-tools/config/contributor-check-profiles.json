@@ -1104,7 +1104,9 @@
     "ocr-provider-contract": {
       "test_paths": [
         "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py",
-        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
+        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_process.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1124,7 +1126,14 @@
         "modules/adapters/runtime/python/worker/ocr/wire.py",
         "modules/adapters/runtime/python/worker/ocr/native/WindowsOcrHelper.cs",
         "modules/adapters/runtime/python/worker/ocr/native/README.md",
-        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
+        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py",
+        "modules/adapters/runtime/python/worker/ocr/windows_api.py",
+        "modules/adapters/runtime/python/worker/ocr/resource.py",
+        "modules/adapters/runtime/python/worker/ocr/windows_process.py",
+        "modules/adapters/runtime/python/worker/ocr/native/OcrLifetimeFixture.cs",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_process.py",
+        "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
       ]
     }
   }

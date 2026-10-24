@@ -516,9 +516,13 @@ No product, model, retained-file or offload guard changes with this test profile
 ## Portable OCR provider checks
 
 `ocr-provider-contract` is a fixed source-owned profile for the bounded request,
-readiness, result and strict private framing protocol inside the managed Python
-runtime. Changes in `worker/ocr/` or its two exact portable tests select it automatically. Its explicit
+readiness, result, strict private framing, resource identity and process failure
+semantics inside the managed Python runtime. Changes in `worker/ocr/`, its four
+exact portable tests or its explicit native qualification operator select it automatically. Its explicit
 coverage never suppresses unknown source impact or a required generic check.
-The profile executes two standard-library test modules and does not load models,
+The profile executes four standard-library test modules and does not load models,
 launch Windows OCR, access provider credentials or qualify the Data roadmap.
 Use actual native/provider and product checks for the later implementation.
+The model-free Windows operator creates only fresh synthetic test resources and
+new owned jobs, using the installed compiler and SDK. It is not an ordinary test,
+a compiler fallback in the app, a model test or a parent qualification pass.

@@ -642,3 +642,40 @@ product OCR availability follows from this component. Actual malformed-image,
 scanned-PDF, native denial/failure and product/UI checks remain pending; existing
 source authorization, accepted model accuracy and retained offload data stay
 unchanged. This helper is not a sandbox against a hostile same-user deployment.
+
+## Bounded native OCR process and resource lease
+
+The runtime's private Windows owner protects source privacy, executable identity,
+resource availability and ownership. It accepts only a fixed resource; requests
+cannot select commands, paths, environments or services. A bounded trusted-build
+manifest binds current source and x64 binary bytes. Native file/ancestor leases
+reject reparse points and deny file write/delete and ancestor deletion through
+retirement. This detects stale/substituted resources within a trusted installation;
+it is not a signature, AppContainer, network sandbox or defense against a party
+who can rewrite the installed application or its build metadata. No process or
+file authority crosses into application/domain modules.
+
+Directory leases require list-directory plus read-attributes access, without
+enumerating entries. Attribute-only handles proved insufficient for Windows
+delete-sharing denial in the new synthetic resource test. This protects the
+named ancestor identity; it is not a child-creation fence or retained-tree proof.
+
+Creation-time JobList membership, suspended start and exact native limit readback
+precede resume. The one-member job and process each cap commit at 512 MiB; only
+three stdio handles are inherited. The job handle and runtime secrets are not
+inherited. Input/result use bounded private pipes. Stderr is counted/discarded;
+any stderr, overflow, I/O failure, nonzero exit or observed native limit denies
+success. A finite 120-second parent deadline and cancellation terminate only this
+new owned Job. The helper's own 110-second wait is not used as cleanup proof.
+The parent requires a signalled native root, zero active members, stopped pipe
+threads and acknowledged native closes. False or raised close results retain
+exact handles/owners and deny successors. The qualification operator likewise
+retains failed guardian/observer ownership and stops after a failed test.
+
+Actual new-owned native failure/crash evidence is separate from portable protocol
+checks. The read-only crash observer duplicates a process handle, never a Job
+handle; kill-on-last-owner-close must end the newly created helper. Neither this
+component nor its tests inspect or change unknown retained offload trees, repeat
+accepted model accuracy, qualify legacy restricted Assets or enable OCR. Trusted
+packaging, actual document recognition/lineage, provider/readiness and host UI
+integration remain required. Ordinary Canvas startup does not probe this engine.

@@ -53,3 +53,48 @@ strict UTF-8, finite numeric geometry and duplicate-free JSON. It enforces the
 `check_result` to bind a parsed document to its authorized source, selected
 pages, language and ready provider. Parsing does not establish authorization
 or provider availability. See [ADR-0046](../../../../../../../docs/adr/ADR-0046-replaceable-local-document-ocr.md).
+
+## Native ownership adapter
+
+`../windows_process.py` implements one fixed private helper exchange. It uses
+creation-time Windows Job membership, suspended creation, three explicitly
+inherited pipe handles and a minimal Windows environment. Process and job commit
+ceilings are each 512 MiB, with one active process and a 120-second parent
+deadline. Output is capped at 2 MiB plus its frame header. Standard error is
+counted, discarded and capped at 64 KiB; any standard error denies success.
+The parent checks cancellation and native limit notifications. It accepts a
+result only after the native root exits, the job reports zero active members,
+pipe threads stop and all owned handle closes are acknowledged. Uncertain
+ownership stays retained and denies successors. No old process is adopted.
+
+`../resource.py` accepts only the fixed `build/WindowsOcrHelper.exe` resource
+with `build/resource.json` beside it. The bounded versioned manifest binds the
+raw helper source and x64 executable digests and byte count. Native read handles
+pin those files and their ancestors through retirement, rejecting reparse points,
+file write/delete sharing and ancestor deletion. Missing, changed or incomplete
+resources fail closed. This is a trusted-installation integrity check, not a
+signature, AppContainer or defense against a writer of the installation itself.
+Runtime code never compiles, searches for, downloads or chooses another helper.
+Build/package composition and the provider/normalization/UI remain pending;
+the product still reports OCR unavailable.
+
+Directory leases request both read attributes and list-directory access. They
+do not enumerate contents. Actual Windows checks showed that an attribute-only
+handle allowed a second delete-access open; the list-directory right makes the
+no-delete sharing check effective. This pins ancestor identity, not every child
+entry or a mutable retained offload tree.
+
+The explicit model-free native qualification is:
+
+```text
+python -B -m modules.adapters.runtime.python.worker.tests.qualification_ocr_windows --native
+```
+
+It creates fresh ignored synthetic bundles, using the already installed x64 .NET
+compiler and Windows SDK 26100. It downloads nothing and leaves earlier runs
+intact. `OcrLifetimeFixture.cs` is a qualification-only fixture for pipe bounds,
+failure, resource limits and crash behavior. It is never selected as a product
+resource. Portable profile tests do not execute this operator. Native checks and
+their exact source hashes supply only local process/resource evidence; actual
+PNG/JPEG/scanned-PDF results, deployment, normalization and both host journeys
+need their own qualification. No model-quality rerun is required.

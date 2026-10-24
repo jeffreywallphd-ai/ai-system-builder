@@ -125,8 +125,11 @@ provider/website/scale/native matrix. The `ingestion-publication` profile also
 runs focused shared-panel interaction tests; real host journeys remain opt-in.
 
 The `ocr-provider-contract` profile runs only the portable managed-runtime OCR
-contract and private framing tests. Fixed source patterns select it automatically
-for the provider package and its two exact portable test modules. Complete explicit source coverage can replace generic
+contract, private framing, resource identity and process failure tests. Fixed source patterns select it automatically
+for the provider package and its four exact portable test modules. Complete explicit source coverage can replace generic
 focused selection only for those declared changes; unknown or explicitly
 required generic impact remains. This profile starts no OCR engine or model
-and establishes no actual Windows or parent-roadmap qualification.
+and establishes no actual Windows or parent-roadmap qualification. The explicit
+model-free Windows operator in the native OCR README tests new synthetic owned
+processes separately. It downloads nothing, leaves historical runs intact and
+does not enable product OCR or qualify model accuracy.

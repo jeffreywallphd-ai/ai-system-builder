@@ -295,12 +295,23 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         test_path = "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
         source = "modules/adapters/runtime/python/worker/ocr/protocol.py"
         wire_test = "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test])
+        resource_test = "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py"
+        process_test = "modules/adapters/runtime/python/worker/tests/test_ocr_process.py"
+        native_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test])
+        self.assertIn(native_test, profile["source_paths"])
+        self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(source, profile["source_paths"])
         commands = run_focused_checks.profile_commands(root, name)
         self.assertEqual(commands, [[sys.executable, "-B", "-m", "unittest", "discover",
                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                   "-p", "test_ocr_protocol.py"],
+                                   "-p", "test_ocr_process.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "modules/adapters/runtime/python/worker/tests",
+                                    "-p", "test_ocr_protocol.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "modules/adapters/runtime/python/worker/tests",
+                                    "-p", "test_ocr_resource.py"],
                                    [sys.executable, "-B", "-m", "unittest", "discover",
                                     "-s", "modules/adapters/runtime/python/worker/tests",
                                     "-p", "test_ocr_wire.py"]])
@@ -310,6 +321,9 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([source], ["documentation"], True, False),
             ([test_path], ["documentation"], True, False),
             ([wire_test], ["documentation"], True, False),
+            ([resource_test], ["documentation"], True, False),
+            ([process_test], ["documentation"], True, False),
+            ([native_test], ["documentation"], True, False),
             ([source, "modules/other/source.ts"], ["documentation"], True, True),
             ([source], ["documentation", "focused-tests"], True, True),
             (["modules/other/source.ts"], ["documentation"], False, True),

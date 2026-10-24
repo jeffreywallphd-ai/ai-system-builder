@@ -362,7 +362,8 @@ little-endian byte length, at most 23000000 request bytes and 2 MiB of response
 bytes before parsing. It rejects duplicate or unknown fields, malformed UTF-8,
 non-finite values, invalid types, geometry and global line/text overflow. A parsed
 result still needs `check_result`; parsing is neither source authorization nor
-provider readiness. The fixed portable profile runs both OCR test modules.
+provider readiness. The fixed portable profile runs four OCR test modules,
+including resource-identity and process failure semantics.
 
 `ocr/native/WindowsOcrHelper.cs` implements the installed Windows engine behind
 that protocol. It accepts bytes instead of caller paths; selected original PDF
@@ -373,3 +374,12 @@ trusted packaged-resource identity or product availability. OCR remains
 unavailable until the managed native owner, actual image/PDF and failure checks,
 normalization, capability and both-host UI work qualify. See the native README
 for framing, limits and remaining obligations. Standard extraction is unchanged.
+
+The private Windows native owner now bounds a single fixed helper exchange with
+creation-time Job membership, 512 MiB process/job ceilings, explicit pipes,
+cancellation, a 120-second deadline and strict native retirement. Trusted local
+resource files and ancestors stay pinned through retirement; missing or changed
+resources fail closed. Failed closes retain ownership and deny successors.
+The model-free Windows qualification operator is separate from ordinary portable
+tests. This process/resource component does not enable OCR: trusted packaging,
+provider composition, actual document results and host wiring still need work.

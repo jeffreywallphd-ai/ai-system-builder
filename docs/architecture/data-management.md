@@ -696,3 +696,29 @@ honor cancellation and prove all owned processes and handles retired. Do not
 start or advertise OCR until those native checks and actual Windows/provider,
 normalization/capability and both-host UI integration qualify. Existing runtime
 task ports and Standard document extraction remain unchanged.
+
+## Bounded Windows OCR process and resource ownership
+
+The managed worker's private OCR transport launches only its fixed installed x64
+helper resource. The application/runtime ports and provider-neutral records stay
+unchanged. No caller chooses a command, path, environment, URL or fallback.
+A bounded manifest binds the raw helper source, executable digest and byte count;
+native read leases pin files and ancestors until the process is retired. Missing,
+changed, redirected or incomplete resources remain unavailable. The manifest is
+trusted build metadata, not a signature against an installation writer.
+
+The owner creates a one-member Windows Job at process creation, starts suspended,
+checks membership and 512 MiB process/job commit ceilings, then resumes. Only three
+pipe handles are inherited. The environment contains only the Windows directory
+variables. The parent bounds time at 120 seconds, checks cancellation, counts and
+discards stderr, and caps the private result at 2 MiB plus framing. Successful
+return requires the root's native exit, zero active job members, pipe-thread
+retirement and acknowledged handle closes. Uncertainty retains ownership and
+prevents another request; there is no adoption/reset interface.
+
+Portable tests and the explicit model-free native qualification have separate
+roles. The native operator compiles fresh synthetic local bundles using installed
+tools, never downloads or enables OCR, and leaves prior runs unchanged. Trusted
+build/package composition, provider/readiness/normalization and actual document
+and desktop/browser UI qualification remain pending. Standard extraction, model
+accuracy and old retained offload data are unchanged.

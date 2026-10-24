@@ -82,3 +82,24 @@ and confirmed exit still need implementation and actual qualification before
 launch. Build/package composition and application/normalization/readiness/host UI
 integration remain pending. A compiler is a development tool, never an implicit
 end-user dependency. No new binary, language-data or model download is authorized.
+
+## Native ownership implementation support
+
+The runtime owns one fixed helper resource and one request at a time. Its x64
+Windows implementation composes creation-time Job membership, suspended creation,
+three explicit inherited pipe handles and only the Windows directory environment.
+Per-process and aggregate commit ceilings are 512 MiB; the active-process limit
+is one. The parent deadline is 120 seconds. Bounded stdout is private recognized
+data; stderr is counted and discarded, and any stderr rejects the exchange.
+Native exit, zero active members, stopped pipe threads and acknowledged native
+handle closes are all required before returning a result or admitting a successor.
+Uncertain ownership is strongly retained with no reset/adoption interface.
+
+A bounded trusted-build manifest binds the current raw source and x64 executable
+digests and executable byte count. Native read leases pin files and all ancestors,
+rejecting reparse points and write/delete access to the files. This detects stale
+or incomplete installations. It is not a signature or isolation from a malicious
+installation writer. The app does not compile or search for a replacement.
+Local model-free native tests are distinct from portable checks. Provider and
+build/package composition, actual document recognition and product/UI remain
+pending; none of these support components changes advertised availability.
