@@ -321,3 +321,38 @@ moves, copies, adopts or deletes the retained slot. The original failures and
 unknown historical exit/cleanup remain intact. The full CPU/CUDA model matrices
 and parent roadmap closure remain pending; passing gate/accounting tests is
 separate component evidence. Standard-only work remains independently possible.
+
+## Model-free worker lifetime qualification
+
+The closed fixture helper checks new Windows workers without loading models:
+
+```text
+python -B dev-tools/helpers/control_plane/qualification_job.py --self-test
+```
+
+It creates an unnamed job with a noninheritable handle, kill-on-close, at most
+two fixture processes and 256/512 MiB per-process/total committed-memory limits.
+`PROC_THREAD_ATTRIBUTE_JOB_LIST` assigns the fixed suspended worker during
+creation. Membership is checked before resume. Native job membership identifies
+the ordinary descendant; only read/query process handles pass to the supervisor.
+The supervisor duplicates from its exact retained guardian process handle into
+itself, tracking every local handle before validation. It never reopens a parent
+PID or allocates a handle in another process. Failed thread closure retains the
+exact handle for retry. Successful shutdown requires the exact member count and
+integer exit code zero; fixed natural expiry and errors use nonzero codes. A real
+short-expiry negative control must fail that same positive shutdown predicate.
+Normal shutdown and guardian termination, including before resume, require
+observed exit through those exact handles. Unknown exit remains a failure.
+No caller command, PID, directory, staging or quota override is accepted.
+
+Output is `evidence-collected-review-required`, with real restart and parent
+qualification false. This fixture does not protect retained files, supply a
+protected journal, integrate the actual model worker or measure offload delivery.
+The full unknown retained charge and actual restart denial remain. Accepted model
+accuracy stays closed. This is not isolation against a malicious same-user
+process that can obtain additional handles.
+
+Creation-time assignment closes the suspended-before-assignment crash window
+described in [Microsoft's process job example](https://devblogs.microsoft.com/oldnewthing/20230209-00/?p=107812/).
+See also [job-list process attributes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
+and [native job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information).

@@ -521,3 +521,27 @@ Model admission, final validation and fail-closed behavior remain required.
 No provider authority, credential access, retained staging, offload lease,
 restricted Assets review or accepted model-accuracy rerun is authorized here.
 Actual model/native/GPU/parent qualification remains separate.
+
+## Closed owned-worker lifetime fixture
+
+Security impact: security-relevant process ownership and qualification integrity.
+The control-plane qualification helper creates only its own fixed model-free
+Python worker and descendant. An unnamed noninheritable kill-on-close job uses
+creation-time job-list assignment; no post-creation assignment crash window or
+breakaway permission is allowed. Exact limits and pre-resume membership are read
+back. Native job members and minimal read-only duplicated process handles prove
+exit across normal and forced guardian shutdown. No caller command, existing
+process action, privilege change, protected payload or ambient credentials cross
+this boundary. IPC, process count, commit and observation time are bounded.
+The supervisor pulls handles from the exact Popen-created guardian into its own
+process and records each duplicate before verification; no remote target or
+parent PID lookup exists. Failed thread closure preserves ownership. A shared
+strict exit-code/count oracle rejects natural expiry and errors; an actual fixed
+expiry negative control tests that rejection through the same native handle.
+
+Admission, native API, identity, protocol and cleanup uncertainty grant no pass
+or release. The fixture supplies no retained-tree protection, durable accounting,
+actual offload-worker integration or malicious same-user isolation. It never
+accesses retained staging, changes the unknown 12 GiB charge, reopens accepted
+accuracy or conducts the restricted Assets assessment. Physical evidence is
+explicitly opt-in; a skip is not qualification or a parent roadmap pass.

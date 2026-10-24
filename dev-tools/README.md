@@ -94,3 +94,18 @@ one epoch, and fixed tiny Hugging Face snapshots at immutable revisions. Each
 case must reach the staged generated-model candidate used by Save/Discard; the
 suite never invokes model save or registration. It is intentionally outside
 `test:e2e`, `test:ai`, and `test:all`.
+
+The model-free owned-job fixture is separate from real offload admission:
+`python -B dev-tools/helpers/control_plane/qualification_job.py --self-test`.
+On supported x64 Windows it checks an unnamed noninheritable job, atomic
+creation-time job assignment, normal descendant shutdown and forced guardian
+exit before and after resume. It starts only fixed copies of its own Python
+fixture, with two-process and 256/512 MiB process/job commit limits. It accepts
+no command, PID, directory, retained-slot or quota option. The JSON is evidence
+for independent review, never a restart lease or parent qualification. Portable
+failure tests run with the fixed control-plane suite; actual native tests require
+`AISB_RUN_OWNED_JOB_NATIVE=1` and are not qualified by a skipped test.
+The supervisor pulls read-only handles from its exact retained guardian handle
+into its own process. Partial handoffs stay locally owned. A fixed natural-expiry
+negative control must be rejected by the same strict shutdown oracle; ordinary
+fixture expiry and errors cannot count as successful job shutdown.
