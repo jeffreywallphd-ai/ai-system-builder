@@ -40,10 +40,18 @@ native implementation or make that optional peer mandatory during dev startup.
 Keep the official Hugging Face clients lazy through bundler-visible imports so
 installed packages do not depend on the repository's node_modules.
 
-Scope the Undici7.29.1 override to `@electron/get`; compatible6.x consumers keep
+Scope the Undici7.30.1 override to `@electron/get`; compatible6.x consumers keep
 their own supported major. Remove obsolete webpack dependencies and overrides.
 Retain the reviewed brace-expansion compatibility adapter for its remaining
 consumers. Install scripts remain disabled during dependency resolution.
+
+Maintenance update (2026-10-24): the original qualified downloader override was
+7.29.1. The original-supplier 7.30.1 security patch preserves the same consumer
+scope, public APIs and supported major. Body-parser 2.4.0 separately patches the
+existing Express runtime parser. These are compatible dependency maintenance;
+the architecture and other tool pins stay unchanged. See the current
+[dependency standard](../standards/dependency-supply-chain-standards.md) for
+upstream release references and the required compatibility/audit checks.
 
 ## Qualification and consequences
 

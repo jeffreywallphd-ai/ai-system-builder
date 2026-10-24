@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -24,6 +24,51 @@ import {
   resolveServerComfyUiRuntimeDeviceMode,
   resolveServerPythonRuntimeWorkerDirectory,
 } from "../composeServerHost";
+
+// Real initialization and teardown belong to each registration's fixture.
+// These cooperative test paths do not qualify native filesystem race controls.
+async function withRegisteredHostFixture(
+  options: Parameters<typeof composeServerHost>[0],
+  assertions: (host: ReturnType<typeof composeServerHost>, locations: {
+    storageRootDirectory: string; runtimeRootDirectory: string;
+  }) => void | Promise<void>,
+  app = { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() },
+): Promise<void> {
+  const parent = realpathSync(tmpdir());
+  const fixture = mkdtempSync(join(parent, "server-host-composition-"));
+  const allocated = realpathSync(fixture);
+  const locations = {
+    storageRootDirectory: join(fixture, "server-storage"),
+    runtimeRootDirectory: join(fixture, "server-runtime"),
+  };
+  const host = composeServerHost(options);
+  let originalFailure: unknown;
+  try {
+    host.registerApi({
+      app,
+      ...locations,
+    });
+    await host.waitForAssetFoundation();
+    await assertions(host, locations);
+  } catch (error) {
+    originalFailure = error;
+    throw error;
+  } finally {
+    try {
+      // This production method awaits background shutdown before DB closure.
+      // If either fails, retain the fixture rather than delete active state.
+      await host.closeRuntimeDatabases();
+      const target = realpathSync(fixture);
+      if (target !== allocated || dirname(target) !== parent) {
+        throw new Error("Owned host fixture cleanup target changed.");
+      }
+      rmSync(target, { recursive: true, force: true });
+    } catch (cleanupError) {
+      if (originalFailure) throw new AggregateError([originalFailure, cleanupError], "Host fixture initialization and cleanup failed.");
+      throw cleanupError;
+    }
+  }
+}
 
 describe("composeServerHost", () => {
   it("rejects malformed controlled runtime preparation before host composition", () => {
@@ -192,183 +237,189 @@ describe("composeServerHost", () => {
       ),
     };
 
-    const host = composeServerHost({
+    await withRegisteredHostFixture({
       artifactRepo: {
         huggingFaceFetchImplementation: artifactRepoFetch,
         huggingFaceHubClient: hubClient,
       },
-    });
+    }, async (host, { storageRootDirectory, runtimeRootDirectory }) => {
 
-    const storageRootDirectory = join(
-      tmpdir(),
-      `server-artifact-upload-test-${Date.now()}`,
-    );
-    const runtimeRootDirectory = join(tmpdir(), `server-runtime-${Date.now()}`);
-
-    host.registerApi({
-      app,
-      storageRootDirectory,
-      runtimeRootDirectory,
-    });
-
-    const registeredPaths = app.post.mock.calls.map((call) => call[0]);
-    for (const expectedPath of [
-      "/api/artifact/upload",
-      "/api/artifact/browse",
-      "/api/artifact/read",
-      "/api/artifact/content/read",
-      "/api/artifact/delete",
-      "/api/config/huggingface-token",
-      "/api/artifact-repo/has",
-      "/api/huggingface/namespace/datasets",
-      "/api/huggingface/dataset/parquet-files",
-      "/api/artifact-repo/store",
-      "/api/artifact/publish",
-      "/api/artifact/publish/verify",
-      "/api/artifact/source/verify",
-      "/api/artifact/register-from-repo",
-      "/api/artifact/localize-from-repo",
-      "/api/model/browse",
-      "/api/model/details",
-      "/api/model/list",
-      "/api/model/reference/save",
-      "/api/model/download",
-      "/api/model/record/update",
-      "/api/model/record/delete",
-      "/api/image-generation/start",
-      "/api/image-generation/read",
-      "/api/image-generation/cancel",
-      "/api/image-generation/finalize",
-      "/api/image-generation/unload-model",
-      "/api/image-generation/runtime-resources",
-      "/api/application-settings/list-definitions",
-      "/api/application-settings/read",
-      "/api/application-settings/update",
-      "/api/application-settings/clear",
-      "/api/workspaces",
-      "/api/workspaces/active-selection",
-      "/api/workspaces/active-selection/clear",
-      "/api/user-library/assets/promote",
-      "/api/user-library/workspace-links",
-      "/api/workspaces/:workspaceId/user-library/copies",
-      "/api/workspaces/:targetWorkspaceId/imports/workspace-asset",
-      "/api/assets/register-resource-backed-view",
-      "/api/assets/finalize-generated-output",
-      "/api/assets/import-external-repository-object",
-      "/api/assets/localize-external-repository-object",
-      "/api/server/restart",
-    ]) {
-      expect(registeredPaths).toContain(expectedPath);
-    }
-    expect(
-      registeredPaths.filter((path) => String(path).startsWith("/api/assets")),
-    ).toEqual([
-      "/api/assets/register-resource-backed-view",
-      "/api/assets/finalize-generated-output",
-      "/api/assets/import-external-repository-object",
-      "/api/assets/localize-external-repository-object",
-    ]);
-    expect(
-      existsSync(join(storageRootDirectory, "asset-kernel", "manifest.json")),
-    ).toBe(true);
-    expect(
-      existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
-    ).toBe(false);
-    const internalRegistry = host.getInternalAssetRegistry();
-    expect(internalRegistry).toBeDefined();
-    expect(internalRegistry?.resourceBackedViewProvider).toBeDefined();
-    expect(internalRegistry?.diagnostics.resourceBackedViewsEnabled).toBe(true);
-    const resourceBacked =
-      await internalRegistry?.readFacade.listResourceBackedViewCards({
-        limit: 10,
-      });
-    expect(resourceBacked?.items).toEqual([]);
-    expect(
-      resourceBacked?.diagnostics?.some(
-        (diagnostic) =>
-          diagnostic.code.includes("source-unavailable") ||
-          diagnostic.code.includes("unsupported") ||
-          diagnostic.code.includes("workspace"),
-      ),
-    ).toBe(true);
-    const missingResourceBackedDetail =
-      await internalRegistry!.readFacade.readResourceBackedViewDetail(
-        "asset-view.image.internal.missing",
-      );
-    expect(missingResourceBackedDetail).toBeUndefined();
-    expect(artifactRepoFetch).not.toHaveBeenCalled();
-    expect(hubClient.fileExists).not.toHaveBeenCalled();
-    expect(hubClient.uploadFile).not.toHaveBeenCalled();
-    expect(hubClient.downloadFile).not.toHaveBeenCalled();
-    expect(
-      existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
-    ).toBe(false);
-    expect(
-      await internalRegistry?.readFacade.listDefinitionCards({
+      const registeredPaths = app.post.mock.calls.map((call) => call[0]);
+      for (const expectedPath of [
+        "/api/artifact/upload",
+        "/api/artifact/browse",
+        "/api/artifact/read",
+        "/api/artifact/content/read",
+        "/api/artifact/delete",
+        "/api/config/huggingface-token",
+        "/api/artifact-repo/has",
+        "/api/huggingface/namespace/datasets",
+        "/api/huggingface/dataset/parquet-files",
+        "/api/artifact-repo/store",
+        "/api/artifact/publish",
+        "/api/artifact/publish/verify",
+        "/api/artifact/source/verify",
+        "/api/artifact/register-from-repo",
+        "/api/artifact/localize-from-repo",
+        "/api/model/browse",
+        "/api/model/details",
+        "/api/model/list",
+        "/api/model/reference/save",
+        "/api/model/download",
+        "/api/model/record/update",
+        "/api/model/record/delete",
+        "/api/image-generation/start",
+        "/api/image-generation/read",
+        "/api/image-generation/cancel",
+        "/api/image-generation/finalize",
+        "/api/image-generation/unload-model",
+        "/api/image-generation/runtime-resources",
+        "/api/application-settings/list-definitions",
+        "/api/application-settings/read",
+        "/api/application-settings/update",
+        "/api/application-settings/clear",
+        "/api/workspaces",
+        "/api/workspaces/active-selection",
+        "/api/workspaces/active-selection/clear",
+        "/api/user-library/assets/promote",
+        "/api/user-library/workspace-links",
+        "/api/workspaces/:workspaceId/user-library/copies",
+        "/api/workspaces/:targetWorkspaceId/imports/workspace-asset",
+        "/api/assets/register-resource-backed-view",
+        "/api/assets/finalize-generated-output",
+        "/api/assets/import-external-repository-object",
+        "/api/assets/localize-external-repository-object",
+        "/api/server/restart",
+      ]) {
+        expect(registeredPaths).toContain(expectedPath);
+      }
+      expect(
+        registeredPaths.filter((path) => String(path).startsWith("/api/assets")),
+      ).toEqual([
+        "/api/assets/register-resource-backed-view",
+        "/api/assets/finalize-generated-output",
+        "/api/assets/import-external-repository-object",
+        "/api/assets/localize-external-repository-object",
+      ]);
+      expect(
+        existsSync(join(storageRootDirectory, "asset-kernel", "manifest.json")),
+      ).toBe(true);
+      expect(
+        existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
+      ).toBe(false);
+      const internalRegistry = host.getInternalAssetRegistry();
+      expect(internalRegistry).toBeDefined();
+      expect(internalRegistry?.resourceBackedViewProvider).toBeDefined();
+      expect(internalRegistry?.diagnostics.resourceBackedViewsEnabled).toBe(true);
+      const resourceBacked =
+        await internalRegistry?.readFacade.listResourceBackedViewCards({
+          limit: 10,
+        });
+      expect(resourceBacked?.items).toEqual([]);
+      expect(
+        resourceBacked?.diagnostics?.some(
+          (diagnostic) =>
+            diagnostic.code.includes("source-unavailable") ||
+            diagnostic.code.includes("unsupported") ||
+            diagnostic.code.includes("workspace"),
+        ),
+      ).toBe(true);
+      const missingResourceBackedDetail =
+        await internalRegistry!.readFacade.readResourceBackedViewDetail(
+          "asset-view.image.internal.missing",
+        );
+      expect(missingResourceBackedDetail).toBeUndefined();
+      expect(artifactRepoFetch).not.toHaveBeenCalled();
+      expect(hubClient.fileExists).not.toHaveBeenCalled();
+      expect(hubClient.uploadFile).not.toHaveBeenCalled();
+      expect(hubClient.downloadFile).not.toHaveBeenCalled();
+      expect(
+        existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
+      ).toBe(false);
+      // Awaited Foundation readiness includes the built-in catalog. The fresh
+      // fixture still has no custom definitions; do not assert pre-start state.
+      const definitions = await internalRegistry!.readFacade.listDefinitionCards({
         includeBuiltIns: true,
         includeCustom: true,
-      }),
-    ).toEqual({ items: [] });
-    const registeredGetPaths = app.get.mock.calls.map((call) => call[0]);
+      });
+      expect(definitions.items.length).toBeGreaterThan(0);
+      expect(definitions.items.every((item) => item.builtIn && item.sourceKind === "system")).toBe(true);
+      // The public facade may filter after retrieval and return an empty page
+      // with a cursor. Check all bounded pages, not only the first empty page.
+      let customCursor: string | undefined;
+      for (let page = 0; page < 32; page += 1) {
+        const customDefinitions = await internalRegistry!.readFacade.listDefinitionCards({
+          includeBuiltIns: false,
+          includeCustom: true,
+          limit: 100,
+          cursor: customCursor,
+        });
+        expect(customDefinitions.items).toEqual([]);
+        customCursor = customDefinitions.nextCursor;
+        if (!customCursor) break;
+      }
+      expect(customCursor).toBeUndefined();
+      const registeredGetPaths = app.get.mock.calls.map((call) => call[0]);
 
-    expect(registeredGetPaths).toContain("/api/assets/definitions");
-    expect(
-      [
-        ...registeredPaths,
-        ...app.patch.mock.calls.map((call) => call[0]),
-        ...app.delete.mock.calls.map((call) => call[0]),
-      ].some((path) =>
-        /\/api\/assets.*(create|update|delete|patch|edit|seed|publish|execute|run|scan)/i.test(
-          String(path),
+      expect(registeredGetPaths).toContain("/api/assets/definitions");
+      expect(
+        [
+          ...registeredPaths,
+          ...app.patch.mock.calls.map((call) => call[0]),
+          ...app.delete.mock.calls.map((call) => call[0]),
+        ].some((path) =>
+          /\/api\/assets.*(create|update|delete|patch|edit|seed|publish|execute|run|scan)/i.test(
+            String(path),
+          ),
         ),
-      ),
-    ).toBe(false);
-    expect(
-      readFileSync(
-        resolve("modules/hosts/server/composition/composeServerHost.ts"),
-        "utf8",
-      ),
-    ).toContain("assetRegistryRead: internalAssetRegistry.readFacade");
-    expect(
-      readFileSync(
-        resolve("modules/hosts/server/composition/composeServerHost.ts"),
-        "utf8",
-      ),
-    ).toContain("assetMutationUseCases");
-    for (const expectedPath of [
-      "/api/artifact/upload/policy",
-      "/api/artifact/media/view",
-      "/api/config/huggingface-token",
-      "/api/workspaces",
-      "/api/workspaces/active-selection",
-      "/api/user-library/assets",
-      "/api/user-library/assets/:assetId",
-      "/api/workspaces/:workspaceId/user-library/links",
-      "/api/workspaces/:workspaceId/user-library/links/:linkId",
-      "/api/workspaces/:workspaceId/effective-asset-sources",
-      "/api/assets/definitions",
-      "/api/asset-authoring/workspaces/:workspaceId/authored-assets",
-      "/api/asset-authoring/workspaces/:workspaceId/authored-assets/:authoredAssetId",
-      "/api/asset-authoring/workspaces/:workspaceId/drafts",
-      "/api/asset-authoring/workspaces/:workspaceId/drafts/:draftId",
-      "/api/asset-authoring/workspaces/:workspaceId/revisions",
-      "/api/asset-authoring/workspaces/:workspaceId/revisions/:revisionId",
-      "/api/asset-authoring/workspaces/:workspaceId/overrides",
-      "/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId",
-      "/api/asset-authoring/workspaces/:workspaceId/effective-summaries",
-      "/api/asset-authoring/workspaces/:workspaceId/customization-targets",
-      "/api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId",
-      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations",
-      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
-      "/api/assets/resource-backed-views",
-      "/api/assets/resource-backed-views/:viewId",
-      "/api/assets/definitions/:definitionId",
-      "/api/assets/definitions/:definitionId/versions/:version",
-      "/api/runtime/readiness",
-      "/api/runtime/capabilities/:capabilityId",
-    ]) {
-      expect(registeredGetPaths).toContain(expectedPath);
-    }
+      ).toBe(false);
+      expect(
+        readFileSync(
+          resolve("modules/hosts/server/composition/composeServerHost.ts"),
+          "utf8",
+        ),
+      ).toContain("assetRegistryRead: internalAssetRegistry.readFacade");
+      expect(
+        readFileSync(
+          resolve("modules/hosts/server/composition/composeServerHost.ts"),
+          "utf8",
+        ),
+      ).toContain("assetMutationUseCases");
+      for (const expectedPath of [
+        "/api/artifact/upload/policy",
+        "/api/artifact/media/view",
+        "/api/config/huggingface-token",
+        "/api/workspaces",
+        "/api/workspaces/active-selection",
+        "/api/user-library/assets",
+        "/api/user-library/assets/:assetId",
+        "/api/workspaces/:workspaceId/user-library/links",
+        "/api/workspaces/:workspaceId/user-library/links/:linkId",
+        "/api/workspaces/:workspaceId/effective-asset-sources",
+        "/api/assets/definitions",
+        "/api/asset-authoring/workspaces/:workspaceId/authored-assets",
+        "/api/asset-authoring/workspaces/:workspaceId/authored-assets/:authoredAssetId",
+        "/api/asset-authoring/workspaces/:workspaceId/drafts",
+        "/api/asset-authoring/workspaces/:workspaceId/drafts/:draftId",
+        "/api/asset-authoring/workspaces/:workspaceId/revisions",
+        "/api/asset-authoring/workspaces/:workspaceId/revisions/:revisionId",
+        "/api/asset-authoring/workspaces/:workspaceId/overrides",
+        "/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId",
+        "/api/asset-authoring/workspaces/:workspaceId/effective-summaries",
+        "/api/asset-authoring/workspaces/:workspaceId/customization-targets",
+        "/api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId",
+        "/api/asset-authoring/workspaces/:workspaceId/derived-customizations",
+        "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
+        "/api/assets/resource-backed-views",
+        "/api/assets/resource-backed-views/:viewId",
+        "/api/assets/definitions/:definitionId",
+        "/api/assets/definitions/:definitionId/versions/:version",
+        "/api/runtime/readiness",
+        "/api/runtime/capabilities/:capabilityId",
+      ]) {
+        expect(registeredGetPaths).toContain(expectedPath);
+      }
+      }, app);
   });
 
   it("builds server model-publishing readiness as explicit unavailable, not missing", async () => {
@@ -455,49 +506,39 @@ describe("composeServerHost", () => {
 
   it("throws clear error for invalid COMFYUI runtime mode", () => {
     const previous = process.env.COMFYUI_RUNTIME_DEVICE_MODE;
-    process.env.COMFYUI_RUNTIME_DEVICE_MODE = "vulkan";
-    const host = composeServerHost();
-    expect(() =>
-      host.registerApi({
-        app: {
-          post: testDouble.fn(),
-          get: testDouble.fn(),
-          patch: testDouble.fn(),
-          delete: testDouble.fn(),
-        },
-        storageRootDirectory: join(tmpdir(), "server-invalid-runtime"),
-      }),
-    ).toThrow("Unsupported COMFYUI runtime mode");
-    process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
+    try {
+      process.env.COMFYUI_RUNTIME_DEVICE_MODE = "vulkan";
+      const host = composeServerHost();
+      expect(() =>
+        host.registerApi({
+          app: {
+            post: testDouble.fn(),
+            get: testDouble.fn(),
+            patch: testDouble.fn(),
+            delete: testDouble.fn(),
+          },
+          storageRootDirectory: join(tmpdir(), "server-invalid-runtime"),
+        }),
+      ).toThrow("Unsupported COMFYUI runtime mode");
+    } finally {
+      if (previous === undefined) delete process.env.COMFYUI_RUNTIME_DEVICE_MODE;
+      else process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
+    }
   });
 
-  it("accepts cpu and directml COMFYUI runtime modes", () => {
+  it("accepts cpu and directml COMFYUI runtime modes", async () => {
     const previous = process.env.COMFYUI_RUNTIME_DEVICE_MODE;
-    process.env.COMFYUI_RUNTIME_DEVICE_MODE = "cpu";
-    expect(() =>
-      composeServerHost().registerApi({
-        app: {
-          post: testDouble.fn(),
-          get: testDouble.fn(),
-          patch: testDouble.fn(),
-          delete: testDouble.fn(),
-        },
-        storageRootDirectory: join(tmpdir(), "server-runtime-cpu"),
-      }),
-    ).not.toThrow();
-    process.env.COMFYUI_RUNTIME_DEVICE_MODE = "directml";
-    expect(() =>
-      composeServerHost().registerApi({
-        app: {
-          post: testDouble.fn(),
-          get: testDouble.fn(),
-          patch: testDouble.fn(),
-          delete: testDouble.fn(),
-        },
-        storageRootDirectory: join(tmpdir(), "server-runtime-directml"),
-      }),
-    ).not.toThrow();
-    process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
+    try {
+      for (const mode of ["cpu", "directml"]) {
+        process.env.COMFYUI_RUNTIME_DEVICE_MODE = mode;
+        await withRegisteredHostFixture({}, (host) => {
+          expect(host.getInternalAssetRegistry()).toBeDefined();
+        });
+      }
+    } finally {
+      if (previous === undefined) delete process.env.COMFYUI_RUNTIME_DEVICE_MODE;
+      else process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
+    }
   });
 
   it("resolves request-selected server image-generation runtime modes when no env override is set", () => {
@@ -742,79 +783,57 @@ describe("server ComfyUI python/runtime resolution", () => {
     ).toBe("cpu");
   });
 
-  it("logs structured ComfyUI python/runtime diagnostics", () => {
+  it("logs structured ComfyUI python/runtime diagnostics", async () => {
     const sink = testDouble.fn();
-    const host = composeServerHost({ logSink: sink });
-    const storageRootDirectory = join(tmpdir(), "server-storage");
-    const runtimeRootDirectory = join(tmpdir(), "server-runtime");
-    host.registerApi({
-      app: {
-        post: testDouble.fn(),
-        get: testDouble.fn(),
-        patch: testDouble.fn(),
-        delete: testDouble.fn(),
-      },
-      storageRootDirectory,
-      runtimeRootDirectory,
-    });
-    const comfyLog = sink.mock.calls
-      .map((call) => call[1] as StructuredLogEvent)
-      .find((event) => event.event === "runtime.comfyui.server.configuration");
-    const expectedBasePythonCommand =
-      process.platform === "win32" ? "python" : "python3";
-    expect(comfyLog?.data).toMatchObject({
-      pythonEnvironmentMode: "managed-venv",
-      basePythonCommand: expectedBasePythonCommand,
-      launchPythonExecutableSource: "managed-venv",
-      skipPythonSetup: false,
-      skipPythonValidation: false,
-      runtimeDeviceMode: "cpu",
-      installRootSource: "default-server-runtime-root",
+    await withRegisteredHostFixture({ logSink: sink }, () => {
+      const comfyLog = sink.mock.calls
+        .map((call) => call[1] as StructuredLogEvent)
+        .find((event) => event.event === "runtime.comfyui.server.configuration");
+      const expectedBasePythonCommand =
+        process.platform === "win32" ? "python" : "python3";
+      expect(comfyLog?.data).toMatchObject({
+        pythonEnvironmentMode: "managed-venv",
+        basePythonCommand: expectedBasePythonCommand,
+        launchPythonExecutableSource: "managed-venv",
+        skipPythonSetup: false,
+        skipPythonValidation: false,
+        runtimeDeviceMode: "cpu",
+        installRootSource: "default-server-runtime-root",
+      });
     });
   });
 
-  it("logs server-owned Python worker-sidecar diagnostics without desktop/runtime-root leakage", () => {
+  it("logs server-owned Python worker-sidecar diagnostics without desktop/runtime-root leakage", async () => {
     const sink = testDouble.fn();
-    const host = composeServerHost({ logSink: sink });
-    const storageRootDirectory = join(tmpdir(), "server-storage");
-    const runtimeRootDirectory = join(tmpdir(), "server-runtime");
-    host.registerApi({
-      app: {
-        post: testDouble.fn(),
-        get: testDouble.fn(),
-        patch: testDouble.fn(),
-        delete: testDouble.fn(),
-      },
-      storageRootDirectory,
-      runtimeRootDirectory,
-    });
-    const pythonLog = sink.mock.calls
-      .map((call) => call[1] as StructuredLogEvent)
-      .find((event) => event.event === "runtime.python.server.configuration");
-    expect(pythonLog?.data).toMatchObject({
-      host: "server",
-      serverStorageRootDirectory: storageRootDirectory,
-      serverRuntimeRootDirectory: runtimeRootDirectory,
-      pythonRuntimeMode: "worker-sidecar",
-      pythonRuntimeRootDirectory: join(
-        runtimeRootDirectory,
-        "models",
-        "huggingface",
-      ),
-      pythonRuntimeRootSource: "default-server-runtime-root",
-      pythonRuntimeEndpointScope: "loopback",
-      pythonRuntimeCommandConfigured: false,
-      pythonRuntimeArgsConfigured: false,
-      taskRegistryOwnership: "server",
-    });
-    const pythonRuntimeData = pythonLog?.data ?? {};
-    expect("pythonRuntimeBaseUrl" in pythonRuntimeData).toBe(false);
-    expect("pythonRuntimeWorkerDirectory" in pythonRuntimeData).toBe(false);
-    expect("pythonRuntimeCommand" in pythonRuntimeData).toBe(false);
-    expect("pythonRuntimeArgs" in pythonRuntimeData).toBe(false);
-    expect(pythonLog?.data).not.toMatchObject({
-      pythonRuntimeMode: "ambient-only",
-      pythonRuntimeRootDirectory: null,
+    await withRegisteredHostFixture({ logSink: sink }, (_host, { storageRootDirectory, runtimeRootDirectory }) => {
+      const pythonLog = sink.mock.calls
+        .map((call) => call[1] as StructuredLogEvent)
+        .find((event) => event.event === "runtime.python.server.configuration");
+      expect(pythonLog?.data).toMatchObject({
+        host: "server",
+        serverStorageRootDirectory: storageRootDirectory,
+        serverRuntimeRootDirectory: runtimeRootDirectory,
+        pythonRuntimeMode: "worker-sidecar",
+        pythonRuntimeRootDirectory: join(
+          runtimeRootDirectory,
+          "models",
+          "huggingface",
+        ),
+        pythonRuntimeRootSource: "default-server-runtime-root",
+        pythonRuntimeEndpointScope: "loopback",
+        pythonRuntimeCommandConfigured: false,
+        pythonRuntimeArgsConfigured: false,
+        taskRegistryOwnership: "server",
+      });
+      const pythonRuntimeData = pythonLog?.data ?? {};
+      expect("pythonRuntimeBaseUrl" in pythonRuntimeData).toBe(false);
+      expect("pythonRuntimeWorkerDirectory" in pythonRuntimeData).toBe(false);
+      expect("pythonRuntimeCommand" in pythonRuntimeData).toBe(false);
+      expect("pythonRuntimeArgs" in pythonRuntimeData).toBe(false);
+      expect(pythonLog?.data).not.toMatchObject({
+        pythonRuntimeMode: "ambient-only",
+        pythonRuntimeRootDirectory: null,
+      });
     });
   });
 

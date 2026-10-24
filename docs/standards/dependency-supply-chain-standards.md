@@ -49,6 +49,23 @@ upstream interface directly.
 
 ## Advisory policy
 
+The maintained HTTP dependency boundary pins original-supplier `body-parser`
+`2.4.0` and scopes original-supplier Undici `7.30.1` to `@electron/get`.
+Compatible 6.x consumers keep their supported major; Forge and Electron pins
+do not change. This is a security maintenance update to ADR-0044's downloader
+scope. The parser regression covers ordinary JSON, compressed JSON and form
+bodies, malformed and oversized refusal, late decoder cleanup and continued
+service. The downloader regression covers proxy-dispatcher, normal fetch,
+redirect and explicit redirect refusal. These are bounded synthetic loopback
+checks, separate from actual package/host qualification.
+
+The upstream fixes are documented in the
+[body-parser 2.4.0 release](https://github.com/expressjs/body-parser/releases/tag/v2.4.0)
+and [Undici 7.30.1 release](https://github.com/nodejs/undici/releases/tag/v7.30.1).
+Preserve the earlier failed audit. Require current zero-advisory runtime and
+toolchain checks, locked SPDX validation and compatible build/host results;
+the maintenance update supplies no unrelated security or model qualification.
+
 `npm run security:dependencies` evaluates two scopes:
 
 - the production/runtime tree fails on any known advisory,

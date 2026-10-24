@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
 import http from "node:http";
+import { gzipSync } from "node:zlib";
 import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
@@ -63,10 +64,11 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   assert.equal(manifest.devDependencies.electron, "42.11.18");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
+    "body-parser": "2.4.0",
     "brace-expansion": "$brace-expansion",
     tar: "7.5.22",
     tmp: "0.2.7",
-    "@electron/get": { undici: "7.29.1" },
+    "@electron/get": { undici: "7.30.1" },
   });
   assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.18");
   assert.equal(
@@ -78,6 +80,7 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
     "sha512-hbzodG06x/l7uq+oeyob5ugv6qZBmJRWC7Uto5QEE99xSHUARz6d+++Rz+79T/ssTYTQkONW4ciTTcJuAbXKIQ==",
   );
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
+  assert.equal(lockfile.packages["node_modules/body-parser"].version, "2.4.0");
 
   const lockedPackages = Object.entries(lockfile.packages);
   const versionsFor = (packageName) =>
@@ -106,7 +109,7 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   }
   assert.equal(manifest.devDependencies["@electron-forge/plugin-vite"], "8.0.1");
   assert.equal(manifest.devDependencies.vite, "7.3.7");
-  assert.deepEqual([...new Set(versionsFor("undici").filter(version => version.startsWith("7.")))], ["7.29.1"]);
+  assert.deepEqual([...new Set(versionsFor("undici").filter(version => version.startsWith("7.")))], ["7.30.1"]);
 });
 
 test("reviewed overrides retain the APIs used by the Electron Forge toolchain", () => {
@@ -203,14 +206,65 @@ test("Electron downloader retains compatible patched proxy dispatcher APIs", asy
   const require = createRequire(import.meta.url);
   const downloaderRequire = createRequire(require.resolve("@electron/get"));
   const { EnvHttpProxyAgent, fetch } = downloaderRequire("undici");
-  assert.equal(downloaderRequire("undici/package.json").version, "7.29.1");
+  assert.equal(downloaderRequire("undici/package.json").version, "7.30.1");
   const agent = new EnvHttpProxyAgent({ noProxy: "*" });
-  const server = http.createServer((_request, response) => response.end("offline downloader fixture"));
-  t.after(async () => { await agent.close(); await new Promise(resolve => server.close(resolve)); });
+  const server = http.createServer((request, response) => {
+    if (request.url === "/redirect") {
+      response.writeHead(302, { location: "/ok" });
+      response.end();
+    } else response.end("offline downloader fixture");
+  });
+  t.after(async () => { await agent.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   const response = await fetch(`http://127.0.0.1:${address.port}/`, { dispatcher: agent });
   assert.equal(await response.text(), "offline downloader fixture");
+  const redirected = await fetch(`http://127.0.0.1:${address.port}/redirect`, { dispatcher: agent });
+  assert.equal(await redirected.text(), "offline downloader fixture");
+  await assert.rejects(fetch(`http://127.0.0.1:${address.port}/redirect`, { dispatcher: agent, redirect: "error" }));
+});
+
+test("patched request parser preserves normal bodies, bounded refusals and continued service", { timeout: 15_000 }, async (t) => {
+  const { default: express } = await import("express");
+  const app = express();
+  app.use(express.json({ limit: "1kb" }));
+  app.use(express.urlencoded({ extended: true, limit: "1kb" }));
+  app.post("/parse", (request, response) => response.json(request.body));
+  app.use((error, _request, response, _next) => response.status(error.status ?? 400).json({ refused: true }));
+  const server = http.createServer(app);
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const post = (body, type = "application/json", encoding) => new Promise((resolve, reject) => {
+    const request = http.request({ host: "127.0.0.1", port: address.port, path: "/parse", method: "POST",
+      headers: { "content-type": type, "content-length": body.length, ...(encoding ? { "content-encoding": encoding } : {}) } }, response => {
+      const chunks = []; let count = 0;
+      response.on("data", chunk => {
+        count += chunk.length;
+        if (count > 4096) response.destroy(new Error("Bounded fixture response exceeded."));
+        else chunks.push(chunk);
+      });
+      response.on("error", reject);
+      response.on("end", () => resolve({ status: response.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) }));
+    });
+    request.setTimeout(3000, () => request.destroy(new Error("Bounded fixture request timeout.")));
+    request.on("error", reject); request.end(body);
+  });
+  const body = Buffer.from(JSON.stringify({ fixture: "local request", items: [1, 2] }));
+  const expected = { status: 200, body: { fixture: "local request", items: [1, 2] } };
+  assert.deepEqual(await post(body), expected);
+  assert.deepEqual(await post(gzipSync(body), "application/json", "gzip"), expected);
+  assert.deepEqual(await post(Buffer.from("label=fixture&nested%5Bvalue%5D=two"), "application/x-www-form-urlencoded"),
+    { status: 200, body: { label: "fixture", nested: { value: "two" } } });
+  assert.equal((await post(Buffer.from("not gzip"), "application/json", "gzip")).status, 400);
+  const oversized = gzipSync(Buffer.from(JSON.stringify({ fixture: "x".repeat(2048) })));
+  assert.equal((await post(oversized, "application/json", "gzip")).status, 413);
+  // A single tiny owned fixture exercises late decoder cleanup. The supplier
+  // can reject early or finish the valid frame; the next request must work.
+  const trailing = await post(Buffer.concat([gzipSync(body), Buffer.from("x")]), "application/json", "gzip");
+  assert.ok([200, 400].includes(trailing.status));
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal((await post(body)).status, 200);
 });
 
 test("runtime SBOM validation requires SPDX packages and relationships", () => {

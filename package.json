@@ -97,11 +97,12 @@
     "vitest": "4.1.12"
   },
   "overrides": {
+    "body-parser": "2.4.0",
     "brace-expansion": "$brace-expansion",
     "tar": "7.5.22",
     "tmp": "0.2.7",
     "@electron/get": {
-      "undici": "7.29.1"
+      "undici": "7.30.1"
     }
   }
 }

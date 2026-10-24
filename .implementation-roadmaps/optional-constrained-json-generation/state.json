@@ -1058,6 +1058,28 @@
       "outcome": "pending",
       "recordedAt": "2026-10-24T01:13:40Z",
       "summary": "Separately reviewed and committed stable-output intent now preserves the first fresh recommendation and explicit choice, refusing unchecked fallback after readiness loss. All61 fixed model-free tests, actual synthetic desktop/browser controls journeys and production builds passed. The separately reviewed zero-available-RAM fix preserves zero and passes12 owning tests and registered checks. Actual worker-local accelerator reporting and final current-source parent qualification remain pending agent work. Accepted model accuracy stays closed; no native/offload or parent pass."
+    },
+    {
+      "artifact": ".local-codex/constrained-final-dependencies.stdout.log",
+      "command": "npm run security:dependencies",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-34",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-24T02:07:51Z",
+      "summary": "Fresh final dependency gate found newly published original-supplier body-parser and undici advisories. Preserve the failed runtime/toolchain audit; the agent is applying compatible patched versions and testing the affected parser/downloader/build paths. No user action, accepted model accuracy rerun or parent completion follows."
+    },
+    {
+      "artifact": ".local-codex/http-dependency-audit.stdout.log",
+      "command": "npm run security:dependencies",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-35",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T02:18:48Z",
+      "summary": "The actual dependency gate now passes with zero runtime and toolchain advisories, validated SPDX inventory and reviewed Python inventory after compatible original-supplier body-parser2.4.0 and scoped undici7.30.1 patches. Script-disabled candidate installation and bounded parser/downloader compatibility passed; affected builds and both host UI journeys passed separately. Preserve the earlier failed audit and pending final technical qualification. No model accuracy rerun or parent completion follows."
     }
   ],
   "feedback": [
@@ -1682,6 +1704,18 @@
       "eventFingerprint": "afb126732ee70755e8a5394816de7bc19e330d3085da142b3bd1bd79b5adf312",
       "recordedAt": "2026-10-24T01:13:40Z",
       "sequence": 95,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c3a677383d564c2ccc2d99b6881736f8f7e5fda77f870bfe36819d794e010ab1",
+      "recordedAt": "2026-10-24T02:07:51Z",
+      "sequence": 96,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4a4779b28398221739bbd490f66fef6fa08009e516f45f9fe8af2314b3f4d4df",
+      "recordedAt": "2026-10-24T02:18:48Z",
+      "sequence": 97,
       "type": "evidence-recorded"
     }
   ],
@@ -2795,5 +2829,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T01:13:40Z"
+  "updatedAt": "2026-10-24T02:18:48Z"
 }
