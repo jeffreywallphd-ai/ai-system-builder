@@ -298,6 +298,10 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         resource_test = "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py"
         process_test = "modules/adapters/runtime/python/worker/tests/test_ocr_process.py"
         provider_test = "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py"
+        recognition_test = "modules/adapters/runtime/python/worker/tests/test_ocr_recognition.py"
+        normalization_test = "modules/adapters/runtime/python/worker/tests/test_document_normalization_ocr.py"
+        standard_test = "modules/adapters/runtime/python/worker/tests/test_document_normalization.py"
+        normalization_source = "modules/adapters/runtime/python/worker/tasks/document_normalization.py"
         build_test = "dev-tools/scripts/native/tests/test_build_windows_ocr.py"
         hook_test = "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
         build_source = "dev-tools/scripts/native/build_windows_ocr.py"
@@ -305,7 +309,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         forge_source = "apps/desktop/forge.config.js"
         native_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
         document_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, build_test, hook_test])
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, build_test, hook_test])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
@@ -316,21 +320,11 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                                    [sys.executable, "-B", "-m", "unittest", "discover",
                                     "-s", "dev-tools/scripts/native/tests",
                                     "-p", "test_build_windows_ocr.py"],
-                                   [sys.executable, "-B", "-m", "unittest", "discover",
-                                   "-s", "modules/adapters/runtime/python/worker/tests",
-                                   "-p", "test_ocr_process.py"],
-                                   [sys.executable, "-B", "-m", "unittest", "discover",
-                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                    "-p", "test_ocr_protocol.py"],
-                                   [sys.executable, "-B", "-m", "unittest", "discover",
-                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                    "-p", "test_ocr_provider.py"],
-                                   [sys.executable, "-B", "-m", "unittest", "discover",
-                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                    "-p", "test_ocr_resource.py"],
-                                   [sys.executable, "-B", "-m", "unittest", "discover",
-                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                    "-p", "test_ocr_wire.py"]])
+                                   *[[sys.executable, "-B", "-m", "unittest", "discover",
+                                      "-s", "modules/adapters/runtime/python/worker/tests", "-p", name]
+                                     for name in ["test_document_normalization.py", "test_document_normalization_ocr.py",
+                                                  "test_ocr_process.py", "test_ocr_protocol.py", "test_ocr_provider.py",
+                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_wire.py"]]])
         config = "dev-tools/config/contributor-check-profiles.json"
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
         for paths, required, expected_ocr, expected_generic in [
@@ -340,6 +334,10 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([resource_test], ["documentation"], True, False),
             ([process_test], ["documentation"], True, False),
             ([provider_test], ["documentation"], True, False),
+            ([recognition_test], ["documentation"], True, False),
+            ([normalization_test], ["documentation"], True, False),
+            ([standard_test], ["documentation"], True, False),
+            ([normalization_source], ["documentation"], True, False),
             ([native_test], ["documentation"], True, False),
             ([document_test], ["documentation"], True, False),
             ([build_test], ["documentation"], True, False),

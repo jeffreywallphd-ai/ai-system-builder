@@ -403,3 +403,29 @@ includes them. Missing tools preserve Standard startup and explicit OCR
 unavailability. Runtime code never compiles. See the native README for input
 leases, publication, interruption recovery and the trusted-compiler scope.
 Normalization, capability and actual host checks remain separate requirements.
+
+## Private scanned-PDF normalization support
+
+`ocr/recognition.py` uses only `OcrProvider` and neutral records. It recognizes
+page one to establish the total count, then every remaining original page with
+the same immutable source and ready identity. More than 16 pages is an error,
+never a partial success. Combined page, line, text and neutral encoded-byte
+limits apply. The validation representation is compact ASCII JSON of the
+dataclass fields; its 2 MiB cap is separate from the Windows wire-frame cap.
+
+`normalize_sources_to_markdown` accepts private keyword arguments `ocr_language`
+and `cancelled`. An explicit language opts existing PDF sources into recognition;
+other formats retain Standard extraction and images are not newly supported.
+Standard imports and calls do not import or probe the supplier. One bounded
+16 MiB byte snapshot feeds all recognition calls. Regular-file metadata is
+checked for observed changes; application authorization and native source-path
+race qualification remain separate requirements.
+
+Recognized lines retain exact Python character offsets, original pages and
+finite rendered geometry in `ocr_document`. Blank pages remain in that metadata
+without invented text. OCR region confidence is `None`; extraction quality
+measures text hygiene, not recognition accuracy. Content-bearing normalized
+fields are excluded from diagnostic representations. OCR admission, read,
+identity, supplier and cancellation failures cannot become unsupported-file skips.
+This private support does not enable public OCR. Contract/capability, task
+cancellation, actual source staging and desktop/browser journeys still need work.

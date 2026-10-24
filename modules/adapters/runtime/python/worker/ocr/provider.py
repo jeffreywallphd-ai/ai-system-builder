@@ -7,14 +7,10 @@ from __future__ import annotations
 import os
 from typing import Callable
 from .protocol import (
-    OcrContractError, OcrDocument, OcrProvider, OcrReadiness, OcrRequest, check_result,
+    OcrContractError, OcrDocument, OcrProvider, OcrReadiness, OcrRequest, OcrUnavailable, check_result,
 )
 from .wire import parse_response, readiness_frame, request_frame
 from .windows_process import exchange, OcrProcessError
-
-
-class OcrUnavailable(RuntimeError):
-    """Fixed public error; never include a document, path or supplier exception."""
 
 
 class WindowsOcrProvider:

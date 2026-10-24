@@ -1,7 +1,8 @@
 """Explicit synthetic Windows OCR document checks, never ordinary discovery.
 
 Uses installed Pillow/Arial only to create synthetic fixtures. No model, provider
-credential, private document, download, product resource or old run is used.
+credential, private document, download or old run is used. The normalization
+case additionally requires the current trusted fixed product helper resource.
 """
 from __future__ import annotations
 import hashlib
@@ -27,6 +28,19 @@ LABELS = ("INVOICE 4826", "ORDER 7259", "TOTAL 3648", "RECEIPT 9152", "REPORT 83
 # per inch, and the bounded helper renders at scale2 with integer flooring.
 # These are rendered-page dimensions, not the embedded image's pixel size.
 PDF_RENDER_SIZE = (int(1000 * 96 / 144 * 2), int(400 * 96 / 144 * 2))
+
+
+def product_resource_identity():
+    result = {}
+    for name, maximum in (("WindowsOcrHelper.exe", 2 * 1024**2), ("resource.json", 4096)):
+        path = OCR / "native/build" / name
+        need(path.is_file() and not path.is_symlink() and path.stat().st_size <= maximum,
+             "current-product-resource-required")
+        with path.open("rb") as stream:
+            value = stream.read(maximum + 1)
+        need(0 < len(value) <= maximum, "current-product-resource-required")
+        result[name] = {"bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()}
+    return result
 
 
 def fixtures(native):
@@ -70,10 +84,13 @@ class WindowsOcrDocuments(unittest.TestCase):
         directory(cls.folder, create=True)
         cls.bundle = cls.folder / "helper"
         cls.sources = {str(path.relative_to(ROOT)): digest(path) for path in [
-            *[OCR / name for name in ("provider.py", "protocol.py", "wire.py", "resource.py",
+            *[OCR / name for name in ("provider.py", "protocol.py", "recognition.py", "wire.py", "resource.py",
                                      "windows_api.py", "windows_process.py", "native/WindowsOcrHelper.cs")],
+            ROOT / "modules/adapters/runtime/python/worker/tasks/document_normalization.py",
+            ROOT / "modules/adapters/runtime/python/worker/models.py",
             Path(__file__).absolute(),
             ROOT / "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"]}
+        cls.product_resource = product_resource_identity()
         build(cls.bundle, OCR / "native/WindowsOcrHelper.cs", cls.native)
         cls.inputs, tools = fixtures(cls.native)
         need(all(digest(ROOT / name) == value for name, value in cls.sources.items()), "source-drift")
@@ -81,11 +98,13 @@ class WindowsOcrDocuments(unittest.TestCase):
              "sources": cls.sources, "fixture_tools": tools,
              "fixture_sha256": {name: hashlib.sha256(raw).hexdigest() for name, raw in cls.inputs.items()},
              "run_id": cls.folder.name, "synthetic_only": True, "models_used": False,
+             "fixed_product_resource": cls.product_resource,
              "product_enabled": False, "parent_qualification": False})
 
     @classmethod
     def tearDownClass(cls):
         fresh_operator()
+        need(product_resource_identity() == cls.product_resource, "product-resource-drift")
         need(all(digest(ROOT / name) == value for name, value in cls.sources.items()), "source-drift")
 
     def setUp(self):
@@ -185,6 +204,49 @@ class WindowsOcrDocuments(unittest.TestCase):
         self.assertTrue(self.journals[-1]["forced"])
         self.assertEqual(self.journals[-1]["reason"], "cancelled")
         self.assert_text(self.recognize("png", "image/png").pages[0], LABELS[0])
+
+
+    def test_08_fixed_product_resource_normalizes_all_scanned_pdf_pages(self):
+        from modules.adapters.runtime.python.worker.models import (
+            DatasetPreparationSourceInput, DocumentNormalizationConfig,
+        )
+        from modules.adapters.runtime.python.worker.tasks.document_normalization import normalize_sources_to_markdown
+
+        source = self.folder / "normalized-source.pdf"
+        with source.open("xb") as stream:
+            stream.write(self.inputs["pdf"])
+        # This case exercises the actual installed resource path, not the
+        # private fixture bundle. Missing/stale resources fail qualification;
+        # this operator never builds or chooses a replacement product resource.
+        self.resource_patch.stop()
+        try:
+            result = normalize_sources_to_markdown(
+                [DatasetPreparationSourceInput(artifactId="synthetic-scan", localPath=str(source),
+                                               originalName="synthetic.pdf", mediaType="application/pdf")],
+                DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="skip"),
+                ocr_language="en-US")
+        finally:
+            self.resource_patch.start()
+        self.assertEqual(result.skipped_document_count, 0)
+        self.assertEqual(result.warnings, [])
+        self.assertEqual(len(result.documents), 1)
+        document = result.documents[0]
+        self.assertEqual(document.ocr_document.source_sha256, hashlib.sha256(self.inputs["pdf"]).hexdigest())
+        self.assertEqual(document.ocr_document.source_page_count, 5)
+        self.assertEqual([page.number for page in document.ocr_document.pages], [1, 2, 3, 4, 5])
+        for page, label in zip(document.ocr_document.pages, LABELS, strict=True):
+            self.assert_text(page, label, PDF_RENDER_SIZE)
+        lines = [(page.number, line) for page in document.ocr_document.pages for line in page.lines]
+        self.assertEqual(len(document.regions), len(lines))
+        for region, (number, line) in zip(document.regions, lines, strict=True):
+            self.assertTrue(document.markdown[region.start:region.end] == line.text,
+                            "The normalized span must retain exact recognized text.")
+            self.assertEqual(region.page_number, number)
+            self.assertIsNone(region.confidence)
+        self.assertNotIn(str(source), repr(document))
+        self.assertTrue(all(label not in repr(document) for label in LABELS))
+        self.assertEqual(len(self.journals), 5)
+        self.assertTrue(all(journal["passed"] for journal in self.journals))
 
 
 if __name__ == "__main__":

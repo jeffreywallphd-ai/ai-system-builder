@@ -5,8 +5,9 @@ Recognized content is data, never a diagnostic or an instruction to execute.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import hashlib
+import json
 import math
 import re
 import unicodedata
@@ -30,6 +31,10 @@ class OcrCancelled(RuntimeError):
     pass
 
 
+class OcrUnavailable(RuntimeError):
+    """Fixed public error; never include private source or supplier details."""
+
+
 def _require(value: bool) -> None:
     if not value:
         raise OcrContractError("Text recognition returned an invalid bounded result.")
@@ -51,6 +56,11 @@ def _identifier(value: object) -> None:
 def _language(value: object) -> None:
     _require(type(value) is str and len(value) <= 35 and
              re.fullmatch(r"[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}", value) is not None)
+
+
+def validate_language(language: str) -> None:
+    """Validate explicit syntax without guessing aliases or installed support."""
+    _language(language)
 
 
 @dataclass(frozen=True)
@@ -134,6 +144,13 @@ class OcrDocument:
             line_count += len(page.lines)
             text_count += sum(len(line.text) for line in page.lines)
         _require(line_count <= MAX_LINES and text_count <= MAX_TEXT_CHARACTERS)
+        # A defined supplier-neutral validation representation bounds the whole
+        # document, including combined pages and escaped supplementary text.
+        # Existing semantic caps bound this temporary allocation. Never retain
+        # or log it; the private Windows wire cap remains independent.
+        encoded = json.dumps(asdict(self), ensure_ascii=True, allow_nan=False,
+                             separators=(",", ":")).encode("ascii")
+        _require(len(encoded) <= MAX_RESULT_BYTES)
 
 
 @dataclass(frozen=True)

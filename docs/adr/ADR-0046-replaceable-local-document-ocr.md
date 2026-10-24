@@ -143,3 +143,22 @@ signature authenticity. Actual fixed-path readiness, document smoke and copied
 resource checks qualify this build component only. Application normalization,
 source authorization, capability and both-host delivery remain required before
 advertised OCR or parent completion.
+
+## Complete scanned-PDF normalization
+
+Keep all-page orchestration provider-neutral in the runtime adapter. Establish
+the complete PDF page count from the first source-bound result, refuse totals
+above 16 and recognize exactly the remaining original pages. Both parts must
+match the same ready source/provider/version/language and page count. Apply
+aggregate line/text limits and a 2 MiB compact ASCII JSON dataclass-validation
+bound to every constructed document, including merged results. This is a neutral
+validation representation, not a second Windows transport contract.
+
+Private normalization uses an explicit language and cancellation callback.
+Only existing PDF sources opt in. Bound a single immutable read and preserve
+recognized lines, exact normalized offsets, blank-page identities and rendered
+geometry. Confidence is absent. OCR failures remain failures even when ordinary
+unsupported documents can be skipped. Standard extraction imports no supplier.
+Current private normalization support does not advertise readiness or replace
+upstream source authorization, native path-race proof, public task contracts or
+actual desktop/browser qualification.

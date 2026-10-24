@@ -541,3 +541,12 @@ fixed installed SDK inputs and bounded compiler output/time. Actual fixed-path
 readiness, document smoke and copied-resource identity are separate controlled
 evidence. Preserve their raw source/build hashes; neither a portable pass nor a
 build alone grants application OCR availability or Data-roadmap completion.
+
+The same OCR profile owns provider-neutral complete-PDF recognition and explicit
+scanned-PDF normalization. It runs nine Python modules and one Node file,
+including existing Standard extraction regressions with installed worker
+dependencies. No model, native engine, credentials or downloads run in that
+profile. The separate native document operator adds actual fixed-product-resource
+normalization after the trusted build. Its source/resource identity, exact spans
+and strict retirement support this adapter only. Public capability/task/staging
+and actual desktop/browser delivery still need their own evidence.

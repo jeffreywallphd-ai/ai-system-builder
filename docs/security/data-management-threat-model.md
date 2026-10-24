@@ -725,3 +725,26 @@ deleting historical evidence. Optional build failure preserves Standard startup,
 while missing/stale resources remain unavailable. Build/copy evidence does not
 grant application or parent qualification. Actual document normalization, source
 authorization and both-host delivery still require separate checks.
+
+## Complete OCR normalization boundary
+
+Private PDF bytes, recognized text and source/page lineage remain untrusted.
+The provider-neutral orchestrator validates readiness, exact source digest,
+provider/version/language, every original page and a consistent total count.
+It rejects totals above 16 and applies aggregate line, character and neutral
+encoded-byte limits to the combined result. Partial recognition is not success.
+Supplier exceptions use fixed public text without retained content in diagnostics.
+
+The normalizer bounds one immutable PDF read at 16 MiB, rejects non-regular or
+observed redirected sources, checks compatible path/handle metadata and compares
+open-handle change time before and after reading. It does not authorize a source
+or establish native protection against a hostile same-user path/content writer;
+those source-staging and R30 native-race requirements remain pending. No new
+executable, service, path selector, file format or implicit language install is
+introduced. OCR failure/cancellation cannot be hidden by unsupported-file skip.
+Normalized text and private paths are excluded from representations. Geometry
+and original page metadata remain exact; no OCR confidence is invented.
+Portable and actual fixed-resource synthetic normalization evidence supports this
+adapter only. Public task/capability, native source authority, both-host delivery
+and parent qualification remain separate. Old offload and accepted model quality
+are unchanged. Rollback must preserve denial rather than silently drop OCR options.

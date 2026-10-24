@@ -754,3 +754,30 @@ development tool, not a contained parser for user content. Runtime recognition
 retains its creation-time Job, fixed resource and finite limits. Fixed-path and
 copied-resource checks do not qualify normalization, readiness, either host's
 product journey or the parent roadmap.
+
+## Provider-neutral complete scanned-PDF normalization
+
+The runtime's private `ocr/recognition.py` composes the replaceable `OcrProvider`;
+it has no Windows, process, file or transport import. It obtains page one, bounds
+the total to 16 and reads exactly every remaining original page with the same
+immutable source, ready provider/version and explicit language. Source page
+counts cannot change between calls. Aggregate neutral result limits apply after
+merging, independently of each private Windows frame limit.
+
+Document normalization has explicit private OCR language/cancellation keywords.
+PDF is the only existing application source format that opts in; Standard and
+other formats remain unchanged. A bounded immutable read is checked against
+regular-file identity, size, modification time and available creation time.
+Change time is compared between the two open-handle readings. Cross-API Windows
+change-time equality is invalid; see the reproduced
+[CPython issue](https://github.com/python/cpython/issues/157671) and
+[Python stat semantics](https://docs.python.org/3.12/library/os.html#os.stat_result).
+These metadata checks detect observed changes, not hostile path-race isolation.
+
+Normalized OCR line spans use exact Python character offsets and original page
+numbers. The attached immutable OCR document retains rendered dimensions and
+line rectangles, including blank pages; confidence is absent. Content-bearing
+fields are hidden from representations. Text hygiene is not OCR accuracy.
+Cancellation and OCR-specific failures bypass ordinary unsupported-file skipping.
+Public capability/task integration, source staging and both-host UI evidence
+remain required before product availability or parent-roadmap closure.

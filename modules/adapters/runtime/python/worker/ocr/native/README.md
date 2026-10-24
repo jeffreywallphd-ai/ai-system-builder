@@ -175,3 +175,21 @@ lease close. Termination releases the OS lock; the next attempt uses a fresh
 UUID and leaves prior runs intact. Uncertain live ownership is retained and
 denies another build in that process. Neither a build nor a copied resource
 alone establishes application OCR availability or parent-roadmap completion.
+
+## Scanned-PDF normalization qualification
+
+The explicit document operator now requires a current trusted product resource.
+Run the fixed development build above first. Seven groups retain their fresh
+private synthetic bundle checks; the eighth removes that fixture override and
+normalizes all five scanned PDF pages through the actual fixed product resource.
+It checks exact spans, original page/geometry metadata, absent confidence and
+strict retirement. Product resource hashes are recorded and checked after use;
+missing or stale resources fail instead of triggering a build or fallback.
+
+The neutral complete-document constructor bounds a defined compact ASCII JSON
+validation representation at 2 MiB, including combined Unicode output. This is
+independent of the private wire cap. Normalization reads at most 16 MiB plus one
+denial byte, preserves exact text and refuses a PDF above 16 total pages. It
+cannot turn OCR errors into skipped-source success. These remain local adapter
+checks; public capability, task/staging and both-host delivery are not qualified
+by this operator. Accepted model accuracy is not rerun.

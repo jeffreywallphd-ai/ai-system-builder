@@ -153,3 +153,11 @@ containment is claimed. Portable tests never compile or launch OCR. Actual build
 fixed product resource and copied-resource evidence stay separate from
 normalization, host UI and parent qualification. Build changes also select the
 dependency gate even though this component adds no dependency.
+
+The `ocr-provider-contract` profile also runs complete-PDF recognition, optional
+scanned-PDF normalization and the existing Standard normalization regressions.
+It contains nine Python modules and one Node file. The normalization tests use
+the existing installed worker dependencies (including Pydantic, pypdf,
+python-docx and markdownify); they do not install anything or run an OCR engine.
+Actual fixed-resource scanned-PDF normalization remains in the separate explicit
+native document operator and grants no public capability or parent completion.
