@@ -2585,6 +2585,44 @@
         "The fresh process reopened the fixed synthetic SQLite metadata and retried the application command offline. This is not a complete desktop or server restart, crash recovery, hostile filesystem protection or native/offload proof.",
         "The three synthetic files remain in the private repository; no remote file was deleted and no visibility change occurred. The small local synthetic metadata database is retained. Provider website rendering, mounted-host UI, full host retry/recovery, governed ingestion scale and advanced/native/runtime checks remain pending agent work. Accepted model accuracy stays closed. No user action is needed."
       ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "work_id": "bounded-lazy-token-masks-final-component",
+      "work_criteria": [
+        "bounded-equivalent-token-masks",
+        "pinned-optional-runtime-delivery",
+        "real-tokenizer-resource-regression"
+      ],
+      "receipt_digest": "b6b36566e614e4388c3bcf814003dbd5cd9bb081932fc75de1d17b5ca1aca98f",
+      "review_digest": "28e9e48e2498028cecb77af8da89724c35c72749cbdf02ad0cc453a1f211cb61",
+      "scope": "Reviewed compiler repair is committed. A clean HEAD-plus-17 projection passed 67 tests; all five scoped checks passed. A current 26-file packaged worker started with authentication and confirmed shutdown. The final suite on the exact clean commit passed 4,094 tests with four existing skips, including seven controlled Python AI tests. Empty AI delegates ran no tests.",
+      "limitations": [
+        "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
+        "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
+        "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+      ],
+      "criterion_id": "packaged-host-readiness"
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "work_id": "bounded-lazy-token-masks-final-component",
+      "work_criteria": [
+        "bounded-equivalent-token-masks",
+        "pinned-optional-runtime-delivery",
+        "real-tokenizer-resource-regression"
+      ],
+      "receipt_digest": "b6b36566e614e4388c3bcf814003dbd5cd9bb081932fc75de1d17b5ca1aca98f",
+      "review_digest": "28e9e48e2498028cecb77af8da89724c35c72749cbdf02ad0cc453a1f211cb61",
+      "scope": "Reviewed compiler repair is committed. A clean HEAD-plus-17 projection passed 67 tests; all five scoped checks passed. A current 26-file packaged worker started with authentication and confirmed shutdown. The final suite on the exact clean commit passed 4,094 tests with four existing skips, including seven controlled Python AI tests. Empty AI delegates ran no tests.",
+      "limitations": [
+        "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
+        "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
+        "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+      ],
+      "criterion_id": "representative-resource-and-usability-qualification"
     }
   ]
 }

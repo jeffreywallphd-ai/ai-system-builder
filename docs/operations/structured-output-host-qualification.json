@@ -164,5 +164,68 @@
       "Installed accelerator total is advisory. It does not establish free VRAM, Torch compatibility, model admission, native process ownership or offload safety. Uncertain masks, MIG, multiple devices, driver errors or unconfirmed probe retirement remain unknown. Existing memory guards and accepted accuracy results are unchanged.",
       "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
     ]
+  },
+  "compiler_repair_follow_up": {
+    "work_id": "bounded-lazy-token-masks-final-component",
+    "receipt_digest": "b6b36566e614e4388c3bcf814003dbd5cd9bb081932fc75de1d17b5ca1aca98f",
+    "review_digest": "28e9e48e2498028cecb77af8da89724c35c72749cbdf02ad0cc453a1f211cb61",
+    "checkpoint_commit": "ac49faebd9df44b993f9b224cdad5e46c26a0f86",
+    "recorded_receipt_source_digest": "5cfa8f8e89cc483e209e9eda592bd2640ab242ff620160b5caa0b69708369508",
+    "selected_source_tests": {
+      "passed": 67,
+      "skipped": 0
+    },
+    "packaged_worker_observation_sha256": "9795ee658a4048047ab58ccefc0ab4fa4a2458a643bccdee49a3c798e0a59219",
+    "actual_packaged_python_files": 26,
+    "owned_worker_stop_confirmed": true,
+    "historical_tokenizer_observation_sha256": "546f613befb8cf9f7f8fb7556242b1a771b5ea4de50f6ef7c859e03b5eeaf927",
+    "scope": "Reviewed compiler repair is committed. A clean HEAD-plus-17 projection passed 67 tests; all five scoped checks passed. A current 26-file packaged worker started with authentication and confirmed shutdown. The final suite on the exact clean commit passed 4,094 tests with four existing skips, including seven controlled Python AI tests. Empty AI delegates ran no tests.",
+    "limitations": [
+      "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
+      "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
+      "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+    ],
+    "parent_qualification": "pending",
+    "prerequisites": [
+      {
+        "work_id": "controlled-training-suite-explicit-routing",
+        "checkpoint_commit": "d771e87591360dbd3b02bd81a92ad8e574fe7569",
+        "receipt_digest": "3e1c650a8f18f1ee728e8abf502358831f88f931d43e7012ac0c9d91c2952af8",
+        "review_digest": "263e61d65d4050a75a695bc86a65f14c7cb49470b0369f1be598b234ad55fc93",
+        "scope": "Routine focused checks exclude the three dedicated controlled Python suites; 14 owning tests passed without a model download."
+      },
+      {
+        "work_id": "local-training-validation-regressions",
+        "checkpoint_commit": "10b53360be6fcd579dc7898549b1149f708c4cd5",
+        "receipt_digest": "06e69313b90f1b01f9d85d9cdaecf236a16acf3d1a11a48f7f2cb58871fd5332",
+        "review_digest": "6a6dd12c996c463f45e9330ce9bc3f2b64ca393ead14de1f99ea6465700d2639",
+        "passed": 72,
+        "skipped": 1,
+        "scope": "Local JSONL uses the built-in JSON reader; corrupt tensor reads invalidate all aggregate tensor facts; rejected shard indexes report incomplete checks. The existing Windows symlink fixture remains skipped. Actual offline local JSONL train/validation reads passed separately without loading a model; that observation predates only the final validation-file changes."
+      }
+    ],
+    "final_committed_suite": {
+      "status": "passed",
+      "commit": "ac49faebd9df44b993f9b224cdad5e46c26a0f86",
+      "source_digest": "60ee5e4dbc1dd3fd1f72cec5f62813efc82309037962c35b935d66d5c708b5b6",
+      "source_unchanged": true,
+      "checkout_clean_after": true,
+      "seconds": 258.375,
+      "observation_sha256": "3fe88d2c3415c629a37b6b9b4767f717ad821a7fb70f6c9b19c5b16ddeb22e06",
+      "counts": {
+        "standard_node_passed": 3471,
+        "standard_node_skipped": 2,
+        "standard_vitest_passed": 491,
+        "e2e_node_passed": 122,
+        "e2e_node_skipped": 2,
+        "e2e_vitest_passed": 3,
+        "controlled_python_ai_passed": 7,
+        "controlled_python_ai_skipped": 0,
+        "empty_node_ai_executed": 0,
+        "empty_vitest_ai_executed": 0
+      },
+      "accepted_accuracy_rerun": false,
+      "scope": "Exact clean committed candidate with shared unchanged dependencies. No Qwen model inference, new download, provider credentials or retained staging; tiny locally-created Context model tests are separate from accepted model accuracy."
+    }
   }
 }

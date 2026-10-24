@@ -10292,6 +10292,52 @@
           "Completed model-accuracy checks stay closed. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bae4f3215b9e0bf1ba16ee5ecdba0501d2c687f5a7fb5143e656340a36a5f52d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The output-format memory fix is reviewed and committed. The selected 67 tests and all five component checks passed.",
+          "The packaged worker matched all 26 current Python files. It started with authentication and stopped successfully.",
+          "The final suite on the clean committed code passed 4,094 tests, with four existing skips. This includes seven controlled Python AI tests; the empty AI groups add no test passes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b9baeb67712b432f3620ceb61c27193de1a9f2a3f0d6d7d1b70fb60f1f8df91b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The worker startup check loaded no model. Its environment shares existing base packages, so it does not prove a fresh installation of every dependency or a full app restart.",
+          "The final suite uses a local Qwen tokenizer and tiny locally built Context models. It does not repeat accepted Qwen accuracy tests or qualify representative model-memory, speed or low-memory-mode behavior."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2459daba6bdc74d5b5e411821a6173977e8ad6127c306d3eaa723d77f8f213ed",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The earlier four-test tokenizer check still applies to the unchanged compiler code. It tested small CPU and graphics-device token masks without loading a model.",
+          "Its original source and memory measurements remain historical. It does not supply current model-memory or speed results."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "052e2c1d1dd35d469f8b0df0dc472e47fca0e09ff7ab372f431c96456832a5c7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must measure output structure, memory use and speed for the changed compiler on CPU and graphics-device profiles, then review the remaining roadmap evidence.",
+          "Earlier model measurements used the previous compiler. Completed accuracy tests stay closed. The final suite on the clean committed code passed.",
+          "Protecting retained temporary files and safely restarting low-memory mode remain separate pending work. No action is needed from you now."
+        ]
+      }
     }
   ]
 }
