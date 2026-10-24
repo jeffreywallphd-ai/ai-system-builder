@@ -75,7 +75,7 @@
   checks with tighter bounded admission rules. Apply task-specific checks and
   per-example source association without assuming tabular rows.
 - Preserve exact normalized artifact/span/region/page lineage. Report unavailable OCR honestly and fail closed; do not imply recognition ran.
-  Use [ADR-0046](../../adr/ADR-0046-replaceable-local-document-ocr.md) for the replaceable worker-owned OCR contract, private framing and bounded native owner/resource lease; provider, build/package and product integration remain pending.
+  Use [ADR-0046](../../adr/ADR-0046-replaceable-local-document-ocr.md) for the replaceable worker OCR contract, strict framing, bounded native owner/resource lease and provider with fresh exact source/page/language binding. Separate synthetic image/scanned-PDF checks cover content and denial/cancellation; they are not parent qualification. Product OCR stays unavailable until trusted packaging, normalization and both-host delivery qualify. No inward Windows imports, supplier selection or model accuracy rerun is added.
 - For images, distinguish inspected metadata/annotations from uninspected
   pixels. Do not claim OCR, face detection, or pixel-level personal-data or
   credential inspection when those capabilities did not run.

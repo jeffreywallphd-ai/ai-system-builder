@@ -362,7 +362,7 @@ little-endian byte length, at most 23000000 request bytes and 2 MiB of response
 bytes before parsing. It rejects duplicate or unknown fields, malformed UTF-8,
 non-finite values, invalid types, geometry and global line/text overflow. A parsed
 result still needs `check_result`; parsing is neither source authorization nor
-provider readiness. The fixed portable profile runs four OCR test modules,
+provider readiness. The fixed portable profile runs five OCR test modules,
 including resource-identity and process failure semantics.
 
 `ocr/native/WindowsOcrHelper.cs` implements the installed Windows engine behind
@@ -383,3 +383,13 @@ resources fail closed. Failed closes retain ownership and deny successors.
 The model-free Windows qualification operator is separate from ordinary portable
 tests. This process/resource component does not enable OCR: trusted packaging,
 provider composition, actual document results and host wiring still need work.
+
+The replaceable provider now composes strict framing, fresh exact-language
+readiness and source/page/provider-bound results over the fixed Windows owner.
+Construction does not probe or launch. No command/path/supplier selector,
+implicit language installation, fallback or confidence value is added.
+The explicit `tests/qualification_ocr_documents.py --native` module exercises
+only new synthetic image/scanned-PDF bundles using installed fixture tools.
+It is not ordinary test discovery or a product readiness gate. Trusted packaged
+resources, normalization and actual desktop/browser delivery still need their
+own checks before OCR can be advertised. Standard extraction stays unchanged.

@@ -722,3 +722,17 @@ tools, never downloads or enables OCR, and leaves prior runs unchanged. Trusted
 build/package composition, provider/readiness/normalization and actual document
 and desktop/browser UI qualification remain pending. Standard extraction, model
 accuracy and old retained offload data are unchanged.
+
+## Replaceable OCR provider composition
+
+The worker-private `ocr/provider.py` composes the neutral OCR contract with the
+fixed Windows transport. The factory has no probe or file/process side effect.
+Each recognition checks fresh installed-language readiness, parses bounded frames
+and checks exact source/provider/version/language and selected original pages.
+Missing platform/helper/language is explicit; response corruption never activates
+a fallback. Application/runtime task ports remain supplier-neutral.
+
+The explicit synthetic document operator checks PNG/JPEG, EXIF rotation, selected
+scanned-PDF pages, empty results and malformed/size/cancellation paths in fresh
+local bundles. It grants no product availability. Trusted development/package
+resource composition, normalization and desktop/browser delivery remain pending.

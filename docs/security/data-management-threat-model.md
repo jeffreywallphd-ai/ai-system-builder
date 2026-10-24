@@ -679,3 +679,20 @@ component nor its tests inspect or change unknown retained offload trees, repeat
 accepted model accuracy, qualify legacy restricted Assets or enable OCR. Trusted
 packaging, actual document recognition/lineage, provider/readiness and host UI
 integration remain required. Ordinary Canvas startup does not probe this engine.
+
+## OCR provider exchange binding
+
+The concrete adapter protects source/page identity and private content across
+two separately retired exchanges: fresh exact-language readiness, then bounded
+recognition. The parsed document must match immutable authorized source bytes,
+selected original pages and the actual ready provider/version/language. No ready
+cache, provider fallback, path/command selector or language download is permitted.
+Absent resources return fixed unavailable reasons; corrupted responses fail the
+contract. Cancellation and unsafe retirement remain failures and never produce
+partial documents. Existing native resource/process limits remain in force.
+
+Synthetic local document checks cover actual image/PDF content and denial paths,
+without private sources, credentials, models or retained files. Fixture Pillow
+and Arial are qualification tools, not runtime provider dependencies. Packaging,
+normalization, source authorization and actual host delivery remain required;
+this component does not advertise OCR or qualify the parent roadmap.

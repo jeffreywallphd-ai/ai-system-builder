@@ -168,8 +168,13 @@ internal static class WindowsOcrHelper
         var decoder = await BitmapDecoder.CreateAsync(stream);
         Need(decoder.DecoderInformation.CodecId == (media == "image/png" ? BitmapDecoder.PngDecoderId : BitmapDecoder.JpegDecoderId));
         Need(decoder.PixelWidth >= 1 && decoder.PixelHeight >= 1 && decoder.PixelWidth <= Dimension && decoder.PixelHeight <= Dimension && (ulong)decoder.PixelWidth * decoder.PixelHeight <= Pixels);
-        using (var bitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied))
+        Need(decoder.OrientedPixelWidth >= 1 && decoder.OrientedPixelHeight >= 1 && decoder.OrientedPixelWidth <= Dimension && decoder.OrientedPixelHeight <= Dimension && (ulong)decoder.OrientedPixelWidth * decoder.OrientedPixelHeight <= Pixels);
+        using (var bitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+            new BitmapTransform(), ExifOrientationMode.RespectExifOrientation, ColorManagementMode.DoNotColorManage))
         {
+            // Recognition coordinates describe the viewed bitmap, not the stored
+            // JPEG raster. EXIF quarter-turns swap the width and height.
+            Need(bitmap.PixelWidth == decoder.OrientedPixelWidth && bitmap.PixelHeight == decoder.OrientedPixelHeight);
             var result = await engine.RecognizeAsync(bitmap); var lines = new List<object>();
             foreach (var line in result.Lines)
             {
@@ -177,10 +182,10 @@ internal static class WindowsOcrHelper
                 Need(ScalarLength(line.Text) <= 250000 && line.Words.Count > 0 && lines.Count < 4096);
                 double left = line.Words.Min(w => w.BoundingRect.Left), top = line.Words.Min(w => w.BoundingRect.Top);
                 double right = line.Words.Max(w => w.BoundingRect.Right), bottom = line.Words.Max(w => w.BoundingRect.Bottom);
-                Need(left >= 0 && top >= 0 && right > left && bottom > top && right <= decoder.PixelWidth && bottom <= decoder.PixelHeight);
+                Need(left >= 0 && top >= 0 && right > left && bottom > top && right <= bitmap.PixelWidth && bottom <= bitmap.PixelHeight);
                 lines.Add(Record("text", line.Text, "left", left, "top", top, "width", right - left, "height", bottom - top));
             }
-            return Record("number", number, "width", (int)decoder.PixelWidth, "height", (int)decoder.PixelHeight, "lines", lines);
+            return Record("number", number, "width", bitmap.PixelWidth, "height", bitmap.PixelHeight, "lines", lines);
         }
     }
 }

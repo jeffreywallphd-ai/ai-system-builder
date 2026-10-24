@@ -38,6 +38,19 @@ unavailable response. Other failures have fixed nonzero exit codes. Helper code
 writes no exception, source text or path as diagnostics; a future native owner
 must also discard or bound system diagnostics.
 
+WinRT reports PDF page size in device-independent pixels (96 per inch), not
+the embedded raster's pixels or PDF points (72 per inch). Synthetic PDF geometry
+expectations use that conversion, the declared render scale and integer flooring.
+See [PDF page size](https://learn.microsoft.com/en-us/uwp/api/windows.data.pdf.pdfpage.size?view=winrt-26100)
+and [Windows coordinate units](https://learn.microsoft.com/en-us/windows/win32/learnwin32/dpi-and-device-independent-pixels).
+
+JPEG EXIF orientation is applied explicitly before recognition. Raw and oriented
+dimensions are bounded before decoding. The result uses the actual oriented
+bitmap dimensions and geometry, so a quarter-turn cannot mix stored raster width
+with viewed-page coordinates. See Microsoft's
+[raw and oriented dimensions](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.imaging.bitmapdecoder?view=winrt-26100)
+and [explicit orientation mode](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.imaging.exiforientationmode?view=winrt-26100).
+
 The helper's managed wait includes input reading and is limited to 110 seconds.
 It is not native exit, memory or descendant containment proof. Before use,
 the runtime must own a trusted compiled resource with private bounded pipes,
@@ -61,7 +74,8 @@ creation-time Windows Job membership, suspended creation, three explicitly
 inherited pipe handles and a minimal Windows environment. Process and job commit
 ceilings are each 512 MiB, with one active process and a 120-second parent
 deadline. Output is capped at 2 MiB plus its frame header. Standard error is
-counted, discarded and capped at 64 KiB; any standard error denies success.
+counted and discarded, with a 64 KiB rejection threshold; any standard error
+denies success. Observed bytes can exceed that threshold before termination.
 The parent checks cancellation and native limit notifications. It accepts a
 result only after the native root exits, the job reports zero active members,
 pipe threads stop and all owned handle closes are acknowledged. Uncertain
@@ -75,7 +89,7 @@ file write/delete sharing and ancestor deletion. Missing, changed or incomplete
 resources fail closed. This is a trusted-installation integrity check, not a
 signature, AppContainer or defense against a writer of the installation itself.
 Runtime code never compiles, searches for, downloads or chooses another helper.
-Build/package composition and the provider/normalization/UI remain pending;
+Build/package composition and normalization/UI remain pending;
 the product still reports OCR unavailable.
 
 Directory leases request both read attributes and list-directory access. They
@@ -98,3 +112,28 @@ resource. Portable profile tests do not execute this operator. Native checks and
 their exact source hashes supply only local process/resource evidence; actual
 PNG/JPEG/scanned-PDF results, deployment, normalization and both host journeys
 need their own qualification. No model-quality rerun is required.
+
+## Provider and actual document checks
+
+`../provider.py` implements the selected supplier behind `OcrProvider`. Creating
+the provider performs no probe or launch. Each recognition checks fresh installed
+language readiness, then binds the recognized result to the exact source digest,
+selected original pages, provider/version and language. Unsupported platforms,
+missing helpers and absent languages are explicit unavailable states. A malformed
+or substituted response is an error, not a fallback. The provider never compiles
+or selects a helper, installs a language, or supplies a confidence score.
+
+The separate synthetic document operator is:
+
+```text
+python -B -m modules.adapters.runtime.python.worker.tests.qualification_ocr_documents --native
+```
+
+It uses installed Pillow and Arial solely to generate new PNG/JPEG/scanned-PDF
+fixtures, and the installed SDK to compile a fresh private qualification bundle.
+It checks text, finite geometry, blank pages, selected original PDF pages,
+EXIF rotation, exact language, malformed/oversized inputs and cancellation with
+strict retirement. Missing tools fail qualification; nothing is downloaded.
+Ordinary portable tests never run this operator. A local bundle and source
+tests do not qualify trusted product packaging, normalization or host delivery.
+Product OCR remains unavailable until those separate checks pass.

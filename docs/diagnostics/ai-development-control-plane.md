@@ -526,3 +526,9 @@ Use actual native/provider and product checks for the later implementation.
 The model-free Windows operator creates only fresh synthetic test resources and
 new owned jobs, using the installed compiler and SDK. It is not an ordinary test,
 a compiler fallback in the app, a model test or a parent qualification pass.
+
+The `ocr-provider-contract` profile includes portable provider source/readiness/
+page binding and cancellation/error checks. The explicit Windows synthetic
+document operator remains a separate controlled check, never an implicit profile
+command. Preserve its actual result and source hashes separately. It cannot
+grant product OCR availability, packaging, normalization, host or parent closure.

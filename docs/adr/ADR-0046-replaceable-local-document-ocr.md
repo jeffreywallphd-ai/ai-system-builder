@@ -103,3 +103,19 @@ installation writer. The app does not compile or search for a replacement.
 Local model-free native tests are distinct from portable checks. Provider and
 build/package composition, actual document recognition and product/UI remain
 pending; none of these support components changes advertised availability.
+
+## Provider orchestration and document qualification
+
+The Windows provider now implements the neutral protocol over the fixed private
+transport. Construction has no side effects. Recognition checks fresh exact
+installed-language readiness and binds every result to the source digest, original
+page selection and ready provider/version. Platform/helper/language absence is
+explicit; malformed or substituted responses fail rather than selecting another
+engine. No supplier process types cross the application runtime/task ports.
+
+The separate model-free document operator creates only new synthetic image and
+scanned-PDF fixtures with installed tools. It checks text, page/geometry lineage,
+EXIF orientation and denial/cancellation retirement. These local results do not
+qualify product packaging, document normalization or either host UI; advertised
+OCR stays unavailable until those requirements pass. Standard extraction and
+accepted model-quality qualification are unchanged.

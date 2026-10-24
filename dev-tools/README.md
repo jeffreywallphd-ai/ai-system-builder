@@ -133,3 +133,10 @@ and establishes no actual Windows or parent-roadmap qualification. The explicit
 model-free Windows operator in the native OCR README tests new synthetic owned
 processes separately. It downloads nothing, leaves historical runs intact and
 does not enable product OCR or qualify model accuracy.
+
+The fixed `ocr-provider-contract` profile now includes the portable provider
+orchestration tests. `qualification_ocr_documents.py --native` is an explicit
+Windows-only synthetic image/scanned-PDF operator, excluded from ordinary
+discovery and profile execution. It uses installed SDK/Pillow/Arial without
+downloads and only fresh ignored bundles. Actual local document evidence does
+not qualify product packaging, normalization, host delivery or model accuracy.
