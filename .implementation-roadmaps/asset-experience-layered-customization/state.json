@@ -24,6 +24,37 @@
       "originalDigest": "2d7521eb819e89aa5fbc6bbd8c4d3105a25ad855ff81882ff043be21e65730af",
       "reason": "An independent security review is needed. The repository owner must arrange a permitted review.",
       "recordedAt": "2026-10-23T18:49:24Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review",
+        "actionOwner": "agent",
+        "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+        "completionCondition": "Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.",
+        "requiredAction": "Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually satisfied technical evidence without inventing independent review.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+      "blockerId": "restricted-legacy-authority-review-pending",
+      "originalBlocker": {
+        "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+        "actionOwner": "human",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+        "id": "restricted-legacy-authority-review-pending",
+        "kind": "dependency",
+        "recordedAt": "2026-10-22T22:18:47Z",
+        "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed."
+      },
+      "originalDigest": "b51e2e0aee23af035673d4a7522ae0fdc9bd822f0050bfd5043e7f5e53253e34",
+      "reason": "The user explicitly declines conducting or arranging an owner security review and requests only permitted automated work. Remove the owner action request without changing technical acceptance, evidence or the restriction.",
+      "recordedAt": "2026-10-24T06:06:46Z",
+      "revisedSummary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
     }
   ],
   "blockers": [
@@ -58,19 +89,19 @@
       "summary": "Actual Windows Electron and managed OIDC/TLS/PostgreSQL Assets authoring, publication/restart, keyboard, contrast, reflow and native400 journeys now pass as independently reviewed local support. The separate legacy Assets authorization review remains unperformed because its independent review turn was restricted before review; no parent security or current-target pass exists."
     },
     {
-      "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
-      "actionOwner": "human",
-      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
-      "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+      "actionLocation": "Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review",
+      "actionOwner": "agent",
+      "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+      "completionCondition": "Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.",
       "id": "restricted-legacy-authority-review-pending",
       "kind": "dependency",
       "recordedAt": "2026-10-22T22:18:47Z",
-      "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+      "requiredAction": "Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually satisfied technical evidence without inventing independent review.",
       "resolution": null,
       "resolvedAt": null,
-      "responsibleRole": "Repository owner",
+      "responsibleRole": "Coding agent",
       "status": "open",
-      "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed."
+      "summary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
     }
   ],
   "chunks": [
@@ -1874,6 +1905,12 @@
       "recordedAt": "2026-10-23T18:49:24Z",
       "sequence": 108,
       "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "9c7800f7d1ad1fcccec5a65211a1e79a25d90628152a640171e31da93a8eef46",
+      "recordedAt": "2026-10-24T06:06:46Z",
+      "sequence": 109,
+      "type": "blocker-reclassified"
     }
   ],
   "increments": [
@@ -3250,6 +3287,6 @@
   },
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
-  "status": "blocked",
-  "updatedAt": "2026-10-23T18:49:24Z"
+  "status": "implementation-complete-qualification-pending",
+  "updatedAt": "2026-10-24T06:06:46Z"
 }

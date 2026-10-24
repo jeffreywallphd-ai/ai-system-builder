@@ -2,8 +2,8 @@
 
 # Security Findings Refresh and Governed Remediation Implementation Roadmap
 
-- Status: `blocked`
-- Updated: `2026-10-23T18:49:25Z`
+- Status: `executing`
+- Updated: `2026-10-24T06:06:46Z`
 
 ## Objective
 
@@ -202,7 +202,7 @@ Current-source review identified this remaining native or policy boundary. The u
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Protect host files and workspace integrity | Remove caller-controlled authority from destructive model operations, dataset staging, read-side model registration and scoped state writes, while preserving safe model management and workspace workflows. | None | `blocked` |
+| 1: Protect host files and workspace integrity | Remove caller-controlled authority from destructive model operations, dataset staging, read-side model registration and scoped state writes, while preserving safe model management and workspace workflows. | None | `implementing` |
 | 2: Bound and verify runtime execution | Carry forward unresolved legacy increment 5 as a complete bounded, host-owned, authenticated, provenance-verified and recoverable runtime slice, with truthful user task state and sanitized output. | file-and-workspace-authority | `pending` |
 | 3: Preserve safe metadata and trusted asset identity | Enforce canonical safe persistence and public projections, complete integrity inputs and authoritative trust/readiness semantics while preserving legitimate user-facing labels and summaries. | runtime-execution-integrity | `pending` |
 | 4: Secure development hosts and contributor tooling | Close the local development and tooling trust boundaries, preserve the governed workflow, and reconcile issue-level qualification before final overall validation. | canonical-safe-records | `pending` |
@@ -210,7 +210,7 @@ Current-source review identified this remaining native or policy boundary. The u
 ## Increment 1: Protect host files and workspace integrity
 
 - Id: `file-and-workspace-authority`
-- Status: `blocked`
+- Status: `implementing`
 - Dependencies: None
 
 Remove caller-controlled authority from destructive model operations, dataset staging, read-side model registration and scoped state writes, while preserving safe model management and workspace workflows.
@@ -407,14 +407,6 @@ Preserve the current governed state, journals and issue evidence. Disable unsafe
 - Changing real production configuration, rotating credentials, publishing packages or deploying software
 - Implementing the 21 other-repository or 25 separately owned functional findings; security-relevant dependencies must be coordinated explicitly
 
-## Human action needed
-
-- **legacy-authority-independent-review-unavailable**: Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an ext...
-  - Owner: Repository owner
-  - Action: Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadma...
-  - Where: Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed
-  - Done when: An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.
-
 ## Pending work
 
 Owner: coding agent. No user action is needed. Technical checks are not passed.
@@ -428,3 +420,8 @@ Owner: coding agent. No user action is needed. Technical checks are not passed.
   - Action: Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.
   - Where: Security roadmap approved native file-control design and qualification fixtures
   - Done when: Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.
+- **legacy-authority-independent-review-unavailable**: The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of...
+  - Owner: Coding agent
+  - Action: Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually...
+  - Where: Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review
+  - Done when: Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.

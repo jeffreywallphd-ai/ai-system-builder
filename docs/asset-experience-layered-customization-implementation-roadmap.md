@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `blocked`
-- Updated: `2026-10-23T18:49:24Z`
+- Status: `implementation-complete-qualification-pending`
+- Updated: `2026-10-24T06:06:46Z`
 
 ## Objective
 
@@ -379,10 +379,11 @@ Keep new create operations capability-gated while retaining read-only browse, im
 - Automatic build, installation, activation, deployment, or unqualified execution
 - Cross-workspace collaborative editing
 
-## Human action needed
+## Pending work
 
-- **restricted-legacy-authority-review-pending**: The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed l...
-  - Owner: Repository owner
-  - Action: Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadma...
-  - Where: Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed
-  - Done when: An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.
+Owner: coding agent. No user action is needed. Technical checks are not passed.
+- **restricted-legacy-authority-review-pending**: The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of...
+  - Owner: Coding agent
+  - Action: Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually...
+  - Where: Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review
+  - Done when: Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.

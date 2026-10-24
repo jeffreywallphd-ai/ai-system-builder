@@ -9,15 +9,15 @@
       "blockers": [
         {
           "blocker_id": "restricted-legacy-authority-review-pending",
-          "source_blocker_digest": "698640d7d30ec919b5c26afb88b5c1175cc2ff5e026c71bce46b5d703e85f8c9",
+          "source_blocker_digest": "e0c76048afaed5a0274879673f365ddfddcf372dbddb1f27a9e1383de146e173",
           "prevents": "Independent qualification of the existing Assets authority component cannot be completed while its review is restricted.",
           "plain_language": {
-            "needed": "An independent security review of Assets access controls.",
-            "prevents": "This review is restricted for the coding agent. Tests written by the author do not replace an independent review.",
-            "responsible_role": "Repository owner",
-            "user_action": "Arrange one permitted independent security review of the Assets workspace access-control change. Provide the reviewer’s report in this repository.",
-            "action": "Use the same review for the Assets and Security roadmap requirements. Do not retry the restricted coding-agent review route.",
-            "done_when": "An allowed independent reviewer assesses the actual code and provides findings. The required current checks and review results are recorded."
+            "needed": "Automated security checks and a clearly recorded review limit.",
+            "prevents": "The required security qualification has no permitted independent assessment for the legacy Assets access-control change. Existing automated checks remain recorded; this notice does not supply a pass.",
+            "responsible_role": "Coding agent",
+            "user_action": "No action needed. You do not need to conduct or arrange a security review.",
+            "action": "Continue permitted automated checks and fix findings. Keep the restricted assessment unperformed. Do not retry it through another agent, tool or route.",
+            "done_when": "Required automated checks and permitted independent reviews pass on the actual code. Any unavailable assessment remains pending and clearly identified."
           }
         }
       ]
@@ -148,15 +148,15 @@
       "blockers": [
         {
           "blocker_id": "legacy-authority-independent-review-unavailable",
-          "source_blocker_digest": "b6c1500b2f26ae9872c587e87adee4430bdd9dbbc774ff5dd07e5561ff5f9321",
+          "source_blocker_digest": "1ed5d28cf6a9f9f34c7bf7e7187756c5130301f60fe71cfe05f5f0273bee281a",
           "prevents": "The legacy Assets authorization portion of this increment's independent security review cannot be completed while that separately invoked review remains restricted. Other permitted threat/control work may continue; author tests cannot replace it.",
           "plain_language": {
-            "needed": "An independent security review of Assets access controls.",
-            "prevents": "This review is restricted for the coding agent. Tests written by the author do not replace an independent review.",
-            "responsible_role": "Repository owner",
-            "user_action": "Arrange one permitted independent security review of the Assets workspace access-control change. Provide the reviewer’s report in this repository.",
-            "action": "Use the same review for the Assets and Security roadmap requirements. Do not retry the restricted coding-agent review route.",
-            "done_when": "An allowed independent reviewer assesses the actual code and provides findings. The required current checks and review results are recorded."
+            "needed": "Automated security checks and a clearly recorded review limit.",
+            "prevents": "The required security qualification has no permitted independent assessment for the legacy Assets access-control change. Existing automated checks remain recorded; this notice does not supply a pass.",
+            "responsible_role": "Coding agent",
+            "user_action": "No action needed. You do not need to conduct or arrange a security review.",
+            "action": "Continue permitted automated checks and fix findings. Keep the restricted assessment unperformed. Do not retry it through another agent, tool or route.",
+            "done_when": "Required automated checks and permitted independent reviews pass on the actual code. Any unavailable assessment remains pending and clearly identified."
           }
         }
       ]
