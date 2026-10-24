@@ -217,3 +217,13 @@ Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
 into smaller source files before using recognition. A version replay must retain
 the exact structure-aware/layout/Markdown settings and a compatible training goal;
 an explicit saved plan cannot bypass those checks.
+
+## Scanned-PDF source selection
+
+The Add data file chooser includes PDF sources alongside the existing structured
+formats. If the browser supplies no MIME type, a PDF extension supplies the
+existing `application/pdf` metadata. This does not authorize a source or validate
+its contents; the existing task, upload policy, source digest and actual reader
+checks remain authoritative. PDF bytes use the same bounded slice, checksum,
+workspace and acknowledged-finalization path. A regression covers a PDF with no
+browser MIME without whole-file allocation.

@@ -566,7 +566,7 @@ export function GuidedIngestionTaskPanel({
                 type="file"
                 multiple
                 disabled={working}
-                accept=".csv,.json,.jsonl,.parquet,text/csv,application/json,application/jsonl,application/vnd.apache.parquet"
+                accept=".csv,.json,.jsonl,.parquet,.pdf,text/csv,application/json,application/jsonl,application/vnd.apache.parquet,application/pdf"
                 onChange={(event) =>
                   setFiles(Array.from(event.target.files ?? []))
                 }
@@ -1222,7 +1222,9 @@ function mediaTypeFromName(name: string): string {
         ? "application/json"
         : extension === "parquet"
           ? "application/vnd.apache.parquet"
-          : "application/octet-stream";
+          : extension === "pdf"
+            ? "application/pdf"
+            : "application/octet-stream";
 }
 function safeUiError(
   error: unknown,

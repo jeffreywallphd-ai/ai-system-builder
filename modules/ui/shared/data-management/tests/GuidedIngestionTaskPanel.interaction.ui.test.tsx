@@ -286,6 +286,39 @@ async function chooseWebsiteAndEnterPage(): Promise<void> {
 }
 
 describe("GuidedIngestionTaskPanel", () => {
+  it("offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const onComplete = testDouble.fn();
+    const record = (status: IngestionTaskRecord["status"], accepted: number, state: IngestionTaskRecord["files"][number]["status"]) => {
+      const result = task(status, accepted, state);
+      return { ...result, files: result.files.map(file => ({ ...file, fileName: "scan.PDF", mediaType: "application/pdf",
+        ...(file.output ? { output: { ...file.output, key: "workspaces/workspace-a/artifacts/files/scan.pdf", mediaType: "application/pdf" } } : {}),
+      })) };
+    };
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(normalizeIngestionTaskTransportCommand(command));
+      return { kind: "task" as const, task: command.action === "create-files" ? record("queued", 0, "pending")
+        : command.action === "append-chunk" ? record("transferring", 3, "transferring") : record("succeeded", 3, "finalized") };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} onComplete={onComplete} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    expect(input.accept.split(",")).toContain(".pdf");
+    expect(input.accept.split(",")).toContain("application/pdf");
+    const file = { name: "scan.PDF", type: "", size: 3,
+      arrayBuffer: () => { throw new Error("Whole-file allocation is not permitted."); },
+      slice: () => ({ arrayBuffer: async () => new Uint8Array([37, 80, 68]).buffer }),
+    } as File;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands[0]).toEqual({ action: "create-files", files: [{ fileName: "scan.PDF", mediaType: "application/pdf", sizeBytes: 3 }] });
+    expect(commands.map(command => command.action)).toEqual(["create-files", "append-chunk", "finalize-file"]);
+    expect(Array.from((commands[1] as { bytes: Uint8Array }).bytes)).toEqual([37, 80, 68]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the plain-language ordered source workflow with technical limits under Advanced settings", async () => {
     container = document.createElement("div");
     document.body.appendChild(container);
