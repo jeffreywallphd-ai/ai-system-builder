@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { access, copyFile, mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
@@ -280,27 +281,61 @@ export function checkLocalSqliteHealth(database: SqliteDatabaseLike): LocalSqlit
   };
 }
 
+interface SqliteOperationOwner { active: boolean }
+interface SqliteOperationQueue { tail: Promise<void>; context: AsyncLocalStorage<SqliteOperationOwner>; rollbackUnconfirmed: boolean }
+// All wrappers of one connection share ownership; another connection relies on SQLite isolation.
+const operationQueues = new WeakMap<SqliteDatabaseLike, SqliteOperationQueue>();
+function operationQueue(database: SqliteDatabaseLike): SqliteOperationQueue {
+  let queue = operationQueues.get(database);
+  if (!queue) { queue = {tail: Promise.resolve(), context: new AsyncLocalStorage<SqliteOperationOwner>(), rollbackUnconfirmed: false}; operationQueues.set(database, queue); }
+  return queue;
+}
+function assertOperationOwner(queue: SqliteOperationQueue, owner?: SqliteOperationOwner): void {
+  if (queue.rollbackUnconfirmed) throw new Error("Structured transaction rollback could not be confirmed; this connection is unavailable.");
+  if (owner) {
+    if (!owner.active || queue.context.getStore() !== owner) throw new Error("Structured transaction owner is not active in this context.");
+  } else if (queue.context.getStore()) throw new Error("Use the supplied transaction store for owned operations.");
+}
+async function serializeOperation<T>(queue: SqliteOperationQueue, work: (owner: SqliteOperationOwner) => Promise<T>): Promise<T> {
+  assertOperationOwner(queue);
+  const previous = queue.tail;
+  let release!: () => void;
+  queue.tail = new Promise<void>(done => {release = done;});
+  await previous;
+  const owner = {active: true};
+  try {
+    // A request admitted before a failed rollback must also remain fenced.
+    assertOperationOwner(queue);
+    return await queue.context.run(owner, () => work(owner));
+  }
+  finally {owner.active = false; release();}
+}
+
 export function createSqliteStructuredDocumentStore(
   database: SqliteDatabaseLike,
   now: () => string = () => new Date().toISOString(),
 ): StructuredDocumentStore {
-  const store = createStore(database, now, false);
+  const store = createStore(database, now, undefined);
   return store;
 }
 
 function createStore(
   database: SqliteDatabaseLike,
   now: () => string,
-  insideTransaction: boolean,
+  owner: SqliteOperationOwner | undefined,
   organizationId?: OrganizationId,
 ): StructuredDocumentStore {
+  const queue = operationQueue(database);
   return {
     organizationId,
     forOrganization(requestedOrganizationId) {
+      assertOperationOwner(queue, owner);
       assertOrganizationScope(organizationId, requestedOrganizationId);
-      return createStore(database, now, insideTransaction, requestedOrganizationId);
+      return createStore(database, now, owner, requestedOrganizationId);
     },
     async readDocument<T>(namespace: string, key: string) {
+      assertOperationOwner(queue, owner);
+      if (!owner) return serializeOperation(queue, lease => createStore(database, now, lease, organizationId).readDocument<T>(namespace, key));
       const row = organizationId === undefined
         ? database.prepare(
           "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = ? AND document_key = ?",
@@ -312,6 +347,8 @@ function createStore(
     },
 
     async listNamespaces() {
+      assertOperationOwner(queue, owner);
+      if (!owner) return serializeOperation(queue, lease => createStore(database, now, lease, organizationId).listNamespaces());
       const rows = organizationId === undefined
         ? database.prepare(
           "SELECT DISTINCT namespace FROM structured_documents ORDER BY namespace",
@@ -328,6 +365,8 @@ function createStore(
     },
 
     async listDocuments<T>(namespace: string) {
+      assertOperationOwner(queue, owner);
+      if (!owner) return serializeOperation(queue, lease => createStore(database, now, lease, organizationId).listDocuments<T>(namespace));
       const rows = organizationId === undefined
         ? database.prepare(
           "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = ? ORDER BY document_key",
@@ -339,8 +378,13 @@ function createStore(
     },
 
     async writeDocument<T>(namespace: string, key: string, value: T, options: StructuredDocumentWriteOptions = {}) {
-      const payload = JSON.stringify(cloneStructuredJson(value));
-      const updatedAt = options.updatedAt ?? now();
+      assertOperationOwner(queue, owner);
+      const detached = cloneStructuredJson(value);
+      const admitted = {expectedRevision: options.expectedRevision, updatedAt: options.updatedAt ?? now()};
+      if (!owner) return serializeOperation(queue, lease => createStore(database, now, lease, organizationId).writeDocument(namespace, key, detached, admitted));
+      const payload = JSON.stringify(detached);
+      const updatedAt = admitted.updatedAt;
+      options = admitted;
       let changes: number | bigint;
       if (organizationId !== undefined) {
         if (options.expectedRevision === undefined) {
@@ -396,6 +440,8 @@ function createStore(
     },
 
     async deleteDocument(namespace: string, key: string, expectedRevision?: number) {
+      assertOperationOwner(queue, owner);
+      if (!owner) return serializeOperation(queue, lease => createStore(database, now, lease, organizationId).deleteDocument(namespace, key, expectedRevision));
       const result = organizationId === undefined
         ? expectedRevision === undefined
           ? database.prepare("DELETE FROM structured_documents WHERE namespace = ? AND document_key = ?").run(namespace, key)
@@ -410,20 +456,20 @@ function createStore(
     },
 
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>): Promise<T> {
-      if (insideTransaction) return work(this);
-      database.exec("BEGIN IMMEDIATE;");
-      try {
-        const result = await work(createStore(database, now, true, organizationId));
-        database.exec("COMMIT;");
-        return result;
-      } catch (error) {
+      assertOperationOwner(queue, owner);
+      if (owner) return work(this);
+      return serializeOperation(queue, async lease => {
+        database.exec("BEGIN IMMEDIATE;");
         try {
-          database.exec("ROLLBACK;");
-        } catch {
-          // Preserve the work failure; SQLite may already have rolled back.
+          const result = await work(createStore(database, now, lease, organizationId));
+          database.exec("COMMIT;");
+          return result;
+        } catch (error) {
+          try {database.exec("ROLLBACK;");}
+          catch { queue.rollbackUnconfirmed = true; }
+          throw error;
         }
-        throw error;
-      }
+      });
     },
   };
 }

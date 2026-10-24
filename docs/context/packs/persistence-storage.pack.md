@@ -76,6 +76,13 @@
 - Database-backed collection mutations use bounded revision compare-and-swap;
   PostgreSQL transactions use bounded full-callback retries at Serializable
   isolation. Mutation callbacks must remain pure because they may run again.
+- In-memory roots and SQLite connections serialize all structured operations
+  across their organization wrappers. Outside reads wait for committed state;
+  unrelated acknowledged writes survive another transaction's failure. Use the
+  supplied transaction store only in its owning async context; expired/foreign
+  stores and captured-root reentry deny. Caller data is copied before waits.
+  An unconfirmed SQLite rollback fences the connection, including queued requests;
+  keep the original callback error and do not reset the fence automatically.
 - JSON compatibility remains only for an unshaped non-production server. Import
   is allowlisted, rollback-preserving, activation-marked, and fail-closed on
   changed source; never add silent fallback, split-write, or implicit re-import.

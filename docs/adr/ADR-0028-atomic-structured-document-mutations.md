@@ -54,6 +54,18 @@ deadlock victim, requiring the complete transaction to be retried.
 
 ## Consequences
 
+The in-memory and SQLite implementations enforce this atomicity across async
+callbacks by serializing every structured operation sharing a root/connection.
+Platform and organization wrappers share that queue. Callers cannot observe a
+foreign transaction's uncommitted state, lose an acknowledged outside write during
+rollback/commit, retain a transaction store after exit or reenter through a captured
+root. Only the supplied store and its scoped children may operate in the owning
+async context. Caller payload/revision options are copied before waits. This
+corrects adapter behavior under the existing decision; it adds no new public
+transaction API, schema or application-layer dependency.
+An unconfirmed SQLite rollback leaves the connection fenced for queued and future
+store operations. Preserve the original work error and do not reset automatically.
+
 - Multiple server processes can safely update different records backed by the
   same PostgreSQL document without collection-wide lost updates.
 - Retryable transaction callbacks and mutation callbacks have a stricter purity

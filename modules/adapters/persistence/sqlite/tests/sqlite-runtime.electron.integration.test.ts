@@ -9,6 +9,20 @@ import electronPath from "electron";
 
 import { LOCAL_SQLITE_MIGRATION_0001, LOCAL_SQLITE_MIGRATION_0002 } from "../sqlite-database";
 
+test("Electron's actual SQLite runtime isolates concurrent structured operations", () => {
+  const env: NodeJS.ProcessEnv = {...process.env, ELECTRON_RUN_AS_NODE: "1"};
+  delete env.NODE_TEST_CONTEXT;
+  const result = spawnSync(electronPath, [
+    "--import", "tsx", "--test", "--test-concurrency=1", "--test-reporter=tap",
+    path.resolve("modules/adapters/persistence/sqlite/tests/structured-transaction-ownership.unit.test.ts"),
+  ], {cwd: path.resolve("."), env, encoding: "utf8", timeout: 30_000});
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /# tests 7\b/);
+  assert.match(result.stdout, /# pass 7\b/);
+  assert.match(result.stdout, /# fail 0\b/);
+  assert.match(result.stdout, /# skipped 0\b/);
+});
+
 test("the checked-in SQLite migration matches the runtime migration", async () => {
   const migrationPath = path.resolve("migrations", "sqlite", "0001-create-structured-document-store.sql");
   const checkedIn = await readFile(migrationPath, "utf8");

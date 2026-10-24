@@ -1,5 +1,14 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+In-memory structured stores and SQLite connection wrappers serialize operations
+under an adapter-owned asynchronous transaction context. Ordinary reads/writes
+cannot join a foreign transaction; callback stores expire on exit. Typed repository
+callbacks use their supplied transaction store and copy caller values before any
+queue wait. This preserves record isolation; it grants no filesystem or publication
+authority and does not qualify a managed PostgreSQL deployment.
+An unconfirmed SQLite rollback fences that connection, including queued requests,
+while preserving the original callback error; it has no automatic reset.
+
 Effective projection records, snapshots, commands, references and provenance are
 explicitly reconstructed with the shared bounded passive DTO schemas. Declared
 labels/metadata, canonical timestamps, revision identities and finite graph-summary

@@ -12,6 +12,20 @@ Resource-backed assets should reference artifact/resource storage identities ins
 
 ## Core distinction
 
+Structured operations on one in-memory root or SQLite connection share FIFO
+ownership across platform and organization wrappers. An async transaction holds
+ownership through commit/rollback, so outside reads wait for committed state and
+outside writes cannot be lost with another callback's rollback or snapshot commit.
+Caller values and revision options are detached before queue waits. Callback and
+derived transaction stores are valid only in their owning async context and expire
+on exit; nested work uses that same supplied store. Root reentry from the callback
+denies explicitly. Transaction callbacks must not perform I/O through captured root
+repositories. PostgreSQL retains its separate-client Serializable transaction and
+bounded retry policy; live managed qualification remains separate.
+If SQLite rollback cannot be confirmed, all wrappers and queued operations on
+that connection deny further access. The original callback error is preserved;
+no automatic reset can admit work into the unfinished transaction.
+
 `ai-system-builder` treats **persistence** and **storage** as separate architecture concerns.
 
 - **Persistence**: structured, durable application records and relational/queryable state.
