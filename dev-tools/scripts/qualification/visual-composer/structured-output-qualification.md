@@ -27,6 +27,20 @@ Complete the production desktop typecheck and server build as well as the focuse
 checks. Shared provider declarations must compile with the server's non-browser
 TypeScript configuration; a desktop-only typecheck cannot establish that result.
 
+The bounded `host-memory-fixture` check profile also executes the owning desktop,
+thin-client and shared recommendation regressions. Run it with:
+
+```powershell
+python dev-tools/helpers/run_focused_checks.py --profile host-memory-fixture
+```
+
+These model-free renderer checks use declared capacity snapshots, including
+sufficient CPU/accelerator, constrained CPU, unknown, stale and missing facts.
+They verify stable initialization, explicit opt-out and recovery, and no unchecked
+dispatch after checked mode loses readiness. They do not qualify physical
+accelerator telemetry or model execution. Keep both real host journeys below as
+separate regression evidence after the final source is frozen.
+
 The journeys check an unknown model's unchecked recommendation, an explicit
 checked choice, protected training purposes, keyboard focus, renamed fields,
 a nested numeric field, the schema preview, invalid duplicate-field refusal and

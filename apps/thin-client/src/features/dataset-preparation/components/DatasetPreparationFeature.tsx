@@ -18,7 +18,6 @@ import {
   resolveDatasetPreparationSourceCapability,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
-  resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   validateDatasetPreparationSaveName,
   isDatasetPreparationOffloadAvailable,
@@ -41,6 +40,7 @@ import {
   DATASET_PREPARATION_TASK_OPTIONS,
   TransientNotificationPublisher,
   DatasetPreparationOutputShapeEditor,
+  useDatasetPreparationConstrainedJson,
   WorkflowSequence,
   WorkflowStep,
   getDatasetInspectionCopy,
@@ -752,7 +752,7 @@ function WorkspaceDatasetPreparationFeature({
       }),
     [labelSet, multiLabel, outputFormat, taskType, visualOutputShape],
   );
-  const constrainedDecodingAvailable = Boolean(
+  const constrainedDecodingReady = Boolean(
     preparationPlan &&
     preparationPlan.generationMode !== "none" &&
     generationModel?.inferenceMode !== "text2text" &&
@@ -767,14 +767,16 @@ function WorkspaceDatasetPreparationFeature({
             ...generationCapacity,
             schemaSupported:
               generationCapacity.schemaSupported &&
-              constrainedDecodingAvailable,
+              constrainedDecodingReady,
           }
         : undefined,
-    [constrainedDecodingAvailable, generationCapacity],
+    [constrainedDecodingReady, generationCapacity],
   );
-  const constrainedJsonResolution = useMemo(
-    () =>
-      resolveDatasetPreparationConstrainedJson({
+  const { resolution: constrainedJsonResolution, available: constrainedDecodingAvailable } =
+    useDatasetPreparationConstrainedJson(
+      JSON.stringify([workspaceId, taskType, generationModel?.modelId, generationModel?.device,
+        generationModel?.inferenceMode, localInference.memoryMode]),
+      {
         preference: constrainedDecodingPreference,
         selectedDevice: generationModel?.device ?? "auto",
         estimatedModelBytes:
@@ -782,16 +784,9 @@ function WorkspaceDatasetPreparationFeature({
             generationModel?.modelId,
           ),
         capacity: recommendationCapacity,
-      }),
-    [
-      constrainedDecodingPreference,
-      generationModel?.device,
-      generationModel?.modelId,
-      recommendationCapacity,
-    ],
-  );
-  const constrainedDecodingEnabled =
-    constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+      },
+    );
+  const constrainedDecodingEnabled = constrainedJsonResolution.enabled;
 
   useEffect(() => {
     let cancelled = false;
@@ -1024,6 +1019,10 @@ function WorkspaceDatasetPreparationFeature({
           outputShapeCompilation.diagnostics[0]?.message ??
           "Review the generated output fields before continuing.",
       });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && constrainedDecodingEnabled && !constrainedDecodingAvailable) {
+      setStatus({ kind: "error", message: "Checked JSON output is unavailable. Start a supported runtime or turn off the checked output option before retrying." });
       return;
     }
     if (
@@ -1675,7 +1674,7 @@ function WorkspaceDatasetPreparationFeature({
                     type="checkbox"
                     checked={constrainedDecodingEnabled}
                     disabled={
-                      status.kind === "loading" || !constrainedDecodingAvailable
+                      status.kind === "loading" || !outputShapeCompilation.ok || (!constrainedDecodingAvailable && !constrainedDecodingEnabled)
                     }
                     onChange={(event) =>
                       setConstrainedDecodingPreference(event.target.checked)

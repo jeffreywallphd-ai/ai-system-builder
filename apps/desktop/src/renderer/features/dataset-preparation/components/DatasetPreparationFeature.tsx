@@ -158,6 +158,7 @@ function WorkspaceDatasetPreparationFeature({
     visualOutputShape,
     constrainedJsonResolution,
     constrainedDecodingEnabled,
+    constrainedSchemaValid,
     constrainedDecodingAvailable,
     unsupportedDocumentPolicy,
     normalizationMode,
@@ -1299,7 +1300,7 @@ function WorkspaceDatasetPreparationFeature({
                                   type="checkbox"
                                   checked={constrainedDecodingEnabled}
                                   disabled={
-                                    formLocked || !constrainedDecodingAvailable
+                                    formLocked || !constrainedSchemaValid || (!constrainedDecodingAvailable && !constrainedDecodingEnabled)
                                   }
                                   onChange={(event) =>
                                     setConstrainedDecodingPreference(

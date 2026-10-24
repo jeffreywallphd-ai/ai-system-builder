@@ -990,14 +990,28 @@
     "host-memory-fixture": {
       "test_paths": [
         "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
-        "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs"
+        "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+        "modules/ui/shared/data-management/tests/useDatasetPreparationConstrainedJson.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
         "dev-tools/scripts/qualification/visual-composer/controlled-dataset-preparation.mjs",
         "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
+        "modules/ui/shared/data-management/useDatasetPreparationConstrainedJson.ts",
+        "modules/ui/shared/data-management/tests/useDatasetPreparationConstrainedJson.ui.test.tsx",
+        "modules/ui/shared/data-management/index.ts",
+        "modules/ui/shared/data-management/README.md",
+        "apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/README.md",
+        "dev-tools/scripts/qualification/visual-composer/structured-output-qualification.md"
       ]
     }
   }

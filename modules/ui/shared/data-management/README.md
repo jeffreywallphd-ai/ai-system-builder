@@ -2,6 +2,20 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The shared `useDatasetPreparationConstrainedJson` hook records the first fresh,
+ready recommendation for a model/device/task/workspace selection. Later free-RAM
+polls do not change that initial checkbox choice. Explicit true or false always
+wins. Changing the selection starts a new recommendation; unavailable startup
+facts do not freeze a false default before the decoder becomes ready.
+
+Readiness and the intended mode are separate. A selected checked mode stays
+checked when readiness disappears, and each host refuses submission before
+dispatch. The user can explicitly uncheck it when the shape remains valid.
+Invalid shapes still disable the control and refuse generation. A stable
+recommendation never replaces the live memory guard, worker capability check or
+schema validation. No model accuracy or offload capability follows from these
+renderer tests.
+
 `GuidedIngestionTaskPanel` presents the shared three-step Add data workflow for
 desktop and thin client: choose Files, Website pages, or Hugging Face dataset;
 select the bounded source; then add it. Safe limits are automatic and technical

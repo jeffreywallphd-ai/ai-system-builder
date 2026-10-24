@@ -85,6 +85,49 @@ describe("DatasetPreparationFeature", () => {
     delete window.desktopApi;
   });
 
+  it.each(["memory", "decoder"] as const)("preserves checked output intent across live %s changes", async change => {
+    vi.useFakeTimers();
+    try {
+      let availableRam = 8 * 1024 ** 3;
+      let decoderAvailable = true;
+      const submit = vi.fn(async (..._args: any[]) => ({ requestId: "checked-desktop" }));
+      const client = { browseSourceArtifacts: async () => [{ artifactId: "checked-source", label: "guide.md", storageKey: "uploads/guide.md", mediaType: "text/markdown" }],
+        startPrepareTrainingDataset: submit, readPrepareTrainingDatasetTask: async () => ({ ok: true, status: "cancelled" }) } as any;
+      const runtime = { readStatus: async () => ({ loadedModels: [], activeTaskCount: 0,
+        generationCapacity: { schemaVersion: "1", capturedAt: new Date().toISOString(), decoderAvailable, schemaSupported: true,
+          logicalProcessorCount: 16, totalSystemMemoryBytes: 16 * 1024 ** 3, availableSystemMemoryBytes: availableRam } }) } as any;
+      const settings = { ...settingsClient, resolveModelDefault: async () => ({ resolved: { source: "global", provider: "transformers",
+        modelId: "Qwen/Qwen2.5-1.5B-Instruct", device: "cpu", inferenceMode: "chat" } }) } as any;
+      let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+      function Probe() {
+        feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient: settings, runtimeStatusClient: runtime });
+        return <output>{String(feature.constrainedDecodingEnabled)}</output>;
+      }
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => { root!.render(<Probe />); await flushAsyncWork(24); });
+      await act(async () => { feature.onToggleArtifact("checked-source"); feature.setModelId("Qwen/Qwen2.5-1.5B-Instruct");
+        feature.setModelDevice("cpu"); feature.setModelInferenceMode("chat"); feature.setModelMemoryOverflowPolicy("none"); await flushAsyncWork(24); });
+      expect(feature.constrainedDecodingEnabled).toBe(true);
+      if (change === "memory") availableRam = 2 * 1024 ** 3;
+      else {
+        await act(async () => { feature.setConstrainedDecodingPreference(true); });
+        decoderAvailable = false;
+      }
+      await act(async () => { await vi.advanceTimersByTimeAsync(5_000); await flushAsyncWork(); });
+      expect(feature.constrainedDecodingEnabled).toBe(true);
+      expect(feature.constrainedDecodingAvailable).toBe(change === "memory");
+      await act(async () => { await feature.onSubmit({ preventDefault() {} } as any); });
+      expect(submit.mock.calls.length).toBe(0); // Never print a generation request on failure.
+      if (change === "decoder") {
+        decoderAvailable = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(5_000); await flushAsyncWork(); });
+        await act(async () => { await feature.onSubmit({ preventDefault() {} } as any); });
+        expect(submit.mock.calls.length).toBe(1);
+        expect(submit.mock.calls[0]?.[0]?.recipe.generation.structuredOutput.constrainedDecoding).toBe(true);
+      }
+    } finally { vi.useRealTimers(); }
+  });
+
   it.each(["standard", "offload-v1"] as const)("rejects an unsupported reused profile without partially replacing %s setup", async (initialMode) => {
     const dispatch = vi.fn();
     const client = { browseSourceArtifacts: async () => [], startPrepareTrainingDataset: dispatch } as any;

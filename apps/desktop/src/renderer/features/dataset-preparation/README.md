@@ -9,6 +9,13 @@ preserves explicit model and output choices in named training settings; loading 
 set is an explicit user action. Resetting output fields does not clear a saved
 explicit constrained-output preference.
 
+The shared recommendation hook keeps an untouched choice stable for the selected
+model. Runtime polling cannot rewrite an explicit checked choice to unchecked.
+If current readiness is missing, submission stops before model preparation or
+task dispatch. A user can explicitly turn off the checked option while the
+output shape is valid; invalid shapes keep the control disabled. Existing live
+memory checks and notification-center shortfall messages remain authoritative.
+
 Keep each control accessible by its visible title. A label that contains a help
 button before a select does not reliably name that select. The Saved training
 settings select therefore has an explicit accessible name that matches its

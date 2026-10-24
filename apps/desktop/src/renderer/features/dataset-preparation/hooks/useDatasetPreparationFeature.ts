@@ -1,4 +1,5 @@
 import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
+import { useDatasetPreparationConstrainedJson } from "../../../../../../../modules/ui/shared/data-management/useDatasetPreparationConstrainedJson";
 import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
 import {
   useCallback,
@@ -42,7 +43,6 @@ import {
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationParameterDefaults,
   resolveDefaultDatasetPreparationTextGenerationModel,
-  resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelCapacity,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   validateDatasetPreparationSaveName,
@@ -216,6 +216,7 @@ export interface UseDatasetPreparationFeatureResult {
   constrainedJsonResolution: DatasetPreparationConstrainedJsonResolution;
   constrainedDecodingEnabled: boolean;
   constrainedDecodingAvailable: boolean;
+  constrainedSchemaValid: boolean;
   lowMemoryAvailable: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
@@ -1681,7 +1682,7 @@ export function useDatasetPreparationFeature(
     [labelSet, multiLabel, outputFormat, taskType, visualOutputShape],
   );
   const lowMemoryAvailable = isDatasetPreparationOffloadAvailable(generationCapacity);
-  const constrainedDecodingAvailable =
+  const constrainedDecodingReady =
     preparationPlan?.generationMode !== undefined &&
     preparationPlan.generationMode !== "none" &&
     modelInferenceMode !== "text2text" &&
@@ -1692,12 +1693,14 @@ export function useDatasetPreparationFeature(
     ? {
         ...generationCapacity,
         schemaSupported:
-          generationCapacity.schemaSupported && constrainedDecodingAvailable,
+          generationCapacity.schemaSupported && constrainedDecodingReady,
       }
     : undefined;
-  const constrainedJsonResolution = useMemo(
-    () =>
-      resolveDatasetPreparationConstrainedJson({
+  const { resolution: constrainedJsonResolution, available: constrainedDecodingAvailable } =
+    useDatasetPreparationConstrainedJson(
+      JSON.stringify([workspaceId, taskType, modelId, modelDevice, modelInferenceMode,
+        modelMemoryMode, modelMemoryOverflowPolicy]),
+      {
         preference: constrainedDecodingPreference,
         selectedDevice:
           modelDevice ||
@@ -1712,19 +1715,9 @@ export function useDatasetPreparationFeature(
           ),
         capacity: recommendationCapacity,
         memoryOverflowPolicy: modelMemoryOverflowPolicy,
-      }),
-    [
-      constrainedDecodingPreference,
-      modelDevice,
-      modelId,
-      modelMemoryOverflowPolicy,
-      modelMemoryMode,
-      recommendationCapacity,
-      taskType,
-    ],
-  );
-  const constrainedDecodingEnabled =
-    constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+      },
+    );
+  const constrainedDecodingEnabled = constrainedJsonResolution.enabled;
 
   useEffect(() => {
     if (
@@ -2183,6 +2176,10 @@ export function useDatasetPreparationFeature(
         });
         return;
       }
+      if (preparationPlan.generationMode !== "none" && constrainedDecodingEnabled && !constrainedDecodingAvailable) {
+        setStatus({ kind: "error", message: "Checked JSON output is unavailable. Start a supported runtime or turn off the checked output option before retrying." });
+        return;
+      }
 
       const validationResult = validateAndParseDatasetPreparationInputs({
         selectedArtifactIds,
@@ -2419,6 +2416,7 @@ export function useDatasetPreparationFeature(
       visualOutputShape,
       outputShapeCompilation,
       constrainedDecodingEnabled,
+      constrainedDecodingAvailable,
       unsupportedDocumentPolicy,
       normalizationMode,
       chunkSize,
@@ -2735,6 +2733,7 @@ export function useDatasetPreparationFeature(
     constrainedJsonResolution,
     constrainedDecodingEnabled,
     constrainedDecodingAvailable,
+    constrainedSchemaValid: outputShapeCompilation.ok,
     lowMemoryAvailable,
     unsupportedDocumentPolicy,
     normalizationMode,
