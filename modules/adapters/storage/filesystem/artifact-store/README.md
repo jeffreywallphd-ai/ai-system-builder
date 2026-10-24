@@ -39,3 +39,10 @@ Publication is not a metadata transaction: a failed or uncertain metadata write 
 leave unregistered owned bytes for normal recovery; it never reports success or
 deletes unrelated files. Native publication/parent-substitution qualification
 remains separate from these cooperative ownership checks.
+
+The exported ingestion byte-storage component can be tested separately from the
+publisher and hosts. It checks workspace scope and finite byte limits before it
+reads a stream. Inspection creates no target. Publication checks the complete
+size and digest before an exclusive write, preserves existing targets and returns
+sanitized failures. Its synthetic tests cover these component behaviors only;
+they do not qualify the complete ingestion workflow, native file races or recovery.
