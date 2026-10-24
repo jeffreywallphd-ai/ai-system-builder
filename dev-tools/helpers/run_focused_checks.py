@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import ast
+import importlib.metadata
+import os
 import re
 import subprocess
 import sys
@@ -12,6 +15,57 @@ from control_plane.candidate import snapshot
 from control_plane.common import fields, identifier, inside, read_json, relative, refuse
 from control_plane.contracts import ControlError
 from control_plane.storage import confined_path
+
+PYTEST_VERSION = "9.1.1"
+
+
+def pytest_environment(environ):
+    # Do not load plugins or extra command options from the calling session.
+    env = {key: value for key, value in environ.items() if not key.upper().startswith("PYTEST_")}
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    env.pop("PYTHONOPTIMIZE", None)
+    return env
+
+
+def pytest_tooling_ready(root):
+    try:
+        source = (root / "dev-tools/helpers/requirements-tests.txt").read_bytes()
+        if len(source) > 16 * 1024:
+            return False
+        lines = [line.strip() for line in source.decode("utf-8").splitlines() if line.strip() and not line.startswith("#")]
+        if lines[:2] != ["--only-binary=:all:", "--require-hashes"] or not 1 <= len(lines[2:]) <= 16:
+            return False
+        seen = set()
+        for line in lines[2:]:
+            match = re.fullmatch(r'([a-zA-Z0-9_-]+)==([0-9]+(?:\.[0-9]+)*)(; [^\r\n]+?)? --hash=sha256:([a-f0-9]{64})', line)
+            if match is None:
+                return False
+            name, version, marker, _hash = match.groups()
+            if name in seen:
+                return False
+            seen.add(name)
+            if marker not in (None, '; sys_platform == "win32"', '; python_version < "3.11"'):
+                return False
+            if name == "pytest" and (version != PYTEST_VERSION or marker is not None):
+                return False
+            if marker == '; sys_platform == "win32"' and sys.platform != "win32":
+                continue
+            if marker == '; python_version < "3.11"' and sys.version_info[:2] >= (3, 11):
+                continue
+            if importlib.metadata.version(name) != version:
+                return False
+        return "pytest" in seen
+    except (OSError, UnicodeError, importlib.metadata.PackageNotFoundError):
+        return False
+
+
+def python_test_command(root, test):
+    tree = ast.parse((root / test).read_text(encoding="utf-8-sig"))
+    # Fixture functions need pytest even when the module does not import it.
+    if any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_") for node in tree.body):
+        return [sys.executable, "-B", "-m", "pytest", "-c", "dev-tools/config/pytest-focused.ini",
+                "--noconftest", "-p", "no:cacheprovider", "-q", "--", test]
+    return [sys.executable, "-B", "-m", "unittest", "discover", "-s", Path(test).parent.as_posix(), "-p", Path(test).name]
 
 
 def commands(root, affected, *, exact=False):
@@ -51,7 +105,7 @@ def commands(root, affected, *, exact=False):
     if vitest:
         result.append(["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", *vitest])
     for test in python:
-        result.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", Path(test).parent.as_posix(), "-p", Path(test).name])
+        result.append(python_test_command(root, test))
     return result
 
 
@@ -81,6 +135,9 @@ def profile_commands(root, profile_id):
 
 
 def main():
+    if sys.flags.optimize:
+        print("Focused verification requires Python assertions. Run without -O or PYTHONOPTIMIZE.", file=sys.stderr)
+        return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--affected", action="append", default=[])
     parser.add_argument("--regression-test")
@@ -92,11 +149,18 @@ def main():
             refuse("verification.arguments", "Choose affected ownership or one exact regression.")
         selected = profile_commands(root, args.profile) if args.profile else commands(root, [relative(args.regression_test)] if args.regression_test else args.affected, exact=bool(args.regression_test))
         for argv in selected:
-            r = subprocess.run(argv, cwd=root, check=False, timeout=270)
+            env = dict(os.environ)
+            env.pop("PYTHONOPTIMIZE", None)
+            if "pytest" in argv:
+                if not pytest_tooling_ready(root):
+                    print("Focused pytest tests require the exact developer tooling in dev-tools/helpers/requirements-tests.txt. Install it explicitly in the selected verification environment; the helper does not install packages.", file=sys.stderr)
+                    return 1
+                env = pytest_environment(os.environ)
+            r = subprocess.run(argv, cwd=root, check=False, timeout=270, env=env)
             if r.returncode:
                 return r.returncode
         return 0
-    except (ControlError, OSError, subprocess.TimeoutExpired):
+    except (ControlError, OSError, SyntaxError, subprocess.TimeoutExpired):
         print("Focused verification unavailable or failed; inspect the owning tests.", file=sys.stderr)
         return 1
 

@@ -17,6 +17,37 @@ Portable agent workflows live under `skills/`; see
 that skill, while generic snapshots, checks, and patch transport remain in
 `dev-tools/helpers/`.
 
+## Python test collection
+
+The focused helper keeps class-based `unittest` discovery and uses pytest for
+files with top-level test functions. This includes fixture-based files that do
+not import pytest themselves. Both controlled AI files remain exclusive to the
+explicit AI suite. An empty collection or failed test remains a failed check.
+
+Install the developer test tools explicitly in the Python environment selected
+for verification. Use `dev-tools/helpers/requirements-tests.txt`: pytest and its
+complete conditional dependency set are pinned to reviewed original PyPI
+universal wheels with SHA-256 hashes. The lock requires wheels and hashes; pip
+must refuse a missing wheel or hash mismatch. These are contributor tools, not
+worker or application runtime dependencies. The helper never installs packages.
+
+For example, create an ignored virtual environment with
+`python -m venv .local-codex/verification-python`, then use that environment's
+Python to run `-m pip install -r dev-tools/helpers/requirements-tests.txt`.
+Use the same Python for the control-plane CLI. Dependency downloads still need
+the existing authorization and network controls; setup grants no extra authority.
+
+Pytest execution uses one fixed file path after `--`, a neutral tracked config,
+no conftest discovery, no cache provider and no automatic third-party plugins.
+The helper removes inherited `PYTEST_*` controls and sets plugin autoload off.
+It checks every applicable locked tool version before execution. Missing or
+different versions fail with setup guidance. AST inspection selects the runner
+without executing the test during planning. Syntax errors remain failures.
+The helper refuses optimized Python and removes `PYTHONOPTIMIZE` from every
+test child so plain assertions cannot be erased.
+Ordinary test code still runs with the contributor's authority. This isolation
+does not sandbox tests or qualify model accuracy, native offload or a roadmap.
+
 ## Local configuration
 
 Copy `dev-tools/helpers/helpers.example.json` to an ignored location such as
