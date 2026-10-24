@@ -10,6 +10,7 @@ import {
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
   normalizeDatasetPreparationMemoryMode,
+  resolveDatasetPreparationOcrChoice,
   type DatasetPreparationTaskRecipe,
   type DatasetPreparationAdvancedPreset,
   type DatasetPreparationExecutionPlan,
@@ -56,6 +57,9 @@ export interface BuildDatasetPreparationRequestInput {
   constrainedDecoding?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled?: boolean;
+  ocrLanguage?: string;
+  sourceFormats?: readonly string[];
   preserveDocumentBoundaries: boolean;
   modelId: string;
   modelInferenceMode: ModelDefaultInferenceMode;
@@ -236,6 +240,14 @@ export function buildDatasetPreparationRequest(
   input: BuildDatasetPreparationRequestInput,
 ) {
   const memoryMode = normalizeDatasetPreparationMemoryMode(input.modelMemoryMode);
+  const ocr = resolveDatasetPreparationOcrChoice({
+    enabled: input.ocrEnabled,
+    language: input.ocrLanguage,
+    method: input.preparation?.method,
+    sourceCount: input.selectedArtifactIds.length,
+    sourceFormats: input.sourceFormats,
+  });
+  if (ocr.ok === false) throw new Error(ocr.message);
   const defaultAdvanced = input.preparation
     ? createDatasetPreparationAdvancedConfigForMethod(input.preparation.method)
     : createDatasetPreparationAdvancedConfig(
@@ -248,6 +260,7 @@ export function buildDatasetPreparationRequest(
           ? {
               content: {
                 ...defaultAdvanced.content,
+                ...ocr.content,
                 ...(input.parsed.maxTokensPerChunk
                   ? { maxTokensPerChunk: input.parsed.maxTokensPerChunk }
                   : {}),

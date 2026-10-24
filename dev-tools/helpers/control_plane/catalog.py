@@ -28,7 +28,11 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
         "modules/adapters/runtime/python/worker/ocr/task_sources.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_task_sources.py",
-        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py"],
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py",
+        "modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx",
+        "modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx"],
 }
 
 

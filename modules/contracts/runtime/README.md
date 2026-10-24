@@ -177,3 +177,15 @@ use safe smaller-model/retry guidance without inventing an amount. No exception
 text, model/source details, filesystem paths, prompts or raw logs enter the new
 public field. Existing guards, limits, admission, cleanup and offload opt-in
 controls remain unchanged; notifications never authorize a denied model load.
+
+The OCR choice resolver validates explicit raw activation, language syntax,
+structure-aware mode and a complete PDF-only selection. It returns only the two
+public content options after admission; an inactive stored language is omitted.
+It cannot authorize a source or establish installed-reader readiness. Initial
+advanced readiness says recognition is unverified; only actual task recognition
+supplies completed reader facts. Text-character hygiene is not OCR accuracy.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.

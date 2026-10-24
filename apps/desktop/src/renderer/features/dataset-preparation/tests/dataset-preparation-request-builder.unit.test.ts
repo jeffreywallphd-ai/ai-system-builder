@@ -3,6 +3,29 @@ import { describe, expect, it } from "vitest";
 import { buildDatasetPreparationRequest, type BuildDatasetPreparationRequestInput } from "../hooks/datasetPreparationRequestBuilder";
 
 describe("datasetPreparationRequestBuilder", () => {
+  it("builds only explicit compatible OCR settings without exposing an internal source map", () => {
+    const input: BuildDatasetPreparationRequestInput = {
+      selectedArtifactIds: ["pdf"], sourceFormats: ["pdf"],
+      preparation: { schemaVersion: "1", inputIntent: "create-from-source-material", method: "structure-aware", sourceKinds: ["document"], generationMode: "task-examples" },
+      ocrEnabled: true, ocrLanguage: "en-US", taskType: "llm-instruction",
+      unsupportedDocumentPolicy: "fail", normalizationMode: "strict", preserveDocumentBoundaries: true,
+      modelId: "Qwen/Qwen2.5-1.5B-Instruct", modelInferenceMode: "chat", modelDevice: "cpu", modelTorchDtype: "bfloat16",
+      failurePolicy: "fail", shuffle: true, outputFormat: "parquet", outputBaseName: "",
+      localDestinationEnabled: true, huggingFaceDestinationEnabled: false, huggingFaceRepository: "", huggingFaceRevision: "", huggingFacePathPrefix: "",
+      parsed: { trainRatio: 0.8, testRatio: 0.2 },
+      resolvedDefault: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct", inferenceMode: "chat", source: "global" },
+    };
+    const request = buildDatasetPreparationRequest(input);
+    expect(request.advanced?.content).toMatchObject({ strategy: "layout", layoutEnabled: true, ocrEnabled: true, ocrLanguage: "en-US" });
+    expect(request).not.toHaveProperty("runtime");
+    expect(JSON.stringify(request)).not.toContain("staged-pdf-ocr");
+    const ordinary = buildDatasetPreparationRequest({ ...input, ocrEnabled: false });
+    expect(ordinary.advanced?.content?.ocrEnabled).toBe(false);
+    expect(ordinary.advanced?.content?.ocrLanguage).toBeUndefined();
+    for (const change of [{ ocrLanguage: "" }, { sourceFormats: ["text"] }, { sourceFormats: undefined }, { ocrEnabled: "yes" as any }]) {
+      expect(() => buildDatasetPreparationRequest({ ...input, ...change })).toThrow();
+    }
+  });
   it("preserves the explicit offload profile and disables only its overflow allowance", () => {
     const input: BuildDatasetPreparationRequestInput = {
       selectedArtifactIds: ["source"], taskType: "llm-instruction",

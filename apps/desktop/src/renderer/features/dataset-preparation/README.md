@@ -29,3 +29,19 @@ inference or accuracy reruns. See the
 [host controls qualification](../../../../../../dev-tools/scripts/qualification/visual-composer/structured-output-qualification.md)
 for commands, evidence and scope limits. Renderer reload does not prove native
 process restart or physical model readiness.
+
+Scanned-PDF text recognition is an explicit, off-by-default choice under
+Document-structure sections. The shared control requires a language and PDF-only
+selection. Named settings and workspace drafts preserve that choice; missing legacy
+fields start off. Malformed flags stop submission. Changing the method or training
+goal turns recognition off; incompatible source changes retain a visible checked
+choice and require correction. Version reuse verifies currently available PDF
+sources before restoring OCR settings. Execution still uses authoritative host
+admission and private byte bindings. Show actual reader counts and explain that
+text-character checks are not OCR accuracy. Local component tests do not qualify
+complete native host/package delivery.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.

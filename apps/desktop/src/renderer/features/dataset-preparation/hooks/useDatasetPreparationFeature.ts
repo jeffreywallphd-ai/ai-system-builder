@@ -48,6 +48,7 @@ import {
   validateDatasetPreparationSaveName,
   isDatasetPreparationOffloadAvailable,
   normalizeDatasetPreparationMemoryMode,
+  resolveDatasetPreparationOcrChoice,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   createDesktopApplicationSettingsClient,
@@ -119,6 +120,8 @@ interface DatasetPreparationPageState {
   constrainedDecodingPreference?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled: boolean;
+  ocrLanguage: string;
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
@@ -218,8 +221,11 @@ export interface UseDatasetPreparationFeatureResult {
   constrainedDecodingAvailable: boolean;
   constrainedSchemaValid: boolean;
   lowMemoryAvailable: boolean;
+  ocrEligible: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled: boolean;
+  ocrLanguage: string;
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
@@ -297,6 +303,8 @@ export interface UseDatasetPreparationFeatureResult {
   setConstrainedDecodingPreference: (value: boolean) => void;
   setUnsupportedDocumentPolicy: (value: "" | "fail" | "skip") => void;
   setNormalizationMode: (value: "" | "best-effort" | "strict") => void;
+  setOcrEnabled: (value: boolean) => void;
+  setOcrLanguage: (value: string) => void;
   setChunkSize: (value: string) => void;
   setChunkOverlap: (value: string) => void;
   setPreserveDocumentBoundaries: (value: boolean) => void;
@@ -410,6 +418,8 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   constrainedDecodingPreference: undefined,
   unsupportedDocumentPolicy: "",
   normalizationMode: "",
+  ocrEnabled: false,
+  ocrLanguage: "",
   chunkSize: "1000",
   chunkOverlap: "200",
   preserveDocumentBoundaries: true,
@@ -581,6 +591,8 @@ function createDefaultTrainingSettingsSnapshot(
     constrainedDecodingPreference: undefined,
     unsupportedDocumentPolicy: "",
     normalizationMode: "",
+    ocrEnabled: false,
+    ocrLanguage: "",
     chunkSize: defaultDatasetPreparationPageState.chunkSize,
     chunkOverlap: defaultDatasetPreparationPageState.chunkOverlap,
     preserveDocumentBoundaries:
@@ -831,6 +843,8 @@ export function useDatasetPreparationFeature(
   const [normalizationMode, setNormalizationMode] = useState<
     "" | "best-effort" | "strict"
   >(cachedDatasetPreparationPageState.normalizationMode);
+  const [ocrEnabled, setOcrEnabled] = useState(cachedDatasetPreparationPageState.ocrEnabled ?? false);
+  const [ocrLanguage, setOcrLanguage] = useState(cachedDatasetPreparationPageState.ocrLanguage ?? "");
   const [chunkSize, setChunkSize] = useState(
     cachedDatasetPreparationPageState.chunkSize,
   );
@@ -1055,6 +1069,8 @@ export function useDatasetPreparationFeature(
       constrainedDecodingPreference,
       unsupportedDocumentPolicy,
       normalizationMode,
+      ocrEnabled,
+      ocrLanguage,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
@@ -1118,6 +1134,8 @@ export function useDatasetPreparationFeature(
     constrainedDecodingPreference,
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -1196,6 +1214,8 @@ export function useDatasetPreparationFeature(
     setGenerationTopP(generationParameters.generationTopP);
     setGenerationMaxNewTokens(generationParameters.generationMaxNewTokens);
     setPreparationMethodId(undefined);
+    setOcrEnabled(false);
+    setOcrLanguage("");
   }, [taskType]);
 
   useEffect(() => {
@@ -1805,6 +1825,8 @@ export function useDatasetPreparationFeature(
         constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
@@ -1860,6 +1882,8 @@ export function useDatasetPreparationFeature(
         constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
@@ -1910,6 +1934,12 @@ export function useDatasetPreparationFeature(
 
   const applyTrainingSettingsSnapshot = useCallback(
     (settings: DatasetPreparationTrainingSettingsSnapshot) => {
+      if ((settings.ocrEnabled !== undefined && typeof settings.ocrEnabled !== "boolean") ||
+          (settings.ocrLanguage !== undefined &&
+            (typeof settings.ocrLanguage !== "string" || settings.ocrLanguage.length > 35))) {
+        setStatus({ kind: "error", message: "This saved setup has invalid text recognition settings. It was not restored; your current setup is unchanged." });
+        return false;
+      }
       suppressNextTaskDefaultResetRef.current = settings.taskType !== taskType;
       setTaskType(settings.taskType);
       setAdvancedPreset(settings.advancedPreset);
@@ -1928,6 +1958,8 @@ export function useDatasetPreparationFeature(
       setConstrainedDecodingPreference(settings.constrainedDecodingPreference);
       setUnsupportedDocumentPolicy(settings.unsupportedDocumentPolicy);
       setNormalizationMode(settings.normalizationMode);
+      setOcrEnabled(settings.ocrEnabled ?? false);
+      setOcrLanguage(settings.ocrLanguage ?? "");
       setChunkSize(settings.chunkSize);
       setChunkOverlap(settings.chunkOverlap);
       setPreserveDocumentBoundaries(settings.preserveDocumentBoundaries);
@@ -1966,6 +1998,7 @@ export function useDatasetPreparationFeature(
       setRequireLicenseMetadata(settings.requireLicenseMetadata);
       setRequireConsentMetadata(settings.requireConsentMetadata);
       setIncludeSourceAttribution(settings.includeSourceAttribution ?? false);
+      return true;
     },
     [taskType],
   );
@@ -1998,8 +2031,7 @@ export function useDatasetPreparationFeature(
     if (!selected) {
       return;
     }
-    applyTrainingSettingsSnapshot(selected.settings);
-    setStatus({ kind: "idle" });
+    if (applyTrainingSettingsSnapshot(selected.settings)) setStatus({ kind: "idle" });
   }, [
     applyTrainingSettingsSnapshot,
     savedTrainingSettings,
@@ -2028,9 +2060,39 @@ export function useDatasetPreparationFeature(
       const output = snapshot.output ?? {};
       const policy = snapshot.effectiveQualityPolicy ?? {};
       const advanced = snapshot.advanced ?? {};
-      const reusedTaskType = isDatasetPreparationTaskType(task.taskType)
-        ? task.taskType
-        : taskType;
+      const reusedTaskType = isDatasetPreparationTaskType(task.taskType) ? task.taskType : taskType;
+      const replaySources = reproduction.sourceArtifactIds.flatMap((id) => {
+        const source = artifacts.find((entry) => entry.artifactId === id);
+        const capability = source && resolveDatasetPreparationSourceCapability({
+          fileName: source.label || source.storageKey, mediaType: source.mediaType,
+        });
+        return capability ? [capability] : [];
+      });
+      const replayResolution = resolveDatasetPreparationAdaptivePlan({ taskType: reusedTaskType, sources: replaySources });
+      const savedPlan = snapshot.preparation;
+      const invalidExplicitOcrPlan = savedPlan !== undefined && (
+        !savedPlan || savedPlan.schemaVersion !== "1" || savedPlan.method !== "structure-aware" ||
+        savedPlan.inputIntent !== "create-from-source-material" || savedPlan.generationMode !== "task-examples" ||
+        !Array.isArray(savedPlan.sourceKinds) || savedPlan.sourceKinds.length !== 1 || savedPlan.sourceKinds[0] !== "document"
+      );
+      const invalidOcrConfiguration = advanced.content?.ocrEnabled === true && (
+        advanced.preset !== "structure-aware" || advanced.content.strategy !== "layout" ||
+        advanced.content.layoutEnabled !== true || normalization.targetFormat !== "markdown" ||
+        !isDatasetPreparationTaskType(task.taskType) || invalidExplicitOcrPlan ||
+        !resolveDatasetPreparationMethodOption(replayResolution, "structure-aware")
+      );
+      const reusedOcr = resolveDatasetPreparationOcrChoice({
+        enabled: advanced.content?.ocrEnabled,
+        language: advanced.content?.ocrLanguage,
+        // Current snapshots store exact advanced settings without a separate plan.
+        method: savedPlan?.method ?? (advanced.preset === "structure-aware" ? "structure-aware" : undefined),
+        sourceCount: reproduction.sourceArtifactIds.length,
+        sourceFormats: replaySources.map((source) => source.format),
+      });
+      if (invalidOcrConfiguration || reusedOcr.ok === false) {
+        setStatus({ kind: "error", message: "This saved setup has invalid text recognition settings. It was not restored; your current setup is unchanged." });
+        return;
+      }
       const reusedOutputFormat = ["jsonl", "json", "csv", "parquet"].includes(
         output.format,
       )
@@ -2061,6 +2123,9 @@ export function useDatasetPreparationFeature(
             )
           : undefined;
       setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
+      if (reusedOcr.content) setPreparationMethodId("structure-aware");
+      setOcrEnabled(advanced.content?.ocrEnabled === true);
+      setOcrLanguage(reusedOcr.content?.ocrLanguage ?? "");
       if (
         [
           "standard",
@@ -2151,7 +2216,7 @@ export function useDatasetPreparationFeature(
         setIncludeSourceAttribution(policy.includeSourceAttribution);
       setStatus({ kind: "idle" });
     },
-    [multiLabel, outputFormat, taskType],
+    [artifacts, multiLabel, outputFormat, taskType],
   );
 
   const onSubmit = useCallback(
@@ -2165,6 +2230,17 @@ export function useDatasetPreparationFeature(
             ? `${preparationResolution.message} ${preparationResolution.action}`
             : preparationResolution.message,
         });
+        return;
+      }
+      const ocr = resolveDatasetPreparationOcrChoice({
+        enabled: ocrEnabled,
+        language: ocrLanguage,
+        method: preparationPlan.method,
+        sourceCount: selectedArtifactIds.length,
+        sourceFormats: selectedSourceCapabilities.map((source) => source.format),
+      });
+      if (ocr.ok === false) {
+        setStatus({ kind: "error", message: ocr.message });
         return;
       }
       if (!outputShapeCompilation.ok) {
@@ -2258,6 +2334,8 @@ export function useDatasetPreparationFeature(
         constrainedDecoding: constrainedDecodingEnabled,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         preserveDocumentBoundaries,
         modelId,
         modelInferenceMode,
@@ -2275,6 +2353,7 @@ export function useDatasetPreparationFeature(
         huggingFaceRevision: "",
         huggingFacePathPrefix: "",
         defaultHuggingFaceNamespace,
+        sourceFormats: selectedSourceCapabilities.map((source) => source.format),
         parsed: validationResult.parsed,
           resolvedDefault,
         });
@@ -2401,6 +2480,7 @@ export function useDatasetPreparationFeature(
       selectedArtifactIds,
       preparationPlan,
       preparationResolution,
+      selectedSourceCapabilities,
       advancedPreset,
       taskType,
       labelSet,
@@ -2419,6 +2499,8 @@ export function useDatasetPreparationFeature(
       constrainedDecodingAvailable,
       unsupportedDocumentPolicy,
       normalizationMode,
+      ocrEnabled,
+      ocrLanguage,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
@@ -2735,8 +2817,13 @@ export function useDatasetPreparationFeature(
     constrainedDecodingAvailable,
     constrainedSchemaValid: outputShapeCompilation.ok,
     lowMemoryAvailable,
+    ocrEligible: preparationMethodId === "structure-aware" && selectedArtifactIds.length > 0 &&
+      selectedSourceCapabilities.length === selectedArtifactIds.length &&
+      selectedSourceCapabilities.every((source) => source.format === "pdf"),
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -2808,6 +2895,8 @@ export function useDatasetPreparationFeature(
     setConstrainedDecodingPreference,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
+    setOcrEnabled,
+    setOcrLanguage,
     setChunkSize,
     setChunkOverlap,
     setPreserveDocumentBoundaries,

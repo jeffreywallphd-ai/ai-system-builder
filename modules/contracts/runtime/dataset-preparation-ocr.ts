@@ -37,3 +37,53 @@ export function supportsDatasetPreparationOcr(capabilities: unknown): boolean {
     capabilities.every((value) => typeof value === "string") &&
     capabilities.includes(DATASET_PREPARATION_OCR_CAPABILITY);
 }
+
+export type DatasetPreparationOcrChoiceResolution =
+  | { ok: true; content?: { ocrEnabled: true; ocrLanguage: string } }
+  | { ok: false; message: string };
+
+/** Form/request convenience. Application authorization and worker checks still apply. */
+export function resolveDatasetPreparationOcrChoice(input: {
+  enabled?: unknown;
+  language?: unknown;
+  method?: unknown;
+  sourceCount: number;
+  sourceFormats?: readonly string[];
+}): DatasetPreparationOcrChoiceResolution {
+  if (input.enabled !== undefined && typeof input.enabled !== "boolean") {
+    return {
+      ok: false,
+      message: "The saved text recognition choice is invalid. Turn it off or choose it again.",
+    };
+  }
+  if (input.enabled !== true) return { ok: true };
+  if (input.method !== "structure-aware") {
+    return {
+      ok: false,
+      message: "Choose Document-structure sections for scanned PDFs, or turn off text recognition.",
+    };
+  }
+  if (
+    !Number.isSafeInteger(input.sourceCount) ||
+    input.sourceCount < 1 ||
+    input.sourceCount > 256 ||
+    !Array.isArray(input.sourceFormats) ||
+    input.sourceFormats.length !== input.sourceCount ||
+    input.sourceFormats.some((format) => format !== "pdf")
+  ) {
+    return {
+      ok: false,
+      message: "Select only PDF files for text recognition. Select at most 256 files.",
+    };
+  }
+  if (!isDatasetPreparationOcrLanguage(input.language)) {
+    return {
+      ok: false,
+      message: "Enter the exact installed Windows language tag, such as en-US, without spaces.",
+    };
+  }
+  return {
+    ok: true,
+    content: { ocrEnabled: true, ocrLanguage: input.language },
+  };
+}

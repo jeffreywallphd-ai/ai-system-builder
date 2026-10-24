@@ -171,9 +171,9 @@ const LOCAL_CAPABILITIES: readonly DatasetPreparationAdvancedCapabilityReadiness
       capabilityId: "ocr-text",
       status: "unavailable",
       provider: "none",
-      version: "unavailable",
-      message: "Text recognition for scanned images is not installed.",
-      action: "Use a text-based PDF or add reviewed text before preparation.",
+      version: "unverified",
+      message: "Text recognition has not been checked for this task.",
+      action: "For scanned PDFs, choose Document-structure sections, enable text recognition and enter an installed Windows language tag.",
     },
     {
       capabilityId: "semantic-embeddings",

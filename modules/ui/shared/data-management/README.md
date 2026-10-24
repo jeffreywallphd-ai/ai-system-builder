@@ -190,3 +190,30 @@ sizes remain supported. Selection rows have independent keys even for identical
 metadata. Existing chunk limits, task ownership, checksum and publication guards
 remain authoritative. Real host journeys exercise multi-file import and source
 discovery; observing bounded file slices does not establish process RSS.
+
+## Scanned PDFs
+
+Desktop and thin client use `DatasetPreparationOcrSettings` for the same optional
+scanned-PDF choice. It starts off and requires only PDFs, Document-structure
+sections and an exact installed Windows language tag. No language is preselected.
+The task checks the installed reader and language. This control performs no
+supplier probe, installation or download. Each PDF is limited to 16 MiB by the
+existing authoritative host/native checks.
+
+Keep a checked choice visible when sources become incompatible, allowing it to be
+turned off; refuse submission until corrected. Explicit method or goal changes
+clear the opt-in. Lock the fieldset while a task runs, including requested but
+unconfirmed cancellation. Desktop named settings preserve a valid explicit choice;
+older records start off and malformed flags cannot activate recognition. Browser
+page loads start off. Public requests contain no host source maps or staging data.
+
+`DatasetPreparationTextReadingChecks` shows completed document/page/line counts
+and the language, without raw provider/version values. Explain that the
+text-character percentage checks replacement and control characters; it is not
+an OCR accuracy score. Form tests use synthetic clients and do not qualify the
+complete installed host, packaged product or generation-model accuracy.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.

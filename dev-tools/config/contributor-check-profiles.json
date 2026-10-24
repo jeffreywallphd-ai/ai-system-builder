@@ -1129,7 +1129,17 @@
         "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_ocr.py",
         "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
         "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
-        "modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py"
+        "modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py",
+        "modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-request-builder.unit.test.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1207,7 +1217,25 @@
         "modules/adapters/runtime/python/worker/app.py",
         "modules/adapters/runtime/python/worker/tasks/markdown_chunking.py",
         "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
-        "modules/adapters/runtime/python/worker/tasks/advanced_capabilities.py"
+        "modules/adapters/runtime/python/worker/tasks/advanced_capabilities.py",
+        "modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx",
+        "modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx",
+        "modules/ui/shared/data-management/datasetPreparationAdaptivePresenter.ts",
+        "modules/ui/shared/data-management/README.md",
+        "apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/hooks/datasetPreparationRequestBuilder.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-request-builder.unit.test.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/README.md",
+        "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx"
       ]
     }
   }

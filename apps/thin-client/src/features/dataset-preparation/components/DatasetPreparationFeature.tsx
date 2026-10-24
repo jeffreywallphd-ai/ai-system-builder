@@ -1,3 +1,4 @@
+import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
 import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -10,6 +11,7 @@ import {
   createDefaultDatasetPreparationVisualOutputShape,
   DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH,
   createDatasetPreparationAdvancedConfigForMethod,
+  resolveDatasetPreparationOcrChoice,
   compileDatasetPreparationVisualOutputShape,
   createDatasetPreparationExecutionPlan,
   evaluateDatasetPreparationSourceReadiness,
@@ -373,8 +375,16 @@ function buildCommand(
     topicBoundarySensitivity: number;
     maxSourceSpans: number;
     similarityThreshold: number;
+    ocrEnabled?: boolean;
+    ocrLanguage?: string;
+    sourceFormats?: readonly string[];
   },
 ): ApiDatasetPreparationCommand {
+  const ocr = resolveDatasetPreparationOcrChoice({
+    enabled: adaptive.ocrEnabled, language: adaptive.ocrLanguage, method: plan.method,
+    sourceCount: sourceArtifactIds.length, sourceFormats: adaptive.sourceFormats,
+  });
+  if (ocr.ok === false) throw new Error(ocr.message);
   const defaultAdvanced = createDatasetPreparationAdvancedConfigForMethod(
     plan.method,
   );
@@ -384,6 +394,7 @@ function buildCommand(
         content: defaultAdvanced.content
           ? {
               ...defaultAdvanced.content,
+              ...ocr.content,
               maxTokensPerChunk: adaptive.maxTokensPerChunk,
               maxSourceSpans: adaptive.maxSourceSpans,
               ...(plan.method === "topic-aware"
@@ -637,6 +648,8 @@ function WorkspaceDatasetPreparationFeature({
   const lowMemoryAvailable = isDatasetPreparationOffloadAvailable(generationCapacity);
   const [preparationMethodId, setPreparationMethodId] =
     useState<DatasetPreparationMethodId>();
+  const [ocrEnabled, setOcrEnabled] = useState(false);
+  const [ocrLanguage, setOcrLanguage] = useState("");
   const [qualityPreset, setQualityPreset] =
     useState<DatasetQualityPreset>("recommended");
   const [requireLicenseMetadata, setRequireLicenseMetadata] = useState(false);
@@ -1035,7 +1048,18 @@ function WorkspaceDatasetPreparationFeature({
       });
       return;
     }
+    const ocr = resolveDatasetPreparationOcrChoice({
+      enabled: ocrEnabled, language: ocrLanguage, method: preparationPlan.method,
+      sourceCount: selectedArtifactIds.length,
+      sourceFormats: selectedSourceCapabilities.map((source) => source.format),
+    });
+    if (ocr.ok === false) {
+      setStatus({ kind: "error", message: ocr.message });
+      return;
+    }
     const adaptiveValues = {
+      ocrEnabled, ocrLanguage,
+      sourceFormats: selectedSourceCapabilities.map((source) => source.format),
       chunkSize: Number(chunkSize),
       chunkOverlap: Number(chunkOverlap),
       maxTokensPerChunk: Number(maxTokensPerChunk),
@@ -1278,6 +1302,8 @@ function WorkspaceDatasetPreparationFeature({
                   setTaskType(event.target.value as DatasetPreparationTaskType);
                   setSelectedArtifactIds([]);
                   setPreparationMethodId(undefined);
+                  setOcrEnabled(false);
+                  setOcrLanguage("");
                 }}
               >
                 {DATASET_PREPARATION_TASK_OPTIONS.map((option) => (
@@ -1436,11 +1462,10 @@ function WorkspaceDatasetPreparationFeature({
                   className="ui-input"
                   value={effectivePreparationMethodId}
                   disabled={status.kind === "loading"}
-                  onChange={(event) =>
-                    setPreparationMethodId(
-                      event.target.value as DatasetPreparationMethodId,
-                    )
-                  }
+                  onChange={(event) => {
+                    setPreparationMethodId(event.target.value as DatasetPreparationMethodId);
+                    setOcrEnabled(false);
+                  }}
                 >
                   {preparationResolution.methods.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -1475,11 +1500,15 @@ function WorkspaceDatasetPreparationFeature({
                 candidates are checked and require review before saving.
               </p>
             ) : null}
-            {preparationPlan?.method === "structure-aware" ? (
-              <p className="ui-text-muted">
-                Scanned-image text recognition is not included. Use a text-based
-                PDF or add reviewed text first.
-              </p>
+            {preparationPlan?.method === "structure-aware" || ocrEnabled ? (
+              <DatasetPreparationOcrSettings
+                enabled={ocrEnabled} language={ocrLanguage}
+                eligible={preparationPlan?.method === "structure-aware" && selectedArtifactIds.length > 0 &&
+                  selectedSourceCapabilities.length === selectedArtifactIds.length &&
+                  selectedSourceCapabilities.every((source) => source.format === "pdf")}
+                busy={status.kind === "loading"}
+                onEnabledChange={setOcrEnabled} onLanguageChange={setOcrLanguage}
+              />
             ) : null}
             {taskType === "llm-classification" ||
             taskType === "vision-classification" ||
@@ -1895,23 +1924,7 @@ function WorkspaceDatasetPreparationFeature({
                     </h4>
                     <dl className="ui-grid ui-grid--two">
                       {qualityReview.advancedReport.content ? (
-                        <>
-                          <dt>Source sections kept</dt>
-                          <dd>
-                            {
-                              qualityReview.advancedReport.content
-                                .sourceSpanCount
-                            }
-                          </dd>
-                          <dt>Reading quality</dt>
-                          <dd>
-                            {Math.round(
-                              qualityReview.advancedReport.content
-                                .meanExtractionQuality * 100,
-                            )}
-                            %
-                          </dd>
-                        </>
+                        <DatasetPreparationTextReadingChecks content={qualityReview.advancedReport.content} />
                       ) : null}
                       {qualityReview.advancedReport.semantic ? (
                         <>

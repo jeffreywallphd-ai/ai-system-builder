@@ -1,3 +1,4 @@
+import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
 import { useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -162,6 +163,9 @@ function WorkspaceDatasetPreparationFeature({
     constrainedDecodingAvailable,
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
+    ocrEligible,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -231,6 +235,8 @@ function WorkspaceDatasetPreparationFeature({
     setConstrainedDecodingPreference,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
+    setOcrEnabled,
+    setOcrLanguage,
     setChunkSize,
     setChunkOverlap,
     setPreserveDocumentBoundaries,
@@ -981,11 +987,10 @@ function WorkspaceDatasetPreparationFeature({
                           className="ui-input"
                           value={preparationMethodId}
                           disabled={formLocked}
-                          onChange={(event) =>
-                            setPreparationMethodId(
-                              event.target.value as DatasetPreparationMethodId,
-                            )
-                          }
+                          onChange={(event) => {
+                            setPreparationMethodId(event.target.value as DatasetPreparationMethodId);
+                            setOcrEnabled(false);
+                          }}
                         >
                           {preparationResolution.methods.map((method) => (
                             <option key={method.id} value={method.id}>
@@ -1066,6 +1071,12 @@ function WorkspaceDatasetPreparationFeature({
                   modelDownloadStatus.message &&
                   modelDownloadStatus.kind === "success" ? (
                   <p role="status">{modelDownloadStatus.message}</p>
+                ) : null}
+                {preparationMethodId === "structure-aware" || ocrEnabled ? (
+                  <DatasetPreparationOcrSettings
+                    enabled={ocrEnabled} language={ocrLanguage} eligible={ocrEligible}
+                    busy={formLocked} onEnabledChange={setOcrEnabled} onLanguageChange={setOcrLanguage}
+                  />
                 ) : null}
                 <CollapsiblePanel
                   className="dataset-preparation__advanced-settings"
@@ -1790,23 +1801,7 @@ function WorkspaceDatasetPreparationFeature({
                         </h5>
                         <dl className="ui-grid ui-grid--two">
                           {qualityReview.advancedReport.content ? (
-                            <>
-                              <dt>Source sections kept</dt>
-                              <dd>
-                                {
-                                  qualityReview.advancedReport.content
-                                    .sourceSpanCount
-                                }
-                              </dd>
-                              <dt>Reading quality</dt>
-                              <dd>
-                                {Math.round(
-                                  qualityReview.advancedReport.content
-                                    .meanExtractionQuality * 100,
-                                )}
-                                %
-                              </dd>
-                            </>
+                            <DatasetPreparationTextReadingChecks content={qualityReview.advancedReport.content} />
                           ) : null}
                           {qualityReview.advancedReport.semantic ? (
                             <>

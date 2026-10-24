@@ -832,3 +832,33 @@ native retirement overrides cancellation rather than supplying an exit pass.
 Preserve Standard behavior and all existing generation, quality, review and memory
 controls. Local task fixtures, even with actual OCR, do not qualify model accuracy,
 whole-host UI, package delivery, unknown-start recovery or durable crash recovery.
+
+### Scanned-PDF form and saved-setting controls
+
+Treat renderer choices and browser storage as untrusted. A strict shared contract
+rejects non-boolean activation, missing or invalid language, incompatible methods,
+missing source-format entries, mixed source types and selections over 256 files.
+The forms and request builders apply the check before dispatch. Inactive settings
+never send a stale language. A checked choice cannot silently fall back after a
+source change; explicit method/goal changes turn it off. Task-owned inputs remain
+locked until observed retirement, including a cancellation request still running.
+
+These are convenience guards. Application authorization, exact protocol support,
+private host byte bindings, native integrity capture and per-task installed-language
+checks remain the security boundary. No renderer-supplied path, hash, source map,
+provider command, model download or language download is introduced. Desktop saved
+settings store only user choices; old records start off and malformed activation
+stops submission. Version reuse must match currently available PDF sources before
+restoration and is checked again by the host at execution.
+
+Display only bounded completed-recognition facts and an explicitly explained
+text-character check. Do not expose arbitrary provider identity/version strings or
+present character hygiene as OCR confidence. Focused form tests cover invalid
+choices, migration, saved-setting restoration, source/method changes, cancellation
+and inactive-request compatibility. Full mounted-host and package proof remains
+separate; browser state and client doubles grant no native or parent qualification.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.

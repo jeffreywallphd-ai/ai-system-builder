@@ -850,3 +850,36 @@ active. Cancellation is cooperative between completed operations, and the worker
 keeps the task running until those operations unwind. A failed native retirement
 does not count as cancellation. Synthetic generation fixtures test task plumbing;
 they grant no model-quality, app UI, packaging or parent-roadmap pass.
+
+## Scanned-PDF preparation controls
+
+Desktop and browser preparation share an optional scanned-PDF control. It starts
+off. Choose Document-structure sections, select only PDFs of at most 16 MiB each,
+and enter the exact installed Windows language tag. No language is guessed or
+installed. The task checks the reader and language before recognition; startup
+and form rendering do not probe them. Protocol support alone is not readiness.
+
+The shared contract validates raw flags, language syntax, method, source count and
+the complete renderer source-format selection before dispatch. Request builders
+include the language only for an explicit valid opt-in. Public commands contain
+no internal source map or staging data. Application authorization and exact
+host-compiled byte bindings remain authoritative and are rechecked independently.
+
+An explicit method or training-goal change turns recognition off. Adding an
+incompatible source keeps a checked choice visible and prevents submission until
+the user corrects it or turns it off. Running-task controls stay locked until the
+observed terminal result. Desktop named settings and workspace drafts retain a
+valid explicit choice; old settings default to off. Invalid saved flags cannot
+activate or silently downgrade recognition. Version reuse refuses missing or
+non-PDF sources before changing the current form. Browser page loads start off.
+
+Review shows actual recognized document, page and line counts and the language.
+The text-character check measures replacement/control-character hygiene, not OCR
+accuracy or model quality. Fixed bounded labels replace raw supplier identity.
+Portable form tests use declared synthetic clients. They do not replace actual
+native recognition, both-host task journeys or complete package qualification.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.

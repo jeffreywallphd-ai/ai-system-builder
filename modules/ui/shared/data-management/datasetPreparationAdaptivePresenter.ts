@@ -112,7 +112,7 @@ const METHOD_COPY: Record<
   "structure-aware": {
     label: "Document-structure sections",
     description:
-      "Uses headings, paragraphs, tables, and other available document structure before creating and checking examples. It does not read text from scanned images.",
+      "Uses headings, paragraphs, tables, and other available document structure before creating and checking examples. You can choose text recognition for scanned PDFs and enter an installed language.",
   },
   "use-source-metadata": {
     label: "Use attached captions or labels",

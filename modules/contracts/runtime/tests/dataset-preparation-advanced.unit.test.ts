@@ -47,6 +47,10 @@ describe("dataset preparation advanced profiles", () => {
           item.capabilityId === "ocr-text" && item.status === "unavailable",
       ),
     );
+    const ocr = readiness.find((item) => item.capabilityId === "ocr-text")!;
+    assert.equal(ocr.version, "unverified");
+    assert.match(ocr.message, /has not been checked/);
+    assert.doesNotMatch(ocr.message, /not installed/);
     assert.ok(
       readiness.some(
         (item) =>

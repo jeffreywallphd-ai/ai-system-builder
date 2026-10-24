@@ -233,3 +233,30 @@ source, native recognition, generation and output operations. Running cancellati
 remains a request until execution unwinds; uncertain native retirement is a failure,
 not a successful cancellation. Keep app controls, both-host journeys, full delivery,
 unknown-start reconciliation and durable recovery separate from local task proof.
+
+## Public preparation controls
+
+Use one shared scanned-PDF control in desktop and thin client. It starts off and
+requires Document-structure sections, a complete all-PDF selection and an explicit
+installed language tag. These are typed public choices; no source map, staging
+path, digest or provider command comes from the renderer. The owning application
+and worker still perform authoritative authorization, protocol and reader checks.
+The renderer cannot establish installed-engine readiness or authorize a read.
+
+Preserve an explicit choice when sources become incompatible and stop submission
+until it is corrected or turned off. An explicit method or training-goal change
+clears the opt-in. Keep controls locked until the task actually settles. Desktop
+named settings preserve the choice without source identities; older settings start
+off. Invalid saved flags fail before dispatch. Version reuse checks the available
+source catalog before restoring an OCR setup; the host rechecks actual sources.
+
+Show actual completed reader counts separately from the text-character hygiene
+score. The latter checks replacement and control characters, not OCR accuracy.
+Do not show arbitrary provider identity/version strings as public diagnostics.
+Local form and request tests are component evidence. Actual complete host journeys
+and packaged delivery remain distinct qualification before parent closure.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.
