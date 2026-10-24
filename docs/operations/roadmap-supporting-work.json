@@ -2249,7 +2249,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2268,7 +2268,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2865,6 +2865,74 @@
         "This is reviewed component support at its recorded snapshot, not current parent criterion, increment or roadmap qualification. Existing native fixture history is preserved.",
         "No actual model worker or offload delivery is qualified. Retained-tree protection and protected durable accounting remain unfinished; actual restart stays denied and unknown retained data still consumes the full 12 GiB budget.",
         "Earlier failed observations and the failed control-plane receipt remain preserved. Completed Standard model accuracy stays closed and was not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "ordinary-ingestion-real-host-ui-qualification-v5",
+      "work_criteria": [
+        "real-host-multi-file-imports-stay-distinct-and-bounded"
+      ],
+      "receipt_digest": "c0d0c632843fff1b67e3c995f8016a581129255da71689704b212ff8b78fbd1b",
+      "review_digest": "35e8d1c67aadd3d283fb00ae89c3563a7165b4b5d03f318cf483027debbf06ab",
+      "scope": "Committed desktop and browser imports passed: three CSV/JSONL/JSON files, 8437961 bytes, 11 reads, maximum 1 MiB, zero whole-file reads, progress, canonical-duplicate denial, completion and source discovery after reload. Exact HTTP admission, organization context, production package and owned-process cleanup passed. Five checks and separate review cover this component. Two documentation EOF newlines were separately checked.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "These ordinary-file journeys do not qualify whole-process RAM use, large-scale imports, provider or website workflows, OCR, model generation, native offload or old retained files. Those agent tasks remain pending.",
+        "All earlier failed runs remain in the evidence. Accepted model accuracy stays closed; no model accuracy check was rerun."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "security-ingestion-bounds-and-egress-reviewed",
+      "work_id": "ordinary-ingestion-real-host-ui-qualification-v5",
+      "work_criteria": [
+        "real-host-multi-file-imports-stay-distinct-and-bounded"
+      ],
+      "receipt_digest": "c0d0c632843fff1b67e3c995f8016a581129255da71689704b212ff8b78fbd1b",
+      "review_digest": "35e8d1c67aadd3d283fb00ae89c3563a7165b4b5d03f318cf483027debbf06ab",
+      "scope": "Committed desktop and browser imports passed: three CSV/JSONL/JSON files, 8437961 bytes, 11 reads, maximum 1 MiB, zero whole-file reads, progress, canonical-duplicate denial, completion and source discovery after reload. Exact HTTP admission, organization context, production package and owned-process cleanup passed. Five checks and separate review cover this component. Two documentation EOF newlines were separately checked.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "These ordinary-file journeys do not qualify whole-process RAM use, large-scale imports, provider or website workflows, OCR, model generation, native offload or old retained files. Those agent tasks remain pending.",
+        "All earlier failed runs remain in the evidence. Accepted model accuracy stays closed; no model accuracy check was rerun."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "ordinary-ingestion-real-host-ui-qualification-v5",
+      "work_criteria": [
+        "real-host-multi-file-imports-stay-distinct-and-bounded"
+      ],
+      "receipt_digest": "c0d0c632843fff1b67e3c995f8016a581129255da71689704b212ff8b78fbd1b",
+      "review_digest": "35e8d1c67aadd3d283fb00ae89c3563a7165b4b5d03f318cf483027debbf06ab",
+      "scope": "Committed desktop and browser imports passed: three CSV/JSONL/JSON files, 8437961 bytes, 11 reads, maximum 1 MiB, zero whole-file reads, progress, canonical-duplicate denial, completion and source discovery after reload. Exact HTTP admission, organization context, production package and owned-process cleanup passed. Five checks and separate review cover this component. Two documentation EOF newlines were separately checked.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "These ordinary-file journeys do not qualify whole-process RAM use, large-scale imports, provider or website workflows, OCR, model generation, native offload or old retained files. Those agent tasks remain pending.",
+        "All earlier failed runs remain in the evidence. Accepted model accuracy stays closed; no model accuracy check was rerun."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "fixed-native-combined-ui-budget",
+      "work_criteria": [
+        "fixed-ui-budget-keeps-owned-lifetime-and-other-ceilings"
+      ],
+      "receipt_digest": "69c4135a3f218e11c9e4275f0eaebc4cc586f7901be503c11c7385350b1b64c0",
+      "review_digest": "68e924b95f37ccb4d0d67636dec3e137dd89a67f2a39c140ed8b745aa5f7f6c1",
+      "scope": "Committed Windows test runner: 31 portable and eight native cases passed with current checks and separate review. Combined UI jobs have a fixed 3 GiB limit; packaging and other fixtures retain 2 GiB, each process 1 GiB and each job 32 active processes. Creation-time membership, finite output/deadline limits and observed owned-tree retirement remain required.",
+      "limitations": [
+        "Reviewed component evidence at its recorded source snapshot; no current parent criterion, work chunk, increment or roadmap pass.",
+        "The native readback fixture establishes the configured test-process limits and ownership mechanics, not a memory allocation stress test, hostile filesystem protection, real model-worker/offload restart or old-process recovery.",
+        "The earlier 2 GiB UI failures remain failed history. This profile does not clear any old fence, authorize quota tuning or qualify parent ingestion scale."
       ]
     }
   ]

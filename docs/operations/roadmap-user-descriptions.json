@@ -10483,6 +10483,69 @@
           "Earlier failed tests and the failed control-plane check stay in the evidence. Accepted Standard model accuracy stays closed. Those accuracy tests were not run again."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3a80d1866a3e500227f166097715bc7866c5237e3d6e68b31467f34e52798ec3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser and desktop app imported three test files, about 8 MiB in total, and found them after reload.",
+          "Upload reads stayed at 1 MiB or less. Progress and completion messages worked. Files with the same normalized name and size were rejected before a task was created.",
+          "Server permission checks passed, and the test processes shut down cleanly. Two documentation newline corrections passed a separate check and did not change the tested product code."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6228627a2402191869f982a9792434fa55c676f4bd2bc4b9e12cdfcfb3ee1120",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to test large-scale imports, full memory use, private-provider and website workflows, and advanced document processing. These tests did not change offload or old temporary files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6b925e506164e9e8ddf46ae05624671e334e646bfd8b32905f6249cf6732d511",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed runs remain recorded. Accepted model accuracy stays closed and was not tested again."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "32cba3fa18c3bbd85f459560c04f5ae63075d5204a6dc15fe45852010210e599",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test runner passed 31 portable tests and eight Windows tests for starting and stopping its own new process groups.",
+          "Combined UI tests have a fixed 3 GiB process-group limit. Packaging retains 2 GiB, with 1 GiB per process and at most 32 active processes. These limits do not reserve RAM or change model memory settings."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "408282c032f4ea69f5970e46a1eff6eb163a76c8dd562eae785076c801a3185b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests checked process limits and shutdown. They did not test full memory allocation, retained-file protection, model offloading or recovery of old processes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9696827f7e77ae8eddb9d50bc78d5abcf3fac01fab6014a50c2feebd80fd996b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed UI runs stay recorded. The agent must finish the remaining import checks within the fixed limits."
+        ]
+      }
     }
   ]
 }
