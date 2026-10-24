@@ -226,6 +226,26 @@ Renderer constraints for this slice:
 - Public repositories may work without a token depending on repository visibility/provider policy.
 - Missing/invalid token and access-denied responses are surfaced with explicit auth guidance in UI messaging.
 
+## Optional Windows text reader build
+
+Forge's `generateAssets` hook runs the fixed OCR build before development start
+and packaging on x64 Windows. It uses the existing trusted
+`PYTHON_RUNTIME_COMMAND` interpreter setting, or `python`, with isolated standard
+library imports. The build uses the installed .NET compiler and Windows SDK
+26100; it downloads nothing. Other platforms and missing tools leave this
+optional reader unavailable while Standard features can still start.
+
+The hook compiles only the repository helper source. It checks source and binary
+hashes before publishing the fixed worker resource. The existing worker
+`extraResource` carries this directory into desktop packages. A valid resource
+can be reused. A terminated build releases its process-owned file lock; a later
+build uses a new temporary directory and does not delete earlier evidence.
+The compiler is a trusted development tool, not a sandboxed content processor.
+End-user runtime code does not compile, search for or download a helper.
+
+The build does not enable OCR by itself. Dataset normalization, readiness and
+actual desktop/browser journeys must qualify before the app advertises it.
+
 ## Hugging Face token configuration UI
 
 - Desktop Artifact Browser now includes a **Hugging Face token** section with masked configured-state display.

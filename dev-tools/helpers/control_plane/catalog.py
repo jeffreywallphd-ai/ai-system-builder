@@ -19,7 +19,7 @@ QUALIFICATION_PROFILES = (
 
 QUALIFICATION_PROFILE_PATTERNS = {
     "review-site": ["dev-tools/review-site/index.html", "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"],
-    "ocr-provider-contract": ["modules/adapters/runtime/python/worker/ocr/*", "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py", "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py", "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py", "modules/adapters/runtime/python/worker/tests/test_ocr_process.py", "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"],
+    "ocr-provider-contract": ["modules/adapters/runtime/python/worker/ocr/*", "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py", "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py", "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py", "modules/adapters/runtime/python/worker/tests/test_ocr_process.py", "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py", "dev-tools/scripts/native/build_windows_ocr.py", "dev-tools/scripts/native/build_windows_ocr.cjs", "dev-tools/scripts/native/tests/test_build_windows_ocr.py", "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs", "apps/desktop/forge.config.js"],
 }
 
 

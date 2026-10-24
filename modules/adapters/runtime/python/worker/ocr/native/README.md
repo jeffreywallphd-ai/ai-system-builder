@@ -137,3 +137,41 @@ strict retirement. Missing tools fail qualification; nothing is downloaded.
 Ordinary portable tests never run this operator. A local bundle and source
 tests do not qualify trusted product packaging, normalization or host delivery.
 Product OCR remains unavailable until those separate checks pass.
+
+## Fixed development and package build
+
+From the repository root, run the trusted development build explicitly with:
+
+```text
+python -I -S -B dev-tools/scripts/native/build_windows_ocr.py --build
+```
+
+The same fixed command runs through Forge's `generateAssets` hook before x64
+Windows development start and packaging. It uses installed .NET Framework 4
+and Windows SDK 26100 only. There are no source, executable, output, compiler
+flag or download options. Missing tools or unsupported platforms are explicit
+unavailable states; the optional hook preserves Standard startup.
+
+Native read leases protect the source, builder, hook and literal compiler
+inputs. Windows servicing hard links are allowed only for those fixed installed
+system files; their handles still deny write/delete sharing. Repository source
+and runtime resource files retain the single-link requirement. Compiler input
+files are individually bounded at 64 MiB and together at 128 MiB.
+
+Each new build copies the pinned source into a new ignored UUID directory under
+`artifacts/tmp/windows-ocr-build`. The trusted compiler has a 120-second deadline
+and 64 KiB retained output per stream. Excess output, any stderr, failure or
+unconfirmed root/pipe/handle retirement denies publication. This is root-process
+retirement, not compiler descendant containment. The runtime helper retains its
+separate creation-time Job, memory and cancellation controls.
+
+Only `build/WindowsOcrHelper.exe` and `build/resource.json` are published, with
+the manifest last. Source and executable hashes, x64 PE identity and byte limits
+must pass the runtime resource validator. The ignored run proof also records
+builder, hook and installed toolchain hashes. The manifest detects stale or
+partial publication; it is not a signature against an installation writer.
+Valid resources are reused only after native identity checks and acknowledged
+lease close. Termination releases the OS lock; the next attempt uses a fresh
+UUID and leaves prior runs intact. Uncertain live ownership is retained and
+denies another build in that process. Neither a build nor a copied resource
+alone establishes application OCR availability or parent-roadmap completion.

@@ -119,3 +119,27 @@ EXIF orientation and denial/cancellation retirement. These local results do not
 qualify product packaging, document normalization or either host UI; advertised
 OCR stays unavailable until those requirements pass. Standard extraction and
 accepted model-quality qualification are unchanged.
+
+## Trusted build and resource composition
+
+Use Forge's existing `generateAssets` lifecycle for development/package builds
+of the fixed helper. An isolated standard-library Python builder uses the fixed
+installed .NET compiler and SDK 26100 references. No supplier, binary, language
+data or model dependency is added. The existing worker resource copy includes
+the generated helper and manifest. Missing optional tools preserve Standard
+startup; runtime code does not compile or probe OCR during ordinary Canvas load.
+
+Build inputs are natively pinned and bounded. Only literal installed system
+toolchain files may have Windows servicing hard links; repository sources and
+runtime resources keep their single-link guard. The trusted compiler has finite
+time/output, exact root retirement and acknowledged handle close. It is not a
+compiler descendant sandbox. Separate runtime creation-time Job controls remain.
+Each attempt uses a new UUID source copy, preserves earlier evidence and replaces
+only the two generated resource names, manifest last. An OS-owned lock survives
+as a file after interruption but releases its lock when the process ends.
+
+Source and binary hashes establish current trusted-installation identity, not
+signature authenticity. Actual fixed-path readiness, document smoke and copied
+resource checks qualify this build component only. Application normalization,
+source authorization, capability and both-host delivery remain required before
+advertised OCR or parent completion.

@@ -298,16 +298,25 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         resource_test = "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py"
         process_test = "modules/adapters/runtime/python/worker/tests/test_ocr_process.py"
         provider_test = "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py"
+        build_test = "dev-tools/scripts/native/tests/test_build_windows_ocr.py"
+        hook_test = "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
+        build_source = "dev-tools/scripts/native/build_windows_ocr.py"
+        hook_source = "dev-tools/scripts/native/build_windows_ocr.cjs"
+        forge_source = "apps/desktop/forge.config.js"
         native_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
         document_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test])
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, build_test, hook_test])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
         self.assertNotIn(document_test, profile["test_paths"])
         self.assertIn(source, profile["source_paths"])
         commands = run_focused_checks.profile_commands(root, name)
-        self.assertEqual(commands, [[sys.executable, "-B", "-m", "unittest", "discover",
+        self.assertEqual(commands, [["node", "--test", "--", hook_test],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "dev-tools/scripts/native/tests",
+                                    "-p", "test_build_windows_ocr.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
                                    "-s", "modules/adapters/runtime/python/worker/tests",
                                    "-p", "test_ocr_process.py"],
                                    [sys.executable, "-B", "-m", "unittest", "discover",
@@ -333,6 +342,11 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([provider_test], ["documentation"], True, False),
             ([native_test], ["documentation"], True, False),
             ([document_test], ["documentation"], True, False),
+            ([build_test], ["documentation"], True, False),
+            ([hook_test], ["documentation"], True, False),
+            ([build_source], ["documentation"], True, False),
+            ([hook_source], ["documentation"], True, False),
+            ([forge_source], ["documentation"], True, False),
             ([source, "modules/other/source.ts"], ["documentation"], True, True),
             ([source], ["documentation", "focused-tests"], True, True),
             (["modules/other/source.ts"], ["documentation"], False, True),

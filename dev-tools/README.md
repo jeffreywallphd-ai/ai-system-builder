@@ -125,8 +125,8 @@ provider/website/scale/native matrix. The `ingestion-publication` profile also
 runs focused shared-panel interaction tests; real host journeys remain opt-in.
 
 The `ocr-provider-contract` profile runs only the portable managed-runtime OCR
-contract, private framing, resource identity and process failure tests. Fixed source patterns select it automatically
-for the provider package and its four exact portable test modules. Complete explicit source coverage can replace generic
+contract, private framing, resource identity, process failure and build-hook tests. Fixed source patterns select it automatically
+for the provider package, fixed builder/hook and exact portable test files. Complete explicit source coverage can replace generic
 focused selection only for those declared changes; unknown or explicitly
 required generic impact remains. This profile starts no OCR engine or model
 and establishes no actual Windows or parent-roadmap qualification. The explicit
@@ -140,3 +140,16 @@ Windows-only synthetic image/scanned-PDF operator, excluded from ordinary
 discovery and profile execution. It uses installed SDK/Pillow/Arial without
 downloads and only fresh ignored bundles. Actual local document evidence does
 not qualify product packaging, normalization, host delivery or model accuracy.
+
+The same fixed profile includes portable tests for
+`scripts/native/build_windows_ocr.py`, its Node hook and Forge wiring. The builder
+is development-only: `python -I -S -B dev-tools/scripts/native/build_windows_ocr.py --build`.
+Forge calls it before x64 Windows start/package. It uses only installed fixed
+compiler/SDK inputs, native input leases, bounded time/output and a fresh UUID
+source copy. It publishes a validated source/binary manifest last, supports
+interruption retry without deleting prior evidence and preserves Standard startup
+when optional tools are absent. The compiler is trusted; no compiler descendant
+containment is claimed. Portable tests never compile or launch OCR. Actual build,
+fixed product resource and copied-resource evidence stay separate from
+normalization, host UI and parent qualification. Build changes also select the
+dependency gate even though this component adds no dependency.

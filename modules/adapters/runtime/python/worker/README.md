@@ -393,3 +393,13 @@ only new synthetic image/scanned-PDF bundles using installed fixture tools.
 It is not ordinary test discovery or a product readiness gate. Trusted packaged
 resources, normalization and actual desktop/browser delivery still need their
 own checks before OCR can be advertised. Standard extraction stays unchanged.
+
+The fixed development/package builder lives in
+`dev-tools/scripts/native/build_windows_ocr.py`, outside worker execution. Forge
+invokes it before x64 Windows start/package, with isolated Python and only the
+installed fixed compiler/SDK. It publishes the helper and a source/binary-bound
+manifest into `ocr/native/build`; the desktop's existing worker resource copy
+includes them. Missing tools preserve Standard startup and explicit OCR
+unavailability. Runtime code never compiles. See the native README for input
+leases, publication, interruption recovery and the trusted-compiler scope.
+Normalization, capability and actual host checks remain separate requirements.

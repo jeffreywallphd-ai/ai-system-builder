@@ -1,9 +1,13 @@
 const path = require("node:path");
 const { MakerSquirrel } = require("@electron-forge/maker-squirrel");
 const { MakerZIP } = require("@electron-forge/maker-zip");
+const { buildWindowsOcrResource } = require("../../dev-tools/scripts/native/build_windows_ocr.cjs");
 
 /** @type {import('@electron-forge/shared-types').ForgeConfig} */
 module.exports = {
+  hooks: {
+    generateAssets: async (_config, platform, arch) => buildWindowsOcrResource(platform, arch),
+  },
   packagerConfig: {
     extraResource: [
       path.resolve(__dirname, "../../modules/adapters/runtime/python/worker"),

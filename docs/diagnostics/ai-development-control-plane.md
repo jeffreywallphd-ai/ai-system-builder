@@ -517,10 +517,10 @@ No product, model, retained-file or offload guard changes with this test profile
 
 `ocr-provider-contract` is a fixed source-owned profile for the bounded request,
 readiness, result, strict private framing, resource identity and process failure
-semantics inside the managed Python runtime. Changes in `worker/ocr/`, its four
-exact portable tests or its explicit native qualification operator select it automatically. Its explicit
+semantics inside the managed Python runtime. Changes in `worker/ocr/`, its exact
+portable tests or its explicit native qualification operator select it automatically. Its explicit
 coverage never suppresses unknown source impact or a required generic check.
-The profile executes four standard-library test modules and does not load models,
+The profile executes six standard-library test modules and one Node test file; it does not load models,
 launch Windows OCR, access provider credentials or qualify the Data roadmap.
 Use actual native/provider and product checks for the later implementation.
 The model-free Windows operator creates only fresh synthetic test resources and
@@ -532,3 +532,12 @@ page binding and cancellation/error checks. The explicit Windows synthetic
 document operator remains a separate controlled check, never an implicit profile
 command. Preserve its actual result and source hashes separately. It cannot
 grant product OCR availability, packaging, normalization, host or parent closure.
+
+The OCR profile also selects the fixed Python builder, Node hook, their portable
+tests and Forge configuration. It runs six standard-library test modules and one
+Node test file without compiling or launching OCR. Build changes additionally
+require the dependency gate. The explicit development build uses isolated Python,
+fixed installed SDK inputs and bounded compiler output/time. Actual fixed-path
+readiness, document smoke and copied-resource identity are separate controlled
+evidence. Preserve their raw source/build hashes; neither a portable pass nor a
+build alone grants application OCR availability or Data-roadmap completion.

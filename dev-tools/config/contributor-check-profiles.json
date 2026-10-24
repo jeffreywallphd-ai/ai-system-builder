@@ -1107,7 +1107,9 @@
         "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_process.py",
-        "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py"
+        "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py",
+        "dev-tools/scripts/native/tests/test_build_windows_ocr.py",
+        "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1137,7 +1139,13 @@
         "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py",
         "modules/adapters/runtime/python/worker/ocr/provider.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py",
-        "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"
+        "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py",
+        "dev-tools/scripts/native/build_windows_ocr.py",
+        "dev-tools/scripts/native/build_windows_ocr.cjs",
+        "dev-tools/scripts/native/tests/test_build_windows_ocr.py",
+        "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs",
+        "apps/desktop/forge.config.js",
+        "apps/desktop/README.md"
       ]
     }
   }

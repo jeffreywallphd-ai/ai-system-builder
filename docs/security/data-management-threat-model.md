@@ -696,3 +696,32 @@ without private sources, credentials, models or retained files. Fixture Pillow
 and Arial are qualification tools, not runtime provider dependencies. Packaging,
 normalization, source authorization and actual host delivery remain required;
 this component does not advertise OCR or qualify the parent roadmap.
+
+## Trusted OCR build inputs and publication
+
+The build protects source/executable integrity, private environment and resource
+availability. Only fixed repository helper source, builder and hook, the installed
+compiler and literal SDK/framework references are accepted. Native file/ancestor
+leases reject redirects and deny file write/delete sharing. Only those fixed
+system toolchain files allow servicing hard links; repository/runtime single-link
+guards remain strict. Each installed file is at most 64 MiB, all inputs 128 MiB.
+
+The builder copies pinned source into a fresh ignored UUID directory. Its compiler
+environment contains only OS directory values and new private temporary paths.
+There is no shell, caller-selected command/source/flag, credential forwarding or
+download. The trusted compiler is limited to 120 seconds and 64 KiB saved output
+per stream; any stderr, overflow, failure or uncertain native root/pipe/handle
+retirement denies publication. A detached handle remains strongly owned when exit
+cannot be proved. This does not claim compiler process-tree containment or defend
+against a hostile compiler/installation writer. Runtime recognition retains its
+separate native Job and resource limits.
+
+An exclusive OS-owned file lock serializes builds and releases on termination.
+No old PID, run or retained model slot is adopted. Only the fixed generated exe
+and manifest are replaced, manifest last; native resource validation binds current
+source and executable digests, PE identity and size before reuse. Interrupted
+publication leaves a detectable mismatch and a fresh attempt can rebuild without
+deleting historical evidence. Optional build failure preserves Standard startup,
+while missing/stale resources remain unavailable. Build/copy evidence does not
+grant application or parent qualification. Actual document normalization, source
+authorization and both-host delivery still require separate checks.

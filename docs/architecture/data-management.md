@@ -736,3 +736,21 @@ The explicit synthetic document operator checks PNG/JPEG, EXIF rotation, selecte
 scanned-PDF pages, empty results and malformed/size/cancellation paths in fresh
 local bundles. It grants no product availability. Trusted development/package
 resource composition, normalization and desktop/browser delivery remain pending.
+
+## OCR development and package resource composition
+
+The development-only builder in `dev-tools/scripts/native/` produces the fixed
+worker resource from pinned repository source and installed compiler/SDK inputs.
+Forge calls it through `generateAssets` before start/package; the existing worker
+resource copy includes the output. It has no inward application/domain dependency
+and creates no runtime supplier selector. Standard startup remains available on
+unsupported platforms or without optional development tools.
+
+Fresh UUID source copies, bounded compiler time/output, exact root retirement,
+native input leases and manifest-last publication detect stale or partial builds.
+Installed Windows servicing links are permitted only for literal system build
+inputs; runtime single-link checks are unchanged. The compiler is a trusted
+development tool, not a contained parser for user content. Runtime recognition
+retains its creation-time Job, fixed resource and finite limits. Fixed-path and
+copied-resource checks do not qualify normalization, readiness, either host's
+product journey or the parent roadmap.
