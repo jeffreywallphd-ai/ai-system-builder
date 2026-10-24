@@ -10628,6 +10628,75 @@
           "These tests did not repeat model accuracy. They do not check old temporary model files, other OCR engines or the separate restricted security work. Normal document processing is unchanged."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e1d65ce5a772e9a100212d2ffde0c943282660674de41f6b763ba250c76a63ad",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The replaceable Windows text reader passed 62 Python tests, seven scanned-document cases, twelve process-control cases and five required checks.",
+          "Tests checked test images, rotated pages, original PDF page numbers, language, invalid inputs and cancellation.",
+          "The app still reports the full OCR feature as unavailable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5aed3a67a366912fce4232f76eaa1af39c0489f18e91fd4033bcc099393c2e21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The reader passed local image and scanned-PDF checks.",
+          "The agent must still connect it to document preparation, check readiness, test final packaging and test both apps."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "15d521f9212e6d0c491fe4d39142dd8e5e43556fb51e7fd0945043c250bb94e6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The build component passed 84 Python tests, seven build-hook tests, one routing test and six required checks.",
+          "A fresh build, reuse and the real build hook passed. Sixteen reading exchanges and ten copied program files also passed checks.",
+          "No dependency or download was added. Missing optional build tools leave Standard features available."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2afd5f6b6686152a5301d92652eceebe5aadc99105ba4de6927d18ce2edef8c9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks cover the build and a package-shaped copy. The agent must still test a full desktop package, document preparation, readiness and both apps.",
+          "The checks trust the installed build tools. They do not test every program those tools could start."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f90c15fa67ec970ec014ac5620215ebf2eb52a3fd87bf2d3c51b8e038f5bf33e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
+          "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
+          "The snapshot failure remains recorded. These checks do not prove a fresh installation."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "96c73099dd4bc4f55f9cee3dfd3eb27129fa683ea2d59a4a72e3121b6a897299",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model accuracy was not tested again.",
+          "These checks do not change normal document extraction. They do not check old temporary model files, other text-reading engines or the separate restricted security work."
+        ]
+      }
     }
   ]
 }

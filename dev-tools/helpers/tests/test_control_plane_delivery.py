@@ -356,6 +356,8 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                 selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
                 self.assertEqual(name in [row["id"] for row in selected], expected_ocr)
                 self.assertEqual("focused-tests" in [row["id"] for row in selected], expected_generic)
+                self.assertEqual("dependencies" in [row["id"] for row in selected],
+                                 bool(set(paths) & {build_source, hook_source, forge_source}))
                 if expected_ocr:
                     self.assertEqual(next(row for row in selected if row["id"] == name)["argv"][-2:], ["--profile", name])
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {

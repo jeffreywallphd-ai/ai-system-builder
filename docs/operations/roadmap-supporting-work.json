@@ -3087,6 +3087,111 @@
         "Trusted build/package composition, provider/readiness/normalization, actual PNG/JPEG/scanned-PDF recognition and both-host UI remain pending. The native tests qualify only newly owned helper process/resource controls, not product OCR availability.",
         "No model-quality checks were repeated. Standard document extraction, the old retained offload slot, restricted legacy work and other providers are outside this component."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-provider-document-qualification",
+      "work_criteria": [
+        "ocr-provider-preserves-actual-document-lineage"
+      ],
+      "receipt_digest": "03f5fcfea1b773005142d27e10a4cfe04216c9cba862b88eb4dfbd887f00c4d8",
+      "review_digest": "806b46341ef610a0ca37ca2391bf2c476287e5f9597577985f4a9768cb7a732c",
+      "scope": "Committed replaceable Windows OCR provider: 62 portable Python tests, seven actual synthetic document cases, twelve native ownership regression cases, five checks and separate review passed. PNG/JPEG, EXIF orientation, selected original scanned-PDF pages, exact language/source/page identity, malformed and oversized input denial and cancellation were checked on selected source. This snapshot does not advertise product OCR.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Local image and scanned-PDF recognition is qualified. Product normalization, readiness, final packaging and actual desktop/browser delivery still need independent qualification. This recorded provider snapshot does not advertise product OCR.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-provider-document-qualification",
+      "work_criteria": [
+        "ocr-provider-preserves-actual-document-lineage"
+      ],
+      "receipt_digest": "03f5fcfea1b773005142d27e10a4cfe04216c9cba862b88eb4dfbd887f00c4d8",
+      "review_digest": "806b46341ef610a0ca37ca2391bf2c476287e5f9597577985f4a9768cb7a732c",
+      "scope": "Committed replaceable Windows OCR provider: 62 portable Python tests, seven actual synthetic document cases, twelve native ownership regression cases, five checks and separate review passed. PNG/JPEG, EXIF orientation, selected original scanned-PDF pages, exact language/source/page identity, malformed and oversized input denial and cancellation were checked on selected source. This snapshot does not advertise product OCR.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Local image and scanned-PDF recognition is qualified. Product normalization, readiness, final packaging and actual desktop/browser delivery still need independent qualification. This recorded provider snapshot does not advertise product OCR.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-provider-document-qualification",
+      "work_criteria": [
+        "ocr-provider-preserves-actual-document-lineage"
+      ],
+      "receipt_digest": "03f5fcfea1b773005142d27e10a4cfe04216c9cba862b88eb4dfbd887f00c4d8",
+      "review_digest": "806b46341ef610a0ca37ca2391bf2c476287e5f9597577985f4a9768cb7a732c",
+      "scope": "Committed replaceable Windows OCR provider: 62 portable Python tests, seven actual synthetic document cases, twelve native ownership regression cases, five checks and separate review passed. PNG/JPEG, EXIF orientation, selected original scanned-PDF pages, exact language/source/page identity, malformed and oversized input denial and cancellation were checked on selected source. This snapshot does not advertise product OCR.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Local image and scanned-PDF recognition is qualified. Product normalization, readiness, final packaging and actual desktop/browser delivery still need independent qualification. This recorded provider snapshot does not advertise product OCR.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-trusted-build-resource",
+      "work_criteria": [
+        "windows-ocr-build-is-fixed-bounded-and-packaged"
+      ],
+      "receipt_digest": "fcd48578fd1be1193e6583418c817fe7df70ff3749b2d37abfbd9980e2da6639",
+      "review_digest": "67a85ff5c20b0df917f5aa8282c6804ecc6f463051d072fd5f160f7fbd3237c8",
+      "scope": "Committed fixed Windows OCR development/package build: 84 Python tests, seven Node hook tests, one routing test, six required checks and separate review passed. Actual selected-source fresh build, reuse, real hook and sixteen product/package-shaped-copy exchanges passed with native retirement and ten exact post-use resource copies. No new dependency or download was added; missing optional tools preserve Standard startup.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "This qualifies the fixed trusted build, reuse, hook and package-shaped resource copy only. A full desktop package, product normalization/readiness and actual desktop/browser journeys remain pending. The compiler is a trusted developer tool; its descendants are not claimed as contained.",
+        "The required dependency audit passed on the working checkout. The isolated snapshot SBOM phase failed because its shared installed dependency paths belong to that checkout. Independent review bound all fourteen dependency inputs and the installed graph to apply the genuine passing audit. The isolated failure remains recorded; no isolated SBOM or clean-install pass is asserted.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-trusted-build-resource",
+      "work_criteria": [
+        "windows-ocr-build-is-fixed-bounded-and-packaged"
+      ],
+      "receipt_digest": "fcd48578fd1be1193e6583418c817fe7df70ff3749b2d37abfbd9980e2da6639",
+      "review_digest": "67a85ff5c20b0df917f5aa8282c6804ecc6f463051d072fd5f160f7fbd3237c8",
+      "scope": "Committed fixed Windows OCR development/package build: 84 Python tests, seven Node hook tests, one routing test, six required checks and separate review passed. Actual selected-source fresh build, reuse, real hook and sixteen product/package-shaped-copy exchanges passed with native retirement and ten exact post-use resource copies. No new dependency or download was added; missing optional tools preserve Standard startup.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "This qualifies the fixed trusted build, reuse, hook and package-shaped resource copy only. A full desktop package, product normalization/readiness and actual desktop/browser journeys remain pending. The compiler is a trusted developer tool; its descendants are not claimed as contained.",
+        "The required dependency audit passed on the working checkout. The isolated snapshot SBOM phase failed because its shared installed dependency paths belong to that checkout. Independent review bound all fourteen dependency inputs and the installed graph to apply the genuine passing audit. The isolated failure remains recorded; no isolated SBOM or clean-install pass is asserted.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-trusted-build-resource",
+      "work_criteria": [
+        "windows-ocr-build-is-fixed-bounded-and-packaged"
+      ],
+      "receipt_digest": "fcd48578fd1be1193e6583418c817fe7df70ff3749b2d37abfbd9980e2da6639",
+      "review_digest": "67a85ff5c20b0df917f5aa8282c6804ecc6f463051d072fd5f160f7fbd3237c8",
+      "scope": "Committed fixed Windows OCR development/package build: 84 Python tests, seven Node hook tests, one routing test, six required checks and separate review passed. Actual selected-source fresh build, reuse, real hook and sixteen product/package-shaped-copy exchanges passed with native retirement and ten exact post-use resource copies. No new dependency or download was added; missing optional tools preserve Standard startup.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "This qualifies the fixed trusted build, reuse, hook and package-shaped resource copy only. A full desktop package, product normalization/readiness and actual desktop/browser journeys remain pending. The compiler is a trusted developer tool; its descendants are not claimed as contained.",
+        "The required dependency audit passed on the working checkout. The isolated snapshot SBOM phase failed because its shared installed dependency paths belong to that checkout. Independent review bound all fourteen dependency inputs and the installed graph to apply the genuine passing audit. The isolated failure remains recorded; no isolated SBOM or clean-install pass is asserted.",
+        "No model accuracy was rerun. Standard document extraction, unknown retained offload files, restricted legacy work and other providers are outside these components."
+      ]
     }
   ]
 }
