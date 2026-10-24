@@ -220,6 +220,38 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             with self.assertRaises(ControlError):
                 run_focused_checks.profile_commands(self.root, "owned")
 
+    def test_ingestion_profile_is_explicit_and_keeps_unknown_and_required_coverage(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        profile = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"]["ingestion-publication"]
+        expected = [
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-ingestion-source.integration.test.ts",
+            "modules/hosts/server/composition/tests/server-ingestion-source.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+            "modules/adapters/transport/api-express/tests/register-ingestion-task-api-route.unit.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        ]
+        self.assertEqual(profile["test_paths"], expected)
+        commands = run_focused_checks.profile_commands(root, "ingestion-publication")
+        self.assertEqual([path for command in commands for path in command if path in expected], sorted(expected))
+        self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] for command in commands))
+        config = "dev-tools/config/contributor-check-profiles.json"
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"ingestion-publication": profile}}))
+        for paths, required, focused in [
+            (profile["source_paths"] + expected, ["ingestion-publication"], False),
+            ([expected[0]], ["ingestion-publication", "focused-tests"], True),
+            ([expected[0], "modules/unknown/source.ts"], ["ingestion-publication"], True),
+        ]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                self.assertEqual("focused-tests" in [check["id"] for check in selected], focused)
+                self.assertEqual(next(check for check in selected if check["id"] == "ingestion-publication")["argv"][-2:], ["--profile", "ingestion-publication"])
+
     def test_review_profile_auto_selects_only_exact_ui_ownership_and_keeps_denials(self):
         config = "dev-tools/config/contributor-check-profiles.json"
         dom = "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"

@@ -3549,9 +3549,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         const artifactCatalog = this.artifactCatalog;
         const catalogRecord = artifactCatalog
           ? await artifactCatalog
-              .readArtifactCatalogRecord({ storageKey }, context)
+              .readArtifactCatalogRecord({ workspaceId, storageKey }, context)
               .then((result) => (result.ok ? result.value.record : undefined))
           : undefined;
+        if (catalogRecord && (catalogRecord.workspaceId !== workspaceId || catalogRecord.storageKey !== storageKey)) {
+          return failAndCleanup(createContractError("validation", "Source catalog metadata does not match the selected workspace artifact."));
+        }
         const resolvedOriginalName =
           metadataOriginalName ?? catalogRecord?.originalName;
         const sourceMediaType = descriptorMediaType ?? catalogRecord?.mediaType;

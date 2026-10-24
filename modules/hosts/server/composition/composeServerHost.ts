@@ -76,11 +76,12 @@ import {
 import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
 import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
-import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
 import {
   GovernedIngestionTaskUseCases,
+  IngestionFilePublicationService,
   GovernedWebsiteIngestionUseCases,
 } from "../../../application/use-cases/ingestion-acquisition";
 import type { ApplicationRequestContext } from "../../../application/ports";
@@ -165,6 +166,7 @@ import {
   createFilesystemArtifactBrowserReadAdapter,
   createFilesystemArtifactContentRetrievalAdapter,
   createFilesystemArtifactObjectStorageAdapter,
+  createFilesystemIngestionFileByteStorageAdapter,
   createFilesystemGeneratedImagePersistenceAdapter,
   createLocalArtifactCatalogPersistenceAdapter,
   createLocalArtifactStorageBindingAdapter,
@@ -1100,6 +1102,19 @@ export function composeServerHost(
             const repository = createStructuredIngestionAcquisitionRepository(
               organizationDocuments,
             );
+            const checkpoints = createFilesystemIngestionCheckpointStorage({
+              rootDirectory: registerOptions.storageRootDirectory,
+              organizationContextProvider: options.organizationContextProvider,
+            });
+            const filePublication = new IngestionFilePublicationService({
+              repository, checkpoints,
+              publications: createStructuredIngestionFilePublicationRepository(organizationDocuments),
+              bytes: createFilesystemIngestionFileByteStorageAdapter({
+                rootDirectory: registerOptions.storageRootDirectory,
+                organizationContextProvider: options.organizationContextProvider,
+              }),
+              bindings: artifactBindings, catalog: artifactCatalog, now: options.now,
+            });
             const website = new GovernedWebsiteIngestionUseCases({
               repository,
               capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
@@ -1112,11 +1127,8 @@ export function composeServerHost(
             });
             return new GovernedIngestionTaskUseCases({
               repository,
-              checkpoints: createFilesystemIngestionCheckpointStorage({
-                rootDirectory: registerOptions.storageRootDirectory,
-                organizationContextProvider:
-                  options.organizationContextProvider,
-              }),
+              checkpoints,
+              filePublication,
               streamStorage: storage,
               artifactCleanup: storage,
               registerArtifactFromRepo,

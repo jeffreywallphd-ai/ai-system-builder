@@ -8,6 +8,14 @@ to each detail. Malformed instance/composition reference shapes are rejected
 before context lookups. Read-only repository use cases still return stored
 records without revalidating their content.
 
+Resumable local-file ingestion uses a private reservation and exclusive verified
+byte writer, one acknowledged origin-issued metadata attempt and atomic
+task/snapshot/receipt commit. Recovery verifies existing exact origin without
+recreating missing or deleted metadata.
+Dataset staging resolves omitted metadata with the exact workspace/catalog key;
+foreign metadata and missing origin remain blocking. Uncertain writing never
+becomes an overwrite, adoption or deletion permission.
+
 Runtime task ownership and cleanup remain in application services/use cases.
 Host reconciliation calls only accepted task callbacks; public reads still
 authorize resources. Image completion keeps per-output session receipts through
@@ -65,3 +73,13 @@ it against exact source content plus permitted operational enrichment before an
 already-current result. Complete package integrity migration and native
 qualification remain separate pending work. Rollback retains the stronger denial
 of forged authority cues.
+
+File/provider ingestion task finalization preserves artifacts across uncertain
+metadata acknowledgements. Only exact scoped task/file/output and immutable
+snapshot readback can reconcile a committed result; missing, conflicting or
+unavailable facts retain failure without destructive compensation. Completed
+upload retries verify digest/snapshot consistency and return succeeded state
+without rewriting it or repeating checkpoint effects. See the canonical
+data-management architecture and threat model for tests and remaining provider,
+native publication and controlled-workflow qualification. No retry creates a missing storage
+binding or adopts legacy data.

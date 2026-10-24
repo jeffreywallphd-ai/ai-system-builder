@@ -1,8 +1,11 @@
 import type { IngestionAcquisitionRepositoryPort } from "../../../application/ports/ingestion";
+import { assertPublicationOutput, normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
 import {
   INGESTION_TASK_LIST_LIMIT,
   normalizeIngestionSourceRefreshRecord,
   normalizeIngestionSourceSnapshot,
+  normalizeIngestionSourceSnapshotId,
+  normalizeIngestionSourceId,
   normalizeIngestionTaskRecord,
   type IngestionSourceRefreshRecord,
   type IngestionSourceSnapshot,
@@ -14,6 +17,7 @@ import { StructuredDocumentConflictError, cloneStructuredJson, type StructuredDo
 export const INGESTION_TASK_NAMESPACE = "ingestion/acquisition-tasks";
 export const INGESTION_SOURCE_SNAPSHOT_NAMESPACE = "ingestion/source-snapshots";
 export const INGESTION_SOURCE_REFRESH_NAMESPACE = "ingestion/source-refreshes";
+export const INGESTION_FILE_PUBLICATION_NAMESPACE = "ingestion/file-publications";
 
 export function createStructuredIngestionAcquisitionRepository(documents: StructuredDocumentStore): IngestionAcquisitionRepositoryPort {
   return {
@@ -59,6 +63,9 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
         if (existing.workspaceId !== task.workspaceId || existing.taskId !== task.taskId || existing.organizationId !== task.organizationId) throw new Error("Ingestion task identity is immutable.");
         if (existing.revision !== expectedRevision || current.revision !== expectedRevision) throw new StructuredDocumentConflictError(INGESTION_TASK_NAMESPACE, key, expectedRevision);
         assertTransition(existing, task);
+        if (task.kind === "file-batch" && task.files.some(file => file.status === "finalized" && existing.files.find(before => before.fileId === file.fileId)?.status !== "finalized")) {
+          throw new Error("Local file completion requires its private publication and source snapshot transaction.");
+        }
         await transaction.writeDocument(INGESTION_TASK_NAMESPACE, key, cloneStructuredJson(task), { expectedRevision: current.revision });
         return cloneStructuredJson(task);
       });
@@ -79,6 +86,28 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
         if (existing.workspaceId !== task.workspaceId || existing.taskId !== task.taskId || existing.organizationId !== task.organizationId) throw new Error("Ingestion task identity is immutable.");
         if (existing.revision !== expectedRevision || current.revision !== expectedRevision) throw new StructuredDocumentConflictError(INGESTION_TASK_NAMESPACE, taskDocumentKey, expectedRevision);
         assertTransition(existing, task);
+        if (task.kind === "file-batch") {
+          const added = task.files.filter(file => file.status === "finalized" && existing.files.find(before => before.fileId === file.fileId)?.status !== "finalized");
+          if (added.length !== 1 || added[0]!.output?.sourceSnapshotId !== snapshot.snapshotId) publicationUnavailable();
+          const file = added[0]!;
+          const publicationKey = `${task.workspaceId}/${task.taskId}/${file.fileId}`;
+          const document = await transaction.readDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey);
+          if (!document || document.revision !== 5) publicationUnavailable();
+          const publication = normalizeIngestionFilePublication(document.value);
+          if (publication.state !== "origin-complete" || publication.revision !== document.revision) publicationUnavailable();
+          assertPublicationOutput(publication, task);
+          const expected = normalizeIngestionSourceSnapshot({
+            schemaVersion: "1.0", snapshotId: normalizeIngestionSourceSnapshotId(`snapshot.${task.taskId}.${file.fileId}`),
+            sourceId: normalizeIngestionSourceId(`source.${task.taskId}.${file.fileId}`),
+            ...(task.organizationId ? { organizationId: task.organizationId } : {}), workspaceId: task.workspaceId,
+            locator: { kind: "file", displayName: file.fileName, originalName: file.fileName },
+            contentDigest: publication.digest, sizeBytes: publication.totalBytes, mediaType: publication.mediaType,
+            rawArtifactKey: publication.key, capturedAt: publication.capturedAt,
+          });
+          if (stableJson(snapshot) !== stableJson(expected)) publicationUnavailable();
+          await transaction.writeDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey,
+            normalizeIngestionFilePublication({ ...publication, state: "committed", revision: 6 }), { expectedRevision: 5 });
+        }
         const currentSnapshot = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey);
         if (currentSnapshot && stableJson(normalizeIngestionSourceSnapshot(currentSnapshot.value)) !== stableJson(snapshot)) throw new StructuredDocumentConflictError(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, 0);
         await transaction.writeDocument(INGESTION_TASK_NAMESPACE, taskDocumentKey, cloneStructuredJson(task), { expectedRevision: current.revision });
@@ -158,6 +187,10 @@ function assertTransition(previous: IngestionTaskRecord, next: IngestionTaskReco
     const after = next.files.find((file) => file.fileId === before.fileId);
     if (!after || after.checkpointId !== before.checkpointId || after.fileName !== before.fileName || after.mediaType !== before.mediaType || after.totalBytes !== before.totalBytes || stableJson(after.providerSource) !== stableJson(before.providerSource) || stableJson(after.websiteSource) !== stableJson(before.websiteSource)) throw new Error("Ingestion task file definition is immutable.");
     if (after.acceptedBytes < before.acceptedBytes || after.nextChunkIndex < before.nextChunkIndex) throw new Error("Ingestion task progress must be monotonic.");
+    if (before.status === "finalized" && (after.status !== "finalized" || stableJson(before.output) !== stableJson(after.output)
+      || before.acceptedBytes !== after.acceptedBytes || before.nextChunkIndex !== after.nextChunkIndex || stableJson(before.lastChunk) !== stableJson(after.lastChunk))) {
+      throw new Error("Finalized ingestion file outputs and checkpoint counters are immutable.");
+    }
   }
 }
 
@@ -165,7 +198,11 @@ function assertOrganizationScope(documents: StructuredDocumentStore, organizatio
   if (documents.organizationId !== organizationId) throw new Error("Ingestion record organization must match the repository organization scope.");
 }
 function assertTaskSnapshotRelationship(task: IngestionTaskRecord, snapshot: IngestionSourceSnapshot): void {
-  const matchesOutput = task.files.some((file) => file.output?.sourceId === snapshot.sourceId && file.output.sourceSnapshotId === snapshot.snapshotId);
+  const matchesOutput = task.files.some((file) => file.status === "finalized" && file.output?.sourceId === snapshot.sourceId
+    && file.output.sourceSnapshotId === snapshot.snapshotId && file.output.key === snapshot.rawArtifactKey
+    && file.output.mediaType === snapshot.mediaType && file.output.sizeBytes === snapshot.sizeBytes
+    && file.output.digest === snapshot.contentDigest && file.output.providerRevision === snapshot.providerRevision
+    && stableJson(file.output.derivedArtifactKeys ?? []) === stableJson(snapshot.derivedArtifactKeys ?? []));
   if (task.workspaceId !== snapshot.workspaceId || task.organizationId !== snapshot.organizationId || !matchesOutput) throw new Error("Ingestion task snapshot must match a finalized task output in the same scope.");
 }
 const taskKey = (workspaceId: WorkspaceId, taskId: string) => `${workspaceId}/${taskId}`;

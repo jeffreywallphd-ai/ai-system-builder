@@ -3,6 +3,8 @@ import { createOrganizationId } from "../../../../contracts/organization";
 import type { IngestionSourceRefreshRecord, IngestionSourceSnapshot, IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore } from "../../shared";
+import { createStructuredIngestionFilePublicationRepository } from "../createStructuredIngestionFilePublicationRepository";
+import type { IngestionFilePublication } from "../../../../application/ports/ingestion";
 import {
   INGESTION_TASK_NAMESPACE,
   createStructuredIngestionAcquisitionRepository,
@@ -61,10 +63,26 @@ function refresh(organizationId?: string): IngestionSourceRefreshRecord {
 
 describe("structured ingestion acquisition repository", () => {
   it("commits a finalized task and matching source snapshot in one optimistic transaction", async () => {
-    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
-    await repository.createTask(task());
+    const documents = createInMemoryStructuredDocumentStore();
+    const repository = createStructuredIngestionAcquisitionRepository(documents);
+    const ready: IngestionTaskRecord = { ...task(), status: "finalizing", files: [{ ...task().files[0]!, acceptedBytes: 10, nextChunkIndex: 2,
+      lastChunk: { index: 1, sizeBytes: 6, digest: digest("c") } }] };
+    await repository.createTask(ready);
+    const exactSnapshot: IngestionSourceSnapshot = { ...snapshot(), sourceId: "source.task-1.file-1" as never, snapshotId: "snapshot.task-1.file-1" as never,
+      rawArtifactKey: `workspaces/workspace-a/artifacts/files/ingestion/${"a".repeat(32)}`,
+      locator: { kind: "file", displayName: "train.jsonl", originalName: "train.jsonl" } };
+    const publications = createStructuredIngestionFilePublicationRepository(documents);
+    let publication: IngestionFilePublication = { schemaVersion: "1.0", publicationId: "a".repeat(32), workspaceId: ready.workspaceId,
+      taskId: ready.taskId, fileId: ready.files[0]!.fileId, taskCreatedAt: now, checkpointId: "checkpoint-1", fileName: "train.jsonl",
+      mediaType: "application/jsonl", totalBytes: 10, acceptedBytes: 10, nextChunkIndex: 2, expectedSha256: digest("b"),
+      key: exactSnapshot.rawArtifactKey, capturedAt: now, revision: 1, state: "reserved" };
+    await publications.createPublication(publication);
+    for (const state of ["writing", "bytes-acknowledged", "origin-issued", "origin-complete"] as const) {
+      publication = await publications.savePublication({ ...publication, state, revision: publication.revision + 1,
+        ...(state !== "writing" ? { digest: digest("b") } : {}) }, publication.revision);
+    }
     const committedTask: IngestionTaskRecord = {
-      ...task(),
+      ...ready,
       status: "finalizing",
       revision: 2,
       updatedAt: "2026-07-30T04:01:00.000Z",
@@ -75,20 +93,21 @@ describe("structured ingestion acquisition repository", () => {
         nextChunkIndex: 2,
         lastChunk: { index: 1, sizeBytes: 6, digest: digest("c") },
         output: {
-          key: snapshot().rawArtifactKey,
+          key: exactSnapshot.rawArtifactKey,
           mediaType: "application/jsonl",
           sizeBytes: 10,
           digest: snapshot().contentDigest,
-          sourceId: snapshot().sourceId,
-          sourceSnapshotId: snapshot().snapshotId,
+          sourceId: exactSnapshot.sourceId,
+          sourceSnapshotId: exactSnapshot.snapshotId,
         },
       }],
     };
-    await expect(repository.saveTaskWithSourceSnapshot(committedTask, 1, snapshot())).resolves.toMatchObject({
+    await expect(repository.saveTaskWithSourceSnapshot(committedTask, 1, exactSnapshot)).resolves.toMatchObject({
       task: { revision: 2, files: [{ status: "finalized" }] },
-      snapshot: { snapshotId: "snapshot-1" },
+      snapshot: { snapshotId: exactSnapshot.snapshotId },
     });
-    expect(await repository.readSourceSnapshot(createWorkspaceId("workspace-a"), snapshot().snapshotId)).toEqual(snapshot());
+    expect(await repository.readSourceSnapshot(createWorkspaceId("workspace-a"), exactSnapshot.snapshotId)).toEqual(exactSnapshot);
+    expect(await publications.readPublication(ready.workspaceId, ready.taskId, ready.files[0]!.fileId)).toMatchObject({ state: "committed", revision: 6 });
   });
 
   it("does not create a source snapshot when a competing task update wins", async () => {

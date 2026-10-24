@@ -15,6 +15,16 @@
   separate derived text, validators, and honest removed/unchanged outcomes.
 
 Checkpoint bytes and credentials never belong in the structured repository.
+Private `IngestionFilePublicationPort` and repository records bind a local-file
+task to one opaque candidate. `IngestionFileByteStoragePort` inspects bounded
+checkpoint content before reservation and validates an exclusive stream before
+target publication. These ports are never transport descriptors. Only an
+acknowledged writing CAS permits bytes; uncertain writing cannot be adopted or
+retried. After durable byte acknowledgement, one successfully acknowledged
+origin-issued CAS permits one metadata attempt. Recovery reads exact complete
+origin only; missing, partial or deleted metadata is never recreated. The
+task/snapshot transaction then commits the private receipt. Completed retries
+verify existing origin and receipt without creating either.
 Task state contains only opaque checkpoint identities, authoritative counters,
 bounded sanitized errors, and immutable artifact references.
 New local-file tasks record a 24-hour checkpoint deadline. Host maintenance can

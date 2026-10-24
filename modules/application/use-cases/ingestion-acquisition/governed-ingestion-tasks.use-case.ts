@@ -1,7 +1,9 @@
 import type {
   IngestionAcquisitionRepositoryPort,
   IngestionCheckpointStoragePort,
+  IngestionFilePublicationPort,
 } from "../../ports/ingestion";
+import { assertPublicationTask, normalizeIngestionFilePublication } from "../../shared/ingestion-file-publication";
 import type {
   ArtifactStoragePort,
   ArtifactStreamStoragePort,
@@ -18,6 +20,8 @@ import {
   normalizeIngestionTaskFileId,
   normalizeIngestionTaskId,
   normalizeIngestionTaskRecord,
+  normalizeIngestionSourceSnapshot,
+  type IngestionSourceSnapshot,
   type IngestionTaskFileRecord,
   type IngestionTaskKind,
   type IngestionTaskProviderSource,
@@ -32,7 +36,6 @@ import {
   createSuccessResult,
   type ContractResult,
 } from "../../../contracts/shared";
-import { createDeleteArtifactRequest } from "../../../contracts/storage";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import type { RegisterArtifactFromRepoUseCase } from "../register-artifact-from-repo.use-case";
 import type { GovernedWebsiteIngestionUseCases } from "./governed-website-ingestion.use-case";
@@ -72,6 +75,7 @@ export interface GovernedIngestionTaskUseCasesDependencies {
   readonly checkpoints: IngestionCheckpointStoragePort;
   readonly streamStorage: ArtifactStreamStoragePort;
   readonly artifactCleanup: Pick<ArtifactStoragePort, "deleteArtifact">;
+  readonly filePublication?: IngestionFilePublicationPort;
   readonly registerArtifactFromRepo?: Pick<
     RegisterArtifactFromRepoUseCase,
     "execute"
@@ -526,17 +530,11 @@ export class GovernedIngestionTaskUseCases {
               snapshot,
             )
           ).task;
-        } catch (error) {
-          await this.deleteArtifact(result.value.artifactId, context).catch(
-            () => undefined,
-          );
-          const latest = await this.dependencies.repository.readTask(
-            task.workspaceId,
-            task.taskId,
-          );
-          if (latest?.status === "cancelled")
-            return createSuccessResult(latest, context);
-          throw error;
+        } catch {
+          const current = await this.readFinalizationState(nextTask, requireFile(nextTask, file.fileId), snapshot);
+          if (current.task.status === "cancelled") return createSuccessResult(current.task, context);
+          if (!current.committed) throw new Error("The imported source has an uncertain commit. Its data was retained for recovery.");
+          task = current.task;
         }
       }
       return createSuccessResult(task, context);
@@ -661,8 +659,15 @@ export class GovernedIngestionTaskUseCases {
     try {
       let task = await this.requireTask(scope.value.workspaceId, taskId);
       let file = requireFile(task, fileId);
-      if (file.status === "finalized")
-        return await this.finishCheckpointCleanup(task, file, context);
+      if (task.kind !== "file-batch") throw new Error("Only uploaded files use file finalization.");
+      if (!this.dependencies.filePublication) throw new Error("Verified file publication is unavailable.");
+      if (file.status === "finalized") {
+        if (expectedDigest && file.output?.digest !== expectedDigest) throw new Error("The finalized file digest does not match this request.");
+        await this.dependencies.filePublication.verifyFilePublication({ taskId, fileId, expectedSha256: expectedDigest }, context);
+        const current = await this.readFinalizationState(task, file);
+        if (!current.committed) throw new Error("The finalized source could not be verified. Its data was retained for recovery.");
+        return await this.finishCheckpointCleanup(current.task, requireFile(current.task, fileId), context);
+      }
       if (
         task.status !== "queued" &&
         task.status !== "transferring" &&
@@ -683,55 +688,20 @@ export class GovernedIngestionTaskUseCases {
         );
         file = requireFile(task, fileId);
       }
-      const key = `workspaces/${task.workspaceId}/artifacts/files/ingestion/${task.taskId}/${file.fileId}-${file.fileName}`;
-      const stored = await this.dependencies.streamStorage.storeArtifactStream(
-        {
-          content: this.dependencies.checkpoints.readChunks(
-            {
-              workspaceId: task.workspaceId,
-              checkpointId: file.checkpointId,
-              expectedChunkCount: file.nextChunkIndex,
-              expectedSizeBytes: file.acceptedBytes,
-            },
-            context,
-          ),
-          descriptor: {
-            key,
-            mediaType: file.mediaType,
-            metadata: {
-              originalFileName: file.fileName,
-              ingestionTaskId: task.taskId,
-            },
-          },
-          maximumBytes: file.totalBytes,
-          expectedSizeBytes: file.totalBytes,
-          ...(expectedDigest ? { expectedSha256: expectedDigest } : {}),
-          overwrite: true,
-        },
-        context,
-      );
-      if (!stored.ok)
+      const published = await this.dependencies.filePublication.publishFile({ taskId, fileId, expectedSha256: expectedDigest }, context);
+      if (published.kind === "content-rejected")
         return await this.markFailed(
           task,
           file,
-          "finalization-failed",
-          "The transferred file could not be saved. You can resume and retry.",
+          "content-verification-failed",
+          "The transferred file could not be verified. Check its checksum, then resume and retry.",
           context,
         );
-      const outputDigest =
-        stored.value.checksum?.algorithm === "sha256"
-          ? normalizeIngestionSha256Digest(
-              `sha256:${stored.value.checksum.value}`,
-            )
-          : expectedDigest;
-      if (!outputDigest)
-        return await this.markFailed(
-          task,
-          file,
-          "digest-unavailable",
-          "The transferred file could not be verified. You can resume and retry.",
-          context,
-        );
+      const publication = normalizeIngestionFilePublication(published.publication);
+      assertPublicationTask(publication, task);
+      if (!["origin-complete", "committed"].includes(publication.state) || !publication.digest
+        || (expectedDigest && publication.digest !== expectedDigest)) throw new Error("The saved source could not be verified. Its data was retained for recovery.");
+      const outputDigest = publication.digest;
       const sourceId = `source.${task.taskId}.${file.fileId}`;
       const snapshotId = `snapshot.${task.taskId}.${file.fileId}`;
       const snapshot = {
@@ -746,10 +716,10 @@ export class GovernedIngestionTaskUseCases {
           originalName: file.fileName,
         },
         contentDigest: outputDigest,
-        sizeBytes: stored.value.sizeBytes ?? file.totalBytes,
+        sizeBytes: publication.totalBytes,
         mediaType: file.mediaType,
-        rawArtifactKey: stored.value.key,
-        capturedAt: this.now(),
+        rawArtifactKey: publication.key,
+        capturedAt: publication.capturedAt,
       } as const;
       const nextTask = updateTask(task, {
         status: "finalizing",
@@ -757,9 +727,9 @@ export class GovernedIngestionTaskUseCases {
           ...file,
           status: "finalized",
           output: {
-            key: stored.value.key,
+            key: publication.key,
             mediaType: file.mediaType,
-            sizeBytes: stored.value.sizeBytes ?? file.totalBytes,
+            sizeBytes: publication.totalBytes,
             digest: outputDigest,
             sourceId,
             sourceSnapshotId: snapshotId,
@@ -776,18 +746,13 @@ export class GovernedIngestionTaskUseCases {
             snapshot,
           )
         ).task;
-      } catch (error) {
-        await this.deleteArtifact(stored.value.key, context).catch(
-          () => undefined,
-        );
-        const latest = await this.dependencies.repository.readTask(
-          task.workspaceId,
-          task.taskId,
-        );
-        if (latest?.status === "cancelled")
-          return createSuccessResult(latest, context);
-        throw error;
+      } catch {
+        const current = await this.readFinalizationState(nextTask, requireFile(nextTask, fileId), snapshot);
+        if (current.task.status === "cancelled") return createSuccessResult(current.task, context);
+        if (!current.committed) throw new Error("The saved source has an uncertain commit. Its data was retained for recovery.");
+        task = current.task;
       }
+      await this.dependencies.filePublication.verifyFilePublication({ taskId, fileId, expectedSha256: expectedDigest }, context);
       return await this.finishCheckpointCleanup(
         task,
         requireFile(task, fileId),
@@ -1004,6 +969,8 @@ export class GovernedIngestionTaskUseCases {
     file: IngestionTaskFileRecord,
     context: ApplicationRequestContext,
   ): Promise<IngestionTaskResult> {
+    // A persisted terminal result is never rewritten by a cleanup retry.
+    if (task.status === "succeeded" || task.status === "cancelled" || task.status === "failed") return createSuccessResult(task, context);
     try {
       await this.dependencies.checkpoints.deleteCheckpoint(
         { workspaceId: task.workspaceId, checkpointId: file.checkpointId },
@@ -1028,10 +995,53 @@ export class GovernedIngestionTaskUseCases {
         ? "All files are ready."
         : "File saved. Continue with the remaining files.",
     });
-    return createSuccessResult(
-      await this.dependencies.repository.saveTask(cleaned, task.revision),
-      context,
-    );
+    try {
+      return createSuccessResult(await this.dependencies.repository.saveTask(cleaned, task.revision), context);
+    } catch {
+      const current = await this.readFinalizationState(cleaned, requireFile(cleaned, file.fileId));
+      if (current.committed && JSON.stringify(current.task) === JSON.stringify(cleaned)) return createSuccessResult(current.task, context);
+      if (current.task.status === "cancelled" || current.task.status === "failed") return createSuccessResult(current.task, context);
+      throw new Error("Source cleanup has an uncertain commit. Its data was retained for recovery.");
+    }
+  }
+
+  private async readFinalizationState(
+    expectedTask: IngestionTaskRecord,
+    expectedFile: IngestionTaskFileRecord,
+    expectedSnapshot?: IngestionSourceSnapshot,
+  ): Promise<{ readonly task: IngestionTaskRecord; readonly committed: boolean }> {
+    try {
+      const stored = await this.dependencies.repository.readTask(expectedTask.workspaceId, expectedTask.taskId);
+      if (!stored) throw new Error();
+      const task = normalizeIngestionTaskRecord(stored);
+      if (task.workspaceId !== expectedTask.workspaceId || task.organizationId !== expectedTask.organizationId || task.taskId !== expectedTask.taskId
+        || task.kind !== expectedTask.kind || task.createdAt !== expectedTask.createdAt || task.checkpointExpiresAt !== expectedTask.checkpointExpiresAt
+        || task.revision < expectedTask.revision || task.files.length !== expectedTask.files.length
+        || !expectedTask.files.every(before => task.files.some(after => immutableIngestionFile(after) === immutableIngestionFile(before)))) throw new Error();
+      const file = requireFile(task, expectedFile.fileId);
+      if (JSON.stringify(file) !== JSON.stringify(expectedFile) || file.status !== "finalized" || !file.output) return { task, committed: false };
+      const output = file.output;
+      if (output.sourceId !== `source.${task.taskId}.${file.fileId}` || output.sourceSnapshotId !== `snapshot.${task.taskId}.${file.fileId}`) return { task, committed: false };
+      const value = await this.dependencies.repository.readSourceSnapshot(task.workspaceId, output.sourceSnapshotId as never);
+      if (!value) return { task, committed: false };
+      const snapshot = normalizeIngestionSourceSnapshot(value);
+      const expectedLocator = task.kind === "file-batch"
+        ? { kind: "file", displayName: file.fileName, originalName: file.fileName }
+        : task.kind === "hugging-face" && file.providerSource
+          ? { kind: "hugging-face", displayName: file.fileName, repository: file.providerSource.repository, path: file.providerSource.path, revision: file.providerSource.revision }
+          : undefined;
+      const committed = snapshot.workspaceId === task.workspaceId && snapshot.organizationId === task.organizationId
+        && snapshot.sourceId === output.sourceId && snapshot.snapshotId === output.sourceSnapshotId
+        && snapshot.rawArtifactKey === output.key && snapshot.sizeBytes === output.sizeBytes && snapshot.mediaType === output.mediaType
+        && snapshot.contentDigest === output.digest && snapshot.providerRevision === output.providerRevision
+        && !snapshot.derivedArtifactKeys?.length && !output.derivedArtifactKeys?.length
+        && expectedLocator !== undefined && JSON.stringify(snapshot.locator) === JSON.stringify(expectedLocator)
+        && (!expectedSnapshot || JSON.stringify(snapshot) === JSON.stringify(normalizeIngestionSourceSnapshot(expectedSnapshot)));
+      return { task, committed };
+    } catch {
+      // Uncertain readback never authorizes compensating deletion or adoption.
+      throw new Error("The source commit could not be verified. Its data was retained for recovery.");
+    }
   }
 
   private async markFailed(
@@ -1070,20 +1080,6 @@ export class GovernedIngestionTaskUseCases {
     );
     if (!task) throw new MissingTaskError();
     return task;
-  }
-
-  private async deleteArtifact(
-    key: string,
-    context: ApplicationRequestContext,
-  ): Promise<void> {
-    const result = await this.dependencies.artifactCleanup.deleteArtifact(
-      createDeleteArtifactRequest(key),
-      context,
-    );
-    if (!result.ok)
-      throw new Error(
-        "The uncommitted ingestion artifact could not be cleaned up.",
-      );
   }
 
   private async saveIdempotently(
@@ -1185,6 +1181,9 @@ function safeMessage(error: unknown, fallback: string): string {
     !/[A-Za-z]:\\|\/Users\/|authorization|cookie|token=/i.test(message)
     ? message
     : fallback;
+}
+function immutableIngestionFile(file: IngestionTaskFileRecord): string {
+  return JSON.stringify({ fileId: file.fileId, checkpointId: file.checkpointId, fileName: file.fileName, mediaType: file.mediaType, totalBytes: file.totalBytes, providerSource: file.providerSource, websiteSource: file.websiteSource });
 }
 function providerBaseName(value: string): string {
   const parts = String(value).trim().replaceAll("\\", "/").split("/");

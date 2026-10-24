@@ -1,4 +1,4 @@
-import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -1209,5 +1209,33 @@ it("denies unbound or conflicting dataset source authority before storage or pro
     expect(retrieveArtifactFromRepo).toHaveBeenCalledTimes(0);
     expect(startTask).toHaveBeenCalledTimes(0);
     expect(readArtifactStorageBindings).toHaveBeenCalledWith({ artifactId: "a1", workspaceId: "workspace-a" }, { workspaceId: "workspace-a" });
+  }
+});
+
+it("recovers opaque-source metadata only from an exact workspace and storage key", async () => {
+  for (const mode of ["valid", "foreign-workspace", "foreign-key"] as const) {
+    let directory = "";
+    const record = { workspaceId: mode === "foreign-workspace" ? "workspace-b" : "workspace-a",
+      storageKey: mode === "foreign-key" ? "other" : "a1", originalName: "source.md", mediaType: "text/markdown", artifactFamily: "text" };
+    const readArtifactCatalogRecord = testDouble.fn(async () => ({ ok: true, value: { record } }));
+    const startTask = testDouble.fn(async (request: any) => {
+      directory = request.payload.runtime.runtimeWorkingDirectory;
+      expect(request.payload.sourceInputs[0].originalName).toBe("source.md");
+      expect(request.payload.sourceInputs[0].mediaType).toBe("text/markdown");
+      expect(await readFile(request.payload.sourceInputs[0].localPath, "utf8")).toBe("Synthetic source.");
+      throw new Error("Synthetic runtime rejection after inspecting staged source.");
+    });
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({ runtimeTaskRegistry: createRegistry({ startTask }), taskPowerLifecycle: createLifecycleFake(),
+      artifactCatalog: { readArtifactCatalogRecord, browseArtifactCatalogRecords: testDouble.fn() } as never,
+      storageBindings: { readArtifactStorageBindings: testDouble.fn(async () => ({ ok: true, value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary",
+        backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] } })), upsertArtifactStorageBinding: testDouble.fn(), deleteArtifactStorageBindings: testDouble.fn() },
+      storage: { retrieveArtifact: testDouble.fn(async () => ({ ok: true, value: { descriptor: { key: "a1" }, content: new TextEncoder().encode("Synthetic source.") } })),
+        storeArtifact: testDouble.fn(), hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn() },
+    });
+    const result = await useCase.startPrepareTrainingDataset(command, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(false);
+    expect(readArtifactCatalogRecord).toHaveBeenCalledWith({ workspaceId: "workspace-a", storageKey: "a1" }, { workspaceId: "workspace-a" });
+    expect(startTask).toHaveBeenCalledTimes(mode === "valid" ? 1 : 0);
+    if (directory) expect(await exists(directory)).toBe(false);
   }
 });

@@ -40,9 +40,21 @@ leave unregistered owned bytes for normal recovery; it never reports success or
 deletes unrelated files. Native publication/parent-substitution qualification
 remains separate from these cooperative ownership checks.
 
+Resumable local-file tasks use `createFilesystemIngestionFileByteStorageAdapter`
+through the private application publisher. It inspects bounded checkpoint content
+before reservation and checks exact EOF size/SHA before exclusive target linking.
+Its opaque task-owned key cannot overwrite an existing file, and post-publication
+errors never delete the target. It writes no binding/catalog itself: the publisher
+conditionally records exact metadata only after durable byte acknowledgement
+and its one successfully acknowledged origin-issued CAS. Retries never recreate
+missing or deleted metadata; complete exact existing origin can be verified.
+Desktop retains its existing object path; server captures its organization prefix.
+Unknown writing stays retained and cannot be resumed as byte authority. These
+cooperative file checks do not qualify hostile native races or crash recovery.
+
 The exported ingestion byte-storage component can be tested separately from the
 publisher and hosts. It checks workspace scope and finite byte limits before it
 reads a stream. Inspection creates no target. Publication checks the complete
-size and digest before an exclusive write, preserves existing targets and returns
+size and digest before publishing the final target, preserves existing targets and returns
 sanitized failures. Its synthetic tests cover these component behaviors only;
 they do not qualify the complete ingestion workflow, native file races or recovery.

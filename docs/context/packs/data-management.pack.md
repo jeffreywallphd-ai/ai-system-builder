@@ -54,7 +54,7 @@
   ingestion path; do not restore the retired Other import tools beside it.
 - Acquisition progress comes from persisted host state. Task/source snapshot
   visibility and changed-refresh/new-snapshot visibility commit atomically;
-  cancellation races compensate any uncommitted artifact writes.
+  website cancellation races compensate uncommitted website artifacts. Local-file publication retains uncertain effects without adoption or destructive cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact
   duplicates cannot cross splits.
@@ -190,7 +190,7 @@
 
 ## Adjacent Packs
 
-- Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin.
+- Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin. Resumable files use pre-reservation checksum checks, exclusive writing CAS, durable bytes and one acknowledged origin-issued CAS before conditional metadata and atomic task/snapshot/receipt commit. Recovery verifies existing exact origin without recreating missing/deleted records. Unknown effects stay retained; completed retry is read-only. Native/crash/parent qualification stays separate; see canonical architecture/threat model and artifact-store README.
 - `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
 - `runtime` or `runtime-task-registry` for worker execution/lifecycle.

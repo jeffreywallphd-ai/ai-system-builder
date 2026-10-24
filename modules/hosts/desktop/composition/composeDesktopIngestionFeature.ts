@@ -2,12 +2,14 @@ import type { OrganizationRequestContextProviderPort } from "../../../applicatio
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../../application/ports/storage";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
-import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
+import { createFilesystemIngestionFileByteStorageAdapter, createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter } from "../../../adapters/storage/filesystem";
 import {
   GovernedIngestionTaskUseCases,
+  IngestionFilePublicationService,
   GovernedWebsiteIngestionUseCases,
   IngestWebsitePageUseCase,
   IngestWebsitePagesBatchUseCase,
@@ -47,6 +49,21 @@ export function composeDesktopIngestionFeature(options: ComposeDesktopIngestionF
   const ingestionTasks: DesktopIngestionTaskCommands = options.documents
     ? (() => {
         const repository = createStructuredIngestionAcquisitionRepository(options.documents!);
+        const checkpoints = createFilesystemIngestionCheckpointStorage({
+          rootDirectory: options.storageRootDirectory,
+          organizationContextProvider: options.organizationContextProvider,
+        });
+        const filePublication = new IngestionFilePublicationService({
+          repository,
+          publications: createStructuredIngestionFilePublicationRepository(options.documents!),
+          checkpoints,
+          // Match desktop's canonical object mapping; checkpoint storage above
+          // separately uses the host's organization prefix.
+          bytes: createFilesystemIngestionFileByteStorageAdapter({ rootDirectory: options.storageRootDirectory }),
+          bindings: createLocalArtifactStorageBindingAdapter({ rootDirectory: options.storageRootDirectory, documents: options.documents }),
+          catalog: createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: options.storageRootDirectory, documents: options.documents }),
+          now: options.now,
+        });
         const website = new GovernedWebsiteIngestionUseCases({
           repository,
           capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
@@ -58,10 +75,8 @@ export function composeDesktopIngestionFeature(options: ComposeDesktopIngestionF
         });
         return new GovernedIngestionTaskUseCases({
         repository,
-        checkpoints: createFilesystemIngestionCheckpointStorage({
-          rootDirectory: options.storageRootDirectory,
-          organizationContextProvider: options.organizationContextProvider,
-        }),
+        checkpoints,
+        filePublication,
         streamStorage: options.artifacts.storage,
         artifactCleanup: options.artifacts.storage,
         registerArtifactFromRepo: options.remoteArtifacts.registerArtifactFromRepoUseCase,

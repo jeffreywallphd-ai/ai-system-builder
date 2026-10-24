@@ -146,8 +146,9 @@ Last-Modified when available and falls back to the content digest, recording an
 append-only unchanged, changed, unavailable, or removed result. Task state and
 its source snapshot commit in one structured-persistence transaction; a changed
 refresh and its new snapshot do the same. If cancellation or a competing update
-wins, newly written artifacts are compensating-deleted before the result is
-returned.
+wins, newly written website artifacts are compensating-deleted before the result
+is returned. Local-file publication instead retains uncertain byte or metadata
+effects; a retry cannot adopt, overwrite or delete them.
 
 ## Split integrity
 
@@ -552,6 +553,52 @@ new sources without adopting explicit-key/legacy records or relaxing missing-
 binding denial. Failed metadata publication reports failure; retained unregistered
 owned bytes and native publication/reparse races remain distinct recovery and
 qualification concerns.
+
+Uploaded-file and provider task finalization retain stored artifacts after an
+uncertain task/snapshot acknowledgement. Error handling cannot infer destructive
+cleanup ownership. Recovery reads the existing scoped task, verifies its immutable
+definition and exact finalized file/output, then compares the immutable source
+snapshot (including the original capture time when reconciling a new commit).
+Missing, foreign, changed or unavailable readback fails without deleting bytes.
+Explicit cancellation can remain authoritative without adopting an output.
+
+A completed upload retry checks the requested digest and persisted snapshot
+relationship before returning. Succeeded tasks are returned without another task
+write or checkpoint effect. Failed/cancelled states are not resurrected by cleanup.
+Checkpoint-cleanup completion acknowledgement loss reconciles only the exact
+intended persisted task; ordinary cleanup failure retains the existing pending
+state. Tests use actual disposable bytes/checkpoints and the structured repository
+with lost-acknowledgement and conflicting/missing-readback injection.
+
+Resumable local files now use a private versioned per-task/file publication intent.
+Bounded checkpoint inspection rejects a bad checksum before reservation, preserving
+the existing failed/resume/retry workflow. A fresh opaque candidate and exact
+reserved-to-writing CAS authorize one exclusive byte write. The dedicated adapter
+checks size/SHA at stream EOF before linking the target and never compensates by
+deleting a published candidate. A lost writing/byte acknowledgement remains
+recovery-pending, without adoption or another byte write.
+
+Durable byte acknowledgement precedes a separate origin-issued CAS. Only its
+exact successfully acknowledged invocation may attempt conditional primary
+binding/catalog creation. Lost issuance acknowledgement grants no effect authority.
+Recovery from an issued intent reads complete exact origin without creating it;
+missing, partial, deleted, foreign or tombstoned metadata remains recovery-pending.
+This prevents a retry from resurrecting registration after authorized deletion.
+Exact complete readback can reconcile metadata acknowledgement loss. The structured transaction
+checks the complete acknowledged output and stable source snapshot, then commits
+private receipt, task and snapshot together. Finalized file outputs are immutable;
+ordinary task saves cannot bypass publication. Desktop preserves its existing
+unprefixed object mapping; server retains organization-prefixed bytes and current
+HTTP task admission denials. Preparation queries exact workspace/key metadata and
+rejects a mismatched returned record before runtime admission.
+
+These cooperative controls do not qualify native byte integrity after publication,
+hostile parent races, protected crash recovery or filesystem/metadata atomicity.
+Unknown candidates stay retained. Generic explicit-key/legacy data is never bound
+on read or retry; missing committed private receipts cannot be manufactured.
+Dataset Preparation's missing/foreign-binding denial remains mandatory. Composed
+desktop staging tests use synthetic bytes and a fake runtime, not model inference
+or complete UI/native/parent qualification.
 
 ## Memory admission notifications
 

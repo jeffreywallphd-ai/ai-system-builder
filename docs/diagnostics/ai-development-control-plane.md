@@ -112,6 +112,14 @@ It checks memory notifications, stable initial recommendations and explicit
 choices during readiness loss. It does not run models, accuracy, physical-resource
 or native/offload qualification. Execute and retain the actual packaged-desktop
 and thin-client Playwright journeys separately before claiming host delivery.
+The `ingestion-publication` profile runs ten fixed ordinary file-ingestion tests:
+publication and task repositories, bounded byte storage, desktop and server
+composition, dataset source staging, website compatibility and HTTP boundaries.
+Its host fixtures use owned synthetic files with no model or provider calls.
+It covers only its declared source paths. Unknown impact and an explicitly
+required focused gate retain generic coverage. This component check grants no
+controlled-provider, scale, native-race, offload or parent-roadmap qualification.
+
 The broader `functionality-outcomes` profile remains intact; a narrow profile
 cannot cover unrelated changed paths or grant a parent qualification.
 

@@ -17,8 +17,14 @@ Use cases in this folder own application orchestration and remain adapter-agnost
   - resolve bounded page or sitemap scope through secure egress, preserve raw
     website captures separately from derived readable text, and append honest
     source refresh outcomes from validators and content digests;
-  - commit task/source lineage atomically and compensate uncommitted artifacts
-    when cancellation or another optimistic update wins.
+  - commit task/source lineage atomically; uploaded/provider artifacts survive
+    ambiguous metadata acknowledgement and cancellation races;
+  - publish local files through an exclusive private reservation, durable byte
+    acknowledgement, one acknowledged origin-issued metadata attempt and exact
+    conditional primary origin; recovery never recreates missing/deleted origin.
+    Checksum rejection
+    before reservation preserves the normal resume workflow, while uncertain
+    writing stays recovery-pending without adoption or destructive compensation.
 
 - `StoreArtifactUploadUseCase`
   - validates upload input at a basic, honest level,

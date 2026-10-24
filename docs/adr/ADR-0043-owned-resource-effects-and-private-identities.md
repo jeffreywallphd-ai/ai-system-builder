@@ -61,6 +61,19 @@ authorization and negative evidence; this decision grants no blanket admission.
 
 ## Verification and Consequences
 
+Resumable local-file publication implements this boundary through private
+task/file-scoped intents, pre-reservation bounded content verification, a single
+acknowledged exclusive writing transition, durable byte acknowledgement and one
+acknowledged origin-issued transition before conditional origin effects. Only
+that acknowledged invocation may attempt metadata creation. Retries verify exact
+complete existing origin; missing/partial/deleted origin stays pending without
+recreation, and lost issuance acknowledgements grant no effect authority. The
+structured task/snapshot transaction also commits
+the private publication receipt. Uncertain writing cannot be adopted, retried or
+deleted; no legacy receipt is inferred. This local implementation preserves host
+byte mapping and task route policy and does not establish native protection or
+filesystem/metadata atomicity.
+
 Implement through existing contracts, application ports, adapters and host wiring.
 Use bounded source-writing claims and actual separate-invocation review. Test
 substitution, links/reparse points, races, partial publication/restart, owner

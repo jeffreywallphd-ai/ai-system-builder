@@ -1041,6 +1041,50 @@
         "modules/adapters/runtime/python/worker/main.py",
         "modules/adapters/runtime/python/worker/tests/test_main.py"
       ]
+    },
+    "ingestion-publication": {
+      "test_paths": [
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+        "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+        "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/desktop-ingestion-source.integration.test.ts",
+        "modules/hosts/server/composition/tests/server-ingestion-source.integration.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+        "modules/adapters/transport/api-express/tests/register-ingestion-task-api-route.unit.test.ts",
+        "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts"
+      ],
+      "source_paths": [
+        "modules/application/shared/ingestion-file-publication.ts",
+        "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
+        "modules/application/use-cases/ingestion-acquisition/index.ts",
+        "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+        "modules/adapters/persistence/ingestion/createStructuredIngestionFilePublicationRepository.ts",
+        "modules/adapters/persistence/ingestion/index.ts",
+        "modules/adapters/persistence/ingestion/createStructuredIngestionAcquisitionRepository.ts",
+        "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+        "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+        "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
+        "modules/hosts/desktop/composition/tests/desktop-ingestion-source.integration.test.ts",
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+        "modules/application/ports/ingestion/README.md",
+        "modules/application/README.md",
+        "modules/application/use-cases/README.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/data-management.pack.md",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md",
+        "modules/adapters/storage/filesystem/artifact-store/README.md",
+        "modules/hosts/server/composition/tests/server-ingestion-source.integration.test.ts",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }
