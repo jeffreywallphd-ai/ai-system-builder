@@ -1,0 +1,71 @@
+{
+  "schema_version": "structured-output-host-qualification-v1",
+  "status": "reviewed-local-controls-support",
+  "work_id": "structured-output-host-controls-qualification-v4",
+  "receipt_digest": "be430f36bf94d7f41d5fd3f77f82aa857d9e232c3e0795c0c0dd93cb7deb94a8",
+  "review_digest": "a657743c5e79399f06a003f568b98795ca00eac0278052642cfbfa8331a2c513",
+  "checkpoint_commit": "2a19349335abf9784dd4b7f62f75c98e211da4d6",
+  "recorded_receipt_source_digest": "1e6643c020889d83109a04480488204a338f2a2f31650fb88d96cf15d0a54b51",
+  "actual_host_run": "artifacts/qualification/visual-composer/runs/2026-10-24t00-37-30-457z-7339838f",
+  "actual_host_source_revision": "source.e9a01ee8b9a57ebd6ce2bde520172cfc14d16ed3fd208ec6ab516e4ba7fc57aa",
+  "host_evidence_sha256": "8586418f14e159e5dbde8f293b883cb0c49c61fa4c66be8376a8d56d96214453",
+  "controls": [
+    {
+      "host": "thin",
+      "stage": "passed",
+      "completed": [
+        "unknown-default-off-explicit-on",
+        "renamed-protected-purpose-keyboard",
+        "nested-number-and-schema-preview",
+        "invalid-shape-refused-and-repaired",
+        "renderer-reload-restored",
+        "field-reset-preserves-user-choice"
+      ],
+      "report_sha256": "7cb08f6623d67578e0cdee89b108cb51dd0a30bdd76069e26899e50dae413e06"
+    },
+    {
+      "host": "desktop",
+      "stage": "passed",
+      "completed": [
+        "unknown-default-off-explicit-on",
+        "renamed-protected-purpose-keyboard",
+        "nested-number-and-schema-preview",
+        "invalid-shape-refused-and-repaired",
+        "named-settings-reset-and-load",
+        "renderer-reload-explicit-settings-load",
+        "field-reset-preserves-user-choice"
+      ],
+      "report_sha256": "3eb2d4fc332ace15788523a2c6fbb49eb89be9f764d2b5f3ef7d084eb09b7aec"
+    }
+  ],
+  "production_builds": {
+    "desktop": "passed",
+    "server": "passed",
+    "independent_report_sha256": "b2a1f204232c1e3be925da060130d7ded968208b421c1f04a0758a829f3f4425"
+  },
+  "selected_source_checks": {
+    "new_model_free_tests": 29,
+    "failures": 0,
+    "skips": 0,
+    "unchanged_prior_scope": {
+      "worker": 8,
+      "desktop_interaction": 36,
+      "executed_again": false
+    },
+    "manifest_sha256": "5cda06f3f62b6877bd09368aa48e3833e0451aa59eaf7f777a3f61b22dea9251"
+  },
+  "preserved_findings": [
+    "Actual thin-client capacity response omitted available RAM; fixed and retested.",
+    "Actual saved-settings dropdown had no accessible name; fixed and retested.",
+    "Actual server compiler rejected a browser-only fetch type; replaced with an equivalent erased literal union and both compilers passed.",
+    "Model-free unit tests depended on live roadmap completion; stable synthetic inventory now exercises real validation, including missing, completed and unknown-owner refusals.",
+    "Independent review found weak nested/required persistence assertions; strengthened assertions passed both hosts. The initial assertion read the schema wrapper rather than its example; corrected and failed run retained."
+  ],
+  "scope": "Actual packaged desktop and local Chrome output-builder journeys passed: unknown-model default off, explicit checked choice, protected required purposes, keyboard focus, nested numeric fields, exact schema structure, invalid-duplicate refusal and repair, saved settings and renderer-reload restoration. Server available-RAM reporting and saved-settings accessible naming were corrected. Registered checks, model-free owning tests, production desktop/server compilation and independent review passed.",
+  "limitations": [
+    "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
+    "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
+    "The agent must finish sufficient-profile adaptive behavior, readiness-loss and final owning qualification. Reviewed CPU/GPU structural-resource measurements remain separate; accepted model accuracy stays closed and must not be rerun. Native retained-file protection and guarded restart remain pending. No action is needed from the user."
+  ],
+  "parent_qualification": "pending"
+}

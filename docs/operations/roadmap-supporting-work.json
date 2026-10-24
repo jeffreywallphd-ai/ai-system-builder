@@ -2495,6 +2495,25 @@
         "A provider owner can still change visibility during or after publication. If the final check fails, remote files may already exist; the app retains the local version, withholds success and does not automatically delete, change visibility or retry the commit.",
         "Three small synthetic files remain in the private test repository. Website rendering, durable host retry, meaningful cleanup/failure recovery, mounted UI, ingestion scale and advanced/native/model checks remain pending agent work. Accepted model accuracy remains closed; no user action is needed."
       ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "structured-output-host-controls-qualification-v4",
+      "work_criteria": [
+        "real-host-visual-controls",
+        "bounded-declared-fixture",
+        "truthful-qualification"
+      ],
+      "receipt_digest": "be430f36bf94d7f41d5fd3f77f82aa857d9e232c3e0795c0c0dd93cb7deb94a8",
+      "review_digest": "a657743c5e79399f06a003f568b98795ca00eac0278052642cfbfa8331a2c513",
+      "scope": "Actual packaged desktop and local Chrome output-builder journeys passed: unknown-model default off, explicit checked choice, protected required purposes, keyboard focus, nested numeric fields, exact schema structure, invalid-duplicate refusal and repair, saved settings and renderer-reload restoration. Server available-RAM reporting and saved-settings accessible naming were corrected. Registered checks, model-free owning tests, production desktop/server compilation and independent review passed.",
+      "limitations": [
+        "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
+        "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
+        "The agent must finish sufficient-profile adaptive behavior, readiness-loss and final owning qualification. Reviewed CPU/GPU structural-resource measurements remain separate; accepted model accuracy stays closed and must not be rerun. Native retained-file protection and guarded restart remain pending. No action is needed from the user."
+      ]
     }
   ]
 }

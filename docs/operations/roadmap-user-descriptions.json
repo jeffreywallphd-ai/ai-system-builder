@@ -10099,6 +10099,55 @@
           "Accepted model accuracy stays closed. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b4232ca6de92f4fbd3f79be3c8c81c687cc434635c69b31de82b4a86ff613144",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The output builder passed tests in the packaged desktop app and local Chrome.",
+          "The tests checked keyboard use, required fields, nested number fields, invalid names, saved settings and restoration after reload.",
+          "The agent fixed available-memory reporting, a missing settings label and a server type error.",
+          "The required checks and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e41a1f4cac471b806607954eb15d7a486f27ae8040639a5159ee4b1b2c28c1be",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is completed supporting work from its recorded source version.",
+          "The isolated unit tests and full-app interface tests are separate evidence.",
+          "The parent roadmap still needs its remaining checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5976559a9387923fb290dca35da87500185c98f46b4669b54aa1f54f1290175d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A test runtime supplied decoder readiness and refused to generate data.",
+          "These tests do not measure a real model, accelerator capacity or low-memory mode.",
+          "Reloading a page does not prove a full app or server restart."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6ce54b3b5d6857e34fe8d47694dfe7640394364dd3a7b89b7fc075a1ebd4a941",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish the automatic default, lost-readiness behavior and final checks.",
+          "Completed model accuracy checks stay closed. They will not be repeated.",
+          "Low-memory file protection and restart checks remain separate work. No action is needed from you."
+        ]
+      }
     }
   ]
 }

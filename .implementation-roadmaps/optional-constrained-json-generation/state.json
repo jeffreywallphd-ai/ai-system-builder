@@ -1036,6 +1036,17 @@
       "outcome": "pending",
       "recordedAt": "2026-10-23T13:49:48Z",
       "summary": "The previously missing representative constrained-CPU structural/resource portion is demonstrated by all3current0.5B Float32 CPU repetitions: bounded resource/time,22structurally accepted outputs per24case phase,0invalid-output attempts/accepted outputs, native exit0 and observed cleanup. The3currentconstrainedGPU repetitions also satisfy structural/resource checks. Actual packaged-host adaptive state, explicit override and successful automated visual-builder journeys remain unqualified. Canonical criterion contains no universal22/24 semantic threshold; smaller semantic failures remain with Functionality. No full criterion or new chunk closes."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Reviewed source-bound synthetic controls-only desktop and browser journeys",
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-32",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-24T00:45:16Z",
+      "summary": "Actual packaged desktop and local Chrome output-builder controls passed with protected required roles, nested numeric schema, invalid-duplicate refusal, explicit choice, saved load and renderer-reload restoration. Available RAM and accessible naming were fixed; model-free tests, current registered checks, production builds and separate review passed. Sufficient-profile adaptive behavior, readiness loss and final owning checks remain pending agent work. No model accuracy rerun, native/offload or parent pass is asserted."
     }
   ],
   "feedback": [
@@ -1649,6 +1660,12 @@
       "recordedAt": "2026-10-23T15:58:34Z",
       "sequence": 93,
       "type": "resumed"
+    },
+    {
+      "eventFingerprint": "19dc2c16e3be857603a8274711d8541221ee5db5ebdcc99b667589a8f501a6cc",
+      "recordedAt": "2026-10-24T00:45:16Z",
+      "sequence": 94,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2761,5 +2778,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-23T15:58:34Z"
+  "updatedAt": "2026-10-24T00:45:16Z"
 }
