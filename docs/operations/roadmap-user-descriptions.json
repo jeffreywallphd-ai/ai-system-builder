@@ -10139,13 +10139,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "99af2db64bccc998bb1e895e912f5d85e01c511dc2f81bc4b752b1516b70f7aa",
+      "source_text_sha256": "f86bfa891129d05d49d2b81b0b74923f1d3cfd2be2429c08f5e061b11e15fb91",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "Stable output choices and lost-readiness handling now pass their checks.",
-          "The agent must finish graphics-memory reporting from the actual worker and the final roadmap checks.",
-          "Accepted model accuracy checks stay closed. Low-memory file protection and restart checks remain separate pending work.",
+          "Worker graphics-memory reporting and the automatic output-mode tests are complete.",
+          "The agent must run the final roadmap checks and review the existing resource results.",
+          "Completed accuracy tests stay closed. Low-memory file protection and restart checks remain separate pending work.",
           "No action is needed from you."
         ]
       }
@@ -10176,14 +10176,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "86c42599a43a6c58fb0b52cf991334dd12ed3da0b55be5ecc572452a77dd9c66",
+      "source_text_sha256": "06bbb3bf1c3a02eefa175c5fa3a06a5eda7070a47098e69ef8332bedc0b4a8f5",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "This supporting work is complete. The parent roadmap still needs its remaining technical checks.",
-          "The agent must finish graphics-memory reporting from the actual worker and run the final checks.",
-          "Completed model-accuracy checks stay closed. Low-memory mode has separate pending work.",
-          "No action is needed from you."
+          "The stable output-choice work is complete. Worker graphics-memory reporting is also complete in a separate reviewed change.",
+          "The agent must finish the final roadmap checks. Accepted accuracy tests stay closed.",
+          "Low-memory mode has separate pending work. No action is needed from you."
         ]
       }
     },
@@ -10208,6 +10207,43 @@
           "These tests check how the app handles memory information. They do not run a model.",
           "The worker memory guards, explicit overflow limits and runtime checks are unchanged.",
           "This correction does not complete physical-memory, low-memory-mode or parent-roadmap qualification. Completed model-accuracy results stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "30f0f36e98474059f0879d8d908e0a656c286c75048f21abcf3cf81a34913021",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both interfaces now receive graphics-memory information from the actual Python worker.",
+          "All 104 focused tests passed. A separate read-only check used the real driver without loading a model.",
+          "The desktop and browser tests passed the automatic default, explicit choice, output editing and saved-setting checks with a declared test capacity.",
+          "Production builds and independent review passed. The change is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "637340903e7fda341188c0e40631e679e8b8e5bf78d1af1f16055a0f81e16a83",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The real driver check and the interface tests are separate checks.",
+          "The interface tests use a declared 8 GiB capacity and cannot generate data.",
+          "The packaged worker files match the reviewed source. This does not prove that packaged Python or a real model ran."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "40acb3dd93206c925e117d2839a633df82d632ed94d3388fc46f6ba9d1090cfb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Installed graphics memory does not tell the app how much memory is free or whether a model can run.",
+          "Uncertain device information and probe failures stay unknown. The app keeps the existing memory guards.",
+          "Completed model-accuracy results stay closed."
         ]
       }
     }

@@ -65,7 +65,7 @@
   "limitations": [
     "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
     "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
-    "Stable recommendation and lost-readiness handling now pass in the separately reviewed follow-up work. The agent must finish truthful worker-local accelerator reporting and final current-source parent qualification. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+    "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
   ],
   "parent_qualification": "pending",
   "superseded_follow_up": [
@@ -78,6 +78,32 @@
           "The agent must finish the automatic default, lost-readiness behavior and final checks.",
           "Completed model accuracy checks stay closed. They will not be repeated.",
           "Low-memory file protection and restart checks remain separate work. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "text": "Stable recommendation and lost-readiness handling now pass in the separately reviewed follow-up work. The agent must finish truthful worker-local accelerator reporting and final current-source parent qualification. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user.",
+      "reason": "Worker-capacity support independently completed; final parent checks remain pending.",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Stable output choices and lost-readiness handling now pass their checks.",
+          "The agent must finish graphics-memory reporting from the actual worker and the final roadmap checks.",
+          "Accepted model accuracy checks stay closed. Low-memory file protection and restart checks remain separate pending work.",
+          "No action is needed from you."
+        ]
+      }
+    },
+    {
+      "text": "This completes only the named local supporting work. The agent must finish truthful worker-local accelerator reporting and final current-source checks for the parent criterion. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user.",
+      "reason": "Worker-capacity support independently completed; final parent checks remain pending.",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This supporting work is complete. The parent roadmap still needs its remaining technical checks.",
+          "The agent must finish graphics-memory reporting from the actual worker and run the final checks.",
+          "Completed model-accuracy checks stay closed. Low-memory mode has separate pending work.",
+          "No action is needed from you."
         ]
       }
     }
@@ -96,7 +122,7 @@
     "scope": "Both renderers keep the first fresh output-mode recommendation stable and preserve explicit choices. Lost decoder or schema readiness cannot silently dispatch unchecked generation. The fixed model-free profile passed 61 tests, production builds passed, and both actual synthetic host controls journeys passed after source freeze. Separate review accepted the exact work, which is committed.",
     "limitations": [
       "The renderer tests use declared CPU and accelerator snapshots. Actual packaged desktop and browser controls journeys use a synthetic decoder capability and refuse generation. They do not prove physical accelerator capacity, model execution or native process restart.",
-      "This completes only the named local supporting work. The agent must finish truthful worker-local accelerator reporting and final current-source checks for the parent criterion. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
+      "This completes the named stable-choice work. Truthful worker-local accelerator reporting is now completed in a separate reviewed follow-up. Final current-source parent checks remain agent work. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
     ]
   },
   "zero_available_ram_follow_up": {
@@ -110,6 +136,33 @@
     "scope": "A reported zero available RAM value now remains zero through normalization and direct CPU or automatic capacity resolution. The app cannot replace it with a larger installed-memory estimate. Twelve owning tests and the registered contract, documentation and architecture checks passed; separate review accepted the correction, which is committed.",
     "limitations": [
       "This is an advisory contract correction with synthetic capacity fixtures. Worker memory guards, resource admission, explicit overflow limits, capability checks and accepted model accuracy are unchanged. No physical memory, model inference, offload or parent qualification is claimed."
+    ]
+  },
+  "worker_capacity_follow_up": {
+    "work_id": "worker-local-accelerator-capacity",
+    "receipt_digest": "44357090f1a3a3726f527e02622a6d76a7aed71e6276113ec26c7575f9d89f88",
+    "review_digest": "124f1a78a36040cfb7da26c0f04f20b82fa632c4a6db9c6306b55b9d2830d1fb",
+    "checkpoint_commit": "edc38ef000833cc2cc2aed7f527d2be263f55601",
+    "actual_host_run": "artifacts/qualification/visual-composer/runs/2026-10-24t01-36-01-810z-1663b46d",
+    "actual_host_source_revision": "source.40da4c056f02c87255d1ee580df4715e622903cdf22f1e2d30341a9fc3bcb0e9",
+    "host_evidence_sha256": "cfc067f120807a2d8d6b8ce36d164cf6eec0e7aa6dbf37da962a5f1686f58f24",
+    "production_worker_observation_sha256": "4bff4c0207dbe62f8f5682d3a740026fc5f1d507274847c83cbc71cb088bb2ba",
+    "worker_observation": {
+      "route": "authenticated-production-ASGI-in-memory",
+      "status": "passed",
+      "total_accelerator_memory_bytes": 8585740288,
+      "elapsed_seconds": 0.079,
+      "torch_or_model_imported": false,
+      "probe_retired": true
+    },
+    "synthetic_focused_tests": 104,
+    "failures": 0,
+    "skips": 0,
+    "scope": "Both hosts now receive a bounded optional accelerator total from the authenticated worker. The fixed profile passed 104 tests. A read-only production-worker route check observed the available driver without loading Torch or a model. Actual desktop and browser journeys passed the declared 8 GiB adaptive default, explicit choice, schema editing and persistence checks. Production builds and separate review passed; the exact change is committed.",
+    "limitations": [
+      "The physical driver observation used the production ASGI route in memory. The two host UI journeys used a declared synthetic 8 GiB capability and refused generation. Packaged worker files match source bytes; that is not a packaged Python execution test. These are separate observations, not one physical end-to-end model run.",
+      "Installed accelerator total is advisory. It does not establish free VRAM, Torch compatibility, model admission, native process ownership or offload safety. Uncertain masks, MIG, multiple devices, driver errors or unconfirmed probe retirement remain unknown. Existing memory guards and accepted accuracy results are unchanged.",
+      "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
     ]
   }
 }
