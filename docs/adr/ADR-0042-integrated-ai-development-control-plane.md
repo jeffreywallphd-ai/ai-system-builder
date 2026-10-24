@@ -39,3 +39,27 @@ claims and attestation IDs do not provide hostile-code isolation, authenticated
 reviewer identity or protection from an unrestricted local administrator.
 Remote execution, identity integration, provider egress and product policy
 changes retain their separate decisions and authority.
+
+## Fixed Windows qualification lifecycle
+
+Within the cooperative-local execution boundary, a separate bounded Windows
+qualification launcher can own newly created model-free test commands. Keep the
+public self-test roles closed and real package/UI command factories separately
+reviewed and identity-bound. Preserve the earlier closed Python fixture rather
+than extending its proof to other commands.
+
+Use suspended creation-time job membership, explicit private standard handles,
+noninherited kill-on-close ownership and finite process/commit/output/deadline
+limits. Require exact native root exit, zero active members and acknowledged
+stream/handle retirement. Qualify crash, failure and timeout behavior before
+real workloads. Unknown retirement fences the new attempt; observed failure
+never becomes a product pass. No arbitrary command service, old-process
+adoption, failed-output recovery, privilege change or offload policy change is
+authorized. This mechanism cannot establish hostile same-user isolation or
+machine-wide resource bounds.
+
+Pipe-only qualification uses detached creation and explicit standard handles.
+Fixed fixture counts and native retirement proof stay strict. A separately
+reviewed source-revision family can test a correction after proven retirement
+of the earlier owned job; its failed journal and fence remain immutable. No
+generic reset or exception for an unidentified process is introduced.

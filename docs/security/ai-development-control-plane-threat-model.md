@@ -283,3 +283,45 @@ malformed counts or unknown diagnostics use generic agent-owned repair guidance.
 Mixed record failures remain visible. No diagnostic grants recovery, changes
 canonical data or supplies a technical pass. Tests preserve original records and
 exercise oversized inventories, excluded fields and malformed/mixed diagnostics.
+
+## Owned Windows qualification command boundary
+
+The separate `dev-tools/helpers/native-qualification/` launcher protects the
+lifetime of newly created local test processes and the integrity of their
+bounded output. It is not a product model loader or a security sandbox. Its
+public entry admits only fixed model-free self-tests. Real consumers require
+separate review of a fixed command factory, executable/source hashes, sanitized
+environment, finite deadlines and fresh nonoverlapping output paths. Never
+accept caller command JSON, shell text, PIDs, arbitrary executables or quota
+overrides. No credentials, provider calls or model accuracy runs belong here.
+
+Create the root suspended with atomic Windows job-list membership and a private
+standard-handle allowlist. Keep the job unnamed and noninherited, prohibit
+breakaway and read back kill-on-close, process count and commit ceilings before
+resume. Own every successfully created handle immediately; a failed close must
+retain ownership and prevent a clean outcome. The job handle must never pass to
+a child. Explicit standard-handle inheritance does not authorize ambient handle
+inheritance.
+
+Require exact root identity/exit, zero active job members, bounded stream drain
+and acknowledged closure. Exercise crash before resume, crash after descendant
+creation, timeout, malformed protocol and uncertain-close paths using synthetic
+model-free fixtures. Root exit or pipe EOF alone cannot prove descendant exit.
+Allocation denial or another observed limit failure is a failed workload;
+absence of a Windows limit notification does not prove no allocation was denied.
+The limits are enforced ceilings, not memory reservations or machine-wide bounds.
+
+Unknown retirement fences only the new run. Preserve earlier fenced output and
+unknown historical ownership; do not look up or terminate old processes, adopt
+partial packages or infer offload recovery. Rollback makes the launcher
+unavailable and keeps existing guards. The cooperative-local threat model does
+not protect against malicious same-user code or an administrator. Other host
+processes may interfere with capacity or file publication and remain outside
+this job's claims.
+
+Use the reviewed pipe-only detached launch policy without weakening job or
+standard-handle membership. Exact fixture counts remain mandatory. A source
+correction can qualify a separately reviewed fixed revision family after actual
+old-job retirement is independently established. Preserve the failed journal
+and fence. This is not an arbitrary reset, process-name exception or permission
+to retry unknown cleanup; no observed identity follows from a plausible cause.

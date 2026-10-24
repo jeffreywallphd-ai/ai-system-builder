@@ -308,3 +308,43 @@ work records. The existing count and 2 MiB response limits, latest-first admissi
 and inventory diagnostic remain unchanged. The browser distinguishes intentional
 history limits from unavailable records; neither changes qualification or recovery
 state. Mixed diagnostics retain each applicable explanation without raw errors.
+
+## Owned Windows qualification commands
+
+The bounded launcher in `dev-tools/helpers/native-qualification/` is separate
+from the closed two-process Python fixture. Its public entry accepts only fixed,
+model-free self-test roles. A real package or UI consumer needs a separately
+reviewed fixed operator, exact executable/source identities, a fresh candidate
+and separate output paths. No public arbitrary-command or existing-process
+adoption interface is provided.
+
+An unnamed, noninherited Windows job owns the new tree at process creation.
+The root starts suspended with both the job-list and explicit standard-handle
+attributes. Only private output pipes and null input can be inherited. Read back
+membership, handle flags and finite limits before resuming. The prospective
+limits are 32 active processes, 1 GiB process commit and 2 GiB job commit; these are hard
+ceilings, not reservations or guaranteed workload capacity. Failed admission or
+an observed limit failure cannot qualify a workload.
+
+Lifecycle completion requires the exact root's native exit, zero active job
+members, completed bounded streams and acknowledged handle closure. Timeout,
+stream overflow, failed native calls or uncertain retirement must retain a
+failure record. A known nonzero result with proven retirement remains a failed
+product test; it does not establish product correctness. Missing retirement
+proof fences that new attempt. An independent model-free lifecycle review must
+precede real package/UI qualification.
+
+This mechanism proves only the newly owned tree. It cannot prove retirement of
+older processes, recover a fenced run, protect retained offload files, qualify
+disk accounting or establish machine-wide resource isolation. Earlier failures
+and their outputs remain intact. Cooperative local trust and the existing
+roadmap approval and candidate-bound verification rules still apply.
+
+Pipe-only roots and fixed fixture children use `DETACHED_PROCESS`, with explicit
+standard handles and no console. Keep exact fixture counts; do not accept an
+unexplained extra process. Microsoft documents the
+[creation flags](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags)
+and [console initialization](https://github.com/microsoft/terminal/blob/main/doc/specs/%23492%20-%20Default%20Terminal/spec.md).
+A corrected source revision uses a separately reviewed fixed self-test family.
+Prior failed journals and fences remain intact; a new pass cannot identify an
+unobserved old process or turn the previous failure into a pass.

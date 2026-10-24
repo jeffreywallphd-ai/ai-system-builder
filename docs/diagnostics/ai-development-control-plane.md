@@ -472,3 +472,31 @@ include only success and problem text used by the browser. Use the technical
 status command for full saved work context and actual recovery guidance. The agent
 handles display maintenance. A limit notice must not hide a simultaneous genuine
 record error or turn unavailable qualification into a pass.
+
+## Windows qualification process lifetime
+
+Use the separate launcher documented in
+`dev-tools/helpers/native-qualification/README.md` only for fixed local test
+workloads. Qualify its model-free native self-tests before a separately reviewed
+package/UI operator uses the private composition. The older
+`control_plane/qualification_job.py` remains a closed Python fixture; its pass
+does not qualify another command or larger limits.
+
+Do not treat a completed root process and drained output as complete cleanup.
+The new job must report the exact native root exit, zero active members and
+acknowledged stream/handle retirement. A known failed command with proven
+retirement is still a failed test. Unknown retirement prevents a successor
+phase and retains the new run's failure record. No PID/name-based cleanup,
+old-fence override or partial-package reuse is permitted.
+
+The limits are 32 active job processes, 1 GiB commit per process, 2 GiB job commit and
+8 MiB saved output per stream. They are ceilings, not reservations. Use finite
+reviewed deadlines and a short fresh confined temporary path. Keep earlier
+attempts and their logs intact. This local support does not pass a parent
+roadmap, model, offload, native file-protection or disk-accounting criterion.
+
+Fixed pipe-only tests use detached creation without a console. Keep exact
+expected counts. If a test fails, inspect its actual native journal and obtain
+independent review before a corrected source revision starts a separate family.
+Preserve old failures and fences. A possible Windows console helper is an
+explanation to test, not authority to loosen counts or adopt an old process.
