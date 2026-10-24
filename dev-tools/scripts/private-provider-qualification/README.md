@@ -36,6 +36,33 @@ Local evidence contains byte counts/hashes and immutable commit identity, not
 credentials, payloads or provider errors. Failed runs print fixed safe stage and
 reason codes; they never qualify a roadmap. No test downloads or runs a model.
 
+Execute uses the production SQLite adapter for the fixed synthetic version and
+publication metadata. Artifact bytes stay in memory. Each run exclusively
+allocates a new UUID directory under the ignored evidence directory. Small
+metadata files are retained with the evidence. The helper deletes no local or
+remote files and never opens an earlier run for a new publication.
+
+After successful publication and the existing denial checks, the helper closes
+its database connection. A fixed new Node process reopens that exact database
+and retries the same application command. The check requires the unchanged
+version digest, the same immutable revision, exactly one publication record,
+and zero publisher or artifact calls. This proves a metadata-process restart;
+it does not prove a complete desktop or server application restart. Synthetic
+failure tests also verify that an unsuccessful provider call leaves the saved
+version available after database reopen for an explicit retry.
+
+The restart child receives no credential or provider settings. Its command and
+loader are fixed. Its Windows identity and PATH values are explicit inert
+values, preventing Node from filling omitted variables from the parent. Input
+is at most 2 KiB; each output stream is limited to 4 KiB. The parent requests
+termination after a 20-second timeout and waits for actual exit. The child sets
+a 15-second stdin deadline. Neither timer is a hard total wall-clock bound.
+Success requires the actual child exit, not a termination request. Unknown fields,
+invalid run identities, changed ownership markers, linked directories/files,
+unexpected database files and database files over 1 MiB are refused. Errors use
+fixed safe codes. These cooperative local checks do not qualify hostile native
+filesystem races, retained model staging, offload recovery or disk accounting.
+
 Successful evidence still needs independent review. Application/provider evidence
 does not prove mounted UI, website or large-file ingestion, remote card rendering,
 OCR, native file safeguards, or parent roadmap completion. File downloads preserve

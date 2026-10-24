@@ -4,14 +4,13 @@ import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 
 import path from "node:path";
 import { createHuggingFaceArtifactRepoStorageAdapter } from "../../../modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter";
 import { SecureEgressBroker } from "../../../modules/adapters/security/egress";
-import { createStructuredDatasetVersionRepository } from "../../../modules/adapters/persistence/dataset-version";
-import { createInMemoryStructuredDocumentStore } from "../../../modules/adapters/persistence/shared";
 import { createSha256DatasetVersionHasher } from "../../../modules/adapters/storage/dataset-version";
 import { createDatasetVersionDocumentationArtifacts } from "../../../modules/application/services/dataset-version/dataset-version-documentation.service";
 import { PublishDatasetVersionUseCase } from "../../../modules/application/use-cases/dataset-version/publish-dataset-version.use-case";
 import { createHuggingFaceTokenConfigStore } from "../../../modules/hosts/shared/huggingFaceTokenConfigStore";
 import { createRetrieveArtifactSuccessResult } from "../../../modules/contracts/storage";
 import { createWorkspaceId } from "../../../modules/contracts/workspace";
+import { DurablePublicationError, openQualificationPersistence, type DurablePublicationState } from "./durable-publication";
 
 const ORIGIN = "https://huggingface.co";
 const MAX_BODY = 16 * 1024;
@@ -46,13 +45,15 @@ export function validateConfig(input: unknown): QualificationConfig {
 export function qualificationPlan(config: QualificationConfig) {
   validateConfig(config);
   return { schema_version: "private-provider-plan-v1", repository: config.repository, private: true,
-    operations: ["inspect-private-destination", "create-if-missing", "publish-three-synthetic-files", "download-exact-commit", "check-denials-and-idempotent-retry"],
+    operations: ["inspect-private-destination", "create-if-missing", "publish-three-synthetic-files", "download-exact-commit", "check-denials-and-idempotent-retry", "close-synthetic-metadata-database", "verify-offline-retry-in-fresh-process"],
     maximum_hub_api_requests: MAX_REQUESTS, maximum_hub_upload_bytes_per_request: MAX_BODY,
     maximum_hub_response_bytes_per_request: MAX_RESPONSE,
     hub_call_admission_window_seconds: MAX_TIME / 1000, hub_request_timeout_seconds: 20,
     maximum_file_download_sessions: 6, file_download_session_timeout_seconds: 60,
     maximum_redirects_per_file_session: 2, maximum_file_bytes_per_session: MAX_BODY,
     hard_total_wall_clock_deadline: false,
+    restart_child_timeout_seconds: 20, restart_input_bytes: 2048, restart_output_bytes_per_stream: 4096,
+    metadata_file_limit_bytes: 1024 * 1024, synthetic_metadata_retained: true,
     credential_read: false, external_effects: false, deletion: false, model_execution: false,
     authority: "Configuration records a destination; separate human authorization is required before --execute." };
 }
@@ -126,7 +127,8 @@ async function readPrivateConfig(root: string, relative: string, maximum: number
   requireFact(realpathSync(current).startsWith(realpathSync(root) + path.sep) && lstatSync(current).isFile() && lstatSync(current).size <= maximum, "local-config-denied");
   return current;
 }
-export async function executeQualification(config: QualificationConfig, token: string, observe: (stage: string, details?: Record<string, unknown>) => void = () => {}) {
+export async function executeQualification(config: QualificationConfig, token: string, persistence: DurablePublicationState, observe: (stage: string, details?: Record<string, unknown>) => void = () => {}) {
+  try {
   validateConfig(config); requireFact(typeof token === "string" && token.trim().length > 0, "credential-unavailable");
   const facts: TransportFacts = { requests: 0, commits: 0, creates: 0 };
   const bounded = boundedHubFetch(config.repository, facts);
@@ -156,7 +158,7 @@ export async function executeQualification(config: QualificationConfig, token: s
     }
     verifyExistingFixture(metadata, actual);
   }
-  const repository = createStructuredDatasetVersionRepository(createInMemoryStructuredDocumentStore());
+  const repository = persistence.repository;
   await repository.createVersion(fixture.version);
   const artifacts = { retrieveArtifact: async (r: any, context: any) => {
     const content = fixture.contents.get(r.key); requireFact(content, "fixture-unavailable");
@@ -192,14 +194,19 @@ export async function executeQualification(config: QualificationConfig, token: s
   const beforePublic = facts.requests;
   const publicAttempt = await useCase.execute({ ...command, visibility: "public", confirmation: { approved: true, visibility: "public" } }, context);
   requireFact(!publicAttempt.ok && facts.requests === beforePublic, "public-confirmation-not-enforced");
+  observe("checking-saved-publication-restart");
+  const restart = persistence.verifyRestart(config.repository, fixture.version.versionDigest, revision);
+  observe("saved-publication-restart-verified", { publication_records: 1, added_provider_requests: 0 });
   return { schema_version: "private-provider-evidence-v1", status: "evidence-collected-review-required", repository_private: true, revision,
     files: downloaded, application_retry_added_requests: 0, publication_records: 1, anonymous_denied: true, invalid_credential_denied: true, unconfirmed_public_denied_before_network: true,
-    transport: facts, local_payload_files_written: 0, remote_files_deleted: 0, remote_synthetic_files_retained: 3,
-    scope: "Actual application and official Hub adapter with synthetic in-memory version/storage. Not mounted-host, large-file ingestion, provider UI rendering, model, native or parent qualification." };
+    transport: facts, restart, local_payload_files_written: 0, local_metadata_database_retained: true, remote_files_deleted: 0, remote_synthetic_files_retained: 3,
+    scope: "Actual application and official Hub adapter with synthetic SQLite version metadata and in-memory artifact bytes. Fixed fresh-process offline retry is not a full app restart. Not mounted-host, large-file ingestion, provider UI rendering, model, native or parent qualification." };
+  } finally { persistence.close(); }
 }
 export async function main(argv: string[]) {
   let stage = "arguments";
   let output: string | undefined;
+  let persistence: DurablePublicationState | undefined;
   const events: Record<string, unknown>[] = [];
   const observe = (event: string, details: Record<string, unknown> = {}) => {
     requireFact(events.length < 64, "evidence-budget");
@@ -221,15 +228,16 @@ export async function main(argv: string[]) {
     const token = createHuggingFaceTokenConfigStore({ filePath: credentialPath }).getToken();
     requireFact(token, "credential-unavailable"); stage = "provider-qualification";
     observe("credential-configured");
-    const result = await executeQualification(config, token, observe);
+    persistence = await openQualificationPersistence(output);
+    const result = await executeQualification(config, token, persistence, observe);
     writeFileSync(path.join(output, "summary.json"), JSON.stringify({ ...result, events }, null, 2) + "\n", { mode: 0o600, flag: "wx" });
     console.log(JSON.stringify({ status: result.status, evidence: output + "/summary.json" })); return 0;
   } catch (error) {
-    const failure = { status: "qualification-failed", stage, reason: error instanceof QualificationError ? error.reason : "operation-unavailable", events };
+    const failure = { status: "qualification-failed", stage, reason: error instanceof QualificationError || error instanceof DurablePublicationError ? error.reason : "operation-unavailable", events };
     let saved = false;
     if (output) try { writeFileSync(path.join(output, "summary.json"), JSON.stringify(failure, null, 2) + "\n", { mode: 0o600, flag: "wx" }); saved = true; } catch { /* Report only fixed copy if the evidence sink is unavailable. */ }
     console.log(JSON.stringify({ status: failure.status, stage, reason: failure.reason, ...(saved ? { evidence: output + "/summary.json" } : {}) })); return 1;
-  }
+  } finally { persistence?.close(); }
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve("dev-tools/scripts/private-provider-qualification/qualification.ts")) {
   main(process.argv.slice(2)).then(code => { process.exitCode = code; }).catch(() => {

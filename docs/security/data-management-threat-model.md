@@ -367,6 +367,34 @@ failure and does not delete another file. This is not an atomic publication or a
 replacement for pending native ACL/reparse qualification. Rollback preserves the
 missing-binding denial even if upload availability is reduced.
 
+## Opt-in private-provider restart qualification
+
+The contributor-only private-provider operator retains synthetic version and
+publication metadata in a fresh exclusively allocated UUID run using the
+production SQLite adapter. Artifact bytes and credentials are not stored in this
+database. Existing human authorization for the exact private provider destination
+remains mandatory; neither configuration nor a replay record supplies authority.
+Existing bounded Hub transport, secure download egress, private visibility,
+immutable revisions, no remote deletion and credential redaction remain intact.
+
+After the first database connection closes, a fixed new Node child reopens only
+that run. Admission checks a bounded ownership marker and nonce, strict run IDs,
+contained nonlinked directories, the exact database file inventory and 1 MiB
+per-file limits. The child has fixed source/argv, bounded secret-free input,
+4 KiB per output stream and a 20-second parent timeout. Explicit inert Windows
+identity/PATH settings prevent automatic ambient inheritance. No provider adapter
+or credential store is loaded by the child. Artifact and publisher calls refuse;
+successful replay requires both call counts to stay zero, the same version digest
+and revision, one publication record, actual database close and actual child exit.
+Failure paths use fixed safe codes and retain the small synthetic metadata.
+
+Focused real SQLite/new-process tests cover successful reuse, saved-version
+preservation after provider failure, later retry, changed ownership, excess bytes,
+unexpected files, links, malformed input and secret non-inheritance. These are
+cooperative contributor checks. They do not prove hostile native check/use race
+protection, app-wide crash recovery, mounted UI, provider page rendering, retained
+offload staging, protected accounting or whole-roadmap qualification.
+
 ## Memory-denial diagnostic delta
 
 Notification history is a public diagnostic sink. On the exact

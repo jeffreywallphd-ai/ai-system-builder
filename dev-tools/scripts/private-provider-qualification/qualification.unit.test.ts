@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { randomUUID } from "node:crypto";
+import { linkSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { boundedHubFetch, main, publicationFixture, qualificationPlan, QualificationError, validateConfig, verifyExistingFixture } from "./qualification";
+import { DurablePublicationError, openQualificationPersistence, replayEnvironment, validateReplayInput, type DurablePublicationState } from "./durable-publication";
+import { PublishDatasetVersionUseCase } from "../../../modules/application/use-cases/dataset-version/publish-dataset-version.use-case";
+import { createSha256DatasetVersionHasher } from "../../../modules/adapters/storage/dataset-version";
+import { createStructuredDatasetVersionRepository } from "../../../modules/adapters/persistence/dataset-version";
+import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../modules/adapters/persistence/sqlite";
+import { createContractError, createFailureResult, createSuccessResult } from "../../../modules/contracts/shared";
+import { createRetrieveArtifactSuccessResult } from "../../../modules/contracts/storage";
 
 const valid = { schema_version: "private-provider-qualification-v1", repository: "synthetic/private-test", credential_file: ".local-codex/profile/artifacts/config/hugging-face-token.json", private: true, creation_approved: true };
 const repo = "synthetic/private-test";
@@ -25,10 +37,124 @@ test("plan contains no credential value and performs no token read, network or p
   assert.equal(plan.maximum_file_download_sessions, 6); assert.equal(plan.file_download_session_timeout_seconds, 60);
   assert.equal(plan.maximum_redirects_per_file_session, 2); assert.equal(plan.maximum_file_bytes_per_session, 16 * 1024);
   assert.equal(plan.hard_total_wall_clock_deadline, false);
+  assert.equal(plan.restart_child_timeout_seconds, 20); assert.equal(plan.restart_input_bytes, 2048); assert.equal(plan.restart_output_bytes_per_stream, 4096);
+  assert.equal(plan.metadata_file_limit_bytes, 1024 * 1024); assert.equal(plan.synthetic_metadata_retained, true);
   assert.equal("maximum_requests" in plan, false); assert.equal("maximum_seconds" in plan, false);
   assert.equal(JSON.stringify(plan).includes("credential_file"), false);
 });
 
+const revision = "a".repeat(40);
+function freshOutput() {
+  const parent = ".local-codex/private-provider-qualification";
+  mkdirSync(parent, { recursive: true });
+  const output = `${parent}/${randomUUID()}`; mkdirSync(output); return output;
+}
+function fixtureUseCase(repository: DurablePublicationState["repository"], fail = false) {
+  const fixture = publicationFixture(); let calls = 0;
+  const retrieveArtifact = async (request: any, context: any) => {
+    const content = fixture.contents.get(request.key)!;
+    return createRetrieveArtifactSuccessResult({ key: request.key, sizeBytes: content.byteLength }, content, context);
+  };
+  const forbidden = async () => { throw new Error("Synthetic unexpected artifact operation"); };
+  const useCase = new PublishDatasetVersionUseCase({ repository, hasher: createSha256DatasetVersionHasher(),
+    artifacts: { retrieveArtifact: retrieveArtifact as never, storeArtifact: forbidden, hasArtifact: forbidden, deleteArtifact: forbidden },
+    publisher: { publishDatasetVersion: async () => { calls++; return fail
+      ? createFailureResult(createContractError("unavailable", "Synthetic provider unavailable."))
+      : createSuccessResult({ provider: "hugging-face" as const, repositoryId: repo, revision }); } } });
+  const context = { workspaceId: fixture.version.workspaceId, principalId: "qualification" };
+  const command = { workspaceId: fixture.version.workspaceId, versionId: fixture.version.versionId, repositoryId: repo, createRepository: true, confirmation: { approved: true as const, visibility: "private" as const } };
+  return { fixture, calls: () => calls, execute: () => useCase.execute(command, context) };
+}
+test("restart input accepts only exact bounded synthetic identities, digest and immutable revision", () => {
+  const input = { run_id: randomUUID(), nonce: randomUUID(), repository: repo, version_digest: "sha256:" + "b".repeat(64), revision };
+  assert.deepEqual(validateReplayInput(input), input);
+  for (const change of [{ run_id: "../old" }, { nonce: "secret" }, { repository: "other/../private" }, { repository: "https://other/private" }, { revision: "main" }, { version_digest: "sha256:wrong" }, { token: "synthetic-never-transmit" }]) {
+    assert.throws(() => validateReplayInput({ ...input, ...change }), DurablePublicationError);
+  }
+  for (const input of [null, [], true]) assert.throws(() => validateReplayInput(input), DurablePublicationError);
+});
+test("fresh child environment excludes credentials, provider settings, ambient PATH and Node options", () => {
+  const names = ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "NODE_OPTIONS", "PYTHON_RUNTIME_AUTH_TOKEN"];
+  const old = names.map(name => process.env[name]);
+  try {
+    for (const name of names) process.env[name] = "synthetic-must-not-be-inherited";
+    const env = replayEnvironment("synthetic-owned-temporary-directory");
+    assert.deepEqual(Object.keys(env).filter(name => !["TEMP", "TMP", "SystemRoot", "WINDIR", "PATH", "HOMEDRIVE", "HOMEPATH", "USERPROFILE", "USERNAME", "USERDOMAIN", "LOGONSERVER", "SYSTEMDRIVE"].includes(name)), []);
+    assert.equal(env.PATH, ""); assert.equal(env.USERNAME, "qualification");
+    assert.equal(env.TEMP, "synthetic-owned-temporary-directory");
+    assert.doesNotMatch(JSON.stringify(env), /synthetic-must-not|NODE_OPTIONS|HF_TOKEN/);
+  } finally { names.forEach((name, i) => { if (old[i] === undefined) delete process.env[name]; else process.env[name] = old[i]; }); }
+});
+test("fixed replay process rejects bad argv, oversized input and extra fields with safe bounded copy", () => {
+  const output = freshOutput(); const env = replayEnvironment(path.resolve(output));
+  const entry = path.resolve("dev-tools/scripts/private-provider-qualification/durable-publication.ts");
+  const loader = pathToFileURL(path.resolve("node_modules/tsx/dist/loader.mjs")).href;
+  for (const [args, input] of [[[], "{}"], [["--replay", "--other"], "{}"], [["--replay"], "x".repeat(2049)], [["--replay"], '{"token":"synthetic-never-log"}']] as const) {
+    const child = spawnSync(process.execPath, ["--import", loader, entry, ...args], { cwd: process.cwd(), env, input, encoding: "utf8", timeout: 20_000, maxBuffer: 4096, windowsHide: true });
+    assert.equal(child.error, undefined); assert.equal(child.status, 1);
+    assert.equal(JSON.parse(child.stdout).status, "replay-failed");
+    assert.doesNotMatch(child.stdout, /synthetic-never|token|Bearer|stack|C:/); assert.ok(child.stdout.length <= 256);
+  }
+});
+test("production SQLite publication survives close and a fresh offline process without a second upload", async t => {
+  const output = freshOutput(); const state = await openQualificationPersistence(output); t.after(() => state.close());
+  const flow = fixtureUseCase(state.repository); await state.repository.createVersion(flow.fixture.version);
+  const published = await flow.execute(); assert.equal(published.ok, true); assert.equal(flow.calls(), 1);
+  const replay = state.verifyRestart(repo, flow.fixture.version.versionDigest, revision);
+  assert.equal(replay.fresh_process_exit_code, 0); assert.equal(replay.database_closed, true);
+  assert.equal(replay.publication_records, 1); assert.equal(replay.publisher_calls, 0); assert.equal(replay.artifact_calls, 0);
+  assert.equal(replay.version_unchanged, true); assert.equal(replay.revision_unchanged, true); assert.equal(replay.ambient_settings_absent, true);
+  await assert.rejects(() => state.repository.listVersions(flow.fixture.version.workspaceId));
+});
+test("a failed restart assertion cannot produce evidence or prevent a later exact replay", async t => {
+  const output = freshOutput(); const state = await openQualificationPersistence(output); t.after(() => state.close());
+  const flow = fixtureUseCase(state.repository); await state.repository.createVersion(flow.fixture.version); assert.equal((await flow.execute()).ok, true);
+  assert.throws(() => state.verifyRestart(repo, flow.fixture.version.versionDigest, "b".repeat(40)), DurablePublicationError);
+  assert.equal(state.verifyRestart(repo, flow.fixture.version.versionDigest, revision).fresh_process_exit_code, 0);
+});
+test("provider failure preserves local version across database restart and permits explicit successful retry", async t => {
+  const output = freshOutput(); const state = await openQualificationPersistence(output); t.after(() => state.close());
+  const failedFlow = fixtureUseCase(state.repository, true); await state.repository.createVersion(failedFlow.fixture.version);
+  assert.equal((await failedFlow.execute()).ok, false); assert.equal(failedFlow.calls(), 1);
+  assert.deepEqual(await state.repository.listPublications(failedFlow.fixture.version.workspaceId), []); state.close();
+  const reopened = await openLocalSqliteDatabase({ policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: path.resolve(output, "durable-state") }) });
+  try {
+    const repository = createStructuredDatasetVersionRepository(reopened.documents);
+    assert.deepEqual(await repository.readVersion(failedFlow.fixture.version.workspaceId, failedFlow.fixture.version.versionId), failedFlow.fixture.version);
+    assert.deepEqual(await repository.listPublications(failedFlow.fixture.version.workspaceId), []);
+    const retry = fixtureUseCase(repository); assert.equal((await retry.execute()).ok, true); assert.equal(retry.calls(), 1);
+  } finally { reopened.close(); }
+  assert.equal(state.verifyRestart(repo, failedFlow.fixture.version.versionDigest, revision).publication_records, 1);
+});
+test("run admission refuses old ownership, arbitrary paths and changed database inventory", async t => {
+  for (const output of [".local-codex/private-provider-qualification/../old", ".local-codex/other/" + randomUUID(), "C:/private/state", ".local-codex/private-provider-qualification/not-a-run"]) {
+    await assert.rejects(() => openQualificationPersistence(output));
+  }
+  const output = freshOutput(); const state = await openQualificationPersistence(output); t.after(() => state.close());
+  await assert.rejects(() => openQualificationPersistence(output));
+  const flow = fixtureUseCase(state.repository); await state.repository.createVersion(flow.fixture.version); assert.equal((await flow.execute()).ok, true); state.close();
+  writeFileSync(path.join(output, "durable-state", "persistence", "unowned.txt"), "synthetic retain");
+  assert.throws(() => state.verifyRestart(repo, flow.fixture.version.versionDigest, revision), DurablePublicationError);
+});
+
+test("restart rejects substituted owner, oversized database and hard-linked database without changing bytes", async t => {
+  for (const fault of ["owner", "oversize", "hardlink"] as const) {
+    const output = freshOutput(); const state = await openQualificationPersistence(output); t.after(() => state.close());
+    const flow = fixtureUseCase(state.repository); await state.repository.createVersion(flow.fixture.version); assert.equal((await flow.execute()).ok, true); state.close();
+    const file = path.join(output, "durable-state", "persistence", "ai-system-builder.sqlite3");
+    if (fault === "owner") writeFileSync(path.join(output, "durable-owner.json"), JSON.stringify({ run_id: path.basename(output), nonce: randomUUID() }));
+    if (fault === "oversize") writeFileSync(file, Buffer.alloc(1024 * 1024 + 1));
+    if (fault === "hardlink") linkSync(file, path.join(output, "retained-database-link"));
+    const before = readFileSync(file);
+    assert.throws(() => state.verifyRestart(repo, flow.fixture.version.versionDigest, revision), DurablePublicationError);
+    assert.deepEqual(readFileSync(file), before);
+  }
+});
+test("run admission refuses a directory link instead of adopting another fixture", async () => {
+  const target = freshOutput(); const linked = `.local-codex/private-provider-qualification/${randomUUID()}`;
+  symlinkSync(path.resolve(target), linked, process.platform === "win32" ? "junction" : "dir");
+  await assert.rejects(() => openQualificationPersistence(linked), DurablePublicationError);
+});
 test("fixed synthetic files use real documentation generator and consistent data references", () => {
   const fixture = publicationFixture();
   assert.equal(fixture.version.totalRows, 2);
