@@ -10036,18 +10036,6 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "3c277ab70c98fa6eb7f1f96e1ba8a9acd180e3e855d24ab821cf0f8d71e4e324",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "Three synthetic files remain in the private test repository for repeat tests. No remote files were deleted.",
-          "The agent must still test retry after restart, cleanup and recovery after failure.",
-          "The agent must also finish the relevant app screens, import, scale and advanced checks. No action is needed from you."
-        ]
-      }
-    },
-    {
       "kind": "support-scope",
       "source_text_sha256": "44de209dca4de380a00cd79180edc3dbea92cfbdb2ae26ccfbb34c9f81b91a1e",
       "user_description": {
@@ -10084,19 +10072,6 @@
           "If the final check fails, remote files may already exist.",
           "The app keeps the local version and reports an unconfirmed result.",
           "It does not automatically delete files, change privacy or repeat the commit."
-        ]
-      }
-    },
-    {
-      "kind": "support-limitation",
-      "source_text_sha256": "0c06cc5ea67448020379b8a43f6402bb21cf4ae452b0a244ef39248504f967d8",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "Three small test files remain in the private repository.",
-          "The agent must still test website rendering, retry after restart, failure recovery, cleanup and the mounted interface.",
-          "Large-scale ingestion and advanced runtime, native and model checks remain separate work.",
-          "Accepted model accuracy stays closed. No action is needed from you."
         ]
       }
     },
@@ -10244,6 +10219,77 @@
           "Installed graphics memory does not tell the app how much memory is free or whether a model can run.",
           "Uncertain device information and probe failures stay unknown. The app keeps the existing memory guards.",
           "Completed model-accuracy results stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7c39eb1362ba37bf750a395f7777fbb0c9d57e19d9472fe4f2f2b3dd1f875ce7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The earlier tests checked retry while the publication details were held in memory.",
+          "The later test confirms that saved publication details survive a new process. It also checks recovery after a failed publication.",
+          "The agent must still check a full app restart and recovery, provider pages, the app interface, data collection, large inputs and advanced runtime and native behavior. No remote file was deleted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9f625349f9c54ec05e951ca102102491b45d96c7041bf56e49fd15c8138c1695",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The three small test files remain private.",
+          "The later test confirms that saved publication details survive a new process. A full app restart and recovery still need testing.",
+          "The agent must also test provider pages, the app interface, large inputs and advanced runtime and native behavior. Completed model-accuracy checks stay closed. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "313988eda72cc380f2759f270f7ba681d9626e1dec9853e451a84d83060e591a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A real private-publication test saved the publication details and downloaded three files at the exact published version.",
+          "After closing the database, a new process found the same saved version, the same published version and one publication record. Retry made no upload or file-read call.",
+          "All 20 helper tests, four publication tests, type checks and three workflow checks passed. A separate 24-test check used only committed code plus this change.",
+          "Independent review passed, and the helper change is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7e9483705e02b0cc7c059718218372d0e42987bc5f697e0abaa1ccd1120e62e0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The real provider test used the current working copy. Separate tests proved that the change also works with the committed code.",
+          "These results complete only the listed software checks. They do not complete the parent criterion, increment or roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ac40ec3e806c02f240651ce82b252206f26ec1b7cb652d94db03ca83764fd942",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The new process reopened saved publication details and retried without network access.",
+          "This does not prove a complete desktop or server restart, crash recovery, protection against file changes or safe low-memory mode."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "821121e0d17d7d1461ac47f4aedea82fc8ef3ac19ddee66c779061686d7a1949",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The three test files remain in the private repository. The small local test database is also retained. No remote file was deleted, and privacy settings did not change.",
+          "The agent must still test provider pages, the app interface, full app restart and recovery, large data collection and advanced runtime and native behavior.",
+          "Completed model-accuracy checks stay closed. No action is needed from you."
         ]
       }
     }

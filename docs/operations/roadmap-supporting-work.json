@@ -2456,7 +2456,7 @@
       "limitations": [
         "This is reviewed application/provider support at its recorded working-source snapshot. Isolated committed-source compatibility tests do not rebind the live runs. It does not qualify a parent criterion, increment or roadmap.",
         "The provider returned the generated documentation bytes correctly. Separate website requests returned HTTP 401, so website rendering remains unqualified; the existing token still works for approved API transfers. No extra credential request is inferred.",
-        "Three synthetic files remain in the private test repository for replay. No remote files were deleted. Durable host retry, meaningful cleanup/failure recovery, mounted UI, governed ingestion, scale and advanced/native/model checks remain pending agent work."
+        "The original support used immediate in-memory retry only. Later durable-publication support separately verifies fixed metadata-process restart and synthetic failure recovery. Full host retry/recovery, provider rendering, mounted UI, governed ingestion, scale and advanced/native/runtime checks remain pending agent work. No remote file was deleted."
       ]
     },
     {
@@ -2474,7 +2474,7 @@
       "limitations": [
         "This is reviewed application/provider support at its recorded working-source snapshot. Isolated committed-source compatibility tests do not rebind the live runs. It does not qualify a parent criterion, increment or roadmap.",
         "The provider returned the generated documentation bytes correctly. Separate website requests returned HTTP 401, so website rendering remains unqualified; the existing token still works for approved API transfers. No extra credential request is inferred.",
-        "Three synthetic files remain in the private test repository for replay. No remote files were deleted. Durable host retry, meaningful cleanup/failure recovery, mounted UI, governed ingestion, scale and advanced/native/model checks remain pending agent work."
+        "The original support used immediate in-memory retry only. Later durable-publication support separately verifies fixed metadata-process restart and synthetic failure recovery. Full host retry/recovery, provider rendering, mounted UI, governed ingestion, scale and advanced/native/runtime checks remain pending agent work. No remote file was deleted."
       ]
     },
     {
@@ -2493,7 +2493,7 @@
       "limitations": [
         "This is reviewed local production support at its recorded working-source snapshot. Isolated committed-source compatibility does not rebind the live run or qualify the parent criterion, increment or roadmap.",
         "A provider owner can still change visibility during or after publication. If the final check fails, remote files may already exist; the app retains the local version, withholds success and does not automatically delete, change visibility or retry the commit.",
-        "Three small synthetic files remain in the private test repository. Website rendering, durable host retry, meaningful cleanup/failure recovery, mounted UI, ingestion scale and advanced/native/model checks remain pending agent work. Accepted model accuracy remains closed; no user action is needed."
+        "Three small synthetic files remain private. Later durable-publication support verifies a fixed metadata-process restart; full host retry/recovery, website rendering, mounted UI, ingestion scale and advanced/native/runtime checks remain pending. Accepted model accuracy stays closed; no user action is needed."
       ]
     },
     {
@@ -2566,6 +2566,24 @@
         "The physical driver observation used the production ASGI route in memory. The two host UI journeys used a declared synthetic 8 GiB capability and refused generation. Packaged worker files match source bytes; that is not a packaged Python execution test. These are separate observations, not one physical end-to-end model run.",
         "Installed accelerator total is advisory. It does not establish free VRAM, Torch compatibility, model admission, native process ownership or offload safety. Uncertain masks, MIG, multiple devices, driver errors or unconfirmed probe retirement remain unknown. Existing memory guards and accepted accuracy results are unchanged.",
         "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "controlled-provider-publication-is-qualified",
+      "work_id": "private-provider-durable-publication-retry",
+      "work_criteria": [
+        "durable-zero-upload-retry",
+        "failure-and-helper-boundaries"
+      ],
+      "receipt_digest": "25b1f5320310a840a2fba2606e65e073e28c19a134ecc44375f9961261334247",
+      "review_digest": "3c05bc57874dd673b61c5f495fd245fd50908771cee5f5151347fba169942fbd",
+      "scope": "An actual private test saved SQLite metadata, downloaded three exact-revision files, closed the database and retried in a fresh offline process. Version and revision stayed unchanged; one record remained with zero publisher or artifact calls. The 20 helper tests, four owning tests, strict types and three registered checks passed. A separate 24-test committed-source check and independent review passed. The helper is committed.",
+      "limitations": [
+        "This is reviewed local application/provider support at the recorded full working-source snapshot. The separate exact committed-source-plus-five compatibility check passed 24 tests. Neither observation grants a parent criterion, increment, roadmap or current parent qualification.",
+        "The fresh process reopened the fixed synthetic SQLite metadata and retried the application command offline. This is not a complete desktop or server restart, crash recovery, hostile filesystem protection or native/offload proof.",
+        "The three synthetic files remain in the private repository; no remote file was deleted and no visibility change occurred. The small local synthetic metadata database is retained. Provider website rendering, mounted-host UI, full host retry/recovery, governed ingestion scale and advanced/native/runtime checks remain pending agent work. Accepted model accuracy stays closed. No user action is needed."
       ]
     }
   ]

@@ -54,7 +54,7 @@
   "scope_limits": [
     "Live provider evidence used the recorded full working-source graph. Independent review proved that the final plan-only correction leaves executed provider behavior unchanged. The isolated HEAD-plus-helper tests establish dependency compatibility, not new external qualification.",
     "Documentation bytes were generated and downloaded with matching hashes. The separate read-only bearer-authenticated website probe returned HTTP 401 for both pages; provider-side rendering is not qualified. The existing token remains valid for authorized API operations.",
-    "Immediate application retry is qualified only against the same in-memory version repository. Process-restart durable retry, meaningful cleanup and failure recovery, mounted-host UI, governed ingestion, large-file/website scale and advanced runtime/model/OCR remain pending agent work. No native/offload/model pass is asserted."
+    "This original support record tested immediate retry only in memory. The later durable_retry record separately qualifies fixed metadata-process restart and synthetic failure recovery. Full host restart/recovery, mounted UI, provider rendering, governed ingestion, scale and advanced/native/runtime qualification remain pending; no model accuracy rerun or parent pass is implied."
   ],
   "parent_qualification": false,
   "human_action_required": false,
@@ -105,7 +105,88 @@
     "scope_limits": [
       "Actual private replay ran the recorded working source graph. Offline committed-source compatibility is separate evidence; neither is a parent pass.",
       "Provider owners can change visibility during or after a request. A final unconfirmed result may already have created a remote commit; no automatic deletion, visibility change or hidden retry is performed.",
-      "Provider rendering, durable host retry, meaningful cleanup/failure recovery, mounted UI, ingestion scale and advanced/native/model checks remain pending. Completed Standard model quality is not rerun."
+      "This visibility support did not qualify a durable host restart. See durable_retry for the later fixed metadata-process restart proof. Full host retry/recovery, website rendering, mounted UI, ingestion scale and advanced/native/runtime checks remain pending. Accepted model accuracy stays closed; no user action is needed."
+    ],
+    "parent_qualification": false,
+    "human_action_required": false
+  },
+  "durable_retry": {
+    "status": "reviewed-local-support-parent-pending",
+    "work_id": "private-provider-durable-publication-retry",
+    "receipt_digest": "25b1f5320310a840a2fba2606e65e073e28c19a134ecc44375f9961261334247",
+    "review_digest": "3c05bc57874dd673b61c5f495fd245fd50908771cee5f5151347fba169942fbd",
+    "commit": "7434194b76bb47df822830d2a12000eab7f1640b",
+    "actual_observation_sha256": "860054949841f6ef88e46b8c0ce5ccdda641d938c723f8fe95cde1823743d52c",
+    "actual_summary_sha256": "e588cdac0ac3750f59e9d3792fe404813ad16bd10a22c5bf939cf65a00a5b923",
+    "actual_source_digest": "a25987cb19a4f30ba820f92d2c463bad44a6320cdce5e1c90b2f2aa00bbbe8c4",
+    "source_unchanged_during_observation": true,
+    "actual_seconds": 6.295999999972992,
+    "private_revision": "7bbc6858caacc78253a9d5123bc63b84d34c317a",
+    "repository_private": true,
+    "immutable_files": [
+      {
+        "sha256": "2f0a396feb5a6ccecffb94769067c4eead4141ddb422f30ec23defa73e719885",
+        "size_bytes": 362
+      },
+      {
+        "sha256": "c1ae6ccd4b0b33fae34cd138cf8e1e2782a7409ae8b54f8c3922cad50261b50f",
+        "size_bytes": 1085
+      },
+      {
+        "sha256": "7a2b64de472410eb36499d6033879667ec792613909b0c82245b8acc8799a0d4",
+        "size_bytes": 96
+      }
+    ],
+    "actual_transport": {
+      "requests": 8,
+      "commits": 1,
+      "creates": 0
+    },
+    "immediate_application_retry_added_requests": 0,
+    "fresh_process_retry": {
+      "schema_version": "private-publication-replay-v1",
+      "version_unchanged": true,
+      "revision_unchanged": true,
+      "publication_records": 1,
+      "publisher_calls": 0,
+      "artifact_calls": 0,
+      "database_closed": true,
+      "ambient_settings_absent": true,
+      "fresh_process_exit_code": 0,
+      "stdout_sha256": "0765c0febf539d49720674206946c31ac5c5f0492398ca3b7071c61dc231c45a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "Production SQLite metadata close/reopen and offline application retry in a fixed new process; not a full app restart or native filesystem qualification."
+    },
+    "anonymous_denied": true,
+    "invalid_credential_denied": true,
+    "unconfirmed_public_denied_before_network": true,
+    "local_payload_files_written": 0,
+    "synthetic_metadata_database_retained": true,
+    "remote_synthetic_files_retained": 3,
+    "remote_files_deleted": 0,
+    "checks": {
+      "registered": [
+        "documentation",
+        "architecture",
+        "focused-tests"
+      ],
+      "helper_tests": 20,
+      "owning_publication_tests": 4,
+      "isolated_head_plus_owned_helper_tests": 20,
+      "isolated_head_plus_owned_publication_tests": 4,
+      "isolated_failures": 0,
+      "isolated_skips": 0,
+      "strict_types_passed": true,
+      "isolated_evidence_sha256": "03f26759ea1712cb8a354fe2efd3918e8332e93f8dca1e2a35c45eaaf1fd6bbb"
+    },
+    "failed_attempts_preserved": {
+      "initial_isolated_report_sha256": "ef3d4d1d33120c2055c667aeaed604afe9508e71d5920e277daf01d4465806ae",
+      "explanation": "The first deep-path sandboxed isolated run passed14/failed6 helper tests; the owning4 passed. Its failure involved SQLite open errors and fixture-link permission errors. A new short-path permitted-environment run passed; path and permissions changed together, so their individual causal contribution is not claimed. Earlier local loader/environment diagnostic failures are retained too."
+    },
+    "scope_limits": [
+      "This is reviewed local application/provider support at the recorded full working-source snapshot. The separate exact committed-source-plus-five compatibility check passed 24 tests. Neither observation grants a parent criterion, increment, roadmap or current parent qualification.",
+      "The fresh process reopened the fixed synthetic SQLite metadata and retried the application command offline. This is not a complete desktop or server restart, crash recovery, hostile filesystem protection or native/offload proof.",
+      "The three synthetic files remain in the private repository; no remote file was deleted and no visibility change occurred. The small local synthetic metadata database is retained. Provider website rendering, mounted-host UI, full host retry/recovery, governed ingestion scale and advanced/native/runtime checks remain pending agent work. Accepted model accuracy stays closed. No user action is needed."
     ],
     "parent_qualification": false,
     "human_action_required": false
