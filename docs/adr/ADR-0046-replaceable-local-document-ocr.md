@@ -162,3 +162,26 @@ unsupported documents can be skipped. Standard extraction imports no supplier.
 Current private normalization support does not advertise readiness or replace
 upstream source authorization, native path-race proof, public task contracts or
 actual desktop/browser qualification.
+
+## Private staged-source capture
+
+Reuse the private native read-lease mechanics for one explicitly bound staged
+PDF without broadening the fixed helper-resource factory. Require canonical
+local-drive task staging, one generated direct child, artifact/context coherence,
+positive bytes at most 16 MiB and an exact expected SHA256. Pin non-reparse
+ancestors before the single-link regular leaf. This protects named identities
+and file sharing; it does not prevent directory child creation. An unconfirmed
+close retains its exact owner and permanently fences later capture in that
+process, with no stale-handle close retry or reset.
+
+Capture returns immutable bytes only after integrity and native retirement.
+Cancellation occurs between bounded synchronous reads; no hard disk-I/O deadline
+is asserted. Application authorization and host-compiled source bindings remain
+required integration, separate from this private adapter. Product OCR stays
+unavailable until those controls and actual task/UI qualification pass.
+
+Require `GetDriveTypeW` on the explicit drive anchor to return `DRIVE_FIXED`
+before acquiring file handles. Drive-letter syntax and `FILE_TYPE_DISK` alone
+do not establish local media. Unknown, remote, removable and failed queries deny.
+See the [Windows drive-type API](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdrivetypew)
+and [file-type API](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfiletype).

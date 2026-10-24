@@ -748,3 +748,28 @@ Portable and actual fixed-resource synthetic normalization evidence supports thi
 adapter only. Public task/capability, native source authority, both-host delivery
 and parent qualification remain separate. Old offload and accepted model quality
 are unchanged. Rollback must preserve denial rather than silently drop OCR options.
+
+## Bound staged-PDF capture
+
+Private PDF bytes and source lineage cross a native file boundary. The private
+snapshot adapter checks canonical local task-stage and direct-child syntax,
+exact artifact/context coherence, bounded expected length and SHA256. These are
+integrity checks, not source authorization: the application must compile the
+binding from its authorized retrieved byte copy before public OCR integration.
+
+Read leases reject reparse points, non-regular files and multiple hard links;
+pin ancestors before descendants; deny file write/delete and ancestor deletion;
+and compare one immutable bounded capture with the expected bytes. Cancellation
+is checked between 64 KiB synchronous reads. It does not promise an asynchronous
+hard deadline for a blocked operating-system call or a directory child fence.
+Every acquired close is attempted independently. Unknown retirement retains the
+exact owner and denies later capture without resetting or retrying stale handles.
+Errors and representations exclude private identifiers, paths and source text.
+Actual synthetic sharing/reparse/content checks support this private slice only;
+upstream authorization, task/capability/UI delivery and broader R30 qualification
+remain required. No historical offload tree or restricted legacy work is touched.
+
+A mapped network drive can have a canonical drive letter and disk-file type.
+The snapshot adapter therefore requires a typed `GetDriveTypeW` result of
+`DRIVE_FIXED` for the explicit anchor before opening files. All other or failed
+queries deny; no current-drive fallback or network-share probe is performed.

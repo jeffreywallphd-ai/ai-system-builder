@@ -1111,6 +1111,7 @@
         "modules/adapters/runtime/python/worker/tests/test_ocr_recognition.py",
         "modules/adapters/runtime/python/worker/tests/test_document_normalization_ocr.py",
         "modules/adapters/runtime/python/worker/tests/test_document_normalization.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py",
         "dev-tools/scripts/native/tests/test_build_windows_ocr.py",
         "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
       ],
@@ -1153,7 +1154,10 @@
         "modules/adapters/runtime/python/worker/tasks/document_normalization.py",
         "modules/adapters/runtime/python/worker/tests/test_ocr_recognition.py",
         "modules/adapters/runtime/python/worker/tests/test_document_normalization_ocr.py",
-        "modules/adapters/runtime/python/worker/tests/test_document_normalization.py"
+        "modules/adapters/runtime/python/worker/tests/test_document_normalization.py",
+        "modules/adapters/runtime/python/worker/ocr/source_snapshot.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py",
+        "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py"
       ]
     }
   }

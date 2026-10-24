@@ -76,7 +76,9 @@ class _Resource:
             return False
         return True
 
-    def pin(self, path, *, directory=False, maximum=0):
+    def pin(self, path, *, directory=False, maximum=0, check_cancelled=None):
+        if check_cancelled is not None:
+            check_cancelled()
         # Attribute-only directory handles do not participate in delete-sharing
         # checks. Request LIST_DIRECTORY too, without enumerating any contents.
         access = 0x81 if directory else 0x80000000
@@ -85,6 +87,8 @@ class _Resource:
         handle = self.native.k.CreateFileW(str(path), access, sharing, None, 3, flags, None)
         need(handle and handle != c.c_void_p(-1).value, "resource-open")
         self.handles.append(handle)
+        if check_cancelled is not None:
+            check_cancelled()
         info = FileInfo()
         need(not self.native.inheritable(handle) and
              self.native.k.GetFileType(handle) == 1 and
@@ -98,8 +102,12 @@ class _Resource:
         data = bytearray()
         buffer = c.create_string_buffer(65536)
         while True:
+            if check_cancelled is not None:
+                check_cancelled()
             count = c.c_uint32()
             need(self.native.k.ReadFile(handle, buffer, len(buffer), c.byref(count), None), "resource-read")
+            if check_cancelled is not None:
+                check_cancelled()
             if not count.value:
                 break
             data.extend(buffer.raw[:count.value])

@@ -309,11 +309,17 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         forge_source = "apps/desktop/forge.config.js"
         native_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
         document_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, build_test, hook_test])
+        source_test = "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py"
+        source_native = "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py"
+        source_capture = "modules/adapters/runtime/python/worker/ocr/source_snapshot.py"
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
         self.assertNotIn(document_test, profile["test_paths"])
+        self.assertIn(source_native, profile["source_paths"])
+        self.assertNotIn(source_native, profile["test_paths"])
+        self.assertIn(source_capture, profile["source_paths"])
         self.assertIn(source, profile["source_paths"])
         commands = run_focused_checks.profile_commands(root, name)
         self.assertEqual(commands, [["node", "--test", "--", hook_test],
@@ -324,7 +330,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                                       "-s", "modules/adapters/runtime/python/worker/tests", "-p", name]
                                      for name in ["test_document_normalization.py", "test_document_normalization_ocr.py",
                                                   "test_ocr_process.py", "test_ocr_protocol.py", "test_ocr_provider.py",
-                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_wire.py"]]])
+                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_source_snapshot.py", "test_ocr_wire.py"]]])
         config = "dev-tools/config/contributor-check-profiles.json"
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
         for paths, required, expected_ocr, expected_generic in [
@@ -340,6 +346,9 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             ([normalization_source], ["documentation"], True, False),
             ([native_test], ["documentation"], True, False),
             ([document_test], ["documentation"], True, False),
+            ([source_test], ["documentation"], True, False),
+            ([source_native], ["documentation"], True, False),
+            ([source_capture], ["documentation"], True, False),
             ([build_test], ["documentation"], True, False),
             ([hook_test], ["documentation"], True, False),
             ([build_source], ["documentation"], True, False),

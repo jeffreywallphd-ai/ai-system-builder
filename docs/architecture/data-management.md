@@ -781,3 +781,19 @@ fields are hidden from representations. Text hygiene is not OCR accuracy.
 Cancellation and OCR-specific failures bypass ordinary unsupported-file skipping.
 Public capability/task integration, source staging and both-host UI evidence
 remain required before product availability or parent-roadmap closure.
+
+## OCR staged-source snapshot boundary
+
+The managed-runtime adapter owns private native PDF capture, not source
+authorization. Its exact stage/artifact/child/length/digest binding must later be
+compiled from the application's authorized retrieved bytes. It reuses the OCR
+native read lease while keeping the trusted helper-resource factory fixed.
+Pinned non-reparse ancestors and a single-link file deny write/delete and
+ancestor replacement through the bounded capture. Every close must acknowledge
+before bytes return; uncertainty retains ownership and fences successors.
+This is neither a child-creation fence nor a retained offload-tree control.
+Synchronous disk cancellation is checked between bounded reads. The component
+does not make OCR available or qualify public task, capability or host delivery.
+
+Before file acquisition, the adapter queries the explicit drive anchor and
+requires fixed local media. Drive-letter syntax is not a network-drive guard.

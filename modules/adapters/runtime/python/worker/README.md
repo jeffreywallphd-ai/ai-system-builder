@@ -429,3 +429,25 @@ fields are excluded from diagnostic representations. OCR admission, read,
 identity, supplier and cancellation failures cannot become unsupported-file skips.
 This private support does not enable public OCR. Contract/capability, task
 cancellation, actual source staging and desktop/browser journeys still need work.
+
+## Private staged-PDF snapshot
+
+`ocr/source_snapshot.py` privately captures one exact direct-child PDF from a
+task-owned local stage. Its binding carries the artifact, generated file name,
+expected byte count and SHA256; upstream application authorization must supply
+those values from the authorized retrieved byte copy. A binding is not authority.
+Windows read leases pin non-reparse ancestors and a single-link regular file,
+deny file write/delete and ancestor deletion, and retain uncertain closes.
+Cancellation is observed between 64 KiB synchronous reads, without claiming a
+hard deadline for an operating-system disk call. Bytes return only after exact
+integrity checks and acknowledged retirement. The fixed resource factory stays
+fixed. This component does not advertise OCR or qualify task/host integration.
+The separate `tests/qualification_ocr_source_snapshot.py --native` operator uses
+only fresh synthetic trees and the current fixed product resource; it never
+builds, downloads, inspects old staging or reruns model accuracy.
+Extra qualification probe handles have their own retained-owner ledger. A failed
+or interrupted close denies further probes and never retries an uncertain handle.
+
+Capture queries the explicit drive root with typed `GetDriveTypeW` before any
+file acquisition. Only fixed local media is admitted; remote, removable, unknown
+and failed drive queries deny without opening a source.
