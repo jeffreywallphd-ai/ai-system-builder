@@ -124,7 +124,7 @@ class StorageTests(Fixture):
 class CatalogTests(Fixture):
     def test_focused_python_checks_never_expand_into_controlled_ai_suite(self):
         import run_focused_checks
-        files = {"modules/adapters/runtime/python/worker/tests/" + n: "x" for n in ("test_unit.py", "test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py")}
+        files = {"modules/adapters/runtime/python/worker/tests/" + n: "x" for n in ("test_unit.py", "test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py", "test_model_training_task_matrix_e2e.py")}
         self.put("modules/adapters/runtime/python/worker/tests/test_unit.py", "import unittest\nclass Cases(unittest.TestCase):\n    def test_value(self): pass\n")
         with patch.object(run_focused_checks, "snapshot", return_value={"files": files}):
             commands = run_focused_checks.commands(self.root, ["modules/adapters/runtime/python/worker/service.py"])

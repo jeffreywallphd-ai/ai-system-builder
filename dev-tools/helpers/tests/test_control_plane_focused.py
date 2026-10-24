@@ -44,14 +44,30 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         name = self.put('modules/adapters/example/test_invalid.py', 'def test_invalid(:\n')
         with self.assertRaises(SyntaxError): focused.python_test_command(self.root, name)
 
-    def test_bounded_owner_selection_keeps_both_controlled_ai_files_excluded(self):
+    def test_bounded_owner_selection_keeps_all_controlled_python_files_excluded(self):
         names = [self.put('modules/adapters/example/' + name, 'def test_value(): pass\n') for name in (
-            'test_normal.py', 'test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py')]
+            'test_normal.py', 'test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
+            'test_model_training_task_matrix_e2e.py')]
         foreign = self.put('modules/adapters/foreign/test_other.py', 'def test_value(): pass\n')
         with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*names, foreign], 'fixture')}):
             commands = focused.commands(self.root, [names[0]])
         self.assertEqual(len(commands), 1)
         self.assertEqual(commands[0][-1], names[0])
+
+    def test_every_controlled_python_file_is_denied_by_exact_and_profile_selection(self):
+        import json
+        from control_plane.contracts import ControlError
+        for name in ('test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
+                     'test_model_training_task_matrix_e2e.py'):
+            path = self.put('modules/adapters/example/' + name, 'def test_value(): pass\n')
+            self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
+                'schema_version': 'contributor-check-profiles-v1',
+                'profiles': {'owned': {'test_paths': [path], 'source_paths': [path]}}}))
+            with self.subTest(name=name), patch.object(focused, 'snapshot', return_value={'files': {path: 'fixture'}}):
+                with self.assertRaises(ControlError):
+                    focused.commands(self.root, [path], exact=True)
+                with self.assertRaises(ControlError):
+                    focused.profile_commands(self.root, 'owned')
 
     def test_environment_removes_all_ambient_pytest_controls_without_mutating_input(self):
         source = {'PATH': 'fixture', 'PYTEST_ADDOPTS': '-p evil --pdb', 'PYTEST_PLUGINS': 'evil', 'PYTEST_CURRENT_TEST': 'foreign', 'pytest_debug': '1', 'PYTHONOPTIMIZE': '2'}

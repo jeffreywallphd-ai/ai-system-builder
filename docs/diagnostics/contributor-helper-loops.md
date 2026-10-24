@@ -21,8 +21,12 @@ that skill, while generic snapshots, checks, and patch transport remain in
 
 The focused helper keeps class-based `unittest` discovery and uses pytest for
 files with top-level test functions. This includes fixture-based files that do
-not import pytest themselves. Both controlled AI files remain exclusive to the
-explicit AI suite. An empty collection or failed test remains a failed check.
+not import pytest themselves. The constrained-JSON and Context AI tests require
+the explicit AI suite. The model-training task matrix requires its separate
+`dev-tools/scripts/testing/run-model-training-e2e.mjs` entry point and authorized
+model assets. All three files are excluded from generic focused checks and
+non-AI profiles. These exclusions are not test passes. An empty collection or
+failed test remains a failed check.
 
 Install the developer test tools explicitly in the Python environment selected
 for verification. Use `dev-tools/helpers/requirements-tests.txt`: pytest and its

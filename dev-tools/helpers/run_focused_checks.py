@@ -17,6 +17,11 @@ from control_plane.contracts import ControlError
 from control_plane.storage import confined_path
 
 PYTEST_VERSION = "9.1.1"
+CONTROLLED_PYTHON_TESTS = frozenset({
+    "test_constrained_json_outlines_integration.py",
+    "test_context_generation_ai_e2e.py",
+    "test_model_training_task_matrix_e2e.py",
+})
 
 
 def pytest_environment(environ):
@@ -79,9 +84,8 @@ def commands(root, affected, *, exact=False):
             owners.add("/".join(parts[:2]))
         elif path.startswith("dev-tools/") and len(parts) >= 3:
             owners.add("/".join(parts[:3]))
-    # These controlled modules belong exclusively to the explicit AI suite.
-    controlled_ai = {"test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py"}
-    tests = sorted(p for p in files if (p in affected if exact else inside(p, list(owners))) and Path(p).name not in controlled_ai and (".test." in p or Path(p).name.startswith("test_") and p.endswith(".py")))
+    # Controlled modules require their explicit AI or model-training entry point.
+    tests = sorted(p for p in files if (p in affected if exact else inside(p, list(owners))) and Path(p).name not in CONTROLLED_PYTHON_TESTS and (".test." in p or Path(p).name.startswith("test_") and p.endswith(".py")))
     if not tests or len(tests) > 300:
         refuse("verification.focused-tests-unavailable", "No bounded owned test set is available.", "Add focused coverage and a tracked catalog mapping for this boundary.")
     node, vitest, python = [], [], []
@@ -121,13 +125,12 @@ def profile_commands(root, profile_id):
     if not isinstance(paths, list) or not 1 <= len(paths) <= 100 or not all(isinstance(p, str) for p in paths) or len(set(paths)) != len(paths):
         refuse("verification.profile-unavailable", "Choose a bounded registered qualification profile.")
     source = snapshot(root)["files"]
-    controlled = {"test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py"}
     for path in paths:
         relative(path)
         confined_path(root, path)
         if not path.startswith(("modules/", "apps/", "dev-tools/")) or path not in source or (
             ".test." not in path and not (Path(path).name.startswith("test_") and path.endswith(".py"))
-        ) or Path(path).name in controlled or ".ai." in path or "/tests/ai/" in path:
+        ) or Path(path).name in CONTROLLED_PYTHON_TESTS or ".ai." in path or "/tests/ai/" in path:
             refuse("verification.profile-path", "Profiles contain only available source-owned non-AI tests.")
         if re.search(r"(?m)^\s*//\s*@test-suite\s+ai\s*$", (root / path).read_text(encoding="utf-8")):
             refuse("verification.profile-ai", "Controlled AI qualification is reserved for the explicit AI suite.")
