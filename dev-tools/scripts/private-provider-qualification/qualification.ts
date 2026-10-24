@@ -62,9 +62,10 @@ export function boundedHubFetch(repository: string, facts: TransportFacts, trans
   return async (input: string | URL | Request, init: RequestInit = {}): Promise<Response> => {
     requireFact(typeof input === "string", "request-denied");
     const url = new URL(input);
-    requireFact(url.origin === ORIGIN && !url.username && !url.password && !url.search && !url.hash, "request-denied");
+    requireFact(url.origin === ORIGIN && !url.username && !url.password && !url.hash, "request-denied");
     const method = init.method ?? "GET";
     const prefix = `/api/datasets/${repository}`;
+    requireFact(!url.search || method === "GET" && url.pathname === prefix && url.search === "?expand=private", "request-denied");
     const allowed = method === "GET" && url.pathname === prefix || method === "POST" && [prefix + "/preupload/main", prefix + "/commit/main", "/api/repos/create"].includes(url.pathname);
     requireFact(allowed && init.redirect !== "follow", "request-denied");
     requireFact(++facts.requests <= MAX_REQUESTS && performance.now() - started < MAX_TIME, "request-budget");
@@ -79,7 +80,9 @@ export function boundedHubFetch(repository: string, facts: TransportFacts, trans
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20_000);
     try {
-      const response = await transport(input, { ...init, redirect: "manual", signal: controller.signal });
+      requireFact(!init.signal?.aborted, "request-cancelled");
+      const signal = init.signal ? AbortSignal.any([controller.signal, init.signal]) : controller.signal;
+      const response = await transport(input, { ...init, redirect: "manual", signal });
       requireFact(response.status < 300 || response.status >= 400, "redirect-denied");
       const reader = response.body?.getReader(); const parts: Uint8Array[] = []; let size = 0;
       try {

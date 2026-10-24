@@ -67,6 +67,28 @@ test("transport denies foreign origins, URLs, endpoints, writes and body sizes b
   assert.equal(calls, 0);
 });
 
+test("only the exact private-field metadata query is added to the existing request scope", async () => {
+  let calls = 0;
+  const bounded = boundedHubFetch(repo, facts(), (async () => { calls++; return new Response('{"private":true}'); }) as typeof fetch);
+  assert.equal((await bounded(base + "?expand=private")).status, 200);
+  for (const suffix of ["?expand=private&expand=cardData", "?expand=private&token=synthetic", "?expand=private&expand=private", "?expand=cardData", "?expand=private#fragment"]) {
+    await assert.rejects(() => bounded(base + suffix), QualificationError);
+  }
+  await assert.rejects(() => bounded(base + "?expand=private", { method: "POST" }), QualificationError);
+  await assert.rejects(() => bounded(base + "/commit/main?expand=private", { method: "POST", body: "{}" }), QualificationError);
+  assert.equal(calls, 1);
+});
+
+test("the bounded transport preserves the production metadata request's cancellation", async () => {
+  const controller = new AbortController(); let aborted = false;
+  const bounded = boundedHubFetch(repo, facts(), (async (_input, init) => new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => { aborted = true; reject(new Error("synthetic-abort")); }, { once: true });
+  })) as typeof fetch);
+  const pending = bounded(base + "?expand=private", { signal: controller.signal });
+  controller.abort(); await assert.rejects(() => pending); assert.equal(aborted, true);
+  await assert.rejects(() => bounded(base, { signal: controller.signal }), QualificationError);
+});
+
 test("create is exact private dataset only and cannot repeat", async () => {
   const f = facts(); let calls = 0;
   const fetcher = boundedHubFetch(repo, f, (async () => { calls++; return new Response("{}"); }) as typeof fetch);

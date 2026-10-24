@@ -38,6 +38,7 @@ export interface HuggingFaceFetchResponse {
   arrayBuffer: () => Promise<ArrayBuffer>;
   json: <T = unknown>() => Promise<T>;
   readonly url?: string;
+  readonly redirected?: boolean;
   readonly body?: ReadableStream<Uint8Array> | null;
 }
 
@@ -47,6 +48,8 @@ export type HuggingFaceFetchImplementation = (
     method?: string;
     headers?: Record<string, string>;
     body?: string;
+    signal?: AbortSignal;
+    redirect?: RequestRedirect;
   },
 ) => Promise<HuggingFaceFetchResponse>;
 
@@ -733,6 +736,59 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     );
   }
 
+  async function readDatasetRepositoryVisibility(
+    target: ResolvedHuggingFaceTarget,
+    token: string,
+  ): Promise<boolean | undefined> {
+    const identity = resolveRepositoryIdentity(target.repositoryName);
+    const metadataUrl = `${hubBaseUrl}/api/datasets/${encodeURIComponent(identity.namespace)}/${encodeURIComponent(identity.name)}?expand=private`;
+    const controller = new AbortController();
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unavailable = () => createContractError("unavailable", "The repository visibility could not be verified. Check the destination before retrying.", {
+      details: { reason: "repository-visibility-unverified" },
+    });
+    const read = async () => {
+      const response = await resolvedFetchImplementation(
+        metadataUrl,
+        { headers: { authorization: `Bearer ${token}`, accept: "application/json" }, signal: controller.signal, redirect: "error" },
+      );
+      if (controller.signal.aborted) { void response.body?.cancel().catch(() => {}); throw unavailable(); }
+      if (response.redirected === true || (response.url && response.url !== metadataUrl)) {
+        await response.body?.cancel(); throw unavailable();
+      }
+      if (response.status === 404) { await response.body?.cancel(); return undefined; }
+      if (!response.ok) { await response.body?.cancel(); throw unavailable(); }
+      if (extractMediaType(response.headers.get("content-type")) !== "application/json" || !response.body) {
+        await response.body?.cancel(); throw unavailable();
+      }
+      reader = response.body.getReader();
+      const parts: Uint8Array[] = []; let size = 0;
+      while (true) {
+        const next = await reader.read(); if (next.done) break;
+        size += next.value.byteLength;
+        if (size > 4096) throw unavailable();
+        parts.push(next.value);
+      }
+      const content = new Uint8Array(size); let offset = 0;
+      for (const part of parts) { content.set(part, offset); offset += part.byteLength; }
+      const metadata: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(content));
+      if (!isObjectRecord(metadata) || typeof metadata.private !== "boolean") throw unavailable();
+      return metadata.private;
+    };
+    try {
+      return await Promise.race([read(), new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => { controller.abort(); void reader?.cancel().catch(() => {}); reject(unavailable()); }, 15_000);
+      })]);
+    } catch {
+      throw unavailable();
+    } finally {
+      clearTimeout(timer);
+      void reader?.cancel().catch(() => {});
+      try { reader?.releaseLock(); } catch { /* The pending read was already aborted. */ }
+    }
+  }
+
   async function uploadWithRepoAutoCreateOnNotFound(
     hubClient: HuggingFaceHubClient,
     request: StoreArtifactInRepoRequest,
@@ -921,7 +977,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       if (request.provider !== "hugging-face") {
         throw new HuggingFaceAdapterValidationError("Dataset publication provider must be hugging-face.");
       }
-      if (request.visibility === "protected") {
+      if (request.visibility !== "private" && request.visibility !== "public") {
         throw new HuggingFaceAdapterValidationError("Hugging Face dataset publication supports private or public visibility only.");
       }
       if (request.files.length < 1 || request.files.length > maximumDatasetPublicationFiles) {
@@ -931,6 +987,9 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
         throw new HuggingFaceAdapterValidationError("Dataset publication currently supports only the main branch.");
       }
       const resolvedTarget = resolveTarget({ provider: "huggingface", repository: request.repositoryId, revision: request.branch, path: "README.md" }, defaultRepoType);
+      if (resolvedTarget.repoType !== "dataset") {
+        throw new HuggingFaceAdapterValidationError("Dataset publication requires a dataset repository.");
+      }
       const normalizedFiles = request.files.map((file) => ({
         ...file,
         path: normalizePathInRepo({ provider: "huggingface", repository: request.repositoryId, revision: request.branch, path: file.path }),
@@ -944,11 +1003,26 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       }
       token = (await getAccessToken())?.trim();
       if (!token) return createFailureResult(createAuthRequiredError("publishDatasetVersion"), requestContext);
+      let repositoryPrivate = await readDatasetRepositoryVisibility(resolvedTarget, token);
+      if (repositoryPrivate === undefined) {
+        if (!request.repositoryCreationApproved) {
+          return createFailureResult(createContractError("not-found", "The target repository does not exist. Explicit repository-creation approval is required."), requestContext);
+        }
+        const authorized = options.authorizeRepositoryCreate
+          ? await options.authorizeRepositoryCreate({ provider: HUGGING_FACE_PROVIDER, repository: resolvedTarget.repositoryName, visibility: request.visibility })
+          : true;
+        if (!authorized) return createFailureResult(createContractError("unavailable", "Provider repository creation is not authorized for this principal."), requestContext);
+        await createDatasetRepositoryIfMissing(resolvedTarget, token, request.visibility);
+        repositoryPrivate = await readDatasetRepositoryVisibility(resolvedTarget, token);
+      }
+      if (repositoryPrivate !== (request.visibility === "private")) {
+        return createFailureResult(createContractError("unavailable", "The repository visibility does not match the confirmed publication. Check the destination before retrying."), requestContext);
+      }
       const hubClient = await resolveHubClient();
       if (typeof hubClient.commit !== "function") {
         throw new HuggingFaceHubClientUnavailableError("The @huggingface/hub client does not support multi-file commits.");
       }
-      const commit = async () => hubClient.commit!({
+      const output = await hubClient.commit({
         repo: toRepoDesignation(resolvedTarget),
         branch: request.branch,
         title: `Publish dataset version ${request.versionDigest.slice("sha256:".length, "sha256:".length + 12)}`,
@@ -956,24 +1030,16 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
         operations: normalizedFiles.map((file) => ({ operation: "addOrUpdate" as const, path: file.path, content: toUploadContent(file.content, file.mediaType) })),
         accessToken: token,
       });
-      let output;
-      try {
-        output = await commit();
-      } catch (error) {
-        if (!isRepositoryMissingStatus(error)) throw error;
-        if (!request.repositoryCreationApproved) {
-          return createFailureResult(createContractError("not-found", "The target repository does not exist. Explicit repository-creation approval is required."), requestContext);
-        }
-        const authorized = options.authorizeRepositoryCreate
-          ? await options.authorizeRepositoryCreate({ provider: HUGGING_FACE_PROVIDER, repository: resolvedTarget.repositoryName, visibility: request.visibility === "public" ? "public" : "private" })
-          : true;
-        if (!authorized) return createFailureResult(createContractError("unavailable", "Provider repository creation is not authorized for this principal."), requestContext);
-        await createDatasetRepositoryIfMissing(resolvedTarget, token, request.visibility === "public" ? "public" : "private");
-        output = await commit();
-      }
       const revision = output?.commit.oid?.trim().toLowerCase();
       if (!revision || !/^[a-f0-9]{7,64}$/.test(revision)) {
         throw new Error("Hugging Face publication did not return an immutable commit identifier.");
+      }
+      let confirmed = false;
+      try { confirmed = await readDatasetRepositoryVisibility(resolvedTarget, token) === (request.visibility === "private"); } catch { /* The remote commit is uncertain, never local success. */ }
+      if (!confirmed) {
+        return createFailureResult(createContractError("unavailable", "The provider commit was created, but its visibility could not be confirmed. Keep the local version and check the destination before retrying.", {
+          details: { reason: "publication-visibility-unconfirmed" },
+        }), requestContext);
       }
       return createSuccessResult({ provider: "hugging-face" as const, repositoryId: request.repositoryId, revision }, requestContext);
     } catch (error) {
