@@ -223,6 +223,16 @@ records, API/IPC/preload responses, notification state, or logs.
 
 ## Dataset Preparation and Model Training Task Profiles
 
+The text-training adapter resolves the required base-model reference before
+loading datasets. The fixed local-format allowlist maps JSON Lines to the
+Datasets `json` builder, retaining local file paths and split roles. It never
+uses the `jsonl` format label as a remote dataset identifier. Saved-model
+validation rejects malformed or unreadable safetensors and invalid or empty
+shard indexes. Native reader failures discard partial tensor facts and return
+fixed invalid-result errors. Missing reader dependencies keep the separate
+normal-warning and publish-denial behavior. Validation reports identify the
+registered model through an opaque reference instead of its local path.
+
 Dataset preparation is the dataset-producing contract boundary. Model training is the model-producing runtime task boundary. Dataset preparation requests may declare a task profile that describes the dataset shape being prepared for a training family. Model training requests may carry the selected training task so the runtime can validate task support and tag generated model records, but model training remains responsible for base model selection, training method, hyperparameters, output registration, and validation.
 
 The shared runtime contracts define first-tier dataset preparation task types for LLM instruction tuning, LLM classification, LLM extraction, LLM embedding tuning, LLM reranking, diffusion LoRA, vision classification, vision detection, and vision segmentation. Each profile declares model family, expected output schema, supported file formats, required/optional fields, compatible training methods, and runtime support status. This profile vocabulary is intentionally contract-level metadata; it does not by itself imply that every runtime adapter can execute every profile.

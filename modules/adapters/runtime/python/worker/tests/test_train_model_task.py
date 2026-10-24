@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 from types import SimpleNamespace
 from pathlib import Path
+
+import pytest
 
 from modules.adapters.runtime.python.worker.models import TrainModelTaskRequest
 
@@ -31,8 +34,10 @@ class _FakeModel:
     def save_pretrained(self, output: str, safe_serialization: bool = True, max_shard_size: str | None = None):
         out = Path(output)
         out.mkdir(parents=True, exist_ok=True)
-        (out / "model.safetensors").write_bytes(b"tensor")
-        (out / "config.json").write_text("{}", encoding="utf-8")
+        header = json.dumps({"test.lora_A.weight": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}}).encode()
+        header += b" " * (-len(header) % 8)
+        (out / "adapter_model.safetensors").write_bytes(len(header).to_bytes(8, "little") + header + b"\x00" * 4)
+        (out / "adapter_config.json").write_text("{}", encoding="utf-8")
 
 
 class _FakeTokenizer:
@@ -336,15 +341,61 @@ def test_train_model_validates_required_inputs(tmp_path: Path) -> None:
     assert "at least one" in result.error["message"].lower()
 
 
-def test_train_model_rejects_unsupported_method(tmp_path: Path) -> None:
+def test_train_model_rejects_missing_base_model_before_loading(monkeypatch, tmp_path: Path) -> None:
     payload = _request(tmp_path)
     payload.method = "full-finetune"
     payload.baseModel.modelId = None
     payload.baseModel.localPath = None
+    def forbidden(*args, **kwargs):
+        raise AssertionError("No dataset or model load is permitted before base-model preflight.")
+    monkeypatch.setattr(train_model_module, "_load_dataset", forbidden)
+    monkeypatch.setattr(train_model_module, "_load_transformers_objects", forbidden)
 
     result = train_model_module.train_model(payload)
     assert result.status == "failed"
     assert "modelid or localpath" in result.error["message"].lower()
+
+
+@pytest.mark.parametrize("format_name,builder", [("jsonl", "json"), ("json", "json"), ("csv", "csv"), ("parquet", "parquet")])
+@pytest.mark.parametrize("explicit_format", [True, False])
+def test_local_dataset_formats_select_only_the_builtin_reader(monkeypatch, tmp_path, format_name, builder, explicit_format):
+    request = _request(tmp_path)
+    path = tmp_path / ("train." + format_name)
+    path.write_text("fixture")
+    request.datasets[0].path = str(path)
+    request.datasets[0].format = format_name if explicit_format else None
+    calls = []
+    def load_local(name, *, data_files):
+        calls.append((name, data_files))
+        assert name in {"json", "csv", "parquet"}
+        return {"train": [{"text": "fixture"}]}
+    monkeypatch.setitem(sys.modules, "datasets", SimpleNamespace(load_dataset=load_local))
+    loaded, evaluation = train_model_module._load_dataset(request)
+    assert len(loaded["train"]) == 1
+    assert evaluation is None
+    assert calls == [(builder, {"train": [str(path)]})]
+
+
+def test_local_jsonl_reader_keeps_validation_split(monkeypatch, tmp_path):
+    request = _request(tmp_path)
+    validation = request.datasets[0].model_copy(update={"artifactId": "validation-1", "splitRole": "validation"})
+    request.datasets.append(validation)
+    expected = {"train": [{"text": "train"}], "validation": [{"text": "validation"}]}
+    def load_local(name, *, data_files):
+        assert name == "json"
+        assert data_files == {"train": [validation.path], "validation": [validation.path]}
+        return expected
+    monkeypatch.setitem(sys.modules, "datasets", SimpleNamespace(load_dataset=load_local))
+    loaded, evaluation = train_model_module._load_dataset(request)
+    assert loaded is expected
+    assert evaluation is expected["validation"]
+
+
+def _tokenize_fixture(dataset, tokenizer, max_length, *, training_task, purpose_paths):
+    assert training_task in {"llm-instruction", "llm-classification"}
+    assert purpose_paths is None
+    assert max_length == train_model_module.DEFAULT_SEQUENCE_LENGTH
+    return {"train": [{"input_ids": [1], "labels": [1]}]}
 
 
 def test_train_model_routes_vision_training_task_to_multimodal_trainer(monkeypatch, tmp_path: Path) -> None:
@@ -387,7 +438,7 @@ def test_train_model_lora_path_returns_real_result_with_mocks(monkeypatch, tmp_p
     monkeypatch.setattr(train_model_module, "_load_dataset", lambda payload: ({"train": type("T", (), {"column_names": ["text"]})()}, None))
     monkeypatch.setattr(train_model_module, "_resolve_base_model", lambda payload: "org/base")
     monkeypatch.setattr(train_model_module, "_load_transformers_objects", lambda *args, **kwargs: (_FakeModel(), _FakeTokenizer()))
-    monkeypatch.setattr(train_model_module, "_tokenize_dataset", lambda dataset, tokenizer, max_length: {"train": [{"input_ids": [1], "labels": [1]}]})
+    monkeypatch.setattr(train_model_module, "_tokenize_dataset", _tokenize_fixture)
     monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
     monkeypatch.setattr(train_model_module, "_build_training_args", lambda payload, output: type("Args", (), {"output_dir": str(output / "ckpt")} )())
     monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({"loss": 0.1}, [{"path": "x", "step": 1, "metric": "loss", "value": 0.1}]))
@@ -409,7 +460,7 @@ def test_train_model_invalid_validation_fails_and_blocks_generated_registration(
     monkeypatch.setattr(train_model_module, "_load_dataset", lambda payload: ({"train": type("T", (), {"column_names": ["text"]})()}, None))
     monkeypatch.setattr(train_model_module, "_resolve_base_model", lambda payload: "org/base")
     monkeypatch.setattr(train_model_module, "_load_transformers_objects", lambda *args, **kwargs: (_FakeModel(), _FakeTokenizer()))
-    monkeypatch.setattr(train_model_module, "_tokenize_dataset", lambda dataset, tokenizer, max_length: {"train": [{"input_ids": [1], "labels": [1]}]})
+    monkeypatch.setattr(train_model_module, "_tokenize_dataset", _tokenize_fixture)
     monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
     monkeypatch.setattr(train_model_module, "_build_training_args", lambda payload, output: type("Args", (), {"output_dir": str(output / "ckpt")} )())
     monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({"loss": 0.1}, []))
@@ -431,7 +482,7 @@ def test_train_model_validation_disabled_marks_unknown(monkeypatch, tmp_path: Pa
     monkeypatch.setattr(train_model_module, "_load_dataset", lambda payload: ({"train": type("T", (), {"column_names": ["text"]})()}, None))
     monkeypatch.setattr(train_model_module, "_resolve_base_model", lambda payload: "org/base")
     monkeypatch.setattr(train_model_module, "_load_transformers_objects", lambda *args, **kwargs: (_FakeModel(), _FakeTokenizer()))
-    monkeypatch.setattr(train_model_module, "_tokenize_dataset", lambda dataset, tokenizer, max_length: {"train": [{"input_ids": [1], "labels": [1]}]})
+    monkeypatch.setattr(train_model_module, "_tokenize_dataset", _tokenize_fixture)
     monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
     monkeypatch.setattr(train_model_module, "_build_training_args", lambda payload, output: type("Args", (), {"output_dir": str(output / "ckpt")} )())
     monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({"loss": 0.1}, []))

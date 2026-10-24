@@ -25,6 +25,17 @@ UI capacity profile is never physical hardware or model qualification.
 
 ## Scope
 
+The text-training local reader admits only the supported format allowlist and
+maps JSON Lines to the built-in JSON builder. A missing base-model reference
+fails before dataset or model loading. Corrupt safetensors, tensor-read failures
+and malformed or empty shard indexes produce invalid validation results.
+Reader failures discard partial tensor keys and shapes and expose only fixed
+messages, without native exceptions or paths. Missing reader dependencies remain
+an explicit incomplete check and deny publish-bound validation. These controls
+do not establish model quality, native file ownership or physical training
+qualification; offline synthetic tests and actual local-file reads are separate
+from those checks.
+
 This model covers workspace source selection, local and Hugging Face staging, structured and document parsing, optional local-model generation, quality policy resolution, curation and quarantine, split creation, human approval, task lifecycle transport, result materialization, immutable dataset versions, publication evidence, warnings, and diagnostics. Artifact Browser handoffs into Context Management are additionally governed by `docs/security/context-management-threat-model.md`.
 
 ## Protected assets

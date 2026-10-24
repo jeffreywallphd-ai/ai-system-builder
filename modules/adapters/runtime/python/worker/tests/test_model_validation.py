@@ -81,6 +81,7 @@ def test_validate_sharded_safetensors_detects_missing_shard(tmp_path: Path) -> N
 
     assert result["status"] == "invalid"
     assert result["shardCount"] == 2
+    assert result["tensorChecksCompleted"] is False
 
 
 @pytest.mark.parametrize(
@@ -242,4 +243,131 @@ def test_publish_strict_validation_fails_when_tensor_checks_are_skipped(monkeypa
     assert result["tensorChecksCompleted"] is False
     assert diff["tensorChecksCompleted"] is False
     assert diff["validationStrictness"] == "publish"
-    assert diff["validatedModelPath"] == str(tmp_path)
+    assert diff["validatedModelRef"] == "registered-model"
+    assert "validatedModelPath" not in diff
+    assert "validatedModelPath" not in result
+    assert str(tmp_path) not in (tmp_path / "model_validation_diff.json").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("strictness", ["normal", "publish"])
+@pytest.mark.parametrize("kind", ["full", "adapter", "diffusers", "sharded"])
+def test_corrupt_tensor_files_return_sanitized_invalid_result(tmp_path, strictness, kind):
+    filename = {
+        "full": "model.safetensors", "adapter": "adapter_model.safetensors",
+        "diffusers": "pytorch_lora_weights.safetensors", "sharded": "part.safetensors",
+    }[kind]
+    (tmp_path / filename).write_bytes(b"invalid tensor header")
+    (tmp_path / "config.json").write_text("{}")
+    if kind in {"adapter", "diffusers"}:
+        (tmp_path / "adapter_config.json").write_text("{}")
+    if kind == "sharded":
+        (tmp_path / "model.safetensors.index.json").write_text(json.dumps({"weight_map": {"weight": filename}}))
+    result = validate_model_output(tmp_path, validation_strictness=strictness)
+    diff_text = (tmp_path / "model_validation_diff.json").read_text()
+    report_text = (tmp_path / "model_validation_report.md").read_text()
+    assert result["status"] == "invalid"
+    assert result["tensorChecksCompleted"] is False
+    assert "Safetensors weights could not be read or validated." in result["errors"]
+    assert json.loads(diff_text)["tensorCount"] == 0
+    for text in (diff_text, report_text, json.dumps(result["errors"])):
+        assert str(tmp_path) not in text
+        assert "SafetensorError" not in text
+        assert "invalid tensor header" not in text
+
+
+@pytest.mark.parametrize("failure", ["open", "keys", "tensor", "shape"])
+@pytest.mark.parametrize("strictness", ["normal", "publish"])
+def test_tensor_reader_failures_discard_partial_observations(monkeypatch, tmp_path, failure, strictness):
+    secret = "PRIVATE_READER_ERROR_DO_NOT_DISCLOSE"
+    class Reader(_FakeSafeTensorReader):
+        def keys(self):
+            if failure == "keys":
+                raise RuntimeError(secret)
+            return ["first", "broken"]
+        def get_tensor(self, key):
+            if key == "broken":
+                if failure == "tensor":
+                    raise RuntimeError(secret)
+                if failure == "shape":
+                    return type("BadShape", (), {"shape": [secret]})()
+            return super().get_tensor(key)
+    def open_reader(*args, **kwargs):
+        if failure == "open":
+            raise RuntimeError(secret)
+        return Reader({"first": [1], "broken": [2]})
+    monkeypatch.setattr(validation_module, "_safe_open_module", lambda: open_reader)
+    (tmp_path / "model.safetensors").write_bytes(b"fixture")
+    (tmp_path / "config.json").write_text("{}")
+    result = validate_model_output(tmp_path, validation_strictness=strictness)
+    diff = json.loads((tmp_path / "model_validation_diff.json").read_text())
+    assert result["status"] == "invalid"
+    assert result["tensorChecksCompleted"] is False
+    assert diff["tensorCount"] == 0
+    assert diff["tensorShapeSummary"] == {}
+    assert secret not in json.dumps(result)
+    assert secret not in (tmp_path / "model_validation_report.md").read_text()
+
+
+@pytest.mark.parametrize("index", [[], None, {"weight_map": {}}, {"weight_map": []}])
+def test_invalid_or_empty_shard_index_is_a_structured_invalid_result(tmp_path, index):
+    (tmp_path / "model.safetensors.index.json").write_text(json.dumps(index))
+    (tmp_path / "config.json").write_text("{}")
+    result = validate_model_output(tmp_path)
+    assert result["status"] == "invalid"
+    assert result["tensorChecksCompleted"] is False
+    assert json.loads((tmp_path / "model_validation_diff.json").read_text())["tensorChecksCompleted"] is False
+    assert "model.safetensors.index.json weight_map is invalid." in result["errors"]
+
+
+@pytest.mark.parametrize("strictness", ["normal", "publish"])
+@pytest.mark.parametrize("bad_first", [False, True])
+def test_unreadable_shard_invalidates_all_tensor_facts_in_either_order(monkeypatch, tmp_path, strictness, bad_first):
+    members = [("safe.lora_A.weight", "good.safetensors"), ("other.recurrent.weight", "bad.safetensors")]
+    if bad_first:
+        members.reverse()
+    (tmp_path / "model.safetensors.index.json").write_text(json.dumps({"weight_map": dict(members)}))
+    (tmp_path / "config.json").write_text("{}")
+    for filename in ("good.safetensors", "bad.safetensors"):
+        (tmp_path / filename).write_bytes(b"fixture")
+    calls = []
+    def read_shard(path, **kwargs):
+        calls.append(Path(path).name)
+        if Path(path).name == "bad.safetensors":
+            raise RuntimeError("PRIVATE_SHARD_ERROR")
+        return _FakeSafeTensorReader({"safe.lora_A.weight": [2, 2]})
+    monkeypatch.setattr(validation_module, "_safe_open_module", lambda: read_shard)
+    result = validate_model_output(tmp_path, validation_strictness=strictness)
+    diff_text = (tmp_path / "model_validation_diff.json").read_text()
+    diff = json.loads(diff_text)
+    assert result["status"] == "invalid"
+    assert result["tensorChecksCompleted"] is False
+    assert diff["tensorCount"] == 0
+    assert diff["tensorShapeSummary"] == {}
+    assert diff["detectedLoRAKeys"] == []
+    assert diff["detectedRecurrentKeys"] == []
+    assert diff["missingTensorKeys"] == []
+    assert result["detectedLoRA"] is False
+    assert result["detectedRecurrentAdditions"] is False
+    assert calls == (["bad.safetensors"] if bad_first else ["good.safetensors", "bad.safetensors"])
+    assert "PRIVATE_SHARD_ERROR" not in json.dumps(result)
+    assert "PRIVATE_SHARD_ERROR" not in diff_text
+
+
+def test_empty_readable_shard_still_reports_missing_indexed_key(monkeypatch, tmp_path):
+    (tmp_path / "model.safetensors.index.json").write_text(json.dumps({"weight_map": {"required": "part.safetensors"}}))
+    (tmp_path / "part.safetensors").write_bytes(b"fixture")
+    (tmp_path / "config.json").write_text("{}")
+    _mock_safe_open(monkeypatch, {"part.safetensors": {}})
+    result = validate_model_output(tmp_path)
+    assert result["status"] == "invalid"
+    assert any("part.safetensors:required" in error for error in result["errors"])
+
+
+def test_missing_reader_dependency_remains_warning_for_normal_validation(monkeypatch, tmp_path):
+    (tmp_path / "model.safetensors").write_bytes(b"fixture")
+    (tmp_path / "config.json").write_text("{}")
+    monkeypatch.setattr(validation_module, "_safe_open_module", lambda: None)
+    result = validate_model_output(tmp_path)
+    assert result["status"] == "warning"
+    assert result["tensorChecksCompleted"] is False
+    assert not result["errors"]

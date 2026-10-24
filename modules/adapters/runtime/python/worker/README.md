@@ -89,6 +89,15 @@ Dependency files:
   also uses a context-specific asynchronous probe/install/re-probe before
   explicit RAG create, inspect, or query work. The worker itself never runs pip.
 
+Text training requires a base-model reference before loading its datasets.
+Local JSON Lines files use Datasets' built-in `json` reader; `jsonl` is a file
+format, not a Hub dataset name. CSV, JSON and Parquet keep their existing readers.
+Safetensors validation returns an invalid result for unreadable weights or an
+invalid or empty shard index. Native read failures use fixed messages and discard
+partial tensor observations. A missing reader dependency remains a warning in
+normal validation and an error for publication; it is distinct from corrupt data.
+Reports retain the opaque registered-model reference and omit the model path.
+
 Optional token-constrained JSON generation uses exact, conditionally installed
 pins in `requirements.txt`: Outlines `1.3.2`, Outlines Core `0.2.14`, and
 jsonschema `4.26.0`. These packages are installed and probed only for Python

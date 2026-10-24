@@ -229,7 +229,9 @@ def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
     if validation_files:
         dataset_dict["validation"] = validation_files
 
-    loaded = load_dataset(dataset_format, data_files=dataset_dict)
+    # JSON Lines uses Datasets' built-in local JSON reader, not a Hub dataset.
+    builder = "json" if dataset_format == "jsonl" else dataset_format
+    loaded = load_dataset(builder, data_files=dataset_dict)
     if len(loaded["train"]) == 0:
         raise ValueError("Training dataset is empty; refusing to train.")
     return loaded, loaded["validation"] if "validation" in loaded else None
@@ -700,8 +702,8 @@ def train_model(
         if on_progress is not None:
             on_progress({"stage": "initializing", "message": "Loading training datasets and model assets..."})
 
-        dataset, eval_dataset = _load_dataset(payload)
         base_model_ref = _resolve_base_model(payload)
+        dataset, eval_dataset = _load_dataset(payload)
 
         advanced = _to_dict(payload.advancedParameters)
         quantization = _to_dict(advanced.get("quantization"))

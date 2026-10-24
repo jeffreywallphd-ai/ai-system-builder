@@ -38,24 +38,26 @@ def _safe_open_module() -> Any | None:
         return None
 
 
-def _read_safetensors_tensors(path: Path) -> tuple[set[str], dict[str, list[int]], str | None]:
+def _read_safetensors_tensors(path: Path) -> tuple[set[str], dict[str, list[int]], str | None, str | None]:
     safe_open = _safe_open_module()
     if safe_open is None:
-        return set(), {}, "safetensors dependency is unavailable; tensor-level checks were skipped."
+        return set(), {}, "safetensors dependency is unavailable; tensor-level checks were skipped.", None
 
     keys: set[str] = set()
     shapes: dict[str, list[int]] = {}
-    with safe_open(str(path), framework="pt", device="cpu") as file_obj:
-        for key in file_obj.keys():
-            keys.add(key)
-            try:
+    try:
+        with safe_open(str(path), framework="pt", device="cpu") as file_obj:
+            for key in file_obj.keys():
                 tensor = file_obj.get_tensor(key)
                 shape = getattr(tensor, "shape", None)
-                if shape is not None:
-                    shapes[key] = [int(dimension) for dimension in shape]
-            except Exception:
-                continue
-    return keys, shapes, None
+                if shape is None:
+                    raise ValueError("Tensor shape is unavailable.")
+                shapes[key] = [int(dimension) for dimension in shape]
+                keys.add(key)
+    except Exception:
+        # Never publish native exceptions, paths or partially inspected tensors.
+        return set(), {}, None, "Safetensors weights could not be read or validated."
+    return keys, shapes, None, None
 
 
 def _resolve_contained_shard(output_dir: Path, shard_name: str) -> Path:
@@ -102,8 +104,8 @@ def _read_safetensors_index(output_dir: Path) -> tuple[dict[str, str], list[str]
     except Exception:
         return {}, [], "model.safetensors.index.json could not be parsed."
 
-    weight_map = data.get("weight_map", {})
-    if not isinstance(weight_map, dict):
+    weight_map = data.get("weight_map") if isinstance(data, dict) else None
+    if not isinstance(weight_map, dict) or not weight_map:
         return {}, [], "model.safetensors.index.json weight_map is invalid."
 
     if len(weight_map) > MAX_SAFETENSORS_INDEX_MEMBERS:
@@ -211,12 +213,37 @@ def validate_model_output(
     weight_map, missing_shards, index_error = _read_safetensors_index(output_dir)
     if index_error:
         errors.append(index_error)
+    if index_error or missing_shards:
+        tensor_checks_completed = False
 
     shard_names = sorted(set(weight_map.values()))
 
     missing_tensor_keys: list[str] = []
     all_tensor_keys: set[str] = set()
     tensor_shape_summary: dict[str, list[int]] = {}
+    tensor_read_failed = False
+
+    def inspect_tensors(path: Path) -> set[str] | None:
+        nonlocal tensor_checks_completed, tensor_read_failed
+        if tensor_read_failed:
+            return None
+        present_keys, shapes, warning, error = _read_safetensors_tensors(path)
+        all_tensor_keys.update(present_keys)
+        tensor_shape_summary.update(shapes)
+        if error:
+            tensor_checks_completed = False
+            tensor_read_failed = True
+            # A failed shard invalidates the whole model's aggregate inspection.
+            all_tensor_keys.clear()
+            tensor_shape_summary.clear()
+            missing_tensor_keys.clear()
+            errors.append(error)
+            return None
+        elif warning:
+            tensor_checks_completed = False
+            (errors if validation_strictness == "publish" else warnings).append(warning)
+            return None
+        return present_keys
 
     # Adapter outputs must be complete.
     if has_adapter_config != has_adapter_weights:
@@ -240,15 +267,8 @@ def validate_model_output(
 
         for shard_name, expected_keys in by_shard.items():
             shard_path = _resolve_contained_shard(output_dir, shard_name)
-            present_keys, shapes, shard_warning = _read_safetensors_tensors(shard_path)
-            all_tensor_keys.update(present_keys)
-            tensor_shape_summary.update(shapes)
-            if shard_warning:
-                tensor_checks_completed = False
-                if validation_strictness == "publish":
-                    errors.append(shard_warning)
-                else:
-                    warnings.append(shard_warning)
+            present_keys = inspect_tensors(shard_path)
+            if present_keys is None:
                 continue
             for expected_key in sorted(expected_keys):
                 if expected_key not in present_keys:
@@ -257,37 +277,13 @@ def validate_model_output(
     if format_name == "safetensors" and not weight_map:
         single = output_dir / "model.safetensors"
         if single.exists():
-            present_keys, shapes, shard_warning = _read_safetensors_tensors(single)
-            all_tensor_keys.update(present_keys)
-            tensor_shape_summary.update(shapes)
-            if shard_warning:
-                tensor_checks_completed = False
-                if validation_strictness == "publish":
-                    errors.append(shard_warning)
-                else:
-                    warnings.append(shard_warning)
+            inspect_tensors(single)
 
     if has_adapter_model:
-        present_keys, shapes, shard_warning = _read_safetensors_tensors(output_dir / "adapter_model.safetensors")
-        all_tensor_keys.update(present_keys)
-        tensor_shape_summary.update(shapes)
-        if shard_warning:
-            tensor_checks_completed = False
-            if validation_strictness == "publish":
-                errors.append(shard_warning)
-            else:
-                warnings.append(shard_warning)
+        inspect_tensors(output_dir / "adapter_model.safetensors")
 
     if has_diffusers_lora_model:
-        present_keys, shapes, shard_warning = _read_safetensors_tensors(output_dir / "pytorch_lora_weights.safetensors")
-        all_tensor_keys.update(present_keys)
-        tensor_shape_summary.update(shapes)
-        if shard_warning:
-            tensor_checks_completed = False
-            if validation_strictness == "publish":
-                errors.append(shard_warning)
-            else:
-                warnings.append(shard_warning)
+        inspect_tensors(output_dir / "pytorch_lora_weights.safetensors")
 
     if tensor_checks_required and not tensor_checks_completed and validation_strictness == "publish":
         errors.append("Tensor-level safetensors checks are required for publish-bound validation.")
