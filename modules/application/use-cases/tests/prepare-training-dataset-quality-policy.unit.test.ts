@@ -209,16 +209,19 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
           deleteArtifact: testDouble.fn(),
         },
         artifactCatalog: {
-          readArtifactCatalogRecord: testDouble.fn(async () => ({
+          readArtifactCatalogRecord: testDouble.fn(async (query: any) => {
+            expect(query).toEqual({ workspaceId: "workspace-a", storageKey: "source-a" });
+            return {
             ok: true,
             value: {
               record: {
+                workspaceId: "workspace-a",
                 storageKey: "source-a",
                 originalName: "source.pdf",
                 mediaType: "application/pdf",
               },
             },
-          })),
+          }; }),
         },
         datasetQualityPolicyProvider: managedQualityPolicyProvider,
       }),
