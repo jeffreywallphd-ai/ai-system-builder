@@ -614,3 +614,31 @@ portable checks do not qualify a Windows parser, native isolation, trusted helpe
 identity, timeouts, cancellation, cleanup, model quality or host UI. Those controls
 and measured failure paths remain required before enabling actual OCR. No cloud
 fallback, arbitrary executable/path or supplier download is authorized here.
+
+## Private OCR helper framing and recognition source
+
+Protected content crosses only a length-prefixed private byte stream. The
+Python codec enforces the response byte cap before JSON parsing; duplicate keys,
+unknown fields, invalid UTF-8, type confusion, non-finite coordinates and global
+line/text overflow fail with one fixed error. Parsed records alone grant no
+source authorization: exact source/provider/language/page binding remains
+mandatory. Recognized content stays data and is excluded from error text.
+
+Windows helper source accepts bounded source bytes, never caller paths or URLs.
+It checks that the actual engine language tag exactly matches the requested
+installed canonical tag, refusing Windows resolution substitutions or aliases.
+It never downloads a language; caps original PDF page
+count/selected pages, raster dimensions and decoded pixel product before native
+bitmap extraction/rendering; limits global lines and Unicode scalar text; and
+refuses overflow instead of truncating. Output is one bounded versioned response
+with source digest and rendered pixel-page geometry, without invented confidence.
+Helper code emits no exception or diagnostic payload; a future native owner must
+also discard/bound system diagnostics. Its managed input/work wait is finite.
+
+Compilation proves source compatibility only. Native allocation/memory, pipe
+retirement, creation-time Job ownership, deadline/cancellation, trusted compiled
+resource identity and crash cleanup remain unqualified. No helper launch or
+product OCR availability follows from this component. Actual malformed-image,
+scanned-PDF, native denial/failure and product/UI checks remain pending; existing
+source authorization, accepted model accuracy and retained offload data stay
+unchanged. This helper is not a sandbox against a hostile same-user deployment.

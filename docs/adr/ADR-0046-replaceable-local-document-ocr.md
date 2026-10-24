@@ -64,3 +64,21 @@ continues to use its existing ports. Portable contract and denial tests run in
 one fixed source-owned profile. They prove contract behavior only; actual Windows
 image/scanned-page and product journeys remain required. Standard parser behavior
 and accepted model-quality evidence are unchanged.
+
+## Helper implementation support
+
+The worker now owns strict private frame serialization and Windows helper source.
+Frames bind versioned provider-neutral metadata; the private input carries
+immutable bytes, media type, explicit language and selected original pages.
+Response parsing checks exact fields/types and a 2 MiB byte cap before JSON
+allocation. The Windows source requires the exact installed canonical language tag, refuses
+resolved-language substitutions or aliases, and validates raster
+size before decoding/rendering and returns text with rendered-pixel geometry.
+No probability is invented. The helper has a finite managed wait including input.
+
+This support is not provider availability. A trusted compiled resource, native
+creation-time process ownership, bounded pipes/memory/concurrency, cancellation
+and confirmed exit still need implementation and actual qualification before
+launch. Build/package composition and application/normalization/readiness/host UI
+integration remain pending. A compiler is a development tool, never an implicit
+end-user dependency. No new binary, language-data or model download is authorized.

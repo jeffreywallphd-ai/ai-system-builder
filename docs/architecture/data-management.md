@@ -671,3 +671,28 @@ Existing OCR requests remain unavailable until that work passes. Standard
 extraction, supported task/source compatibility and accepted model quality stay
 unchanged. A future Tesseract or service adapter must satisfy this same boundary
 and separately establish its supply-chain, execution and egress authority.
+
+## Private Windows OCR helper protocol
+
+The runtime-owned `ocr/wire.py` encodes only exact bounded request objects and
+parses exact readiness/document response fields. Private frames use a four-byte
+unsigned little-endian UTF-8 JSON byte length: at most 23000000 request bytes and
+2097152 response bytes. Duplicate keys, invalid UTF-8, unknown fields, non-finite
+numbers and global page/line/text overflow are refused. Parsed metadata must still
+pass the authorized source/provider/language/page check before use.
+
+The Windows helper source has no application/domain/UI dependency and no file,
+executable or service selector. It accepts PNG/JPEG/PDF bytes and requires exact ordinal equality between the
+requested canonical language tag and the actual engine language. Substitutions,
+aliases and tag-spelling differences are unavailable. It validates dimensions/pixels before bitmap decode
+or PDF render and retains original selected PDF page numbers. Line geometry is
+relative to the rendered pixel page, not original PDF points. Unicode scalar
+counts match the Python contract. A managed 110-second wait includes input reads.
+
+The source and a successful SDK compilation supply no native containment,
+readiness or product pass. The future owner must verify a trusted built resource,
+create its Job membership before execution, bound private I/O and resources,
+honor cancellation and prove all owned processes and handles retired. Do not
+start or advertise OCR until those native checks and actual Windows/provider,
+normalization/capability and both-host UI integration qualify. Existing runtime
+task ports and Standard document extraction remain unchanged.

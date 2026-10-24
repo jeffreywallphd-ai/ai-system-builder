@@ -354,3 +354,22 @@ Native helper/build/lifetime, normalization, capability and UI integration still
 need actual qualification. Standard extraction and accepted model accuracy are
 unchanged. Future adapters require the same bounds and separate supplier/egress
 review; the protocol grants no arbitrary executable or service configuration.
+
+## Private OCR messages and Windows helper source
+
+`ocr/wire.py` enforces strict versioned private JSON frames: a four-byte
+little-endian byte length, at most 23000000 request bytes and 2 MiB of response
+bytes before parsing. It rejects duplicate or unknown fields, malformed UTF-8,
+non-finite values, invalid types, geometry and global line/text overflow. A parsed
+result still needs `check_result`; parsing is neither source authorization nor
+provider readiness. The fixed portable profile runs both OCR test modules.
+
+`ocr/native/WindowsOcrHelper.cs` implements the installed Windows engine behind
+that protocol. It accepts bytes instead of caller paths; selected original PDF
+pages and rendered pixel geometry remain explicit. Its source can be compiled
+with an installed SDK, without a supplier/model/language download. Source and
+compilation do not establish native-process isolation, actual engine operation,
+trusted packaged-resource identity or product availability. OCR remains
+unavailable until the managed native owner, actual image/PDF and failure checks,
+normalization, capability and both-host UI work qualify. See the native README
+for framing, limits and remaining obligations. Standard extraction is unchanged.

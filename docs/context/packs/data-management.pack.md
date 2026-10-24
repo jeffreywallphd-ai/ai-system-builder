@@ -75,7 +75,7 @@
   checks with tighter bounded admission rules. Apply task-specific checks and
   per-example source association without assuming tabular rows.
 - Preserve exact normalized artifact/span/region/page lineage. Report unavailable OCR honestly and fail closed; do not imply recognition ran.
-  Use [ADR-0046](../../adr/ADR-0046-replaceable-local-document-ocr.md) for the replaceable worker-owned OCR contract; Windows integration remains pending.
+  Use [ADR-0046](../../adr/ADR-0046-replaceable-local-document-ocr.md) for the replaceable worker-owned OCR contract and private framing; Windows runtime/product integration remains pending.
 - For images, distinguish inspected metadata/annotations from uninspected
   pixels. Do not claim OCR, face detection, or pixel-level personal-data or
   credential inspection when those capabilities did not run.

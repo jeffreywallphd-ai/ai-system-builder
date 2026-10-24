@@ -294,17 +294,22 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         profile = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"][name]
         test_path = "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
         source = "modules/adapters/runtime/python/worker/ocr/protocol.py"
-        self.assertEqual(profile["test_paths"], [test_path])
+        wire_test = "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
+        self.assertEqual(profile["test_paths"], [test_path, wire_test])
         self.assertIn(source, profile["source_paths"])
         commands = run_focused_checks.profile_commands(root, name)
         self.assertEqual(commands, [[sys.executable, "-B", "-m", "unittest", "discover",
                                    "-s", "modules/adapters/runtime/python/worker/tests",
-                                   "-p", "test_ocr_protocol.py"]])
+                                   "-p", "test_ocr_protocol.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "modules/adapters/runtime/python/worker/tests",
+                                    "-p", "test_ocr_wire.py"]])
         config = "dev-tools/config/contributor-check-profiles.json"
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
         for paths, required, expected_ocr, expected_generic in [
             ([source], ["documentation"], True, False),
             ([test_path], ["documentation"], True, False),
+            ([wire_test], ["documentation"], True, False),
             ([source, "modules/other/source.ts"], ["documentation"], True, True),
             ([source], ["documentation", "focused-tests"], True, True),
             (["modules/other/source.ts"], ["documentation"], False, True),

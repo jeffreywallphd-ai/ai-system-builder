@@ -1103,7 +1103,8 @@
     },
     "ocr-provider-contract": {
       "test_paths": [
-        "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
+        "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/ocr/__init__.py",
@@ -1119,7 +1120,11 @@
         "dev-tools/config/contributor-check-profiles.json",
         "dev-tools/helpers/tests/test_control_plane_delivery.py",
         "dev-tools/README.md",
-        "docs/diagnostics/ai-development-control-plane.md"
+        "docs/diagnostics/ai-development-control-plane.md",
+        "modules/adapters/runtime/python/worker/ocr/wire.py",
+        "modules/adapters/runtime/python/worker/ocr/native/WindowsOcrHelper.cs",
+        "modules/adapters/runtime/python/worker/ocr/native/README.md",
+        "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
       ]
     }
   }
