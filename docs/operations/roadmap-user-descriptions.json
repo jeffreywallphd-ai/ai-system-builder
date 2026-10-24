@@ -1155,8 +1155,8 @@
       "user_description": {
         "purpose": "Prove that packaged hosts start the pinned decoder and report its actual readiness.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent completed these technical checks and the separate review. No action is needed from you for this criterion.",
+        "completion_proof": "The final qualification report records the executed checks, exact sources, independent review and scope limits.",
         "requirements": [
           "Desktop and server packages must install and start the pinned dependency.",
           "They must report decoder and schema readiness truthfully.",
@@ -1173,8 +1173,8 @@
       "user_description": {
         "purpose": "Prove constrained generation on representative accelerator and limited CPU profiles.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent completed these technical checks and the separate review. No action is needed from you for this criterion.",
+        "completion_proof": "The final qualification report records the executed checks, exact sources, independent review and scope limits.",
         "requirements": [
           "The agent must test one sufficient accelerator profile and one constrained CPU profile.",
           "Tests must confirm adaptive behavior and the explicit override.",
@@ -1194,8 +1194,8 @@
       "user_description": {
         "purpose": "Make the shipped behavior and dependency risks accurate and verifiable.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent completed these technical checks and the separate review. No action is needed from you for this criterion.",
+        "completion_proof": "The final qualification report records the executed checks, exact sources, independent review and scope limits.",
         "requirements": [
           "Architecture, security, context, README and guidance checks must describe and validate shipped behavior and remaining risks.",
           "Dependency source, license, audit and software bill-of-materials checks must validate the shipped dependencies."
@@ -1211,8 +1211,8 @@
       "user_description": {
         "purpose": "Run the final short and long test suites with the applicable builds.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent completed these technical checks and the separate review. No action is needed from you for this criterion.",
+        "completion_proof": "The final qualification report records the executed checks, exact sources, independent review and scope limits.",
         "requirements": [
           "After all increments are implemented, the complete short-duration suite must pass once.",
           "The separately invoked long-duration end-to-end suite must also pass once.",
@@ -1229,8 +1229,8 @@
       "user_description": {
         "purpose": "Verify constrained generation without weakening task, resource or dependency protection.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent completed these technical checks and the separate review. No action is needed from you for this criterion.",
+        "completion_proof": "The final qualification report records the executed checks, exact sources, independent review and scope limits.",
         "requirements": [
           "The final review must confirm protected task purposes and request envelope fields.",
           "Schema size and resource use must remain bounded.",
@@ -10113,19 +10113,6 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "f86bfa891129d05d49d2b81b0b74923f1d3cfd2be2429c08f5e061b11e15fb91",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "Worker graphics-memory reporting and the automatic output-mode tests are complete.",
-          "The agent must run the final roadmap checks and review the existing resource results.",
-          "Completed accuracy tests stay closed. Low-memory file protection and restart checks remain separate pending work.",
-          "No action is needed from you."
-        ]
-      }
-    },
-    {
       "kind": "support-scope",
       "source_text_sha256": "0ea509dc2949a7d057f364ea605ba04d8946a1ea63d6a0c275404afc27312c87",
       "user_description": {
@@ -10146,18 +10133,6 @@
           "The renderer tests use declared computer-capacity values.",
           "The desktop and browser tests use a test runtime that cannot generate data.",
           "These checks do not prove real graphics-memory reporting, model execution or a full application restart."
-        ]
-      }
-    },
-    {
-      "kind": "support-limitation",
-      "source_text_sha256": "06bbb3bf1c3a02eefa175c5fa3a06a5eda7070a47098e69ef8332bedc0b4a8f5",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "The stable output-choice work is complete. Worker graphics-memory reporting is also complete in a separate reviewed change.",
-          "The agent must finish the final roadmap checks. Accepted accuracy tests stay closed.",
-          "Low-memory mode has separate pending work. No action is needed from you."
         ]
       }
     },
@@ -10328,14 +10303,74 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "052e2c1d1dd35d469f8b0df0dc472e47fca0e09ff7ab372f431c96456832a5c7",
+      "kind": "support-scope",
+      "source_text_sha256": "07c3b7ebbd428784d360ed7002cf02b831faa521f0aceebcea83ba2ddc15a2ff",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The agent must measure output structure, memory use and speed for the changed compiler on CPU and graphics-device profiles, then review the remaining roadmap evidence.",
-          "Earlier model measurements used the previous compiler. Completed accuracy tests stay closed. The final suite on the clean committed code passed.",
-          "Protecting retained temporary files and safely restarting low-memory mode remain separate pending work. No action is needed from you now."
+          "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a93f93b611b1b0666b2420cb990239bff5a59c8df16081a09f1b39f501edc2cb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This component was recorded before the final tests and review. Those later results are recorded separately.",
+          "The component alone grants no roadmap pass and does not qualify low-memory mode or safe restart."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0f5673f495b149ed5835b179b1b709452a0f978b1bc18b709cae212ce0066d0e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9d3e8d52739907b0c38758d864bf16102f5e42b2dcd7a14068dbd4367994808f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ce31171be1d22ba1d50465b626d6cb94c4bec71c6b3c3a444721ec8c82610f71",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f8a74dba6637d087cdd558e6be4149263bf6a3e6db4d901193dcc86349f219b5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6acd9637b2e010fc173e1035b16e4d986e70d61022dfa2bf2c74cea4b3503ed7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This stable-choice component was completed before the final roadmap checks. Those later checks and their independent review have now passed.",
+          "Accepted model accuracy stays closed. Testing actual low-memory mode and safe restart remains separate pending work. No action is needed from you."
         ]
       }
     }

@@ -2,8 +2,8 @@
 
 # Optional Constrained JSON Generation Implementation Roadmap
 
-- Status: `implementation-complete-qualification-pending`
-- Updated: `2026-10-24T02:48:43Z`
+- Status: `completed`
+- Updated: `2026-10-24T05:22:29Z`
 
 ## Objective
 
@@ -121,7 +121,7 @@ The generated example payload may be customized, but the outer schema version, t
 | 2: Visual output-shape contract and compiler | Define a bounded, task-aware visual field tree that compiles deterministically into one exact example schema and role mapping without requiring users to write JSON or JSON Schema. | adaptive-preference-foundation | `completed` |
 | 3: Constrained decoder and schema enforcement | Add a pinned adapter-owned JSON Schema logits processor to local Qwen generation and enforce the compiler's exact schema without weakening existing semantic validation. | visual-output-schema-foundation | `completed` |
 | 4: End-to-end generation pipeline and visual builder | Expose the adaptive checkbox and approachable visual output builder in both hosts, persist user intent, and carry custom names and nesting safely through generation, validation, dataset output, and training. | constrained-decoder-engine | `completed` |
-| 5: Production hardening and qualification | Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented. | pipeline-and-visual-builder | `implemented-pending-qualification` |
+| 5: Production hardening and qualification | Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented. | pipeline-and-visual-builder | `completed` |
 
 ## Increment 1: Adaptive preference and resource recommendation
 
@@ -322,7 +322,7 @@ Hide the visual builder and checkbox, resolve recipes to task defaults, and forc
 ## Increment 5: Production hardening and qualification
 
 - Id: `production-hardening-and-qualification`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `pipeline-and-visual-builder`
 
 Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented.
@@ -349,9 +349,9 @@ Human portions of the original work packages, deliverables, verification and com
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `packaged-host-readiness`: Desktop and server packages install and start the pinned dependency, advertise truthful decoder and schema readiness, and preserve fail-closed checked behavior. | local | passed (test) |
-| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence. | controlled-environment | pending (external) |
+| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence. | controlled-environment | passed (external) |
 | `documentation-and-dependency-gates`: Architecture, security, context, README, guidance, dependency provenance, license, audit, and SBOM checks describe and validate the shipped behavior and residual risks. | local | passed (test) |
-| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | failed (test) |
+| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | passed (test) |
 | `security-impact-reviewed`: Final review confirms protected task purposes and envelope fields, bounded schema and resource use, no silent fallback, safe diagnostics, dependency integrity, and documented risk for unchecked generation and user-added fields. | local | passed (review) |
 
 ### Human scope handled offline

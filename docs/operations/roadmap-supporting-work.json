@@ -2249,7 +2249,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2268,7 +2268,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2512,7 +2512,7 @@
       "limitations": [
         "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
         "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
-        "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+        "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
       ]
     },
     {
@@ -2530,7 +2530,7 @@
       "scope": "Both renderers keep the first fresh output-mode recommendation stable and preserve explicit choices. Lost decoder or schema readiness cannot silently dispatch unchecked generation. The fixed model-free profile passed 61 tests, production builds passed, and both actual synthetic host controls journeys passed after source freeze. Separate review accepted the exact work, which is committed.",
       "limitations": [
         "The renderer tests use declared CPU and accelerator snapshots. Actual packaged desktop and browser controls journeys use a synthetic decoder capability and refuse generation. They do not prove physical accelerator capacity, model execution or native process restart.",
-        "This completes the named stable-choice work. Truthful worker-local accelerator reporting is now completed in a separate reviewed follow-up. Final current-source parent checks remain agent work. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
+        "At the time of this stable-choice component, final parent checks were still pending. The later final qualification now records their successful execution and review. Accepted model accuracy stays closed; actual native offload and safe restart remain separate pending work. No action is needed from the user."
       ]
     },
     {
@@ -2565,7 +2565,7 @@
       "limitations": [
         "The physical driver observation used the production ASGI route in memory. The two host UI journeys used a declared synthetic 8 GiB capability and refused generation. Packaged worker files match source bytes; that is not a packaged Python execution test. These are separate observations, not one physical end-to-end model run.",
         "Installed accelerator total is advisory. It does not establish free VRAM, Torch compatibility, model admission, native process ownership or offload safety. Uncertain masks, MIG, multiple devices, driver errors or unconfirmed probe retirement remain unknown. Existing memory guards and accepted accuracy results are unchanged.",
-        "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+        "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
       ]
     },
     {
@@ -2601,7 +2601,7 @@
       "limitations": [
         "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
         "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
-        "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+        "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
       ],
       "criterion_id": "packaged-host-readiness"
     },
@@ -2620,9 +2620,99 @@
       "limitations": [
         "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
         "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
-        "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+        "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
       ],
       "criterion_id": "representative-resource-and-usability-qualification"
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "packaged-host-readiness",
+      "work_id": "constrained-current-primary-final-qualification-v2",
+      "work_criteria": [
+        "packaged-host-readiness"
+      ],
+      "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+      "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+      "scope": "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated.",
+      "limitations": [
+        "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification.",
+        "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history.",
+        "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
+        "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "constrained-current-primary-final-qualification-v2",
+      "work_criteria": [
+        "representative-resource-and-usability-qualification"
+      ],
+      "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+      "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+      "scope": "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated.",
+      "limitations": [
+        "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification.",
+        "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history.",
+        "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
+        "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "documentation-and-dependency-gates",
+      "work_id": "constrained-current-primary-final-qualification-v2",
+      "work_criteria": [
+        "documentation-and-dependency-gates"
+      ],
+      "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+      "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+      "scope": "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated.",
+      "limitations": [
+        "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification.",
+        "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history.",
+        "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
+        "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "full-short-and-long-suites",
+      "work_id": "constrained-current-primary-final-qualification-v2",
+      "work_criteria": [
+        "full-short-and-long-suites"
+      ],
+      "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+      "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+      "scope": "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated.",
+      "limitations": [
+        "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification.",
+        "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history.",
+        "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
+        "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "constrained-current-primary-final-qualification-v2",
+      "work_criteria": [
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+      "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+      "scope": "Final current-source review accepted all five constrained-output criteria. The primary suite passed 4,375 tests with four existing skips; all three builds, current packaged-worker readiness and six repository checks passed. CPU and accelerator resource observations remain separate. Accepted accuracy was not repeated.",
+      "limitations": [
+        "Recorded source-specific evidence and separate review support the legacy roadmap events; these links themselves grant no parent pass or future-candidate qualification.",
+        "CPU peak, timing and native exit passed; CPU memory return was not measured. The corrected accelerator test returned exactly to its original memory floors. Earlier failed observations remain history.",
+        "Automated host controls used declared test capacity. Physical driver, model generation and packaged-worker observations are separate; no single physical whole-host run or fresh full-dependency installation is claimed.",
+        "Accepted model accuracy remains closed. Actual optional low-memory mode, retained-file protection and safe restart remain separate pending work. No action is needed from you for these agent tasks."
+      ]
     }
   ]
 }

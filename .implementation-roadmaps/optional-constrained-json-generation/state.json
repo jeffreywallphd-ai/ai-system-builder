@@ -464,7 +464,10 @@
       "title": "Completion gates"
     }
   ],
-  "completion": null,
+  "completion": {
+    "completedAt": "2026-10-24T05:22:29Z",
+    "summary": "All five increments and their retained technical criteria are complete. Final current-source suite passed 4,375 tests with four existing skips; applicable builds, packaged readiness, representative resource profiles and separate review passed. Accepted accuracy was not rerun; optional offload/native/security work and final human approval remain separate."
+  },
   "createdAt": "2026-07-30T18:57:05Z",
   "currentIncrementId": null,
   "decisions": [
@@ -1091,6 +1094,61 @@
       "outcome": "failed",
       "recordedAt": "2026-10-24T02:48:43Z",
       "summary": "The current final all-suite preserved source bytes and passed standard Node/UI and E2E Node/UI coverage. The controlled Python AI delegate failed with a native memory allocation error; empty AI delegates are not passed test cases. The agent is locating the schema-compilation cost with bounded diagnostics. Final qualification stays pending; accepted model accuracy is not rerun and no user action is required."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Actual separately source-bound startup/resource/UI observations and completed component checks",
+      "criterionId": "packaged-host-readiness",
+      "id": "evidence-37",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T05:22:23Z",
+      "summary": "Current primary server/thin builds and desktop package passed on source672efd2e. All26 fresh packaged worker files match the reviewed current source/startup06. Actual compiled server consumer startup02 verified seven exactpins including LLGuidance1.9.1, auth401denials, readydecoder capability, oneownedworker/noattach and confirmedstop. This is model-free worker/consumer proof, not a fullAPIapp, freshall-dependency install, native restart or otherplatform pass."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Executed six fixed current checks and separate source-bound technical review",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-38",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "summary": "Actual current receipt089682ff passed documentation, agent-support, architecture, dependencies, roadmap and control-plane on unchanged source672efd2e. Reviewed exactpins/wheel-only supplier provenance and compatible HTTPpatch evidence remain bound. Preserve earlier failed audits and fixture/install attempts; no invented rawgate transcripts, wholeinstalledbyteintegrity or otherowner qualification."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Executed six fixed current checks and separate source-bound technical review",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-39",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "summary": "Genuine separate fivecriterion review binds current receipt089682ff, primaryaggregate/build/startup captures, applicable exactsource UI/worker and distinct CPU03/GPU05profiles. Protectedpurposes/envelope, bounded schema/resource use, EOS/no-fallback, safe diagnostics and dependency integrity are retained. This supplies the approvedOptionalJSON technicalreview only; restrictedAssets/nativeoffload/recovery/provider/acceptedaccuracy and finalhumanapproval are not promoted."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Actual separately source-bound startup/resource/UI observations and completed component checks",
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-40",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "summary": "Actual CPU03 and corrected GPU05 separately confirm schema-valid nonempty first/warm outputs within declaredmemory/load/latency bounds and nativeexit0. GPU05returns exactly to measuredallocated/reservedfloors with deadownerweakrefs. CPU03doesnotprove RAMreturn. Actual twohost automatedvisualediting/default/override/persistence uses declared8GiBsyntheticcapability; physicalauthenticatedworkerdriver observation is separate. All applicable sourcehashes are current. Preserve03/04observerfailedcleanup and deniedprofiles; no physicalwholehostinference, statisticalmatrix or accuracy claim."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "npm run test:all; npm run build:server; npm run build:thin-client; npm run package",
+      "criterionId": "full-short-and-long-suites",
+      "id": "evidence-41",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "summary": "Actual primary npm run test:all completedexit0 on unchangedsource672efd2e with allsevenrunnerstagespassed: Node standard3717+2skips, UIstandard502, NodeE2E146+2skips, UIE2E3, controlledPythonAI7; total4375passed/4existingNodeskips. EmptyNode/VitestAIdelegates countzero. Current server/thin/package builds passed separately. Distinct E2Edelegates ran through the actualall-suite; no separatelyinvoked obsolete aliases invented. OldfailednativeCoreIndex suite and cleanac49proof remain history."
     }
   ],
   "feedback": [
@@ -1734,6 +1792,42 @@
       "recordedAt": "2026-10-24T02:48:43Z",
       "sequence": 98,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "119cf96c905527206a1df787dd317f52f92928f07ea4189fc8191aa3c3cce091",
+      "recordedAt": "2026-10-24T05:22:23Z",
+      "sequence": 99,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0e09e2f0f127445ab7fd165128a007be50210fc9f81c124ed9bb2c80a2629187",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "sequence": 100,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e53277097f781768d4cf131c347fe0b41de3cae43f403f2ce4814a42de193e7b",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "sequence": 101,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "07c234226d17756f8fc4671f632260dddbaf6d985ea25014e7bf8d5ec6170fe5",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "sequence": 102,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e92682fe5eb51216f648ba624a16e52d6cd1b17afd2f3cdca51a9063fc862e6b",
+      "recordedAt": "2026-10-24T05:22:24Z",
+      "sequence": 103,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6e67934cc98b95a399b46a2a1c0f322c2ea6debfa26c6240540a50c8127ee553",
+      "recordedAt": "2026-10-24T05:22:29Z",
+      "sequence": 104,
+      "type": "roadmap-completed"
     }
   ],
   "increments": [
@@ -2542,10 +2636,7 @@
       "id": "production-hardening-and-qualification",
       "number": 5,
       "objective": "Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented.",
-      "pendingCriteria": [
-        "representative-resource-and-usability-qualification",
-        "full-short-and-long-suites"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "No new architecture decision is required because the work remains within accepted Python-adapter, host composition, shared UI, and Data Management boundaries.",
@@ -2669,7 +2760,7 @@
       ],
       "rollback": "Disable decoder and visual-builder capability advertisement, hide the controls, resolve recipes to task defaults, and retain the strict unchecked generation and validation path; remove the isolated dependency only after packaged hosts no longer reference it.",
       "startedAt": "2026-07-30T21:17:30Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Production hardening and qualification",
       "verification": [
         "Run focused packaged-worker startup and host readiness checks before final gates.",
@@ -2846,6 +2937,6 @@
   },
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
-  "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T02:48:43Z"
+  "status": "completed",
+  "updatedAt": "2026-10-24T05:22:29Z"
 }

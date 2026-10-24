@@ -65,9 +65,9 @@
   "limitations": [
     "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
     "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
-    "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+    "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
   ],
-  "parent_qualification": "pending",
+  "parent_qualification": "historical-component-only",
   "superseded_follow_up": [
     {
       "text": "The agent must finish sufficient-profile adaptive behavior, readiness-loss and final owning qualification. Reviewed CPU/GPU structural-resource measurements remain separate; accepted model accuracy stays closed and must not be rerun. Native retained-file protection and guarded restart remain pending. No action is needed from the user.",
@@ -122,7 +122,7 @@
     "scope": "Both renderers keep the first fresh output-mode recommendation stable and preserve explicit choices. Lost decoder or schema readiness cannot silently dispatch unchecked generation. The fixed model-free profile passed 61 tests, production builds passed, and both actual synthetic host controls journeys passed after source freeze. Separate review accepted the exact work, which is committed.",
     "limitations": [
       "The renderer tests use declared CPU and accelerator snapshots. Actual packaged desktop and browser controls journeys use a synthetic decoder capability and refuse generation. They do not prove physical accelerator capacity, model execution or native process restart.",
-      "This completes the named stable-choice work. Truthful worker-local accelerator reporting is now completed in a separate reviewed follow-up. Final current-source parent checks remain agent work. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
+      "At the time of this stable-choice component, final parent checks were still pending. The later final qualification now records their successful execution and review. Accepted model accuracy stays closed; actual native offload and safe restart remain separate pending work. No action is needed from the user."
     ]
   },
   "zero_available_ram_follow_up": {
@@ -162,7 +162,7 @@
     "limitations": [
       "The physical driver observation used the production ASGI route in memory. The two host UI journeys used a declared synthetic 8 GiB capability and refused generation. Packaged worker files match source bytes; that is not a packaged Python execution test. These are separate observations, not one physical end-to-end model run.",
       "Installed accelerator total is advisory. It does not establish free VRAM, Torch compatibility, model admission, native process ownership or offload safety. Uncertain masks, MIG, multiple devices, driver errors or unconfirmed probe retirement remain unknown. Existing memory guards and accepted accuracy results are unchanged.",
-      "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
+      "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
     ]
   },
   "compiler_repair_follow_up": {
@@ -183,9 +183,9 @@
     "limitations": [
       "Packaged startup loads no model. Its offline native-dependency install shares existing base packages; it is not a fresh installation of every dependency or a complete app restart. The final suite uses a local Qwen tokenizer and tiny locally built Context models, not accepted Qwen accuracy cohorts. None of this qualifies representative model memory, latency or native offload.",
       "The earlier four-method tokenizer observation covers the unchanged compiler and tokenizer code, including small CPU and accelerator masks. Its recorded source and memory figures remain historical. It loads no model and cannot replace current model-memory or latency qualification.",
-      "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now."
+      "At this component's recorded source, final parent checks were pending. Later reviewed results are recorded in the final qualification report. This historical component alone does not qualify the parent, actual offload or native recovery."
     ],
-    "parent_qualification": "pending",
+    "parent_qualification": "historical-component-only",
     "prerequisites": [
       {
         "work_id": "controlled-training-suite-explicit-routing",
@@ -226,6 +226,278 @@
       },
       "accepted_accuracy_rerun": false,
       "scope": "Exact clean committed candidate with shared unchanged dependencies. No Qwen model inference, new download, provider credentials or retained staging; tiny locally-created Context model tests are separate from accepted model accuracy."
+    },
+    "historical_parent_qualification": {
+      "original": "pending",
+      "work_id": "bounded-lazy-token-masks-final-component",
+      "meaning": "Historical component support at its recorded source. Current final qualification is recorded separately in final_qualification; this header does not assert a current pending requirement."
     }
+  },
+  "final_qualification": {
+    "status": "independently-qualified-legacy-criteria",
+    "work_id": "constrained-current-primary-final-qualification-v2",
+    "receipt_digest": "089682ffead60e0ca38f10af55f172be732906d293990603bc484c2625fd053f",
+    "review_digest": "15ecd0baaaa0c78ae6d5a9b422d9af85fcd1fbd8c6c0392fb376ab89a8c9f06b",
+    "source_digest": "672efd2ec746df09564d967f9ea65000ed4eb8fea8b583b356e427bd8809dc74",
+    "source_head": "5c6d1fb6d0920a04a6b8eea8eb4e8983e31c3857",
+    "reviewed_criteria": [
+      "packaged-host-readiness",
+      "representative-resource-and-usability-qualification",
+      "documentation-and-dependency-gates",
+      "full-short-and-long-suites",
+      "security-impact-reviewed"
+    ],
+    "independent_note": {
+      "sha256": "c4b475e4c87b1f74bd423642d46e294946a9463e9199b8e7a92d11f876260c5c",
+      "bytes": 20476
+    },
+    "committed_applicability": {
+      "sha256": "9d064a09c1b111e3ee024b0bfb33a669642f8c42b35ceb67093302e478887475",
+      "bytes": 45561
+    },
+    "actual_primary_all_suite": {
+      "sha256": "bb780486f6e555cb2e022306d33e16575394e5ce79b817ffe8e2d0175b40ca9f",
+      "bytes": 3958,
+      "command": "npm run test:all",
+      "passed": 4375,
+      "skipped": 4,
+      "counts": {
+        "node_standard_passed": 3717,
+        "node_standard_skipped": 2,
+        "vitest_standard_passed": 502,
+        "node_e2e_passed": 146,
+        "node_e2e_skipped": 2,
+        "vitest_e2e_passed": 3,
+        "controlled_python_ai_passed": 7,
+        "empty_ai_delegates_executed": 0
+      },
+      "source_unchanged": true,
+      "raw_canonical_states_preserved": true,
+      "seconds": 310.10999999998603,
+      "report_hashes": {
+        "test-suite-report.json": {
+          "sha256": "44c5b52d229cc3ea5caaf8c37ae27c5e00cbcc4e2ff55ba98278775593780287",
+          "bytes": 1123
+        },
+        "non-browser-standard-test-report.json": {
+          "sha256": "2613354fbf50bf3af68fa2b1f3aa8e1a01c1d246ea1eff1b71f535e7588e5f70",
+          "bytes": 69606
+        },
+        "non-browser-e2e-test-report.json": {
+          "sha256": "4feff905e4407beb315b970ae9d53ea2b7f63960fd21f49ee228c585bbb75953",
+          "bytes": 12050
+        },
+        "non-browser-ai-test-report.json": {
+          "sha256": "43735b66e1ffb62a618154d5c6b8f48d4aaaacc3fffd87e2d8c3a40362ec156e",
+          "bytes": 1090
+        },
+        "vitest-standard-test-report.json": {
+          "sha256": "4ddfe94d353f65d93840ff271fa2c63f2cbcc3db84343f98fd321883ab0598c1",
+          "bytes": 283742
+        },
+        "vitest-e2e-test-report.json": {
+          "sha256": "815cf3b78a3e1850b9d5bf959a2e816e07c996a8e74a9b153638dbb8cd1a9645",
+          "bytes": 3581
+        },
+        "vitest-ai-test-report.json": {
+          "sha256": "68d3c0c9b9139899b510d205495586a0d20b6a9746dfb96a0444d15ce67cfc86",
+          "bytes": 383
+        }
+      },
+      "logs_sha256": {
+        "all-suite.stdout.log": "78601e9ad1b158d18c602e3f2f81f1e407a8764a60e122faf49cf84c00ac0c73",
+        "all-suite.stderr.log": "68469c2217151dea0aced3c8ef2d596dcbb2efe6728ac1fdf76e94c0a0853b85"
+      }
+    },
+    "actual_primary_builds": {
+      "sha256": "1b173773295d7678ad9fdd10a130990b930990794cdc6dabb1d34144f81634dc",
+      "bytes": 1546,
+      "source_unchanged": true,
+      "results": [
+        {
+          "script": "build:server",
+          "exit_code": 0,
+          "seconds": 2.375,
+          "logs_sha256": {
+            "stdout": "71b2e5a237a7fdd4ddec68af43bc509960ebcbc0cff1cfe89a5b5b40e2ee8ccd",
+            "stderr": "ee8b5ccd8d8886a4b69ed8cb2b5db4a5070239129b8430805dcc8ec30ecbe362"
+          }
+        },
+        {
+          "script": "build:thin-client",
+          "exit_code": 0,
+          "seconds": 5.26500000001397,
+          "logs_sha256": {
+            "stdout": "dec6ca933bc8f6d60d7860111f2480d1e5854dbbec387619857e6998c76afb0a",
+            "stderr": "25c33b1f02b29be7e5114cf7c47c6eaf8fed2f6dcb1d192548f6d8beba922eac"
+          }
+        },
+        {
+          "script": "package",
+          "exit_code": 0,
+          "seconds": 9.954000000027008,
+          "logs_sha256": {
+            "stdout": "b379f723dd04aec55273134466d1658283c5d19d0a17b43376c0a1a57daf095c",
+            "stderr": "1424fb8fb1222ff6594a7a9f656be761ad9267d186d392d558674ad5f8d147d2"
+          }
+        }
+      ]
+    },
+    "compiled_server_worker": {
+      "sha256": "71ce0120ec00356f54a1d140944bd488b2e565e4f35fa6b5bd3e4a9dbe17cba9",
+      "bytes": 1688,
+      "worker_files": 26,
+      "unauthenticated_denials": [
+        401,
+        401
+      ],
+      "decoder_ready": true,
+      "owned_stop_confirmed": true,
+      "startup_and_reads_seconds": 1.02
+    },
+    "resource_profiles": {
+      "cpu03": {
+        "sha256": "cc939a9235af082cbebb8277bb2a6169ae7d01f320b51d1b7e413ea016a8079a",
+        "bytes": 5292,
+        "sampled_peak_rss_bytes": 3233538048,
+        "load_seconds": 7.26500000001397,
+        "first_and_warm_seconds": [
+          4.125,
+          3.26500000001397
+        ],
+        "outputs_schema_valid_and_nonempty": true,
+        "native_exit_code": 0,
+        "readers_stopped": true,
+        "limit": "CPU peak, timing, structure and actual native exit only. The earlier observer retained an owner at the pre-exit measurement; no RAM-return-to-floor claim."
+      },
+      "gpu05": {
+        "sha256": "382c8a17da7283be81e6ac0cc057ffdecad40372a9bf265cf8a83b51e12fa8d2",
+        "bytes": 3297,
+        "sampled_peak_rss_bytes": 3718193152,
+        "load_seconds": 4.23499999998603,
+        "first_and_warm_seconds": [
+          2.327999999979511,
+          0.8279999999795109
+        ],
+        "outputs_schema_valid_and_nonempty": true,
+        "native_exit_code": 0,
+        "readers_stopped": true,
+        "peak_allocated_vram_bytes": 1997686784,
+        "allocated_after_cleanup_bytes": 8519680,
+        "reserved_after_cleanup_bytes": 20971520,
+        "strict_original_floors_restored": true,
+        "model_and_generator_owners_dead": true
+      }
+    },
+    "retained_history": "Earlier native eager-compiler failure, CPU03 observer limit, GPU03/04 failed cleanup readings, denied profiles and all separate historical source-specific observations remain unchanged. The observer locals snapshot was corrected before GPU05; no production guard or cleanup threshold changed.",
+    "limits": [
+      "CPU03 and GPU05 are separate representative structural/resource observations, not a statistical or all-model accuracy matrix. Accepted model accuracy was not rerun.",
+      "Physical driver observation, actual automated host controls using a declared synthetic capacity, packaged-worker startup and actual model generation are separate evidence. No single physical whole-host inference journey is claimed.",
+      "The installed native dependency environment shares reviewed base packages. This is not a fresh installation of all dependencies, full API-app startup, or qualification on untested platforms.",
+      "Native retained-tree protection, protected durable accounting, guarded offload restart, optional offload delivery and restricted security work remain with their existing owners. Final overall human approval is separate."
+    ],
+    "accepted_accuracy_rerun": false,
+    "final_human_approval_recorded": false,
+    "criterion_events": [
+      {
+        "type": "evidence-recorded",
+        "incrementId": "production-hardening-and-qualification",
+        "criterionId": "packaged-host-readiness",
+        "kind": "test",
+        "outcome": "passed",
+        "summary": "Current primary server/thin builds and desktop package passed on source672efd2e. All26 fresh packaged worker files match the reviewed current source/startup06. Actual compiled server consumer startup02 verified seven exactpins including LLGuidance1.9.1, auth401denials, readydecoder capability, oneownedworker/noattach and confirmedstop. This is model-free worker/consumer proof, not a fullAPIapp, freshall-dependency install, native restart or otherplatform pass.",
+        "command": "Actual separately source-bound startup/resource/UI observations and completed component checks",
+        "artifact": "docs/operations/structured-output-host-qualification.json"
+      },
+      {
+        "type": "evidence-recorded",
+        "incrementId": "production-hardening-and-qualification",
+        "criterionId": "documentation-and-dependency-gates",
+        "kind": "test",
+        "outcome": "passed",
+        "summary": "Actual current receipt089682ff passed documentation, agent-support, architecture, dependencies, roadmap and control-plane on unchanged source672efd2e. Reviewed exactpins/wheel-only supplier provenance and compatible HTTPpatch evidence remain bound. Preserve earlier failed audits and fixture/install attempts; no invented rawgate transcripts, wholeinstalledbyteintegrity or otherowner qualification.",
+        "command": "Executed six fixed current checks and separate source-bound technical review",
+        "artifact": "docs/operations/structured-output-host-qualification.json"
+      },
+      {
+        "type": "evidence-recorded",
+        "incrementId": "production-hardening-and-qualification",
+        "criterionId": "security-impact-reviewed",
+        "kind": "review",
+        "outcome": "passed",
+        "summary": "Genuine separate fivecriterion review binds current receipt089682ff, primaryaggregate/build/startup captures, applicable exactsource UI/worker and distinct CPU03/GPU05profiles. Protectedpurposes/envelope, bounded schema/resource use, EOS/no-fallback, safe diagnostics and dependency integrity are retained. This supplies the approvedOptionalJSON technicalreview only; restrictedAssets/nativeoffload/recovery/provider/acceptedaccuracy and finalhumanapproval are not promoted.",
+        "command": "Executed six fixed current checks and separate source-bound technical review",
+        "artifact": "docs/operations/structured-output-host-qualification.json"
+      },
+      {
+        "type": "evidence-recorded",
+        "incrementId": "production-hardening-and-qualification",
+        "criterionId": "representative-resource-and-usability-qualification",
+        "kind": "external",
+        "outcome": "passed",
+        "summary": "Actual CPU03 and corrected GPU05 separately confirm schema-valid nonempty first/warm outputs within declaredmemory/load/latency bounds and nativeexit0. GPU05returns exactly to measuredallocated/reservedfloors with deadownerweakrefs. CPU03doesnotprove RAMreturn. Actual twohost automatedvisualediting/default/override/persistence uses declared8GiBsyntheticcapability; physicalauthenticatedworkerdriver observation is separate. All applicable sourcehashes are current. Preserve03/04observerfailedcleanup and deniedprofiles; no physicalwholehostinference, statisticalmatrix or accuracy claim.",
+        "command": "Actual separately source-bound startup/resource/UI observations and completed component checks",
+        "artifact": "docs/operations/structured-output-host-qualification.json"
+      },
+      {
+        "type": "evidence-recorded",
+        "incrementId": "production-hardening-and-qualification",
+        "criterionId": "full-short-and-long-suites",
+        "kind": "test",
+        "outcome": "passed",
+        "summary": "Actual primary npm run test:all completedexit0 on unchangedsource672efd2e with allsevenrunnerstagespassed: Node standard3717+2skips, UIstandard502, NodeE2E146+2skips, UIE2E3, controlledPythonAI7; total4375passed/4existingNodeskips. EmptyNode/VitestAIdelegates countzero. Current server/thin/package builds passed separately. Distinct E2Edelegates ran through the actualall-suite; no separatelyinvoked obsolete aliases invented. OldfailednativeCoreIndex suite and cleanac49proof remain history.",
+        "command": "npm run test:all; npm run build:server; npm run build:thin-client; npm run package",
+        "artifact": "docs/operations/structured-output-host-qualification.json"
+      }
+    ],
+    "superseded_pending_statements": [
+      "The agent must finish the final current-source parent checks and review the existing CPU/GPU resource evidence together with the completed UI work. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user.",
+      "The agent must measure structural output, memory and latency for the changed compiler on the CPU and accelerator profiles, then review the parent evidence. Earlier model measurements used the previous compiler. Completed accuracy checks stay closed; retained-file protection and guarded restart remain separate. The final clean-commit suite passed. No action is needed from the user now.",
+      "This completes the named stable-choice work. Truthful worker-local accelerator reporting is now completed in a separate reviewed follow-up. Final current-source parent checks remain agent work. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
+    ],
+    "archived_display_rows": [
+      {
+        "kind": "support-limitation",
+        "source_text_sha256": "f86bfa891129d05d49d2b81b0b74923f1d3cfd2be2429c08f5e061b11e15fb91",
+        "user_description": {
+          "owner": "agent",
+          "sentences": [
+            "Worker graphics-memory reporting and the automatic output-mode tests are complete.",
+            "The agent must run the final roadmap checks and review the existing resource results.",
+            "Completed accuracy tests stay closed. Low-memory file protection and restart checks remain separate pending work.",
+            "No action is needed from you."
+          ]
+        }
+      },
+      {
+        "kind": "support-limitation",
+        "source_text_sha256": "052e2c1d1dd35d469f8b0df0dc472e47fca0e09ff7ab372f431c96456832a5c7",
+        "user_description": {
+          "owner": "agent",
+          "sentences": [
+            "The agent must measure output structure, memory use and speed for the changed compiler on CPU and graphics-device profiles, then review the remaining roadmap evidence.",
+            "Earlier model measurements used the previous compiler. Completed accuracy tests stay closed. The final suite on the clean committed code passed.",
+            "Protecting retained temporary files and safely restarting low-memory mode remain separate pending work. No action is needed from you now."
+          ]
+        }
+      },
+      {
+        "kind": "support-limitation",
+        "source_text_sha256": "06bbb3bf1c3a02eefa175c5fa3a06a5eda7070a47098e69ef8332bedc0b4a8f5",
+        "user_description": {
+          "owner": "agent",
+          "sentences": [
+            "The stable output-choice work is complete. Worker graphics-memory reporting is also complete in a separate reviewed change.",
+            "The agent must finish the final roadmap checks. Accepted accuracy tests stay closed.",
+            "Low-memory mode has separate pending work. No action is needed from you."
+          ]
+        }
+      }
+    ]
+  },
+  "historical_parent_qualification": {
+    "original": "pending",
+    "work_id": "structured-output-host-controls-qualification-v4",
+    "meaning": "Historical component support at its recorded source. Current final qualification is recorded separately in final_qualification; this header does not assert a current pending requirement."
   }
 }
