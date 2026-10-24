@@ -10585,7 +10585,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The agent must add safe start, stop and cancellation controls. The agent must then test scanned files in the desktop app and browser app."
+          "The earlier source tests did not run the Windows text reader. A later work item has now tested its start, stop and cancellation controls. The agent must still add the reader to the app and test scanned files in both apps."
         ]
       }
     },
@@ -10596,6 +10596,36 @@
         "owner": "agent",
         "sentences": [
           "The accepted model-accuracy tests stay closed and were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "76e09421071e67504d949608509a695f218bfa77df8a526a2dd6b5f723bf18b0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The OCR component passed 51 portable tests and 12 Windows test cases. Process tests checked cancellation, timeouts, crashes, resource limits and protection of program files. The app still reports OCR as unavailable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "98c65dbbc109785fdfdad35291bffbf8ab5f9dfd524fece082dbcc3eda5a47bb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must add the text reader to the app and test scanned images and PDFs in the desktop app and browser app. The completed process tests remain recorded as supporting work."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "106170b613f63ea93ee3bda798fdac53df8c7883be96ae384f3b316a9f13d923",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests did not repeat model accuracy. They do not check old temporary model files, other OCR engines or the separate restricted security work. Normal document processing is unchanged."
         ]
       }
     }

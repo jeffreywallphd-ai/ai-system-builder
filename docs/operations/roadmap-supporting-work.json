@@ -3036,6 +3036,57 @@
         "The Windows helper has not run. Native process limits, safe shutdown, cancellation, trusted build/package identity, real scanned files, normalization/readiness and both-host UI checks remain agent work.",
         "Accepted model accuracy stays closed and was not rerun. Existing Standard document behavior, unknown retained offload data and restricted legacy work are unchanged."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "bounded-windows-ocr-native-owner",
+      "work_criteria": [
+        "ocr-native-owner-is-bounded-and-retires"
+      ],
+      "receipt_digest": "ab3d227df2c3e3d2840e3533d09d6058bdf59608441ae6e495299263bef25af9",
+      "review_digest": "2507057fa1f92aca546306d102bded962c7bbea5b7ad3f08d2d7a498d97b6506",
+      "scope": "Committed Windows OCR process/resource controls: 51 portable tests, routing, five checks, separate review and 12 actual Windows test cases passed on the exact selected source. Native checks cover cancellation, timeout, limits, resource locks, failure cleanup and owner crash. Product OCR is still unavailable.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Trusted build/package composition, provider/readiness/normalization, actual PNG/JPEG/scanned-PDF recognition and both-host UI remain pending. The native tests qualify only newly owned helper process/resource controls, not product OCR availability.",
+        "No model-quality checks were repeated. Standard document extraction, the old retained offload slot, restricted legacy work and other providers are outside this component."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "bounded-windows-ocr-native-owner",
+      "work_criteria": [
+        "ocr-native-owner-is-bounded-and-retires"
+      ],
+      "receipt_digest": "ab3d227df2c3e3d2840e3533d09d6058bdf59608441ae6e495299263bef25af9",
+      "review_digest": "2507057fa1f92aca546306d102bded962c7bbea5b7ad3f08d2d7a498d97b6506",
+      "scope": "Committed Windows OCR process/resource controls: 51 portable tests, routing, five checks, separate review and 12 actual Windows test cases passed on the exact selected source. Native checks cover cancellation, timeout, limits, resource locks, failure cleanup and owner crash. Product OCR is still unavailable.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Trusted build/package composition, provider/readiness/normalization, actual PNG/JPEG/scanned-PDF recognition and both-host UI remain pending. The native tests qualify only newly owned helper process/resource controls, not product OCR availability.",
+        "No model-quality checks were repeated. Standard document extraction, the old retained offload slot, restricted legacy work and other providers are outside this component."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "bounded-windows-ocr-native-owner",
+      "work_criteria": [
+        "ocr-native-owner-is-bounded-and-retires"
+      ],
+      "receipt_digest": "ab3d227df2c3e3d2840e3533d09d6058bdf59608441ae6e495299263bef25af9",
+      "review_digest": "2507057fa1f92aca546306d102bded962c7bbea5b7ad3f08d2d7a498d97b6506",
+      "scope": "Committed Windows OCR process/resource controls: 51 portable tests, routing, five checks, separate review and 12 actual Windows test cases passed on the exact selected source. Native checks cover cancellation, timeout, limits, resource locks, failure cleanup and owner crash. Product OCR is still unavailable.",
+      "limitations": [
+        "This is reviewed implementation support at its recorded source snapshot. It does not complete a parent criterion, work chunk, increment or roadmap.",
+        "Trusted build/package composition, provider/readiness/normalization, actual PNG/JPEG/scanned-PDF recognition and both-host UI remain pending. The native tests qualify only newly owned helper process/resource controls, not product OCR availability.",
+        "No model-quality checks were repeated. Standard document extraction, the old retained offload slot, restricted legacy work and other providers are outside this component."
+      ]
     }
   ]
 }
