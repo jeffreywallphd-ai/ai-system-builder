@@ -301,3 +301,10 @@ canonical summary/action and criterion-specific operation explanation. Historica
 technical wording can predate newly supplied access; primary copy must accurately
 distinguish authorized access from successful verification. Do not ask for access
 again when it has been supplied, or imply it works before an actual check passes.
+
+Public execution summaries allowlist only bounded sanitized success and problem
+text. Agent context, quality notes and unknown outcome fields remain in canonical
+work records. The existing count and 2 MiB response limits, latest-first admission
+and inventory diagnostic remain unchanged. The browser distinguishes intentional
+history limits from unavailable records; neither changes qualification or recovery
+state. Mixed diagnostics retain each applicable explanation without raw errors.

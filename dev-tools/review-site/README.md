@@ -183,3 +183,11 @@ result will close it? Use short active sentences and separate actions. Apply the
 applicable [ASD-STE100 Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf) writing principles; this is not a claim of formal
 ASD-STE100 certification. Retain security controls, accurate limits and completed
 model results when simplifying the wording.
+
+Execution summaries expose only the success and problem fields used by the browser.
+Other work context remains in the canonical controller records and technical CLI.
+This reduces response size without increasing the existing byte or record limits.
+A display-limit notice says how many recent execution records are shown and confirms
+that older records remain saved. Description maintenance and genuine record failures
+are explained separately, including when both occur. No user action is requested
+for these agent-owned display issues.

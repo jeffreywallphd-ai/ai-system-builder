@@ -22,6 +22,41 @@ const humanIssue = (needed, prevents, action) => ({
     done_when: "The agent has checked and recorded the requested result." },
 });
 
+test("review notices distinguish bounded history, description maintenance and actual record failures", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const response = { schema_version: "development-review-v1", source_digest: "notice", roadmaps: [], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
+    await pause();
+    const error = window.document.querySelector("#error");
+    const limit = { code: "projection.execution-records-truncated", total: 272, shown: 271 };
+    response.diagnostics = [limit];
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(error.textContent, /newest 271 of 272.*Older records remain saved.*Your action: None/);
+    assert.doesNotMatch(error.textContent, /unavailable|recovery|could not be loaded/);
+    response.diagnostics.push({ code: "projection.user-description-unavailable" });
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(error.textContent, /newest 271 of 272.*Some descriptions need an update/);
+    response.diagnostics.push({ code: "projection.local-state-unavailable", detail: "synthetic-private-note" });
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(error.textContent, /newest 271 of 272.*Some records are unavailable/);
+    for (const malformed of [{ shown: -1, total: 3 }, { shown: 3, total: 2 }, { shown: 2, total: 2 }, { shown: "<img src=x>", total: 3 }, { shown: 0.5, total: 3 }]) {
+      response.diagnostics = [{ ...limit, ...malformed }];
+      window.document.querySelector("#refresh").click(); await pause();
+      assert.match(error.textContent, /Some records are unavailable/);
+      assert.doesNotMatch(error.textContent, /newest|<img|synthetic-private-note/);
+    }
+    response.diagnostics = [];
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(error.hidden, true);
+    assert.equal(error.textContent, "");
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+  } finally { window.close(); }
+});
+
 test("JSON review UI refreshes, navigates and renders hostile text inertly", async () => {
   const html = readFileSync("dev-tools/review-site/index.html", "utf8");
   const script = readFileSync("dev-tools/review-site/app.js", "utf8");

@@ -418,6 +418,20 @@ function render() {
   document.querySelector("#fingerprint").textContent = `Source ${data.source_digest.slice(0, 12)}`;
 }
 let fetching = false;
+function reviewNotice(diagnostics) {
+  const messages = [];
+  const limits = diagnostics.filter(row => row?.code === "projection.execution-records-truncated");
+  const limit = limits[0];
+  const validLimit = limits.length === 1 && Number.isSafeInteger(limit.shown) && Number.isSafeInteger(limit.total)
+    && limit.shown >= 0 && limit.total > limit.shown;
+  if (validLimit) messages.push(`The Work items tab shows the newest ${limit.shown} of ${limit.total} execution records. Older records remain saved. Your action: None.`);
+  if (diagnostics.some(row => row?.code === "projection.user-description-unavailable"))
+    messages.push("Some descriptions need an update. The agent will update them. Your action: None.");
+  if (diagnostics.some(row => row?.code !== "projection.user-description-unavailable"
+    && !(row?.code === "projection.execution-records-truncated" && validLimit)))
+    messages.push("Some records are unavailable. The agent will check the saved workflow records and repair the issue. Your action: None.");
+  return messages.join(" ");
+}
 async function refresh() {
   if (fetching) return; fetching = true;
   try {
@@ -429,10 +443,9 @@ async function refresh() {
     if (lastDigest !== data.source_digest) { lastDigest = data.source_digest; render(); }
     document.querySelector("#connection").textContent = "Live · JSON connected";
     document.querySelector("#updated").textContent = `Checked ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-    const error = document.querySelector("#error"); error.hidden = !data.diagnostics.length;
-    error.textContent = !data.diagnostics.length ? "" : data.diagnostics.every(row => row.code === "projection.user-description-unavailable")
-      ? "Some descriptions need an update. The agent will update them. Your action: None."
-      : "Some records could not be loaded. The agent must check the contributor status command for recovery guidance.";
+    const error = document.querySelector("#error");
+    error.textContent = reviewNotice(data.diagnostics);
+    error.hidden = !error.textContent;
   } catch {
     document.querySelector("#connection").textContent = "Connection interrupted";
     const error = document.querySelector("#error"); error.hidden = false; error.textContent = "The local review server is unavailable. Retry, or start it using the documented review-site command.";

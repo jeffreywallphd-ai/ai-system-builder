@@ -274,3 +274,12 @@ canonical summary/action and criterion-specific operation explanation. Historica
 technical wording can predate newly supplied access; primary copy must accurately
 distinguish authorized access from successful verification. Do not ask for access
 again when it has been supplied, or imply it works before an actual check passes.
+
+Execution summary minimization uses a positive success/problem allowlist. Internal
+rationale, baseline, quality and unknown outcome fields remain outside the public
+response. Existing sanitization, inert text rendering, count and 2 MiB byte bounds
+remain mandatory. A display-limit diagnostic retains only validated integer counts;
+malformed counts or unknown diagnostics use generic agent-owned repair guidance.
+Mixed record failures remain visible. No diagnostic grants recovery, changes
+canonical data or supplies a technical pass. Tests preserve original records and
+exercise oversized inventories, excluded fields and malformed/mixed diagnostics.

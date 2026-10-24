@@ -3,7 +3,7 @@
 # Optional Constrained JSON Generation Implementation Roadmap
 
 - Status: `completed`
-- Updated: `2026-10-24T05:22:29Z`
+- Updated: `2026-10-24T05:53:34Z`
 
 ## Objective
 

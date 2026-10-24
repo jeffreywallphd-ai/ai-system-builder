@@ -457,3 +457,10 @@ responsible role, the user's action, the remaining work and the completion check
 The technical definition stays in JSON for agents. Simplifying text or changing
 responsibility cannot supply credentials, grant restricted authority, bypass a
 safety guard, approve new scope or close a technical acceptance check.
+
+An execution-record display limit is not record corruption. The site reports the
+number of recent records shown; older records remain saved. Its public summaries
+include only success and problem text used by the browser. Use the technical
+status command for full saved work context and actual recovery guidance. The agent
+handles display maintenance. A limit notice must not hide a simultaneous genuine
+record error or turn unavailable qualification into a pass.

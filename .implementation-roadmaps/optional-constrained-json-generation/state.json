@@ -1203,7 +1203,10 @@
       "targetIncrementId": "production-hardening-and-qualification"
     }
   ],
-  "finalApproval": null,
+  "finalApproval": {
+    "approvedAt": "2026-10-24T05:53:34Z",
+    "note": "The user explicitly approved the completed overall work after the final report was presented."
+  },
   "history": [
     {
       "eventFingerprint": "5e0cd7b646e04824d51078c5cefd8264bfb697201decadad6a0ff2f7ddec72cc",
@@ -1828,6 +1831,12 @@
       "recordedAt": "2026-10-24T05:22:29Z",
       "sequence": 104,
       "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "843fd2f0d90762755e1dfb3815641fb3b834b5b9de8c6303f63057ddea281b6e",
+      "recordedAt": "2026-10-24T05:53:34Z",
+      "sequence": 105,
+      "type": "final-approval-recorded"
     }
   ],
   "increments": [
@@ -2938,5 +2947,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "completed",
-  "updatedAt": "2026-10-24T05:22:29Z"
+  "updatedAt": "2026-10-24T05:53:34Z"
 }

@@ -7371,7 +7371,7 @@
       "roadmap_id": "optional-constrained-json-generation",
       "source_title_objective_digest": "f65c88082fbb093cb81e12aea206b4cd221f9c581648325eb063786be6eaf4fe",
       "user_description": {
-        "title": "Optional generation with a checked JSON format",
+        "title": "Optional Constrained JSON Generation",
         "purpose": "The agent will add optional token-level JSON Schema limits to local Qwen dataset generation.",
         "scope": [
           "Strict semantic validation must remain intact.",

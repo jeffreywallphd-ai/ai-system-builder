@@ -143,7 +143,11 @@ def project(root: Path) -> dict:
     execution_records.sort(key=lambda w: creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at")) or "", reverse=True)
     executions = []
     for w in execution_records[:1000]:
-        executions.append({"id": safe_text(w["spec"]["work_id"], 80), "title": safe_text(w["spec"]["title"]), "kind": w["spec"]["kind"], "status": w["status"], "outcome": {k: safe_text(v, 1000) for k, v in w["spec"]["outcome"].items()}, "roadmap": safe_text((w["spec"].get("roadmap") or {}).get("increment_id", "lightweight")), "receipt_count": len(w.get("receipts", [])), "review_count": len(w.get("reviews", [])), "latest_verification": (w.get("receipts") or [{}])[-1].get("qualification", "unverified"), "latest_review": (w.get("reviews") or [{}])[-1].get("disposition", "missing"), "claim": "active" if w.get("claim") else "none"})
+        # The browser displays success, falling back to problem. Keep agent-only
+        # context and unknown notes in canonical records, outside the response.
+        summary = {key: safe_text(w["spec"]["outcome"][key], 1000)
+                   for key in ("success", "problem") if key in w["spec"]["outcome"]}
+        executions.append({"id": safe_text(w["spec"]["work_id"], 80), "title": safe_text(w["spec"]["title"]), "kind": w["spec"]["kind"], "status": w["status"], "outcome": summary, "roadmap": safe_text((w["spec"].get("roadmap") or {}).get("increment_id", "lightweight")), "receipt_count": len(w.get("receipts", [])), "review_count": len(w.get("reviews", [])), "latest_verification": (w.get("receipts") or [{}])[-1].get("qualification", "unverified"), "latest_review": (w.get("reviews") or [{}])[-1].get("disposition", "missing"), "claim": "active" if w.get("claim") else "none"})
         executions[-1]["metrics"] = delivery(w)
         executions[-1]["source"] = "execution"
         executions[-1]["created_at"] = creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at"))

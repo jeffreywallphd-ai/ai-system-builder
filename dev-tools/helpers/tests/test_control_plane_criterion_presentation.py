@@ -334,6 +334,31 @@ class CriterionPresentationTests(unittest.TestCase):
         self.assertEqual(value['work_items'][0]['id'], 'work-0999')
         self.assertIn({'code': 'projection.execution-records-truncated', 'total': 1000, 'shown': shown}, value['diagnostics'])
 
+    def test_unrendered_execution_notes_do_not_displace_public_work_summaries(self):
+        from unittest.mock import patch
+        from control_plane.records import Records
+        records = Records.empty()
+        for number in range(300):
+            identity = 'work-' + str(number).zfill(4)
+            records['work_items'][identity] = {
+                'spec': {'work_id': identity, 'title': 'Owned work', 'kind': 'lightweight',
+                         'outcome': {key: key + ':' + 'x' * 990 for key in
+                                     ('user', 'journey', 'baseline', 'problem', 'success', 'quality', 'internal_rationale')}},
+                'status': 'complete', 'created_at': f'2026-10-23T00:{number // 60:02}:{number % 60:02}Z',
+                'events': [{'at': '2026-10-23T00:00:00Z'}],
+            }
+        original = json.dumps(records, sort_keys=True)
+        with patch.object(Records, 'load', return_value=records):
+            value = project(self.root)
+        works = [row for row in value['work_items'] if row['source'] == 'execution']
+        self.assertEqual(value['inventory'], {'execution_records_total': 300, 'execution_records_shown': 300,
+                                              'execution_records_truncated': False})
+        self.assertEqual(works[0]['id'], 'work-0299')
+        self.assertEqual(works[-1]['id'], 'work-0000')
+        self.assertTrue(all(set(row['outcome']) == {'success', 'problem'} for row in works))
+        self.assertLess(len(json.dumps(value).encode()), 2 * 1024 * 1024)
+        self.assertEqual(json.dumps(records, sort_keys=True), original)
+
     def test_current_repository_response_deduplicates_linked_criteria_without_losing_canonical_detail(self):
         value = project(Path(__file__).resolve().parents[3])
         self.assertLess(len(json.dumps(value).encode()), 2 * 1024 * 1024)
