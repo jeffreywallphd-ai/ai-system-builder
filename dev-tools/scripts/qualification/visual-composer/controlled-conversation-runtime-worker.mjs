@@ -19,7 +19,7 @@ export function createControlledConversationRuntimeWorker(options) {
   const port = Number(options.port);
   const token = String(options.token ?? "").trim();
   const scenario = options.scenario ?? "immediate";
-  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download", "dataset-profile"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
+  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download", "dataset-profile", "structured-output-controls"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
   if (host !== LOOPBACK_HOST) {
     throw new Error(
       "Controlled runtime qualification must remain on loopback.",
@@ -75,6 +75,7 @@ export function createControlledConversationRuntimeWorker(options) {
             "unload-model",
             ...(options.modelCacheRoot ? ["ensure-model-download"] : []),
             ...(scenario === "dataset-profile" ? ["dataset-preparation.offload-v1"] : []),
+            ...(scenario === "structured-output-controls" ? ["dataset-preparation.constrained-json"] : []),
           ],
         });
       }

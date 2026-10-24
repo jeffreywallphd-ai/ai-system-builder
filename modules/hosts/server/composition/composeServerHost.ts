@@ -2423,6 +2423,7 @@ export function composeServerHost(
             schemaSupported: true,
             logicalProcessorCount: cpus().length,
             totalSystemMemoryBytes: totalmem(),
+            availableSystemMemoryBytes: freemem(),
           };
         },
         datasetVersionUseCases,

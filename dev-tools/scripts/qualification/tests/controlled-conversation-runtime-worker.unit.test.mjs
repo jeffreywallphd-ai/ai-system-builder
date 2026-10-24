@@ -6,6 +6,28 @@ import path from "node:path";
 
 import { createControlledConversationRuntimeWorker } from "../visual-composer/controlled-conversation-runtime-worker.mjs";
 
+test("structured output fixture declares controls readiness without performing dataset generation", async () => {
+  const token = "qualification-token-0123456789abcdef";
+  assert.throws(() => createControlledConversationRuntimeWorker({ port: 0, token, scenario: "unknown-controls" }));
+  for (const scenario of ["immediate", "structured-output-controls"]) {
+    const worker = createControlledConversationRuntimeWorker({ port: 0, token, scenario });
+    const { port } = await worker.start();
+    try {
+      const origin = `http://127.0.0.1:${port}`;
+      const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
+      assert.equal((await fetch(`${origin}/capabilities`)).status, 401);
+      const capabilities = await (await fetch(`${origin}/capabilities`, { headers })).json();
+      assert.equal(capabilities.capabilities.includes("dataset-preparation.constrained-json"), scenario === "structured-output-controls");
+      assert.equal(capabilities.capabilities.includes("dataset-preparation.offload-v1"), false);
+      const refused = await fetch(`${origin}/tasks/start`, { method: "POST", headers,
+        body: JSON.stringify({ requestId: "dataset.controls-only", taskType: "prepare-training-dataset", payload: {} }) });
+      assert.equal(refused.status, 400);
+      assert.equal((await refused.json()).error.message, "The runtime request is invalid.");
+      assert.deepEqual((await (await fetch(`${origin}/models/status`, { headers })).json()).loadedModels, []);
+    } finally { await worker.stop(); }
+  }
+});
+
 test("controlled conversation worker authenticates, bounds, and completes synthetic turns", async () => {
   const token = "qualification-token-0123456789abcdef";
   const worker = createControlledConversationRuntimeWorker({

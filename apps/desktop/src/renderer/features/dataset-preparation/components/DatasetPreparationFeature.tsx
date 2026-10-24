@@ -498,6 +498,7 @@ function WorkspaceDatasetPreparationFeature({
                 </span>
                 <select
                   className="ui-input"
+                  aria-label="Saved training settings"
                   value={selectedSavedTrainingSettingsId}
                   disabled={formLocked || savedTrainingSettings.length === 0}
                   onChange={(event) =>

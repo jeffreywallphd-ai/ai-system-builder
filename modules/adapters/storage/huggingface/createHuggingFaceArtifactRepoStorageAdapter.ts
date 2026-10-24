@@ -49,7 +49,7 @@ export type HuggingFaceFetchImplementation = (
     headers?: Record<string, string>;
     body?: string;
     signal?: AbortSignal;
-    redirect?: RequestRedirect;
+    redirect?: "error" | "follow" | "manual";
   },
 ) => Promise<HuggingFaceFetchResponse>;
 

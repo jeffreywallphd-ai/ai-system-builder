@@ -31,7 +31,7 @@ async function start(): Promise<void> {
   }
   const created = await createServer({
     env: process.env,
-    structuredDocuments: process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile"
+    structuredDocuments: ["dataset-profile", "structured-output-controls"].includes(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO ?? "")
       ? createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("qualification.local"))
       : createInMemoryStructuredDocumentStore(),
     runtimeDatabases: createVisualComposerQualificationRuntimeDatabase(),

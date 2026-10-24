@@ -39,6 +39,45 @@ class BlockerRunnerTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory(dir=runner.ROOT/'.local-codex')
         self.addCleanup(self.temp.cleanup); self.folder=Path(self.temp.name)
         self.config=runner.registry()
+        # Exercise the real inventory validator against stable public metadata.
+        # Unit lifecycle tests must not depend on a live roadmap remaining open.
+        metadata = {}
+        for owner in self.config['owners']:
+            increments = {}
+            for ref in owner['criteria']:
+                increment, criterion = ref.split('/')
+                increments.setdefault(increment, {'id':increment, 'status':'verifying', 'acceptanceCriteria':[]})['acceptanceCriteria'].append(
+                    {'id':criterion, 'description':'Synthetic qualification requirement.', 'qualification':{'status':'pending'}})
+            metadata[owner['id']] = {'status':'executing', 'increments':list(increments.values()),
+                'blockers':[{'id':owner['id']+'-synthetic', 'kind':'technical', 'status':'open',
+                    'summary':'Synthetic unresolved requirement.', 'requiredAction':'Synthetic action.'}]}
+        metadata['system-builder-canvas-reliability'] = {'status':'completed', 'increments':[], 'blockers':[]}
+        self.metadata = metadata
+        state_root = runner.ROOT/'.implementation-roadmaps'
+        original_glob, original_read = Path.glob, runner.read
+        def glob(path, pattern):
+            if path == state_root and pattern == '*/state.json':
+                return iter(state_root/name/'state.json' for name in sorted(metadata))
+            return original_glob(path, pattern)
+        def read(path, *args, **kwargs):
+            path = Path(path)
+            if path.parent.parent == state_root and path.name == 'state.json':
+                return copy.deepcopy(metadata[path.parent.name])
+            return original_read(path, *args, **kwargs)
+        self.enterContext(patch.object(Path, 'glob', glob))
+        self.enterContext(patch.object(runner, 'read', side_effect=read))
+        self.enterContext(patch.object(runner, 'folded_history', return_value=[]))
+
+    def test_inventory_excludes_validated_folded_history_but_not_an_unknown_owner(self):
+        retired = 'synthetic-retired-roadmap'
+        self.metadata[retired] = {'status':'blocked', 'increments':[], 'blockers':[{'status':'open'}]}
+        handoff = {'source':retired, 'owner':'security-findings-refresh', 'consolidation_sha256':'a'*64}
+        with patch.object(runner, 'folded_history', return_value=[handoff]):
+            rows = runner.inventory(self.config)
+        self.assertNotIn(retired, {row['roadmap_id'] for row in rows})
+        self.assertEqual(next(row for row in rows if row['roadmap_id']==handoff['owner'])['folded_history'], [handoff])
+        with self.assertRaisesRegex(ValueError, 'Unmapped or changed'):
+            runner.inventory(self.config)
 
     def test_inventory_accounts_for_every_open_blocker_without_offload_or_provider_calls(self):
         result=runner.inventory(self.config)
