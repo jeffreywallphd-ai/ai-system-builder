@@ -10139,13 +10139,75 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "6ce54b3b5d6857e34fe8d47694dfe7640394364dd3a7b89b7fc075a1ebd4a941",
+      "source_text_sha256": "99af2db64bccc998bb1e895e912f5d85e01c511dc2f81bc4b752b1516b70f7aa",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The agent must finish the automatic default, lost-readiness behavior and final checks.",
-          "Completed model accuracy checks stay closed. They will not be repeated.",
-          "Low-memory file protection and restart checks remain separate work. No action is needed from you."
+          "Stable output choices and lost-readiness handling now pass their checks.",
+          "The agent must finish graphics-memory reporting from the actual worker and the final roadmap checks.",
+          "Accepted model accuracy checks stay closed. Low-memory file protection and restart checks remain separate pending work.",
+          "No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0ea509dc2949a7d057f364ea605ba04d8946a1ea63d6a0c275404afc27312c87",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both interfaces keep the initial output-mode choice stable when memory use changes.",
+          "If checked output loses runtime support, the app keeps your choice and refuses to start generation. It does not switch to unchecked output.",
+          "The 61 model-free tests, production builds and both app-interface tests passed. Independent review passed, and the changes are committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c224c8213e70e5ddb4d39c64f1927dd8c3376cfa3d70a60e80259ec9ce840c85",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The renderer tests use declared computer-capacity values.",
+          "The desktop and browser tests use a test runtime that cannot generate data.",
+          "These checks do not prove real graphics-memory reporting, model execution or a full application restart."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "86c42599a43a6c58fb0b52cf991334dd12ed3da0b55be5ecc572452a77dd9c66",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This supporting work is complete. The parent roadmap still needs its remaining technical checks.",
+          "The agent must finish graphics-memory reporting from the actual worker and run the final checks.",
+          "Completed model-accuracy checks stay closed. Low-memory mode has separate pending work.",
+          "No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ee181a55b318d01507fc1c697693254499b6c6ec9769079589b6bec3983f8d6b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app now keeps a report of zero free RAM as zero.",
+          "It cannot replace that report with a larger estimate based on installed RAM.",
+          "The 12 owning tests and required checks passed. Independent review passed, and the correction is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e1e9e9c834ebe2bbf060f350c57d2f5b50933e8fc2d021311f0ffe5c5d8a16c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests check how the app handles memory information. They do not run a model.",
+          "The worker memory guards, explicit overflow limits and runtime checks are unchanged.",
+          "This correction does not complete physical-memory, low-memory-mode or parent-roadmap qualification. Completed model-accuracy results stay closed."
         ]
       }
     }

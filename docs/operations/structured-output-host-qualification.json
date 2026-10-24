@@ -65,7 +65,51 @@
   "limitations": [
     "Reviewed local controls support at its recorded working-source snapshot. Isolated HEAD-plus-selected tests and actual full-working-graph host journeys are separate evidence. No parent criterion, increment, roadmap or current parent qualification is granted.",
     "The runtime is an explicitly declared controls-only fixture: it advertises synthetic decoder readiness and refuses generation. These journeys do not prove sufficient-accelerator reporting, general adaptive-state stability, model inference, physical resources, native restart or offload. Renderer reload is not a native application or server restart.",
-    "The agent must finish sufficient-profile adaptive behavior, readiness-loss and final owning qualification. Reviewed CPU/GPU structural-resource measurements remain separate; accepted model accuracy stays closed and must not be rerun. Native retained-file protection and guarded restart remain pending. No action is needed from the user."
+    "Stable recommendation and lost-readiness handling now pass in the separately reviewed follow-up work. The agent must finish truthful worker-local accelerator reporting and final current-source parent qualification. Accepted model accuracy stays closed. Native retained-file protection and guarded restart remain separate pending work. No action is needed from the user."
   ],
-  "parent_qualification": "pending"
+  "parent_qualification": "pending",
+  "superseded_follow_up": [
+    {
+      "text": "The agent must finish sufficient-profile adaptive behavior, readiness-loss and final owning qualification. Reviewed CPU/GPU structural-resource measurements remain separate; accepted model accuracy stays closed and must not be rerun. Native retained-file protection and guarded restart remain pending. No action is needed from the user.",
+      "reason": "Replaced after separately reviewed stable-output-intent completion; original qualification scope is preserved.",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish the automatic default, lost-readiness behavior and final checks.",
+          "Completed model accuracy checks stay closed. They will not be repeated.",
+          "Low-memory file protection and restart checks remain separate work. No action is needed from you."
+        ]
+      }
+    }
+  ],
+  "stable_output_follow_up": {
+    "work_id": "stable-constrained-output-intent",
+    "receipt_digest": "541b2cb65edd6f056cf12b2581abff28a518df75e8a58c4c2f4b5c0c6d5078e9",
+    "review_digest": "affa4142ca2724e4cd9ecadb14c79c1aa5d54d27741f5ad9e4edf3d06794e7fb",
+    "checkpoint_commit": "d5b53aecc6ccd3f5326c3ae28c4ae86235cec680",
+    "actual_host_run": "artifacts/qualification/visual-composer/runs/2026-10-24t00-58-15-530z-5b5f5de3",
+    "actual_host_source_revision": "source.f16f066452e7ec74b737a5f849a9cbf3307dffbb2d705247f9f09651fe5724cc",
+    "host_evidence_sha256": "97005361fd4f9e12f78fd0b162d1d36a0d634036455c0d45a0565a1794db86b7",
+    "synthetic_focused_tests": 61,
+    "failures": 0,
+    "skips": 0,
+    "scope": "Both renderers keep the first fresh output-mode recommendation stable and preserve explicit choices. Lost decoder or schema readiness cannot silently dispatch unchecked generation. The fixed model-free profile passed 61 tests, production builds passed, and both actual synthetic host controls journeys passed after source freeze. Separate review accepted the exact work, which is committed.",
+    "limitations": [
+      "The renderer tests use declared CPU and accelerator snapshots. Actual packaged desktop and browser controls journeys use a synthetic decoder capability and refuse generation. They do not prove physical accelerator capacity, model execution or native process restart.",
+      "This completes only the named local supporting work. The agent must finish truthful worker-local accelerator reporting and final current-source checks for the parent criterion. Accepted model accuracy stays closed; native offload remains separate pending work. No action is needed from the user."
+    ]
+  },
+  "zero_available_ram_follow_up": {
+    "work_id": "preserve-zero-available-generation-memory",
+    "receipt_digest": "14cfc684ebc11000b3b7c547cca09dfc0d5e880fc56bba72b6e370fe837cc561",
+    "review_digest": "9e4411de0239ae5c2e7d389e901eb79cc504cfef3bfae1bfd45f7beb6386a975",
+    "checkpoint_commit": "bad64936b8d02eb39f65eada8e0f4a977a2b2010",
+    "owning_contract_tests": 12,
+    "failures": 0,
+    "skips": 0,
+    "scope": "A reported zero available RAM value now remains zero through normalization and direct CPU or automatic capacity resolution. The app cannot replace it with a larger installed-memory estimate. Twelve owning tests and the registered contract, documentation and architecture checks passed; separate review accepted the correction, which is committed.",
+    "limitations": [
+      "This is an advisory contract correction with synthetic capacity fixtures. Worker memory guards, resource admission, explicit overflow limits, capability checks and accepted model accuracy are unchanged. No physical memory, model inference, offload or parent qualification is claimed."
+    ]
+  }
 }

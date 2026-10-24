@@ -1047,6 +1047,17 @@
       "outcome": "pending",
       "recordedAt": "2026-10-24T00:45:16Z",
       "summary": "Actual packaged desktop and local Chrome output-builder controls passed with protected required roles, nested numeric schema, invalid-duplicate refusal, explicit choice, saved load and renderer-reload restoration. Available RAM and accessible naming were fixed; model-free tests, current registered checks, production builds and separate review passed. Sufficient-profile adaptive behavior, readiness loss and final owning checks remain pending agent work. No model accuracy rerun, native/offload or parent pass is asserted."
+    },
+    {
+      "artifact": "docs/operations/structured-output-host-qualification.json",
+      "command": "Source-bound model-free regressions and actual synthetic host controls evidence, followed by separate review",
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-33",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-24T01:13:40Z",
+      "summary": "Separately reviewed and committed stable-output intent now preserves the first fresh recommendation and explicit choice, refusing unchecked fallback after readiness loss. All61 fixed model-free tests, actual synthetic desktop/browser controls journeys and production builds passed. The separately reviewed zero-available-RAM fix preserves zero and passes12 owning tests and registered checks. Actual worker-local accelerator reporting and final current-source parent qualification remain pending agent work. Accepted model accuracy stays closed; no native/offload or parent pass."
     }
   ],
   "feedback": [
@@ -1665,6 +1676,12 @@
       "eventFingerprint": "19dc2c16e3be857603a8274711d8541221ee5db5ebdcc99b667589a8f501a6cc",
       "recordedAt": "2026-10-24T00:45:16Z",
       "sequence": 94,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "afb126732ee70755e8a5394816de7bc19e330d3085da142b3bd1bd79b5adf312",
+      "recordedAt": "2026-10-24T01:13:40Z",
+      "sequence": 95,
       "type": "evidence-recorded"
     }
   ],
@@ -2778,5 +2795,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T00:45:16Z"
+  "updatedAt": "2026-10-24T01:13:40Z"
 }
