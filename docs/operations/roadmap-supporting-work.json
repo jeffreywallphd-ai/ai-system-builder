@@ -3240,6 +3240,54 @@
         "This is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
         "OCR is not available in the app yet. The agent must still qualify authorized source-file native capture, public task and cancellation handling, readiness, actual desktop/browser journeys and a full desktop package. Earlier provider and build limits remain historical snapshots."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-staged-source-snapshot",
+      "work_criteria": [
+        "staged-source-capture-is-exact-bounded-and-retired"
+      ],
+      "receipt_digest": "6852f02213b591db837c6c22b6e9bee99ebacc52505884b2298ad0d2ef50512b",
+      "review_digest": "50e14d21e9d28339bfe4cf92a36e5c7babc2495f493aa7db599c9f26408abff9",
+      "scope": "Committed private staged-PDF capture pins the exact local fixed-drive file and its ancestors, checks byte count and digest, reads immutable bytes and acknowledges closes before return. Selected-source 150 Python tests, seven Node tests, one routing test, required gates and separate review passed. Five actual Windows case groups checked sharing, replacement, cancellation and retirement; five captured PDF pages passed recognition. This does not authorize a source or enable app OCR.",
+      "limitations": [
+        "This staged-source capture is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must compile the application-authorized task source map and qualify public task readiness, cancellation and chunking, actual desktop/browser journeys and a full desktop package. Earlier source, reader, normalization and build descriptions remain historical snapshots."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-staged-source-snapshot",
+      "work_criteria": [
+        "staged-source-capture-is-exact-bounded-and-retired"
+      ],
+      "receipt_digest": "6852f02213b591db837c6c22b6e9bee99ebacc52505884b2298ad0d2ef50512b",
+      "review_digest": "50e14d21e9d28339bfe4cf92a36e5c7babc2495f493aa7db599c9f26408abff9",
+      "scope": "Committed private staged-PDF capture pins the exact local fixed-drive file and its ancestors, checks byte count and digest, reads immutable bytes and acknowledges closes before return. Selected-source 150 Python tests, seven Node tests, one routing test, required gates and separate review passed. Five actual Windows case groups checked sharing, replacement, cancellation and retirement; five captured PDF pages passed recognition. This does not authorize a source or enable app OCR.",
+      "limitations": [
+        "This staged-source capture is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must compile the application-authorized task source map and qualify public task readiness, cancellation and chunking, actual desktop/browser journeys and a full desktop package. Earlier source, reader, normalization and build descriptions remain historical snapshots."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-staged-source-snapshot",
+      "work_criteria": [
+        "staged-source-capture-is-exact-bounded-and-retired"
+      ],
+      "receipt_digest": "6852f02213b591db837c6c22b6e9bee99ebacc52505884b2298ad0d2ef50512b",
+      "review_digest": "50e14d21e9d28339bfe4cf92a36e5c7babc2495f493aa7db599c9f26408abff9",
+      "scope": "Committed private staged-PDF capture pins the exact local fixed-drive file and its ancestors, checks byte count and digest, reads immutable bytes and acknowledges closes before return. Selected-source 150 Python tests, seven Node tests, one routing test, required gates and separate review passed. Five actual Windows case groups checked sharing, replacement, cancellation and retirement; five captured PDF pages passed recognition. This does not authorize a source or enable app OCR.",
+      "limitations": [
+        "This staged-source capture is reviewed local implementation support at its recorded snapshot. It does not complete a parent criterion, work chunk, increment or roadmap. No model accuracy was rerun.",
+        "OCR is not available in the app yet. The agent must compile the application-authorized task source map and qualify public task readiness, cancellation and chunking, actual desktop/browser journeys and a full desktop package. Earlier source, reader, normalization and build descriptions remain historical snapshots."
+      ]
     }
   ]
 }

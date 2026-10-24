@@ -10732,6 +10732,42 @@
           "Earlier descriptions of reader and build limits remain as historical snapshots."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3f890459edc60e181a3fb2542f8d6027b8a91f875c00efc201814719bdeabc17",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private reader checked the exact staged PDF on a local fixed drive, prevented that file from being changed and its parent folders from being replaced during the read, and checked its expected size and fingerprint.",
+          "Cancellation was checked between reads. Native file handles were confirmed closed before bytes were returned. All five captured pages passed text recognition.",
+          "The selected code passed 150 Python tests, seven Node tests, one routing test, the required checks and separate review. Five actual Windows test groups passed.",
+          "These checks do not authorize a source or make OCR available in the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4c1029165977f83188216a437df96d660d8ec794820d3c3660805aec9c075a12",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records reviewed staged-file capture at its tested code snapshot.",
+          "It does not finish the parent requirement, work item, increment or roadmap. Model accuracy was not tested again."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c23799d1c0ab884907892c9af1e7bfc9233e9fec7f5123571bf1f11dbaaffc5c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "OCR is not available in the app yet.",
+          "The agent must still build the task file map from application-authorized data and test public task readiness, cancellation, chunking, desktop and browser journeys, and a full desktop package.",
+          "Earlier source, reader, preparation and build descriptions remain as historical snapshots."
+        ]
+      }
     }
   ]
 }
