@@ -348,7 +348,9 @@ remains failed; no automatic additional cap increase follows.
 
 The private reviewed package/UI composition permits the additional exact
 `ocr-documents` scenario. Its literal argv forms, source/environment witnesses,
-1 GiB process, 2 GiB package, 3 GiB UI and 32-process ceilings do not change.
+and 32-process ceiling remain fixed. The explicitly approved OCR profile uses
+2 GiB per process and 4 GiB per job; Standard profiles retain their earlier
+1 GiB process, 2 GiB package and 3 GiB UI limits.
 There is no new public execution selector or numeric budget. Unknown scenario
 strings remain denied. Actual OCR uses a newly packaged authenticated Python
 worker with synthetic generation; package resource identity and real host results
@@ -388,3 +390,39 @@ The probe has a new directory and minimized environment/output. It is diagnostic
 support for the newly owned root, not the complete production preparer, evidence
 about an older numeric PID, a model or accuracy test, a cap waiver or parent
 qualification. Existing failed app runs and retained data remain unchanged.
+
+### Approved OCR profile and direct-root diagnostic
+
+The approved 2 GiB process/4 GiB job profile is selected only by an exactly issued
+immutable OCR host intent, v2 startup intent or closed OCR-budget fixture. There
+is no caller numeric budget, generic command, runtime path or environment
+selector. Standard roles and the historical v1 diagnostic keep their limits.
+All actual limit fields, flags and member counts must match readback before
+resume and throughout lifetime control. The unchanged time, stream, active-zero,
+handle-acknowledgment and fence rules remain mandatory.
+
+The v2 factory directly starts the pinned base image. It also pins the existing
+venv executable/config and requires the config's base location to match. The
+fixed `__PYVENV_LAUNCHER__` context supplies the venv executable/prefix; it is not
+a caller-provided path. Python 3.12 site activation remains enabled with isolated
+and no-user-site flags. Before supplier import, a safe bounded fact verifies
+exact executable/prefix/base identities, required flags and the installed
+guidance distribution. A mismatch exits without importing Torch. The consumer
+must require all identity booleans and each fact's PID to match its retained
+created root. It cannot substitute a redirector's parent or a reported numeric
+PID. This tightens observation identity; it grants no process lookup authority.
+
+Both diagnostic versions discard raw supplier streams before retention and the
+first-line queue. Counts and overflow remain active. V2 still permits only three
+exclusive, synced facts of at most 1,024 bytes, a 20-second deadline and 32 job
+members. Invalid context, failed import/query, missing facts, cap hits or uncertain
+retirement remain failures. The v4 native family refuses a prior v3 fence and
+the v2 diagnostic refuses the actual `runs/FENCED.json` locations in v1 and v2,
+as well as parent-level fences. Neither route adopts or clears
+old ownership, files or uncertainty.
+
+The explicit budget is a prospective test policy, not a known completing budget,
+RAM reservation or production model policy. New exact-source native readback and
+separate reviewed calibration must establish their actual results. Preserve all
+earlier failures and their old limits. No dependency preparation, OCR app, model,
+offload or parent-roadmap pass follows from this profile or its portable tests.

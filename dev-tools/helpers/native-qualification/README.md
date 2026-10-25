@@ -38,11 +38,13 @@ count zero, root exit, final pipe drains and acknowledged closure of every owned
 handle. A nonzero command remains failed even when cleanup is proven; retries
 still need separate review. Unknown cleanup grants no successor.
 
-Every process has a 1 GiB commit ceiling and every job permits at most 32 active
-processes. Fixture and package jobs retain a 2 GiB aggregate commit ceiling. The
-fixed combined ingestion UI role has a 3 GiB aggregate ceiling for its server,
-Vite, browser and desktop topology. Only an exact issued immutable intent selects
-this profile. No caller quota, environment override or public budget option exists.
+Standard fixtures and dataset-profile commands retain a 1 GiB process commit
+ceiling. Their fixture/package jobs retain a 2 GiB aggregate ceiling and their
+combined UI job retains a 3 GiB ceiling. The approved fixed OCR profile uses
+2 GiB per process and 4 GiB per job. Only an issued immutable `ocr-documents`
+host intent, `ocr-runtime-import-v2` diagnostic or `ocr-budget` fixture selects
+that profile. All jobs retain the 32-process ceiling. No caller quota,
+environment override or public budget option exists.
 These are finite limits, not reservations, measured requirements or model-memory
 policy. Readback and
 peaks are recorded. Observed process/job/count limit notifications fail the
@@ -104,9 +106,32 @@ unknown child, native filesystem/offload lease or parent-roadmap pass is implied
 See [control-plane operations](../../../docs/diagnostics/ai-development-control-plane.md)
 and its [threat model](../../../docs/security/ai-development-control-plane-threat-model.md).
 
-The same two fixed private command forms now permit exact `ocr-documents` for
-real deployed Windows OCR with bounded synthetic generation. No new CLI, argv,
-quota, process cleanup or old-run recovery route exists. Unknown scenario strings
-are refused. Both the new scenario composition and changed launcher source need
-current reviewed evidence before a real OCR host run. OCR model accuracy remains
-separate from synthetic generation and native/host delivery.
+The same two fixed private command forms permit exact `ocr-documents` for real
+deployed Windows OCR with bounded synthetic generation. They use the approved
+2 GiB process and 4 GiB job profile. No caller quota, new CLI, argv, process
+cleanup or old-run recovery route exists. Unknown scenario strings are refused.
+The changed launcher needs current reviewed evidence before a real OCR host run.
+Model accuracy remains separate from synthetic generation and native/host delivery.
+
+The new `native-ocr-budget-command-selftests-v4` family runs nine closed cases:
+the earlier eight mechanics and Standard budget checks, plus actual OCR-profile
+readback. It refuses a fence in the previous v3 family. Readback sets limits; it
+does not allocate the ceiling or prove that Torch or either app fits.
+
+The separate `ocr-runtime-import-v2` diagnostic directly starts the hash-pinned
+base interpreter with `-I -B`, the fixed venv launcher context and the approved
+2 GiB/4 GiB limits. `-S` is excluded because Python 3.12 needs site activation
+for this environment. Before importing Torch, its bounded first fact checks
+the exact venv executable/prefix, base executable/prefix, isolation flags and
+installed guidance-distribution context. Facts contain booleans, not paths.
+The consumer must match each fact's PID to the retained created root. A parent
+match or an advisory process number cannot replace that check.
+
+This v2 role retains the 20-second deadline, 32-process ceiling, raw-stream
+discard and byte-overflow controls. Its three exclusive, synced facts are each
+at most 1,024 bytes. Runtime identity, import, query and native retirement must
+all pass. The original v1 probe and failed app runs remain unchanged. The v2
+factory refuses `runs/FENCED.json` in either diagnostic family and also refuses
+a parent-level fence. A fresh source review, native
+qualification and separate one-use calibration are required; no startup, host,
+model or parent pass follows from the approved budget alone.

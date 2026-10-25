@@ -322,10 +322,14 @@ An unnamed, noninherited Windows job owns the new tree at process creation.
 The root starts suspended with both the job-list and explicit standard-handle
 attributes. Only private output pipes and null input can be inherited. Read back
 membership, handle flags and finite limits before resuming. The prospective
-limits are 32 active processes and 1 GiB process commit. Fixture/package jobs
-retain 2 GiB aggregate commit; the fixed combined ingestion UI role alone has
-a 3 GiB job ceiling. Its exact issued immutable intent selects the profile;
-no caller numeric quota, environment override or public budget flag is allowed.
+limits are 32 active processes. Standard fixtures and package jobs retain
+1 GiB process commit and 2 GiB aggregate commit. The fixed Standard ingestion
+UI role retains 1 GiB per process and a 3 GiB job ceiling. Only issued fixed OCR
+package/UI intents, the OCR budget fixture and the v2 startup diagnostic use
+the approved 2 GiB process and 4 GiB job ceilings. The historical v1 startup
+diagnostic retains its original 1 GiB process and 2 GiB job limits.
+An exact issued immutable intent selects the profile; no caller numeric quota,
+environment override or public budget flag is allowed.
 These are hard ceilings, not reservations or guaranteed workload capacity. Failed admission or
 an observed limit failure cannot qualify a workload.
 
@@ -352,9 +356,24 @@ A corrected source revision uses a separately reviewed fixed self-test family.
 Prior failed journals and fences remain intact; a new pass cannot identify an
 unobserved old process or turn the previous failure into a pass.
 
-The role-budget revision retains the two observed 2 GiB UI-limit failures and
-uses the fixed `native-ui-budget-command-selftests-v3` family. Its additional
-closed UI-budget case reads back exactly 3 GiB; all seven existing lifetime
-cases retain their scope and assertions. This calibrates a bounded test topology,
-not product/model/offload policy. Native readback establishes neither physical
-allocation nor successful UI behavior; real host qualification remains separate.
+The earlier fixed `native-ui-budget-command-selftests-v3` family retains its
+eight-case mechanics evidence and the two prior 2 GiB UI-limit failures. The
+approved OCR profile uses the separate fixed
+`native-ocr-budget-command-selftests-v4` family. Its nine cases add an OCR budget
+readback at exactly 2 GiB per process and 4 GiB per job. The Standard UI case
+still reads back 3 GiB. Existing lifetime assertions remain unchanged. A fresh
+family refuses a prior family fence; it does not adopt old processes or remove
+earlier failures. These cases calibrate the bounded test topology. Native limit
+readback proves neither physical allocation nor successful app behavior.
+
+The fixed v2 model-free startup diagnostic pins the direct base interpreter,
+venv interpreter and configuration. Its fixed launcher context must establish
+the intended venv and isolation settings before Torch import. Eleven exact
+identity checks must pass; every safe fact must identify the newly owned root.
+Using a descendant or a reported process number instead is not permitted.
+Raw supplier output is discarded, while byte counts and overflow checks stay
+active. Startup results are limited to three small typed fact files. Actual and
+parent-level v1/v2 run fences prevent admission. The v1 failure remains failed.
+A successful v2 import and accelerator query qualifies only this diagnostic;
+production dependency preparation, both app journeys, model quality, retained
+offload recovery and parent roadmap qualification require separate evidence.

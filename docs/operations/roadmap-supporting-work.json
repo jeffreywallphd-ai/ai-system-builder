@@ -2249,7 +2249,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2268,7 +2268,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -3462,7 +3462,7 @@
       "scope": "Commit 12df299 adds PDF selection and a filename-based media-type fallback when the browser omits MIME metadata. The regression checks bounded slicing and source transfer. Fresh component checks and separate review accepted the three-file projection. Seventeen previously executed Guided interaction cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
       "limitations": [
         "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
-        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+        "The earlier full package attempt stopped for lack of disk space before either OCR app journey ran. The user has now freed the requested disk space. The agent must run fresh desktop and browser OCR checks and retain the earlier failures. No further user action is needed for this resource request. Full app qualification remains pending."
       ]
     },
     {
@@ -3478,7 +3478,7 @@
       "scope": "Commit 12df299 adds PDF selection and a filename-based media-type fallback when the browser omits MIME metadata. The regression checks bounded slicing and source transfer. Fresh component checks and separate review accepted the three-file projection. Seventeen previously executed Guided interaction cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
       "limitations": [
         "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
-        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+        "The earlier full package attempt stopped for lack of disk space before either OCR app journey ran. The user has now freed the requested disk space. The agent must run fresh desktop and browser OCR checks and retain the earlier failures. No further user action is needed for this resource request. Full app qualification remains pending."
       ]
     },
     {
@@ -3494,7 +3494,7 @@
       "scope": "Commit ae102cc gives both apps' method controls and the shared language control stable caption references, with help text referenced separately. Fresh component checks and separate review accepted the seven-file projection. Nineteen previously executed DOM cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
       "limitations": [
         "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
-        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+        "The earlier full package attempt stopped for lack of disk space before either OCR app journey ran. The user has now freed the requested disk space. The agent must run fresh desktop and browser OCR checks and retain the earlier failures. No further user action is needed for this resource request. Full app qualification remains pending."
       ]
     },
     {
@@ -3510,7 +3510,121 @@
       "scope": "Commit ae102cc gives both apps' method controls and the shared language control stable caption references, with help text referenced separately. Fresh component checks and separate review accepted the seven-file projection. Nineteen previously executed DOM cases apply through exact selected-source and finite dependency equality; they were not rerun for this checkpoint.",
       "limitations": [
         "These are reviewed component snapshots. They do not record a successful current desktop/browser OCR journey, a real-browser accessible-name check, a full package or parent qualification. No model accuracy was rerun.",
-        "The latest full package attempt stopped for lack of disk space before either OCR app journey ran. About 5 GB of free space on the system drive has been requested for another attempt; that request is pending. The agent can continue other Data code work. Earlier no-user-action notes describe their recorded component checks, not this current disk request."
+        "The earlier full package attempt stopped for lack of disk space before either OCR app journey ran. The user has now freed the requested disk space. The agent must run fresh desktop and browser OCR checks and retain the earlier failures. No further user action is needed for this resource request. Full app qualification remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-native-qualification-support",
+      "work_criteria": [
+        "closed-native-mechanics-and-diagnostic-contracts",
+        "native-only-documentation-and-preservation",
+        "current-component-review-and-owned-checkpoint"
+      ],
+      "receipt_digest": "212f3fcd96d5b456ef73b9e850153d2df883f3f857cf61003ccd2b3c7acb4cb6",
+      "review_digest": "98133804be9b889da586e3aa2d5ac54eaab8a88411d9810224cb55472f6fe2e5",
+      "scope": "Commit 173df437 preserves reviewed runner support and diagnostic framing. Focused checks, five registered gates, separate review and the exact selected-source checkpoint passed. Recorded eight-case native mechanics evidence has its original scope; it does not establish a successful Torch startup or an OCR app journey.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-native-qualification-support",
+      "work_criteria": [
+        "closed-native-mechanics-and-diagnostic-contracts",
+        "native-only-documentation-and-preservation",
+        "current-component-review-and-owned-checkpoint"
+      ],
+      "receipt_digest": "212f3fcd96d5b456ef73b9e850153d2df883f3f857cf61003ccd2b3c7acb4cb6",
+      "review_digest": "98133804be9b889da586e3aa2d5ac54eaab8a88411d9810224cb55472f6fe2e5",
+      "scope": "Commit 173df437 preserves reviewed runner support and diagnostic framing. Focused checks, five registered gates, separate review and the exact selected-source checkpoint passed. Recorded eight-case native mechanics evidence has its original scope; it does not establish a successful Torch startup or an OCR app journey.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-native-qualification-support",
+      "work_criteria": [
+        "closed-native-mechanics-and-diagnostic-contracts",
+        "native-only-documentation-and-preservation",
+        "current-component-review-and-owned-checkpoint"
+      ],
+      "receipt_digest": "212f3fcd96d5b456ef73b9e850153d2df883f3f857cf61003ccd2b3c7acb4cb6",
+      "review_digest": "98133804be9b889da586e3aa2d5ac54eaab8a88411d9810224cb55472f6fe2e5",
+      "scope": "Commit 173df437 preserves reviewed runner support and diagnostic framing. Focused checks, five registered gates, separate review and the exact selected-source checkpoint passed. Recorded eight-case native mechanics evidence has its original scope; it does not establish a successful Torch startup or an OCR app journey.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-bounded-startup-v2",
+      "work_criteria": [
+        "fixed-ocr-profile-preserves-other-guards",
+        "strict-direct-runtime-startup-qualified",
+        "current-security-documentation-and-component-review"
+      ],
+      "receipt_digest": "2bd819c917cc82246c0ee2e7d83782a0dafadd40c7c75ebbccc41c25b7cd7ff2",
+      "review_digest": "3bf644ad24f9f75a2e30bc1abe2804f7522ae75698c234b71f93b4eaf523e4c6",
+      "scope": "The approved fixed OCR test profile passed focused checks, five registered gates and separate review. Nine actual Windows runner cases passed with exact OCR2GiB/process4GiB/job and unchanged Standard limits. One direct-root v2 diagnostic passed all eleven runtime identities, completed Torch import and accelerator availability query, and exited with strict native cleanup. Peak process and job commit were1340239872bytes; this is a startup-only measurement.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-bounded-startup-v2",
+      "work_criteria": [
+        "fixed-ocr-profile-preserves-other-guards",
+        "strict-direct-runtime-startup-qualified",
+        "current-security-documentation-and-component-review"
+      ],
+      "receipt_digest": "2bd819c917cc82246c0ee2e7d83782a0dafadd40c7c75ebbccc41c25b7cd7ff2",
+      "review_digest": "3bf644ad24f9f75a2e30bc1abe2804f7522ae75698c234b71f93b4eaf523e4c6",
+      "scope": "The approved fixed OCR test profile passed focused checks, five registered gates and separate review. Nine actual Windows runner cases passed with exact OCR2GiB/process4GiB/job and unchanged Standard limits. One direct-root v2 diagnostic passed all eleven runtime identities, completed Torch import and accelerator availability query, and exited with strict native cleanup. Peak process and job commit were1340239872bytes; this is a startup-only measurement.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-bounded-startup-v2",
+      "work_criteria": [
+        "fixed-ocr-profile-preserves-other-guards",
+        "strict-direct-runtime-startup-qualified",
+        "current-security-documentation-and-component-review"
+      ],
+      "receipt_digest": "2bd819c917cc82246c0ee2e7d83782a0dafadd40c7c75ebbccc41c25b7cd7ff2",
+      "review_digest": "3bf644ad24f9f75a2e30bc1abe2804f7522ae75698c234b71f93b4eaf523e4c6",
+      "scope": "The approved fixed OCR test profile passed focused checks, five registered gates and separate review. Nine actual Windows runner cases passed with exact OCR2GiB/process4GiB/job and unchanged Standard limits. One direct-root v2 diagnostic passed all eleven runtime identities, completed Torch import and accelerator availability query, and exited with strict native cleanup. Peak process and job commit were1340239872bytes; this is a startup-only measurement.",
+      "limitations": [
+        "Reviewed component support at its recorded source snapshot does not complete a parent criterion, work chunk, increment or roadmap, and does not grant current parent qualification.",
+        "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
+        "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
       ]
     }
   ]

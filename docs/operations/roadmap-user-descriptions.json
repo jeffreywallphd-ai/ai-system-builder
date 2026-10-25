@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -10911,14 +10911,79 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "5de076647ecc37fdb437bb7bb9539cea115d97a77c0a5811f2bbe3b9d46bb3e4",
+      "source_text_sha256": "46a30d418f136625c887c17759de59854f5ba5bee8919871423ced6f0056a3ec",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The latest full package attempt stopped because the system drive ran out of space, before either OCR app journey ran.",
-          "The user has been asked to make about 5 GB available for another attempt; that request is still pending.",
-          "The agent can continue other Data code work meanwhile.",
-          "Earlier statements that no user action was needed refer to their recorded component checks."
+          "The earlier full app test stopped because the drive ran out of space, before either OCR app journey ran.",
+          "The user has now freed the requested space.",
+          "The agent must run fresh tests in the desktop app and browser app, and keep the earlier failure results.",
+          "No further action is needed from the user for disk space.",
+          "Full app qualification is still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "978cec7a354f4164943b4d6c9a3964d3525cb23077b8ebc6384c69b99fb59329",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover reviewed components at their recorded code snapshots.",
+          "They do not complete a parent roadmap requirement, work chunk, increment or roadmap.",
+          "They do not establish current qualification of a parent roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e3f583476fa045aef7813752d8b7d17465ff62d8bb99e23805301e2439877851",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still prove the complete OCR preparation journey in the packaged desktop app and browser app.",
+          "The agent must also finish the other pending advanced Data tests.",
+          "No action is needed from the user for those tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "086c461d2977d75e0f1a2529eda7e27f4a8f1596c2f908a2104490ffcb142b4f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy stays closed and was not tested again.",
+          "Unknown retained files for low-memory mode, restricted legacy work and other providers are unchanged.",
+          "Earlier failures remain in the record."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "579fc18cd34a17b1ee01035e5de69587feccb803022b2a8eff55af78aa5b8ff7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Commit 173df437 saves the reviewed test runner and diagnostic support.",
+          "Focused checks, five repository checks, separate review and the check of the selected commit files passed.",
+          "The earlier eight Windows runner tests keep their original scope.",
+          "That component did not prove PyTorch startup or a complete OCR app journey."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9a9b9e432ed53df6e821a640705cbe7f67a2ddc3820a99118331d89ffed44a0e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The approved OCR test profile passed focused checks, five repository checks and separate review.",
+          "All nine Windows runner tests passed.",
+          "OCR tests have a 2 GiB limit per process and a 4 GiB total limit. Limits for other test types are unchanged.",
+          "The startup test verified its Python environment, imported PyTorch and completed the GPU availability check.",
+          "Its process exited with confirmed cleanup.",
+          "Peak process and total commit were about 1.25 GiB. This measures startup, not model memory needs or app readiness."
         ]
       }
     }

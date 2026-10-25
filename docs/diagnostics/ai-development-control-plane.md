@@ -577,3 +577,31 @@ exception text is retained. Check those actual facts together with the native
 root, limit and retirement observations; exit zero alone is insufficient.
 Current source review and one-use execution approval are required separately.
 This diagnostic grants no guard waiver or OCR, host, model or parent pass.
+
+### Approved OCR startup profile
+
+The fixed OCR test profile is capped at 2 GiB per process and 4 GiB per job.
+Only issued `ocr-documents` package/UI intents, the new direct-interpreter
+`ocr-runtime-import-v2` diagnostic and the closed `ocr-budget` fixture select it.
+Standard profiles retain their 1 GiB process, 2 GiB package and 3 GiB UI limits.
+All profiles keep 32 members and the existing time, output, ownership,
+retirement and fencing controls. The approval defines a bounded calibration;
+it is not a reservation or proof that a workload fits.
+
+The v2 diagnostic pins the base executable and existing venv/config. It uses
+the fixed CPython venv launcher context while directly starting the base image.
+Its child uses `-I -B` and retains Python 3.12 site activation. Before Torch
+import, the first safe fact checks the exact executable, venv and base prefixes,
+isolation flags and guidance-distribution context. These are fixed booleans;
+paths and supplier exception text are not published. The separately reviewed
+consumer must match every fact PID to the retained created root. It must not
+accept an arbitrary descendant, parent match or advisory limit-message PID.
+
+New native evidence uses the v4 family with nine lifecycle and profile-readback
+cases. A previous v3 fence prevents execution. The diagnostic uses a fresh v2
+family and refuses `runs/FENCED.json` in either diagnostic family, as well as
+parent-level fences. Preserve the original v1 failure, all old
+limits and actual app failures. Only current native evidence plus completed
+identity/import/query facts and strict retirement can qualify this startup
+probe. Real production preparation and both OCR app journeys remain separate;
+no model accuracy checks are reopened.

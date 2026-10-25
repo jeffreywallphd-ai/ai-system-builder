@@ -25,15 +25,18 @@ import uuid
 
 _MODULE=Path(__file__).resolve()
 _REPO=_MODULE.parents[3]
-_SELFTEST_RUNS=_REPO/".local-codex/native-ui-budget-command-selftests-v3"
+_PREVIOUS_SELFTEST_RUNS=_REPO/".local-codex/native-ui-budget-command-selftests-v3"
+_SELFTEST_RUNS=_REPO/".local-codex/native-ocr-budget-command-selftests-v4"
 _PENDING={}
 _LIVE={}
 _ISSUED={}
-_FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget"))
+_FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
 _OCR_IMPORT_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v1/runs"
+_OCR_IMPORT_V2_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v2/runs"
 _OCR_IMPORT_PYTHON_SHA="1c4e9fbd9259294528031a567cef76b0a45254b66d612cf58de267928d1defbb"
 _OCR_IMPORT_CONFIG_SHA="27821a1b627f7753b1cdb5e70b94e668987fd10499ee0ded9214e3add51b92a5"
+_OCR_IMPORT_BASE_SHA="1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5"
 _OCR_IMPORT_SCRIPT='''from pathlib import Path
 import json, os, re
 
@@ -46,6 +49,61 @@ def fact(name, stage, **values):
         stream.write(data); stream.flush(); os.fsync(stream.fileno())
 
 fact("01-before-import.json", "before-import")
+imported = False
+stage = "import"
+try:
+    import torch
+    imported = True
+    fact("02-import-complete.json", "import-complete")
+    stage = "accelerator-check"
+    available = bool(torch.cuda.is_available())
+except BaseException as error:
+    kind = type(error).__name__
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", kind): kind = "UnknownError"
+    fact("03-final.json", "finished", imported=imported,
+         accelerator_available=None, success=False, failure_stage=stage, error_type=kind)
+    raise SystemExit(1) from None
+fact("03-final.json", "finished", imported=True,
+     accelerator_available=available, success=True, failure_stage=None, error_type=None)
+'''
+
+_OCR_IMPORT_SCRIPT_V2='''from pathlib import Path
+from importlib import metadata
+import json, os, re, sys
+
+def fact(name, stage, **values):
+    body = {"schema_version": "ocr-runtime-import-fact-v2", "stage": stage,
+            "pid": os.getpid(), "parent_pid": os.getppid(), **values}
+    data = (json.dumps(body, separators=(",", ":")) + "\\n").encode()
+    if len(data) > 1024: raise RuntimeError("diagnostic-fact-bound")
+    with Path(name).open("xb") as stream:
+        stream.write(data); stream.flush(); os.fsync(stream.fileno())
+
+prefix = Path(os.environ["AISB_OCR_EXPECTED_PREFIX"])
+base = Path(os.environ["AISB_OCR_EXPECTED_BASE"])
+identity = {
+    "executable": Path(sys.executable) == prefix/"Scripts/python.exe",
+    "prefix": Path(sys.prefix) == prefix,
+    "exec_prefix": Path(sys.exec_prefix) == prefix,
+    "base_executable": Path(sys._base_executable) == base,
+    "base_prefix": Path(sys.base_prefix) == base.parent,
+    "base_exec_prefix": Path(sys.base_exec_prefix) == base.parent,
+    "isolated": sys.flags.isolated == 1,
+    "no_user_site": sys.flags.no_user_site == 1,
+    "bytecode_disabled": sys.flags.dont_write_bytecode == 1,
+    "site_enabled": sys.flags.no_site == 0,
+}
+try:
+    identity["guidance_distribution"] = (
+        metadata.version("llguidance") == "1.9.1" and
+        Path(metadata.distribution("llguidance").locate_file("")) == prefix/"Lib/site-packages")
+except BaseException:
+    identity["guidance_distribution"] = False
+fact("01-before-import.json", "before-import", identity=identity)
+if not all(identity.values()):
+    fact("03-final.json", "finished", imported=False, accelerator_available=None,
+         success=False, failure_stage="runtime-identity", error_type="RuntimeIdentityMismatch")
+    raise SystemExit(1)
 imported = False
 stage = "import"
 try:
@@ -183,6 +241,44 @@ def _reviewed_ocr_runtime_import_intent(*,run,folder,review_digest):
     return _remember(_Intent("ocr-runtime-import",(str(python),"-c",_OCR_IMPORT_SCRIPT),folder,MappingProxyType(env),20,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
 
 
+def _prior_family_clear(family):
+    # A changed experiment must not bypass an uncertain earlier native owner.
+    if family.exists() or family.is_symlink():
+        _regular_directory(family,_REPO)
+        fence=family/"FENCED.json"
+        need(not fence.exists() and not fence.is_symlink(),"prior-native-family-remains-fenced")
+
+
+def _reviewed_ocr_runtime_import_intent_v2(*,run,folder,review_digest):
+    """Direct pinned interpreter; fixed venv context and the approved OCR budget."""
+    need(run.parent==_OCR_IMPORT_V2_RUNS and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/"runtime-import","fixed-ocr-import-v2-run")
+    need(re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-ocr-import-witness")
+    _prior_family_clear(_OCR_IMPORT_RUNS.parent)
+    _prior_family_clear(_OCR_IMPORT_RUNS)
+    _prior_family_clear(_OCR_IMPORT_V2_RUNS.parent)
+    _prior_family_clear(_OCR_IMPORT_V2_RUNS)
+    runtime=_REPO/".local-codex/ocr-cached-runtime-v1/venv"
+    python=runtime/"Scripts/python.exe";config=runtime/"pyvenv.cfg"
+    base=Path(sys._base_executable)
+    for file,expected in ((python,_OCR_IMPORT_PYTHON_SHA),(config,_OCR_IMPORT_CONFIG_SHA),(base,_OCR_IMPORT_BASE_SHA)):
+        need(file.is_absolute() and file.is_file() and file.stat().st_size<=1024**2 and file.resolve()==file and not file.is_symlink() and not(getattr(file.lstat(),"st_file_attributes",0)&0x400) and _digest(file)==expected,"fixed-ocr-import-v2-runtime")
+    homes=[line.partition("=")[2].strip() for line in config.read_text(encoding="utf8").splitlines() if line.partition("=")[0].strip().lower()=="home"]
+    need(len(homes)==1 and Path(homes[0])==base.parent,"fixed-ocr-import-v2-base-context")
+    _regular_directory(folder,_REPO)
+    for name in ("t","h"):_regular_directory(folder/name,_REPO)
+    for name in ("stdout.log","stderr.log","01-before-import.json","02-import-complete.json","03-final.json"):
+        need(not (folder/name).exists() and not (folder/name).is_symlink(),"fresh-ocr-import-output")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute(),"fixed-ocr-import-Windows-environment")
+    env.update({"PATH":os.pathsep.join((str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "HOME":str(folder/"h"),"USERPROFILE":str(folder/"h"),"TEMP":str(folder/"t"),"TMP":str(folder/"t"),
+                "__PYVENV_LAUNCHER__":str(python),"AISB_OCR_EXPECTED_PREFIX":str(runtime),"AISB_OCR_EXPECTED_BASE":str(base),
+                "PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1","PIP_NO_INDEX":"1","PIP_CONFIG_FILE":os.devnull,
+                "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1"})
+    bindings={str(python):_OCR_IMPORT_PYTHON_SHA,str(config):_OCR_IMPORT_CONFIG_SHA,str(base):_OCR_IMPORT_BASE_SHA}
+    return _remember(_Intent("ocr-runtime-import-v2",(str(base),"-I","-B","-c",_OCR_IMPORT_SCRIPT_V2),folder,MappingProxyType(env),20,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
 def _digest_bytes(value):return hashlib.sha256(value).hexdigest()
 
 
@@ -194,13 +290,21 @@ def _validate_intent(intent,folder):
     _regular_directory(folder,_REPO)
 
 
-def _job_memory_limit(intent):
+def _memory_limits(intent):
     # A caller value, environment setting or lookalike role cannot select a
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package","ui","ocr-runtime-import") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
-    return UI_JOB_BYTES if phase in ("ui","fixture:ui-budget") else JOB_BYTES
+    need(type(phase) is str and (phase in ("package","ui","ocr-runtime-import","ocr-runtime-import-v2") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or (phase in ("package","ui") and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
+    if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
+    return PROCESS_BYTES,UI_JOB_BYTES if phase in ("ui","fixture:ui-budget") else JOB_BYTES
+
+
+def _job_memory_limit(intent):return _memory_limits(intent)[1]
+
+
+def _process_memory_limit(intent):return _memory_limits(intent)[0]
 
 
 KILL_CLOSE = 0x2000
@@ -208,6 +312,8 @@ LIMIT_FLAGS = KILL_CLOSE | 0x100 | 0x200 | 0x8
 PROCESS_BYTES = 1024**3
 JOB_BYTES = 2 * 1024**3
 UI_JOB_BYTES = 3 * 1024**3
+OCR_PROCESS_BYTES = 2 * 1024**3
+OCR_JOB_BYTES = 4 * 1024**3
 MEMBERS = 32
 LOG_CAP = 8 * 1024**2
 FORCED_EXIT = 0xE0000042
@@ -350,7 +456,7 @@ class _OwnedJob:
         need(self.job is not None and self.owned.get("job")==self.job,"owned-job-ledger-required")
         expected_job_bytes=_job_memory_limit(self.intent)
         value=Limits();need(self.n.k.QueryInformationJobObject(self.job,9,c.byref(value),c.sizeof(value),None),"limits-readback")
-        need(value.basic.flags==LIMIT_FLAGS and value.basic.active_limit==MEMBERS and value.process_memory==PROCESS_BYTES and value.job_memory==expected_job_bytes,"limits-drift")
+        need(value.basic.flags==LIMIT_FLAGS and value.basic.active_limit==MEMBERS and value.process_memory==_process_memory_limit(self.intent) and value.job_memory==expected_job_bytes,"limits-drift")
         return value
 
     def accounting(self):
@@ -399,7 +505,7 @@ class _OwnedJob:
         self.phase="preparing"
         _validate_intent(self.intent,self.folder)
         k=self.n.k;self.job=self.hold("job",k.CreateJobObjectW(None,None));need(not self.n.inheritable(self.job),"job-inherit")
-        value=Limits();value.basic.flags=LIMIT_FLAGS;value.basic.active_limit=MEMBERS;value.process_memory=PROCESS_BYTES;value.job_memory=_job_memory_limit(self.intent)
+        value=Limits();value.basic.flags=LIMIT_FLAGS;value.basic.active_limit=MEMBERS;value.process_memory=_process_memory_limit(self.intent);value.job_memory=_job_memory_limit(self.intent)
         need(k.SetInformationJobObject(self.job,9,c.byref(value),c.sizeof(value)),"limits-set");self.limits()
         port=self.hold("completion-port",k.CreateIoCompletionPort(c.c_void_p(-1).value,None,0,1));need(not self.n.inheritable(port),"completion-port-inherit")
         association=CompletionAssociation(COMPLETION_KEY,port)
@@ -440,7 +546,7 @@ class _OwnedJob:
 
     def _drain(self,name,handle):
         saved=0;observed=0;digest=hashlib.sha256();first=bytearray();sent=False
-        discard=self.intent.phase=="ocr-runtime-import"
+        discard=self.intent.phase in ("ocr-runtime-import","ocr-runtime-import-v2")
         try:
             with (self.folder/(name+".log")).open("xb") as stream:
                 buffer=c.create_string_buffer(65536)
@@ -509,7 +615,7 @@ class _OwnedJob:
         else:
             _LIVE.pop(id(self),None)
             self.job=None;self.process=None
-        self.final_result={"root_exit_code":code,"created_root_pid":root_pid,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"observed_limit_notifications":self.limit_notifications,"reported_pids_are_process_identity":False,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
+        self.final_result={"root_exit_code":code,"created_root_pid":root_pid,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":_process_memory_limit(self.intent),"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"observed_limit_notifications":self.limit_notifications,"reported_pids_are_process_identity":False,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
         self.phase="finished"
         return copy.deepcopy(self.final_result)
 
@@ -592,6 +698,8 @@ def bounded_eof(stream,seconds,maximum):
 def fixture(role):
     if role=="ui-budget":
         os.write(1,b"fixed-native-ui-budget\n");return 0
+    if role=="ocr-budget":
+        os.write(1,b"fixed-native-ocr-budget\n");return 0
     if role=="stdio":
         os.write(1,b"fixed-native-stdout\n");os.write(2,b"fixed-native-stderr\n");return 0
     if role=="failure":return 23
@@ -732,12 +840,13 @@ def crash_case(mode):
 def native_selftest():
     need(os.name=="nt" and c.sizeof(c.c_void_p)==8,"actual-Windows-x64-required")
     _assert_no_pending()
+    _prior_family_clear(_PREVIOUS_SELFTEST_RUNS)
     _regular_directory(_SELFTEST_RUNS,_REPO,create=True)
     need(not (_SELFTEST_RUNS/"FENCED.json").exists(),"native selftest lifecycle remains fenced; no automatic successor")
     source=_implementation_hashes();suite=_SELFTEST_RUNS/uuid.uuid4().hex;suite.mkdir()
     cases=[];all_passed=False;current_case=None
     try:
-        for role in ("stdio","failure","natural-expiry","timeout","overflow","ui-budget"):
+        for role in ("stdio","failure","natural-expiry","timeout","overflow","ui-budget","ocr-budget"):
             current_case=role
             folder=suite/role;folder.mkdir()
             result=_OwnedJob(_fixture_intent(role,folder),folder).run()
@@ -755,17 +864,19 @@ def native_selftest():
                 need(result["reason"]=="log-overflow" and not result["command_passed"] and result["log_overflow"] and result["logs"]["stdout"]["bytes"]==LOG_CAP and result["forced_owned_job_termination"],"actual-log-overflow-bounded-retired")
             elif role=="ui-budget":
                 need(result["command_passed"] and result["job_accounting"]["total"]==1 and result["limits"]=={"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":UI_JOB_BYTES,"active_limit":MEMBERS} and (folder/"stdout.log").read_bytes()==b"fixed-native-ui-budget\n" and (folder/"stderr.log").read_bytes()==b"","actual-fixed-ui-budget-readback")
+            elif role=="ocr-budget":
+                need(result["command_passed"] and result["job_accounting"]["total"]==1 and result["limits"]=={"flags":LIMIT_FLAGS,"process_bytes":OCR_PROCESS_BYTES,"job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS} and (folder/"stdout.log").read_bytes()==b"fixed-native-ocr-budget\n" and (folder/"stderr.log").read_bytes()==b"","actual-fixed-ocr-budget-readback")
             cases.append({"case":role,"passed":True,"observation":str(folder/"observation.json"),"sha256":_digest(folder/"observation.json"),"root_exit_code":result["root_exit_code"],"job_total":result["job_accounting"]["total"],"job_active":result["job_accounting"]["active"]})
         for mode in ("before-resume","after-descendant"):
             current_case="guardian-crash-"+mode
             cases.append(crash_case(mode))
         need(_implementation_hashes()==source,"native-source-changed")
-        all_passed=len(cases)==8 and all(case["passed"] for case in cases)
+        all_passed=len(cases)==9 and all(case["passed"] for case in cases)
     except BaseException as error:
         cases.append({"case":current_case,"passed":False,"error_type":type(error).__name__,"diagnostic":str(error)[:500]})
         raise
     finally:
-        report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":8,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"ui_job_bytes":UI_JOB_BYTES,"active_limit":MEMBERS},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics and fixed UI-budget readback only; no old-process cleanup, native filesystem/offload, model, parent or product qualification."}
+        report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":9,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"ui_job_bytes":UI_JOB_BYTES,"ocr_process_bytes":OCR_PROCESS_BYTES,"ocr_job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics and fixed Standard/OCR budget readback only; no old-process cleanup, native filesystem/offload, runtime import, model, parent or product qualification."}
         dump(suite/"observation.json",report)
         if not all_passed:
             dump(suite/"FENCED.json",{"reason":"native-selftest-failed-or-unconfirmed","repeat_authority":False,"fixture_retained":True})
@@ -784,7 +895,7 @@ def _parser():
     parser=argparse.ArgumentParser(description=__doc__)
     group=parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--native-selftest",action="store_true")
-    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget"),help=argparse.SUPPRESS)
+    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget","ocr-budget"),help=argparse.SUPPRESS)
     group.add_argument("--guardian",choices=("before-resume","after-descendant"),help=argparse.SUPPRESS)
     return parser
 
