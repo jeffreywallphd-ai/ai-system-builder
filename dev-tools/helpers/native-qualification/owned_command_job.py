@@ -2,7 +2,8 @@
 
 Public CLI: --native-selftest only. Internal child roles are fixed. No command,
 PID, cwd, shell or caller JSON execution interface exists. Cooperative reviewed
-Python composition may issue only the two fixed package/ingestion UI forms.
+Python composition may issue only fixed package/UI forms for synthetic dataset
+delivery or real Windows OCR with synthetic generation.
 """
 from __future__ import annotations
 import argparse
@@ -30,6 +31,38 @@ _LIVE={}
 _ISSUED={}
 _FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
+_OCR_IMPORT_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v1/runs"
+_OCR_IMPORT_PYTHON_SHA="1c4e9fbd9259294528031a567cef76b0a45254b66d612cf58de267928d1defbb"
+_OCR_IMPORT_CONFIG_SHA="27821a1b627f7753b1cdb5e70b94e668987fd10499ee0ded9214e3add51b92a5"
+_OCR_IMPORT_SCRIPT='''from pathlib import Path
+import json, os, re
+
+def fact(name, stage, **values):
+    body = {"schema_version": "ocr-runtime-import-fact-v1", "stage": stage,
+            "pid": os.getpid(), "parent_pid": os.getppid(), **values}
+    data = (json.dumps(body, separators=(",", ":")) + "\\n").encode()
+    if len(data) > 1024: raise RuntimeError("diagnostic-fact-bound")
+    with Path(name).open("xb") as stream:
+        stream.write(data); stream.flush(); os.fsync(stream.fileno())
+
+fact("01-before-import.json", "before-import")
+imported = False
+stage = "import"
+try:
+    import torch
+    imported = True
+    fact("02-import-complete.json", "import-complete")
+    stage = "accelerator-check"
+    available = bool(torch.cuda.is_available())
+except BaseException as error:
+    kind = type(error).__name__
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", kind): kind = "UnknownError"
+    fact("03-final.json", "finished", imported=imported,
+         accelerator_available=None, success=False, failure_stage=stage, error_type=kind)
+    raise SystemExit(1) from None
+fact("03-final.json", "finished", imported=True,
+     accelerator_available=available, success=True, failure_stage=None, error_type=None)
+'''
 
 
 def _retain_pending(owner):
@@ -114,13 +147,40 @@ def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,fold
     env=dict(environment)
     need(all(type(key) is str and type(value) is str and "\0" not in key+value for key,value in env.items()) and len({key.upper() for key in env})==len(env) and sum(len(key)+len(value)+2 for key,value in env.items())<32760,"bounded-environment")
     forbidden=("PYTHONPATH","PYTHONSTARTUP","PYTHONINSPECT","PYTHONOPTIMIZE","LD_PRELOAD","DYLD_INSERT_LIBRARIES")
-    need(not any(key in env for key in forbidden) and env.get("NODE_OPTIONS")=="" and env.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="dataset-profile" and env.get("AISB_LOCAL_DESKTOP_UI_RUN")==str(run) and env.get("HF_HUB_OFFLINE")=="1" and env.get("TRANSFORMERS_OFFLINE")=="1" and env.get("PIP_NO_INDEX")=="1" and env.get("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")=="1","fixed-controlled-environment")
+    need(not any(key in env for key in forbidden) and env.get("NODE_OPTIONS")=="" and env.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO") in ("dataset-profile", "ocr-documents") and env.get("AISB_LOCAL_DESKTOP_UI_RUN")==str(run) and env.get("HF_HUB_OFFLINE")=="1" and env.get("TRANSFORMERS_OFFLINE")=="1" and env.get("PIP_NO_INDEX")=="1" and env.get("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")=="1","fixed-controlled-environment")
     need(env.get("TEMP")==env.get("TMP")==str(candidate.parent/"t") and env.get("HOME")==env.get("USERPROFILE")==str(candidate.parent/"h"),"short-owned-temp-home")
     need(_digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())==environment_sha256,"reviewed-environment-drift")
     _regular_directory(folder,_REPO);_regular_directory(candidate.parent/"t",_REPO);_regular_directory(candidate.parent/"h",_REPO)
     argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),"--project=thin-chrome","--project=packaged-desktop")
     bindings[str(node_executable)]=node_sha256
     return _remember(_Intent(phase,argv,candidate,MappingProxyType(env),420,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _reviewed_ocr_runtime_import_intent(*,run,folder,review_digest):
+    """One closed diagnostic, not the production dependency preparer or a model run.
+
+    No command, script, executable, environment, cwd or quota is caller-selected.
+    Only the reviewed existing isolated runtime is permitted. Raw supplier output
+    is discarded by this exact role; three bounded child facts carry results.
+    """
+    need(run.parent==_OCR_IMPORT_RUNS and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/"runtime-import","fixed-ocr-import-run")
+    need(re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-ocr-import-witness")
+    runtime=_REPO/".local-codex/ocr-cached-runtime-v1/venv"
+    python=runtime/"Scripts/python.exe";config=runtime/"pyvenv.cfg"
+    for file,expected in ((python,_OCR_IMPORT_PYTHON_SHA),(config,_OCR_IMPORT_CONFIG_SHA)):
+        need(file.is_file() and file.stat().st_size<=1024**2 and file.resolve()==file and not file.is_symlink() and not(getattr(file.lstat(),"st_file_attributes",0)&0x400) and _digest(file)==expected,"fixed-ocr-import-runtime")
+    _regular_directory(folder,_REPO)
+    for name in ("t","h"):_regular_directory(folder/name,_REPO)
+    for name in ("stdout.log","stderr.log","01-before-import.json","02-import-complete.json","03-final.json"):
+        need(not (folder/name).exists() and not (folder/name).is_symlink(),"fresh-ocr-import-output")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute(),"fixed-ocr-import-Windows-environment")
+    env.update({"PATH":os.pathsep.join((str(python.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "HOME":str(folder/"h"),"USERPROFILE":str(folder/"h"),"TEMP":str(folder/"t"),"TMP":str(folder/"t"),
+                "PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1","PIP_NO_INDEX":"1","PIP_CONFIG_FILE":os.devnull,
+                "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1"})
+    bindings={str(python):_OCR_IMPORT_PYTHON_SHA,str(config):_OCR_IMPORT_CONFIG_SHA}
+    return _remember(_Intent("ocr-runtime-import",(str(python),"-c",_OCR_IMPORT_SCRIPT),folder,MappingProxyType(env),20,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
 
 
 def _digest_bytes(value):return hashlib.sha256(value).hexdigest()
@@ -139,7 +199,7 @@ def _job_memory_limit(intent):
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package","ui") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    need(type(phase) is str and (phase in ("package","ui","ocr-runtime-import") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
     return UI_JOB_BYTES if phase in ("ui","fixture:ui-budget") else JOB_BYTES
 
 
@@ -263,7 +323,7 @@ class _OwnedJob:
         _validate_intent(intent,folder)
         self.intent,self.folder=intent,folder
         self.n=None;self.job=None;self.process=None;self.owned={};self.threads=[];self.log_state={};self.overflow=threading.Event();self.pipe_error=threading.Event();self.first=queue.Queue(maxsize=1)
-        self.resume_done=False;self.assigned=False;self.peak_active=0;self.forced=False;self.cleanup_errors=[];self.events=[];self.limit_messages=[];self.event_overflow=False
+        self.resume_done=False;self.assigned=False;self.peak_active=0;self.forced=False;self.cleanup_errors=[];self.events=[];self.limit_messages=[];self.limit_notifications=[];self.event_overflow=False
         self.phase="new";self.final_result=None
         _register_owner(self)
         try:self.n=_Win()
@@ -314,7 +374,13 @@ class _OwnedJob:
             if len(self.events)>=4096:self.event_overflow=True;break
             # A reported numeric PID is never opened or used for mutation.
             self.events.append(message.value)
-            if message.value in (3,9,10):self.limit_messages.append(message.value)
+            if message.value in (3,9,10):
+                self.limit_messages.append(message.value)
+                # Advisory correlation only: even a valid reported number can
+                # be stale/recycled. Never open or act on a process by it.
+                reported=detail.value
+                pid=reported if message.value in (9,10) and type(reported) is int and 0<reported<=0xffffffff else None
+                self.limit_notifications.append({"message":message.value,"reported_pid":pid})
 
     def _inherited_stdio_handles(self):
         return tuple(self.owned[name] for name in ("stdin","stdout-write","stderr-write"))
@@ -374,6 +440,7 @@ class _OwnedJob:
 
     def _drain(self,name,handle):
         saved=0;observed=0;digest=hashlib.sha256();first=bytearray();sent=False
+        discard=self.intent.phase=="ocr-runtime-import"
         try:
             with (self.folder/(name+".log")).open("xb") as stream:
                 buffer=c.create_string_buffer(65536)
@@ -383,15 +450,16 @@ class _OwnedJob:
                         need(c.get_last_error()==109,"pipe-read");break
                     if count.value==0:break
                     chunk=buffer.raw[:count.value];observed+=len(chunk)
-                    keep=chunk[:max(0,LOG_CAP-saved)]
+                    keep=b"" if discard else chunk[:max(0,LOG_CAP-saved)]
                     if keep:stream.write(keep);digest.update(keep);saved+=len(keep)
                     if observed>LOG_CAP:self.overflow.set()
-                    if name=="stdout" and not sent:
+                    if not discard and name=="stdout" and not sent:
                         first.extend(chunk[:max(0,4097-len(first))])
                         if b"\n" in first or len(first)>4096:
                             self.first.put_nowait(bytes(first).split(b"\n",1)[0]);sent=True
                 stream.flush();os.fsync(stream.fileno())
             self.log_state[name]={"bytes":saved,"observed_bytes":observed,"sha256":digest.hexdigest(),"complete":True,"cap_bytes":LOG_CAP,"path":str(self.folder/(name+".log"))}
+            if discard:self.log_state[name]["raw_content_discarded"]=True
         except BaseException as error:
             self.pipe_error.set();self.log_state[name]={"bytes":saved,"observed_bytes":observed,"complete":False,"error_type":type(error).__name__}
 
@@ -405,6 +473,8 @@ class _OwnedJob:
         need(self.phase!="finishing","finish-reentry")
         self.phase="finishing"
         code=None;account=None;peak=None;drained=False;confirmed=False
+        root_pid=getattr(self.process,"pid",None) if self.process else None
+        if type(root_pid) is not int or not 0<root_pid<=0xffffffff:root_pid=None
         try:
             if self.process:
                 need(self.owned.get("root")==self.process.process,"owned-root-ledger-required")
@@ -439,7 +509,7 @@ class _OwnedJob:
         else:
             _LIVE.pop(id(self),None)
             self.job=None;self.process=None
-        self.final_result={"root_exit_code":code,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
+        self.final_result={"root_exit_code":code,"created_root_pid":root_pid,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"observed_limit_notifications":self.limit_notifications,"reported_pids_are_process_identity":False,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
         self.phase="finished"
         return copy.deepcopy(self.final_result)
 

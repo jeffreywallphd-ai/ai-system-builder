@@ -550,3 +550,30 @@ profile. The separate native document operator adds actual fixed-product-resourc
 normalization after the trusted build. Its source/resource identity, exact spans
 and strict retirement support this adapter only. Public capability/task/staging
 and actual desktop/browser delivery still need their own evidence.
+
+## Controlled OCR delivery scenario
+
+Native limit reports include bounded advisory message/process numbers and the
+created root's number so a reviewer can correlate saved test evidence. Missing
+or invalid process numbers are `null`. These numbers do not identify a current
+process and must never be used to open or act on one. Collection shares the
+existing 4,096-event and 128-message-per-poll bounds. All memory, time, handle,
+retirement and failure rules stay unchanged. A limit hit is still a failed
+workload; a missing notification is not evidence of success.
+
+The separate private `ocr-runtime-import` diagnostic checks installed Torch import
+and its accelerator query under the unchanged 1 GiB process and 2 GiB job limits.
+It uses a fixed existing Python environment, fixed script, new confined directory,
+minimal offline environment, 32-process ceiling and 20-second deadline. It does
+not run a model, an accuracy check or the production dependency-preparation flow.
+Its new directory, environment and minimized output are deliberate differences
+from production. No earlier failed process is identified by this new run.
+
+Only this closed role discards supplier stdout/stderr before disk retention and
+the first-line queue. Observed-byte counts and the 8 MiB overflow rule remain
+active. At most three exclusive, synced, bounded JSON facts record startup stages,
+the child's own process numbers and typed results or error class. No supplier
+exception text is retained. Check those actual facts together with the native
+root, limit and retirement observations; exit zero alone is insufficient.
+Current source review and one-use execution approval are required separately.
+This diagnostic grants no guard waiver or OCR, host, model or parent pass.

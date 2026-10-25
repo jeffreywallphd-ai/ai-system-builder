@@ -343,3 +343,48 @@ qualify the unchanged seven lifecycle cases and exact UI-budget readback before
 any separately reviewed real host run. It grants no old-process, retained-slot,
 model, offload, product or parent-roadmap qualification. A failed new workload
 remains failed; no automatic additional cap increase follows.
+
+### Fixed OCR host scenario
+
+The private reviewed package/UI composition permits the additional exact
+`ocr-documents` scenario. Its literal argv forms, source/environment witnesses,
+1 GiB process, 2 GiB package, 3 GiB UI and 32-process ceilings do not change.
+There is no new public execution selector or numeric budget. Unknown scenario
+strings remain denied. Actual OCR uses a newly packaged authenticated Python
+worker with synthetic generation; package resource identity and real host results
+need separate evidence. Changed launcher source needs current qualification; an
+older raw source hash is never presented as equal. No old-process, retained-slot,
+offload, model-quality or parent closure follows from this scenario.
+
+Limit diagnostics retain only bounded numeric notification identifiers and
+reported process numbers, with the created root number for correlation. Process
+numbers may be stale or recycled and never grant identity, ownership or action
+authority. No process is opened or queried from these reports. Count-limit or
+invalid process details use `null`. Collection shares the existing 128-message
+poll and 4,096-event total bounds; overflow still fails qualification. Quotas,
+native handles, cleanup evidence, fencing and limit-hit failure are unchanged.
+
+### Closed OCR runtime-import diagnostic
+
+The additional private `ocr-runtime-import` intent has one fixed script and one
+hash-pinned existing isolated Python environment. Its run, working directory,
+temporary files and home are confined to a fresh fixed family. No caller can
+select an executable, command, script, environment or budget. It keeps the 1 GiB
+process, 2 GiB job, 32-process, 20-second and 8 MiB per-stream bounds, atomic job
+membership and all existing retirement/fence requirements. The public CLI and
+production dependency preparation, model admission and provider controls do not
+change.
+
+Supplier imports can print private paths before raising. Therefore this exact
+role discards both raw streams before disk retention and the first-line queue;
+bounded draining, observed-byte accounting and overflow failure stay active.
+Only three exclusive, synced facts of at most 1,024 bytes each carry fixed stage
+names, own process numbers, booleans and a bounded error-class name. Other roles
+retain their original logging. A failed import/query, missing final fact, limit
+hit or uncertain retirement cannot become a success. A native exit code does not
+replace semantic result checks.
+
+The probe has a new directory and minimized environment/output. It is diagnostic
+support for the newly owned root, not the complete production preparer, evidence
+about an older numeric PID, a model or accuracy test, a cap waiver or parent
+qualification. Existing failed app runs and retained data remain unchanged.

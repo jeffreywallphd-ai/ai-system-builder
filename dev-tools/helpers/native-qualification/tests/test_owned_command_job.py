@@ -3,9 +3,13 @@ from pathlib import Path
 import contextlib
 import ctypes
 import importlib.util
+import hashlib
 import io
+import json
 import os
 import sys
+import tempfile
+import builtins
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -34,7 +38,7 @@ class PortableNativePolicyTests(unittest.TestCase):
             return job._OwnedJob(self.issued_intent("fixture:stdio"),SOURCE.parent)
 
     def test_job_memory_profiles_are_fixed_and_require_an_issued_identity(self):
-        for phase in ("package", "fixture:stdio", "fixture:failure", "fixture:hold"):
+        for phase in ("package", "fixture:stdio", "fixture:failure", "fixture:hold", "ocr-runtime-import"):
             self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),2*1024**3)
         for phase in ("ui", "fixture:ui-budget"):
             self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),3*1024**3)
@@ -43,6 +47,114 @@ class PortableNativePolicyTests(unittest.TestCase):
                 job._job_memory_limit(self.issued_intent(phase))
         unissued=job._Intent("ui",(),SOURCE.parent,{},.01,SOURCE.parent,{},{})
         with self.assertRaises(job.NativeFailure):job._job_memory_limit(unissued)
+
+    def test_runtime_import_factory_has_no_caller_command_environment_or_budget(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();runtime=root/".local-codex/ocr-cached-runtime-v1/venv"
+            (runtime/"Scripts").mkdir(parents=True)
+            python=runtime/"Scripts/python.exe";python.write_bytes(b"synthetic-executable-not-run")
+            config=runtime/"pyvenv.cfg";config.write_bytes(b"synthetic-config")
+            family=root/".local-codex/native-ocr-runtime-import-v1/runs"
+            run=family/("1"*32);folder=run/"runtime-import"
+            (folder/"t").mkdir(parents=True);(folder/"h").mkdir()
+            with patch.object(job,"_REPO",root),patch.object(job,"_OCR_IMPORT_RUNS",family), \
+                    patch.object(job,"_OCR_IMPORT_PYTHON_SHA",job._digest(python)), \
+                    patch.object(job,"_OCR_IMPORT_CONFIG_SHA",job._digest(config)), \
+                    patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"SECRET_TOKEN":"never-forward"},clear=True):
+                intent=job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+                self.assertEqual(intent.argv,(str(python),"-c",job._OCR_IMPORT_SCRIPT))
+                self.assertEqual(intent.cwd,folder);self.assertEqual(intent.seconds,20)
+                self.assertEqual(job._job_memory_limit(intent),2*1024**3)
+                self.assertNotIn("SECRET_TOKEN",intent.environment)
+                self.assertEqual(intent.environment["HOME"],str(folder/"h"))
+                self.assertEqual(intent.environment["PIP_NO_INDEX"],"1")
+                with self.assertRaises(TypeError):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64,command="arbitrary")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=run/"other",review_digest="a"*64)
+                (folder/"01-before-import.json").write_bytes(b"old-result")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+                self.assertEqual((folder/"01-before-import.json").read_bytes(),b"old-result")
+                python.write_bytes(b"changed-runtime")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+
+    def drain_bytes(self,phase,chunks,maximum=8*1024**2,stream_name="stdout"):
+        with tempfile.TemporaryDirectory() as temporary:
+            owned=self.fake_owned();owned.folder=Path(temporary)
+            owned.intent=self.issued_intent(phase)
+            iterator=iter(chunks)
+            def read(handle,buffer,capacity,count,overlapped):
+                try:chunk=next(iterator)
+                except StopIteration:return 0
+                self.assertLessEqual(len(chunk),capacity)
+                ctypes.memmove(buffer,chunk,len(chunk))
+                ctypes.cast(count,ctypes.POINTER(ctypes.c_uint32)).contents.value=len(chunk)
+                return 1
+            owned.n.k.ReadFile=read
+            with patch.object(job.c,"get_last_error",return_value=109,create=True),patch.object(job,"LOG_CAP",maximum):
+                owned._drain(stream_name,123)
+            # Remove only this injected fake owner; no real native handles exist.
+            job._LIVE.pop(id(owned),None)
+            return (owned,(owned.folder/(stream_name+".log")).read_bytes())
+
+    def test_runtime_import_discards_supplier_bytes_and_first_line_before_retention(self):
+        private=b"supplier exception /private/path token=secret\n"
+        owned,saved=self.drain_bytes("ocr-runtime-import",[private,b"more private bytes"])
+        self.assertEqual(saved,b"");self.assertTrue(owned.first.empty())
+        self.assertEqual(owned.log_state["stdout"]["observed_bytes"],len(private)+18)
+        self.assertEqual(owned.log_state["stdout"]["bytes"],0)
+        self.assertEqual(owned.log_state["stdout"]["sha256"],hashlib.sha256(b"").hexdigest())
+        self.assertTrue(owned.log_state["stdout"]["raw_content_discarded"])
+        self.assertFalse(owned.pipe_error.is_set())
+        error_owner,error_saved=self.drain_bytes("ocr-runtime-import",[private],stream_name="stderr")
+        self.assertEqual(error_saved,b"");self.assertTrue(error_owner.first.empty())
+        self.assertEqual(error_owner.log_state["stderr"]["observed_bytes"],len(private))
+        self.assertTrue(error_owner.log_state["stderr"]["raw_content_discarded"])
+        normal,normal_saved=self.drain_bytes("fixture:stdio",[b"fixed-line\n"])
+        self.assertEqual(normal_saved,b"fixed-line\n")
+        self.assertEqual(normal.first.get_nowait(),b"fixed-line")
+        self.assertNotIn("raw_content_discarded",normal.log_state["stdout"])
+
+    def test_runtime_import_discard_does_not_disable_observed_byte_overflow(self):
+        owned,saved=self.drain_bytes("ocr-runtime-import",[b"123456789"],maximum=8)
+        self.assertEqual(saved,b"");self.assertTrue(owned.overflow.is_set())
+        self.assertEqual(owned.log_state["stdout"]["observed_bytes"],9)
+        self.assertTrue(owned.log_state["stdout"]["complete"])
+
+    def test_runtime_import_facts_distinguish_import_and_accelerator_failures_without_messages(self):
+        original_import=builtins.__import__
+        for failure in (None,"import","accelerator-check"):
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as temporary:
+                def available():
+                    if failure=="accelerator-check":raise RuntimeError("private supplier message")
+                    return False
+                torch=SimpleNamespace(cuda=SimpleNamespace(is_available=available))
+                def imported(name,*args,**kwargs):
+                    if name=="torch":
+                        if failure=="import":raise ImportError("private supplier message")
+                        return torch
+                    return original_import(name,*args,**kwargs)
+                before=Path.cwd()
+                try:
+                    os.chdir(temporary)
+                    with patch.object(builtins,"__import__",side_effect=imported):
+                        if failure is None:exec(compile(job._OCR_IMPORT_SCRIPT,"<fixed-diagnostic>","exec"),{})
+                        else:
+                            with self.assertRaises(SystemExit) as exit:
+                                exec(compile(job._OCR_IMPORT_SCRIPT,"<fixed-diagnostic>","exec"),{})
+                            self.assertEqual(exit.exception.code,1)
+                    files=sorted(Path(temporary).glob("*.json"))
+                    self.assertEqual(len(files),2 if failure=="import" else 3)
+                    self.assertTrue(all(file.stat().st_size<=1024 for file in files))
+                    self.assertTrue(all(b"private supplier" not in file.read_bytes() for file in files))
+                    final=json.loads(Path("03-final.json").read_bytes())
+                    self.assertEqual(final["success"],failure is None)
+                    self.assertEqual(final["imported"],failure!="import")
+                    self.assertEqual(final["failure_stage"],failure)
+                    self.assertEqual(final["pid"],os.getpid())
+                finally:os.chdir(before)
 
     def test_job_limit_readback_rejects_a_different_profile_or_other_ceiling(self):
         for phase,reported,flags,members,process_bytes,passes in (
@@ -73,6 +185,58 @@ class PortableNativePolicyTests(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
             job._parser().parse_args(["--native-selftest","--job-bytes",str(4*1024**3)])
 
+    def completion_source(self,rows,repeat=False):
+        iterator=iter(rows)
+        def read(port,message,key,detail,timeout):
+            self.assertEqual((port,timeout),(55,0))
+            try:kind,pid=rows[0] if repeat else next(iterator)
+            except StopIteration:return 0
+            ctypes.cast(message,ctypes.POINTER(ctypes.c_uint32)).contents.value=kind
+            ctypes.cast(key,ctypes.POINTER(ctypes.c_size_t)).contents.value=job.COMPLETION_KEY
+            ctypes.cast(detail,ctypes.POINTER(ctypes.c_void_p)).contents.value=pid
+            return 1
+        return read
+
+    def test_limit_notifications_retain_only_advisory_numbers_without_opening_processes(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(6,41),(3,42),(9,43),(10,44)])
+        with patch.object(job.c,"get_last_error",return_value=258,create=True):owned.poll_events()
+        self.assertEqual(owned.events,[6,3,9,10])
+        self.assertEqual(owned.limit_messages,[3,9,10])
+        self.assertEqual(owned.limit_notifications,[{"message":3,"reported_pid":None},{"message":9,"reported_pid":43},{"message":10,"reported_pid":44}])
+        self.assertFalse(hasattr(owned.n.k,"OpenProcess"))
+
+    def test_limit_notification_pid_is_null_unless_a_positive_uint32_is_reported(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(9,None),(9,0),(9,0x100000000),(10,0xffffffff)])
+        with patch.object(job.c,"get_last_error",return_value=258,create=True):owned.poll_events()
+        self.assertEqual([row["reported_pid"] for row in owned.limit_notifications],[None,None,None,0xffffffff])
+        self.assertEqual(owned.limit_messages,[9,9,9,10])
+
+    def test_limit_notification_collection_keeps_existing_poll_and_total_event_bounds(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(9,43)],repeat=True)
+        owned.poll_events()
+        self.assertEqual(len(owned.events),128);self.assertEqual(len(owned.limit_notifications),128)
+        owned.events.extend([6]*(4096-len(owned.events)))
+        owned.poll_events()
+        self.assertTrue(owned.event_overflow)
+        self.assertEqual(len(owned.events),4096);self.assertEqual(len(owned.limit_notifications),128)
+
+    def test_root_number_survives_handle_retirement_but_is_not_process_identity(self):
+        owned=self.fake_owned();owned.process=SimpleNamespace(process=56,pid=1234);owned.job=54
+        owned.owned={"job":54,"root":56}
+        owned.threads=[SimpleNamespace(join=lambda timeout:None,is_alive=lambda:False)]
+        owned.n.exit_code=lambda *args:0;owned.n.inheritable=lambda handle:False
+        owned.limit_messages=[9];owned.limit_notifications=[{"message":9,"reported_pid":1234}]
+        with patch.object(owned,"accounting",return_value={"total":1,"active":0,"terminated":0}),patch.object(owned,"poll_events"),patch.object(owned,"limits",return_value=SimpleNamespace(peak_process=0,peak_job=0)):
+            result=owned.finish("observed-native-limit-hit")
+        self.assertTrue(result["cleanup_confirmed"]);self.assertIsNone(owned.process)
+        self.assertEqual(result["created_root_pid"],1234);self.assertFalse(result["reported_pids_are_process_identity"])
+        result["observed_limit_notifications"][0]["reported_pid"]=9999
+        self.assertEqual(owned.finish()["observed_limit_notifications"],[{"message":9,"reported_pid":1234}])
+        self.assertEqual(owned.finish()["reason"],"observed-native-limit-hit")
+
     def test_zero_shutdown_oracle_is_strict_about_count_and_type(self):
         self.assertTrue(job.strict_shutdown_codes([0,0],2))
         for values,count in (([97],1),([23],1),([False],1),([0.0],1),([],0),([0],True),([0],2)):
@@ -87,6 +251,40 @@ class PortableNativePolicyTests(unittest.TestCase):
 
     def test_unknown_host_phase_is_denied_before_native_work(self):
         with self.assertRaises(job.NativeFailure):job._reviewed_host_intent("shell",candidate=Path("none"),node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},environment={},environment_sha256="",review_digest="")
+
+    def test_host_scenarios_keep_exact_commands_and_unchanged_native_budgets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32)
+            node=root/"node.exe";node.write_bytes(b"synthetic identity only; never executed")
+            hashes={}
+            for name in job._CONSUMER_FILES:
+                (helpers/name).write_bytes(b"synthetic reviewed helper identity")
+                hashes[name]=job._digest(helpers/name)
+            for folder in (run/"package",run/"ui",candidate.parent/"t",candidate.parent/"h"):
+                folder.mkdir(parents=True,exist_ok=True)
+            env={"NODE_OPTIONS":"", "AISB_LOCAL_DESKTOP_UI_RUN":str(run),
+                 "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1",
+                 "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1", "TEMP":str(candidate.parent/"t"),
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+            with patch.object(job,"_REPO",root):
+                for scenario in ("dataset-profile","ocr-documents","ocr-document","ocr-documents --command", ""):
+                    for phase in ("package","ui"):
+                        with self.subTest(scenario=scenario,phase=phase):
+                            values={**env,"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+                            kwargs=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),run=run,
+                                folder=run/phase,reviewed_file_hashes=hashes,environment=values,
+                                environment_sha256=hashlib.sha256(json.dumps(values,sort_keys=True,separators=(",",":")).encode()).hexdigest(),review_digest="b"*64)
+                            if scenario not in ("dataset-profile","ocr-documents"):
+                                with self.assertRaises(job.NativeFailure):job._reviewed_host_intent(phase,**kwargs)
+                            else:
+                                intent=job._reviewed_host_intent(phase,**kwargs)
+                                expected=(str(node),str(helpers/"offline-package.mjs")) if phase=="package" else (
+                                    str(node),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),"--project=thin-chrome","--project=packaged-desktop")
+                                self.assertEqual(intent.argv,expected)
+                                self.assertEqual(job._job_memory_limit(intent),(2 if phase=="package" else 3)*1024**3)
+                                self.assertEqual(job.PROCESS_BYTES,1024**3);self.assertEqual(job.MEMBERS,32)
 
     def test_unissued_intent_cannot_reach_native_creation(self):
         with self.assertRaises(job.NativeFailure):job._validate_intent(object(),Path("none"))
