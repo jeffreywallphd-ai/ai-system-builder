@@ -42,6 +42,39 @@
         "Documentation and architecture checks passed. Full suites intentionally deferred by the current user instruction."
       ],
       "title": "Keep Add data tasks in the correct workspace"
+    },
+    {
+      "areas": [
+        "Shared Context renderer",
+        "Browser Dataset Preparation",
+        "Shared Dataset Review and existing two-host replay boundaries"
+      ],
+      "chunkId": "dataset-context-roundtrips",
+      "completedAt": "2026-10-26T14:24:36Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-real-host-roundtrips",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/context-management.md",
+        "docs/security/context-management-threat-model.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-dataset-context-roundtrips",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Completed focused Context and Dataset UI components with exact session/action/request/artifact/report/page identity checks and safe failure handling. Context checkpoint e192f3f64 and Dataset checkpoint b28e6163b are tested and independently reviewed. Nine provided-data training goals and existing review/edit/version/replay controls pass at the feature level. Real host/runtime/provider and final combined tests remain in later work; no parent criterion is qualified by this declaration.",
+      "tests": [
+        "Context29/29 cases plus related10-file profile passed; receipt 79a00ee250223e413be31a2ec6dc89d710296a5eda977ce1c09645c44e381256; accepted review bb149dd3b244f22343f8ebc110e76fecdd52b4d3d4940053e29a1ba323390c2f.",
+        "Dataset36/36 cases plus related dataset-version-browser profile/docs/agent/architecture passed; receipt242ee3379bd5a63a291beb0a9a882d0b5147483ff8041a280a79bcc07c638619; accepted review eb0920b9ec3fbb93a8dc7a61d36e06d226da941c64c78204487b931376cf6eb0.",
+        "Two current shared Dataset Review UI files passed through exact one-worker runner, including row edit as a new version and explicit approve/reject behavior.",
+        "Actual regressions failed before correction. Current scoped TypeScript probes report zero diagnostics. Full suites deferred by user; completed model accuracy and OCR not rerun."
+      ],
+      "title": "Test dataset and Context workflows"
     }
   ],
   "completion": null,
@@ -269,6 +302,12 @@
       "recordedAt": "2026-10-26T13:04:55Z",
       "sequence": 12,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a6a6a5be67f3eaf4a193613bf9927b2266b21143cd7f179a149b142440bb15df",
+      "recordedAt": "2026-10-26T14:24:36Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -303,7 +342,8 @@
       "allowPendingQualification": true,
       "completedAt": null,
       "completedChunks": [
-        "scoped-ingestion-and-coverage-ledger"
+        "scoped-ingestion-and-coverage-ledger",
+        "dataset-context-roundtrips"
       ],
       "deliverables": [
         "Versioned machine-readable mapping from current supported route/tab/action/task capability to stable scenario IDs, host applicability, expected contract/oracle, exact test file and fixture/host/runtime evidence tier.",
@@ -683,5 +723,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-26T13:04:55Z"
+  "updatedAt": "2026-10-26T14:24:36Z"
 }

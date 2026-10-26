@@ -200,3 +200,17 @@ Notes:
 Development security mode changes use `secureFetch` and the existing paired
 device token. Enforced-mode changes require `security:admin`; a denial is not
 retried through public fetch. Public status reads retain their existing policy.
+
+## Browser model action ownership
+
+Model browsing and inventory reset when the workspace or API client changes. Old
+replies cannot refresh the previous workspace, replace the current file dialog or
+publish a completion. Reference saves, downloads and record deletion share one
+synchronous pending-action owner. Downloads remain host-owned after acceptance;
+leaving Models does not cancel them. Notifications retain task progress.
+
+Model file reads require an explicit current dialog action and matching record
+identity. Closing or selecting another model invalidates pending file reads.
+Deletion retains confirmation and always requests record-only deletion. Unexpected
+exceptions use fixed notification and diagnostic copy. Focused tests use synthetic
+clients; they do not qualify provider downloads, model accuracy or physical files.

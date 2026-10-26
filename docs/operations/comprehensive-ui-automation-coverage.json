@@ -1130,10 +1130,30 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+          "name": "finds a support model, saves it, downloads it, inspects its files and deletes only its record",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+          "name": "starts one host-owned download without claiming that a queued task has finished",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
+          "name": "workspace/client retirement, file identity, duplicate mutations, clear and fixed errors",
+          "tier": "thin-hook-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Synthetic Model UI/client evidence only. Actual host/provider/download/model and final testing remain pending. Accepted model accuracy is not rerun."
     },
     {
       "id": "models-download-inventory-validation",
@@ -1160,12 +1180,32 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+          "name": "finds a support model, saves it, downloads it, inspects its files and deletes only its record",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+          "name": "starts one host-owned download without claiming that a queued task has finished",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
+          "name": "workspace/client retirement, file identity, duplicate mutations, clear and fixed errors",
+          "tier": "thin-hook-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "approved exact model cache; qualified native identity/effects for destructive or reveal operations"
-      ]
+      ],
+      "scope_limit": "Synthetic Model UI/client evidence only. Actual host/provider/download/model and final testing remain pending. Accepted model accuracy is not rerun."
     },
     {
       "id": "desktop-model-training",

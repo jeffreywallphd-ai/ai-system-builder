@@ -17,7 +17,7 @@ const asError = (e: ApiEnvelope, status:number, endpoint:string) => { const apiE
 const requireObject = (value: unknown, message: string) => { if (!isObject(value)) throw new ModelManagementApiError(message, "invalid_payload", value); return value; };
 const requireModels = (value: unknown, message: string) => { const obj = requireObject(value, message); if (!Array.isArray(obj.models)) throw new ModelManagementApiError(message, "invalid_payload", value); return obj; };
 export const DEFAULT_MODEL_MANAGEMENT_REQUEST_TIMEOUT_MS: Record<Operation, number> = {list:15000,"files-list":15000,details:15000,save:15000,delete:15000,update:15000,validate:30000,publish:30000,browse:30000,download:MODEL_MANAGEMENT_DOWNLOAD_REQUEST_TIMEOUT_MS,"download-start":30000,"download-read":15000,"download-complete":15000,"download-list":15000,"download-cancel":15000};
-const summary=(b:Record<string,unknown>)=>({provider:b.provider,query:typeof b.query==="string"?b.query:undefined,modelId:typeof b.modelId==="string"?b.modelId:undefined,modelRecordId:typeof b.modelRecordId==="string"?b.modelRecordId:undefined,limit:typeof b.limit==="number"?b.limit:undefined});
+const summary=(b:Record<string,unknown>)=>({provider:b.provider==="huggingface"?"huggingface":undefined,queryLength:typeof b.query==="string"?Math.min(b.query.length,100_000):undefined,hasModelId:typeof b.modelId==="string",hasModelRecordId:typeof b.modelRecordId==="string",limit:typeof b.limit==="number"&&Number.isSafeInteger(b.limit)&&b.limit>=0&&b.limit<=500?b.limit:undefined});
 
 const sanitizeModelRecord = <T>(model: T): T => {
   if (!isObject(model)) return model;
@@ -39,25 +39,26 @@ const sanitizeActivity = (value: unknown) => {
 
 const post = async <T>(base: string, path: string, operation:Operation, body: Record<string, unknown>, pick: (v: unknown) => T, headers?: Record<string, string>, requestTimeouts: Record<Operation, number> = DEFAULT_MODEL_MANAGEMENT_REQUEST_TIMEOUT_MS) => {
   const endpoint=apiUrl(base,path); const started=Date.now(); const ctrl=new AbortController(); const timeout=window.setTimeout(()=>ctrl.abort("timeout"),requestTimeouts[operation]);
-  const detail={operation,endpoint,...summary(body)}; logThinClientDiagnostic("info",{feature:"model-management",operation,phase:"request.start",message:"Request started",metadata:detail});
+  const detail={operation,...summary(body)}; logThinClientDiagnostic("info",{feature:"model-management",operation,phase:"request.start",message:"Request started",metadata:detail});
   try {
     const response = await secureFetch(endpoint, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body), signal: ctrl.signal });
     const elapsedMs=Date.now()-started;
     const ctype=response.headers.get("content-type")??"";
-    if(!ctype.includes("application/json")){ logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"response.non_json",message:"Response was not JSON",metadata:{...detail,status:response.status,elapsedMs,contentType:ctype}}); throw new ModelManagementApiError("Model management response was not JSON.","invalid_json"); }
+    if(!ctype.includes("application/json")){ logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"response.non_json",message:"Response was not JSON",metadata:{...detail,status:response.status,elapsedMs}}); throw new ModelManagementApiError("Model management response was not JSON.","invalid_json"); }
     let raw: unknown;
     try { raw = await response.json(); } catch { logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"response.invalid_json",message:"Response JSON parse failed",metadata:{...detail,status:response.status,elapsedMs}}); throw new ModelManagementApiError("Model management response was not valid JSON.", "invalid_json"); }
     let envelope:ApiEnvelope;
-    try { envelope = ensureEnvelope(raw); } catch (error) { logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"response.malformed_envelope",message:"Response envelope was malformed",metadata:{...detail,status:response.status,elapsedMs,errorMessage:error instanceof Error?error.message:String(error)}}); throw error; }
-    if (!envelope.ok) { const err=asError(envelope,response.status,endpoint); logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"request.failure",message:err.message,metadata:{...detail,status:response.status,elapsedMs,code:err.code}}); throw err; }
+    try { envelope = ensureEnvelope(raw); } catch (error) { logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"response.malformed_envelope",message:"Response envelope was malformed",metadata:{...detail,status:response.status,elapsedMs}}); throw error; }
+    if (!envelope.ok) { const err=asError(envelope,response.status,endpoint); logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"request.failure",message:"Model request was refused",metadata:{...detail,status:response.status,elapsedMs}}); throw err; }
+    const value = pick(envelope.value);
     logThinClientDiagnostic("info",{feature:"model-management",operation,phase:"request.success",message:"Request success",metadata:{...detail,status:response.status,elapsedMs}});
-    return pick(envelope.value);
+    return value;
   } catch (error) {
     const elapsedMs=Date.now()-started;
     if ((error instanceof DOMException && error.name === "AbortError") || error === "timeout") {
       logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"request.timeout",message:"Request timed out",metadata:{...detail,elapsedMs}}); throw new ModelManagementApiError(`Model management ${operation} request timed out.`,"timeout");
     }
-    logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"request.failure",message:error instanceof Error?error.message:String(error),metadata:{...detail,elapsedMs}}); throw error;
+    logThinClientDiagnostic("warn",{feature:"model-management",operation,phase:"request.failure",message:"Model request failed",metadata:{...detail,elapsedMs}}); throw error;
   } finally { window.clearTimeout(timeout); }
 };
 

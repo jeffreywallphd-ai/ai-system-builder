@@ -1057,3 +1057,26 @@ outside this presentation change.
 Missing report/review, foreign fingerprint and wrong review state retain accepted
 ownership until matching review or authoritative terminal evidence. Eight rendered
 denial/recovery cases failed before the correction and passed after it.
+
+### Browser model selection and action integrity
+
+Model reference, registry, file-list and download controls preserve workspace/client
+session identity across awaits. Same-frame duplicate mutation is refused; stale
+save/download/delete results cannot refresh the old workspace or announce success
+in its replacement. Details/file/save/download/delete replies must match the
+requested identity. A file dialog sequence refuses closed or superseded replies.
+Deletion keeps explicit confirmation and record-only intent; no file-delete
+authority is introduced. Accepted host tasks are not cancelled on page retirement.
+
+Unexpected API exceptions use fixed public and diagnostic messages. Inventory
+timeouts are bounded and cleared. Focused synthetic tests exercise the complete
+browse/reference/download/inspect/record-delete workflow and denial/recovery cases.
+No token, private provider, physical files, model accuracy, native staging or
+restricted legacy Assets assessment is exercised or qualified by this change.
+
+The real Models API client also uses fixed failure diagnostic copy before the
+renderer handles an exception. Diagnostics retain only public operation/provider,
+bounded query length, identifier-presence flags, status and elapsed time; they omit
+raw queries, identifiers, endpoints, provider error text/code/details and content
+type. Thrown API error message/status/code/details remain unchanged for typed
+callers. Actual client-to-renderer denial tests cover that separate boundary.

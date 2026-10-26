@@ -1,5 +1,6 @@
 import { Fragment } from "react";
-import { TermWithHint, TransientNotificationPublisher } from "../../../../../../modules/ui/shared";
+import { TermWithHint } from "../../../../../../modules/ui/shared/glossary";
+import { TransientNotificationPublisher } from "../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
 import { ModalDialog } from "../../../../../../modules/ui/shared/components/ModalDialog";
 import type { ModelBrowseItem, ModelInventoryRecord } from "../../../../../../modules/contracts/model";
 import type { ModelManagementApiClient } from "../api/apiModelManagementClient";
@@ -36,7 +37,7 @@ export function ModelManagementFeature({ client, workspaceId }: { client?: Model
     <section className="ui-stack ui-stack--sm"><h3>Browse results</h3>{emptyBrowseMessage ? <p className="ui-text-muted" role="status">{vm.status}</p> : null}<ul className="ui-stack ui-stack--sm">{vm.browseResults.map((m: ModelBrowseItem) => <li key={m.modelId} className="ui-panel ui-stack ui-stack--sm">
       <header className="ui-grid ui-grid--two"><strong>{m.displayName}</strong><span>{m.modelId}</span></header>
       <dl className="ui-grid ui-grid--two"><dt><TermWithHint termId="provider">Provider</TermWithHint></dt><dd>{m.provider}</dd><dt><TermWithHint termId="taskTags">Tasks</TermWithHint></dt><dd>{m.taskTags?.join(", ") || "n/a"}</dd><dt><TermWithHint termId="inference">Inference</TermWithHint></dt><dd>{m.inferenceMode || "n/a"}</dd></dl>
-      <div className="ui-grid ui-grid--two"><button className="ui-button" onClick={() => void vm.viewDetails(m.modelId)} disabled={vm.loading}>Details</button><button className="ui-button" onClick={() => void vm.saveReference(m)} disabled={vm.loading}>Save reference</button><button className="ui-button" onClick={() => void vm.download(m)} disabled={vm.downloadingModelId === m.modelId}>{vm.downloadingModelId === m.modelId ? "Downloading..." : "Download"}</button></div>
+      <div className="ui-grid ui-grid--two"><button className="ui-button" onClick={() => void vm.viewDetails(m.modelId)} disabled={vm.loading}>Details</button><button className="ui-button" onClick={() => void vm.saveReference(m)} disabled={vm.loading}>Save reference</button><button className="ui-button" onClick={() => void vm.download(m)} disabled={vm.loading}>{vm.downloadingModelId === m.modelId ? "Downloading..." : "Download"}</button></div>
     </li>)}</ul></section>
 
     <section className="ui-stack ui-stack--sm"><h3>Server model inventory</h3>

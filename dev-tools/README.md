@@ -177,3 +177,9 @@ normal dependency preparation, authentication, review and approval. Actual
 package/resource identity and native retirement are required separately. The
 portable OCR profile covers fixture/launch regression tests without launching
 OCR or a model; real app qualification stays pending until its controlled run.
+
+The existing `functionality-tasks` contributor profile includes the Thin Models
+renderer, hook and API-client tests. Its explicit source mapping replaces coarse
+app-wide ownership only for declared paths. Unknown impact and explicitly required
+focused checks remain selected. These synthetic tests do not download or run
+models. Workflow authority, runner commands and full-suite policy are unchanged.

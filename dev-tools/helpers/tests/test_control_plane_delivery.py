@@ -704,4 +704,30 @@ class DeliveryTests(Fixture):
         self.assertEqual(result["status"], "output-limit")
 
 
+    def test_model_task_profile_covers_exact_ui_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        actual_root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profiles = read_json(actual_root / config)
+        profile = profiles["profiles"]["functionality-tasks"]
+        expected = {
+            "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+            "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
+            "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts",
+        }
+        self.assertTrue(expected.issubset(profile["test_paths"]))
+        commands = run_focused_checks.profile_commands(actual_root, "functionality-tasks")
+        flattened = {arg for command in commands for arg in command}
+        self.assertTrue(expected.issubset(flattened))
+        self.assertNotIn("apps/thin-client/src/pages/tests/home-page.unit.test.tsx", flattened)
+        self.put(config, json.dumps(profiles))
+        source = "apps/thin-client/src/features/model-management/hooks/useModelManagementFeature.ts"
+        for paths, required, focused in (
+            ([source, config], ["functionality-tasks"], False),
+            ([source, "modules/unknown/source.ts"], ["functionality-tasks"], True),
+            ([source], ["functionality-tasks", "focused-tests"], True),
+        ):
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+
 if __name__ == "__main__": unittest.main()

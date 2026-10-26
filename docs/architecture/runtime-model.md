@@ -581,3 +581,24 @@ and new starts cannot enter its stop/start interval. Unconfirmed recovery failur
 continues to deny admission while allowing status reads. Actual owned lifecycle
 recovery, rather than a healthy read, clears the fence. Existing native ownership
 and offload staging requirements remain separate.
+
+### Browser model controls and asynchronous replies
+
+Models uses a committed workspace/API-client session for browse, inventory,
+reference, download, details, file and registry-delete actions. A replaced or closed
+session cannot dispatch follow-up inventory work or apply old completion state.
+The optional default client is stable for that mounted session. Inventory reads
+retain the 12-second bound and clear owned timers after settlement or retirement.
+
+Reference save, download start and record delete share synchronous pending-action
+admission. A download reply must identify the requested workspace/model/task;
+legacy completed downloads and saved references must match the requested model.
+Host-owned accepted downloads stay observable through the notification subsystem.
+Page retirement never asserts cancellation or worker exit. Registry deletion
+requires exact confirmed record acknowledgement and requests deleteLocalFiles=false.
+
+File dialogs use selected record identity and a local request sequence. Close,
+selection or workspace/client replacement invalidates earlier file results. Model
+files load only after explicit selection of Show model files. Unexpected exceptions
+are not public diagnostic payloads. Focused renderer/client tests do not qualify
+physical downloads, real model execution, native ownership or the final UI matrix.

@@ -56,3 +56,12 @@
 - Typical set: `index` + `logging`.
 - Add `runtime`, `desktop-host`, or `server-host` for boundary-specific diagnostics.
 - Add `testing` when adding regression coverage for logging-critical failures.
+
+- Browser Models logs fixed operation/phase/failure copy with the public provider
+  label. It does not copy unexpected transport exceptions into notifications or
+  diagnostics. See `docs/architecture/runtime-model.md` and
+  `docs/security/data-management-threat-model.md` for asynchronous action limits.
+
+- Models API failures keep typed error contracts for callers, but log only fixed
+  copy and bounded public facts; never copy response error text/code/details or
+  search/model identifiers into the shared diagnostic store.

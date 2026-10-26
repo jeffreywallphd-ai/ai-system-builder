@@ -411,7 +411,10 @@
         "modules/application/use-cases/system-builder/tests/system-builder-composer-catalog.unit.test.ts",
         "dev-tools/scripts/qualification/tests/test_owned_windows_process_exit.py",
         "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+        "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
+        "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -542,7 +545,10 @@
         "dev-tools/scripts/qualification/observe_windows_process_exit.py",
         "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
         "dev-tools/scripts/qualification/visual-composer/task-visibility-measurement.ts",
-        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx",
+        "apps/thin-client/src/features/model-management/api/apiModelManagementClient.ts",
+        "apps/thin-client/README.md"
       ]
     },
     "functionality-context": {
