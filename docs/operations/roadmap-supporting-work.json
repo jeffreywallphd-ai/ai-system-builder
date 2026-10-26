@@ -4525,6 +4525,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "desktop-artifact-preload-preview-and-delete",
+      "work_criteria": [
+        "desktop-artifact-composed-previews-and-filters",
+        "desktop-artifact-owned-reads-and-deletion",
+        "desktop-artifact-bounded-evidence-and-history"
+      ],
+      "receipt_digest": "d909d8415d9d93af33ade403424c0655e336806006ba8004d164e69220828bb1",
+      "review_digest": "658a449c699b5a8eb2dc49b65ba93c595c5e0e13ed2837df03f09e041a20901a",
+      "scope": "Tested and committed Desktop Artifact Browser through mounted component/default client, actual preload/IPC/application and new JSON/filesystem objects. Nineteen new cases cover exact five text formats, type/storage filters, workspace refusal, typed single-flight deletion/retry and selection/filter/retirement races. Sender, provider/settings and timing are fixtures; physical Electron, production access, image/PDF decoding, SQLite/restart, providers, native recovery and full tests remain pending.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

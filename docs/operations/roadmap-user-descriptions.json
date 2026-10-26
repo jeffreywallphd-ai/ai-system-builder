@@ -11854,6 +11854,20 @@
           "Installed app windows, image and PDF decoding, production security, SQLite restart, providers, native recovery and final combined testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8307fd8687c7eba86fb6827bfc4023110bf48a385d3f037079f7f3b7c070620f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed safer data browsing and deletion in the desktop component.",
+          "Nineteen new interface cases check exact text, CSV, JSON, JSONL and Markdown previews, filters and workspace separation.",
+          "Deletion keeps its confirmation after failure and accepts one request at a time. A late reply preserves a newer selection and refreshes the filter currently displayed.",
+          "The tests use the real desktop connection, application code, saved records and new files. Sender checks, unavailable providers and settings, and reply timing are test inputs.",
+          "Installed app windows, image and PDF decoding, production security, database restart, providers, native recovery and final combined testing remain pending."
+        ]
+      }
     }
   ]
 }
