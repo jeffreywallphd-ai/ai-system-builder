@@ -3816,6 +3816,25 @@
         "Thin supported-settings restore and page integration remain pending. Large source-list matching projection, actual host/provider publication and restart, scale and advanced runtime remain separate unqualified parent work. Existing accepted model accuracy outcomes stay closed.",
         "Desktop restore validates the represented saved configuration and its current source identities, not source bytes, runtime readiness or publication authorization. No automatic task, model or provider dispatch is granted."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-desktop-source-lookup-delivery",
+      "work_criteria": [
+        "bounded-authoritative-source-resolution",
+        "current-atomic-async-restore",
+        "production-seam-and-reviewed-regressions"
+      ],
+      "receipt_digest": "231038b757d39c333922b50b876179522fae3c302d198b9883268f3dbbf76438",
+      "review_digest": "16afcc54b8d17e92abfcb4bf10a2fb773f2189c7625bb043cc90342bc8ed808a",
+      "scope": "Reviewed Desktop saved-source lookup through existing workspace-authorized exact-key reads:100 unique keys, sequential execution,15-second deadline. Immutable capture, conflict checks, complete command validation and current-page guards prevent partial or stale application. Exact20 source checkpoint:877 tests passed; Desktop types had zero errors. Seven current check groups and independent review passed. No model/native rerun or parent qualification.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "Thin supported-settings restore, actual full-app saved-version/provider publication/restart, large-data and advanced preparation qualification remain pending. Accepted model accuracy results remain closed.",
+        "Metadata lookup does not prove source bytes or runtime/provider readiness. Timing out stops this caller and later reads; an already-issued read-only detail request is not cancelled. No automatic task/model/provider dispatch or publication authority is granted."
+      ]
     }
   ]
 }

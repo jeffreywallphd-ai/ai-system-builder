@@ -11207,6 +11207,37 @@
           "The Desktop app checks saved settings and the current file list. You must still review the setup and start a task yourself. These tests do not prove file contents or online publishing."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f260405064900310e1aafbb0c2224c42d5c2c6dc0a3389d44771c8b28035757a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The remaining Data work and final tests stay open. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2b03aca3fc5fa8aef12ead27900742e140ba649147bffee46eca639d4c3cf926",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish saved-settings reuse in the browser app, then complete full-app, online publishing, recovery, large-data and advanced preparation checks. No action needed. Completed model accuracy tests stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "110e7df1690ec1226d6f49a86c971f2f35923ece5f881d7c7c8c9dfcfd906f18",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app checks saved settings and file details. You must review the setup and start preparation yourself. A slow lookup stops restoring settings; a file-detail request already sent may still finish."
+        ]
+      }
     }
   ]
 }
