@@ -11,8 +11,9 @@ failed and successfully empty source lists remain distinct, with contextual retr
 Neither host dispatches preparation without a current ready list. Both forms
 reject malformed source arrays exposed by their clients; duplicate source matches
 are retained for later exact replay validation. Desktop malformed source and
-version-list envelopes no longer become empty results. Thin-client malformed
-successful source-envelope rejection remains a separate pending client correction.
+version-list envelopes no longer become empty results. The shared thin-client
+HTTP source client rejects missing or nonarray items with fixed safe text; actual
+client-to-form tests cover retry to a genuine empty response.
 Fixed failure copy exposes no supplier exceptions or private paths.
 Application authorization remains authoritative. These local controls do not
 qualify one-use saved setup replay or actual provider, model, native or scale work.

@@ -42,8 +42,9 @@ client and request lifetime; retired reads and errors cannot replace newer data
 or user selections. A current successful list is required before task dispatch.
 Source read failures retain fixed contextual text rather than overwriting task
 progress. Desktop source and version-list replies without an array fail instead
-of claiming an empty result. Thin-client malformed successful source-envelope
-rejection remains a separate pending client correction. These controls prepare
+of claiming an empty result. The shared thin-client HTTP source client also
+rejects missing or nonarray source items. Its real-client Preparation test covers
+safe failure followed by direct retry to a genuine empty list. These controls prepare
 for, but do not implement, setup reuse.
 
 The shared Artifact Browser uses the same card presentation for uploaded and

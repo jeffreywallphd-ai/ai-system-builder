@@ -2,12 +2,13 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
+import { createApiArtifactBrowserClient } from "../../artifact-browser/api/apiArtifactBrowserClient";
 import { DatasetPreparationFeature } from "../components/DatasetPreparationFeature";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | undefined, container: HTMLDivElement;
 const preparation = { start: vi.fn(), read: vi.fn(), cancel: vi.fn() };
-afterEach(() => { act(() => root?.unmount()); container?.remove(); root = undefined; localStorage.clear(); vi.clearAllMocks(); });
+afterEach(() => { act(() => root?.unmount()); container?.remove(); root = undefined; localStorage.clear(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 function deferred<T>() { let resolve!: (value: T) => void, reject!: (error: Error) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 const source = (id: string) => ({ artifactId: id, originalName: `${id}.jsonl`, storageKey: `uploads/${id}.jsonl`, artifactFamily: "tabular", mediaType: "application/x-ndjson" });
 async function render(client: any, workspaceId = "workspace-a") {
@@ -57,4 +58,21 @@ it.each(["synchronous", "malformed"])("contains %s source failure and does not c
 it("ignores a late rejection after unmount", async () => {
   const first = deferred<any[]>(); await render({ browseArtifacts: () => first.promise }); await act(async () => root!.unmount()); root = undefined;
   await act(async () => first.reject(new Error("retired private failure")));
+});
+
+it("recovers a malformed successful HTTP source response through the real client and retry control", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ status: 200, json: async () => ({ ok: true, value: { items: "private-wire-detail" } }) })
+    .mockResolvedValueOnce({ status: 200, json: async () => ({ ok: true, value: { items: [] } }) });
+  vi.stubGlobal("fetch", fetchMock);
+  await render(createApiArtifactBrowserClient());
+  expect(container.textContent).toContain("Source files could not be loaded");
+  expect(container.textContent).not.toContain("Add a compatible dataset");
+  expect(container.textContent).not.toContain("private-wire-detail");
+  expect(preparation.start).not.toHaveBeenCalled();
+  await act(async () => [...container.querySelectorAll("button")].find(b => b.textContent === "Retry source files")!.click());
+  expect(container.textContent).toContain("Add a compatible dataset");
+  expect(container.textContent).not.toContain("Source files could not be loaded");
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  for (const [, init] of fetchMock.mock.calls) expect(JSON.parse(init.body).workspaceId).toBe("workspace-a");
 });

@@ -469,7 +469,8 @@ export function createApiArtifactBrowserClient(
         const items = (
           value as { items?: ThinClientArtifactBrowseItem[] } | undefined
         )?.items;
-        return Array.isArray(items) ? items : [];
+        if (!Array.isArray(items)) throw new Error("Source file response is incomplete.");
+        return items;
       });
     },
 

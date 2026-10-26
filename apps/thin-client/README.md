@@ -28,6 +28,7 @@ Current scope:
   reuse APIs remain available to asset workflows
 - feature-local artifact upload workflow under `src/features/artifact-upload/`, including multi-file selection, independent per-file results, and cancelation for selected or queued uploads
 - feature-local artifact browser workflow under `src/features/artifact-browser/`
+- Artifact source reads reject incomplete successful API responses instead of showing a false empty list. Dataset Preparation shows a safe error and direct source retry; a genuine empty list still shows the add-data guidance.
 - fetch-based HTTP artifact-upload client that calls the server API route (`/api/artifact/upload`)
 - fetch-based HTTP website ingestion client that calls server API routes (`/api/artifact/ingest-website-page`, `/api/artifact/ingest-website-pages-batch`)
 - artifact publish verification/re-check flow that calls `POST /api/artifact/publish/verify`
