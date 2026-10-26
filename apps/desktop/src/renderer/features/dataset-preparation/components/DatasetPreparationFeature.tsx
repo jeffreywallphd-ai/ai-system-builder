@@ -299,6 +299,8 @@ function WorkspaceDatasetPreparationFeature({
   const cancelReplayOnEdit = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus,
     (request, isCurrent) => onReuseDatasetVersion(request.reproduction, request.selection, isCurrent));
 
+  const trainingTaskControlId = useId();
+  const trainingTaskCaptionId = useId();
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
@@ -571,13 +573,15 @@ function WorkspaceDatasetPreparationFeature({
                     Choose the kind of training dataset this preparation run
                     should create.
                   </p>
-                  <label className="ui-stack ui-stack--sm">
-                    <span>
-                      <TermWithHint termId="trainingTask">
+                  <div className="ui-stack ui-stack--sm">
+                    <TermWithHint termId="trainingTask">
+                      <label id={trainingTaskCaptionId} htmlFor={trainingTaskControlId}>
                         Training task
-                      </TermWithHint>
-                    </span>
+                      </label>
+                    </TermWithHint>
                     <select
+                      id={trainingTaskControlId}
+                      aria-labelledby={trainingTaskCaptionId}
                       className="ui-input"
                       value={taskType}
                       onChange={(event) =>
@@ -596,7 +600,7 @@ function WorkspaceDatasetPreparationFeature({
                         ),
                       )}
                     </select>
-                  </label>
+                  </div>
                   <p className="dataset-preparation__section-description ui-text-muted">
                     {selectedTaskProfile.description}
                   </p>

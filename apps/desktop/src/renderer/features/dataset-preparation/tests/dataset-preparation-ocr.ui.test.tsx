@@ -45,6 +45,30 @@ describe("desktop scanned-PDF preparation", () => {
   }
   afterEach(async () => { await act(async () => root?.unmount()); root = undefined; container?.remove(); resetDatasetPreparationPageStateForTests(); });
 
+  it("labels the training task select without making its help button the labelled control", async () => {
+    const submit = await render();
+    const select = Array.from(container.querySelectorAll("select"))
+      .find((item) => Array.from(item.options).some((option) => option.value === "llm-classification"))!;
+    expect(select).toBeTruthy();
+    expect(select.labels).toHaveLength(1);
+    const label = select.labels![0]!;
+    expect(label.control).toBe(select);
+    expect(label.textContent).toBe("Training task");
+    expect(document.getElementById(select.getAttribute("aria-labelledby")!)).toBe(label);
+    const hint = label.closest(".ui-glossary-term")!.querySelector("button")!;
+    expect(hint.closest("label")).toBeNull();
+    const previous = select.value;
+    await act(async () => { hint.click(); await flush(); });
+    expect(hint.getAttribute("aria-expanded")).toBe("true");
+    expect(select.value).toBe(previous);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, "llm-classification");
+      select.dispatchEvent(new Event("change", { bubbles: true })); await flush();
+    });
+    expect(select.value).toBe("llm-classification");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
   it("keeps the method name short and exposes changing help separately", async () => {
     await render();
     const select = field("How should the source material be divided?");

@@ -188,9 +188,13 @@ export async function prepareProvidedVersions(page: Page, host: Host) {
   if (await method.count()) await method.selectOption("validate-and-split");
   const run = () => page.getByRole("button", { name: "Run checks and prepare", exact: true });
   const approve = () => page.getByRole("button", { name: "Approve and save dataset", exact: true });
-  const output = page.getByRole("combobox", { name: host === "desktop" ? "Output format" : /Saved file format/ });
+  const output = page.getByLabel(host === "desktop" ? "Output format" : "Saved file format", { exact: host === "desktop" });
   if (!await output.isVisible()) {
-    if (host === "desktop") await page.getByRole("button", { name: /Output file/ }).click();
+    if (host === "desktop") {
+      const outputPanel = page.getByRole("button", { name: /Output file/ });
+      if (!await outputPanel.isVisible()) await page.getByRole("button", { name: "Advanced settings", exact: true }).click();
+      await outputPanel.click();
+    }
     else await output.locator("xpath=ancestor::details[1]").locator("summary").click();
   }
   await output.selectOption("jsonl");

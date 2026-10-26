@@ -29,6 +29,12 @@ the same app data and uses a fresh worker evidence cache for each session.
 Its closed restart phase names give each shutdown a separate acknowledgment
 and exclusive report. Existing ordinary shutdown filenames remain unchanged.
 
+The Desktop training task has a short explicit label for its select. Its help
+button is separate from that label. A real-component regression checks label
+association, independent help and task changes. The app journeys open the output
+settings before using a hidden format control: Advanced settings and Output file
+in Desktop, or the containing Advanced settings disclosure in the browser app.
+
 The focused launch-plan test also exercises Playwright's actual module-loading
 order. Its import-only global setup loads the shared ESM modules first. Both app
 specs must then collect and skip with the required scenario absent, while a third
