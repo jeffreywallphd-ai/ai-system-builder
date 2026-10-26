@@ -240,6 +240,12 @@
           "name": "fixed worker-exit code notice, forged text denial and uncertain status preservation",
           "tier": "shared-rendered-known-worker-outcome-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts",
+          "name": "real host task progress assertions use fixed public running copy; original task lifecycle and timing oracles retained",
+          "tier": "real-host-journey-source",
+          "qualification": "source-collection-only-actual-host-execution-pending"
         }
       ],
       "actual_host_qualification": "pending",

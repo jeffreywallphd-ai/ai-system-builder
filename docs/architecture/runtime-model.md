@@ -707,3 +707,9 @@ the existing fixed worker-stop notice used by the desktop and managed recovery
 journeys. Snapshot capture keeps only that known code and fixed copy. Arbitrary
 messages, forged message-only exit claims and uncertain statuses cannot supply
 this classification. Other failed downloads keep the generic safe action hint.
+
+Owned-download host journeys assert the fixed public running message,
+`Downloading model.`, rather than the synthetic worker progress text. Numeric
+progress, timing, request identity, workspace fencing, reconnect, cancellation,
+idempotent completion and owned shutdown checks remain unchanged. Source
+collection and local bridge tests do not qualify an actual host run.

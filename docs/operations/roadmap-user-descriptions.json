@@ -11646,6 +11646,18 @@
           "These local results do not complete actual runtime or host checks or the roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4944f5f05209f68c37a2fe30f66abd81ec7584925de1f4197dad492c541a9b67",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the specific notice for a stopped download worker.",
+          "Other runtime text remains hidden.",
+          "Actual app recovery and final roadmap tests remain pending."
+        ]
+      }
     }
   ]
 }

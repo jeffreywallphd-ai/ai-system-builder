@@ -108,7 +108,7 @@ export async function qualifyOwnedTaskJourney(page:Page,info:TestInfo,options:{s
     const away=await start("Reference workspace fencing");
     await page.reload();
     let panel=await showNotifications(page);
-    await expect(panel.locator(".ui-notification__item").filter({has:page.getByText("Reference workspace fencing",{exact:true})})).toContainText("Synthetic download in progress.");
+    await expect(panel.locator(".ui-notification__item").filter({has:page.getByText("Reference workspace fencing",{exact:true})})).toContainText("Downloading model.");
     await page.getByRole("button",{name:"Home",exact:true}).click();
     await page.getByRole("button",{name:"Create new workspace",exact:true}).click();
     await page.locator('input[name="workspaceName"]').fill("Owned task destination workspace");
@@ -134,7 +134,7 @@ export async function qualifyOwnedTaskJourney(page:Page,info:TestInfo,options:{s
       const reconnect=await start("Reference reconnect");
       await page.reload();
       panel=await showNotifications(page);
-      await expect(panel.locator(".ui-notification__item").filter({has:page.getByText("Reference reconnect",{exact:true})})).toContainText("Synthetic download in progress.");
+      await expect(panel.locator(".ui-notification__item").filter({has:page.getByText("Reference reconnect",{exact:true})})).toContainText("Downloading model.");
       await page.context().setOffline(true);
       try {await page.waitForTimeout(2000);await expect(panel.locator(".ui-notification__item").filter({has:page.getByText("Reference reconnect",{exact:true})})).not.toContainText("Model download failed.");}
       finally {await page.context().setOffline(false);}

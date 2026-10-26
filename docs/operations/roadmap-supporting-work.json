@@ -4259,6 +4259,23 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "download-worker-stop-safe-copy",
+      "work_criteria": [
+        "worker-stop-fixed-code-copy",
+        "worker-stop-host-compatibility-and-scope"
+      ],
+      "receipt_digest": "d047d8920da1ce6994716a2dbf006fb3019d44d701b4f36ee559de2abe70a8fd",
+      "review_digest": "a6799b9b9c974281e6a300d4208f1c7aad4bacfed90d6c9838d7c7ddd966f3b2",
+      "scope": "Tested and committed fixed download worker-stop notices with exact error-code classification; arbitrary runtime text remains hidden.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
