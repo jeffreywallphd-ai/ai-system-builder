@@ -1040,3 +1040,24 @@ contain a comma are also rejected because the form uses comma-separated labels.
 Generation inference mode must be present. Historical omission requests worker
 discovery, but current forms serialize an explicit auto mode that the application
 normalizes differently. Reject that missing meaning instead of selecting chat.
+
+### Add data session and cancellation presentation
+
+The shared Add data renderer scopes a form session to its workspace, task client
+and source-browser client. It admits one synchronous start/retry owner, fences
+late responses and commands after replacement/unmount, and validates response
+workspace/task identity before local progress or notifications. This presentation
+guard does not replace application authorization or cancel an accepted host task
+on navigation. Host-owned work and persisted checkpoints remain authoritative.
+
+Cancellation is confirmed only by a matching terminal task response. Failed or
+nonterminal cancel responses keep admission closed and expose an explicit task
+status read. Early cancel waits for task identity; duplicate control requests
+are refused and old progress cannot replace the confirmed outcome. Local files
+retain the existing bounded slices, chunk integrity and finalization protocol.
+Actual host/provider/native and final cross-roadmap qualification remain separate
+from deterministic renderer/client-fixture tests.
+
+Session retirement runs in the layout cleanup of the committed tree, before
+passive effects. This closes the commit-to-passive interval for late completion
+and notification effects without changing accepted host task ownership.

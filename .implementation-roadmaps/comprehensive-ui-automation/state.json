@@ -11,11 +11,43 @@
       "summary": "The approved UI roadmap is queued by the user until both optional-low-memory-inference and functionality-optimization are actually completed; neither predecessor is qualified by this approval."
     }
   ],
-  "chunks": [],
+  "chunks": [
+    {
+      "areas": [
+        "Shared Data Management renderer mounted by desktop and thin client",
+        "Current route/scenario coverage census",
+        "Affected README, architecture and threat model"
+      ],
+      "chunkId": "scoped-ingestion-and-coverage-ledger",
+      "completedAt": "2026-10-26T13:04:55Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "modules/ui/shared/data-management/README.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-scoped-ingestion-and-coverage-ledger",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Implemented synchronous Add data start/retry ownership, workspace/task/client/mount fences and explicit status reconciliation after unconfirmed cancellation. Kept bounded multi-file slices and exact digests, existing source paths and safe errors. Added16 acquisition regressions plus an AST-backed39-family route/source census. Feature and related ingestion checks pass; actual host/provider/native and final combined suites remain pending. This declaration does not qualify the whole increment.",
+      "tests": [
+        "Eight new race cases failed on the original implementation and passed after repair.",
+        "Changed component file plus related ingestion-publication profile passed; current receipt b6adb1364ce1d30b8409187b14079b51f7c821aa26588d973c0a725ba4feb85f.",
+        "Both changed TypeScript files have zero scoped syntax/semantic diagnostics; no emit.",
+        "Documentation and architecture checks passed. Full suites intentionally deferred by the current user instruction."
+      ],
+      "title": "Keep Add data tasks in the correct workspace"
+    }
+  ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-10-23T13:55:23Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "daily-data-and-ai-journeys",
   "decisions": [
     {
       "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
@@ -207,6 +239,36 @@
       "recordedAt": "2026-10-23T15:55:19Z",
       "sequence": 7,
       "type": "resumed"
+    },
+    {
+      "eventFingerprint": "288505e2f5d6d36cb5f27351887a15f6bce4e58c25c8871c466ffc540835845a",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 8,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "6c7402f7bee60d4fdb29bd18cee2191d613c68136fa871ee81b4541fbfb9ee55",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 9,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "5dab7925d375a90fc72cf69b7f5c1cdb211adb5686688cec85d62f4ec4d7abb8",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 10,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "a143d500606feaf6b83abc8d699be58bf87e53bb5805187d13afb597e5dc7537",
+      "recordedAt": "2026-10-26T12:45:53Z",
+      "sequence": 11,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "d979c6498f1a39103555355485c365cdade874dac6bc6cda83b29c0911f46b34",
+      "recordedAt": "2026-10-26T13:04:55Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -240,7 +302,9 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "scoped-ingestion-and-coverage-ledger"
+      ],
       "deliverables": [
         "Versioned machine-readable mapping from current supported route/tab/action/task capability to stable scenario IDs, host applicability, expected contract/oracle, exact test file and fixture/host/runtime evidence tier.",
         "Parameterized focused UI variants for all nine task types and every registry-supported material/format combination, including inactive/invalid controls, source association, output-shape assignment and review decisions.",
@@ -260,11 +324,113 @@
       "id": "daily-data-and-ai-journeys",
       "number": 1,
       "objective": "Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "No new product capability, architecture decision, download or dependency is authorized by UI tests.",
+          "Pending controlled qualification does not count as a pass; no workflow implementation/policy changes are requested."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "scoped-ingestion-and-coverage-ledger",
+            "outcome": "Test and repair duplicate, stale, foreign and unconfirmed-cancellation behavior in the shared workflow; publish a source-linked scenario census with untested layers visibly pending.",
+            "title": "Keep Add data tasks in the correct workspace"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-real-host-roundtrips",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "dataset-context-roundtrips",
+            "outcome": "Exercise supported preparation variants, review/edit/reject/save/version/reuse and Context actions with exact persisted values and safe correction paths; repair reproduced defects.",
+            "title": "Test dataset and Context workflows"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "ai-controls-and-owned-task-states",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "model-training-image-controls",
+            "outcome": "Exercise supported choices, unavailable states and deterministic task review/save/discard/finalize/retry/cancel; preserve accepted accuracy and native ownership.",
+            "title": "Test model, training and image controls"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-real-host-roundtrips",
+              "ai-controls-and-owned-task-states",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "daily-journey-host-wiring",
+            "outcome": "Add exact source-bound host journeys and scenario/variation mapping; execute only feature-relevant cases now. Keep unavailable native/provider/managed evidence and final combined suites pending.",
+            "title": "Connect and check daily app journeys"
+          }
+        ],
+        "completionTests": [
+          "Only feature/related-feature checks and applicable documentation/architecture checks during catch-up.",
+          "Full standard/E2E/AI and combined cross-roadmap testing deferred by explicit current user direction; no full-suite pass inferred."
+        ],
+        "documentation": [
+          "Shared feature README and affected canonical architecture/threat model.",
+          "Versioned coverage ledger and canonical roadmap/report; review site remains dynamic."
+        ],
+        "fingerprint": "a8501809bbe4bfcb6494e56a59b9d05c7b5c68691badd304623b3c9bb125d76f",
+        "focusedTests": [
+          "Exact changed UI test file while iterating.",
+          "Existing ingestion-publication profile for shared acquisition plus related application/storage/transport behavior.",
+          "Exact dataset/Context/model/training/image component/client files as their chunks change."
+        ],
+        "recordedAt": "2026-10-26T12:45:53Z",
+        "rollback": "Revert only owned coherent test/feature patches, retaining actual data, history, guards and failed evidence.",
+        "steps": [
+          "Publish current source-linked coverage census and fix/test shared acquisition races.",
+          "Exercise dataset review and Context roundtrips with exact artifact/settings oracles; fix discovered defects.",
+          "Exercise model/training/image controls and owned task states with bounded fixtures; fix discovered defects.",
+          "Connect focused host journeys and reconcile every daily scenario, preserving external/physical/final-suite gaps."
+        ],
+        "summary": "Deliver daily UI coverage in four coherent feature chunks; run each affected feature and its related boundaries, retain real host/runtime gaps and defer full combined suites until cross-roadmap catch-up implementation is complete."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-26T12:45:52Z",
+          "risks": [
+            "Security-relevant workspace/task identity, safe diagnostics and async ownership must remain fail closed.",
+            "A frontend fixture is not native/provider/model or actual host qualification.",
+            "Retained old offload state and restricted legacy Assets review remain excluded."
+          ],
+          "sources": [
+            {
+              "title": "Mounted shared ingestion workflow",
+              "url": "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
+            },
+            {
+              "title": "Current UI discovery census",
+              "url": "docs/operations/comprehensive-ui-automation-discovery.json"
+            },
+            {
+              "title": "Data architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Data threat model",
+              "url": "docs/security/data-management-threat-model.md"
+            }
+          ],
+          "summary": "Refresh current mounted daily UI and prior39-family discovery. Both Add data hosts use the same GuidedIngestionTaskPanel. Source inspection finds unfenced late task responses, state-only duplicate admission and cancellation clearing busy before proof. Existing ingestion-publication profile covers this first feature and related production paths. Preserve existing Data/OCR/model qualification history."
+        }
+      ],
       "rollback": "Revert the coherent tested harness/feature correction at its owning layer while preserving committed user artifacts, immutable dataset/source history, current public contracts and security guards. Retain failed evidence. Remove only current test-owned disposable profiles/resources after confirmed ownership/exit; unknown files or stages remain untouched.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-10-26T12:45:52Z",
+      "status": "implementing",
       "title": "Data, Context and AI preparation journeys",
       "verification": [
         "Run exact changed component/client and owning application/adapter test files through existing focused Node/Vitest helpers; test harness admission, empty discovery, safe diagnostics, failure and teardown with bounded negative fixtures.",
@@ -510,12 +676,12 @@
     }
   ],
   "roadmapApproval": {
-    "approvedAt": "2026-10-23T15:40:37Z",
+    "approvedAt": "2026-10-26T12:45:52Z",
     "fingerprint": "299252410bb192339fd7626a891ae124aedb87091ac9c0d5a4d0951fbb97d8b5",
-    "note": "The user explicitly approved the complete Comprehensive Functional UI Automation roadmap. Implementation is queued by the same direction: start only after BOTH optional-low-memory-inference and functionality-optimization have actually completed through their owning workflows. This approval does not start an increment, qualify either predecessor or waive genuine technical/security/native/resource gaps."
+    "note": "Existing roadmap content remains approved. The latest explicit catch-up direction authorizes feature-first execution across open roadmaps before final qualification; preserve genuine pending checks and defer all full suites without changing workflow."
   },
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "ready",
-  "updatedAt": "2026-10-23T15:55:19Z"
+  "status": "executing",
+  "updatedAt": "2026-10-26T13:04:55Z"
 }

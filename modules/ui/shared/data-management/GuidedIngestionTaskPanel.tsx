@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
@@ -87,7 +87,16 @@ type ProviderFilesByRepository = Readonly<
   Record<string, readonly HuggingFaceDatasetFile[]>
 >;
 
-export function GuidedIngestionTaskPanel({
+export function GuidedIngestionTaskPanel(props: GuidedIngestionTaskPanelProps) {
+  const [scope, setScope] = useState({ client: props.client, browser: props.sourceBrowserClient, workspaceId: props.workspaceId, key: 0 });
+  if (scope.client !== props.client || scope.browser !== props.sourceBrowserClient || scope.workspaceId !== props.workspaceId) {
+    setScope({ client: props.client, browser: props.sourceBrowserClient, workspaceId: props.workspaceId, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedIngestionTaskPanel key={scope.key} {...props} />;
+}
+
+function ScopedIngestionTaskPanel({
   client,
   sourceBrowserClient,
   workspaceId,
@@ -118,9 +127,57 @@ export function GuidedIngestionTaskPanel({
   const [task, setTask] = useState<IngestionTaskRecord>();
   const [error, setError] = useState<string>();
   const [working, setWorking] = useState(false);
+  const [statusNeedsConfirmation, setStatusNeedsConfirmation] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cancelledRef = useRef(false);
   const currentTaskIdRef = useRef<string | undefined>(undefined);
+  const mountedRef = useRef(true);
+  const operationSequenceRef = useRef(0);
+  const activeOperationRef = useRef<number | undefined>(undefined);
+  const statusRequestRef = useRef(false);
+  const latestTaskRef = useRef<IngestionTaskRecord | undefined>(undefined);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; cancelledRef.current = true; };
+  }, []);
+
+  const ownsOperation = (token: number) => mountedRef.current && activeOperationRef.current === token;
+  const terminal = (value: IngestionTaskRecord) => ["succeeded", "failed", "cancelled"].includes(value.status);
+  function beginOperation() {
+    const token = ++operationSequenceRef.current;
+    activeOperationRef.current = token;
+    cancelledRef.current = false;
+    latestTaskRef.current = undefined;
+    setStatusNeedsConfirmation(false);
+    setWorking(true);
+    setError(undefined);
+    return {
+      token,
+      client: { execute: async (input: Parameters<GuidedIngestionTaskClient["execute"]>[0]) => {
+        if (!ownsOperation(token) || cancelledRef.current) throw new Error("This task is no longer active.");
+        const value = await client!.execute(input);
+        if (!ownsOperation(token)) throw new Error("This task response is no longer active.");
+        return value;
+      } },
+      accept: (value: IngestionTaskTransportValue) => {
+        if (!ownsOperation(token)) throw new Error("This task response is no longer active.");
+        return acceptTask(value);
+      },
+      isActive: () => ownsOperation(token) && !cancelledRef.current,
+    };
+  }
+  function finishOperation(token: number) {
+    if (!ownsOperation(token)) return;
+    const latest = latestTaskRef.current;
+    if (latest && !terminal(latest)) {
+      setStatusNeedsConfirmation(true);
+      setWorking(true);
+    } else {
+      activeOperationRef.current = undefined;
+      setWorking(false);
+    }
+  }
   const websiteUrls = useMemo(() => lines(websiteInput), [websiteInput]);
   const selectedProviderDatasets = useMemo(
     () =>
@@ -366,11 +423,21 @@ export function GuidedIngestionTaskPanel({
   const acceptTask = (
     value: IngestionTaskTransportValue,
   ): IngestionTaskRecord => {
+    if (!mountedRef.current) throw new Error("This task response is no longer active.");
     if (value.kind !== "task")
       throw new Error("The ingestion task response was incomplete.");
+    if (value.task.workspaceId !== workspaceId ||
+        (currentTaskIdRef.current && value.task.taskId !== currentTaskIdRef.current)) {
+      throw new Error("The ingestion task response did not match this workspace or task.");
+    }
+    if (latestTaskRef.current && value.task.revision < latestTaskRef.current.revision) return latestTaskRef.current;
+    latestTaskRef.current = value.task;
     setTask(value.task);
     currentTaskIdRef.current = value.task.taskId;
     upsertTaskActivity(value.task);
+    if (cancelledRef.current && !terminal(value.task) && !statusRequestRef.current) {
+      queueMicrotask(() => { if (mountedRef.current) void cancel(); });
+    }
     return value.task;
   };
 
@@ -391,37 +458,39 @@ export function GuidedIngestionTaskPanel({
     setTask(undefined);
     setError(undefined);
     currentTaskIdRef.current = undefined;
+    latestTaskRef.current = undefined;
     notifications?.setPanelOpen(true);
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     onComplete?.();
   }
 
   async function start(): Promise<void> {
-    if (!client || !workspaceId || working) return;
-    setError(undefined);
-    setWorking(true);
+    if (!client || !workspaceId || activeOperationRef.current !== undefined) return;
+    const operation = beginOperation();
     setTask(undefined);
-    cancelledRef.current = false;
     currentTaskIdRef.current = undefined;
     try {
       const completed =
         sourceKind === "files"
-          ? await addFiles(client, workspaceId, files, acceptTask, cancelledRef)
+          ? await addFiles(operation.client, workspaceId, files, operation.accept, cancelledRef)
           : sourceKind === "website"
             ? await addWebsite(
-                client,
+                operation.client,
                 workspaceId,
                 websiteScope,
                 websiteUrls,
                 maximumPages,
-                acceptTask,
+                operation.accept,
+                operation.isActive,
               )
             : await addProviderFiles(
-                client,
+                operation.client,
                 workspaceId,
                 selectedProviderFiles,
-                acceptTask,
+                operation.accept,
+                operation.isActive,
               );
+      if (!ownsOperation(operation.token)) return;
       if (completed.status === "failed")
         throw new Error(
           completed.files.find((file) => file.error)?.error?.message ??
@@ -429,41 +498,64 @@ export function GuidedIngestionTaskPanel({
         );
       if (completed.status === "succeeded") completeSuccessfully();
     } catch (reason) {
-      if (!cancelledRef.current) setError(safeUiError(reason));
+      if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
     } finally {
-      setWorking(false);
+      finishOperation(operation.token);
     }
   }
 
   async function cancel(): Promise<void> {
+    if (!mountedRef.current || statusRequestRef.current) return;
     cancelledRef.current = true;
     const taskId = currentTaskIdRef.current;
-    if (client && workspaceId && taskId) {
-      try {
-        acceptTask(
-          await client.execute({
-            workspaceId,
-            command: { action: "cancel", taskId },
-          }),
-        );
-      } catch {
-        setError(
-          "The cancellation could not be confirmed. Check the task status before retrying.",
-        );
-      }
+    if (!client || !workspaceId || !taskId) {
+      setStatusNeedsConfirmation(true);
+      setError("The task is still starting. Cancellation will be requested when its identity is available.");
+      return;
     }
-    setWorking(false);
+    await reconcileTask("cancel", taskId);
+  }
+
+  async function reconcileTask(action: "cancel" | "read", taskId: string): Promise<void> {
+    if (!client || !workspaceId || statusRequestRef.current || !mountedRef.current) return;
+    const token = activeOperationRef.current;
+    statusRequestRef.current = true;
+    setCheckingStatus(true);
+    try {
+      const response = await client.execute({ workspaceId, command: { action, taskId } });
+      if (!mountedRef.current || activeOperationRef.current !== token || currentTaskIdRef.current !== taskId) return;
+      const confirmed = acceptTask(response);
+      if (terminal(confirmed)) {
+        activeOperationRef.current = undefined;
+        cancelledRef.current = true;
+        setWorking(false);
+        setStatusNeedsConfirmation(false);
+        setError(undefined);
+        if (confirmed.status === "succeeded") completeSuccessfully();
+      } else {
+        setStatusNeedsConfirmation(true);
+        setWorking(true);
+        setError("The task has not stopped. Check task status before starting another task.");
+      }
+    } catch {
+      if (mountedRef.current && activeOperationRef.current === token) {
+        setStatusNeedsConfirmation(true);
+        setWorking(true);
+        setError("The task status could not be confirmed. Check task status before starting another task.");
+      }
+    } finally {
+      statusRequestRef.current = false;
+      if (mountedRef.current) setCheckingStatus(false);
+    }
   }
 
   async function resume(): Promise<void> {
-    if (!client || !workspaceId || !task || task.status !== "failed") return;
-    setWorking(true);
-    setError(undefined);
-    cancelledRef.current = false;
+    if (!client || !workspaceId || !task || task.status !== "failed" || activeOperationRef.current !== undefined) return;
+    const operation = beginOperation();
     try {
       if (task.kind === "file-batch") normalizedSelectedFiles(files);
-      const resumed = acceptTask(
-        await client.execute({
+      const resumed = operation.accept(
+        await operation.client.execute({
           workspaceId,
           command: { action: "resume", taskId: task.taskId },
         }),
@@ -476,19 +568,21 @@ export function GuidedIngestionTaskPanel({
             : undefined;
       const completed = action
         ? await runWithPolling(
-            client,
+            operation.client,
             workspaceId,
             { action, taskId: task.taskId },
-            acceptTask,
+            operation.accept,
+            operation.isActive,
           )
         : await transferFilesToTask(
-            client,
+            operation.client,
             workspaceId,
             files,
             resumed,
-            acceptTask,
+            operation.accept,
             cancelledRef,
           );
+      if (!ownsOperation(operation.token)) return;
       if (completed.status === "failed")
         throw new Error(
           completed.files.find((file) => file.error)?.error?.message ??
@@ -496,9 +590,9 @@ export function GuidedIngestionTaskPanel({
         );
       if (completed.status === "succeeded") completeSuccessfully();
     } catch (reason) {
-      setError(safeUiError(reason));
+      if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
     } finally {
-      setWorking(false);
+      finishOperation(operation.token);
     }
   }
 
@@ -968,9 +1062,16 @@ export function GuidedIngestionTaskPanel({
             <button
               type="button"
               className="ui-button ui-button--outline"
+              disabled={checkingStatus}
               onClick={() => void cancel()}
             >
               Cancel
+            </button>
+          ) : null}
+          {statusNeedsConfirmation && currentTaskIdRef.current ? (
+            <button type="button" className="ui-button ui-button--outline" disabled={checkingStatus}
+              onClick={() => void reconcileTask("read", currentTaskIdRef.current!)}>
+              Check task status
             </button>
           ) : null}
           {task?.status === "failed" &&
@@ -978,6 +1079,7 @@ export function GuidedIngestionTaskPanel({
             <button
               type="button"
               className="ui-button ui-button--outline"
+              disabled={working}
               onClick={() => void resume()}
             >
               Try again
@@ -1110,6 +1212,7 @@ async function addWebsite(
   urls: readonly string[],
   maximumPages: number,
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1120,11 +1223,13 @@ async function addWebsite(
       },
     }),
   );
+  if (["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,
     { action: "run-website", taskId: task.taskId },
     accept,
+    isActive,
   );
 }
 async function addProviderFiles(
@@ -1132,6 +1237,7 @@ async function addProviderFiles(
   workspaceId: string,
   files: readonly HuggingFaceDatasetFile[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1146,11 +1252,13 @@ async function addProviderFiles(
       },
     }),
   );
+  if (["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,
     { action: "run-hugging-face", taskId: task.taskId },
     accept,
+    isActive,
   );
 }
 async function runWithPolling(
@@ -1161,6 +1269,7 @@ async function runWithPolling(
     readonly taskId: string;
   },
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
 ): Promise<IngestionTaskRecord> {
   let settled = false;
   let result: IngestionTaskTransportValue | undefined;
@@ -1176,7 +1285,9 @@ async function runWithPolling(
     },
   );
   while (!settled) {
+    if (!isActive()) throw new Error("This task is no longer active.");
     await Promise.race([completion, delay(500)]);
+    if (!isActive()) throw new Error("This task is no longer active.");
     if (!settled) {
       try {
         accept(

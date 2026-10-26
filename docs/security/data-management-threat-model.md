@@ -1005,3 +1005,27 @@ checks; do not accept caller metadata as proof of recognized content.
   and committed-frame guards retire edits, client/scope changes and task start
   before late replies. Full-host/provider/scale checks remain separate; these
   local UI checks grant no parent, native, source-byte or application authorization qualification.
+
+### Add data asynchronous session fencing
+
+The shared renderer treats task responses as scope-bound data. Before progress,
+notification or completion effects it requires the current mounted workspace and
+client session, exact task identity, and the active operation owner. Replacement
+or unmount stops further renderer-originated polls/chunks without claiming host
+termination or deleting accepted work. A synchronous owner prevents duplicate
+start/retry dispatch before the busy render. Existing transport/application
+authority, byte limits, provenance, checkpoints and resource ownership remain.
+
+A cancel request alone cannot release UI admission. A failed or nonterminal
+response retains the task and requires status confirmation; only a matching
+terminal response releases the owner. Duplicate status/cancel operations are
+refused, early cancel waits for identity and stale completion cannot overwrite
+the confirmed result. Tests exercise actual shared rendering with deferred
+responses, foreign identities, unmount during a slice, duplicate operations and
+multi-file exact-byte/digest assertions. These finite fixtures do not qualify
+real host/native retirement, provider egress or model semantics. No unknown old
+staging, process or filesystem object is inspected, adopted or cleaned up.
+
+Session retirement runs in the layout cleanup of the committed tree, before
+passive effects. This closes the commit-to-passive interval for late completion
+and notification effects without changing accepted host task ownership.

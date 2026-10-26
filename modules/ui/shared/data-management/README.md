@@ -257,3 +257,29 @@ no byte integrity, transport cancellation, provider, scale-runtime or parent pas
 `readDatasetVersionReplaySources` supplies the shared bounded metadata lookup;
 each host supplies its existing workspace-authorized detail operation. Retain all
 observed rows before capability filtering, so incompatible duplicates cannot be hidden.
+
+## Acquisition session ownership
+
+Add data keeps one synchronous start or retry owner before React renders the busy
+state. Changing workspace or either client replaces the form session. Late task
+responses cannot change the new form, publish notifications, call completion or
+send another chunk or poll. Leaving a page does not claim that the host task has
+been cancelled; accepted work remains host-owned and observable.
+
+Cancel remains pending until a matching terminal task response confirms its
+outcome. A failed request or a still-running response keeps new starts disabled
+and offers **Check task status**. A cancel requested during creation waits for the
+task identity before sending the request. Duplicate cancel/status requests are
+refused. A later old run response cannot replace a confirmed terminal outcome.
+Matching workspace/task identities are checked before progress or notifications.
+File transfer still slices at the existing 1 MiB bound and uses authoritative
+chunk offsets, digests and finalization; whole-file reads are unnecessary.
+
+The focused interaction tests drive this real shared renderer with bounded client
+and file fixtures. They cover both host consumers' shared behavior, not actual
+packaged-app, browser transport, provider or native qualification. The comprehensive
+UI coverage ledger is `docs/operations/comprehensive-ui-automation-coverage.json`.
+
+Session retirement runs in the layout cleanup of the committed tree, before
+passive effects. This closes the commit-to-passive interval for late completion
+and notification effects without changing accepted host task ownership.
