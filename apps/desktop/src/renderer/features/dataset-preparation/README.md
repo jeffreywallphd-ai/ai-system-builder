@@ -84,3 +84,12 @@ roundtrip passes. Check the current page request and committed frame before and
 after each await and before setters. Merge options and settings together; announce
 success only after the consumer form commit. Timeout stops later reads without
 claiming to cancel IPC. No task/model/provider is started by reuse.
+
+Global Dataset Notifications use fixed progress copy and the same closed failure
+code messages as the task client. Validated numeric memory-shortfall facts survive
+the client mapping so the notification can state the amount to free. Raw runtime
+messages, unknown details and invalid counts do not enter notification history.
+Committed workspace/client retirement and exact shared-listener cleanup reject
+late updates. A bounded terminal identity cache refuses duplicate start replay.
+Focused rendered/client tests preserve review, cancellation, overflow warnings and
+measured memory guidance; actual hosts and final combined testing stay separate.

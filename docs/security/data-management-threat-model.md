@@ -1147,3 +1147,20 @@ no prompt, provider diagnostic, path or payload is copied into history. Existing
 host authority, memory guards and task lifetime stay unchanged. Rendered synthetic
 regressions cover denial, retry, valid review/terminal states and shared cleanup;
 actual host, model, native recovery and final testing remain separate.
+
+### Dataset notification failure and memory facts
+
+Dataset Notifications consumes the owning client's closed failure-code map and
+existing numeric shortfall formatter. The client forwards only normalized memory
+facts plus the existing allowed stage/reason fields; arbitrary worker details and
+messages stay excluded. Fixed progress copy and ordered safe-integer counts avoid
+private content and invalid progress. Only an actual boolean overflow flag can
+produce the once-per-request disk warning.
+
+Committed workspace/client sessions and per-subscription identity retire stale
+replies and shared cached-result cleanup. Closed supported status checks leave
+malformed reads uncertain for retry; explicit authoritative unknown remains an
+unknown outcome. A bounded terminal cache refuses replay. Host authority, memory
+guards, task lifetime and model expectations do not change. Synthetic rendered
+and real client-mapping regressions are local support, not physical model/OCR,
+native recovery, actual host or parent-roadmap qualification.

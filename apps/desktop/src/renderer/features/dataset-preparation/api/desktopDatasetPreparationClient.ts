@@ -1,4 +1,5 @@
 import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
+import { normalizeDatasetPreparationMemoryShortfall } from "../../../../../../../modules/contracts/runtime";
 import {
   getDesktopApi,
   type DesktopPrepareTrainingDatasetInput,
@@ -341,6 +342,16 @@ const DATASET_PREPARATION_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
     "Dataset preparation took longer than allowed. Retry with fewer files or smaller source sections.",
 };
 
+/** Fixed code-owned public copy, shared by task clients and Notifications. */
+export function getDesktopDatasetPreparationFailureMessage(error: { code?: string; details?: Record<string, unknown> } | undefined): string {
+  if (error?.code === "generation_insufficient_resources") {
+    return getDatasetPreparationMemoryFailureMessage(error.details?.memoryShortfall);
+  }
+  return error && Object.prototype.hasOwnProperty.call(DATASET_PREPARATION_FAILURE_MESSAGES, error.code ?? "")
+    ? DATASET_PREPARATION_FAILURE_MESSAGES[error.code!]
+    : "Dataset preparation could not finish. Review the selected files and settings, then retry.";
+}
+
 function mapDatasetPreparationTaskFailure(
   error:
     | {
@@ -363,14 +374,17 @@ function mapDatasetPreparationTaskFailure(
     ["normalization", "chunking", "generation", "split"].includes(error.stage)
       ? error.stage
       : undefined;
+  const memoryShortfall = code === "generation_insufficient_resources"
+    ? normalizeDatasetPreparationMemoryShortfall(error?.memoryShortfall)
+    : undefined;
+  const details = {
+    ...(stage ? { stage, reasonCode: code } : {}),
+    ...(memoryShortfall ? { memoryShortfall } : {}),
+  };
   return {
     code,
-    message:
-      code === "generation_insufficient_resources"
-        ? getDatasetPreparationMemoryFailureMessage(error?.memoryShortfall)
-        : DATASET_PREPARATION_FAILURE_MESSAGES[code] ??
-          "Dataset preparation could not finish. Review the selected files and settings, then retry.",
-    ...(stage ? { details: { stage, reasonCode: code } } : {}),
+    message: getDesktopDatasetPreparationFailureMessage({ code, details }),
+    ...(Object.keys(details).length ? { details } : {}),
   };
 }
 

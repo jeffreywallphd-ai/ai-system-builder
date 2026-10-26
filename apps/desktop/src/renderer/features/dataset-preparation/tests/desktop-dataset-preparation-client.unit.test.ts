@@ -5,6 +5,15 @@ import { createFilesystemArtifactBrowserReadAdapter } from "../../../../../../..
 import { BrowseArtifactsUseCase } from "../../../../../../../modules/application/use-cases/browse-artifacts.use-case";
 import { ReadArtifactDetailUseCase } from "../../../../../../../modules/application/use-cases/read-artifact-detail.use-case";
 
+// Dataset-only fixtures deny unrelated provider operations. These methods keep
+// the existing required preload shape without a credential or network path.
+function deniedProviderBridge() {
+  const unavailable = async () => ({ ok: false, error: { code: "unavailable", message: "Provider operations are outside this Dataset client fixture." } });
+  return { getHuggingFaceTokenStatus: unavailable, setHuggingFaceToken: unavailable,
+    clearHuggingFaceToken: unavailable, browseHuggingFaceNamespaceDatasets: unavailable,
+    browseHuggingFaceDatasetParquetFiles: unavailable };
+}
+
 describe("desktop dataset preparation client", () => {
   const makeReplayClient = (readArtifactDetail = vi.fn(async () => ({ ok: true, value: { artifact: { locator: { storageKey: "uploads/source.csv" }, originalName: "source.csv", mediaType: "text/csv" } } }))) => {
     const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
@@ -213,6 +222,7 @@ describe("desktop dataset preparation client", () => {
     });
 
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -294,6 +304,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -344,6 +355,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -404,6 +416,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -440,6 +453,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -473,6 +487,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -583,6 +598,7 @@ describe("desktop dataset preparation client", () => {
         },
       });
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -717,6 +733,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -866,6 +883,7 @@ describe("desktop dataset preparation client", () => {
       },
     }));
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -933,6 +951,9 @@ describe("desktop dataset preparation client", () => {
       expect(result.ok).toBe(false);
       expect(JSON.stringify(result)).toContain("Free at least 243 MiB of RAM");
       expect(JSON.stringify(result)).not.toContain("private-fixture");
+      expect(result).toMatchObject({ ok: false, error: { details: { memoryShortfall: {
+        resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0,
+      } } } });
     } finally { hostWindow.window.desktopApi = previous; }
   });
 

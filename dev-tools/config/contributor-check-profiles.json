@@ -417,7 +417,8 @@
         "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts",
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-feature.unit.test.tsx",
-        "dev-tools/scripts/qualification/tests/owned-task-journey-boundary.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/owned-task-journey-boundary.unit.test.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -552,7 +553,9 @@
         "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx",
         "apps/thin-client/src/features/model-management/api/apiModelManagementClient.ts",
         "apps/thin-client/README.md",
-        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/README.md"
       ]
     },
     "functionality-context": {
