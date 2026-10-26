@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { existsSync, lstatSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -9,7 +11,7 @@ import {
   stopVisualComposerOwnedProcess,
   waitForVisualComposerEndpoint,
 } from "../visual-composer/visual-composer-host-lifecycle.mjs";
-import { buildPackagedDesktopFromCurrentWorktree } from "../visual-composer/visual-composer-global-setup.mjs";
+import { buildPackagedDesktopFromCurrentWorktree, preparePackagedDesktopQualificationIdentity } from "../visual-composer/visual-composer-global-setup.mjs";
 import { resolveVisualComposerQualificationEnvironment } from "../visual-composer/visual-composer-qualification-environment.mjs";
 import { createProvidedDatasetHostLaunchPlan } from "../visual-composer/provided-dataset-host-launch-plan.mjs";
 
@@ -276,4 +278,110 @@ test("qualification binding results are independent and preserve exact argument 
   assert.equal(first.PYTHON_RUNTIME_PORT, "45003");
   assert.equal(second.PYTHON_RUNTIME_PORT, "45005");
   assert.notEqual(first, second);
+});
+
+function withSeedFixture(run) {
+  const parent = realpathSync(os.tmpdir());
+  const root = mkdtempSync(path.join(parent, "desktop-qualification-seed-"));
+  const executablePath = path.join(root, "synthetic-app.exe");
+  const seedExecutable = path.join(root, "synthetic-seed.exe");
+  // These inert files are never executed. Every test injects its own runner.
+  writeFileSync(executablePath, "", { flag: "wx" });
+  writeFileSync(seedExecutable, "", { flag: "wx" });
+  try {
+    return run({ root, executablePath, seedExecutable });
+  } finally {
+    assert.equal(path.dirname(root), parent);
+    assert.equal(realpathSync(root), root);
+    let entries = 0;
+    const regularTree = (folder, depth = 0) => {
+      assert.ok(depth <= 10);
+      for (const name of readdirSync(folder)) {
+        const file = path.join(folder, name), info = lstatSync(file);
+        assert.ok(++entries <= 16 && !info.isSymbolicLink());
+        assert.equal(realpathSync(file), file);
+        if (info.isDirectory()) regularTree(file, depth + 1);
+        else assert.ok(info.isFile() && info.size === 0 && [executablePath, seedExecutable].includes(file));
+      }
+    };
+    regularTree(root);
+    rmSync(root, { recursive: true });
+  }
+}
+
+function seedPlan(fixture, provided = false) {
+  const options = { repoRoot: fixture.root, runId: "single-desktop-seed",
+    desktopExecutablePath: fixture.executablePath, electronNodeExecutablePath: fixture.seedExecutable,
+    environment: { PATH: "synthetic-path", NODE_OPTIONS: "--max-old-space-size=256" } };
+  return provided ? createProvidedDatasetHostLaunchPlan({ ...options,
+    pythonExecutable: path.join(fixture.root, "python.exe"), sourceRevision: bindingSource }) : createVisualComposerHostLaunchPlan(options);
+}
+
+test("standalone desktop identity preparation preserves exact normal and provided seed commands", () => {
+  withSeedFixture(fixture => {
+    for (const provided of [false, true]) {
+      const plan = seedPlan(fixture, provided), before = JSON.stringify(plan);
+      const ambient = JSON.stringify(process.env), calls = [];
+      preparePackagedDesktopQualificationIdentity(plan, { platform: "win32", spawnProcess: (...args) => {
+        calls.push(args); return { status: 0 };
+      } });
+      assert.deepEqual(calls, [[plan.desktop.seed.command, plan.desktop.seed.args, {
+        cwd: plan.desktop.seed.cwd, env: plan.desktop.seed.env,
+        windowsHide: true, encoding: "utf8", timeout: 30_000,
+      }]]);
+      assert.equal(calls[0][2].env.ELECTRON_RUN_AS_NODE, "1");
+      assert.ok(existsSync(plan.paths.desktopDataRoot));
+      assert.equal(existsSync(plan.paths.thinRuntimeRoot), false);
+      assert.equal(existsSync(plan.paths.thinStorageRoot), false);
+      assert.equal(JSON.stringify(plan), before);
+      assert.equal(JSON.stringify(process.env), ambient);
+    }
+  });
+});
+
+test("standalone desktop identity preparation rejects unsupported platforms before allocation", () => {
+  withSeedFixture(fixture => {
+    const plan = seedPlan(fixture);
+    let calls = 0;
+    assert.throws(() => preparePackagedDesktopQualificationIdentity(plan, {
+      platform: "linux", spawnProcess: () => { calls += 1; throw new Error("must not run"); },
+    }), /currently requires Windows/);
+    assert.equal(calls, 0);
+    assert.equal(existsSync(plan.paths.desktopDataRoot), false);
+  });
+});
+
+test("standalone desktop identity preparation rejects either missing executable before allocation", () => {
+  for (const missing of ["executablePath", "seedExecutable"]) {
+    withSeedFixture(fixture => {
+      const plan = seedPlan(fixture); rmSync(fixture[missing]);
+      let calls = 0;
+      assert.throws(() => preparePackagedDesktopQualificationIdentity(plan, {
+        platform: "win32", spawnProcess: () => { calls += 1; throw new Error("must not run"); },
+      }), error => /executable is unavailable/.test(error.message) && !error.message.includes(fixture.root));
+      assert.equal(calls, 0);
+      assert.equal(existsSync(plan.paths.desktopDataRoot), false);
+    });
+  }
+});
+
+test("standalone desktop identity preparation keeps nonzero and timeout failures bounded and redacted", () => {
+  for (const status of [1, null]) {
+    withSeedFixture(fixture => {
+      const plan = seedPlan(fixture), before = JSON.stringify(plan);
+      let calls = 0;
+      assert.throws(() => preparePackagedDesktopQualificationIdentity(plan, {
+        platform: "win32", spawnProcess: () => {
+          calls += 1;
+          return { status, error: new Error(`token=synthetic-secret ${fixture.root}`),
+            stderr: `password=synthetic-password\r\n${fixture.root} ${"x".repeat(2_000)}` };
+        },
+      }), error => error.message.startsWith("Unable to seed packaged desktop identity.") &&
+        error.message.length <= 900 && !error.message.includes(fixture.root) &&
+        !error.message.includes("synthetic-secret") && !error.message.includes("synthetic-password") &&
+        !/[\r\n\t]/.test(error.message));
+      assert.equal(calls, 1);
+      assert.equal(JSON.stringify(plan), before);
+    });
+  }
 });

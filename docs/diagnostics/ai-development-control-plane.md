@@ -140,6 +140,14 @@ the pure projection without calling the combined service-starting setup; it must
 still validate its source/package and prove actual native retirement and app
 results. Unknown impact and explicit generic focused checks remain selected.
 
+The same focused file checks standalone desktop identity preparation with inert
+files and an injected runner. Trusted serial callers can reuse
+`preparePackagedDesktopQualificationIdentity` after actual source/package checks
+and pure environment binding. Its default seed command, data root, timeout and
+failure behavior remain the existing ones. Normal shared setup still builds
+before seeding. The export neither starts browser services nor grants permission
+to use an unverified package; real serial/native/app evidence remains pending.
+
 The broader `functionality-outcomes` profile remains intact; a narrow profile
 cannot cover unrelated changed paths or grant a parent qualification.
 

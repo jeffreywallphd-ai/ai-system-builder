@@ -470,3 +470,15 @@ then configure its app without invoking combined web-service startup. This
 source extraction does not prove actual app topology, native readback, owned
 retirement, memory fit or savings. Those observations remain pending; no model
 accuracy, provider publication or old-owner recovery authority is added.
+
+The existing fixed desktop identity-seeding routine is separately reusable by
+trusted source callers. Normal shared setup still builds before seeding. A
+serial caller must first prove actual source and full package identity and apply
+the pure environment map. The routine retains executable checks, the isolated
+desktop data root, the exact seed command and its 30-second hidden-process
+deadline. Optional platform/runner injection supports app-free source tests; it
+is not caller JSON, a new public command, a skip-build flag or launch authority.
+Tests cover both launch plans, pre-allocation denial and bounded redacted child
+failures with inert owned files. They do not run a seed process or qualify apps,
+actual package/source identity, native retirement, memory fit or savings. A
+separately reviewed serial consumer and actual per-host evidence remain required.

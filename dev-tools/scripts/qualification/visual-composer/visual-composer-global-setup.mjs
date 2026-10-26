@@ -109,7 +109,7 @@ export async function startVisualComposerQualification(config, launchPlan) {
   );
   if (projects.has("packaged-desktop")) {
     buildPackagedDesktopFromCurrentWorktree(launchPlan);
-    preparePackagedDesktop(launchPlan);
+    preparePackagedDesktopQualificationIdentity(launchPlan);
   }
   if (!projects.has("thin-chrome")) return async () => assertAssetSystemSourceIdentity(launchPlan.repoRoot, sourceRevision);
 
@@ -237,8 +237,10 @@ function prepareThinClientQualificationIdentity(launchPlan) {
   return { bearerToken, credentialPath };
 }
 
-function preparePackagedDesktop(launchPlan) {
-  if (process.platform !== "win32") {
+// Trusted reviewed callers must verify source and package before seeding.
+// This does not build the package, configure runtimes or start web services.
+export function preparePackagedDesktopQualificationIdentity(launchPlan, options = {}) {
+  if ((options.platform ?? process.platform) !== "win32") {
     throw new Error(
       "Packaged desktop visual composer qualification currently requires Windows.",
     );
@@ -260,7 +262,7 @@ function preparePackagedDesktop(launchPlan) {
     }
   }
   mkdirSync(launchPlan.paths.desktopDataRoot, { recursive: true });
-  const result = spawnSync(
+  const result = (options.spawnProcess ?? spawnSync)(
     launchPlan.desktop.seed.command,
     launchPlan.desktop.seed.args,
     {
