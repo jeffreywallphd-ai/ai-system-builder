@@ -1057,7 +1057,8 @@
         "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
         "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
         "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
-        "apps/server/src/tests/create-server.integration.test.ts"
+        "apps/server/src/tests/create-server.integration.test.ts",
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts"
       ],
       "source_paths": [
         "modules/application/shared/ingestion-file-publication.ts",

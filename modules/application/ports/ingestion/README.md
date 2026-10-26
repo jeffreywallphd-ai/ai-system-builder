@@ -30,3 +30,19 @@ bounded sanitized errors, and immutable artifact references.
 New local-file tasks record a 24-hour checkpoint deadline. Host maintenance can
 cancel and deterministically clean expired unfinished tasks; immutable completed
 artifacts and source snapshots are never subject to this checkpoint cleanup.
+
+The fixed `governed-ingestion-streaming.integration.test.ts` fixture exercises
+the production use cases, SQLite records and filesystem adapters with serial
+8 MiB and 64 MiB synthetic JSON Lines sources. It reuses one 1 MiB producer
+chunk and hashes the complete saved output through 64 KiB reads. It checks exact
+monotonic progress, duplicate-chunk retry, immutable finalization after closing
+and reopening SQLite, wrong-digest recovery and partial cancellation cleanup.
+Every case closes its database and removes only its new temporary root.
+
+The fixture records observed test-process peak RSS and workflow time, with a
+prospective 1 GiB RSS assertion and 120-second case deadlines. These are local
+test observations, not enforced product memory admission or proof for maximum
+4 GiB inputs, mounted UI, provider/website transfer, hostile native filesystem
+races or a complete Data roadmap criterion. The source-owned
+`ingestion-publication` profile runs this model-free fixture alongside its
+existing checks. It does not download a model or rerun accepted accuracy tests.
