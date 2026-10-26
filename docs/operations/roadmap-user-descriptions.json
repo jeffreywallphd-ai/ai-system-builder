@@ -11633,6 +11633,19 @@
           "These local results do not complete actual download or host checks or the roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "664b14cd82baf388152c4978c1cb8295b657d0b9613e735061aab95fa7a06de9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed safe Context progress and task-list checks.",
+          "Installation guidance remains available.",
+          "Unknown status stays separate from confirmed failure.",
+          "These local results do not complete actual runtime or host checks or the roadmap."
+        ]
+      }
     }
   ]
 }

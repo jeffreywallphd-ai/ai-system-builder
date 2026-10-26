@@ -1182,3 +1182,11 @@ forwarded. Synthetic UI regressions preserve the existing history behavior and
 exercise malformed/foreign/duplicate/oversized pages, mutable identity, wrong
 completion, retirement and safe copy. They do not qualify downloads, models, real
 hosts, physical native protections or any parent roadmap.
+
+The shared download bridge preserves the exact known worker-stop classification
+through capture using only `python_runtime_worker_exited` plus failed status.
+Its public copy is fixed; raw runtime message text is never trusted. Forged text
+under another code and a known code on unknown status cannot assert worker exit.
+Existing real host recovery assertions remain unchanged. Local bridge/runtime
+fixtures support this compatibility repair without claiming an actual host fault
+or native retirement qualification.

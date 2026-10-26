@@ -15,6 +15,7 @@ import { useNotificationCenter } from "./NotificationProvider";
 import type { NotificationActivityStatus } from "./notificationState";
 
 export const MODEL_DOWNLOAD_NOTIFICATION_POLL_MS = 1_500;
+const WORKER_STOPPED_MESSAGE = "Python runtime worker stopped before the task completed.";
 
 export interface ModelDownloadNotificationClient {
   listModelDownloads(input: ListModelDownloadTasksRequest): Promise<ListModelDownloadTasksResult>;
@@ -110,7 +111,8 @@ function normalizeStatus(status: ModelDownloadTaskActivity["status"]): Notificat
 
 function activityMessage(activity: ModelDownloadTaskActivity): string {
   if (activity.status === "succeeded") return "Model download completed.";
-  if (activity.status === "failed") return "Model download failed. Open Models to review the download and retry.";
+  if (activity.status === "failed") return activity.error?.code === "python_runtime_worker_exited"
+    ? WORKER_STOPPED_MESSAGE : "Model download failed. Open Models to review the download and retry.";
   if (activity.status === "cancelled") return "Model download was cancelled.";
   if (activity.status === "queued") return "Waiting to download.";
   return activity.status === "unknown" ? "Model download status is unavailable." : "Downloading model.";
@@ -144,7 +146,9 @@ function captureActivity(activity: ModelDownloadTaskActivity): ModelDownloadTask
     && Number.isFinite(Date.parse(activity.updatedAt)) ? activity.updatedAt : undefined;
   return Object.freeze({ requestId: activity.requestId, workspaceId: activity.workspaceId,
     modelId: activity.modelId, displayName: activity.displayName, status: activity.status,
-    model: activity.model, progress: downloadProgress(activity.progress), updatedAt });
+    model: activity.model, progress: downloadProgress(activity.progress), updatedAt,
+    ...(activity.status === "failed" && activity.error?.code === "python_runtime_worker_exited"
+      ? { error: { code: "python_runtime_worker_exited", message: WORKER_STOPPED_MESSAGE } } : {}) });
 }
 
 function downloadProgress(progress: ModelDownloadTaskActivity["progress"]) {

@@ -701,3 +701,9 @@ from validated numeric progress and known chunk units; other runtime free text
 is not displayed. Invalid numeric progress and unknown units are omitted. These
 presentation checks preserve host authorization and do not qualify actual RAG,
 models, native runtime or complete host execution.
+
+The closed `python_runtime_worker_exited` error code on a failed download retains
+the existing fixed worker-stop notice used by the desktop and managed recovery
+journeys. Snapshot capture keeps only that known code and fixed copy. Arbitrary
+messages, forged message-only exit claims and uncertain statuses cannot supply
+this classification. Other failed downloads keep the generic safe action hint.

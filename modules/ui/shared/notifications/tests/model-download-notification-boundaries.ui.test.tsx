@@ -135,3 +135,23 @@ it("checks an existing shared snapshot before publishing it", async () => {
   await act(async () => { stop(); await Promise.resolve(); }); await refresh();
   assert.match(container!.textContent!, /Test model/);
 });
+
+it("preserves the fixed worker-stop notice for its exact failed-task code", async () => {
+  let value = activity(); const client = { listModelDownloads: async () => ({ activities: [value] }) };
+  await mount(client); value = activity({ status: "failed", error: { code: "python_runtime_worker_exited", message: "PRIVATE_WORKER_TEXT" } }); await refresh();
+  assert.match(container!.textContent!, /Python runtime worker stopped before the task completed\./);
+  assert.doesNotMatch(JSON.stringify(notifications.state.records), /PRIVATE/);
+});
+
+it("does not infer worker exit from an unrecognized code's message", async () => {
+  let value = activity(); const client = { listModelDownloads: async () => ({ activities: [value] }) };
+  await mount(client); value = activity({ status: "failed", error: { code: "unknown", message: "Python runtime worker stopped before the task completed. PRIVATE_FORGED" } }); await refresh();
+  assert.match(container!.textContent!, /Model download failed\. Open Models/);
+  assert.doesNotMatch(container!.textContent!, /Python runtime worker stopped|PRIVATE/);
+});
+
+it("does not report worker exit for an uncertain task status", async () => {
+  await mount({ listModelDownloads: async () => ({ activities: [activity({ status: "unknown", error: { code: "python_runtime_worker_exited", message: "PRIVATE_UNCERTAIN" } })] }) });
+  assert.equal(notifications.records.find(v => v.kind === "activity")?.status, "unknown");
+  assert.doesNotMatch(container!.textContent!, /Python runtime worker stopped|PRIVATE/);
+});

@@ -4241,6 +4241,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "context-task-notification-boundaries",
+      "work_criteria": [
+        "context-notification-page-and-status",
+        "context-notification-safe-compatible-progress",
+        "context-notification-evidence-and-scope"
+      ],
+      "receipt_digest": "1ca83004153bca75941ac49452c7c5eb3ddfaf98bf61f20ea40a37fe1c6dc548",
+      "review_digest": "7ad13a9be51d8c876bfea39642bff2628fce847916276e58f91791f6e4d316cc",
+      "scope": "Tested and committed Context task notifications with safe progress, preserved installation guidance, complete task-list checks and accurate unknown status.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
