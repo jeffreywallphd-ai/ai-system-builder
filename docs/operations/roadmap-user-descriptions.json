@@ -11752,6 +11752,20 @@
           "These tests use model-client fixtures. Real training and final host checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6b72d1bb3a7af50117081ef1d7dbfa230e4a7083efad8b90d6c4cb9490932196",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the Training default-model fix through the real Models client.",
+          "Training uses the safe availability flag to choose an installed model while keeping local paths hidden.",
+          "The tests check preferred text models, preparation models and date order, and refuse unsuitable automatic defaults.",
+          "The selected record ID is submitted for the application to check. The availability flag grants no permission to load files.",
+          "The connection to the desktop bridge and the training action are fixtures. Real training and final host checks remain pending."
+        ]
+      }
     }
   ]
 }

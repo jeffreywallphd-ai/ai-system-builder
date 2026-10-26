@@ -1255,3 +1255,21 @@ record; application resolution and admission remain unchanged. Rendered tests
 exercise the actual client sanitizer with finite preload envelopes and verify
 path-free presentation/requests, unsuitable-default refusal and existing model
 preference/fallback behavior. They do not qualify actual training or native files.
+
+Composed Training tests join real UI/preload/handlers/orchestration with newly
+owned staged input files, cooperative output storage and a durable JSON registry.
+Independent byte and reopened-identity oracles protect exact input/output mapping,
+explicit review, workspace refusal, retained failed-save review and no duplicate
+storage on retry. The finite worker and passive input-binding/settings/runtime ports do
+not prove physical training or host authorization. Fixture cleanup checks the
+identity, containment, entry/byte bounds and regular-file tree of only directories
+created for that test. It never inspects or cleans retained model/offload data,
+and no native race-protection or atomic-publication qualification is inferred.
+
+Training status reads require a canonical workspace-bearing bridge request, just
+like cancel and explicit Save/Discard. The client rejects malformed workspace
+identity before entering the bridge. This aligns declarations with the existing
+preload contract and preserves all handler/application validation. Exact consumed
+preload methods type-check without hiding the mismatch behind a broad cast.
+The composed fixture reads input bytes from a real new filesystem store, while
+input binding and artifact-list policy remain declared fixtures.

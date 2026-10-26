@@ -1373,6 +1373,12 @@
           "name": "Nine two-dataset rendered training profiles plus zero values, action/session/task/review/failure regressions",
           "tier": "desktop-training-form-and-hook-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+          "name": "Mounted Training with real preload/handlers/use case, staged bytes, explicit durable save/reopen, registration retry and owned discard",
+          "tier": "desktop-training-in-process-preload-with-finite-worker-and-filesystem-json-stores",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",

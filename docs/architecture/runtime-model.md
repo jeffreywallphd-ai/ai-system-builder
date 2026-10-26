@@ -785,3 +785,20 @@ clients. Full/merged forms, preferred text models, preparation-source preference
 and newest-record ordering stay intact. These are form defaults only: requests
 carry the selected record ID, and application ownership, loading and runtime
 guards still decide whether training can start.
+
+The composed Training UI fixture uses the actual model client, preload contracts,
+registered IPC handlers, training use case, generated-model filesystem adapter
+and reopened JSON registry. Its finite worker verifies two staged dataset byte
+streams and supplies bounded synthetic output bytes. Save/Discard remain explicit.
+A registration failure retains review and its first storage result; retry registers
+once without recopying. Refused Stop retains the task, and foreign review is
+denied before runtime I/O. The invoke link, input bindings/artifact listings, worker and
+passive settings/runtime reads are fixtures. Physical Electron/sender policy,
+training semantics, native atomic publication and production SQLite remain separate.
+
+The Training renderer bridge uses the canonical status, cancel and review request
+types. Every method requires the existing workspace identity; the Models client
+normalizes that identity before entering a status-read bridge. Real preload
+function assignment and a rejected-workspace regression cover this boundary.
+The composed input byte store is also real; input bindings and artifact listings
+remain finite fixtures rather than a complete artifact-host qualification.

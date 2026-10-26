@@ -4398,6 +4398,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "training-default-model-availability",
+      "work_criteria": [
+        "training-safe-inventory-default",
+        "training-unsuitable-default-and-authority",
+        "training-selection-evidence-and-history"
+      ],
+      "receipt_digest": "17fc4f80bb5067bd30afbbd387042efa29799aea9cfe7478fe5e8555c772c6b1",
+      "review_digest": "30b3435fa2b8444fb57b6e62d20c52637d42c48749ea63111f74e39eeb2177c8",
+      "scope": "Tested, independently reviewed and committed Training default-model selection through the actual sanitized Models client, preserving path-free requests, suitable form/text/source/newest preferences and unavailable-default refusal.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

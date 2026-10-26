@@ -54,6 +54,9 @@ import type {
   CancelModelDownloadTaskResult,
   ListModelsRequest,
   ModelTrainingRequest,
+  ModelTrainingStatusRequest,
+  ModelTrainingCancelRequest,
+  ModelTrainingReviewRequest,
   ModelTrainingResult,
   SaveModelReferenceRequest,
   UpdateModelRecordRequest,
@@ -1365,19 +1368,19 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readModelTrainingStatus?: (
-    input: { runId: string },
+    input: ModelTrainingStatusRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   cancelModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingCancelRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   saveModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingReviewRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   discardModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingReviewRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   validateModel?: (

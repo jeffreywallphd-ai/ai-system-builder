@@ -274,7 +274,7 @@ export function createDesktopModelsClient(): DesktopModelsClient {
         throw new Error("Desktop preload model training status bridge is unavailable.");
       }
       return ensureSuccess(
-        await desktopApi.readModelTrainingStatus(input),
+        await desktopApi.readModelTrainingStatus({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
         (value) => value as DesktopModelTrainingResult,
         "Failed to read model training status.",
       );
