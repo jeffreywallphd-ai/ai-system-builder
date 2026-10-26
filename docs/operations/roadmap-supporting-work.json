@@ -4471,6 +4471,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ],
+      "work_id": "workspace-first-run-transport-persistence-journeys",
+      "work_criteria": [
+        "workspace-composed-create-select-and-reopen",
+        "workspace-single-create-and-selection-failure",
+        "workspace-scoped-fixture-and-current-plan"
+      ],
+      "receipt_digest": "cba39527000687dd7f6bcf993c81fec4f68d9ce0947d9ae67c1e9a3685e77bb2",
+      "review_digest": "98e221b5bb69c6d879cca2a9364e68f0fb8fc924454cea2c81c8d51fadb10fc7",
+      "scope": "Tested, independently reviewed and committed workspace first-run journeys through both real forms, switchers, gates and default clients, actual preload/handlers or local HTTP, the creation use case and new JSON repositories. Exact identity and reopen checks cover two Foundation reference choices, stored selection, one pending creation, failed-create retry and rejected failed/malformed selection responses; canonical empty selection and valid-but-absent readiness remain distinct."
     }
   ]
 }

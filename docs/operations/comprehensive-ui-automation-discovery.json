@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "title": "Comprehensive Functional UI Automation",
-  "status": "approved-queued",
+  "status": "executing",
   "preparedOn": "2026-10-23",
   "scope": "All currently mounted product functionality in packaged Windows desktop and local Chrome thin client, with managed identity/PostgreSQL/TLS and installed-runtime cases as explicitly named controlled layers. Also retain reusable tests for intentionally unmounted API/component surfaces without exposing them as product navigation.",
   "notAQualificationResult": true,
@@ -1610,22 +1610,51 @@
     "No restricted independent legacy security review retry by another tool/agent",
     "No inspection/adoption/deletion/move/ACL change of retained old offload staging and no fresh lease until owning native protection/accounting/process proof qualifies"
   ],
-  "nextStep": "Keep this approved not-started roadmap pending/queued while completing optional-low-memory-inference and functionality-optimization. After both actually close, revalidate their canonical completion and this approval before starting the first approved increment. This is the retained user-ordered workflow constraint, not an unresolved obstacle or an automatic cross-roadmap gate. No repeat approval question is required for the unchanged roadmap.",
+  "nextStep": "Continue the approved daily-data-and-ai-journeys increment, then the remaining ordered increments. Run only feature and related-feature checks during implementation catch-up. Keep final combined testing and genuine native, provider, runtime and host qualifications pending; this scheduling update grants no predecessor or parent completion.",
   "selectedStrategy": "layered-existing-toolchain",
   "implementationPlanArtifact": "docs/operations/comprehensive-ui-automation-plan.json",
   "ownerScopeClarification": "Physical native/offload, model semantic accuracy, private-provider operations and restricted independent review retain their existing owners. This UI roadmap requires its own applicable actual host assertions and truthful UI readiness/denial, not those roadmaps to close. New valid UI evidence may be linked later only through each owner current qualification process.",
   "implementationQueue": {
-    "status": "queued-not-started",
-    "authorityRef": "explicit-user-full-roadmap-approval-and-ordered-start",
+    "status": "executing",
+    "authorityRef": "later-user-feature-first-open-roadmap-catch-up",
     "predecessorRoadmaps": [
       "optional-low-memory-inference",
       "functionality-optimization"
     ],
-    "startCondition": "Honor the explicit user order: both named predecessor roadmaps must actually complete under their own qualification and closure workflow before starting this roadmap. Revalidate their canonical states and this approval at that time. This operator/workflow constraint is not an automatic external-roadmap gate or a claim of predecessor closure.",
-    "implementationStarted": false,
+    "startCondition": "The existing canonical roadmap approval authorizes feature-first implementation across open roadmaps. Continue the approved ordered increments without waiting for predecessor qualification. Keep those predecessor results pending under their own owners and retain all final gates.",
+    "implementationStarted": true,
     "predecessorPassGranted": false,
     "acceptanceScopeChanged": false,
     "enforcement": "operator-workflow-constraint",
-    "schedulingClassification": "pending-not-blocked"
-  }
+    "schedulingClassification": "in-progress-not-blocked"
+  },
+  "supersededScheduling": [
+    {
+      "authorityRef": "prior-explicit-user-ordered-start",
+      "values": {
+        "status": "approved-queued",
+        "nextStep": "Keep this approved not-started roadmap pending/queued while completing optional-low-memory-inference and functionality-optimization. After both actually close, revalidate their canonical completion and this approval before starting the first approved increment. This is the retained user-ordered workflow constraint, not an unresolved obstacle or an automatic cross-roadmap gate. No repeat approval question is required for the unchanged roadmap.",
+        "implementationQueue": {
+          "status": "queued-not-started",
+          "authorityRef": "explicit-user-full-roadmap-approval-and-ordered-start",
+          "predecessorRoadmaps": [
+            "optional-low-memory-inference",
+            "functionality-optimization"
+          ],
+          "startCondition": "Honor the explicit user order: both named predecessor roadmaps must actually complete under their own qualification and closure workflow before starting this roadmap. Revalidate their canonical states and this approval at that time. This operator/workflow constraint is not an automatic external-roadmap gate or a claim of predecessor closure.",
+          "implementationStarted": false,
+          "predecessorPassGranted": false,
+          "acceptanceScopeChanged": false,
+          "enforcement": "operator-workflow-constraint",
+          "schedulingClassification": "pending-not-blocked"
+        }
+      },
+      "supersededBy": {
+        "authorityRef": "later-user-feature-first-open-roadmap-catch-up",
+        "canonicalApprovalFingerprint": "299252410bb192339fd7626a891ae124aedb87091ac9c0d5a4d0951fbb97d8b5",
+        "canonicalApprovalNote": "Existing roadmap content remains approved. The latest explicit catch-up direction authorizes feature-first execution across open roadmaps before final qualification; preserve genuine pending checks and defer all full suites without changing workflow."
+      },
+      "qualificationGranted": false
+    }
+  ]
 }

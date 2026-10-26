@@ -11811,6 +11811,20 @@
           "Real models, providers, production security, native files and final host testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "415076ec4a8874dc65c45af1666a120e0e8e3e9162fca140efa85c4ba2bbb92a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the desktop and browser workspace components.",
+          "Twenty-four focused tests cover two new workspaces, their Foundation choices and the exact saved selection after reopening.",
+          "One action starts one pending creation. A refused creation keeps the entered name and allows an explicit retry.",
+          "Failed or invalid selection responses show a load error and do not open workspace content. An empty selection and a valid reference to a missing workspace keep their separate states.",
+          "The tests use real local application code and new JSON files. App windows, production access controls, native file protection and final combined testing remain pending."
+        ]
+      }
     }
   ]
 }
