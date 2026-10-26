@@ -127,18 +127,22 @@ class CatalogTests(Fixture):
         root = HELPERS.parents[1]
         config = "dev-tools/config/contributor-check-profiles.json"
         profile = read_json(root / config)["profiles"]["dataset-version-browser"]
-        expected = ['modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts', 'modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts', 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx']
+        expected = ['modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts', 'modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts', 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx']
         self.assertEqual(profile["test_paths"], expected)
         commands = run_focused_checks.profile_commands(root, "dataset-version-browser")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
         self.assertTrue(all(command[0] == "node" for command in commands))
-        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"dataset-version-browser": profile}}))
-        exact = ['modules/ui/shared/dataset-version/DatasetVersionPanel.tsx', 'modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/ArtifactsPage.tsx', 'apps/thin-client/src/pages/ArtifactsPage.tsx', 'apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx']
+        # The desktop client also belongs to the existing portable OCR profile.
+        # Retain that overlapping owner in the fixture rather than suppressing it.
+        self.put(config, json.dumps(read_json(root / config)))
+        exact = ['modules/ui/shared/dataset-version/DatasetVersionPanel.tsx', 'modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/ArtifactsPage.tsx', 'apps/thin-client/src/pages/ArtifactsPage.tsx', 'apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts', 'apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx', 'apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx']
         for path in exact:
             ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
             self.assertIn("dataset-version-browser", ids)
             self.assertIn("architecture", ids)
             self.assertNotIn("focused-tests", ids)
+            if path == "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts":
+                self.assertIn("ocr-provider-contract", ids)
         for paths, required, focused in [(exact + [config], ["control-plane"], False),
                                          (exact, ["focused-tests"], True),
                                          (exact + ["apps/thin-client/src/other.ts"], ["documentation"], True)]:
@@ -442,7 +446,8 @@ isVitestOwnedTestSource('import { it } from "vitest";');
                                                   "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_source_snapshot.py", "test_ocr_wire.py",
                                                   *[Path(path).name for path in task_tests]])]])
         config = "dev-tools/config/contributor-check-profiles.json"
-        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
+        # Preserve the Browser profile that also owns the desktop client.
+        self.put(config, json.dumps(read_json(root / config)))
         for paths, required, expected_ocr, expected_generic in [
             ([source], ["documentation"], True, False),
             ([test_path], ["documentation"], True, False),

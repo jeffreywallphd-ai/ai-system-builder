@@ -1315,7 +1315,14 @@
         "modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts",
         "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
-        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx"
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1339,7 +1346,19 @@
         "modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts",
         "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
-        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx"
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/README.md",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx"
       ]
     }
   }

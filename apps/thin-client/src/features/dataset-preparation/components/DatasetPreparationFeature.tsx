@@ -524,6 +524,9 @@ function WorkspaceDatasetPreparationFeature({
   const [artifacts, setArtifacts] = useState<ThinClientArtifactBrowseItem[]>(
     [],
   );
+  const [sourceLoadState, setSourceLoadState] = useState<{ workspaceId: string; client: typeof browser; status: "loading" | "ready" | "failed" }>({ workspaceId, client: browser, status: "loading" });
+  const [sourceRefresh, setSourceRefresh] = useState(0);
+  const sourceLoadStatus = sourceLoadState.workspaceId === workspaceId && sourceLoadState.client === browser ? sourceLoadState.status : "loading";
   const [selectedArtifactIds, setSelectedArtifactIds] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [activeRequestId, setActiveRequestId] = useState<string>();
@@ -914,21 +917,6 @@ function WorkspaceDatasetPreparationFeature({
     mounted.current = true;
     cancelRequest.current = undefined;
     setCancelPending(false);
-    void browser
-      .browseArtifacts({ workspaceId })
-      .then((items) => {
-        if (mounted.current) {
-          setArtifacts(items.filter(supportedSource));
-        }
-      })
-      .catch(() => {
-        if (mounted.current) {
-          setStatus({
-            kind: "error",
-            message: "Source files could not be loaded. Try again.",
-          });
-        }
-      });
     return () => {
       mounted.current = false;
       pollingSession.current += 1;
@@ -937,6 +925,26 @@ function WorkspaceDatasetPreparationFeature({
       cancelRequest.current = undefined;
     };
   }, [browser, workspaceId]);
+
+  useEffect(() => {
+    let current = true;
+    setSourceLoadState({ workspaceId, client: browser, status: "loading" });
+    setArtifacts([]);
+    void Promise.resolve().then(() => browser.browseArtifacts({ workspaceId })).then(items => {
+      if (!current) return;
+      if (!Array.isArray(items) || items.some(item => !item ||
+          typeof item.artifactId !== "string" || !item.artifactId ||
+          typeof item.storageKey !== "string" || !item.storageKey ||
+          (item.originalName !== undefined && typeof item.originalName !== "string") ||
+          (item.mediaType !== undefined && typeof item.mediaType !== "string"))) throw new Error();
+      setArtifacts(items.filter(supportedSource));
+      setSelectedArtifactIds(selected => selected.filter(id => items.some(item => item.artifactId === id)));
+      setSourceLoadState({ workspaceId, client: browser, status: "ready" });
+    }).catch(() => {
+      if (current) setSourceLoadState({ workspaceId, client: browser, status: "failed" });
+    });
+    return () => { current = false; };
+  }, [browser, workspaceId, sourceRefresh]);
 
   const poll = async (requestId: string) => {
     const session = pollingSession.current;
@@ -1007,6 +1015,10 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   const start = async () => {
+    if (sourceLoadStatus !== "ready") {
+      setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
+      return;
+    }
     const session = pollingSession.current;
     const parsed = [trainRatio, validationRatio, testRatio].map(Number);
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
@@ -1316,7 +1328,13 @@ function WorkspaceDatasetPreparationFeature({
               </select>
               <small className="ui-text-muted">{taskOption.description}</small>
             </label>
-            {availableArtifacts.length === 0 ? (
+            {sourceLoadStatus === "loading" ? (
+              <p role="status">Loading source files…</p>
+            ) : sourceLoadStatus === "failed" ? (
+              <div><p role="status">Source files could not be loaded. Try again.</p>
+                <button type="button" className="ui-button" disabled={status.kind === "loading"} onClick={() => setSourceRefresh(value => value + 1)}>Retry source files</button>
+              </div>
+            ) : availableArtifacts.length === 0 ? (
               <p className="ui-text-muted">
                 Add a compatible dataset or source file in Artifact Ingestion
                 first.

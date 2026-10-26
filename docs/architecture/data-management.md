@@ -35,6 +35,17 @@ repository and visibility. Changing publication inputs clears public consent.
 The page-owned setup reuse consumer remains separate pending work; the Browser
 does not offer reuse until that consumer can acknowledge actual application.
 
+Preparation source loading in both hosts distinguishes loading, failed and
+successfully ready lists, including a genuine empty result. Add data offers a
+direct retry after failure. Source replies are bound to the current workspace,
+client and request lifetime; retired reads and errors cannot replace newer data
+or user selections. A current successful list is required before task dispatch.
+Source read failures retain fixed contextual text rather than overwriting task
+progress. Desktop source and version-list replies without an array fail instead
+of claiming an empty result. Thin-client malformed successful source-envelope
+rejection remains a separate pending client correction. These controls prepare
+for, but do not implement, setup reuse.
+
 The shared Artifact Browser uses the same card presentation for uploaded and
 generated artifacts. User data remains previewable without exposing active
 content: JSON and JSON Lines are formatted and capped at 100 displayed lines,

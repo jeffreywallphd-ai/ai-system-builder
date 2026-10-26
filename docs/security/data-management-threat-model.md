@@ -1,5 +1,22 @@
 # Data Management Threat Model
 
+## Current preparation source-list admission
+
+Desktop retires source reads with an exact workspace/client scope and a monotonic
+request identity. Thin-client source effects capture their own lifetime rather
+than accepting the current value of a mutable mounted flag. Scope changes,
+superseding reads and unmount prevent old success and failure replies from
+changing source data, current selections, readiness or task status. Loading,
+failed and successfully empty source lists remain distinct, with contextual retry.
+Neither host dispatches preparation without a current ready list. Both forms
+reject malformed source arrays exposed by their clients; duplicate source matches
+are retained for later exact replay validation. Desktop malformed source and
+version-list envelopes no longer become empty results. Thin-client malformed
+successful source-envelope rejection remains a separate pending client correction.
+Fixed failure copy exposes no supplier exceptions or private paths.
+Application authorization remains authoritative. These local controls do not
+qualify one-use saved setup replay or actual provider, model, native or scale work.
+
 ## Saved-version Browser response and consent controls
 
 Both Browser detail views associate history only through an exact unique

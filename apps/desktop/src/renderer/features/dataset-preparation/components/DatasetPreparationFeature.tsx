@@ -140,6 +140,8 @@ function WorkspaceDatasetPreparationFeature({
   const {
     artifacts,
     allArtifactCount,
+    sourceLoadStatus,
+    retrySourceArtifacts,
     filteredArtifacts,
     selectedArtifactStorageFilter,
     selectedArtifactIds,
@@ -798,7 +800,13 @@ function WorkspaceDatasetPreparationFeature({
                       <option value="generated">Generated artifacts</option>
                     </select>
                   </label>
-                  {allArtifactCount === 0 ? (
+                  {sourceLoadStatus === "loading" ? (
+                    <p role="status">Loading source files…</p>
+                  ) : sourceLoadStatus === "failed" ? (
+                    <div><p role="status">Source files could not be loaded. Try again.</p>
+                      <button type="button" className="ui-button" disabled={status.kind === "loading"} onClick={retrySourceArtifacts}>Retry source files</button>
+                    </div>
+                  ) : allArtifactCount === 0 ? (
                     <p>No artifacts available yet.</p>
                   ) : artifacts.length === 0 ? (
                     <p className="ui-text-muted">

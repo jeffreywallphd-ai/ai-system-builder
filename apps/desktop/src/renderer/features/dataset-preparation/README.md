@@ -9,6 +9,12 @@ preserves explicit model and output choices in named training settings; loading 
 set is an explicit user action. Resetting output fields does not clear a saved
 explicit constrained-output preference.
 
+Source loading has separate loading, ready and failed states. Retry a failed
+source list directly in Add data. Empty-source guidance is shown only after a
+successful read. Workspace/client changes and newer requests retire older replies;
+only a current successful source list can enable preparation. Read failures use
+fixed safe text and do not replace task progress or a saved result.
+
 The shared recommendation hook keeps an untouched choice stable for the selected
 model. Runtime polling cannot rewrite an explicit checked choice to unchecked.
 If current readiness is missing, submission stops before model preparation or

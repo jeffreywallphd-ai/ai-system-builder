@@ -3,6 +3,32 @@ import { describe, expect, it, vi } from "vitest";
 import { createDesktopDatasetPreparationClient } from "../api/desktopDatasetPreparationClient";
 
 describe("desktop dataset preparation client", () => {
+  it("rejects malformed source-list envelopes and preserves a genuinely empty result", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const browseArtifacts = vi.fn();
+    host.window.desktopApi = { browseArtifacts } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [undefined, null, {}, { items: null }, { items: "invalid" }]) {
+      browseArtifacts.mockResolvedValueOnce({ ok: true, value });
+      await expect(client.browseSourceArtifacts("workspace-a")).rejects.toThrow("Source file list is incomplete.");
+    }
+    browseArtifacts.mockResolvedValueOnce({ ok: true, value: { items: [] } });
+    expect(await client.browseSourceArtifacts("workspace-a")).toEqual([]);
+  });
+  it("rejects malformed version lists instead of reporting a successful empty history", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const listDatasetVersions = vi.fn();
+    host.window.desktopApi = { listDatasetVersions } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [undefined, {}, { versions: null }, { versions: "invalid" }]) {
+      listDatasetVersions.mockResolvedValueOnce({ ok: true, value });
+      await expect(client.listVersions!("workspace-a")).rejects.toThrow("Dataset version history is incomplete.");
+    }
+    listDatasetVersions.mockResolvedValueOnce({ ok: true, value: { versions: [] } });
+    expect(await client.listVersions!("workspace-a")).toEqual([]);
+  });
   it("preserves cancellation truth and rejects substituted or inconsistent replies", async () => {
     const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
     host.window ??= {} as Window & typeof globalThis;

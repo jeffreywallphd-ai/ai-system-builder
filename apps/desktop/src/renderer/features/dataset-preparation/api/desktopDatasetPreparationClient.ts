@@ -362,11 +362,12 @@ function mapDatasetPreparationTaskFailure(
 
 function toBrowseItems(value: unknown): DesktopArtifactBrowseItem[] {
   if (typeof value !== "object" || value === null) {
-    return [];
+    throw new Error("Source file list is incomplete.");
   }
 
   const items = (value as { items?: DesktopArtifactBrowseItem[] }).items;
-  return Array.isArray(items) ? items : [];
+  if (!Array.isArray(items)) throw new Error("Source file list is incomplete.");
+  return items;
 }
 
 export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparationClient {
@@ -681,7 +682,8 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
         response,
         "Dataset version history could not be loaded.",
       ).value as { versions?: readonly DatasetVersionRecord[] } | undefined;
-      return Array.isArray(value?.versions) ? value.versions : [];
+      if (!Array.isArray(value?.versions)) throw new Error("Dataset version history is incomplete.");
+      return value.versions;
     },
     async compareVersions(workspaceId, fromVersionId, toVersionId) {
       if (!desktopApi.compareDatasetVersions)

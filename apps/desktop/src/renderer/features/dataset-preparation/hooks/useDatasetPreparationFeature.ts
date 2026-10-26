@@ -4,6 +4,7 @@ import { useTaskObservationManager } from "../../../../../../../modules/ui/share
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -193,6 +194,8 @@ export interface SavedDatasetPreparationTrainingSettings {
 }
 
 export interface UseDatasetPreparationFeatureResult {
+  sourceLoadStatus: "loading" | "ready" | "failed";
+  retrySourceArtifacts: () => void;
   artifacts: DatasetPreparationSourceArtifact[];
   allArtifactCount: number;
   filteredArtifacts: DatasetPreparationSourceArtifact[];
@@ -779,6 +782,21 @@ export function useDatasetPreparationFeature(
     DatasetPreparationSourceArtifact[]
   >([]);
   const [artifactsLoaded, setArtifactsLoaded] = useState(false);
+  const [sourceLoadState, setSourceLoadState] = useState<{ workspaceId: string | undefined; status: "loading" | "ready" | "failed" }>({ workspaceId, status: "loading" });
+  const sourceRequestId = useRef(0);
+  const sourceScope = useRef<{ workspaceId: string | undefined; client: typeof datasetClient } | undefined>(undefined);
+  const previousSourceWorkspace = useRef(workspaceId);
+  useLayoutEffect(() => {
+    const scope = { workspaceId, client: datasetClient };
+    sourceScope.current = scope;
+    ++sourceRequestId.current;
+    setArtifactsLoaded(false);
+    setArtifacts([]);
+    setSourceLoadState({ workspaceId, status: "loading" });
+    if (previousSourceWorkspace.current !== workspaceId) setSelectedArtifactIds([]);
+    previousSourceWorkspace.current = workspaceId;
+    return () => { if (sourceScope.current === scope) { sourceScope.current = undefined; ++sourceRequestId.current; } };
+  }, [datasetClient, workspaceId]);
   const [selectedArtifactStorageFilter, setSelectedArtifactStorageFilter] =
     useState<DatasetPreparationArtifactStorageFilter>(
       cachedDatasetPreparationPageState.selectedArtifactStorageFilter,
@@ -1276,16 +1294,31 @@ export function useDatasetPreparationFeature(
   }, []);
 
   const refreshArtifacts = useCallback(async () => {
-    const sourceArtifacts =
-      await datasetClient.browseSourceArtifacts(workspaceId);
-    if (!isMountedRef.current) return;
-    setArtifacts(sourceArtifacts); setArtifactsLoaded(true);
-    setSelectedArtifactIds((current) => {
-      const validArtifactIds = new Set(
-        sourceArtifacts.map((artifact) => artifact.artifactId),
-      );
-      return current.filter((artifactId) => validArtifactIds.has(artifactId));
-    });
+    const scope = sourceScope.current;
+    if (!scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient) return;
+    const requestId = ++sourceRequestId.current;
+    const current = () => isMountedRef.current && sourceScope.current === scope && sourceRequestId.current === requestId;
+    setArtifactsLoaded(false);
+    setSourceLoadState({ workspaceId, status: "loading" });
+    try {
+      const sourceArtifacts = await datasetClient.browseSourceArtifacts(workspaceId);
+      if (!current()) return;
+      if (!Array.isArray(sourceArtifacts) || sourceArtifacts.some(item => !item ||
+          typeof item.artifactId !== "string" || !item.artifactId ||
+          typeof item.storageKey !== "string" || !item.storageKey || typeof item.label !== "string")) throw new Error();
+      setArtifacts(sourceArtifacts);
+      setArtifactsLoaded(true);
+      setSourceLoadState({ workspaceId, status: "ready" });
+      setSelectedArtifactIds(selected => {
+        const validIds = new Set(sourceArtifacts.map(artifact => artifact.artifactId));
+        return selected.filter(id => validIds.has(id));
+      });
+    } catch {
+      if (current()) {
+        setArtifactsLoaded(false);
+        setSourceLoadState({ workspaceId, status: "failed" });
+      }
+    }
   }, [datasetClient, workspaceId]);
 
   const refreshRuntimeModelStatus = useCallback(async () => {
@@ -1564,11 +1597,7 @@ export function useDatasetPreparationFeature(
   }, [activeTaskRequestId, pollDatasetPreparationTask, status.kind]);
 
   useEffect(() => {
-    void refreshArtifacts().catch((error) => {
-      const message =
-        error instanceof Error ? error.message : "Failed to load artifacts.";
-      setStatus({ kind: "error", message });
-    });
+    void refreshArtifacts();
   }, [refreshArtifacts]);
 
   useEffect(() => {
@@ -2233,6 +2262,10 @@ export function useDatasetPreparationFeature(
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      if (sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") {
+        setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
+        return;
+      }
 
       if (!preparationPlan) {
         setStatus({
@@ -2553,6 +2586,7 @@ export function useDatasetPreparationFeature(
       datasetClient,
       generationCapacity,
       workspaceId,
+      sourceLoadState,
       pollDatasetPreparationTask,
       setActiveDatasetPreparationTask,
     ],
@@ -2804,6 +2838,8 @@ export function useDatasetPreparationFeature(
   ]);
 
   return {
+    sourceLoadStatus: sourceLoadState.workspaceId === workspaceId ? sourceLoadState.status : "loading",
+    retrySourceArtifacts: () => { void refreshArtifacts(); },
     artifacts: taskRelevantArtifacts,
     allArtifactCount: artifacts.length,
     filteredArtifacts,
