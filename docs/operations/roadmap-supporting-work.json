@@ -4453,6 +4453,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "browser-model-download-http-notification-journeys",
+      "work_criteria": [
+        "browser-download-http-owned-progress",
+        "browser-download-durable-completion",
+        "browser-download-refusal-and-bounded-fixture"
+      ],
+      "receipt_digest": "0da9203888de0219f11d505cf48a611ad145bec29441ec7e7d3eb634d836cd9e",
+      "review_digest": "12345519d85d550febe375ac56149571ddd237232ea4a2282c1efb426aebfd34",
+      "scope": "Tested, independently reviewed and committed browser download journeys through the actual secure client, loopback routes, owned task use case, shared notification center and reopened JSON registry. Finite offline task/completion records verify single immediate start, navigation progress, visible workspace separation, exact durable registration and replay, access refusal/retry, foreign completion before worker reads and confirmed cancellation.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

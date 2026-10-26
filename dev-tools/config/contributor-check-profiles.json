@@ -427,7 +427,8 @@
         "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
         "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
         "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
-        "apps/thin-client/src/features/model-management/tests/model-download-http.ui.test.tsx"
+        "apps/thin-client/src/features/model-management/tests/model-download-http.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/workspace-first-run-transports.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -568,7 +569,11 @@
         "modules/adapters/transport/api-express/image-generation/registerImageGenerationApiRoutes.ts",
         "apps/desktop/src/renderer/lib/desktopApi.ts",
         "apps/desktop/src/renderer/features/models/api/desktopModelsClient.ts",
-        "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx"
+        "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx",
+        "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspace.tsx",
+        "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
+        "apps/desktop/src/renderer/features/workspace/components/WorkspaceCreateForm.tsx",
+        "apps/thin-client/src/features/workspace/components/WorkspaceCreateForm.tsx"
       ]
     },
     "functionality-context": {

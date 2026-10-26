@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import {
   ApplicationIcon,
@@ -20,12 +20,16 @@ export function WorkspaceCreateForm({
   const [workspaceName, setWorkspaceName] = useState("");
   const [includeFoundation, setIncludeFoundation] = useState(true);
   const [formError, setFormError] = useState<string>();
+  const creatingRef = useRef(false);
+  const [creating, setCreating] = useState(false);
 
   return (
     <form
       className="ui-stack ui-stack--sm workspace-create-form"
+      aria-busy={creating}
       onSubmit={async (event) => {
         event.preventDefault();
+        if (creatingRef.current) return;
         const submittedValue = new FormData(event.currentTarget).get(
           "workspaceName",
         );
@@ -36,6 +40,8 @@ export function WorkspaceCreateForm({
           return;
         }
 
+        creatingRef.current = true;
+        setCreating(true);
         try {
           await workspace.createWorkspace({
             name: submittedName,
@@ -50,6 +56,9 @@ export function WorkspaceCreateForm({
               ? error.message
               : "Workspace could not be created.",
           );
+        } finally {
+          creatingRef.current = false;
+          setCreating(false);
         }
       }}
     >
@@ -60,6 +69,7 @@ export function WorkspaceCreateForm({
         </span>
         <input
           name="workspaceName"
+          disabled={creating}
           value={workspaceName}
           aria-invalid={formError ? "true" : undefined}
           aria-describedby={formError ? errorId : undefined}
@@ -73,6 +83,7 @@ export function WorkspaceCreateForm({
       <label className="ui-checkbox">
         <input
           type="checkbox"
+          disabled={creating}
           checked={includeFoundation}
           onChange={(event) =>
             setIncludeFoundation(event.currentTarget.checked)
@@ -95,7 +106,7 @@ export function WorkspaceCreateForm({
           {formError}
         </p>
       ) : null}
-      <button className="ui-button ui-button--primary" type="submit">
+      <button className="ui-button ui-button--primary" type="submit" disabled={creating}>
         <ApplicationIcon name="add" />
         <span className="ui-button__label">Create workspace</span>
       </button>

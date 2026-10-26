@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import {
+  isWorkspaceId,
   type ActiveWorkspaceSelection,
   type WorkspaceRecord,
 } from "../../../../../../../modules/contracts/workspace";
@@ -285,10 +286,10 @@ function createDesktopWorkspaceClient(): WorkspaceClient {
 
     async readActiveWorkspaceSelection() {
       const response = await getDesktopApi().readActiveWorkspaceSelection?.();
-      return isOkEnvelope(response) &&
-        isActiveWorkspaceSelection(response.value)
-        ? response.value
-        : {};
+      if (!isOkEnvelope(response) || !isActiveWorkspaceSelection(response.value)) {
+        throw new Error("Workspace selection is unavailable.");
+      }
+      return response.value;
     },
 
     async saveActiveWorkspaceSelection(workspaceId) {
@@ -349,9 +350,11 @@ function isWorkspaceCreateValue(
 function isActiveWorkspaceSelection(
   value: unknown,
 ): value is ActiveWorkspaceSelection {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const workspaceId = (value as { readonly workspaceId?: unknown }).workspaceId;
-  return workspaceId === undefined || typeof workspaceId === "string";
+  const selectedAt = (value as { readonly selectedAt?: unknown }).selectedAt;
+  return (workspaceId === undefined || isWorkspaceId(workspaceId)) &&
+    (selectedAt === undefined || typeof selectedAt === "string");
 }
 
 function errorMessage(value: unknown, fallback: string): string {

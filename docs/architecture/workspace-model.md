@@ -93,3 +93,35 @@ fixture establishes exact counts, bounded response size and collection-read
 counts; it does not qualify dedicated-profile p95 budgets. Rollback must preserve
 workspace/group authority and unavailable states, without restoring full-catalog
 renderer count requests or inferred zero values.
+
+## Workspace form admission and selection failures
+
+Both workspace creation forms take a synchronous per-form admission fence before
+calling the existing workspace client. Name, Foundation choice and Submit are
+disabled while the request is pending. The form releases admission after success
+or failure; a refused create retains the entered name for an explicit retry.
+This presentation fence does not replace transport/application authorization.
+
+A failed or malformed active-selection response is a load failure. Both default clients reject it so the provider shows its fixed load
+error and keeps workspace-owned content gated. An actual successful empty
+selection still means no workspace was selected. Recovery repeats existing reads;
+it does not create or select a default workspace. Arrays, invalid workspace
+identities and non-string optional timestamps are rejected. The canonical empty
+object stays valid. A valid identity whose workspace is absent keeps the existing
+Unavailable state instead of becoming a load error.
+
+Composed tests mount both real forms, switchers and gates with their default
+clients, actual preload/registered IPC handlers or loopback HTTP routes, the
+creation use case and newly owned JSON repositories. They verify two explicit
+workspace identities, stored selection after remount, required names, one pending
+create, refused-create retry, failed-selection recovery and absence of gated child
+reads. Foundation choices remain reference-only: one trusted activation reference
+or none, with no baseline installer or asset copy. Context Clear is tested through
+the existing hook API and is not presented as a new product UI control.
+
+The fixtures use a fixed synthetic organization/access policy, in-process invoke
+or constrained relative-URL resolution. They restore browser globals/storage,
+drain finite creation/transport work, close only the owned listener and check
+identity, containment, regular files and finite bytes before deleting a new tree.
+They do not qualify physical Electron/sender policy, a browser shell, production
+authentication/SQLite, hostile native file races or final combined testing.

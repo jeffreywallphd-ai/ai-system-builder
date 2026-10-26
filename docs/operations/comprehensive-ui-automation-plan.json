@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "approved-queued",
+  "status": "executing",
   "strategy": "layered-existing-toolchain",
   "scope": "Comprehensive current supported mounted UI functionality, with meaningful actual-host journeys and focused deterministic variation tests. The roadmap creates tests, executes them and repairs in-scope defects; it does not silently expand product/authority boundaries.",
   "sourceInventory": "docs/operations/comprehensive-ui-automation-discovery.json",

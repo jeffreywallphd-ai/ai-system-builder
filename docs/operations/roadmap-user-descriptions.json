@@ -11796,6 +11796,21 @@
           "Real model downloads, physical desktop security, native files and final host testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0484439260e8d3374fe1d07030be7c1a8660a70bc373f775d3d5d9d2afae9264",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed browser download journeys through real local HTTP and application code.",
+          "One immediate action starts one task. Progress survives navigation, and another workspace shows no owner activity in its open notification panel.",
+          "A completed download registers once, appears in refreshed inventory and reopens with the same saved identity.",
+          "Missing test access prevents a start. An explicit authorized retry succeeds, and another workspace cannot complete the task.",
+          "The tests also confirm cancellation without registration. Worker records, downloaded bytes and access rules are test fixtures.",
+          "Real models, providers, production security, native files and final host testing remain pending."
+        ]
+      }
     }
   ]
 }
