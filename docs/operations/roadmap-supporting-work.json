@@ -3740,6 +3740,44 @@
         "The one-use page consumer, ready authorized sources, later-edit protection and actual setup application acknowledgment remain unfinished. Neither app offers setup reuse yet.",
         "Actual packaged/browser journeys, private-provider publication/restart, scale and other parent checks remain pending. No native/offload/model accuracy test was run or reopened."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-source-scope-readiness",
+      "work_criteria": [
+        "current-scope-source-reads",
+        "recoverable-truthful-source-state",
+        "scoped-reviewed-source-delivery"
+      ],
+      "receipt_digest": "6bef70f269b8c89327080438d04eb4ad630b240b8a1af2d4a0e0e0e06ceaf403",
+      "review_digest": "965c31cef5abbf3692017f9471f6c5d3cf282eb93288a5af094a38e7a34fafc3",
+      "scope": "Reviewed workspace/client/request-bound source readiness in both apps, loading/failure/genuine-empty separation, direct retry, pre-dispatch readiness guards, safe errors and strict Desktop source/version envelopes. Actual exact selected17-file profile passed176 tests; Desktop full-program type check had zero diagnostics; Thin build and six current gates passed. Setup reuse remains pending.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "The one-use page/form consumer for saved setup reuse and actual application acknowledgment are still pending. No source-readiness test grants reuse, source-byte integrity or authorization.",
+        "Actual packaged/browser journeys, authorized private-provider publication and restart, scale, advanced runtime and other parent checks remain pending. Accepted model accuracy outcomes stay closed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-source-envelope-recovery",
+      "work_criteria": [
+        "truthful-source-envelope",
+        "real-client-ui-recovery",
+        "scoped-source-delivery"
+      ],
+      "receipt_digest": "2ec7af5ab24a36d87400f44c0a4eaf80f5493fffa54cf897287269a093b9f8dc",
+      "review_digest": "97a8a14ea07d69acaf8797a06af6ed25d5d4ad8a198e3c0e94c9fe5b59182a53",
+      "scope": "Reviewed strict successful-response admission in the shared Thin HTTP artifact source client. Missing or nonarray items fail safely; genuine empty/valid lists and authenticated workspace requests remain supported. Real-client Preparation failure/retry and exact selected18-file profile passed189 tests; Thin type/build and five current gates passed. Setup reuse remains pending.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "The one-use page/form consumer for saved setup reuse and actual application acknowledgment are still pending. No source-readiness test grants reuse, source-byte integrity or authorization.",
+        "Actual packaged/browser journeys, authorized private-provider publication and restart, scale, advanced runtime and other parent checks remain pending. Accepted model accuracy outcomes stay closed."
+      ]
     }
   ]
 }

@@ -11113,6 +11113,58 @@
           "Full app and online publishing tests, restart recovery and large-data checks remain pending. No model accuracy test was repeated; earlier accepted results stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0ba115f414b161f131a0fe403e1059a36160b8b16f88568ec063af23d8ef64e3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both apps now wait for the current source files and provide a direct retry after failure. Old replies cannot replace newer workspace choices. The tests, Desktop type check and browser app build passed.",
+          "The agent is completing the remaining Data work. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6cd8ff2891f39997817307d01b1719faa81bc92afc7bc0f61789f3118dd4fd65",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser app now shows a source-read error when the server returns an incomplete list. Retry can then show a genuine empty list. The client tests, form tests and browser app build passed.",
+          "The agent is completing the remaining Data work. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "46d0e7984b157600518747418f1b1da126f3de8c2fc6acff87a7d7fa45963b47",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tested changes are part of Data step3. The remaining work and final tests stay open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "59f70889211e6a3ff89c202fa9014dd8726f88ccd3c4048e64cfe7257c6f8a07",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish safe reuse of saved settings. Waiting for files, protecting later edits and confirming that the form changed still need end-to-end integration."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f1b2123064d34840aa6358fc34d3e63909032f51dcf70d0d4a471d5cbbfd8bd1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must complete the full-app tests, online publishing tests, recovery checks and large-data tests. No action needed. Accepted model accuracy tests stay closed."
+        ]
+      }
     }
   ]
 }
