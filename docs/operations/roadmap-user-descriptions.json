@@ -10983,7 +10983,50 @@
           "OCR tests have a 2 GiB limit per process and a 4 GiB total limit. Limits for other test types are unchanged.",
           "The startup test verified its Python environment, imported PyTorch and completed the GPU availability check.",
           "Its process exited with confirmed cleanup.",
-          "Peak process and total commit were about 1.25 GiB. This measures startup, not model memory needs or app readiness."
+          "Peak memory charged to the test process and its process group was about 1.25 GiB. This measures startup, not model memory needs or app readiness."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "17bf6a8943a0c58af2b4abb7a42224c322e0e3f4c8a0633556cfeb341501caca",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests in the packaged desktop app and browser app read a new five-page scanned PDF, refused an unavailable language and saved five reviewed rows with their original source and page numbers.",
+          "Tests kept previews short, reopened saved data, checked downloads in the active workspace and checked task cancellation after recognition.",
+          "Completed preparation requests no longer reopen the saved-result view after a reload. Running tasks and datasets that still need approval keep their recovery records.",
+          "Both apps and their workers stopped with confirmed cleanup under unchanged limits of 2 GiB per process and 4 GiB for the process group."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c7bcfe733cd1a43dd49137eb1a32ed224d1cfa36a9a209b0a80521f14d605ddc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The checked Windows OCR workflow is one part of Data step5. It does not finish that step or the Data roadmap, or approve a release."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "98250de95752bbf981d36b443c6e9d413c6b2e2742e8122b84285a43cdad2e47",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still finish advanced semantic preparation, larger-scale checks, saved-version history and reuse, and safe publication. Earlier results and failures remain in the record."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4a01c5f0f3fb4b5a4e29498f05ebeb4de3a2cb9799c061e6693f7072efec9072",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test uses the installed Windows reader, one language and a new five-page scanned PDF. Example generation is simulated. It does not repeat model accuracy tests or prove other languages, readers, large collections or general accessibility. Cancellation is checked after recognition; stopping an OCR read in progress remains separate."
         ]
       }
     }

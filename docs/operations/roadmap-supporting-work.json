@@ -3626,6 +3626,63 @@
         "Complete production OCR preparation in the packaged desktop and browser still needs current end-to-end evidence. Other pending advanced Data capabilities remain agent work. No user action is needed for those tests.",
         "Accepted model accuracy remains closed and was not rerun. Unknown retained offload data, restricted legacy work, other providers and earlier failed observations are unchanged."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "windows-ocr-completed-task-recovery-host-v9",
+      "work_criteria": [
+        "completed-request-recovery-marker-lifecycle",
+        "real-ocr-delivery-through-both-apps",
+        "unchanged-guards-and-reviewed-evidence"
+      ],
+      "receipt_digest": "2afc79118041212a7a39be081fe0eb82221065112de4c076f8d793c1c12c3594",
+      "review_digest": "34a8a9612426b61f1d1fc4a37ddc93576050676e2916996ed8614ed035db4ffa",
+      "scope": "Reviewed Windows OCR in both apps covers language denial/retry, five pages and saved rows with source/page lineage, review/approval/reload, bounded previews, workspace-scoped downloads and cancellation after recognition. Request-matched cleanup retains pending reviews, running/newer tasks and other workspaces. Selected101 and five gates passed; package/two-host results and strict shutdown are separately bound under unchanged2GiB/process4GiB/job limits. Only generation is synthetic.",
+      "limitations": [
+        "These results support only the reviewed Windows OCR workflow at its recorded source and runtime snapshot. They do not complete Data increment5, a parent criterion or the Data roadmap, and do not authorize a release.",
+        "Advanced semantic preparation, representative data/resource/scale qualification, saved-version history/reuse and safe publication remain separate agent work. Earlier component descriptions and failed attempts remain historical.",
+        "This run uses one installed Windows language and a synthetic five-page PDF. Generation is synthetic; no model-accuracy tests were repeated. It does not qualify other engines, languages or broader format/scale accuracy, in-flight native OCR cancellation or general accessibility."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "windows-ocr-completed-task-recovery-host-v9",
+      "work_criteria": [
+        "completed-request-recovery-marker-lifecycle",
+        "real-ocr-delivery-through-both-apps",
+        "unchanged-guards-and-reviewed-evidence"
+      ],
+      "receipt_digest": "2afc79118041212a7a39be081fe0eb82221065112de4c076f8d793c1c12c3594",
+      "review_digest": "34a8a9612426b61f1d1fc4a37ddc93576050676e2916996ed8614ed035db4ffa",
+      "scope": "Reviewed Windows OCR in both apps covers language denial/retry, five pages and saved rows with source/page lineage, review/approval/reload, bounded previews, workspace-scoped downloads and cancellation after recognition. Request-matched cleanup retains pending reviews, running/newer tasks and other workspaces. Selected101 and five gates passed; package/two-host results and strict shutdown are separately bound under unchanged2GiB/process4GiB/job limits. Only generation is synthetic.",
+      "limitations": [
+        "These results support only the reviewed Windows OCR workflow at its recorded source and runtime snapshot. They do not complete Data increment5, a parent criterion or the Data roadmap, and do not authorize a release.",
+        "Advanced semantic preparation, representative data/resource/scale qualification, saved-version history/reuse and safe publication remain separate agent work. Earlier component descriptions and failed attempts remain historical.",
+        "This run uses one installed Windows language and a synthetic five-page PDF. Generation is synthetic; no model-accuracy tests were repeated. It does not qualify other engines, languages or broader format/scale accuracy, in-flight native OCR cancellation or general accessibility."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "windows-ocr-completed-task-recovery-host-v9",
+      "work_criteria": [
+        "completed-request-recovery-marker-lifecycle",
+        "real-ocr-delivery-through-both-apps",
+        "unchanged-guards-and-reviewed-evidence"
+      ],
+      "receipt_digest": "2afc79118041212a7a39be081fe0eb82221065112de4c076f8d793c1c12c3594",
+      "review_digest": "34a8a9612426b61f1d1fc4a37ddc93576050676e2916996ed8614ed035db4ffa",
+      "scope": "Reviewed Windows OCR in both apps covers language denial/retry, five pages and saved rows with source/page lineage, review/approval/reload, bounded previews, workspace-scoped downloads and cancellation after recognition. Request-matched cleanup retains pending reviews, running/newer tasks and other workspaces. Selected101 and five gates passed; package/two-host results and strict shutdown are separately bound under unchanged2GiB/process4GiB/job limits. Only generation is synthetic.",
+      "limitations": [
+        "These results support only the reviewed Windows OCR workflow at its recorded source and runtime snapshot. They do not complete Data increment5, a parent criterion or the Data roadmap, and do not authorize a release.",
+        "Advanced semantic preparation, representative data/resource/scale qualification, saved-version history/reuse and safe publication remain separate agent work. Earlier component descriptions and failed attempts remain historical.",
+        "This run uses one installed Windows language and a synthetic five-page PDF. Generation is synthetic; no model-accuracy tests were repeated. It does not qualify other engines, languages or broader format/scale accuracy, in-flight native OCR cancellation or general accessibility."
+      ]
     }
   ]
 }
