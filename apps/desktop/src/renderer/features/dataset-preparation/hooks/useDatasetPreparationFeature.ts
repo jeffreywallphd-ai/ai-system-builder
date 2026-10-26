@@ -13,7 +13,7 @@ import {
 
 import type { ModelDefaultInferenceMode } from "../../../../../../../modules/contracts/settings";
 import type { DatasetVersionReproduction } from "../../../../../../../modules/contracts/dataset";
-import { validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
+import { captureDatasetVersionReplayRequest, projectDatasetVersionReplaySources, validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import type {
   DatasetPreparationTaskType,
@@ -358,7 +358,7 @@ export interface UseDatasetPreparationFeatureResult {
   onDownloadGenerationModel: () => Promise<void>;
   onSaveTrainingSettings: () => void;
   onLoadTrainingSettings: () => void;
-  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction, context?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">) => boolean;
+  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction, context?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">, isRequestCurrent?: () => boolean) => Promise<boolean>;
 }
 
 export interface UseDatasetPreparationFeatureOptions {
@@ -1312,7 +1312,8 @@ export function useDatasetPreparationFeature(
       setSourceLoadState({ workspaceId, status: "ready" });
       setSelectedArtifactIds(selected => {
         const validIds = new Set(sourceArtifacts.map(artifact => artifact.artifactId));
-        return selected.filter(id => validIds.has(id));
+        const next = selected.filter(id => validIds.has(id));
+        return next.length === selected.length ? selected : next;
       });
     } catch {
       if (current()) {
@@ -1675,9 +1676,10 @@ export function useDatasetPreparationFeature(
       const relevantArtifactIds = new Set(
         taskRelevantArtifacts.map((artifact) => artifact.artifactId),
       );
-      return current.filter((artifactId) =>
+      const next = current.filter((artifactId) =>
         relevantArtifactIds.has(artifactId),
       );
+      return next.length === current.length ? current : next;
     });
   }, [artifactsLoaded, taskRelevantArtifacts]);
 
@@ -2090,31 +2092,52 @@ export function useDatasetPreparationFeature(
     status, activeTaskRequestId, qualityReview, reviewActionInFlight,
   ]);
   const committedReplayFrame = useRef<object | undefined>(undefined);
+  const pendingReplayFrame = useRef<object | undefined>(undefined);
   useLayoutEffect(() => {
     committedReplayFrame.current = replayFrame;
     return () => { if (committedReplayFrame.current === replayFrame) committedReplayFrame.current = undefined; };
   });
 
   const onReuseDatasetVersion = useCallback(
-    (reproduction: DatasetVersionReproduction, selection?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">): boolean => {
+    async (reproduction: DatasetVersionReproduction, selection?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">, isRequestCurrent: () => boolean = () => true): Promise<boolean> => {
       const current = () => committedReplayFrame.current === replayFrame &&
         sourceScope.current === replaySourceScope && sourceRequestId.current === replaySourceEpoch &&
-        replaySourceScope?.workspaceId === workspaceId && replaySourceScope?.client === datasetClient;
+        replaySourceScope?.workspaceId === workspaceId && replaySourceScope?.client === datasetClient &&
+        isRequestCurrent() && !activePollingRequestIdRef.current;
       // Retired callbacks must not change even the current task's message.
       if (!current()) return false;
       if (status.kind === "loading" || activePollingRequestIdRef.current || activeTaskRequestId || qualityReview || reviewActionInFlight) return false;
+      if (pendingReplayFrame.current === replayFrame) return false;
       const deny = () => { setStatus({ kind: "error", message: "This saved setup cannot be used here. It was not restored; your current setup is unchanged." }); return false; };
       if (!selection || !workspaceId ||
           sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") return deny();
       let context: DatasetVersionReplayContext;
+      let resolvedSources: typeof artifacts;
+      const captured = captureDatasetVersionReplayRequest(reproduction, selection);
+      if (!captured || captured.selection.workspaceId !== workspaceId || !datasetClient.readReplaySourceArtifacts) return deny();
+      const exactSelection = captured.selection;
+      reproduction = captured.reproduction;
       try {
-        if (selection.workspaceId !== workspaceId) return deny();
+        const observed = projectDatasetVersionReplaySources(exactSelection.selectedVersion, artifacts);
+        if (!observed || new Set(observed.map(source => source.artifactId)).size !== observed.length) return deny();
+        pendingReplayFrame.current = replayFrame;
+        // Browse is capped at250. Exact workspace-authorized metadata reads
+        // resolve every saved canonical source without widening that catalogue.
+        const fetched = await datasetClient.readReplaySourceArtifacts(workspaceId, captured.sources, current);
+        if (!current()) return false;
+        const matching = projectDatasetVersionReplaySources(exactSelection.selectedVersion, fetched);
+        if (!Array.isArray(fetched) || !matching || fetched.length !== captured.sources.length || matching.length !== captured.sources.length || matching.some((row, index) => row.artifactId !== captured.sources[index].artifactId || row.storageKey !== captured.sources[index].storageKey)) return deny();
+        resolvedSources = [...matching];
+        for (const source of observed) {
+          const matches = resolvedSources.filter(row => row.artifactId === source.artifactId);
+          if (matches.length !== 1 || matches[0].storageKey !== source.storageKey || matches[0].label !== source.label || matches[0].mediaType !== source.mediaType) return deny();
+        }
         context = {
-          workspaceId, selectedVersion: selection.selectedVersion, datasetArtifactKey: selection.datasetArtifactKey,
-          requestedVersionId: selection.selectedVersion.versionId,
-          sources: { status: "ready", workspaceId, items: artifacts },
+          workspaceId, selectedVersion: exactSelection.selectedVersion, datasetArtifactKey: exactSelection.datasetArtifactKey,
+          requestedVersionId: exactSelection.selectedVersion.versionId,
+          sources: { status: "ready", workspaceId, items: resolvedSources },
         };
-      } catch { return deny(); }
+      } catch { return current() ? deny() : false; }
       const result = validateDatasetVersionReplay(reproduction, context);
       if (!result.ok) return deny();
       const replay = result.value, recipe = replay.recipe, task = recipe.task;
@@ -2177,7 +2200,7 @@ export function useDatasetPreparationFeature(
       if (!parsed.ok) return deny();
       try {
         const sourceFormats = selectedArtifactIds.map(id => {
-          const source = artifacts.find(item => item.artifactId === id)!;
+          const source = resolvedSources.find(item => item.artifactId === id)!;
           return resolveDatasetPreparationSourceCapability({ fileName: source.label || source.storageKey, mediaType: source.mediaType })!.format;
         });
         const rebuilt = buildDatasetPreparationRequest({
@@ -2190,7 +2213,7 @@ export function useDatasetPreparationFeature(
         // The persisted producer is JSON: optional undefined properties are
         // omitted by serialization, rather than accepted as untrusted values.
         const roundTrip = validateDatasetVersionReplay(JSON.parse(JSON.stringify({
-          versionId: replay.versionId, sourceArtifactIds: selectedArtifactIds, lineage: selection.selectedVersion.lineage,
+          versionId: replay.versionId, sourceArtifactIds: selectedArtifactIds, lineage: exactSelection.selectedVersion.lineage,
           recipeSnapshot: { recipe: rebuilt.recipe, preparation: rebuilt.preparation, advanced: rebuilt.advanced,
             split: rebuilt.split, output: { format: rebuilt.output.format, naming: rebuilt.output.naming }, effectiveQualityPolicy: replay.quality },
         })), context);
@@ -2200,6 +2223,8 @@ export function useDatasetPreparationFeature(
       // Retire synchronously: another call from this frame cannot apply twice.
       committedReplayFrame.current = undefined;
       if (!applyTrainingSettingsSnapshot(settings)) return false;
+      const selectedIds = new Set(selectedArtifactIds);
+      setArtifacts([...artifacts.filter(source => !selectedIds.has(source.artifactId)), ...resolvedSources]);
       setSelectedArtifactStorageFilter("all");
       setSelectedArtifactIds(selectedArtifactIds);
       setStatus({ kind: "idle" });

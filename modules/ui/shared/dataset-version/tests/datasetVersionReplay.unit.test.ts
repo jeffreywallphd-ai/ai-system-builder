@@ -8,7 +8,7 @@ import {
   createDefaultDatasetPreparationTaskRecipe,
   type DatasetPreparationTaskType,
 } from "../../../../contracts/runtime";
-import { validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../datasetVersionReplay";
+import { captureDatasetVersionReplayRequest, projectDatasetVersionReplaySources, validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../datasetVersionReplay";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}` as const;
 const copy = <T>(input: T): T => JSON.parse(JSON.stringify(input));
@@ -244,6 +244,73 @@ for (const [name, change] of [
   value.snapshot.preparation = pass(value).preparation;
   change(object(value.snapshot.advanced));
   deny(value);
+});
+
+test("projects a matching source after a large unrelated catalogue without mutating rows", () => {
+  const value = fixture(), source = { ...value.context.sources.items[0] };
+  const rows = Array.from({ length: 4096 }, (_, index) => ({ ...source, artifactId: `unrelated-${index}` }));
+  const result = projectDatasetVersionReplaySources(value.version, [...rows, source]);
+  assert.deepEqual(result, [source]);
+  assert.notEqual(result?.[0], source);
+  assert.equal(Object.isFrozen(result), true); assert.equal(Object.isFrozen(result?.[0]), true);
+  value.context = { ...value.context, sources: { ...value.context.sources, items: result! } };
+  pass(value);
+});
+
+test("captures complete bounded saved meaning before an asynchronous source lookup", () => {
+  const value = fixture(), selection = { workspaceId: value.context.workspaceId, selectedVersion: value.version, datasetArtifactKey: value.context.datasetArtifactKey };
+  const captured = captureDatasetVersionReplayRequest(value.reproduction, selection)!;
+  assert.ok(captured); assert.deepEqual(captured.sources, [{ artifactId: "source-1", storageKey: "sources/example.csv" }]);
+  object(value.snapshot.output).format = "csv"; value.reproduction.sourceArtifactIds = ["changed"]; selection.datasetArtifactKey = "other/file.jsonl";
+  assert.equal(captured.selection.datasetArtifactKey, "prepared/training.jsonl");
+  assert.deepEqual(captured.reproduction.sourceArtifactIds, ["source-1"]);
+  const result = validateDatasetVersionReplay(captured.reproduction, { ...value.context, selectedVersion: captured.selection.selectedVersion });
+  assert.equal(result.ok, true); assert.equal(Object.isFrozen(captured.reproduction.recipeSnapshot), true); assert.equal(Object.isFrozen(captured.sources[0]), true);
+});
+for (const mode of ["accessor", "large", "wrong-workspace", "wrong-version", "wrong-file", "changed-lineage", "duplicate-id"] as const) test(`capture denies ${mode} before metadata I/O`, () => {
+  const value = fixture(), selection = { workspaceId: value.context.workspaceId, selectedVersion: value.version, datasetArtifactKey: value.context.datasetArtifactKey }; let called = 0;
+  if (mode === "accessor") Object.defineProperty(selection, "selectedVersion", { enumerable: true, get() { ++called; throw new Error("Must not execute"); } });
+  if (mode === "large") value.reproduction.recipeSnapshot = { value: "x".repeat(1024 * 1024) };
+  if (mode === "wrong-workspace") selection.workspaceId = "workspace-b";
+  if (mode === "wrong-version") value.reproduction.versionId = "other";
+  if (mode === "wrong-file") selection.datasetArtifactKey = "other/file.jsonl";
+  if (mode === "changed-lineage") object(value.reproduction.lineage).sources = [];
+  if (mode === "duplicate-id") value.reproduction.sourceArtifactIds = ["source-1", "source-1"];
+  assert.equal(captureDatasetVersionReplayRequest(value.reproduction, selection), undefined); assert.equal(called, 0);
+});
+
+test("preserves every matching duplicate and order including a late wrong-key or incompatible row", () => {
+  const value = fixture(), source = value.context.sources.items[0];
+  const duplicate = { ...source, storageKey: "other/file.bin", label: "file.bin", mediaType: "application/octet-stream" };
+  const rows = [source, ...Array.from({ length: 300 }, (_, index) => ({ ...source, artifactId: `other-${index}` })), duplicate];
+  const result = projectDatasetVersionReplaySources(value.version, rows);
+  assert.deepEqual(result, [source, duplicate]);
+  value.context = { ...value.context, sources: { ...value.context.sources, items: result! } };
+  deny(value, "sources-unavailable");
+});
+
+test("retains the exact256 match bound and refuses an oversized result as a whole", () => {
+  const value = fixture(), source = value.context.sources.items[0];
+  assert.equal(projectDatasetVersionReplaySources(value.version, Array(256).fill(source))?.length, 256);
+  assert.equal(projectDatasetVersionReplaySources(value.version, Array(257).fill(source)), undefined);
+  assert.deepEqual(projectDatasetVersionReplaySources(value.version, [{ ...source, artifactId: "other" }]), []);
+});
+
+for (const kind of ["selected-version", "array-entry", "artifact-id", "storage-key", "label", "media-type"] as const) test(`projection rejects ${kind} accessors without calling them`, () => {
+  const value = fixture(), source = { ...value.context.sources.items[0] }; let called = 0;
+  const getter = () => { called += 1; throw new Error("Must not execute"); };
+  const rows = [source];
+  if (kind === "selected-version") Object.defineProperty(value.version, "lineage", { get: getter, enumerable: true });
+  else if (kind === "array-entry") Object.defineProperty(rows, "0", { get: getter, enumerable: true });
+  else Object.defineProperty(source, ({ "artifact-id": "artifactId", "storage-key": "storageKey", label: "label", "media-type": "mediaType" })[kind], { get: getter, enumerable: true });
+  assert.equal(projectDatasetVersionReplaySources(value.version, rows), undefined);
+  assert.equal(called, 0);
+});
+
+test("projection rejects sparse rows and malformed records without inferring missing sources", () => {
+  const value = fixture();
+  assert.equal(projectDatasetVersionReplaySources(value.version, Array(2)), undefined);
+  assert.equal(projectDatasetVersionReplaySources({ versionId: "v1" }, value.context.sources.items), undefined);
 });
 test("never invokes an accessor in saved JSON", () => {
   const value = fixture();

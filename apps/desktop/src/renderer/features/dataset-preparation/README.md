@@ -74,3 +74,13 @@ settlement. Retired callbacks and active tasks or reviews cannot replace setting
 Provider choices reset to local-only; approval and provider authority are never
 restored, and reuse never starts preparation or publication. Thin reuse and actual
 host, provider, native and scale qualification remain pending.
+Saved-version source lookup uses the existing workspace-authorized artifact-detail
+read. It does not assume the ordinary first250 browse rows are a complete list.
+Capture the bounded immutable request, retain observed duplicate/conflict denials,
+then resolve at most 100 canonical keys sequentially within 15 seconds. The returned
+key supplies the source ID. Reject missing legacy IDs with no authoritative key
+binding. Keep looked-up options private until the complete settings/request
+roundtrip passes. Check the current page request and committed frame before and
+after each await and before setters. Merge options and settings together; announce
+success only after the consumer form commit. Timeout stops later reads without
+claiming to cancel IPC. No task/model/provider is started by reuse.

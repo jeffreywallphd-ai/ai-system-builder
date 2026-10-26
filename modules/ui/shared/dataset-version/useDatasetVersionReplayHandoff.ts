@@ -140,13 +140,15 @@ export function useDatasetVersionReplayHandoff(workspaceId: string, preparationA
   return { request, enqueue, claim, isCurrent, finish, cancel };
 }
 
-/** The host supplies its complete validated synchronous setter transaction.
+/** The host may resolve metadata asynchronously before its complete validated
+ * synchronous setter transaction. The host must guard freshness before setters.
  * Success is acknowledged from the next committed render, never from enqueue.
  */
 export function useDatasetVersionReplayConsumer(handoff: DatasetVersionReplayHandoff | undefined,
-  sourceStatus: "loading" | "ready" | "failed", apply: (request: DatasetVersionReplayRequest) => boolean): () => void {
+  sourceStatus: "loading" | "ready" | "failed", apply: (request: DatasetVersionReplayRequest, isCurrent: () => boolean) => boolean | Promise<boolean>): () => void {
   const consumer = useRef<object>({});
   const lifecycle = useRef(0);
+  const consumerActive = useRef(false);
   const appliedOnce = useRef<DatasetVersionReplayRequest | undefined>(undefined);
   const [applied, setApplied] = useState<DatasetVersionReplayRequest>();
   const request = handoff?.request;
@@ -157,8 +159,10 @@ export function useDatasetVersionReplayConsumer(handoff: DatasetVersionReplayHan
   useEffect(() => {
     if (!request || !claim || !cancel) return;
     ++lifecycle.current;
+    consumerActive.current = true;
     claim(request, consumer.current);
     return () => {
+      consumerActive.current = false;
       const closing = ++lifecycle.current;
       // StrictMode probes a mounted effect twice. A replacement setup cancels
       // this cleanup ticket; real unmount retains it and retires the request.
@@ -168,13 +172,18 @@ export function useDatasetVersionReplayConsumer(handoff: DatasetVersionReplayHan
   useEffect(() => {
     if (!request || !current || !finish || !current(request, consumer.current) || appliedOnce.current === request) return;
     if (sourceStatus === "loading") return;
-    let applied = false;
-    if (sourceStatus === "ready") {
-      try { applied = apply(request); } catch { /* Fixed host failure, never log saved payloads. */ }
-    }
-    if (!applied) { finish(request, consumer.current, false); return; }
     appliedOnce.current = request;
-    setApplied(request);
+    const settle = (applied: boolean) => {
+      if (!consumerActive.current || !current(request, consumer.current)) return;
+      if (applied !== true) { finish(request, consumer.current, false); return; }
+      setApplied(request);
+    };
+    if (sourceStatus !== "ready") { settle(false); return; }
+    try {
+      const result = apply(request, () => consumerActive.current && current(request, consumer.current));
+      if (typeof result === "boolean") settle(result);
+      else void Promise.resolve(result).then(settle, () => settle(false));
+    } catch { settle(false); /* Never log saved payloads or supplier errors. */ }
   }, [request, sourceStatus, apply, current, finish]);
   useEffect(() => {
     if (request && applied === request && current?.(request, consumer.current)) finish?.(request, consumer.current, true);

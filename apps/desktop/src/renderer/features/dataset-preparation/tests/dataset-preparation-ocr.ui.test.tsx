@@ -147,20 +147,20 @@ describe("desktop scanned-PDF preparation", () => {
   it("restores complete version OCR settings only for sources actually present as PDFs", async () => {
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
     const fixture = datasetVersionReplayFixture("llm-instruction", "ocr");
-    const client = { browseSourceArtifacts: async () => [fixture.source] } as any;
+    const client = { browseSourceArtifacts: async () => [fixture.source], readReplaySourceArtifacts: async () => [fixture.source] } as any;
     function Probe() { feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client }); return null; }
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => { root!.render(<Probe />); await flush(); });
-    await act(async () => { expect(feature.onReuseDatasetVersion(fixture.reproduction, fixture.selection)).toBe(true); await flush(); });
+    await act(async () => { expect(await feature.onReuseDatasetVersion(fixture.reproduction, fixture.selection)).toBe(true); await flush(); });
     expect(feature.ocrEnabled).toBe(true); expect(feature.ocrLanguage).toBe("en-US"); expect(feature.preparationMethodId).toBe("structure-aware");
-    await act(async () => { expect(feature.onReuseDatasetVersion({ ...fixture.reproduction, sourceArtifactIds: ["not-present"] }, fixture.selection)).toBe(false); await flush(); });
+    await act(async () => { expect(await feature.onReuseDatasetVersion({ ...fixture.reproduction, sourceArtifactIds: ["not-present"] }, fixture.selection)).toBe(false); await flush(); });
     expect(feature.selectedArtifactIds).toEqual([fixture.source.artifactId]); expect(feature.status.message).toContain("was not restored"); expect(feature.ocrLanguage).toBe("en-US");
   });
 
   it("refuses contradictory version settings atomically even with an explicit structure-aware plan", async () => {
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
     const fixture = datasetVersionReplayFixture("llm-instruction", "ocr");
-    const client = { browseSourceArtifacts: async () => [fixture.source] } as any;
+    const client = { browseSourceArtifacts: async () => [fixture.source], readReplaySourceArtifacts: async () => [fixture.source] } as any;
     function Probe() { feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client }); return null; }
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => { root!.render(<Probe />); await flush(); });

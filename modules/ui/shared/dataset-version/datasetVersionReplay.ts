@@ -2,6 +2,7 @@ import {
   normalizeDatasetVersionRecord,
   type DatasetVersionLineage,
   type DatasetVersionRecord,
+  type DatasetVersionReproduction,
 } from "../../../contracts/dataset";
 import {
   createDatasetPreparationAdvancedConfig,
@@ -45,8 +46,9 @@ export interface DatasetVersionReplayContext {
   readonly requestedVersionId: string;
   readonly datasetArtifactKey: string;
   readonly expectedDatasetId?: string;
-  /** Project matching rows from a complete, successfully loaded authorized list.
-   * Keep duplicate matches so ambiguity is denied. Never infer identity by name.
+  /** All matching rows from a complete authorized list, or authoritative exact
+   * canonical-key reads for every saved source. Preserve any observed catalogue
+   * duplicate/conflict; a partial browse page alone cannot prove completeness.
    */
   readonly sources: {
     readonly status: "loading" | "failed" | "ready";
@@ -388,6 +390,76 @@ function freeze<T>(value: T): T {
     Object.freeze(value);
   }
   return value;
+}
+
+export interface CapturedDatasetVersionReplayRequest {
+  readonly reproduction: DatasetVersionReproduction;
+  readonly selection: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">;
+  readonly sources: readonly { readonly artifactId: string; readonly storageKey: string }[];
+}
+
+/** Capture bounded immutable meaning before metadata I/O. This is not source
+ * availability, authority or complete-settings validation. Validate after lookup.
+ */
+export function captureDatasetVersionReplayRequest(
+  untrustedReproduction: unknown,
+  untrustedSelection: unknown,
+): CapturedDatasetVersionReplayRequest | undefined {
+  try {
+    const selection = object(cloneJson(untrustedSelection, 1024 * 1024));
+    fields(selection, ["workspaceId", "selectedVersion", "datasetArtifactKey"]);
+    cloneJson(selection.selectedVersion, 512 * 1024);
+    // Contract normalization introduces optional undefined properties. Capture
+    // its normal JSON representation, as the real saved-record producer does.
+    const version = JSON.parse(JSON.stringify(normalizeDatasetVersionRecord(selection.selectedVersion as DatasetVersionRecord))) as DatasetVersionRecord;
+    const workspaceId = text(selection.workspaceId);
+    const datasetArtifactKey = normalizeStorageArtifactKey(text(selection.datasetArtifactKey, 4000));
+    if (version.workspaceId !== workspaceId || version.artifacts.filter(item => item.role === "dataset" && item.artifactKey === datasetArtifactKey).length !== 1) return undefined;
+    const reproduction = object(cloneJson(untrustedReproduction, 1024 * 1024));
+    fields(reproduction, ["versionId", "sourceArtifactIds", "recipeSnapshot", "lineage"]);
+    const ids = list(reproduction.sourceArtifactIds, 100).map(id => text(id));
+    if (reproduction.versionId !== version.versionId || !ids.length || new Set(ids).size !== ids.length || !equal(ids, version.lineage.sources.map(source => source.sourceArtifactId))) return undefined;
+    if (!equal(normalizeDatasetVersionRecord({ ...version, lineage: lineage(reproduction.lineage) }).lineage, version.lineage)) return undefined;
+    return freeze({
+      reproduction: reproduction as unknown as DatasetVersionReproduction,
+      selection: { workspaceId, selectedVersion: version, datasetArtifactKey },
+      sources: version.lineage.sources.map(source => ({ artifactId: text(source.sourceArtifactId), storageKey: source.artifactKey })),
+    });
+  } catch { return undefined; }
+}
+
+/** Select all observed matching rows, including conflicting duplicates. This
+ * projection supplies neither completeness, authorization nor validity. A partial
+ * browse page needs separate authoritative exact-key resolution before replay.
+ */
+export function projectDatasetVersionReplaySources(
+  selectedVersion: unknown,
+  authorizedRows: readonly DatasetVersionReplaySource[],
+): readonly DatasetVersionReplaySource[] | undefined {
+  try {
+    const version = normalizeDatasetVersionRecord(cloneJson(selectedVersion, 512 * 1024) as DatasetVersionRecord);
+    const ids = new Set(version.lineage.sources.map(source => source.sourceArtifactId));
+    if (!ids.size || !Array.isArray(authorizedRows)) return undefined;
+    const matches: DatasetVersionReplaySource[] = [];
+    const data = (value: object, key: string, optional = false): unknown => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor && optional) return undefined;
+      if (!descriptor?.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, "value")) return invalid();
+      return descriptor.value;
+    };
+    for (let index = 0; index < authorizedRows.length; index += 1) {
+      const row = object(data(authorizedRows, String(index)));
+      const artifactId = data(row, "artifactId");
+      if (typeof artifactId !== "string") return undefined;
+      if (!ids.has(artifactId)) continue;
+      const storageKey = data(row, "storageKey"), label = data(row, "label"), mediaType = data(row, "mediaType", true);
+      if (typeof storageKey !== "string" || typeof label !== "string" || (mediaType !== undefined && typeof mediaType !== "string")) return undefined;
+      matches.push({ artifactId, storageKey, label, ...(mediaType === undefined ? {} : { mediaType }) });
+      // Refuse the entire projection; never pass a truncated successful result.
+      if (matches.length > 256) return undefined;
+    }
+    return freeze(matches);
+  } catch { return undefined; }
 }
 
 /** Data-only validation. Callers must separately prove async freshness before

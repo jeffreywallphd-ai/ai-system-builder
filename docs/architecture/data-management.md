@@ -961,6 +961,31 @@ ordered source ID must match one current authorized source-list row with the
 same logical storage key and compatible source capability. Metadata has no byte
 digest; this check does not authorize or prove current source bytes.
 
+`projectDatasetVersionReplaySources` selects all observed matching lineage IDs,
+including incompatible duplicates in their original order. The 256-row bound
+applies to matching rows, not unrelated workspace files. Oversized matches,
+malformed records and accessors deny the whole projection. It proves neither
+catalogue completeness nor authority; a first match, map or page is not proof.
+
+Desktop's ordinary browse remains capped at 250. Saved setup reuse instead captures
+a bounded frozen request, rejects observed duplicate/conflicting rows, and resolves
+at most 100 unique exact source keys through the existing workspace-authorized
+artifact-detail operation. Reads are sequential with a 15-second whole-batch
+deadline and current page/client/frame checks before and after every await.
+The returned locator must equal the requested canonical key; the source ID is
+derived from that locator. A missing non-key legacy ID has no such identity proof
+and is rejected. Metadata lookup does not read source bytes or contact providers.
+Timeout stops the caller and later reads; it does not cancel already-issued IPC.
+
+Resolved options stay private until complete replay validation and the actual
+persisted request roundtrip agree. Only then may one current setter transaction
+merge the validated sources and replace the form. The consumer acknowledges an
+async result only after the resulting form commit. Input, navigation, workspace,
+client, source retry, task start and disposal retire stale work without late
+form/option writes or progress changes. An unchanged selection filter preserves
+its array identity, so a source-ready housekeeping render does not cancel a valid
+lookup. Actual host/provider, scale-runtime and parent qualification remain separate.
+
 The helper reads the actual finalizer snapshot: recipe, optional advanced
 configuration, split, output format/name and form-supported quality choices.
 Snapshots containing only operation or split metadata are not reusable setups.

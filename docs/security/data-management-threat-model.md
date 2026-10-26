@@ -938,6 +938,22 @@ checks; do not accept caller metadata as proof of recognized content.
   lineage equality; ordered unique source IDs and exact logical storage keys;
   ready workspace-scoped source projection with duplicate matches preserved;
   closed supported settings and whole-value rejection before any setter.
+- Observed-match projection retains every matching duplicate and its order,
+  including incompatible rows. Reject accessor/sparse rows and more than 256
+  matches as a whole. Unrelated rows do not consume this bound. Never filter
+  conflicting matches away or treat the capped 250 browse page as complete.
+- Desktop captures bounded frozen reproduction/selection meaning before I/O.
+  Resolve at most 100 unique canonical lineage keys through the existing explicit
+  workspace `artifact.detail.read`/`artifact:read` operation, sequentially within
+  a 15-second caller deadline. Every await checks the exact current request,
+  client and committed form frame. Returned locator equality supplies key-derived
+  source identity; it cannot prove a different missing legacy ID. Preserve all
+  observed duplicate/conflict denials. Errors are fixed, path/payload-free copy.
+  Keep fetched options private until full replay validation and actual serialized
+  request equality pass, then merge only with the complete current form update.
+  No partial option merge, stale progress overwrite, automatic dispatch or late
+  acknowledgment. Timeout makes no IPC cancellation or native-cleanup claim.
+  Source-byte, physical host, provider, scale-runtime and parent checks stay separate.
 - Bounds: recipe snapshot 512 KiB, reproduction envelope 1 MiB, JSON depth 16
   and 20,000 nodes, selected-source projection 256. The existing version-record
   normalizer still limits persisted lists to 100. Inspect property descriptors
@@ -950,7 +966,8 @@ checks; do not accept caller metadata as proof of recognized content.
 - Residual scope: no proof of current source bytes, async page freshness, runtime
   memory admission, installed OCR language, model readiness or provider authority.
   The internal Desktop restore hook now calls the validator with the exact
-  selected version/file and the complete current authorized source list. It
+  selected version/file, observed list conflicts and bounded current exact-key
+  source metadata. It
   builds a complete replacement, rebuilds the normal serialized request and
   requires identical normalized meaning before setters. A committed-frame and
   source-request fence retires stale edits, workspace/client/retry/unmount and

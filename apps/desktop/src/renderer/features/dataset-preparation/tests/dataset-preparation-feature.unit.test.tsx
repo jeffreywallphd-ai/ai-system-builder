@@ -280,7 +280,7 @@ describe("DatasetPreparationFeature", () => {
     const dispatch = vi.fn();
     const fixture = datasetVersionReplayFixture("llm-instruction", "pdf");
     fixture.recipe.generation.model.modelId = "fixture/replacement";
-    const client = { browseSourceArtifacts: async () => [fixture.source], startPrepareTrainingDataset: dispatch } as any;
+    const client = { browseSourceArtifacts: async () => [fixture.source], readReplaySourceArtifacts: async () => [fixture.source], startPrepareTrainingDataset: dispatch } as any;
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
     let memoryMode: unknown = "offload-v99";
     function ReuseProbe() {

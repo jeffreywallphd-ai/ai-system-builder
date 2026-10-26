@@ -297,7 +297,7 @@ function WorkspaceDatasetPreparationFeature({
     workspaceId,
   });
   const cancelReplayOnEdit = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus,
-    request => onReuseDatasetVersion(request.reproduction, request.selection));
+    (request, isCurrent) => onReuseDatasetVersion(request.reproduction, request.selection, isCurrent));
 
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();

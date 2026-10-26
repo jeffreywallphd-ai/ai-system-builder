@@ -14,19 +14,23 @@ function datasetVersionReplayFixture() {
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | undefined, container: HTMLDivElement, handoff!: DatasetVersionReplayHandoff, navigate!: (active: boolean) => void;
 let messages: readonly { message: string; workspaceId?: string }[] = [], calls = 0, order: string[] = [];
+type Outcome = "yes" | "no" | "throw" | "async";
+let finishAsync!: () => void, rejectAsync!: () => void;
 function Notices() { messages = useOptionalNotificationCenter()!.state.records; return null; }
-function Consumer({ status, outcome, cancelAfterCommit }: { status: "loading" | "ready" | "failed"; outcome: "yes" | "no" | "throw"; cancelAfterCommit?: boolean }) {
+function Consumer({ status, outcome, cancelAfterCommit }: { status: "loading" | "ready" | "failed"; outcome: Outcome; cancelAfterCommit?: boolean }) {
   const [value, setValue] = useState("draft");
-  const cancel = useDatasetVersionReplayConsumer(handoff, status, () => { ++calls; if (outcome === "throw") throw new Error("private fixture detail"); if (outcome === "no") return false; setValue("saved"); return true; });
+  const cancel = useDatasetVersionReplayConsumer(handoff, status, (_request, current) => { ++calls; if (outcome === "throw") throw new Error("private fixture detail"); if (outcome === "no") return false;
+    if (outcome === "async") return new Promise<boolean>((resolve, reject) => { finishAsync = () => { if (!current()) { resolve(false); return; } setValue("saved"); resolve(true); }; rejectAsync = () => reject(new Error("private fixture detail")); });
+    setValue("saved"); return true; });
   useLayoutEffect(() => { order.push(`commit:${value}`); if (value === "saved" && cancelAfterCommit) cancel(); }, [value, cancelAfterCommit]);
   return <div><span>{value}</span><button onClick={() => { cancel(); setValue("later edit"); }}>Edit form</button></div>;
 }
-function Harness({ workspaceId, consume, status, outcome, cancelAfterCommit }: { workspaceId: string; consume?: boolean; status: "loading" | "ready" | "failed"; outcome: "yes" | "no" | "throw"; cancelAfterCommit?: boolean }) {
+function Harness({ workspaceId, consume, status, outcome, cancelAfterCommit }: { workspaceId: string; consume?: boolean; status: "loading" | "ready" | "failed"; outcome: Outcome; cancelAfterCommit?: boolean }) {
   const [active, setActive] = useState(false); navigate = setActive;
   handoff = useDatasetVersionReplayHandoff(workspaceId, active, () => setActive(true));
   return consume && active ? <Consumer status={status} outcome={outcome} cancelAfterCommit={cancelAfterCommit} /> : null;
 }
-async function render(options: { workspaceId?: string; consume?: boolean; status?: "loading" | "ready" | "failed"; outcome?: "yes" | "no" | "throw"; strict?: boolean; cancelAfterCommit?: boolean } = {}) {
+async function render(options: { workspaceId?: string; consume?: boolean; status?: "loading" | "ready" | "failed"; outcome?: Outcome; strict?: boolean; cancelAfterCommit?: boolean } = {}) {
   if (!root) { container = document.createElement("div"); document.body.append(container); root = createRoot(container); }
   const body = <NotificationProvider><Notices /><Harness workspaceId={options.workspaceId ?? "workspace-a"} consume={options.consume} status={options.status ?? "loading"} outcome={options.outcome ?? "yes"} cancelAfterCommit={options.cancelAfterCommit}/></NotificationProvider>;
   await act(async () => root!.render(options.strict ? <StrictMode>{body}</StrictMode> : body));
@@ -72,6 +76,19 @@ it.each(["failed", "declined", "exception"])("does not announce a %s application
 it("cancellation after application but before acknowledgment makes no success or rollback claim", async () => {
   await render({ consume: true }); const result = await queue(); await render({ consume: true, status: "ready", cancelAfterCommit: true });
   expect(await result.promise).toBe(false); expect(container.textContent).toContain("saved"); expect(messages).toHaveLength(0);
+});
+it("announces an async restore once only after its actual form commit", async () => {
+  await render({ consume: true, status: "ready", outcome: "async" }); const result = await queue();
+  expect(calls).toBe(1); expect(messages).toHaveLength(0); expect(container.textContent).toContain("draft");
+  await act(async () => finishAsync()); expect(await result.promise).toBe(true); expect(order).toContain("commit:saved"); expect(messages).toHaveLength(1);
+});
+it.each(["edit", "unmount", "reject"])("retires async %s without a late write or success", async mode => {
+  await render({ consume: true, status: "ready", outcome: "async" }); const result = await queue();
+  if (mode === "edit") await act(async () => container.querySelector("button")!.click());
+  if (mode === "unmount") { await act(async () => root!.unmount()); root = undefined; }
+  await act(async () => mode === "reject" ? rejectAsync() : finishAsync());
+  expect(await result.promise).toBe(false); expect(messages).toHaveLength(0);
+  if (mode === "edit") expect(container.textContent).toContain("later edit");
 });
 
 it("captures a frozen request without retaining caller mutations", async () => {

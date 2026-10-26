@@ -1326,7 +1326,8 @@
         "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts",
         "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx",
         "modules/ui/shared/dataset-version/tests/datasetVersionReplayHandoff.ui.test.tsx",
-        "apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx"
+        "apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx",
+        "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1371,7 +1372,9 @@
         "modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff.ts",
         "modules/ui/shared/dataset-version/tests/datasetVersionReplayHandoff.ui.test.tsx",
         "apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx",
-        "modules/ui/shared/data-management/README.md"
+        "modules/ui/shared/data-management/README.md",
+        "modules/ui/shared/dataset-version/datasetVersionReplay.ts",
+        "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"
       ]
     }
   }

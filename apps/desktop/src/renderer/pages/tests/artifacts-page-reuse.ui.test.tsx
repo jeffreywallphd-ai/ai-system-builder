@@ -44,9 +44,10 @@ function setup(){
  const sources=new Promise<any[]>((yes,no)=>{resolve=yes;reject=no;});
  const browse=vi.fn().mockReturnValue(sources);
  const publication=vi.fn(), dispatch=vi.fn();
- state.client={listVersions:list,compareVersions:vi.fn(),readReproduction:vi.fn(async()=>fixture.reproduction),publishVersion:publication,browseSourceArtifacts:browse,startPrepareTrainingDataset:dispatch};
+ const lookupCurrent:boolean[]=[];
+ state.client={listVersions:list,compareVersions:vi.fn(),readReproduction:vi.fn(async()=>fixture.reproduction),publishVersion:publication,browseSourceArtifacts:browse,readReplaySourceArtifacts:vi.fn(async(_w:any,_refs:any,current:()=>boolean)=>{lookupCurrent.push(current());await Promise.resolve();lookupCurrent.push(current());return[fixture.source];}),startPrepareTrainingDataset:dispatch};
  container=document.createElement("div");document.body.append(container);root=createRoot(container);
- return {fixture,list,publication,dispatch,browse,resolve,reject};
+ return {fixture,list,publication,dispatch,browse,resolve,reject,lookupCurrent};
 }
 
 async function render(workspaceId="workspace-a", strict=false){const page=<NotificationProvider><Notices/><ArtifactsPage workspaceId={workspaceId} workspaceName="Test" initialSelectedStorageKey="prepared/training.jsonl" refreshToken={0} onUploaded={()=>{}}/></NotificationProvider>;await act(async()=>root!.render(strict?<StrictMode>{page}</StrictMode>:page));}
@@ -56,7 +57,7 @@ function hasSavedSource(){return [...document.body.querySelectorAll<HTMLInputEle
 it.each([false,true])("real Browser-to-Preparation reuse waits for sources and actual form application, strict=%s",async strict=>{
  const s=setup();await render("workspace-a",strict);expect(document.body.textContent).toContain("Use this setup again");expect(reuseNotices()).toHaveLength(0);
  await click("Use this setup again");expect(document.body.textContent).toContain("Loading source files");expect(reuseNotices()).toHaveLength(0);expect(s.dispatch).not.toHaveBeenCalled();expect(s.publication).not.toHaveBeenCalled();
- await act(async()=>s.resolve([s.fixture.source]));expect(goal().value).toBe("llm-classification");expect(hasSavedSource()).toBe(true);expect(reuseNotices()).toHaveLength(1);expect(reuseNotices()[0].workspaceId).toBe("workspace-a");expect(document.body.textContent).not.toContain("Saved versions");
+ await act(async()=>s.resolve([s.fixture.source]));expect(state.client.readReplaySourceArtifacts).toHaveBeenCalledTimes(1);expect(s.lookupCurrent).toEqual([true,true]);expect(goal().value).toBe("llm-classification");expect(hasSavedSource()).toBe(true);expect(reuseNotices()).toHaveLength(1);expect(reuseNotices()[0].workspaceId).toBe("workspace-a");expect(document.body.textContent).not.toContain("Saved versions");
  await click("Save training settings");const saved=JSON.parse(localStorage.getItem("ai-system-builder.datasetPreparation.trainingSettings.v1")!)[0].settings;
  expect(saved).toMatchObject({taskType:"llm-classification",labelSet:"positive, negative",outputBaseName:"Saved setup",trainRatio:"0.7",validationRatio:"0.2",testRatio:"0.1",seed:"17",shuffle:false,qualityPreset:"strict",huggingFaceDestinationEnabled:false,huggingFaceRepository:"",localDestinationEnabled:true});
  expect(s.dispatch).not.toHaveBeenCalled();expect(s.publication).not.toHaveBeenCalled();
@@ -80,6 +81,24 @@ it("workspace replacement retires the old delivery and keeps old success out of 
 
 it.each(["empty", "wrong-key"])("ready but %s original sources deny the whole restore",async mode=>{
  const s=setup();await render();await click("Use this setup again");
+ if(mode==="empty")state.client.readReplaySourceArtifacts.mockResolvedValue([]);
  await act(async()=>s.resolve(mode==="empty"?[]:[{...s.fixture.source,storageKey:"uploads/different.csv"}]));
  expect(goal().value).toBe("llm-instruction");expect(hasSavedSource()).toBe(false);expect(reuseNotices()).toHaveLength(0);expect(s.dispatch).not.toHaveBeenCalled();expect(s.publication).not.toHaveBeenCalled();
+});
+it("an exact saved source absent from the browse page is added only after current lookup and form validation",async()=>{
+ const s=setup();await render();await click("Use this setup again");
+ const page=Array.from({length:250},(_,index)=>({...s.fixture.source,artifactId:`other-${index}`,storageKey:`uploads/other-${index}.csv`}));
+ await act(async()=>s.resolve(page));expect(goal().value).toBe("llm-classification");expect(hasSavedSource()).toBe(true);expect(reuseNotices()).toHaveLength(1);
+ expect(s.dispatch).not.toHaveBeenCalled();expect(s.publication).not.toHaveBeenCalled();
+});
+it.each(["edit","tab","workspace"])("retires a live metadata lookup on %s change before any late source option or form write",async mode=>{
+ const s=setup();let resolveLookup!:(rows:any[])=>void;
+ state.client.readReplaySourceArtifacts.mockImplementation(()=>new Promise<any[]>(yes=>{resolveLookup=yes;}));
+ await render();await click("Use this setup again");await act(async()=>s.resolve([]));expect(state.client.readReplaySourceArtifacts).toHaveBeenCalledTimes(1);expect(reuseNotices()).toHaveLength(0);
+ if(mode==="edit")await act(async()=>{goal().value="llm-extraction";goal().dispatchEvent(new Event("change",{bubbles:true}));});
+ if(mode==="tab")await click("Artifact Browser");
+ if(mode==="workspace")await render("workspace-b");
+ await act(async()=>resolveLookup([s.fixture.source]));expect(reuseNotices()).toHaveLength(0);expect(hasSavedSource()).toBe(false);
+ if(mode==="edit")expect(goal().value).toBe("llm-extraction");
+ expect(s.dispatch).not.toHaveBeenCalled();expect(s.publication).not.toHaveBeenCalled();
 });

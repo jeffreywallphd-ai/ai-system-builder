@@ -241,3 +241,15 @@ the surviving page after the resulting form commit. Input, navigation, workspace
 changes, source failure or replacement requests retire older delivery. The action
 never runs preparation or publishes a dataset. Thin-client reuse remains absent
 until its complete supported-settings consumer is connected and tested.
+
+Saved-source matching uses `projectDatasetVersionReplaySources` from the shared
+dataset-version module. Keep all observed matching rows, including conflicting
+or incompatible duplicates. A partial browse page cannot prove completeness.
+Desktop captures saved meaning before I/O, then resolves at most 100 exact source
+keys through the existing workspace-authorized metadata read, sequentially within
+a 15-second caller deadline. Derive source identity from each exact returned key;
+do not invent an ID for a missing legacy source. Reject observed conflicts, run
+the complete replay/request roundtrip, and only then merge validated options with
+the form. The async consumer acknowledges the resulting current form commit.
+The ordinary 250 browse and 256 matching-row bounds remain unchanged. This grants
+no byte integrity, IPC cancellation, provider, scale-runtime or parent pass.
