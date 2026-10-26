@@ -11670,6 +11670,19 @@
           "Actual app runs and final roadmap tests remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8d96c42f437a3f15b17485c62b6c06e5056a2b708e22d033439868aa118ae89c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed manual Context discard and deletion checks.",
+          "Discard and cancelled deletion must keep the entire saved catalog unchanged.",
+          "Confirmed deletion must remove only the selected artifact.",
+          "The desktop and browser journey source includes these checks; actual app runs, physical file removal and final qualification remain pending."
+        ]
+      }
     }
   ]
 }

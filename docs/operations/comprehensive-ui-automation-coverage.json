@@ -1227,6 +1227,12 @@
           "name": "workspace/client retirement, file identity, duplicate mutations, clear and fixed errors",
           "tier": "thin-hook-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
+          "name": "real mounted browser client/HTTP/routes/use-case/registry reference journey and refused-access/provider-failure retry",
+          "tier": "mounted-feature-real-loopback-client-route-usecase-storage-fixed-provider-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -1286,6 +1292,12 @@
           "file": "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
           "name": "workspace/client retirement, file identity, duplicate mutations, clear and fixed errors",
           "tier": "thin-hook-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
+          "name": "saves a reference, reopens persisted storage, separates workspaces and deletes only the confirmed record",
+          "tier": "mounted-feature-real-loopback-client-route-usecase-storage-fixed-provider-fixture",
           "qualification": "focused-execution-and-independent-review-required"
         }
       ],

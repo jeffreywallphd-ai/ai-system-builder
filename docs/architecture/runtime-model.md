@@ -713,3 +713,12 @@ Owned-download host journeys assert the fixed public running message,
 progress, timing, request identity, workspace fencing, reconnect, cancellation,
 idempotent completion and owned shutdown checks remain unchanged. Source
 collection and local bridge tests do not qualify an actual host run.
+
+The focused browser model-reference UI fixture joins the actual API client,
+loopback HTTP routes, application use cases and durable local registry. It checks
+reference save/reopen, workspace-separated inventory, cancelled deletion, explicit
+record-only deletion and safe failure/retry. The fixed synthetic browse provider
+and fixture credential middleware do not qualify remote provider integration,
+production authentication, full-app mounting, model execution or native file
+effects. Ambient model discovery is disabled. Each test retires only its owned
+listener and bounded new regular temporary tree; it never opens saved app tokens.

@@ -4293,6 +4293,23 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "manual-context-lifecycle-boundaries",
+      "work_criteria": [
+        "context-discard-delete-host-wiring",
+        "context-lifecycle-negative-and-ui-evidence"
+      ],
+      "receipt_digest": "27cda398cda77594eb89edce72682f241fbb1470daeeb080c9c2b8825d37a36d",
+      "review_digest": "612f305ff102a955a11883bb48741a1c6fc99cf0d3b9bfba05344c668a72e982",
+      "scope": "Tested and committed full-catalog manual Context discard and confirmed-removal oracles, exact mounted deletion controls and both host-journey source consumers.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
