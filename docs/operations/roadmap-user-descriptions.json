@@ -11269,6 +11269,37 @@
           "If the browser app cannot represent a saved setting, it leaves the current form unchanged. Review the setup and start a task yourself. These tests do not prove source-file contents or online publishing."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9d6ea464e5ee768fcd2929247bbed7c5ab7cc7e53302e548b2055abe45890fd3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests for saving, comparing and reusing dataset versions are committed. They also check that saved data survives restarting each app.",
+          "The supporting code passed 951 tests and a type check. The agent must still run these full-app journeys. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee3871f4113c2f5432c0c663a34e0fc1648c0c88d1f853b81aa9b5ac9db74353",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent has added and checked the full-app tests. The agent must now run them in both apps. No action is needed from you. Completed model accuracy and OCR tests stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8b0e72a9dc554b564f175d19ce05bc6e81cb69e7da6c83a970ef38f5bb5061f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Online documentation checks, large-data checks and advanced preparation checks still need work. The browser test restarts the server services; the Desktop test closes and reopens the app."
+        ]
+      }
     }
   ]
 }

@@ -3854,6 +3854,25 @@
         "Whole-host saved-version/provider publication/restart, large-data and advanced preparation qualification remain pending. Accepted model accuracy results remain closed.",
         "Thin has a smaller editable settings set than Desktop. Any unsupported saved value rejects the whole restore before setters. Metadata checks prove no source bytes, runtime readiness or provider authority; preparation and publication still require explicit user actions."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-provided-version-host-journeys",
+      "work_criteria": [
+        "provided-only-real-runtime",
+        "real-version-and-owned-restart-journeys",
+        "bounded-reviewed-evidence-and-delivery"
+      ],
+      "receipt_digest": "c6e499836f2db6b9dc480efb6247bf35587108c8c563eca2bb2b1fad70dc6c03",
+      "review_digest": "cd715837f9c5c7026de602c92388d79934a75217e46238ad915008d7186ac3e1",
+      "scope": "Committed real provided-data test composition and both-app save, compare, complete supported-settings reuse and restart journey assertions. Production processor, scoped SQLite, fresh session evidence and fail-closed ownership are preserved. Exact20-file checkpoint99dc7a3:951 focused tests and zero TypeScript errors; five current checks and separate review passed. Actual native package/UI execution and parent qualification remain pending.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "This source-only chunk implements real provided-data app journeys but does not execute or qualify the native package/UI run. Standard native limits remain unchanged. Prior model accuracy and actual OCR evidence must not be rerun for this work.",
+        "Private-provider website rendering/cleanup, scale and advanced-preparation qualification remain separate pending work. Thin restart reconstructs complete services and SQLite within the same Node process; Desktop restart launches a fresh app process."
+      ]
     }
   ]
 }
