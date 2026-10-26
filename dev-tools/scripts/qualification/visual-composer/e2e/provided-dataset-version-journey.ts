@@ -179,7 +179,7 @@ export async function prepareProvidedVersions(page: Page, host: Host) {
   await notices.getByRole("button", { name: "Close notifications", exact: true }).click();
   const sourceIdentity = await readImportedSource(page, host, workspace);
   await page.getByRole("tab", { name: "Dataset Preparation", exact: true }).click();
-  const goal = page.getByRole("combobox", { name: host === "desktop" ? "Training task" : "Training goal", exact: true });
+  const goal = page.getByRole("combobox", { name: host === "desktop" ? /^Training task\b/ : /^Training goal\b/ });
   await goal.selectOption("llm-classification");
   const source = host === "desktop" ? page.locator("label").filter({ has: page.getByText(FILE, { exact: true }) }).getByRole("checkbox")
     : page.getByRole("checkbox", { name: FILE, exact: true });
