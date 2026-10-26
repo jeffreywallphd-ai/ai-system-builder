@@ -1244,6 +1244,15 @@ export function useDatasetPreparationFeature(
     });
   }, []);
 
+  const retireTaskRecovery = useCallback((requestId: string) => {
+    if (!workspaceId) return;
+    try {
+      if (sessionStorage.getItem(taskStorageKey) === requestId) {
+        sessionStorage.removeItem(taskStorageKey);
+      }
+    } catch { /* A successful task remains successful if session storage is unavailable. */ }
+  }, [taskStorageKey, workspaceId]);
+
   const clearActiveTask = useCallback(() => {
     cancellationMessageRef.current = undefined;
     cancelRequestRef.current = undefined;
@@ -1456,6 +1465,7 @@ export function useDatasetPreparationFeature(
             return;
           }
           if (pollResponse.status === "succeeded") {
+            retireTaskRecovery(requestId);
             clearActiveTask();
             setStatus({
               kind: "success",
@@ -1544,6 +1554,7 @@ export function useDatasetPreparationFeature(
       pollingRecoveryGraceWindowMs,
       refreshArtifacts,
       refreshRuntimeModelStatus,
+      retireTaskRecovery,
     ],
   );
 
@@ -2604,6 +2615,7 @@ export function useDatasetPreparationFeature(
         });
         return;
       }
+      retireTaskRecovery(qualityReview.requestId);
       const value = response.value;
       setResultSummary({
         datasetKey:
@@ -2640,6 +2652,7 @@ export function useDatasetPreparationFeature(
     qualityReview,
     refreshArtifacts,
     refreshRuntimeModelStatus,
+    retireTaskRecovery,
     reviewActionInFlight,
     workspaceId,
   ]);
@@ -2668,6 +2681,7 @@ export function useDatasetPreparationFeature(
         setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
         return;
       }
+      retireTaskRecovery(qualityReview.requestId);
       setQualityReview(undefined);
       setStatus({ kind: "idle" });
       await refreshRuntimeModelStatus();
@@ -2686,6 +2700,7 @@ export function useDatasetPreparationFeature(
     datasetClient,
     qualityReview,
     refreshRuntimeModelStatus,
+    retireTaskRecovery,
     reviewActionInFlight,
     workspaceId,
   ]);

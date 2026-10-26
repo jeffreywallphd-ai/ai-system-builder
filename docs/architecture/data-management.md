@@ -883,3 +883,30 @@ Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
 into smaller source files before using recognition. A version replay must retain
 the exact structure-aware/layout/Markdown settings and a compatible training goal;
 an explicit saved plan cannot bypass those checks.
+
+## OCR delivery qualification
+
+The controlled OCR test entry imports the actual newly packaged worker. Both hosts
+retain their production Python dependency preparation and authenticated task
+lifecycle. Only bounded deterministic generation is substituted. A shared
+Playwright journey covers file import, explicit language selection, unavailable
+language, actual recognition facts, review, approval/reload, cancellation/retry
+and source visibility in a second workspace. The fixed launch plan uses relative
+arguments from the real worker directory so repository paths with spaces do not
+change the existing host argument-tokenization contract. Default controlled Node
+worker journeys are unchanged.
+
+Source-bound package/resource, native cleanup and host observations are separate
+from portable component tests and model accuracy. See
+[OCR qualification](../../dev-tools/scripts/qualification/visual-composer/ocr-qualification.md).
+
+The guided local file selector also lists PDF source material. Its missing-MIME
+fallback identifies a PDF extension without changing raw-byte ingestion, backend
+policy or authoritative PDF recognition. The focused regression captures the
+original excluded-PDF failure and corrected bounded transfer behavior.
+
+Both hosts associate preparation-method captions and help separately. The shared
+OCR language field does the same for its caption, recognition limits and language
+guidance. React-generated IDs preserve each form's associations without changing
+task settings, authorization or readiness. Exact-caption host queries and focused
+description-association regressions cover this behavior.

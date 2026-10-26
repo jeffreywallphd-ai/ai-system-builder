@@ -32,7 +32,21 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx",
         "modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx",
         "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
-        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx"],
+        "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactBrowserFeature.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
+        "apps/desktop/README.md",
+        "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/ocr-qualification-worker.py",
+        "dev-tools/scripts/qualification/visual-composer/ocr-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/tests/test_ocr_qualification_worker.py",
+        "dev-tools/scripts/qualification/tests/ocr-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
+        "dev-tools/helpers/native-qualification/owned_command_job.py",
+        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"],
 }
 
 

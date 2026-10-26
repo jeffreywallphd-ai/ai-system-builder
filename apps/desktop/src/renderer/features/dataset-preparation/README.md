@@ -41,7 +41,19 @@ admission and private byte bindings. Show actual reader counts and explain that
 text-character checks are not OCR accuracy. Local component tests do not qualify
 complete native host/package delivery.
 
+Session recovery retains running tasks and datasets that still need approval.
+Successful approval, a completed task result, or confirmed discard removes only
+the matching request in that workspace. A newer request or another workspace's
+recovery record stays intact. Completed tasks must not reopen the saved-result
+view when the user returns to preparation after a reload.
+
 Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
 into smaller source files before using recognition. A version replay must retain
 the exact structure-aware/layout/Markdown settings and a compatible training goal;
 an explicit saved plan cannot bypass those checks.
+
+The desktop task client maps the closed `ocr_unavailable` and
+`ocr_input_invalid` failure codes to fixed language/source corrective messages.
+It preserves the validated normalization stage while discarding raw worker
+messages and details. Unknown codes keep the generic safe failure message;
+private runtime paths, prompts and supplier exceptions are never UI copy.

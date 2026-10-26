@@ -641,6 +641,74 @@ describe("desktop dataset preparation client", () => {
     expect(JSON.stringify(result)).not.toContain("secret");
   });
 
+  it.each([
+    [
+      "ocr_unavailable",
+      "ocr_unavailable",
+      "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+      "normalization",
+    ],
+    [
+      "ocr_input_invalid",
+      "ocr_input_invalid",
+      "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language.",
+      "normalization",
+    ],
+    [
+      "ocr_unknown",
+      "ocr_unknown",
+      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+      "normalization",
+    ],
+    [
+      "ocr_unavailable/private",
+      "task_failed",
+      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+      "normalization",
+    ],
+    [
+      "ocr_unavailable",
+      "ocr_unavailable",
+      "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+      "private-stage",
+    ],
+  ])("safely projects OCR task failure case %# (%s)", async (inputCode, code, message, stage) => {
+    const hostWindow = globalThis as typeof globalThis & {
+      window?: Window & typeof globalThis;
+    };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const previous = hostWindow.window.desktopApi;
+    try {
+      hostWindow.window.desktopApi = {
+        ...previous,
+        readPrepareTrainingDatasetTask: async () => ({
+          ok: true,
+          value: {
+            status: "failed",
+            error: {
+              code: inputCode,
+              stage,
+              message: "C:\\private\\source.pdf token=secret prompt=private-content",
+              details: { path: "private-content", diagnosticClass: "SupplierPrivateError" },
+            },
+          },
+        }),
+      } as never;
+      const result = await createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask("ocr-task");
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code,
+          message,
+          ...(stage === "normalization" ? { details: { stage, reasonCode: code } } : {}),
+        },
+      });
+      expect(JSON.stringify(result)).not.toMatch(/private|secret|SupplierPrivateError/);
+    } finally {
+      hostWindow.window.desktopApi = previous;
+    }
+  });
+
   it("maps workspace-bound dataset review bridge responses", async () => {
     const hostWindow = globalThis as typeof globalThis & {
       window?: Window & typeof globalThis;

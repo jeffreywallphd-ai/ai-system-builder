@@ -277,7 +277,7 @@ export function useArtifactBrowserFeature(
     setRepositoryVisibility: publishLogic.setRepositoryVisibility,
     togglePublishForm: publishLogic.togglePublishForm,
     readArtifactMedia: (storageKey: string) =>
-      artifactClient.readArtifactMedia({ storageKey }),
+      artifactClient.readArtifactMedia({ storageKey }, { workspaceId }),
     setRegisterRepository: huggingFace.setRegisterRepository,
     setRegisterNamespace: huggingFace.setRegisterNamespace,
     setRegisterPathInRepo: huggingFace.setRegisterPathInRepo,

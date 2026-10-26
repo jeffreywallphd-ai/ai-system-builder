@@ -553,6 +553,21 @@ and actual desktop/browser delivery still need their own evidence.
 
 ## Controlled OCR delivery scenario
 
+The fixed native package/UI composition also permits exact `ocr-documents`.
+It retains the existing command forms, source/environment hashes and
+retirement guards. It does not permit arbitrary Python, commands, roots or
+parameters. Its fixed approved OCR limits are described below. The owning
+reviewed composition launches the actual newly packaged
+worker and substitutes only bounded synthetic generation. Both host dependency
+preparers remain real. Validate copied OCR resources independently of package
+exit status, since optional OCR build failure preserves Standard startup.
+
+The portable OCR profile now covers the fixed fixture and launch-plan regressions
+plus existing host lifecycle/preparation checks. It does not run the actual app
+journeys, OCR supplier, native lifetime self-tests or models. Those controlled
+checks keep separate current-source observations and independent review. See
+[OCR qualification](../../dev-tools/scripts/qualification/visual-composer/ocr-qualification.md).
+
 Native limit reports include bounded advisory message/process numbers and the
 created root's number so a reviewer can correlate saved test evidence. Missing
 or invalid process numbers are `null`. These numbers do not identify a current

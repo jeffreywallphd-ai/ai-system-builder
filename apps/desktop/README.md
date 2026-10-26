@@ -130,6 +130,7 @@ Design constraints:
 - uploads selected files as independent artifact-upload requests so one rejected file does not stop the rest of the batch
 - reports a per-file result list, keeps successful stored keys visible, and lets users cancel queued files before or during a batch
 - renders browse/detail/content preview and Hugging Face publish success/error feedback
+- reads Artifact Browser download bytes with the current workspace; switching workspaces updates that context, and existing storage checks still reject missing or foreign workspace access
 - supports published-backing re-check and last-verified display from durable binding metadata
 - supports imported-source re-check and separate source verification status display
 - supports imported-source inspection and explicit localize/download action when local bytes are missing

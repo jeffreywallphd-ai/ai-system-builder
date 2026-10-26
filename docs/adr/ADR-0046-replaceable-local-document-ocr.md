@@ -260,3 +260,21 @@ Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
 into smaller source files before using recognition. A version replay must retain
 the exact structure-aware/layout/Markdown settings and a compatible training goal;
 an explicit saved plan cannot bypass those checks.
+
+## Controlled OCR app qualification
+
+Use the actual packaged Python app and OCR resources for the desktop and browser
+journeys. A fixed offline test entry replaces only generation with known synthetic
+examples. It retains launch authentication, production dependency preparation,
+source authorization/capture, recognition, curation, review and explicit approval.
+The two fixed synthetic model identifiers select ordinary generation or a bounded
+cancellation wait. Neither identifier loads a model.
+
+A package exit code alone is insufficient: the optional build hook can preserve
+Standard startup without OCR. Verify the copied helper source, manifest, binary
+and all deployed worker inputs before launching the OCR journeys. Require actual
+page/line/text results, unavailable-language refusal, cancellation observation,
+retry, persistence and owned-process retirement. A synthetic generator provides
+no model-quality or inference-performance evidence. Full host qualification is
+pending until that exact controlled run and its independent review pass. See
+[the OCR qualification procedure](../../dev-tools/scripts/qualification/visual-composer/ocr-qualification.md).

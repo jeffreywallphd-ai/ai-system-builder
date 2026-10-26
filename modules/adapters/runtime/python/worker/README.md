@@ -464,3 +464,17 @@ or interrupted close denies further probes and never retries an uncertain handle
 Capture queries the explicit drive root with typed `GetDriveTypeW` before any
 file acquisition. Only fixed local media is admitted; remote, removable, unknown
 and failed drive queries deny without opening a source.
+
+## Actual app OCR qualification fixture
+
+The separate fixed test entry in `dev-tools/scripts/qualification/visual-composer/`
+loads the newly packaged worker and retains its real authentication, task, source
+capture, OCR, review and output paths. It replaces only generation for known
+synthetic documents and denies actual model/provider operations. It is not copied
+into or selected by the product worker. A second fixed synthetic identifier waits
+at most 15 seconds for the real task's cancellation callback and emits no rows.
+
+Both host dependency preparers remain active. Validate copied helper source,
+manifest and binary before actual host qualification; a successful package can
+still have OCR unavailable. Portable form/fixture tests, real native OCR, full
+app delivery and model quality remain separate evidence.

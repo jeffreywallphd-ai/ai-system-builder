@@ -328,11 +328,20 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         task_tests = ["modules/adapters/runtime/python/worker/tests/" + name for name in [
             "test_ocr_task_sources.py", "test_markdown_chunking.py", "test_prepare_training_dataset_ocr.py",
             "test_worker_app.py", "test_prepare_training_dataset_task.py", "test_advanced_dataset_preparation.py"]]
-        ui_tests = ['modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-request-builder.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx']
+        desktop_client_source = "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts"
+        desktop_client_test = "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts"
+        artifact_browser_hook = 'apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactBrowserFeature.ts'
+        artifact_browser_test = 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx'
+        desktop_readme = 'apps/desktop/README.md'
+        ui_tests = ['modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', desktop_client_test, artifact_browser_test, 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-request-builder.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx']
         ocr_port_source = "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts"
         ocr_app_test = "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts"
         host_source = "modules/hosts/server/composition/composeServerHost.ts"
-        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests, *task_tests, *ui_tests])
+        journey_python = "dev-tools/scripts/qualification/tests/test_ocr_qualification_worker.py"
+        journey_node = ["dev-tools/scripts/qualification/tests/" + name for name in [
+            "ocr-host-launch-plan.unit.test.mjs", "visual-composer-host-lifecycle.unit.test.mjs",
+            "controlled-runtime-preparation.unit.test.mjs"]] + ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"]
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests, *task_tests, *ui_tests, journey_python, *journey_node])
         self.assertIn(native_test, profile["source_paths"])
         self.assertNotIn(native_test, profile["test_paths"])
         self.assertIn(document_test, profile["source_paths"])
@@ -341,12 +350,21 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         self.assertNotIn(source_native, profile["test_paths"])
         self.assertIn(source_capture, profile["source_paths"])
         self.assertIn(source, profile["source_paths"])
+        self.assertIn(desktop_client_source, profile["source_paths"])
+        self.assertIn(desktop_client_test, profile["test_paths"])
+        self.assertIn(artifact_browser_hook, profile["source_paths"])
+        self.assertIn(artifact_browser_test, profile["source_paths"])
+        self.assertIn(artifact_browser_test, profile["test_paths"])
+        self.assertEqual(profile["source_paths"].count(desktop_readme), 1)
         commands = run_focused_checks.profile_commands(root, name)
-        self.assertEqual(commands, [["node", "--import", "tsx", "--test", "--", hook_test, *sorted(staging_tests)],
+        node_tests = sorted([hook_test, *staging_tests, *journey_node])
+        self.assertEqual(commands, [*[["node", "--import", "tsx", "--test", "--", *node_tests[at:at+12]] for at in range(0, len(node_tests), 12)],
                                    ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", *sorted(ui_tests)],
                                    [sys.executable, "-B", "-m", "unittest", "discover",
                                     "-s", "dev-tools/scripts/native/tests",
                                     "-p", "test_build_windows_ocr.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "dev-tools/scripts/qualification/tests", "-p", "test_ocr_qualification_worker.py"],
                                    *[[sys.executable, "-B", "-m", "unittest", "discover",
                                       "-s", "modules/adapters/runtime/python/worker/tests", "-p", name]
                                      for name in sorted(["test_document_normalization.py", "test_document_normalization_ocr.py",
@@ -381,6 +399,21 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             (['modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx'], ["documentation"], True, False),
             (['apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx'], ["documentation"], True, False),
             (['apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx'], ["documentation"], True, False),
+            ([desktop_client_source], ["documentation"], True, False),
+            ([desktop_client_test], ["documentation"], True, False),
+            ([artifact_browser_hook], ["documentation"], True, False),
+            ([artifact_browser_test], ["documentation"], True, False),
+            ([desktop_readme], ["documentation"], True, False),
+            (["apps/desktop/src/renderer/features/artifact-browser/hooks/unrelatedArtifactBrowserHook.ts"], ["documentation"], False, True),
+            (["apps/desktop/src/renderer/features/artifact-browser/tests/unrelated-composition.unit.test.tsx"], ["documentation"], False, True),
+            ([artifact_browser_hook, "modules/other/source.ts"], ["documentation"], True, True),
+            ([desktop_readme, "apps/desktop/src/renderer/features/artifact-browser/hooks/unrelatedArtifactBrowserHook.ts"], ["documentation"], True, True),
+            (["apps/desktop/src/renderer/features/dataset-preparation/api/unrelatedDesktopClient.ts"], ["documentation"], False, True),
+            (["apps/desktop/src/renderer/features/dataset-preparation/tests/unrelated-client.unit.test.ts"], ["documentation"], False, True),
+            (["dev-tools/scripts/qualification/visual-composer/ocr-qualification-worker.py"], ["documentation"], True, False),
+            (["dev-tools/scripts/qualification/visual-composer/ocr-host-launch-plan.mjs"], ["documentation"], True, False),
+            (["dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts"], ["documentation"], True, False),
+            (["dev-tools/helpers/native-qualification/owned_command_job.py"], ["documentation"], True, False),
             # Shared host/barrel paths are covered only when this bounded OCR
             # profile is selected. They must not auto-own unrelated host work.
             ([host_source], ["documentation"], False, True),

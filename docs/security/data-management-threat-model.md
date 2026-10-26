@@ -862,3 +862,30 @@ Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
 into smaller source files before using recognition. A version replay must retain
 the exact structure-aware/layout/Markdown settings and a compatible training goal;
 an explicit saved plan cannot bypass those checks.
+
+## Controlled OCR delivery checks
+
+The OCR fixture has no external provider or model access. It accepts only its two
+fixed synthetic generation identifiers, CPU Standard settings, an explicit test
+language and one source. The actual application and deployed worker still check
+authorization, exact staging bytes, protocol, language, bounds, review and output
+admission. Model downloads, training and conversation are refused by the fixture.
+No fixture branch exists in product code. Both hosts retain production dependency
+preparation; the server omits the simulated Node worker's preparation override.
+
+Create only new bounded synthetic PDF files under the current qualification run.
+The fixture font comes from the Windows directory API. Keep bearer-bearing traces,
+screenshots and video off. Log only selected native counters/status, never frames,
+recognized text, task tokens or paths. The fixed native operator requires exact
+source/tool/package/environment witnesses, finite unchanged limits, actual root
+exit, zero active members and acknowledged handle retirement. Preserve every
+failed run. Unknown ownership never permits a successor.
+
+A single Windows language/profile and synthetic generation cannot qualify all
+OCR documents, model accuracy, inference performance or a parent criterion.
+
+PDF chooser metadata is a routing hint only. Adding the existing PDF input type
+and its empty-browser-MIME fallback does not change backend admission or validate
+a PDF signature. Existing source authorization, raw-byte publication and native
+PDF decoding remain required. Preserve all structured file choices and streaming
+checks; do not accept caller metadata as proof of recognized content.

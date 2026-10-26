@@ -249,6 +249,10 @@ function ensureSuccessEnvelope(
 }
 
 const DATASET_PREPARATION_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
+  ocr_unavailable:
+    "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+  ocr_input_invalid:
+    "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language.",
   preparation_input_intent_ambiguous:
     "The selected files mix existing datasets with source material. Prepare those groups separately.",
   preparation_plan_mismatch:

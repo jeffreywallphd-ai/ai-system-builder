@@ -85,6 +85,153 @@ describe("DatasetPreparationFeature", () => {
     delete window.desktopApi;
   });
 
+  async function mountRecoveredTask(requestId: string, overrides: Record<string, unknown> = {}) {
+    const key = "ai-system-builder.preparation-task.v1:workspace-a";
+    sessionStorage.setItem(key, requestId);
+    const onPrepared = vi.fn();
+    const client = {
+      browseSourceArtifacts: async () => [],
+      readPrepareTrainingDatasetTask: vi.fn(async () => ({
+        ok: true, status: "review-required",
+        value: { qualityReport: { reportFingerprint: `sha256:${"b".repeat(64)}` }, review: {} },
+      })),
+      approvePreparedTrainingDataset: vi.fn(async () => ({ ok: true, value: successfulDatasetResult() })),
+      cancelPrepareTrainingDatasetTask: vi.fn(async (id: string) => ({ ok: true, value: { requestId: id, cancelled: true, status: "cancelled" } })),
+      ...overrides,
+    } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    function RecoveryProbe({ workspaceId }: { workspaceId: string }) {
+      feature = useDatasetPreparationFeature({ workspaceId, client, settingsClient, onPrepared });
+      return null;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    async function renderWorkspace(workspaceId: string) {
+      await act(async () => { root!.render(<RecoveryProbe key={workspaceId} workspaceId={workspaceId} />); await flushAsyncWork(20); });
+    }
+    await renderWorkspace("workspace-a");
+    return { key, client, onPrepared, renderWorkspace, get state() { return feature; } };
+  }
+
+  it("retires the resolved review recovery marker after successful approval", async () => {
+    const key = "ai-system-builder.preparation-task.v1:workspace-a";
+    const requestId = "review-recovery-approved";
+    sessionStorage.setItem(key, requestId);
+    const onPrepared = vi.fn();
+    const client = {
+      browseSourceArtifacts: async () => [],
+      readPrepareTrainingDatasetTask: async () => ({
+        ok: true, status: "review-required",
+        value: { qualityReport: { reportFingerprint: `sha256:${"a".repeat(64)}` }, review: {} },
+      }),
+      approvePreparedTrainingDataset: vi.fn(async () => ({ ok: true, value: successfulDatasetResult() })),
+    } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    function RecoveryProbe() {
+      feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient, onPrepared });
+      return null;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => { root!.render(<RecoveryProbe />); await flushAsyncWork(20); });
+    expect(feature.qualityReview?.requestId).toBe(requestId);
+    expect(sessionStorage.getItem(key)).toBe(requestId);
+    await act(async () => { await feature.onApproveReview(); await flushAsyncWork(20); });
+    expect(client.approvePreparedTrainingDataset).toHaveBeenCalledWith(requestId, `sha256:${"a".repeat(64)}`, "workspace-a", "");
+    expect(onPrepared).toHaveBeenCalledOnce();
+    expect(sessionStorage.getItem(key)).toBeNull();
+  });
+
+  it("retires a directly succeeded task without clearing another workspace's recovery", async () => {
+    const otherKey = "ai-system-builder.preparation-task.v1:workspace-b";
+    sessionStorage.setItem(otherKey, "other-workspace-request");
+    const recovery = await mountRecoveredTask("direct-recovery-success", {
+      readPrepareTrainingDatasetTask: async () => ({ ok: true, status: "succeeded", value: successfulDatasetResult() }),
+    });
+    expect(recovery.state.status.kind).toBe("success");
+    expect(recovery.onPrepared).toHaveBeenCalledOnce();
+    expect(sessionStorage.getItem(recovery.key)).toBeNull();
+    expect(sessionStorage.getItem(otherKey)).toBe("other-workspace-request");
+  });
+
+  it.each(["review", "running", "reconnecting"] as const)("retains %s task recovery when the page unmounts", async mode => {
+    vi.useFakeTimers();
+    try {
+      const requestId = `retain-recovery-${mode}`;
+      const overrides = mode === "review" ? {} : {
+        readPrepareTrainingDatasetTask: async () => mode === "running"
+          ? { ok: true, status: "running", progress: { message: "Preparing test data." } }
+          : { ok: false, error: { message: "fetch failed" } },
+      };
+      const recovery = await mountRecoveredTask(requestId, overrides);
+      expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+      if (mode === "review") expect(recovery.state.qualityReview?.requestId).toBe(requestId);
+      else expect(recovery.state.status.kind).toBe("loading");
+      await act(async () => root!.unmount()); root = undefined;
+      expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+      expect(recovery.onPrepared).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("retires recovery only after a confirmed matching discard", async () => {
+    const recovery = await mountRecoveredTask("confirmed-review-discard");
+    await act(async () => { await recovery.state.onDiscardReview(); await flushAsyncWork(); });
+    expect(recovery.client.cancelPrepareTrainingDatasetTask).toHaveBeenCalledWith("confirmed-review-discard", "workspace-a");
+    expect(sessionStorage.getItem(recovery.key)).toBeNull();
+    expect(recovery.state.qualityReview).toBeUndefined();
+    expect(recovery.onPrepared).not.toHaveBeenCalled();
+  });
+
+  it.each(["approval-denied", "approval-threw", "discard-denied", "discard-running", "discard-wrong-request", "discard-wrong-status"] as const)("retains review recovery after %s", async mode => {
+    const requestId = `failed-review-${mode}`;
+    const recovery = await mountRecoveredTask(requestId, {
+      approvePreparedTrainingDataset: async () => {
+        if (mode === "approval-threw") throw new Error("Test approval is unavailable.");
+        return { ok: false, error: { message: "Test approval was denied." } };
+      },
+      cancelPrepareTrainingDatasetTask: async () => mode === "discard-denied"
+        ? { ok: false, error: { message: "Test discard was denied." } }
+        : { ok: true, value: { requestId: mode === "discard-wrong-request" ? "another-request" : requestId,
+          cancelled: mode !== "discard-running", status: mode === "discard-wrong-status" ? "unknown" : mode === "discard-running" ? "running" : "cancelled" } },
+    });
+    await act(async () => {
+      if (mode.startsWith("approval")) await recovery.state.onApproveReview();
+      else await recovery.state.onDiscardReview();
+      await flushAsyncWork();
+    });
+    expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+    expect(recovery.state.qualityReview?.requestId).toBe(requestId);
+    expect(recovery.onPrepared).not.toHaveBeenCalled();
+  });
+
+  it("keeps newer recovery and captures the original workspace for a delayed approval", async () => {
+    let resolveApproval!: (value: any) => void;
+    const approval = new Promise(resolve => { resolveApproval = resolve; });
+    const recovery = await mountRecoveredTask("old-workspace-review", { approvePreparedTrainingDataset: () => approval });
+    let action!: Promise<void>;
+    await act(async () => { action = recovery.state.onApproveReview(); await flushAsyncWork(); });
+    sessionStorage.setItem(recovery.key, "newer-workspace-a-request");
+    const otherKey = "ai-system-builder.preparation-task.v1:workspace-b";
+    sessionStorage.setItem(otherKey, "workspace-b-review");
+    await recovery.renderWorkspace("workspace-b");
+    await act(async () => { resolveApproval({ ok: true, value: successfulDatasetResult() }); await action; await flushAsyncWork(); });
+    expect(sessionStorage.getItem(recovery.key)).toBe("newer-workspace-a-request");
+    expect(sessionStorage.getItem(otherKey)).toBe("workspace-b-review");
+    expect(recovery.state.qualityReview?.requestId).toBe("workspace-b-review");
+  });
+
+  it.each(["getItem", "removeItem"] as const)("preserves a successful approval when recovery storage %s fails", async method => {
+    const recovery = await mountRecoveredTask(`restricted-review-${method}`);
+    const original = Storage.prototype[method];
+    const denied = vi.spyOn(Storage.prototype, method).mockImplementation(function (this: Storage, key: string) {
+      if (this === sessionStorage && key === recovery.key) throw new Error("Test storage is unavailable.");
+      return original.call(this, key) as any;
+    });
+    try {
+      await act(async () => { await recovery.state.onApproveReview(); await flushAsyncWork(); });
+      expect(recovery.state.status.kind).toBe("success");
+      expect(recovery.onPrepared).toHaveBeenCalledOnce();
+    } finally { denied.mockRestore(); }
+  });
+
   it.each(["memory", "decoder"] as const)("preserves checked output intent across live %s changes", async change => {
     vi.useFakeTimers();
     try {

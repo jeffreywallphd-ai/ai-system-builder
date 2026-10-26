@@ -161,3 +161,13 @@ the existing installed worker dependencies (including Pydantic, pypdf,
 python-docx and markdownify); they do not install anything or run an OCR engine.
 Actual fixed-resource scanned-PDF normalization remains in the separate explicit
 native document operator and grants no public capability or parent completion.
+
+## Controlled OCR app journeys
+
+[OCR qualification](scripts/qualification/visual-composer/ocr-qualification.md)
+uses the actual packaged worker, source capture and Windows reader in desktop and
+browser. The fixed fixture substitutes only synthetic generation and retains
+normal dependency preparation, authentication, review and approval. Actual
+package/resource identity and native retirement are required separately. The
+portable OCR profile covers fixture/launch regression tests without launching
+OCR or a model; real app qualification stays pending until its controlled run.
