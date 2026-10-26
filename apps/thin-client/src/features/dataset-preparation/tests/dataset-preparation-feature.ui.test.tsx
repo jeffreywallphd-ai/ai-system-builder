@@ -5,6 +5,9 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DatasetPreparationFeature } from "../components/DatasetPreparationFeature";
+import type { ApiDatasetPreparationClient } from "../api/apiDatasetPreparationClient";
+import type { ArtifactBrowserApiClient } from "../../artifact-browser/api/apiArtifactBrowserClient";
+import type { DatasetQualityReport } from "../../../../../../modules/contracts/runtime";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -19,6 +22,353 @@ describe("thin DatasetPreparationFeature", () => {
     container?.remove();
     root = undefined;
     container = undefined;
+    localStorage.clear();
+  });
+
+  function control(label: string) {
+    const found = [...container!.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.trim() === label);
+    expect(found).toBeTruthy(); return found!;
+  }
+  function change(element: HTMLInputElement | HTMLSelectElement, value: string) {
+    const prototype = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(element, value);
+    element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }));
+  }
+  function field(label: string, selector: string) {
+    const element = [...container!.querySelectorAll("label")].find(value => value.textContent?.includes(label))?.querySelector(selector);
+    expect(element).toBeTruthy(); return element as HTMLInputElement & HTMLSelectElement;
+  }
+  function datasetClients(overrides: Partial<ApiDatasetPreparationClient> = {}, name = "support-instructions.jsonl", mediaType = "application/x-ndjson") {
+    const preparation: ApiDatasetPreparationClient = {
+      start: vi.fn<ApiDatasetPreparationClient["start"]>(async () => ({ requestId: "owned-task", taskType: "prepare-training-dataset", accepted: true, status: "queued" })),
+      read: vi.fn<ApiDatasetPreparationClient["read"]>(async ({ requestId }) => ({ requestId, taskType: "prepare-training-dataset", status: "cancelled" })),
+      cancel: vi.fn<ApiDatasetPreparationClient["cancel"]>(async ({ requestId }) => ({ requestId, cancelled: true, status: "cancelled" })),
+      approve: vi.fn(async () => { throw new Error("Synthetic unexpected approval"); }),
+      readPreparedReviewPage: vi.fn<ApiDatasetPreparationClient["readPreparedReviewPage"]>(async input => ({ lineId: input.lineId, page: input.page, pageSize: 10, totalRows: 0, rows: [] })),
+      ...overrides,
+    };
+    const artifact = { browseArtifacts: vi.fn(async () => [{ artifactId: "source-1", storageKey: `uploads/${name}`, originalName: name, artifactFamily: "dataset", mediaType }]) } as unknown as ArtifactBrowserApiClient;
+    return { preparation, artifact };
+  }
+  async function mountDataset(clients: ReturnType<typeof datasetClients>, onPrepared?: (key: string) => void) {
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root!.render(<DatasetPreparationFeature workspaceId="workspace-a" artifactClient={clients.artifact} preparationClient={clients.preparation} onPrepared={onPrepared} />));
+  }
+  async function selectStructuredSource() {
+    await act(async () => container!.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+  }
+
+  function createApprovedResult(): Awaited<ReturnType<ApiDatasetPreparationClient["approve"]>>["result"] {
+    return {
+      outputs: {
+        local: {
+          dataset: {
+            sourceKind: "runtime",
+            storage: { key: "datasets/prepared.parquet" },
+          },
+        },
+      },
+      provenance: {},
+      summary: {
+        sourceDocumentCount: 1,
+        normalizedDocumentCount: 1,
+        skippedDocumentCount: 0,
+        chunkCount: 4,
+        generatedExampleCount: 10,
+        datasetRowCount: 10,
+        trainRowCount: 8,
+        validationRowCount: 1,
+        testRowCount: 1,
+      },
+      warnings: [],
+    };
+  }
+
+  function createQualityReport(): DatasetQualityReport {
+    return {
+      schemaVersion: "1" as const,
+      status: "needs-attention" as const,
+      reportFingerprint: "a".repeat(64),
+      policy: {
+        policyId: "workspace-default",
+        revision: "1",
+        scope: "workspace" as const,
+        preset: "recommended" as const,
+        allowedLanguages: ["en"],
+        requireLicenseMetadata: false,
+        requireConsentMetadata: false,
+        excludedBenchmarkIds: [],
+        maxRowsPerSource: 100_000,
+        minimumTextCharacters: 1,
+        maximumTextCharacters: 100_000,
+        fuzzyDuplicateSimilarity: 0.9,
+        maxFuzzyCandidatesPerRow: 100,
+        maxReportSamplesPerReason: 3,
+        mandatoryChecks: {
+          sourceAssociation: true as const,
+          schema: true as const,
+          exactDuplicates: true as const,
+          fuzzyDuplicates: true as const,
+          sensitivePersonalData: true as const,
+          secretLikeContent: true as const,
+          splitLeakage: true as const,
+        },
+      },
+      mapping: {
+        taskType: "llm-instruction",
+        status: "complete" as const,
+        mappedFields: ["prompt", "response"],
+        missingRequiredFields: [],
+      },
+      fields: [],
+      distributions: { sources: [] },
+      counts: { inputRows: 11, acceptedRows: 10, quarantinedRows: 1 },
+      reasonCounts: { "exact-duplicate": 1 },
+      samples: [],
+      reviewRequired: true,
+      approvalAllowed: false,
+    };
+  }
+
+  it.each([
+    ["llm-instruction", "support-instructions.jsonl", "application/x-ndjson", {}],
+    ["llm-classification", "ticket-labels.csv", "text/csv", { labelSet: ["billing", "technical"], multiLabel: true }],
+    ["llm-extraction", "invoice-fields.json", "application/json", { strictSchema: false }],
+    ["llm-embedding", "semantic-pairs.parquet", "application/vnd.apache.parquet", {}],
+    ["llm-reranker", "search-triplets.jsonl", "application/x-ndjson", {}],
+    ["diffusion-lora", "product-captions.jsonl", "application/x-ndjson", { conceptKind: "style", triggerToken: "mug-token", regularizationClass: "ceramic mug" }],
+    ["vision-classification", "defect-labels.csv", "text/csv", { labelSet: ["normal", "damaged"] }],
+    ["vision-detection", "street-boxes.jsonl", "application/x-ndjson", { labelSet: ["normal", "damaged"], boxFormat: "xyxy" }],
+    ["vision-segmentation", "surface-masks.jsonl", "application/x-ndjson", { labelSet: ["normal", "damaged"], maskFormat: "coco-rle" }],
+  ] as const)("builds a provided-data %s preparation from its visible task controls", async (goal, filename, mediaType, task) => {
+    const clients = datasetClients({}, filename, mediaType);
+    await mountDataset(clients);
+    await act(async () => change(field("Training goal", "select"), goal));
+    await selectStructuredSource();
+    await act(async () => {
+      if ("labelSet" in task) change(field("Allowed labels", "input"), task.labelSet.join(", "));
+      if (goal === "llm-classification") field("Allow more than one label", "input").click();
+      if (goal === "llm-extraction") field("Require every extracted result", "input").click();
+      if (goal === "diffusion-lora") {
+        change(field("What the images teach", "select"), "style");
+        change(field("Optional trigger word", "input"), " mug-token ");
+        change(field("Optional general class", "input"), " ceramic mug ");
+      }
+      if (goal === "vision-detection") change(field("Box format", "select"), "xyxy");
+      if (goal === "vision-segmentation") change(field("Mask format", "select"), "coco-rle");
+    });
+    expect(control("Run checks and prepare").disabled).toBe(false);
+    await act(async () => control("Run checks and prepare").click());
+    expect(clients.preparation.start).toHaveBeenCalledTimes(1);
+    expect(clients.preparation.start).toHaveBeenCalledWith({ workspaceId: "workspace-a", command: expect.objectContaining({
+      sourceArtifactIds: ["source-1"],
+      preparation: { schemaVersion: "1", inputIntent: "use-existing-dataset", method: "validate-and-split", sourceKinds: ["structured"], generationMode: "none" },
+      recipe: expect.objectContaining({ task: expect.objectContaining({ taskType: goal, textInputMode: "provided", ...task }) }),
+      split: { trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, shuffle: true },
+      quality: { policy: expect.objectContaining({ preset: "recommended" }), reviewRequired: true },
+    }) });
+    expect(container!.textContent).toContain("Dataset preparation stopped.");
+  });
+
+  it("admits one preparation before React commits the busy state", async () => {
+    let resolve!: (value: Awaited<ReturnType<ApiDatasetPreparationClient["start"]>>) => void;
+    const pending = new Promise<Awaited<ReturnType<ApiDatasetPreparationClient["start"]>>>(done => { resolve = done; });
+    const clients = datasetClients({ start: vi.fn(async () => pending) });
+    await mountDataset(clients); await selectStructuredSource();
+    try {
+      await act(async () => { const start = control("Run checks and prepare"); start.click(); start.click(); });
+      expect(clients.preparation.start).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => resolve({ requestId: "owned-task", taskType: "prepare-training-dataset", accepted: true, status: "queued" })); }
+  });
+
+  it("does not observe a delayed start through a replaced preparation client", async () => {
+    let resolve!: (value: Awaited<ReturnType<ApiDatasetPreparationClient["start"]>>) => void;
+    const pending = new Promise<Awaited<ReturnType<ApiDatasetPreparationClient["start"]>>>(done => { resolve = done; });
+    const clients = datasetClients({ start: vi.fn(async () => pending) }), next = datasetClients();
+    await mountDataset(clients); await selectStructuredSource();
+    await act(async () => control("Run checks and prepare").click());
+    await act(async () => root!.render(<DatasetPreparationFeature workspaceId="workspace-a" artifactClient={clients.artifact} preparationClient={next.preparation} />));
+    await act(async () => resolve({ requestId: "owned-task", taskType: "prepare-training-dataset", accepted: true, status: "queued" }));
+    expect(clients.preparation.read).toHaveBeenCalledTimes(0);
+    expect(next.preparation.read).toHaveBeenCalledTimes(0);
+    expect(container!.textContent).not.toContain("Dataset preparation stopped.");
+  });
+
+  it.each(["foreign", "error", "unknown"] as const)("retains accepted task ownership when status is %s", async mode => {
+    vi.useFakeTimers();
+    let terminal = false;
+    const read = vi.fn<ApiDatasetPreparationClient["read"]>(async ({ requestId }) => {
+      if (terminal) return { requestId, taskType: "prepare-training-dataset", status: "cancelled" };
+      if (mode === "error") throw new Error("private polling payload");
+      return { requestId: mode === "foreign" ? "foreign-task" : requestId, taskType: "prepare-training-dataset", status: mode === "unknown" ? "unknown" : "cancelled" };
+    });
+    const clients = datasetClients({ read });
+    try {
+      await mountDataset(clients); await selectStructuredSource();
+      await act(async () => control("Run checks and prepare").click());
+      expect(container!.textContent).not.toContain("Dataset preparation stopped.");
+      expect(container!.textContent).not.toContain("private polling payload");
+      expect(control("Stop preparation")).toBeTruthy();
+      const before = read.mock.calls.length;
+      await act(async () => vi.advanceTimersByTimeAsync(800));
+      expect(read.mock.calls.length).toBeGreaterThan(before);
+      terminal = true;
+      await act(async () => vi.advanceTimersByTimeAsync(800));
+      expect(container!.textContent).toContain("Dataset preparation stopped.");
+      expect(control("Run checks and prepare").disabled).toBe(false);
+    } finally {
+      await act(async () => root?.unmount()); root = undefined;
+      await vi.advanceTimersByTimeAsync(800);
+      vi.useRealTimers();
+    }
+  });
+
+  function reviewClients(overrides: Partial<ApiDatasetPreparationClient> = {}) {
+    const qualityReport = createQualityReport();
+    return datasetClients({
+      read: vi.fn<ApiDatasetPreparationClient["read"]>(async ({ requestId }) => ({ requestId, taskType: "prepare-training-dataset", status: "review-required", result: {
+        ...createApprovedResult(), qualityReport, review: { state: "review-required", reportFingerprint: qualityReport.reportFingerprint, approvalAllowed: false },
+      } })),
+      ...overrides,
+    });
+  }
+  function deferredDatasetValue<Value>() {
+    let resolve!: (value: Value) => void;
+    const promise = new Promise<Value>(done => { resolve = done; });
+    return { promise, resolve };
+  }
+
+  it.each([
+    ["missing report", "review"], ["missing review", "review"],
+    ["wrong fingerprint", "review"], ["wrong state", "review"],
+    ["missing report", "cancelled"], ["missing review", "cancelled"],
+    ["wrong fingerprint", "cancelled"], ["wrong state", "cancelled"],
+  ] as const)("keeps ownership for %s until matching %s evidence", async (invalid, resolution) => {
+    vi.useFakeTimers();
+    let confirmed = false;
+    const qualityReport = createQualityReport(), onPrepared = vi.fn();
+    const clients = datasetClients({ read: vi.fn<ApiDatasetPreparationClient["read"]>(async ({ requestId }) => {
+      if (confirmed && resolution === "cancelled") return { requestId, taskType: "prepare-training-dataset", status: "cancelled" };
+      return { requestId, taskType: "prepare-training-dataset", status: "review-required", result: {
+        ...createApprovedResult(),
+        qualityReport: !confirmed && invalid === "missing report" ? undefined : qualityReport,
+        review: !confirmed && invalid === "missing review" ? undefined : {
+          state: !confirmed && invalid === "wrong state" ? "approved" : "review-required",
+          reportFingerprint: !confirmed && invalid === "wrong fingerprint" ? "b".repeat(64) : qualityReport.reportFingerprint,
+          approvalAllowed: false,
+        },
+      } };
+    }) });
+    try {
+      await mountDataset(clients, onPrepared); await selectStructuredSource();
+      await act(async () => control("Run checks and prepare").click());
+      expect(control("Stop preparation")).toBeTruthy();
+      expect(control("Preparing...").disabled).toBe(true);
+      expect(container!.querySelector(".dataset-preparation__approval-controls")).toBeNull();
+      await act(async () => vi.advanceTimersByTimeAsync(800));
+      expect(clients.preparation.read).toHaveBeenCalledTimes(2);
+      expect(clients.preparation.start).toHaveBeenCalledTimes(1);
+      expect(clients.preparation.approve).not.toHaveBeenCalled();
+      expect(clients.preparation.readPreparedReviewPage).not.toHaveBeenCalled();
+      expect(onPrepared).not.toHaveBeenCalled();
+      confirmed = true;
+      await act(async () => vi.advanceTimersByTimeAsync(800));
+      if (resolution === "review") {
+        expect(control("Approve and save dataset")).toBeTruthy();
+        expect(control("Run checks and prepare").disabled).toBe(true);
+      } else {
+        expect(container!.textContent).toContain("Dataset preparation stopped.");
+        expect(control("Run checks and prepare").disabled).toBe(false);
+      }
+      expect(onPrepared).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root?.unmount()); root = undefined;
+      await vi.advanceTimersByTimeAsync(800); vi.useRealTimers();
+    }
+  });
+  async function openPreparedReview(clients: ReturnType<typeof datasetClients>, onPrepared?: (key: string) => void) {
+    await mountDataset(clients, onPrepared); await selectStructuredSource();
+    await act(async () => control("Run checks and prepare").click());
+    expect(control("Approve and save dataset")).toBeTruthy();
+  }
+
+  it.each(["approve", "discard"] as const)("admits one %s action before its busy render", async action => {
+    const approved = deferredDatasetValue<Awaited<ReturnType<ApiDatasetPreparationClient["approve"]>>>();
+    const discarded = deferredDatasetValue<Awaited<ReturnType<ApiDatasetPreparationClient["cancel"]>>>();
+    const clients = reviewClients({ approve: vi.fn(async () => approved.promise), cancel: vi.fn(async () => discarded.promise) });
+    const onPrepared = vi.fn();
+    await openPreparedReview(clients, onPrepared);
+    try {
+      await act(async () => { const target = control(action === "approve" ? "Approve and save dataset" : "Discard dataset"); target.click(); target.click(); });
+      expect(action === "approve" ? clients.preparation.approve : clients.preparation.cancel).toHaveBeenCalledTimes(1);
+      expect(onPrepared).toHaveBeenCalledTimes(0);
+    } finally {
+      await act(async () => {
+        approved.resolve({ requestId: "owned-task", taskType: "prepare-training-dataset", status: "succeeded", result: createApprovedResult() });
+        discarded.resolve({ requestId: "owned-task", cancelled: true, status: "cancelled" });
+      });
+    }
+    expect(onPrepared).toHaveBeenCalledTimes(action === "approve" ? 1 : 0);
+  });
+
+  it("does not publish an old approval after preparation client replacement", async () => {
+    const pending = deferredDatasetValue<Awaited<ReturnType<ApiDatasetPreparationClient["approve"]>>>();
+    const clients = reviewClients({ approve: vi.fn(async () => pending.promise) }), next = datasetClients(), onPrepared = vi.fn();
+    await openPreparedReview(clients, onPrepared);
+    await act(async () => control("Approve and save dataset").click());
+    await act(async () => root!.render(<DatasetPreparationFeature workspaceId="workspace-a" artifactClient={clients.artifact} preparationClient={next.preparation} onPrepared={onPrepared} />));
+    await act(async () => pending.resolve({ requestId: "owned-task", taskType: "prepare-training-dataset", status: "succeeded", result: createApprovedResult() }));
+    expect(onPrepared).toHaveBeenCalledTimes(0);
+    expect(container!.textContent).not.toContain("Training dataset is ready.");
+  });
+
+  it("retains review after a foreign approval or private exception", async () => {
+    let fail = false;
+    const onPrepared = vi.fn(), clients = reviewClients({ approve: vi.fn<ApiDatasetPreparationClient["approve"]>(async () => {
+      if (fail) throw new Error("private approval payload");
+      return { requestId: "foreign-task", taskType: "prepare-training-dataset", status: "succeeded", result: createApprovedResult() };
+    }) });
+    await openPreparedReview(clients, onPrepared);
+    await act(async () => control("Approve and save dataset").click());
+    expect(onPrepared).toHaveBeenCalledTimes(0);
+    expect(control("Discard dataset")).toBeTruthy();
+    fail = true;
+    await act(async () => control("Approve and save dataset").click());
+    expect(container!.textContent).not.toContain("private approval payload");
+    expect(control("Discard dataset")).toBeTruthy();
+  });
+
+  it("rejects a review page for a different page number", async () => {
+    const clients = reviewClients({ readPreparedReviewPage: vi.fn<ApiDatasetPreparationClient["readPreparedReviewPage"]>(async input => ({ lineId: input.lineId, page: input.page + 1, pageSize: 10, totalRows: 1, rows: [{ rowIndex: 0, rowFingerprint: `sha256:${"f".repeat(64)}`, values: { prompt: "foreign private page content" } }] })) });
+    await openPreparedReview(clients);
+    const exact = [...container!.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.includes("Exact duplicates"))!;
+    await act(async () => exact.click());
+    expect(document.body.textContent).not.toContain("foreign private page content");
+    expect(document.body.textContent).toContain("did not match the requested page");
+    expect(clients.preparation.approve).toHaveBeenCalledTimes(0);
+  });
+
+  it("retains the quality review when discard is not confirmed", async () => {
+    const clients = reviewClients({ cancel: vi.fn<ApiDatasetPreparationClient["cancel"]>(async ({ requestId }) => ({ requestId, cancelled: false, status: "running" })) });
+    await openPreparedReview(clients);
+    await act(async () => control("Discard dataset").click());
+    expect(container!.textContent).toContain("Discard could not be confirmed");
+    expect(control("Approve and save dataset")).toBeTruthy();
+    expect(control("Run checks and prepare").disabled).toBe(true);
+  });
+
+  it("ignores an old review page after discard and a fresh preparation", async () => {
+    const pending = deferredDatasetValue<Awaited<ReturnType<ApiDatasetPreparationClient["readPreparedReviewPage"]>>>();
+    const clients = reviewClients({ readPreparedReviewPage: vi.fn(async () => pending.promise) });
+    await openPreparedReview(clients);
+    await act(async () => [...container!.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.includes("Exact duplicates"))!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("button[aria-label='Close dialog']")!.click());
+    await act(async () => control("Discard dataset").click());
+    await act(async () => control("Run checks and prepare").click());
+    await act(async () => pending.resolve({ lineId: "reason:exact-duplicate", page: 0, pageSize: 10, totalRows: 1, rows: [{ rowIndex: 0, rowFingerprint: `sha256:${"e".repeat(64)}`, values: { prompt: "old private review page" } }] }));
+    expect(document.body.textContent).not.toContain("old private review page");
+    expect(control("Approve and save dataset")).toBeTruthy();
+    expect(clients.preparation.start).toHaveBeenCalledTimes(2);
   });
 
   it.each(["running", "unknown", "error", "delayed"])("keeps observing when cancellation is %s", async (mode) => {
@@ -27,7 +377,7 @@ describe("thin DatasetPreparationFeature", () => {
       let terminal = false;
       let starts = 0;
       let finishCancel: ((value: unknown) => void) | undefined;
-      const read = vi.fn(async () => ({ requestId: "cancel-task", status: terminal ? "cancelled" : "running" }));
+      const read = vi.fn(async ({ requestId }: { requestId: string }) => ({ requestId, status: terminal ? "cancelled" : "running" }));
       const cancel = vi.fn(async () => {
         if (mode === "error") throw new Error("private runtime failure");
         if (mode === "delayed") return new Promise((resolve) => { finishCancel = resolve; });
@@ -80,78 +430,14 @@ describe("thin DatasetPreparationFeature", () => {
 
   it("uses four ordered steps and creates a three-way dataset without advanced changes", async () => {
     const onPrepared = vi.fn();
-    const start = vi.fn(async () => ({
+    const start = vi.fn<ApiDatasetPreparationClient["start"]>(async () => ({
       requestId: "task-1",
       taskType: "prepare-training-dataset",
       accepted: true as const,
       status: "queued" as const,
     }));
-    const approvedResult = {
-      outputs: {
-        local: {
-          dataset: {
-            sourceKind: "runtime",
-            storage: { key: "datasets/prepared.parquet" },
-          },
-        },
-      },
-      provenance: {},
-      summary: {
-        sourceDocumentCount: 1,
-        normalizedDocumentCount: 1,
-        skippedDocumentCount: 0,
-        chunkCount: 4,
-        generatedExampleCount: 10,
-        datasetRowCount: 10,
-        trainRowCount: 8,
-        validationRowCount: 1,
-        testRowCount: 1,
-      },
-      warnings: [],
-    };
-    const qualityReport = {
-      schemaVersion: "1" as const,
-      status: "needs-attention" as const,
-      reportFingerprint: "a".repeat(64),
-      policy: {
-        policyId: "workspace-default",
-        revision: "1",
-        scope: "workspace" as const,
-        preset: "recommended" as const,
-        allowedLanguages: ["en"],
-        requireLicenseMetadata: false,
-        requireConsentMetadata: false,
-        excludedBenchmarkIds: [],
-        maxRowsPerSource: 100_000,
-        minimumTextCharacters: 1,
-        maximumTextCharacters: 100_000,
-        fuzzyDuplicateSimilarity: 0.9,
-        maxFuzzyCandidatesPerRow: 100,
-        maxReportSamplesPerReason: 3,
-        mandatoryChecks: {
-          sourceAssociation: true as const,
-          schema: true as const,
-          exactDuplicates: true as const,
-          fuzzyDuplicates: true as const,
-          sensitivePersonalData: true as const,
-          secretLikeContent: true as const,
-          splitLeakage: true as const,
-        },
-      },
-      mapping: {
-        taskType: "llm-instruction",
-        status: "complete" as const,
-        mappedFields: ["prompt", "response"],
-        missingRequiredFields: [],
-      },
-      fields: [],
-      distributions: { sources: [] },
-      counts: { inputRows: 11, acceptedRows: 10, quarantinedRows: 1 },
-      reasonCounts: { "exact-duplicate": 1 },
-      samples: [],
-      reviewRequired: true,
-      approvalAllowed: false,
-    };
+    const approvedResult = createApprovedResult();
+    const qualityReport = createQualityReport();
     const read = vi.fn(async () => ({
       requestId: "task-1",
       status: "review-required" as const,
@@ -581,7 +867,7 @@ describe("thin DatasetPreparationFeature", () => {
   });
 
   it("shows only reviewed-annotation preparation for object detection and reports the pixel-inspection limit", async () => {
-    const start = vi.fn(async () => ({
+    const start = vi.fn<ApiDatasetPreparationClient["start"]>(async () => ({
       requestId: "task-detection",
       taskType: "prepare-training-dataset",
       accepted: true as const,

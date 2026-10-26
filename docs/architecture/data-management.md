@@ -1061,3 +1061,35 @@ from deterministic renderer/client-fixture tests.
 Session retirement runs in the layout cleanup of the committed tree, before
 passive effects. This closes the commit-to-passive interval for late completion
 and notification effects without changing accepted host task ownership.
+
+### Browser preparation session and review ownership
+
+The browser Dataset Preparation form replaces its session when its workspace,
+artifact client or preparation client changes. Layout cleanup retires the old
+form during commit. The narrow typed preparation client checks that session
+before dispatch and after reply. Client replacement cannot continue an old poll
+or publish an old approval through the new form. Accepted backend work is not
+cancelled merely because the form closes. UI imports use the owning shared
+Data Management, Dataset Review, notification and workflow families.
+
+Synchronous admission prevents duplicate starts and review mutations before a
+busy render. A confirmed active task stays owned while status reads fail, return
+another task or report Unknown. The form continues observation and cancellation
+instead of admitting another task. A matching terminal result ends observation.
+Task and approval replies must name the requested task. Prepared review pages
+must match the requested line and page; a local review/page sequence prevents an
+older reply from replacing a fresh review. Unconfirmed discard retains review.
+
+Unexpected transport exceptions use fixed copy. Existing memory denials retain
+the notification-center path and bounded memory-shortfall suggestions. No RAM,
+VRAM, disk, OCR, quality, model-loading or worker policy is changed. Focused UI
+cases cover all nine training goals with explicit structured-source commands,
+including labels, extraction strictness, image concept, box and mask settings,
+80/10/10 splits and mandatory quality review. These client fixtures do not prove
+physical transformation or model accuracy. Real host and final testing stay
+separate; completed model quality and OCR evidence is retained.
+
+A review-required result retains task ownership until its quality report and
+review state exist, the state is review-required and their fingerprints match.
+Incomplete or inconsistent evidence keeps observation and Stop preparation
+available. It cannot admit a fresh start, save or review-page request.

@@ -1029,3 +1029,31 @@ staging, process or filesystem object is inspected, adopted or cleaned up.
 Session retirement runs in the layout cleanup of the committed tree, before
 passive effects. This closes the commit-to-passive interval for late completion
 and notification effects without changing accepted host task ownership.
+
+### Browser preparation asynchronous effects
+
+Protected UI assets include source selection, accepted task identity, exact quality
+review identity, save/discard intent, prepared page content and completion callbacks.
+Workspace/client replacement, same-frame duplicate submission, foreign replies,
+late pages and raw exceptions can confuse or disclose that presentation. The
+renderer retires sessions in layout cleanup, fences typed operations before and
+after await, synchronously admits one start/review mutation and matches task/page
+identities before use. A review/page sequence invalidates superseded results.
+
+Failed, foreign or Unknown task reads retain the accepted owner and continue
+observation. Unconfirmed discard retains the exact quality review. An old client
+approval cannot trigger completion in a replacement session. Public diagnostics
+do not echo unexpected transport exceptions. Memory denials keep the existing
+bounded numeric notification formatter; resource guards and host/application
+authorization are unchanged. Navigation never claims worker termination.
+
+Focused rendered journeys exercise nine supported task recipes plus duplicate,
+stale-client, status failure, wrong task/page, review and cancellation cases.
+Related version/replay checks remain required. Synthetic API fixtures confer no
+physical runtime, provider, native protection or model-quality qualification.
+Unknown historical offload data and restricted legacy security review remain
+outside this presentation change.
+
+Missing report/review, foreign fingerprint and wrong review state retain accepted
+ownership until matching review or authoritative terminal evidence. Eight rendered
+denial/recovery cases failed before the correction and passed after it.

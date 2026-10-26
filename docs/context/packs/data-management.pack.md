@@ -197,3 +197,4 @@
 - `desktop-implementation` for renderer and thin-client experience.
 - `server-host` for Express/API composition.
 - `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.
+- Browser preparation retires workspace/client sessions during commit, admits actions synchronously and checks task/review/page identities. Unknown status retains ownership. See `docs/architecture/data-management.md` and `docs/security/data-management-threat-model.md`.

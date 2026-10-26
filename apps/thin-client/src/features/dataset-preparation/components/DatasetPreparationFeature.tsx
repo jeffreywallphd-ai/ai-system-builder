@@ -43,21 +43,22 @@ import {
 } from "../../../../../../modules/contracts/runtime";
 import {
   DATASET_PREPARATION_TASK_OPTIONS,
-  TransientNotificationPublisher,
-  DatasetPreparationOutputShapeEditor,
-  useDatasetPreparationConstrainedJson,
-  WorkflowSequence,
-  WorkflowStep,
   getDatasetInspectionCopy,
   getDatasetPreparationIntentCopy,
   getDatasetPreparationMethodCopy,
   getDatasetPreparationTaskOption,
+  DatasetPreparationOutputShapeEditor,
+  useDatasetPreparationConstrainedJson,
+} from "../../../../../../modules/ui/shared/data-management";
+import { TransientNotificationPublisher } from "../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
+import { WorkflowSequence, WorkflowStep } from "../../../../../../modules/ui/shared/components/WorkflowSequence";
+import {
   DatasetReviewModal,
   createDatasetQualityReviewLines,
   createDatasetQualityReviewRowItems,
   type DatasetQualityReviewLine,
   type ReviewDecision,
-} from "../../../../../../modules/ui/shared";
+} from "../../../../../../modules/ui/shared/dataset-review";
 import {
   createApiArtifactBrowserClient,
   type ArtifactBrowserApiClient,
@@ -501,8 +502,15 @@ function buildCommand(
 }
 
 export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps) {
-  return <WorkspaceDatasetPreparationFeature key={props.workspaceId} {...props} />;
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, artifact: props.artifactClient, preparation: props.preparationClient, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.artifact !== props.artifactClient || scope.preparation !== props.preparationClient) {
+    setScope({ workspaceId: props.workspaceId, artifact: props.artifactClient, preparation: props.preparationClient, key: scope.key + 1 });
+    return null;
+  }
+  return <WorkspaceDatasetPreparationFeature key={scope.key} {...props} />;
 }
+
+class DatasetPresentationError extends Error {}
 
 function WorkspaceDatasetPreparationFeature({
   workspaceId,
@@ -517,15 +525,50 @@ function WorkspaceDatasetPreparationFeature({
     () => artifactClient ?? createApiArtifactBrowserClient(),
     [artifactClient],
   );
-  const preparation = useMemo(
+  const sourcePreparation = useMemo(
     () => preparationClient ?? createApiDatasetPreparationClient(),
     [preparationClient],
   );
+  const mounted = useRef(true);
+  const preparation = useMemo(() => {
+    function guard<Input, Value>(call: (input: Input) => Promise<Value>) {
+      return async (input: Input) => {
+        if (!mounted.current) throw new DatasetPresentationError("This dataset preparation session is no longer active.");
+        const value = await call(input);
+        if (!mounted.current) throw new DatasetPresentationError("This dataset preparation session is no longer active.");
+        return value;
+      };
+    }
+    return {
+      start: guard((input: Parameters<ApiDatasetPreparationClient["start"]>[0]) => sourcePreparation.start(input)),
+      read: guard(async (input: Parameters<ApiDatasetPreparationClient["read"]>[0]) => {
+        const value = await sourcePreparation.read(input);
+        if (value.requestId !== input.requestId) throw new DatasetPresentationError("The dataset task response did not match the active task.");
+        return value;
+      }),
+      cancel: guard(async (input: Parameters<ApiDatasetPreparationClient["cancel"]>[0]) => {
+        const value = await sourcePreparation.cancel(input);
+        if (value.requestId !== input.requestId) throw new DatasetPresentationError("The dataset cancellation response did not match the active task.");
+        return value;
+      }),
+      approve: guard(async (input: Parameters<ApiDatasetPreparationClient["approve"]>[0]) => {
+        const value = await sourcePreparation.approve(input);
+        if (value.requestId !== input.requestId || value.status !== "succeeded") throw new DatasetPresentationError("The reviewed dataset save could not be confirmed.");
+        return value;
+      }),
+      readPreparedReviewPage: guard(async (input: Parameters<ApiDatasetPreparationClient["readPreparedReviewPage"]>[0]) => {
+        const value = await sourcePreparation.readPreparedReviewPage(input);
+        if (value.lineId !== input.lineId || value.page !== input.page) throw new DatasetPresentationError("The prepared review page did not match the requested page.");
+        return value;
+      }),
+      ...(sourcePreparation.readGenerationCapacity ? { readGenerationCapacity: guard((input: { workspaceId: string }) => sourcePreparation.readGenerationCapacity!(input)) } : {}),
+      ...(sourcePreparation.readReproduction ? { readReproduction: guard((input: Parameters<NonNullable<ApiDatasetPreparationClient["readReproduction"]>>[0]) => sourcePreparation.readReproduction!(input)) } : {}),
+    };
+  }, [sourcePreparation]);
   const initialStructuredOutputSettings = useMemo(
     () => readPersistedStructuredOutputSettings(workspaceId),
     [workspaceId],
   );
-  const mounted = useRef(true);
   const suppressNextTaskOutputReset = useRef(false);
   const suppressNextClassificationOutputReset = useRef(false);
   const [artifacts, setArtifacts] = useState<PreparationSource[]>(
@@ -546,12 +589,28 @@ function WorkspaceDatasetPreparationFeature({
   const cancellationNotice = useRef<string | undefined>(undefined);
   const cancelRequest = useRef<object | undefined>(undefined);
   const [result, setResult] = useState<ApiPreparedTrainingDatasetResult>();
-  const [qualityReview, setQualityReview] = useState<{
+  const [qualityReview, setQualityReviewState] = useState<{
     requestId: string;
     report: DatasetQualityReport;
     advancedReport?: DatasetPreparationAdvancedReport;
   }>();
-  const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
+  const qualityReviewRef = useRef<typeof qualityReview>(undefined);
+  const reviewPageSequenceRef = useRef(0);
+  function setQualityReview(value: typeof qualityReview) {
+    qualityReviewRef.current = value;
+    reviewPageSequenceRef.current++;
+    setQualityReviewState(value);
+    setQualityReviewPage(undefined);
+    setQualityReviewPageLoading(false);
+    setQualityReviewPageError(undefined);
+  }
+  const [reviewActionInFlight, setReviewActionState] = useState(false);
+  const reviewActionRef = useRef(false);
+  function setReviewActionInFlight(value: boolean) {
+    reviewActionRef.current = value;
+    setReviewActionState(value);
+  }
+  const startingRef = useRef(false);
   const [qualityReviewModalOpen, setQualityReviewModalOpen] = useState(false);
   const [qualityReviewIndex, setQualityReviewIndex] = useState(0);
   const [qualityReviewDecisions, setQualityReviewDecisions] = useState<
@@ -600,7 +659,10 @@ function WorkspaceDatasetPreparationFeature({
     page = 0,
     entry: "first" | "last" = "first",
   ) => {
-    if (!qualityReview || line.count === 0) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || line.count === 0) return;
+    const pageRequest = ++reviewPageSequenceRef.current;
+    const current = () => mounted.current && qualityReviewRef.current === review && reviewPageSequenceRef.current === pageRequest;
     setQualityReviewLine(line);
     setQualityReviewIndex(0);
     setQualityReviewPageLoading(true);
@@ -609,24 +671,26 @@ function WorkspaceDatasetPreparationFeature({
     try {
       const next = await preparation.readPreparedReviewPage({
         workspaceId,
-        requestId: qualityReview.requestId,
-        reportFingerprint: qualityReview.report.reportFingerprint,
+        requestId: review.requestId,
+        reportFingerprint: review.report.reportFingerprint,
         lineId: line.id as DatasetQualityReviewLineId,
         page,
       });
+      if (!current()) return;
       setQualityReviewPage(next);
       setQualityReviewIndex(
         entry === "last" ? Math.max(0, next.rows.length - 1) : 0,
       );
     } catch (reason) {
+      if (!current()) return;
       setQualityReviewPage(undefined);
       setQualityReviewPageError(
-        reason instanceof Error
+        reason instanceof DatasetPresentationError
           ? reason.message
           : "Prepared records could not be loaded.",
       );
     } finally {
-      setQualityReviewPageLoading(false);
+      if (current()) setQualityReviewPageLoading(false);
     }
   };
   const [taskType, setTaskType] =
@@ -927,7 +991,7 @@ function WorkspaceDatasetPreparationFeature({
       },
     });
   }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId, localInference]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     mounted.current = true;
     cancelRequest.current = undefined;
     setCancelPending(false);
@@ -938,7 +1002,7 @@ function WorkspaceDatasetPreparationFeature({
       cancellationNotice.current = undefined;
       cancelRequest.current = undefined;
     };
-  }, [browser, workspaceId]);
+  }, [browser, preparation, workspaceId]);
 
   useEffect(() => {
     let current = true;
@@ -1093,8 +1157,20 @@ function WorkspaceDatasetPreparationFeature({
     const session = pollingSession.current;
     const current = () => mounted.current && pollingSession.current === session && activeRequestRef.current === requestId;
     while (current()) {
-      const task = await preparation.read({ workspaceId, requestId });
+      let task: Awaited<ReturnType<ApiDatasetPreparationClient["read"]>>;
+      try { task = await preparation.read({ workspaceId, requestId }); }
+      catch {
+        if (!current()) return;
+        setStatus({ kind: "loading", message: "Task status is temporarily unavailable. The accepted preparation is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
       if (!current()) return;
+      if (task.status === "unknown") {
+        setStatus({ kind: "loading", message: "The accepted task could not be confirmed. It is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
       if (task.status === "queued" || task.status === "running") {
         const progress =
           typeof task.progress?.processed === "number" &&
@@ -1109,20 +1185,23 @@ function WorkspaceDatasetPreparationFeature({
         await waitForNextPoll();
         continue;
       }
+      if (task.status === "review-required" && (
+        !task.result.qualityReport || !task.result.review ||
+        task.result.review.state !== "review-required" ||
+        task.result.review.reportFingerprint !== task.result.qualityReport.reportFingerprint
+      )) {
+        setStatus({ kind: "loading", message: "Check results could not be verified. The accepted preparation is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
       activeRequestRef.current = undefined;
       cancellationNotice.current = undefined;
       cancelRequest.current = undefined;
       setCancelPending(false);
       setActiveRequestId(undefined);
       if (task.status === "review-required") {
-        if (!task.result.qualityReport || !task.result.review) {
-          setStatus({
-            kind: "error",
-            message:
-              "Check results could not be verified. Run preparation again.",
-          });
-          return;
-        }
+        // Review evidence was checked before releasing the accepted task owner.
+        if (!task.result.qualityReport) return;
         setQualityReview({
           requestId,
           report: task.result.qualityReport,
@@ -1158,6 +1237,7 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   const start = async () => {
+    if (!mounted.current || startingRef.current || activeRequestRef.current || qualityReviewRef.current || reviewActionRef.current) return;
     committedReplayFrame.current = undefined;
     cancelReplay();
     if (sourceLoadStatus !== "ready") {
@@ -1281,6 +1361,7 @@ function WorkspaceDatasetPreparationFeature({
     setResult(undefined);
     setQualityReview(undefined);
     setStatus({ kind: "loading", message: "Starting dataset preparation..." });
+    startingRef.current = true;
     try {
       const started = await preparation.start({
         workspaceId,
@@ -1340,11 +1421,13 @@ function WorkspaceDatasetPreparationFeature({
           message:
             memoryFailure
               ? getDatasetPreparationMemoryFailureMessage(failure?.details?.memoryShortfall)
-              : error instanceof Error
+              : error instanceof DatasetPresentationError
               ? error.message
               : "Dataset preparation could not be started.",
         });
       }
+    } finally {
+      if (mounted.current && pollingSession.current === session) startingRef.current = false;
     }
   };
 
@@ -1378,7 +1461,8 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   const approveReview = async () => {
-    if (!qualityReview || reviewActionInFlight) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || reviewActionRef.current) return;
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
     if (saveNameError) {
       setStatus({ kind: "error", message: saveNameError });
@@ -1388,8 +1472,8 @@ function WorkspaceDatasetPreparationFeature({
     try {
       const approved = await preparation.approve({
         workspaceId,
-        requestId: qualityReview.requestId,
-        reportFingerprint: qualityReview.report.reportFingerprint,
+        requestId: review.requestId,
+        reportFingerprint: review.report.reportFingerprint,
         outputBaseName,
       });
       setResult(approved.result);
@@ -1402,7 +1486,7 @@ function WorkspaceDatasetPreparationFeature({
       setStatus({
         kind: "error",
         message:
-          error instanceof Error
+          error instanceof DatasetPresentationError
             ? error.message
             : "The reviewed dataset could not be saved.",
       });
@@ -1412,14 +1496,15 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   const discardReview = async () => {
-    if (!qualityReview || reviewActionInFlight) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || reviewActionRef.current) return;
     setReviewActionInFlight(true);
     try {
       const response = await preparation.cancel({
         workspaceId,
-        requestId: qualityReview.requestId,
+        requestId: review.requestId,
       });
-      if (response?.requestId !== qualityReview.requestId || response.cancelled !== true || response.status !== "cancelled") {
+      if (response?.requestId !== review.requestId || response.cancelled !== true || response.status !== "cancelled") {
         setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
         return;
       }

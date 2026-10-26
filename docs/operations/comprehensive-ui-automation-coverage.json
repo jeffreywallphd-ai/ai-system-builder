@@ -616,8 +616,75 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data llm-instruction preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data llm-classification preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data llm-extraction preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data llm-embedding preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data llm-reranker preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data diffusion-lora preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data vision-classification preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data vision-detection preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "builds a provided-data vision-segmentation preparation from its visible task controls",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "admits one preparation before React commits the busy state",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "does not observe a delayed start through a replaced preparation client",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": []
     },
@@ -682,8 +749,75 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "retains accepted task ownership when status is foreign",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "retains accepted task ownership when status is error",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "retains accepted task ownership when status is unknown",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "admits one approve action before its busy render",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "admits one discard action before its busy render",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "does not publish an old approval after preparation client replacement",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "retains review after a foreign approval or private exception",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "rejects a review page for a different page number",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "retains the quality review when discard is not confirmed",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "ignores an old review page after discard and a fresh preparation",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
+          "name": "uses four ordered steps and creates a three-way dataset without advanced changes",
+          "tier": "thin-feature-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": []
     },
