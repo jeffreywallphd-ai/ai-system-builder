@@ -11380,6 +11380,26 @@
           "These results cover local storage. They do not complete the full-app, private-service, website or maximum-file-size tests. They do not enforce a memory limit in the product. Earlier failures remain recorded. Completed model-accuracy and text-recognition checks stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cda3381ae2b60ee511b4b66ab2108358cadffb8d0d254730c80b5e036a36f469",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Local tests passed for 1,024 rows from 16 files. They checked each row, its source and label, saved review records, and repeatable training and test groups. Both cleanup methods kept the same 512 unique rows. All 27 focused tests passed and received a separate review."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6329a615b18ac34d1d6444c136cf2abf77d95fd2b5549c5ee4504140e2e51c76",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These synthetic examples check local data cleanup and Python allocations. Generated-data workflows, real-app memory use and online-service behavior still need checks. This evidence does not prove whole-app memory limits or complete the roadmap. The browser page check is deferred at your request. Completed model-accuracy and text-recognition checks stay closed. Earlier failures remain recorded."
+        ]
+      }
     }
   ]
 }

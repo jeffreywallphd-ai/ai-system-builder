@@ -3957,6 +3957,23 @@
       "limitations": [
         "These local application/storage tests do not complete the parent criterion or Data roadmap. They do not prove renderer memory, hard memory admission, maximum 4 GiB inputs, private-provider or website transfer, or hostile native filesystem races. Separate full-app/provider/website and broader resource checks remain pending. All prior failures and completed model-accuracy/OCR results remain unchanged."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "data-semantic-reference-outcomes",
+      "work_criteria": [
+        "controlled-semantic-reference-scale",
+        "actual-preparation-quality-and-split-invariants",
+        "reviewed-bounded-source-and-qualification-scope"
+      ],
+      "receipt_digest": "9da9498c096abf7d9e3265c60abcfe002c20ba0c928f1108a96d91f45fc386ae",
+      "review_digest": "111c91fe44ea48c8ed83510918c1a997b7e5335de211021219b972184643f11b",
+      "scope": "Committed component776be3a53 tests 1,024 synthetic rows from16 sources. Exact accepted, review and quarantine row tuples, labels, multiplicity, source balance and deterministic group-safe splits pass. Both default fuzzy checks and optional semantic curation retain the same512 unique rows. All27 exact-selected-worker tests and four current checks pass with independent review. The1024-row direct fixture uses2.37MB traced Python allocations. Local reference/component evidence only.",
+      "limitations": [
+        "This fixed token-permutation reference demonstrates compatibility with the already effective baseline, not extra end-to-end quality gain, natural-language recall or model accuracy. Traced allocations are not process RSS or native admission; timing assertions are not hard deadlines. This does not complete a parent criterion, increment or roadmap. Real generated-data, private-provider, full-app and broader resource checks remain pending. The user deferred the browser-dependent page check. Prior failures and completed model-accuracy/OCR results stay unchanged."
+      ]
     }
   ]
 }
