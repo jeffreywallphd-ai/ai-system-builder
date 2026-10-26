@@ -11420,6 +11420,26 @@
           "The agent must still connect each command to the correct app setup, prove that the first run has stopped, and collect separate memory and runtime results. App performance and memory savings are not yet proven. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for the setup work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ef13e24bca80b89d51445ca15db2c9895cd8e4b4012c09942ba9994b8bed6c68",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "App test settings can now be prepared without starting services. Code checks confirmed that the settings preserve the required values, reject invalid values, and exclude unrelated credentials. Existing shared setup keeps its build, sign-in, service and cleanup steps. These checks did not open an app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6d14c9885d73fef3154fa65a8a08f1484e68b407a9557424c12f876354e487c6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still connect separate app setup, check the tested build, prove each run has stopped, and collect separate memory and runtime results. App fit and memory savings are not yet proven. The earlier memory-limit failure remains recorded. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for this setup work."
+        ]
+      }
     }
   ]
 }

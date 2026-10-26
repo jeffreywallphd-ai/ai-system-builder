@@ -3991,6 +3991,23 @@
       "limitations": [
         "A separately reviewed serial consumer must connect each command to host-specific setup, prove native retirement before the next app, preserve a finite whole-run deadline and collect per-host memory/runtime observations. Portable checks prove no actual app fit, memory savings or new native readback. The earlier1GiB process-limit failure remains failed. This support adds no parent qualification and does not close the Data increment or roadmap. The user deferred the private-provider browser page check; completed model-accuracy/OCR checks stay closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "serial-host-environment-binding",
+      "work_criteria": [
+        "pure-exact-environment-bindings",
+        "existing-shared-setup-compatible",
+        "focused-routing-docs-and-scope"
+      ],
+      "receipt_digest": "4bee94409911bdce0a83a627ab8c21d1a1ccf6f7c14bb2ba2e55e2b74df399f2",
+      "review_digest": "188e6000088c1daf6e6e47468e9647d8629305538b16c231eb7cb1500427975e",
+      "scope": "Committed sourcec6d3c9ff8 extracts a pure immutable thirteen-key app-qualification environment map. Shared setup still reads actual source identity and retains its existing build, authentication, lifecycle and cleanup. Ten Node lifecycle/binding cases, two selected routing cases, four source checks and independent review pass. Normal/provided plans preserve exact runtime arguments and exclude unrelated credentials. OCR caller compatibility was source-inspected without rerunning OCR.",
+      "limitations": [
+        "This support adds no parent qualification and does not close the Data increment or roadmap. The agent must still connect separate host setup, validate source/package identity, prove native retirement before the next app, keep a finite whole-run deadline and collect per-host memory/runtime results. Code checks prove no actual app fit, memory savings or new native readback. The earlier process-limit failure remains failed. The user-deferred private-provider browser page check stays incomplete. Completed model-accuracy and OCR checks stay closed."
+      ]
     }
   ]
 }
