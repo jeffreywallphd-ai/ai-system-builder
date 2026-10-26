@@ -961,10 +961,17 @@
           "name": "late cancellation cannot replace confirmed review-required progress",
           "tier": "shared-renderer-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/adapters/runtime/python/worker/tests/test_context_manual_pack_integrity.py",
+          "name": "exact saved manual content digest, one-entry/no-source shape and valid original UTF-8/line endings",
+          "tier": "production-runtime-byte-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "runtime_integrity_scope": "Production pack generation/inspection with small synthetic bytes only. Actual app, model, native and final combined qualification remains pending."
     },
     {
       "id": "context-source-packs",

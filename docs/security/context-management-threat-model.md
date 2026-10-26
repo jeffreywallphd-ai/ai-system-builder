@@ -178,3 +178,16 @@ reviving the old observation. This is renderer ownership, not runtime authority.
 Delete confirmation binds the selected artifact ID and verified storage key.
 Only an acknowledgement of that exact key can clear the confirmation, refresh
 the list or report deletion. A different key leaves the selected view intact.
+
+### Manual pack content and lineage consistency
+
+A readable package with a correct outer digest can still declare a manual digest
+that does not match `context.md`, or claim missing/extra entries or source lineage.
+Manual inspection now enforces the same one-entry/no-source shape as generation
+and hashes exact bounded member bytes before accepting their text interpretation.
+Fixed failures omit contents, digests and local paths. Existing path, outer-byte,
+archive and UTF-8/Markdown checks remain mandatory; this check grants no author
+authenticity. Positive Unicode/line-ending cases and substituted bytes, stale
+digests, invalid shape and invalid text cases exercise the production operation.
+These local fixtures do not qualify actual hosts, model semantics or native
+ownership. Rollback must retain denial of inconsistent manual packages.

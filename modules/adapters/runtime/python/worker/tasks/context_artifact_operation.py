@@ -797,10 +797,15 @@ def _inspect_pack(path: Path) -> tuple[dict[str, Any], list[str], list[dict[str,
             if names != expected_entries:
                 raise ValueError("Context pack entries do not match its manifest.")
             if input_mode == "manual":
+                if manifest["sources"] or len(manifest["manualEntries"]) != 1:
+                    raise ValueError("Manual context packs require one manual entry only.")
                 context_info = archive.getinfo("context.md")
                 if context_info.file_size > MAX_TOPICS_BYTES:
                     raise ValueError("Manual context pack exceeds the safe limit.")
-                context_text = archive.read(context_info).decode("utf-8")
+                context_bytes = archive.read(context_info)
+                if "sha256:" + hashlib.sha256(context_bytes).hexdigest() != manifest["manualEntries"][0]["digest"]:
+                    raise ValueError("Manual context pack content does not match its manifest.")
+                context_text = context_bytes.decode("utf-8")
                 _validate_markdown_document(context_text)
                 return manifest, sorted(names), []
             topics_info = archive.getinfo("topics.md")

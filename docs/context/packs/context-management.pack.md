@@ -132,3 +132,9 @@ reviving the old observation. This is renderer ownership, not runtime authority.
 Delete confirmation binds the selected artifact ID and verified storage key.
 Only an acknowledgement of that exact key can clear the confirmation, refresh
 the list or report deletion. A different key leaves the selected view intact.
+
+- Manual pack inspection follows generation: one manual entry, no sources, and
+  exact `context.md` bytes matching the recorded digest before UTF-8/Markdown
+  acceptance. The outer package digest is separate. Original line endings stay
+  exact; source-derived/legacy and RAG behavior remains unchanged. See the
+  canonical Context architecture and threat model for scope and evidence limits.

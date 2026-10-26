@@ -566,7 +566,8 @@
         "modules/adapters/runtime/python/worker/tests/test_context_generation.py",
         "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
         "modules/adapters/runtime/python/worker/tests/test_context_bounded_validation.py",
-        "dev-tools/scripts/qualification/tests/test_context_efficiency_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_context_efficiency_qualification.py",
+        "modules/adapters/runtime/python/worker/tests/test_context_manual_pack_integrity.py"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",

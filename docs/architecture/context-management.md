@@ -267,3 +267,14 @@ reviving the old observation. This is renderer ownership, not runtime authority.
 Delete confirmation binds the selected artifact ID and verified storage key.
 Only an acknowledgement of that exact key can clear the confirmation, refresh
 the list or report deletion. A different key leaves the selected view intact.
+
+### Manual package byte identity during inspection
+
+A saved manual pack must contain exactly one manual manifest entry and no source
+artifacts, as required by manual generation. The runtime compares SHA-256 of the
+exact bounded `context.md` member bytes with that entry before accepting UTF-8
+and Markdown. It does not normalize line endings or text before the comparison.
+The existing catalog digest protects the outer package; the member check protects
+its internal content/lineage consistency. It does not authenticate an author.
+Legacy/source-derived package handling, RAG validation and review/save controls
+remain unchanged. Focused byte fixtures do not qualify either mounted host.
