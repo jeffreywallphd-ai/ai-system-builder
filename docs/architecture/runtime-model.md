@@ -663,3 +663,11 @@ replacement as well as page exit. Focused regressions cover both cases.
 Retired Refresh actions return before advancing list-read identities or changing
 loading state. Browser generation callbacks update only after React commits a
 render; a suspended replacement cannot take ownership of confirmed output.
+
+### Training notification status integrity
+
+Training Notifications follow the accepted run in the committed workspace/client
+session. Unknown or mismatched status stays uncertain and retries. Progress uses
+validated integer counts and fixed copy; runtime free text and error details do
+not enter notification history. Matching terminal outcomes are not replayed by a
+duplicate start event. Focused rendered tests do not qualify physical training.

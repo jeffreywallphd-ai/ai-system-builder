@@ -4169,6 +4169,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-real-host-roundtrips",
+      "work_id": "daily-manual-context-host-journey",
+      "work_criteria": [
+        "bounded-manual-context-fixture",
+        "manual-context-host-journey-oracles",
+        "manual-host-evidence-and-scope"
+      ],
+      "receipt_digest": "224eadd3b885e1d83e9014e399f4bd63490500a7f85a9bbd924bd47d5b2e7dcd",
+      "review_digest": "aa2bcd3d72765c06d5df1f3e2c502c6ebca3d51803e5bbd59180e6ca478bbbd0",
+      "scope": "Tested and committed manual Context fixture admission, exact saved-byte oracles and Desktop/browser save-and-reopen journey wiring. Actual app execution remains pending.",
+      "limitations": [
+        "These are reviewed local fixture, oracle and collection results at their recorded source snapshots. They do not qualify actual app behavior or complete the criterion, increment or roadmap.",
+        "Existing native budgets, runtime and host gaps remain pending. Full testing is deferred by user direction; no accepted model accuracy or OCR test is rerun."
+      ]
     }
   ]
 }

@@ -11560,6 +11560,42 @@
           "Tested and committed exact manual Context pack byte and entry checks. Valid original text stays unchanged; inconsistent saved packs are refused. These results apply to the tested code and local feature scope."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4b9729dcc0e1bef848e0aa52c72e1339942b55706d522a3c927b245e289575ea",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and tested the code for manual Context save and reopen on both apps.",
+          "The tests check test-input rules and saved-file results.",
+          "The actual app journeys still need to run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6644bfdedc91bc9b70c2a7208f44a3f233ea5b30bb488a7301474d5194157698",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover local helper tests at the tested code version.",
+          "They do not prove the actual apps work or complete the roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3d638b63f8d4189f19500d2f05aaf80e934c70b832427ddfa53ba8691aa24990",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Host and runtime checks still need evidence.",
+          "Safety limits stay in effect.",
+          "Full testing is deferred at your request.",
+          "Completed model accuracy and OCR tests will not run again."
+        ]
+      }
     }
   ]
 }

@@ -1131,3 +1131,19 @@ refuses redirects and malformed success values, and prints only closed failure
 categories. Provider codes, messages and payloads are not assertion diagnostics.
 Finite helper tests preserve exact dispatch and exercise denial/stream cleanup;
 they do not qualify actual apps, model semantics, native ownership or old stages.
+
+### Training notification outcome integrity
+
+The Desktop training notification bridge checks exact run identity and a closed
+status set before classifying a read. Uncertain reads keep shared observation
+active; committed client/workspace retirement rejects late publication. Shared
+snapshots are checked again before presentation. The bridge owns exact listener
+cleanup, including synchronous cached delivery, and remembers at most 100 terminal
+identities to refuse duplicate start replay within the mounted session.
+
+Public progress uses only safe integer current/total pairs with a positive total
+and current within range. Fixed messages replace runtime progress and error text;
+no prompt, provider diagnostic, path or payload is copied into history. Existing
+host authority, memory guards and task lifetime stay unchanged. Rendered synthetic
+regressions cover denial, retry, valid review/terminal states and shared cleanup;
+actual host, model, native recovery and final testing remain separate.
