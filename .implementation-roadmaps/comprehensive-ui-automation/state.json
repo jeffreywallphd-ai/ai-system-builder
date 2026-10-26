@@ -75,6 +75,37 @@
         "Actual regressions failed before correction. Current scoped TypeScript probes report zero diagnostics. Full suites deferred by user; completed model accuracy and OCR not rerun."
       ],
       "title": "Test dataset and Context workflows"
+    },
+    {
+      "areas": [
+        "Browser Models",
+        "Desktop Train Model",
+        "Desktop and browser Image generation"
+      ],
+      "chunkId": "model-training-image-controls",
+      "completedAt": "2026-10-26T17:48:26Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "ai-controls-and-owned-task-states",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-model-training-image-controls",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Completed and checkpointed current Model, Desktop Training and both Image renderer/client controls with exact task/session/review/output ownership and safe failure notifications. Model 04d0ac48e, Training e0f59779a and Image 5a5200e00 are tested and independently reviewed component outcomes. Actual host transport/storage journeys and final qualification remain in the fourth chunk and later checks; no whole parent criterion is qualified by this declaration.",
+      "tests": [
+        "Models: 43 focused cases; exact receipt 840121633239324f29b5e15098251119c52cc7828b31376c1df6c05d85223d28; accepted review 2b74ccfe0864625f71e84402102eb10cc3b2eb9b73711bcd22385e28cab24079.",
+        "Training: 29 focused cases; exact receipt 85cc9bf06224db2dbab09f8b2e1b1c1f59451345e66043c58251cb065f271e93; accepted review 0e12ab3e99cc35930fd4e77ae98787daefacfc04923f29e82d02e4571088bcd4.",
+        "Image: 44 focused regressions plus related task profile, zero diagnostics in 9 changed TypeScript roots and thin-client build passed; receipt ac5e1a6b2b4205d67a9c76c0fb9b239f17120b9fa115e2068f67b72aa6dc3f65; accepted review 9e0763b4090becf0f4b3832aba1c77b7cd3dec2bd07167dd5948e9acc9ade3bf.",
+        "Retained real red regressions and earlier failures. No full suite, actual model accuracy/OCR or native/provider qualification run."
+      ],
+      "title": "Test model, training and image controls"
     }
   ],
   "completion": null,
@@ -308,6 +339,12 @@
       "recordedAt": "2026-10-26T14:24:36Z",
       "sequence": 13,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "be165faa142d189d1de010a5db46d32be6357f09619a9630c95d41917abfd2f4",
+      "recordedAt": "2026-10-26T17:48:26Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -343,7 +380,8 @@
       "completedAt": null,
       "completedChunks": [
         "scoped-ingestion-and-coverage-ledger",
-        "dataset-context-roundtrips"
+        "dataset-context-roundtrips",
+        "model-training-image-controls"
       ],
       "deliverables": [
         "Versioned machine-readable mapping from current supported route/tab/action/task capability to stable scenario IDs, host applicability, expected contract/oracle, exact test file and fixture/host/runtime evidence tier.",
@@ -723,5 +761,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-26T14:24:36Z"
+  "updatedAt": "2026-10-26T17:48:26Z"
 }

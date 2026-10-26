@@ -5,15 +5,50 @@ import { captureInitialProgress, progressVisibilityDelay, terminalVisibilityDela
 
 type Operation="start"|"read"|"list"|"cancel"|"complete";
 export async function taskOperation(page:Page,operation:Operation,input:Record<string,unknown>) {
+  if (!["start", "read", "list", "cancel", "complete"].includes(operation)) throw new Error("Unsupported owned task operation.");
   const response=await page.evaluate(async({operation,input})=>{
+    const failed = (reason: string) => ({ ok: false as const, reason });
+    const maximumBytes = 256 * 1024;
+    try {
     const names={start:"startModelDownload",read:"readModelDownload",list:"listModelDownloads",cancel:"cancelModelDownload",complete:"completeModelDownload"};
     const api=(window as unknown as {desktopApi?:Record<string,(input:unknown)=>Promise<unknown>>}).desktopApi;
-    if(api) return api[names[operation]]!(input);
-    const token=localStorage.getItem("ai-system-builder.paired-device-token");
-    return (await fetch(`/api/model/download/${operation}`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify(input)})).json();
-  },{operation,input}) as any;
-  expect(response.ok, `Owned ${operation} failed: ${String(response.error?.code ?? response.error?.kind ?? "unavailable")}`).toBe(true);
-  return response.value;
+    let envelope: unknown;
+    if (api) envelope = await api[names[operation]]!(input);
+    else {
+      const token=localStorage.getItem("ai-system-builder.paired-device-token");
+      if (!token) return failed("pairing-unavailable");
+      const controller = new AbortController();
+      const deadline = setTimeout(() => controller.abort(), 30_000);
+      try {
+        const result = await fetch(`/api/model/download/${operation}`,{method:"POST",redirect:"error",signal:controller.signal,headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify(input)});
+        if (!result.ok || !/^application\/json(?:\s*;|$)/i.test(result.headers.get("content-type") ?? "") || !result.body) {
+          await result.body?.cancel(); return failed("http-refused");
+        }
+        const reader = result.body.getReader(), chunks: Uint8Array[] = []; let size = 0;
+        try {
+          while (true) {
+            const next = await reader.read(); if (next.done) break;
+            size += next.value.byteLength; if (size > maximumBytes) return failed("response-too-large");
+            chunks.push(next.value);
+          }
+        } finally { try { await reader.cancel(); } finally { reader.releaseLock(); } }
+        const bytes = new Uint8Array(size); let offset = 0;
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+        envelope = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      } finally { clearTimeout(deadline); }
+    }
+    if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) return failed("invalid-response");
+    const candidate = envelope as { ok?: unknown; value?: unknown };
+    if (candidate.ok !== true || !candidate.value || typeof candidate.value !== "object" || Array.isArray(candidate.value)) return failed("invalid-response");
+    const serialized = JSON.stringify(candidate.value);
+    if (typeof serialized !== "string") return failed("invalid-response");
+    if (new TextEncoder().encode(serialized).byteLength > maximumBytes) return failed("response-too-large");
+    return { ok: true as const, value: JSON.parse(serialized) };
+    } catch { return failed("transport-unavailable"); }
+  },{operation,input}).catch(() => ({ ok: false as const, reason: "page-unavailable" }));
+  const reason = "reason" in response && ["pairing-unavailable", "http-refused", "invalid-response", "response-too-large", "transport-unavailable", "page-unavailable"].includes(response.reason) ? response.reason : "invalid-response";
+  expect(response.ok, `Owned ${operation} failed. ${reason}.`).toBe(true);
+  return "value" in response ? response.value : undefined;
 }
 
 async function showNotifications(page:Page) {

@@ -1122,3 +1122,12 @@ retained-object restrictions remain unchanged.
 
 Focused review regressions also deny retired Refresh admission and preserve the
 committed output consumer during a suspended replacement render.
+
+### Daily UI task evidence and safe diagnostics
+
+The owned-task app-journey helper treats HTTP/IPC results as untrusted evidence.
+It keeps existing same-origin pairing and host authority, bounds response bytes,
+refuses redirects and malformed success values, and prints only closed failure
+categories. Provider codes, messages and payloads are not assertion diagnostics.
+Finite helper tests preserve exact dispatch and exercise denial/stream cleanup;
+they do not qualify actual apps, model semantics, native ownership or old stages.

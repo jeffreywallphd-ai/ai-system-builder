@@ -193,3 +193,10 @@ The `functionality-tasks` profile includes cross-host image request ownership
 regressions and the actual image notification consumers. These finite UI/client
 fixtures do not run image models or replace host/native qualification. Full-suite
 qualification remains separate from component checkpoints.
+
+The fixed owned-task UI journey uses only five declared IPC/HTTP operations. Its
+HTTP reader refuses redirects, missing pairing, non-JSON/non-success responses,
+invalid UTF-8 and responses over 256 KiB, with a 30-second network deadline.
+It cancels and releases response streams and uses fixed failure categories.
+The same value bound applies to Desktop replies. Its focused transport fixtures
+do not launch either app or qualify host delivery, inference or native cleanup.

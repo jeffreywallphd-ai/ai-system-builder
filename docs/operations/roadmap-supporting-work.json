@@ -4116,6 +4116,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "image-ui-complete-presentation-boundaries",
+      "work_criteria": [
+        "image-intent-and-admission",
+        "image-session-and-result-ownership",
+        "image-safe-failures-and-support"
+      ],
+      "receipt_digest": "ac5e1a6b2b4205d67a9c76c0fb9b239f17120b9fa115e2068f67b72aa6dc3f65",
+      "review_digest": "9e0763b4090becf0f4b3832aba1c77b7cd3dec2bd07167dd5948e9acc9ade3bf",
+      "scope": "Tested and committed Image form choices, current-session task controls, retry and complete registered results with safe failure notifications.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

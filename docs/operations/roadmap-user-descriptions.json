@@ -11530,6 +11530,16 @@
           "Tested and committed nine Desktop training profiles, exact task/review ownership, seed and LoRA dropout set to zero and safe failure notifications. These results apply to the tested code and local feature scope."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2ae8ece965eb9defa5a990f50bf95147684a6b3b081277ff5d78c29acc48a03f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed Image form choices, current-session task controls, retry and complete registered results with safe failure notifications. These results apply to the tested code and local feature scope."
+        ]
+      }
     }
   ]
 }
