@@ -29,6 +29,13 @@ the same app data and uses a fresh worker evidence cache for each session.
 Its closed restart phase names give each shutdown a separate acknowledgment
 and exclusive report. Existing ordinary shutdown filenames remain unchanged.
 
+The focused launch-plan test also exercises Playwright's actual module-loading
+order. Its import-only global setup loads the shared ESM modules first. Both app
+specs must then collect and skip with the required scenario absent, while a third
+app-free test executes the shared restart-path resolver through a native file-URL
+import. This catches TypeScript/CommonJS and ESM loading conflicts without opening
+an app, browser or worker. It does not replace either real host journey.
+
 The separately reviewed fixed operator binds the exact source identity, Python
 executable, package and two selected tests. It uses the existing `dataset-profile`
 native role: 1 GiB per process, 2 GiB package job, 3 GiB UI job, 32 members, and

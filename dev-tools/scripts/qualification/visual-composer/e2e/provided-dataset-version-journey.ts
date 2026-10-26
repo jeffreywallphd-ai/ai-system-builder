@@ -2,6 +2,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { normalizeDatasetVersionRecord, type DatasetVersionRecord } from "../../../../../modules/contracts/dataset";
 
 type Host = "desktop" | "thin";
@@ -20,6 +21,16 @@ const ROWS = [
 const MAX_BYTES = 65_536;
 const INPUT = Buffer.from("text,label\n" + ROWS.map(row => row.join(",")).join("\n") + "\n");
 type SourceIdentity = { artifactId: string; storageKey: string; digest: string };
+
+// Playwright loads these TypeScript tests through CommonJS after its ESM
+// global setup. A native URL import keeps the shared MJS resolver in ESM.
+export async function resolveProvidedServerRestartMarker(runId: string, repoRoot = process.cwd()) {
+  const coreUrl = pathToFileURL(path.resolve(repoRoot,
+    "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-core.mjs"));
+  const { resolveVisualComposerQualificationPaths } = await import(coreUrl.href);
+  const roots = resolveVisualComposerQualificationPaths(repoRoot, runId);
+  return path.join(roots.thinRuntimeRoot, "provided-server-session-2.json");
+}
 
 async function readImportedSource(page: Page, host: Host, workspace: string): Promise<SourceIdentity> {
   const item = await page.evaluate(async ({ host, workspace, name, limit }) => {

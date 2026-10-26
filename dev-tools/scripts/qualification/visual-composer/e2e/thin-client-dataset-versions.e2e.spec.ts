@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart } from "./provided-dataset-version-journey";
+import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart, resolveProvidedServerRestartMarker } from "./provided-dataset-version-journey";
 import { lstat, readFile, realpath } from "node:fs/promises";
-import path from "node:path";
-import { resolveVisualComposerQualificationPaths } from "../visual-composer-qualification-core.mjs";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
@@ -22,8 +20,7 @@ test("browser saves, compares and explicitly reuses provided dataset versions ac
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
   // Readiness alone could observe the old listener. Require the fresh second
   // owner record, emitted only after task/listener/persistence close + reopen.
-  const roots = resolveVisualComposerQualificationPaths(process.cwd(), process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!);
-  const marker = path.join(roots.thinRuntimeRoot, "provided-server-session-2.json");
+  const marker = await resolveProvidedServerRestartMarker(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!);
   await expect.poll(async () => {
     try {
       if (await realpath(marker) !== marker) return false;
