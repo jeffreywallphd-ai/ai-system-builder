@@ -1,6 +1,9 @@
 import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
 import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { captureDatasetVersionReplayRequest, projectDatasetVersionReplaySources, validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
+import { readDatasetVersionReplaySources } from "../../../../../../modules/ui/shared/dataset-version/readDatasetVersionReplaySources";
+import { useDatasetVersionReplayConsumer, type DatasetVersionReplayHandoff, type DatasetVersionReplayRequest } from "../../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
 
 import type {
   ApiDatasetPreparationCommand,
@@ -70,6 +73,7 @@ export interface DatasetPreparationFeatureProps {
   artifactClient?: ArtifactBrowserApiClient;
   preparationClient?: ApiDatasetPreparationClient;
   onPrepared?: (artifactStorageKey: string) => void;
+  replayHandoff?: DatasetVersionReplayHandoff;
 }
 
 type Status =
@@ -119,7 +123,8 @@ function qualityStatusLabel(status: DatasetQualityReport["status"]): string {
   return "Needs attention";
 }
 
-function supportedSource(item: ThinClientArtifactBrowseItem): boolean {
+type PreparationSource = Pick<ThinClientArtifactBrowseItem, "artifactId" | "storageKey" | "originalName" | "mediaType">;
+function supportedSource(item: PreparationSource): boolean {
   return Boolean(
     resolveDatasetPreparationSourceCapability({
       fileName: item.originalName ?? item.storageKey,
@@ -504,6 +509,7 @@ function WorkspaceDatasetPreparationFeature({
   artifactClient,
   preparationClient,
   onPrepared,
+  replayHandoff,
 }: DatasetPreparationFeatureProps) {
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();
@@ -521,9 +527,13 @@ function WorkspaceDatasetPreparationFeature({
   );
   const mounted = useRef(true);
   const suppressNextTaskOutputReset = useRef(false);
-  const [artifacts, setArtifacts] = useState<ThinClientArtifactBrowseItem[]>(
+  const suppressNextClassificationOutputReset = useRef(false);
+  const [artifacts, setArtifacts] = useState<PreparationSource[]>(
     [],
   );
+  // Keep all observed rows. Filtering an unsupported duplicate before checking
+  // saved source identity could hide a conflicting catalogue record.
+  const [sourceRows, setSourceRows] = useState<PreparationSource[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<{ workspaceId: string; client: typeof browser; status: "loading" | "ready" | "failed" }>({ workspaceId, client: browser, status: "loading" });
   const [sourceRefresh, setSourceRefresh] = useState(0);
   const sourceLoadStatus = sourceLoadState.workspaceId === workspaceId && sourceLoadState.client === browser ? sourceLoadState.status : "loading";
@@ -886,6 +896,10 @@ function WorkspaceDatasetPreparationFeature({
   }, [taskType]);
 
   useEffect(() => {
+    if (suppressNextClassificationOutputReset.current) {
+      suppressNextClassificationOutputReset.current = false;
+      return;
+    }
     if (taskType !== "llm-classification") return;
     setVisualOutputShape((current) => {
       const priorDefault = createDefaultDatasetPreparationVisualOutputShape(
@@ -930,6 +944,7 @@ function WorkspaceDatasetPreparationFeature({
     let current = true;
     setSourceLoadState({ workspaceId, client: browser, status: "loading" });
     setArtifacts([]);
+    setSourceRows([]);
     void Promise.resolve().then(() => browser.browseArtifacts({ workspaceId })).then(items => {
       if (!current) return;
       if (!Array.isArray(items) || items.some(item => !item ||
@@ -938,13 +953,141 @@ function WorkspaceDatasetPreparationFeature({
           (item.originalName !== undefined && typeof item.originalName !== "string") ||
           (item.mediaType !== undefined && typeof item.mediaType !== "string"))) throw new Error();
       setArtifacts(items.filter(supportedSource));
-      setSelectedArtifactIds(selected => selected.filter(id => items.some(item => item.artifactId === id)));
+      setSourceRows(items);
+      setSelectedArtifactIds(selected => {
+        const retained = selected.filter(id => items.some(item => item.artifactId === id));
+        return retained.length === selected.length ? selected : retained;
+      });
       setSourceLoadState({ workspaceId, client: browser, status: "ready" });
     }).catch(() => {
       if (current) setSourceLoadState({ workspaceId, client: browser, status: "failed" });
     });
     return () => { current = false; };
   }, [browser, workspaceId, sourceRefresh]);
+
+  const replayFrame = useMemo(() => ({}), [workspaceId, browser, preparation, sourceLoadState, sourceRefresh, sourceRows,
+    artifacts, selectedArtifactIds, status, activeRequestId, cancelPending, result, qualityReview, reviewActionInFlight,
+    taskType, textGenerationPrompt, visualOutputShape, constrainedDecodingPreference, localInference, preparationMethodId,
+    ocrEnabled, ocrLanguage, qualityPreset, requireLicenseMetadata, requireConsentMetadata, includeSourceAttribution,
+    labelSet, multiLabel, extractionStrictSchema, diffusionConceptKind, diffusionTriggerToken, diffusionRegularizationClass,
+    detectionBoxFormat, segmentationMaskFormat, chunkSize, chunkOverlap, maxTokensPerChunk, topicBoundarySensitivity,
+    maxSourceSpans, similarityThreshold, trainRatio, validationRatio, testRatio, outputFormat, outputBaseName]);
+  const committedReplayFrame = useRef<object | undefined>(undefined);
+  const pendingReplayFrame = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    committedReplayFrame.current = replayFrame;
+    return () => { if (committedReplayFrame.current === replayFrame) committedReplayFrame.current = undefined; };
+  });
+  const applySavedVersion = async (request: DatasetVersionReplayRequest, isRequestCurrent: () => boolean): Promise<boolean> => {
+    const current = () => mounted.current && committedReplayFrame.current === replayFrame &&
+      request.workspaceId === workspaceId && isRequestCurrent() && !activeRequestRef.current;
+    if (!current() || pendingReplayFrame.current === replayFrame || status.kind === "loading" || activeRequestId ||
+        qualityReview || reviewActionInFlight || cancelPending) return false;
+    const deny = () => {
+      setStatus({ kind: "error", message: "This saved setup cannot be used here. It was not restored; your current setup is unchanged." });
+      return false;
+    };
+    if (sourceLoadStatus !== "ready") return deny();
+    const captured = captureDatasetVersionReplayRequest(request.reproduction, request.selection);
+    if (!captured || captured.selection.workspaceId !== workspaceId) return deny();
+    const selection = captured.selection;
+    try {
+      const observed = projectDatasetVersionReplaySources(selection.selectedVersion, sourceRows.map(row => ({
+        artifactId: row.artifactId, storageKey: row.storageKey, label: row.originalName ?? row.storageKey,
+        ...(row.mediaType === undefined ? {} : { mediaType: row.mediaType }),
+      })));
+      if (!observed || new Set(observed.map(row => row.artifactId)).size !== observed.length) return deny();
+      pendingReplayFrame.current = replayFrame;
+      const resolved = await readDatasetVersionReplaySources(workspaceId, captured.sources, current,
+        (scope, key) => browser.readArtifactDetail({ storageKey: key }, { workspaceId: scope }));
+      if (!current()) return false;
+      for (const row of observed) {
+        const match = resolved.find(source => source.artifactId === row.artifactId);
+        if (!match || match.storageKey !== row.storageKey || match.label !== row.label || match.mediaType !== row.mediaType) return deny();
+      }
+      const context: DatasetVersionReplayContext = {
+        workspaceId, selectedVersion: selection.selectedVersion, datasetArtifactKey: selection.datasetArtifactKey,
+        requestedVersionId: selection.selectedVersion.versionId, sources: { status: "ready", workspaceId, items: resolved },
+      };
+      const validated = validateDatasetVersionReplay(captured.reproduction, context);
+      if (!validated.ok) return deny();
+      const replay = validated.value, recipe = replay.recipe, task = recipe.task, generation = recipe.generation;
+      // Thin deliberately has fewer editable settings than Desktop. Rebuild its
+      // actual command below and deny the whole request if any meaning differs.
+      if (replay.output.format !== "parquet" && replay.output.format !== "jsonl") return deny();
+      const taskSettings = {
+        taskType: task.taskType,
+        labelSet: "labelSet" in task ? task.labelSet?.join(", ") ?? "" : "",
+        multiLabel: "multiLabel" in task && task.multiLabel === true,
+        extractionStrictSchema: "strictSchema" in task ? task.strictSchema ?? true : true,
+        diffusionConceptKind: "conceptKind" in task ? task.conceptKind ?? "subject" : "subject",
+        diffusionTriggerToken: "triggerToken" in task ? task.triggerToken ?? "" : "",
+        diffusionRegularizationClass: "regularizationClass" in task ? task.regularizationClass ?? "" : "",
+        detectionBoxFormat: "boxFormat" in task ? task.boxFormat ?? "coco" : "coco",
+        segmentationMaskFormat: "maskFormat" in task ? task.maskFormat ?? "png" : "png",
+      };
+      const adaptive = {
+        chunkSize: recipe.chunking?.chunkSize ?? 1000, chunkOverlap: recipe.chunking?.chunkOverlap ?? 200,
+        maxTokensPerChunk: replay.advanced?.content?.maxTokensPerChunk ?? 320,
+        topicBoundarySensitivity: replay.advanced?.content?.semanticBoundaryThreshold ?? 0.22,
+        maxSourceSpans: replay.advanced?.content?.maxSourceSpans ?? 10000,
+        similarityThreshold: replay.advanced?.semantic?.similarityThreshold ?? 0.9,
+        ocrEnabled: replay.advanced?.content?.ocrEnabled === true, ocrLanguage: replay.advanced?.content?.ocrLanguage ?? "",
+        sourceFormats: resolved.map(source => resolveDatasetPreparationSourceCapability({ fileName: source.label, mediaType: source.mediaType })!.format),
+      };
+      const model = generation?.model;
+      const structured = {
+        visualShape: generation?.structuredOutput?.visualShape
+          ? JSON.parse(JSON.stringify(generation.structuredOutput.visualShape)) as DatasetPreparationVisualOutputShape
+          : createDefaultDatasetPreparationVisualOutputShape(task.taskType, { multiLabel: taskSettings.multiLabel }),
+        constrainedDecoding: generation?.structuredOutput?.constrainedDecoding ?? false,
+        promptTemplate: generation?.promptTemplate ?? resolveDefaultDatasetPreparationPromptTemplate(task.taskType) ?? "",
+        memoryMode: model?.memoryMode ?? "standard",
+        localModel: model ? { modelId: model.modelId, device: model.device, torchDtype: model.torchDtype } : undefined,
+      };
+      const split = { trainRatio: replay.split.trainRatio, validationRatio: replay.split.validationRatio ?? 0, testRatio: replay.split.testRatio };
+      const rebuilt = buildCommand([...replay.sourceArtifactIds], JSON.parse(JSON.stringify(replay.preparation)), taskSettings,
+        split, replay.output.format, replay.output.naming?.baseName ?? "", replay.quality, structured, adaptive);
+      const roundTrip = validateDatasetVersionReplay(JSON.parse(JSON.stringify({
+        versionId: replay.versionId, sourceArtifactIds: rebuilt.sourceArtifactIds, lineage: selection.selectedVersion.lineage,
+        recipeSnapshot: { recipe: rebuilt.recipe, preparation: rebuilt.preparation, advanced: rebuilt.advanced,
+          split: rebuilt.split, output: { format: rebuilt.output.format, naming: rebuilt.output.naming },
+          effectiveQualityPolicy: rebuilt.quality?.policy },
+      })), context);
+      if (!roundTrip.ok || JSON.stringify(roundTrip.value) !== JSON.stringify(replay)) return deny();
+      if (!current()) return false;
+      committedReplayFrame.current = undefined;
+      suppressNextTaskOutputReset.current = taskType !== task.taskType;
+      // The classification default adapter also runs after a task/multiLabel
+      // change. Preserve the exact validated saved shape for this one commit.
+      suppressNextClassificationOutputReset.current = task.taskType === "llm-classification" &&
+        (taskType !== task.taskType || multiLabel !== taskSettings.multiLabel);
+      setTaskType(task.taskType); setLabelSet(taskSettings.labelSet); setMultiLabel(taskSettings.multiLabel);
+      setExtractionStrictSchema(taskSettings.extractionStrictSchema); setDiffusionConceptKind(taskSettings.diffusionConceptKind);
+      setDiffusionTriggerToken(taskSettings.diffusionTriggerToken); setDiffusionRegularizationClass(taskSettings.diffusionRegularizationClass);
+      setDetectionBoxFormat(taskSettings.detectionBoxFormat); setSegmentationMaskFormat(taskSettings.segmentationMaskFormat);
+      setPreparationMethodId(replay.preparation.method); setTextGenerationPrompt(structured.promptTemplate);
+      setVisualOutputShape(structured.visualShape); setConstrainedDecodingPreference(structured.constrainedDecoding);
+      setLocalInference({ workspaceId, memoryMode: structured.memoryMode, memorySettingsInvalid: false, localModel: structured.localModel });
+      setOcrEnabled(adaptive.ocrEnabled); setOcrLanguage(adaptive.ocrLanguage);
+      setChunkSize(String(adaptive.chunkSize)); setChunkOverlap(String(adaptive.chunkOverlap));
+      setMaxTokensPerChunk(String(adaptive.maxTokensPerChunk)); setTopicBoundarySensitivity(String(adaptive.topicBoundarySensitivity));
+      setMaxSourceSpans(String(adaptive.maxSourceSpans)); setSimilarityThreshold(String(adaptive.similarityThreshold));
+      setTrainRatio(String(split.trainRatio)); setValidationRatio(String(split.validationRatio)); setTestRatio(String(split.testRatio));
+      setOutputFormat(replay.output.format); setOutputBaseName(replay.output.naming?.baseName ?? "");
+      setQualityPreset(replay.quality.preset); setRequireLicenseMetadata(replay.quality.requireLicenseMetadata);
+      setRequireConsentMetadata(replay.quality.requireConsentMetadata); setIncludeSourceAttribution(replay.quality.includeSourceAttribution);
+      const selected = new Set(replay.sourceArtifactIds);
+      const restored: PreparationSource[] = resolved.map(source => ({ artifactId: source.artifactId,
+        storageKey: source.storageKey, originalName: source.label, mediaType: source.mediaType }));
+      setArtifacts([...artifacts.filter(source => !selected.has(source.artifactId)), ...restored]);
+      setSourceRows([...sourceRows.filter(source => !selected.has(source.artifactId)), ...restored]);
+      setSelectedArtifactIds([...replay.sourceArtifactIds]);
+      setResult(undefined); setQualityReview(undefined); setStatus({ kind: "idle" });
+      return true;
+    } catch { return current() ? deny() : false; }
+  };
+  const cancelReplay = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus, applySavedVersion);
 
   const poll = async (requestId: string) => {
     const session = pollingSession.current;
@@ -1015,6 +1158,8 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   const start = async () => {
+    committedReplayFrame.current = undefined;
+    cancelReplay();
     if (sourceLoadStatus !== "ready") {
       setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
       return;
@@ -1299,7 +1444,8 @@ function WorkspaceDatasetPreparationFeature({
   };
 
   return (
-    <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
+    <section className="ui-panel ui-panel--elevated ui-panel--sectioned"
+      onInputCapture={cancelReplay} onChangeCapture={cancelReplay} onClickCapture={cancelReplay}>
       <div className="ui-panel__section-body ui-stack ui-stack--sm">
         <WorkflowSequence ariaLabel="Dataset preparation workflow">
           <WorkflowStep

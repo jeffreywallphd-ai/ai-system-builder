@@ -967,7 +967,7 @@ applies to matching rows, not unrelated workspace files. Oversized matches,
 malformed records and accessors deny the whole projection. It proves neither
 catalogue completeness nor authority; a first match, map or page is not proof.
 
-Desktop's ordinary browse remains capped at 250. Saved setup reuse instead captures
+Both apps' ordinary browse remains capped at 250. Saved setup reuse instead captures
 a bounded frozen request, rejects observed duplicate/conflicting rows, and resolves
 at most 100 unique exact source keys through the existing workspace-authorized
 artifact-detail operation. Reads are sequential with a 15-second whole-batch
@@ -975,7 +975,9 @@ deadline and current page/client/frame checks before and after every await.
 The returned locator must equal the requested canonical key; the source ID is
 derived from that locator. A missing non-key legacy ID has no such identity proof
 and is rejected. Metadata lookup does not read source bytes or contact providers.
-Timeout stops the caller and later reads; it does not cancel already-issued IPC.
+Both transports use shared `readDatasetVersionReplaySources` for these limits and
+safe metadata projection. Timeout stops the caller and later reads; it does not
+cancel an already-issued read-only transport request.
 
 Resolved options stay private until complete replay validation and the actual
 persisted request roundtrip agree. Only then may one current setter transaction
@@ -1006,8 +1008,15 @@ This component performs no I/O, dispatch, notification, persistence, provider
 operation or form mutation. It returns no destination or historical approval
 authority. Reuse still needs page-owned request freshness, ready source state,
 one-use consumption and an applied/not-applied acknowledgment in both apps.
-Those consumers, host journeys, publication and parent qualification remain
-separate work; exporting the validator does not complete saved-version reuse.
+Both apps now connect the real Browser panel and Preparation consumer through
+the shared ephemeral handoff. Thin rebuilds its actual command and checks identical
+normalized meaning before any setters. Its smaller form rejects unsupported
+values, including split seeds or disabled shuffle, CSV/JSON output, strict
+normalization, nondefault chunk-boundary/count settings and unsupported generation
+parameters. It does not silently replace them with defaults. Both apps preserve
+explicit saved output layouts through the restore commit's defaulting effects and
+observed conflicts and active-task/review state. Whole-host journeys, publication
+and parent qualification remain separate from these local component checks.
 
 Saved omissions retain implemented worker behavior: batch size 1, maximum new
 tokens 256, no explicit temperature/top-p override, no overflow permission, and

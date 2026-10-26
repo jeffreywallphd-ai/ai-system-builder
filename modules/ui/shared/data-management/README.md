@@ -234,22 +234,26 @@ short accessible names. Associate changing instructions as descriptions rather
 than including them in the control name. Use component-generated IDs so multiple
 forms do not share label or help targets. Real OCR journeys use the exact captions.
 
-Desktop Artifact Browser now offers Use this setup again for an exact saved
+Desktop and Thin Artifact Browser now offer Use this setup again for an exact saved
 version. The page owns one request; Preparation waits for its current source
 list and applies only complete validated settings. Success is announced from
 the surviving page after the resulting form commit. Input, navigation, workspace
 changes, source failure or replacement requests retire older delivery. The action
-never runs preparation or publishes a dataset. Thin-client reuse remains absent
-until its complete supported-settings consumer is connected and tested.
+never runs preparation or publishes a dataset. Thin checks the complete actual
+command before changing any fields. A setting outside its smaller form's support
+denies the whole restore, preserving the current form instead of approximating it.
 
 Saved-source matching uses `projectDatasetVersionReplaySources` from the shared
 dataset-version module. Keep all observed matching rows, including conflicting
 or incompatible duplicates. A partial browse page cannot prove completeness.
-Desktop captures saved meaning before I/O, then resolves at most 100 exact source
+Both apps capture saved meaning before I/O, then resolve at most 100 exact source
 keys through the existing workspace-authorized metadata read, sequentially within
 a 15-second caller deadline. Derive source identity from each exact returned key;
 do not invent an ID for a missing legacy source. Reject observed conflicts, run
 the complete replay/request roundtrip, and only then merge validated options with
 the form. The async consumer acknowledges the resulting current form commit.
 The ordinary 250 browse and 256 matching-row bounds remain unchanged. This grants
-no byte integrity, IPC cancellation, provider, scale-runtime or parent pass.
+no byte integrity, transport cancellation, provider, scale-runtime or parent pass.
+`readDatasetVersionReplaySources` supplies the shared bounded metadata lookup;
+each host supplies its existing workspace-authorized detail operation. Retain all
+observed rows before capability filtering, so incompatible duplicates cannot be hidden.

@@ -6,7 +6,7 @@ import {
   type DesktopArtifactBrowseItem,
 } from "../../../lib/desktopApi";
 import { normalizeDatasetPreparationTransportError } from "../hooks/datasetPreparationTransport";
-import { normalizeStorageArtifactKey } from "../../../../../../../modules/contracts/storage";
+import { readDatasetVersionReplaySources } from "../../../../../../../modules/ui/shared/dataset-version/readDatasetVersionReplaySources";
 import type {
   DatasetVersionComparison,
   DatasetVersionPublicationRecord,
@@ -389,44 +389,11 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
 
   return {
     async readReplaySourceArtifacts(workspaceId, sources, isCurrent) {
-      const unavailable = () => new Error("Saved source files could not be confirmed in this workspace.");
-      try {
-        if (typeof workspaceId !== "string" || !workspaceId.trim() || workspaceId !== workspaceId.trim() || workspaceId.length > 256 || /[\u0000-\u001f]/u.test(workspaceId) || typeof isCurrent !== "function" || !Array.isArray(sources) || !sources.length || sources.length > 100) throw unavailable();
-        // Capture all scalar references before awaiting. The production browse
-        // ID is the catalogue key. A detail DTO cannot prove another legacy ID.
-        const references = sources.map(source => {
-          const key = normalizeStorageArtifactKey(source.storageKey);
-          if (source.storageKey !== key || source.artifactId !== key) throw unavailable();
-          return key;
-        });
-        if (new Set(references).size !== references.length) throw unavailable();
-        const resolved: DesktopDatasetReplaySource[] = [];
-        const deadline = performance.now() + 15_000;
-        // Fixed concurrency1 bounds metadata and stops stale work at each await.
-        for (const key of references) {
-          if (!isCurrent()) throw unavailable();
-          const remaining = deadline - performance.now();
-          if (remaining <= 0) throw unavailable();
-          const read = desktopApi.readArtifactDetail({ storageKey: key }, { workspaceId });
-          let timer: ReturnType<typeof setTimeout> | undefined;
-          const timeout = new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(unavailable()), remaining); });
-          // Timing out stops this caller and all later reads; it does not claim
-          // to cancel an already issued read-only IPC request.
-          const response = await Promise.race([read, timeout]).finally(() => clearTimeout(timer));
-          if (!isCurrent()) throw unavailable();
-          if (!isPreloadResponseEnvelope(response) || response.ok !== true || !response.value || typeof response.value !== "object") throw unavailable();
-          const artifact = (response.value as { artifact?: unknown }).artifact;
-          if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)) throw unavailable();
-          const fields = artifact as { locator?: { storageKey?: unknown }; originalName?: unknown; mediaType?: unknown };
-          const returnedKey = fields.locator?.storageKey, label = fields.originalName, mediaType = fields.mediaType;
-          if (typeof returnedKey !== "string" || returnedKey !== key || normalizeStorageArtifactKey(returnedKey) !== returnedKey ||
-              (label !== undefined && (typeof label !== "string" || label.length > 512 || /[\u0000-\u001f]/u.test(label))) ||
-              (mediaType !== undefined && (typeof mediaType !== "string" || mediaType.length > 256 || /[\u0000-\u001f]/u.test(mediaType)))) throw unavailable();
-          resolved.push({ artifactId: returnedKey, storageKey: returnedKey, label: label ?? returnedKey,
-            ...(mediaType === undefined ? {} : { mediaType }) });
-        }
-        return resolved;
-      } catch { throw unavailable(); }
+      return readDatasetVersionReplaySources(workspaceId, sources, isCurrent, async (scope, key) => {
+        const response = await desktopApi.readArtifactDetail({ storageKey: key }, { workspaceId: scope });
+        if (!isPreloadResponseEnvelope(response) || response.ok !== true || !response.value || typeof response.value !== "object") throw new Error();
+        return (response.value as { artifact?: unknown }).artifact;
+      });
     },
     async browseSourceArtifacts(workspaceId) {
       if (!workspaceId) return [];

@@ -942,7 +942,7 @@ checks; do not accept caller metadata as proof of recognized content.
   including incompatible rows. Reject accessor/sparse rows and more than 256
   matches as a whole. Unrelated rows do not consume this bound. Never filter
   conflicting matches away or treat the capped 250 browse page as complete.
-- Desktop captures bounded frozen reproduction/selection meaning before I/O.
+- Both apps capture bounded frozen reproduction/selection meaning before I/O.
   Resolve at most 100 unique canonical lineage keys through the existing explicit
   workspace `artifact.detail.read`/`artifact:read` operation, sequentially within
   a 15-second caller deadline. Every await checks the exact current request,
@@ -952,7 +952,9 @@ checks; do not accept caller metadata as proof of recognized content.
   Keep fetched options private until full replay validation and actual serialized
   request equality pass, then merge only with the complete current form update.
   No partial option merge, stale progress overwrite, automatic dispatch or late
-  acknowledgment. Timeout makes no IPC cancellation or native-cleanup claim.
+  acknowledgment. The shared `readDatasetVersionReplaySources` enforces the same
+  metadata bounds for both authorized transport adapters and rejects accessor
+  fields without invoking them. Timeout makes no transport cancellation or native-cleanup claim.
   Source-byte, physical host, provider, scale-runtime and parent checks stay separate.
 - Bounds: recipe snapshot 512 KiB, reproduction envelope 1 MiB, JSON depth 16
   and 20,000 nodes, selected-source projection 256. The existing version-record
@@ -985,6 +987,10 @@ checks; do not accept caller metadata as proof of recognized content.
   still-mounted session and retire actual disposal. The surviving page announces
   one fixed scoped success after commit, never after queue/navigation. Cancellation
   makes no unchanged-state, rollback or publication claim. Reuse dispatches no
-  task/model/provider action. Thin consumer and actual host/provider/scale checks
-  remain pending; these local UI checks grant no parent, native, source-byte or
-  application authorization qualification.
+  task/model/provider action. Thin now uses the same one-use handoff and metadata
+  resolver, retaining all observed rows before supported-source filtering. Its
+  actual command roundtrip denies unsupported values before every setter; it
+  never inserts original snapshot values to hide a builder mismatch. Form capture
+  and committed-frame guards retire edits, client/scope changes and task start
+  before late replies. Full-host/provider/scale checks remain separate; these
+  local UI checks grant no parent, native, source-byte or application authorization qualification.

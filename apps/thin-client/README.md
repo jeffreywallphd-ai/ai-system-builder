@@ -42,6 +42,13 @@ Current scope:
 - token-first style baseline under `src/styles/`
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester and Artifact Browser; panel headers stay title-only, with actions such as Artifact Browser refresh placed in the body.
 - Dataset Preparation colocates its optional meaningful save name with final approval; one approval saves the complete curated ready set and opens the exact saved dataset in Artifact Browser, without a post-save Saved versions section. Dataset Review persists rejections and approved edits as immutable minor versions.
+- Saved versions offer **Use this setup again**. The page waits for current source
+  metadata and applies all represented settings together. A success notice follows
+  the form update; preparation still requires an explicit start. Unsupported saved
+  settings leave the current form unchanged. File lookups use the existing scoped
+  detail API, at most 100 keys, sequentially within a 15-second caller deadline.
+  Navigation, later edits, source retry, workspace/client changes and task start
+  retire old restores. Local-only outputs and current runtime/provider guards remain.
 
 ## Hugging Face auth behavior
 
