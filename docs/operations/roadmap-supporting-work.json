@@ -4543,6 +4543,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "provider-ingestion-ui-transport-and-revision",
+      "work_criteria": [
+        "provider-selection-exact-registration",
+        "provider-retry-and-ui-ownership",
+        "provider-bounded-evidence"
+      ],
+      "receipt_digest": "eac4143f5636dd6c017d1b8873beec01898bba29c97c333839735b16e278a233",
+      "review_digest": "edd14fa82decef987a98d03b11a45bca3e6c65884646e9f3628cdbe19393e1c4",
+      "scope": "Tested and committed 24 provider-selection UI cases across default desktop/browser clients, real preload/IPC or local HTTP, application browse/registration/tasks and new JSON catalog/bindings. Exact selected references, pinned revisions, partial retry and stale/duplicate intent are checked. Provider metadata/existence and access/sender/credential/timing are offline fixtures; task repository is in memory. No provider bytes, live access, physical host, native or full qualification.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

@@ -11868,6 +11868,20 @@
           "Installed app windows, image and PDF decoding, production security, database restart, providers, native recovery and final combined testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "812f430d6bf609da902506462cb08ac08515466dc912eac69e21a08faef076b1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed safer dataset file selection in both app components.",
+          "Twenty-four interface cases check selected files, exact saved revisions, retry of only a failed file, safe errors and workspace changes.",
+          "Changing the account or dataset selection clears old file choices. Repeated clicks start one browse. Old Add data controls cannot submit a cleared selection.",
+          "These checks use the real app connections, application code and new saved records. Provider responses, access checks and unavailable credentials are test inputs.",
+          "The app registers file references in this workflow. These tests do not download or read remote file contents. Live provider access, installed app windows, database restart, native recovery and final combined testing remain pending."
+        ]
+      }
     }
   ]
 }
