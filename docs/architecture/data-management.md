@@ -1181,3 +1181,22 @@ list callback. Changing type or storage filters while deletion is pending cannot
 leave the removed item in the displayed list. The callback is updated in layout,
 never during an uncommitted render; the existing workspace/client lease check
 still prevents refreshing another view.
+
+## Provider ingestion UI request ownership
+
+The shared Add data panel serializes namespace and file browsing before its busy
+render. Exact browse identity and committed session lifetime fence replies. A
+namespace or dataset selection change clears dependent file choices. Beginning a
+file browse invalidates those choices before awaiting new metadata. Provider Add
+data requires a current completed file browse and no pending browse; queued React
+updates cannot admit a stale Add data handler for an invalidated selection.
+
+Provider tasks use existing registration semantics: exact pinned remote references
+are verified, cataloged and bound, with source snapshots. They do not materialize
+provider bytes. Partial retry retains completed registrations and processes only
+unfinished files. Separate explicit localization, application authorization and
+typed host boundaries remain unchanged. Offline composed UI tests assert actual
+registered transports/use cases/new JSON persistence and task/source identity,
+with finite provider/sender/access fixtures and an in-memory task repository.
+Physical hosts, real provider access/download, file parsing, database restart,
+native recovery and final combined qualification remain separate.

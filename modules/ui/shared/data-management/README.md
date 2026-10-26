@@ -283,3 +283,25 @@ UI coverage ledger is `docs/operations/comprehensive-ui-automation-coverage.json
 Session retirement runs in the layout cleanup of the committed tree, before
 passive effects. This closes the commit-to-passive interval for late completion
 and notification effects without changing accepted host task ownership.
+
+## Provider browse and selection intent
+
+Hugging Face namespace and file browsing share one synchronous request owner.
+Repeated clicks before the busy render issue one browse; retired sessions do not
+apply late replies. Changing the namespace clears its datasets and files. Changing
+the dataset selection clears loaded files and their selection. A new file browse
+also invalidates old selection before awaiting the provider. Add data refuses a
+stale provider selection synchronously, including before the next render.
+
+Current provider ingestion verifies and registers exact imported-source references.
+It preserves provider, repository, path and immutable revision in scoped bindings
+and source snapshots; it does not download provider bytes. A retry skips completed
+files and retries only unfinished items. Localization remains a separate existing
+application action. UI selection never grants provider or workspace authority.
+
+Composed desktop and browser scenarios use actual clients, preload/registered IPC
+or owned local HTTP, application browse/registration/task code, new JSON catalog
+and binding files, and an in-memory task repository. Provider metadata/existence,
+sender/access and unavailable credential operations are finite offline fixtures.
+No real credential, provider network/publication/download, Parquet-byte parsing,
+physical host, database restart, native recovery or model qualification follows.

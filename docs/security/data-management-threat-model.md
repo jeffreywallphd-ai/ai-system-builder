@@ -1360,3 +1360,22 @@ list callback. Changing type or storage filters while deletion is pending cannot
 leave the removed item in the displayed list. The callback is updated in layout,
 never during an uncommitted render; the existing workspace/client lease check
 still prevents refreshing another view.
+
+## Provider browse and stale file selection
+
+A repeated browse or an outdated file selection can confuse local provider intent.
+The shared panel admits one browse synchronously, checks exact request/session
+ownership after replies, and clears dependent choices when namespace or dataset
+selection changes. A fresh browse invalidates old files before awaiting metadata.
+A synchronous current-file-list gate prevents an old Add data handler from sending
+a task during that transition. These are presentation/intent controls; typed host
+validation, workspace/organization authorization and immutable revision checks
+remain authoritative. Remote registration is not local byte acquisition.
+
+Both-client composed scenarios retain actual pre-fix selection/duplicate failures,
+partial retry, selected-file-only effects, old-workspace replies and fixed safe
+provider refusal. Credentials, provider metadata/existence, sender/access and timing
+are synthetic boundaries; provider writes/downloads are disabled. Only fresh root
+identity/containment/type/entry/byte checked files are removed after finite owned
+work drains and globals are restored. No real provider, model, native, physical
+host or parent security/roadmap qualification is claimed.

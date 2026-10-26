@@ -137,6 +137,9 @@ function ScopedIngestionTaskPanel({
   const activeOperationRef = useRef<number | undefined>(undefined);
   const statusRequestRef = useRef(false);
   const latestTaskRef = useRef<IngestionTaskRecord | undefined>(undefined);
+  const providerBrowseSequenceRef = useRef(0);
+  const providerBrowseRef = useRef<number | undefined>(undefined);
+  const providerFilesCurrentRef = useRef(false);
   useLayoutEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; cancelledRef.current = true; };
@@ -299,8 +302,24 @@ function ScopedIngestionTaskPanel({
     }
   }
 
+  function changeProviderDatasets(next: ReadonlySet<string>): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined) return;
+    providerFilesCurrentRef.current = false;
+    setSelectedProviderRepositories(next);
+    setProviderFilesByRepository({});
+    setSelectedProviderFileKeys(new Set());
+    setProviderBrowseState({ status: "idle" });
+  }
+
+  function changeProviderNamespace(value: string): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined || value === providerNamespace) return;
+    setProviderNamespace(value);
+    setProviderDatasets([]);
+    changeProviderDatasets(new Set());
+  }
+
   function toggleAllProviderDatasets(): void {
-    setSelectedProviderRepositories(
+    changeProviderDatasets(
       allProviderDatasetsSelected
         ? new Set()
         : new Set(providerDatasets.map((dataset) => dataset.repository)),
@@ -318,15 +337,22 @@ function ScopedIngestionTaskPanel({
   async function findProviderDatasets(): Promise<void> {
     const browse = sourceBrowserClient?.browseHuggingFaceNamespaceDatasets;
     if (
-      !browse ||
+      !browse || !mountedRef.current || providerBrowseRef.current !== undefined ||
       working ||
       providerBrowseState.status === "loading" ||
       !providerNamespace.trim()
     )
       return;
+    const request = ++providerBrowseSequenceRef.current;
+    providerBrowseRef.current = request;
+    providerFilesCurrentRef.current = false;
+    const current = () => mountedRef.current && providerBrowseRef.current === request;
+    setProviderDatasets([]); setSelectedProviderRepositories(new Set());
+    setProviderFilesByRepository({}); setSelectedProviderFileKeys(new Set());
     setProviderBrowseState({ status: "loading", message: "Finding datasets…" });
     try {
       const datasets = await browse({ namespace: providerNamespace.trim() });
+      if (!current()) return;
       setProviderDatasets(datasets);
       setSelectedProviderRepositories(new Set());
       setProviderFilesByRepository({});
@@ -340,6 +366,7 @@ function ScopedIngestionTaskPanel({
             },
       );
     } catch (reason) {
+      if (!current()) return;
       setProviderBrowseState({
         status: "error",
         message: safeUiError(
@@ -347,18 +374,25 @@ function ScopedIngestionTaskPanel({
           "Datasets could not be loaded. Check the Hugging Face settings and try again.",
         ),
       });
+    } finally {
+      if (providerBrowseRef.current === request) providerBrowseRef.current = undefined;
     }
   }
 
   async function loadSelectedProviderFiles(): Promise<void> {
     const browse = sourceBrowserClient?.browseHuggingFaceDatasetParquetFiles;
     if (
-      !browse ||
+      !browse || !mountedRef.current || providerBrowseRef.current !== undefined ||
       working ||
       providerBrowseState.status === "loading" ||
       selectedProviderDatasets.length === 0
     )
       return;
+    const request = ++providerBrowseSequenceRef.current;
+    providerBrowseRef.current = request;
+    providerFilesCurrentRef.current = false;
+    const current = () => mountedRef.current && providerBrowseRef.current === request;
+    setProviderFilesByRepository({}); setSelectedProviderFileKeys(new Set());
     setProviderBrowseState({
       status: "loading",
       message: "Loading files from the selected datasets…",
@@ -373,7 +407,9 @@ function ScopedIngestionTaskPanel({
             ] as const,
         ),
       );
+      if (!current()) return;
       const filesByRepository = Object.fromEntries(entries);
+      providerFilesCurrentRef.current = true;
       setProviderFilesByRepository(filesByRepository);
       setSelectedProviderFileKeys(new Set());
       const count = Object.values(filesByRepository).flat().length;
@@ -387,6 +423,7 @@ function ScopedIngestionTaskPanel({
             },
       );
     } catch (reason) {
+      if (!current()) return;
       setProviderBrowseState({
         status: "error",
         message: safeUiError(
@@ -394,6 +431,8 @@ function ScopedIngestionTaskPanel({
           "Dataset files could not be loaded. Check the selection and try again.",
         ),
       });
+    } finally {
+      if (providerBrowseRef.current === request) providerBrowseRef.current = undefined;
     }
   }
 
@@ -442,6 +481,7 @@ function ScopedIngestionTaskPanel({
   };
 
   function completeSuccessfully(): void {
+    providerFilesCurrentRef.current = false;
     setSourceKind("files");
     setFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -466,6 +506,7 @@ function ScopedIngestionTaskPanel({
 
   async function start(): Promise<void> {
     if (!client || !workspaceId || activeOperationRef.current !== undefined) return;
+    if (sourceKind === "hugging-face" && (providerBrowseRef.current !== undefined || !providerFilesCurrentRef.current)) return;
     const operation = beginOperation();
     setTask(undefined);
     currentTaskIdRef.current = undefined;
@@ -837,7 +878,7 @@ function ScopedIngestionTaskPanel({
                 disabled={working || providerBrowseState.status === "loading"}
                 placeholder="Hugging Face name"
                 onInput={(event) =>
-                  setProviderNamespace(event.currentTarget.value)
+                  changeProviderNamespace(event.currentTarget.value)
                 }
               />
             </label>
@@ -897,7 +938,7 @@ function ScopedIngestionTaskPanel({
                             working || providerBrowseState.status === "loading"
                           }
                           onChange={(event) =>
-                            setSelectedProviderRepositories(
+                            changeProviderDatasets(
                               toggleSet(
                                 selectedProviderRepositories,
                                 dataset.repository,
