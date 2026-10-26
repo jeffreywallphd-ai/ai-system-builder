@@ -11300,6 +11300,46 @@
           "Online documentation checks, large-data checks and advanced preparation checks still need work. The browser test restarts the server services; the Desktop test closes and reopens the app."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "651350027a65a142e082109129fe84e2ba80d9779f8985f4c681b4b069c5ac21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test loader now opens its shared files correctly. A small test checks loading order without starting either app. This does not show that the full app journeys pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8f674cbaa5e834e3b44bc0fd11685fbfd80f9488266064c73f8895cac39092a9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests can find task names when help text is present. This change alone did not fix the Desktop control's missing label."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "77f7217db05357b9992624f62045e23fb5c2f1885efdb636e94b343d92f07843",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop task list now has its own short label, separate from its help button. The tests also open the output settings before choosing a format. These fixes passed their source checks and review."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "26343126121ea9249bc8a4e2324ee167e58870010be43a155e9e956757287165",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still complete the supplied-data journeys in both real apps within the enforced limits. Earlier failures stay failed. These fixes do not complete dataset lineage or publishing, large-data checks, advanced preparation, or the Data roadmap. Completed model-accuracy and OCR checks are not reopened."
+        ]
+      }
     }
   ]
 }

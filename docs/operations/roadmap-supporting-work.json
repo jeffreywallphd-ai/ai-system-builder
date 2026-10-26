@@ -3873,6 +3873,56 @@
         "This source-only chunk implements real provided-data app journeys but does not execute or qualify the native package/UI run. Standard native limits remain unchanged. Prior model accuracy and actual OCR evidence must not be rerun for this work.",
         "Private-provider website rendering/cleanup, scale and advanced-preparation qualification remain separate pending work. Thin restart reconstructs complete services and SQLite within the same Node process; Desktop restart launches a fresh app process."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-provided-version-module-loading",
+      "work_criteria": [
+        "module-loading-order-regression",
+        "canonical-guard-preservation",
+        "bounded-runner-and-documentation"
+      ],
+      "receipt_digest": "6eab87b3a603413981c88e8e9b8b328a415836956c7ebd4455e5d86a857a7efa",
+      "review_digest": "6dabfe1620790be632f09713f67dcfc9377c3ed709f5b2ede3733b23df0a4883",
+      "scope": "Committed source fix518a loads the canonical provided-data test resolver through native file-URL import after shared setup. The app-free loading-order regression, scoped checks and separate review passed. This is source-level support; it does not qualify an actual package or app journey.",
+      "limitations": [
+        "Source checks and reviews do not qualify an actual provided-data package/two-app run or complete a parent criterion, Data increment3, the Data roadmap or a release. Failed native attempts remain failed. Private-provider publication/rendering/cleanup, scale and advanced preparation remain pending. Accepted model-accuracy and earlier OCR results stay closed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-provided-version-goal-selectors",
+      "work_criteria": [
+        "current-accessible-goal-controls",
+        "preserve-real-journeys-and-gaps"
+      ],
+      "receipt_digest": "a39a0452965b47019854dd17424eea7c17af1a6fe6dd61da0a87635617fb24b8",
+      "review_digest": "3401031d7277d92dd946aabef3d4dc2809f707c35cc4d574bfa63db5b51438bb",
+      "scope": "Committed source change836a matches the provided-data task controls by Training task/Training goal name prefixes. Scoped checks and separate review passed. Prefix matching alone did not fix the unlabelled Desktop select; the separate587d caption/help correction addresses that source defect. No host pass is claimed.",
+      "limitations": [
+        "Source checks and reviews do not qualify an actual provided-data package/two-app run or complete a parent criterion, Data increment3, the Data roadmap or a release. Failed native attempts remain failed. Private-provider publication/rendering/cleanup, scale and advanced preparation remain pending. Accepted model-accuracy and earlier OCR results stay closed."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-version-accessible-controls",
+      "work_criteria": [
+        "task-caption-and-help-association",
+        "open-output-disclosures-before-selection",
+        "scope-and-qualification-remain-truthful"
+      ],
+      "receipt_digest": "3c334a43e6618bcee9d541b0ff938074b682248052dae27024d8a6d864760e7e",
+      "review_digest": "aefeddc3d6a64506887006b7d52bf6356b6a957b6a096f4c9ba816452799f3bb",
+      "scope": "Committed source fix587d explicitly labels the Desktop task select and separates its help button. Journeys open the existing output settings before choosing JSON Lines. The real component regression, five source check groups and separate review passed. Full provided-data package/two-app qualification remains pending.",
+      "limitations": [
+        "Source checks and reviews do not qualify an actual provided-data package/two-app run or complete a parent criterion, Data increment3, the Data roadmap or a release. Failed native attempts remain failed. Private-provider publication/rendering/cleanup, scale and advanced preparation remain pending. Accepted model-accuracy and earlier OCR results stay closed."
+      ]
     }
   ]
 }
