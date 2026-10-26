@@ -11440,6 +11440,26 @@
           "The agent must still connect separate app setup, check the tested build, prove each run has stopped, and collect separate memory and runtime results. App fit and memory savings are not yet proven. The earlier memory-limit failure remains recorded. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for this setup work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cce85c0a1587a44c333f21e07f599c32173f7f7b11d9a3190efbdc4e418e8f88",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop sign-in setup can now be reused after the agent checks the prepared app. The normal setup still builds first. Code tests confirmed the same sign-in command and safe failure handling for both test plans. These checks did not open an app or run the sign-in command."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b4745136e0ef40effd5046871e69119e1af8610fc4e25b6941c6e50cec27b606",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still connect and review the separate app runs, check their code and packages, prove each run has stopped, and collect memory and runtime results. The setup drafts have not run. The earlier memory-limit failure stays recorded; app fit and memory savings are not yet proven. This does not complete the Data increment or roadmap. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for this implementation work."
+        ]
+      }
     }
   ]
 }

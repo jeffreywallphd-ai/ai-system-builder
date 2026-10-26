@@ -4008,6 +4008,23 @@
       "limitations": [
         "This support adds no parent qualification and does not close the Data increment or roadmap. The agent must still connect separate host setup, validate source/package identity, prove native retirement before the next app, keep a finite whole-run deadline and collect per-host memory/runtime results. Code checks prove no actual app fit, memory savings or new native readback. The earlier process-limit failure remains failed. The user-deferred private-provider browser page check stays incomplete. Completed model-accuracy and OCR checks stay closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "serial-desktop-preparation",
+      "work_criteria": [
+        "existing-seed-behavior-and-caller-preserved",
+        "bounded-app-free-seeding-regressions",
+        "truthful-composition-and-remaining-proof"
+      ],
+      "receipt_digest": "e690e49010ac093de16860a0d00f45116efd0c3bf6c2173b2746d9e8c6f80e7e",
+      "review_digest": "2dc1fc55fe4a38f0f2ce613278726945611fe7021751e0c078468ddd12235dc3",
+      "scope": "Committed source765f9d56d exposes the existing desktop identity-seeding routine for reviewed callers with verified packages. Normal shared setup still builds before seeding; the reusable routine starts no web service and adds no skip-build flag. Fourteen app-free Node cases verify both launch plans, exact seed settings, pre-allocation denial and bounded redacted failures. Focused, documentation and agent checks plus independent review pass. No real seed process or app was run.",
+      "limitations": [
+        "The agent must still compose and review the serial operator, bind fresh source/package/helpers, prove exact native retirement before the next app, enforce a finite total deadline and collect per-host memory/runtime evidence. Draft helpers are unexecuted and grant no authority. This support adds no parent qualification and does not close the Data increment or roadmap. The earlier memory-limit failure stays failed; actual app fit and savings remain unproven. The user-deferred private-provider browser page test stays incomplete. Completed model-accuracy and OCR results stay closed."
+      ]
     }
   ]
 }
