@@ -18,6 +18,45 @@ function record(value: unknown): Record<string, any> {
 function text(value: unknown, limit: number): value is string { return typeof value === "string" && value.trim().length > 0 && value.length <= limit; }
 export interface ManualContextSnapshot { workspace: string; artifactId: string; storageKey: string; digest: string; sizeBytes: number; manualDigest: string; }
 
+// Capture every declared catalog field, without depending on display order.
+// Immutable scalar copies cannot change underneath a later comparison.
+export function captureManualContextCatalog(value: unknown) {
+  const listed = record(value);
+  if (listed.action !== "browser-list" || !Array.isArray(listed.items) || listed.items.length > 8) throw invalid();
+  const ids = new Set<string>(), keys = new Set<string>();
+  const items = (listed.items as unknown[]).map((value: unknown) => {
+    const item = record(value);
+    if (!text(item.artifactId, 1024) || !text(item.storageKey, 4096) || !text(item.name, 512)
+        || !text(item.kind, 128) || !text(item.mediaType, 256) || !text(item.digest, 128)
+        || !Number.isSafeInteger(item.sizeBytes) || item.sizeBytes < 1
+        || (item.createdAt !== undefined && !text(item.createdAt, 64))
+        || ids.has(item.artifactId) || keys.has(item.storageKey)) throw invalid();
+    ids.add(item.artifactId); keys.add(item.storageKey);
+    return Object.freeze({ artifactId: item.artifactId as string, storageKey: item.storageKey as string,
+      name: item.name as string, kind: item.kind as string, mediaType: item.mediaType as string,
+      digest: item.digest as string, sizeBytes: item.sizeBytes as number, createdAt: item.createdAt as string | undefined });
+  });
+  return Object.freeze(items.sort((left, right) => left.artifactId < right.artifactId ? -1 : left.artifactId === right.artifactId ? 0 : 1));
+}
+
+// A retained original is insufficient to prove discard did not publish another
+// artifact. Compare the entire before/after catalog for no-change claims.
+export function validateManualContextCatalog(value: unknown, saved: ManualContextSnapshot, state: "retained" | "removed",
+  before?: ReturnType<typeof captureManualContextCatalog>) {
+  if (state !== "retained" && state !== "removed") throw invalid();
+  const items = captureManualContextCatalog(value);
+  if (before) {
+    const expected = state === "retained" ? before : before.filter(item => item.artifactId !== saved.artifactId);
+    if (JSON.stringify(items) !== JSON.stringify(expected)) throw invalid();
+  }
+  const matches = items.filter(item => item.artifactId === saved.artifactId || item.storageKey === saved.storageKey || item.name === fixed.name);
+  if (state === "removed") { if (matches.length !== 0) throw invalid(); return; }
+  if (matches.length !== 1) throw invalid();
+  const item = matches[0]!;
+  if (item.artifactId !== saved.artifactId || item.storageKey !== saved.storageKey || item.name !== fixed.name
+      || item.digest !== saved.digest || item.sizeBytes !== saved.sizeBytes) throw invalid();
+}
+
 // This is an oracle over actual public read results, not a seeded response.
 // The real runtime inspector must validate the member digest before returning
 // this manifest. Actual stored-byte SHA is checked independently below.
@@ -132,11 +171,52 @@ export async function verifyManualContextAfterRestart(page: Page, host: Host, sa
   const detail = page.getByRole("dialog", { name: "Detail & preview", exact: true }); await expect(detail.getByRole("heading", { name: fixed.name, exact: true })).toBeVisible();
   await detail.getByRole("button", { name: "Close context detail and preview", exact: true }).click();
   await savedSnapshot(page, host, saved.workspace, saved);
+  await verifyManualContextDiscardAndDelete(page, host, saved);
   const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!, source = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!;
   if (!/^[a-z0-9-]{20,80}$/.test(run) || !/^source\.[a-f0-9]{64}$/.test(source)) throw new Error("The current Context journey source identity is unavailable.");
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "manual-context"); await mkdir(folder, { recursive: true }); if (await realpath(folder) !== folder) throw new Error("The Context evidence folder is unavailable.");
   const body = JSON.stringify({ schemaVersion: "manual-context-host-journey-v1", sourceRevision: source, host, status: "passed", ...saved,
-    modelGeneration: false, ocr: false, scope: "Actual fixed manual pack UI/storage/restart support only. Native retirement and parent qualification remain separate." }, null, 2) + "\n";
+    modelGeneration: false, ocr: false, discardNoPublication: true, cancelledDeletePreservedBytes: true,
+    confirmedCatalogRemoval: true, deletedDetailRefused: true, removalSurvivedRendererReload: true,
+    scope: "Actual fixed manual pack UI/storage/restart/discard/catalog-removal support only. Physical backing-file erasure, native retirement and parent qualification remain separate." }, null, 2) + "\n";
   if (Buffer.byteLength(body) > 8192) throw new Error("The Context evidence exceeded its limit.");
   await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" }); await info.attach("manual-context-host-journey", { body, contentType: "application/json" });
+}
+
+async function verifyManualContextDiscardAndDelete(page: Page, host: Host, saved: ManualContextSnapshot) {
+  const before = captureManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }));
+  await page.getByRole("tab", { name: "Context Packs", exact: true }).click();
+  await page.getByRole("button", { name: /^Manual entry/ }).click();
+  await page.getByLabel("Pack name", { exact: true }).fill(fixed.name);
+  await page.getByLabel("Pack contents", { exact: true }).fill(fixed.markdown);
+  await page.getByRole("button", { name: "Prepare context pack", exact: true }).click();
+  const discard = page.getByRole("button", { name: "Discard context pack", exact: true });
+  await expect(discard).toBeVisible({ timeout: 60_000 }); await discard.click(); await expect(discard).not.toBeVisible();
+  validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "retained", before);
+  await savedSnapshot(page, host, saved.workspace, saved);
+
+  await page.getByRole("tab", { name: "Context Browser", exact: true }).click();
+  const card = page.locator("article").filter({ has: page.getByRole("heading", { name: fixed.name, exact: true }) });
+  await expect(card).toHaveCount(1); await card.getByRole("button", { name: "View Details", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "Detail & preview", exact: true });
+  await expect(detail.getByRole("heading", { name: fixed.name, exact: true })).toBeVisible();
+  await detail.getByRole("button", { name: "Delete", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Delete context artifact", exact: true });
+  const confirm = confirmation.getByRole("button", { name: "Confirm delete", exact: true });
+  await expect(confirm).toBeDisabled(); await confirmation.getByLabel("Confirmation", { exact: true }).fill("delete");
+  await expect(confirm).toBeDisabled(); await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(confirmation).not.toBeVisible();
+  validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "retained", before);
+  await savedSnapshot(page, host, saved.workspace, saved);
+
+  await detail.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(confirm).toBeDisabled(); await confirmation.getByLabel("Confirmation", { exact: true }).fill("Delete");
+  await expect(confirm).toBeEnabled(); await confirm.click();
+  await expect(confirmation).not.toBeVisible(); await expect(detail).not.toBeVisible(); await expect(card).toHaveCount(0);
+  validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "removed", before);
+  await expect(readManualContextValue(page, host, saved.workspace, { action: "browser-detail", artifactId: saved.artifactId })).rejects.toThrow("The saved Context read could not be verified.");
+  await page.reload(); await expect(page.getByLabel("Select current workspace")).toHaveValue(saved.workspace, { timeout: 60_000 });
+  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await page.getByRole("tab", { name: "Context Browser", exact: true }).click(); await expect(card).toHaveCount(0);
+  validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "removed", before);
 }

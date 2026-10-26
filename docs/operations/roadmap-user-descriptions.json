@@ -11658,6 +11658,18 @@
           "Actual app recovery and final roadmap tests remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "16db1c1b6d3de470764cd50fec9efbbe1d8ba427a04bea96977b9cf49fd3fbc9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the task journeys with the current safe progress message.",
+          "Progress, timing, task identity, workspace separation, cancellation and cleanup checks remain in place.",
+          "Actual app runs and final roadmap tests remain pending."
+        ]
+      }
     }
   ]
 }

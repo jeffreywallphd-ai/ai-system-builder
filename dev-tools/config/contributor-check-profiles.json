@@ -1383,7 +1383,8 @@
         "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
         "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",

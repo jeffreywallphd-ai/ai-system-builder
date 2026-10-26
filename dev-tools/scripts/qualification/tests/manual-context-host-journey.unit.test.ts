@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fixed from "../visual-composer/daily-context-fixture.json";
 import type { Page } from "@playwright/test";
-import { readManualContextValue, validateManualContextSnapshot } from "../visual-composer/e2e/manual-context-host-journey";
+import { readManualContextValue, validateManualContextSnapshot, validateManualContextCatalog, captureManualContextCatalog } from "../visual-composer/e2e/manual-context-host-journey";
 
 const globals = new Map<string, PropertyDescriptor | undefined>();
 function replace(name: string, value: unknown) {
@@ -27,6 +27,84 @@ function valid() {
       contextPack: { inputMode: "manual", method: "none" } } };
   return { bytes, item, detail };
 }
+
+describe("manual Context discard and delete catalog oracle", () => {
+  function catalog() {
+    const { item, detail, bytes } = valid();
+    return { page: { action: "browser-list", items: [item] }, item,
+      saved: validateManualContextSnapshot("workspace.synthetic", item, detail, bytes) };
+  }
+  it("requires the exact retained artifact after discard or cancelled deletion", () => {
+    const { page, saved } = catalog(); assert.doesNotThrow(() => validateManualContextCatalog(page, saved, "retained"));
+  });
+  it("rejects an extra distinct publication after discard or cancelled deletion", () => {
+    const { page, saved, item } = catalog(); const before = captureManualContextCatalog(page);
+    page.items.push({ ...item, artifactId: "artifact.extra", storageKey: "generated/context/extra.zip", name: "Accidental publication" });
+    rejected(() => validateManualContextCatalog(page, saved, "retained", before));
+  });
+  it("compares all original catalog entries and ignores list order", () => {
+    const { page, saved, item } = catalog();
+    page.items.push({ ...item, artifactId: "artifact.other", storageKey: "generated/context/other.zip", name: "Unrelated Context" });
+    const before = captureManualContextCatalog(page); page.items.reverse();
+    assert.doesNotThrow(() => validateManualContextCatalog(page, saved, "retained", before));
+    page.items.find(item => item.artifactId === "artifact.other")!.name = "Unexpected change";
+    rejected(() => validateManualContextCatalog(page, saved, "retained", before));
+  });
+  it("cannot hide unrelated deletion when the target was removed", () => {
+    const { page, saved, item } = catalog(); const other = { ...item, artifactId: "artifact.other", storageKey: "generated/context/other.zip", name: "Unrelated Context" };
+    page.items.push(other); const before = captureManualContextCatalog(page);
+    assert.doesNotThrow(() => validateManualContextCatalog({ action: "browser-list", items: [other] }, saved, "removed", before));
+    rejected(() => validateManualContextCatalog({ action: "browser-list", items: [] }, saved, "removed", before));
+  });
+  for (const field of ["kind", "mediaType", "createdAt"] as const) {
+    it(`rejects a catalog ${field} change after discard`, () => {
+      const { page, saved } = catalog(); const before = captureManualContextCatalog(page);
+      (page.items[0] as Record<string, unknown>)[field] = "changed";
+      rejected(() => validateManualContextCatalog(page, saved, "retained", before));
+    });
+  }
+  it("accepts confirmed removal without requiring unrelated Context artifacts to disappear", () => {
+    const { saved, item } = catalog();
+    const page = { action: "browser-list", items: [{ ...item, artifactId: "artifact.other", storageKey: "generated/context/other.zip", name: "Other saved Context" }] };
+    assert.doesNotThrow(() => validateManualContextCatalog(page, saved, "removed"));
+  });
+  for (const field of ["artifactId", "storageKey", "digest", "sizeBytes"] as const) {
+    it(`refuses a retained artifact with changed ${field}`, () => {
+      const { page, saved } = catalog(); const item = page.items[0]! as Record<string, unknown>;
+      item[field] = field === "sizeBytes" ? 1 : "substituted"; rejected(() => validateManualContextCatalog(page, saved, "retained"));
+    });
+  }
+  it("does not accept a missing artifact as a successful discard or cancelled deletion", () => {
+    const { saved } = catalog(); rejected(() => validateManualContextCatalog({ action: "browser-list", items: [] }, saved, "retained"));
+  });
+  for (const field of ["artifactId", "storageKey", "name"] as const) {
+    it(`refuses removal while the saved ${field} remains`, () => {
+      const { saved, item } = catalog(); const lookalike = { ...item, artifactId: "artifact.other", storageKey: "generated/context/other.zip", name: "Other" };
+      lookalike[field] = item[field]; rejected(() => validateManualContextCatalog({ action: "browser-list", items: [lookalike] }, saved, "removed"));
+    });
+  }
+  for (const field of ["artifactId", "storageKey"] as const) {
+    it(`refuses duplicate catalog ${field} even outside the saved target`, () => {
+      const { page, saved, item } = catalog();
+      const other = { ...item, artifactId: "artifact.other", storageKey: "generated/context/other.zip", name: "Other" };
+      const duplicate = { ...other, artifactId: "artifact.duplicate", storageKey: "generated/context/duplicate.zip" }; duplicate[field] = other[field];
+      page.items.push(other, duplicate); rejected(() => validateManualContextCatalog(page, saved, "retained"));
+    });
+  }
+  it("refuses malformed, oversized, wrong-action and unknown-state catalog claims", () => {
+    const { saved, item } = catalog();
+    for (const value of [null, [], { action: "browser-detail", items: [] }, { action: "browser-list", items: null },
+      { action: "browser-list", items: Array(9).fill(item) }, { action: "browser-list", items: [null] }]) {
+      rejected(() => validateManualContextCatalog(value, saved, "removed"));
+    }
+    rejected(() => validateManualContextCatalog({ action: "browser-list", items: [] }, saved, "unknown" as "removed"));
+  });
+  it("rejects catalog record accessors without invoking supplier code", () => {
+    const { page, saved } = catalog(); let reads = 0;
+    Object.defineProperty(page.items[0], "diagnostic", { get() { reads++; throw new Error("synthetic-private-diagnostic"); } });
+    rejected(() => validateManualContextCatalog(page, saved, "retained")); assert.equal(reads, 0);
+  });
+});
 const rejected = (operation: () => unknown) => assert.throws(operation, error => {
   assert.ok(error instanceof Error); assert.match(error.message, /^The saved manual Context pack did not match/);
   assert.equal(error.message.includes("synthetic-private-diagnostic"), false); return true;

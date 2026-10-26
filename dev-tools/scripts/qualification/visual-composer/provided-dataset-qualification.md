@@ -72,3 +72,23 @@ Focused tests exercise admission/denial, actual model-free task delegation,
 snapshot-oracle refusals and Playwright module collection. Skipped app cases do
 not qualify UI selectors, app behavior or native retirement. Actual source-bound
 app execution and final combined testing remain pending until separately run.
+
+After restart and exact saved-byte validation, both manual Context cases prepare
+and discard another fixed pack. The saved pack must remain unchanged. They then
+check that lowercase confirmation cannot delete, cancel deletion and recheck
+the original bytes. Only the exact pack created by this journey is eligible for
+confirmed deletion. Its public catalog entry must disappear, detail access must
+fail and removal must survive renderer reload. The bounded catalog oracle rejects
+missing retained records, substitutions, duplicates and lookalike removal claims.
+
+Real mounted component tests cover exact confirmation, cancelled deletion, single
+dispatch and catalog refresh. Local oracle/component passes and source collection
+do not run the apps, prove physical backing-file erasure, qualify native shutdown
+or complete the parent roadmap. Existing actual-host execution remains pending.
+
+Discard and cancelled deletion compare the entire before/after public catalog,
+including every declared item field, independent of list order. Confirmed removal
+must leave exactly the original catalog minus the selected artifact. Immutable
+scalar snapshots prevent caller mutation from hiding an extra publication, a
+changed unrelated entry or unrelated deletion. Retaining the original pack alone
+cannot establish no publication.

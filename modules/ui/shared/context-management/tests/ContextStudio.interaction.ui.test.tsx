@@ -423,6 +423,36 @@ describe("ContextStudio scoped actions", () => {
     expect(container!.textContent).not.toContain("was deleted from Context Browser");
   });
 
+  it("requires exact confirmation, preserves cancelled deletion and removes only the confirmed artifact", async () => {
+    let deleted = false;
+    const client = browserContextClient(async command => {
+      if (command.action === "browser-list") return { action: "browser-list", items: deleted ? [] : [savedItem] };
+      if (command.action === "browser-delete") { deleted = true; return { action: "browser-delete", storageKey: savedItem.storageKey }; }
+      return undefined;
+    });
+    const deleteCalls = () => vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "browser-delete");
+    await renderStudio(client); await openScopedBrowser();
+    await act(async () => button("Delete").click());
+    expect(button("Confirm delete").disabled).toBe(true);
+    await act(async () => setInput(document.querySelector<HTMLInputElement>("input[placeholder='Delete']")!, "delete"));
+    expect(button("Confirm delete").disabled).toBe(true); expect(deleteCalls()).toHaveLength(0);
+    await act(async () => button("Cancel").click());
+    expect(document.querySelector("input[placeholder='Delete']")).toBeNull();
+    expect(document.querySelector(".artifact-browser__detail-dialog")!.textContent).toContain(savedItem.name);
+    expect(deleteCalls()).toHaveLength(0);
+    await act(async () => button("Delete").click());
+    expect(button("Confirm delete").disabled).toBe(true);
+    await act(async () => setInput(document.querySelector<HTMLInputElement>("input[placeholder='Delete']")!, "Delete"));
+    expect(button("Confirm delete").disabled).toBe(false);
+    await act(async () => { const confirm = button("Confirm delete"); confirm.click(); confirm.click(); });
+    expect(deleteCalls()).toHaveLength(1);
+    expect(deleteCalls()[0]![0]).toEqual({ workspaceId: "workspace-a", command: { action: "browser-delete", artifactId: savedItem.artifactId } });
+    expect(document.querySelector("input[placeholder='Delete']")).toBeNull();
+    expect(document.querySelector(".artifact-browser__detail-dialog")).toBeNull();
+    expect(container!.textContent).toContain("was deleted from Context Browser");
+    expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "browser-list")).toHaveLength(2);
+  });
+
   it.each(["running", "missing-artifact"] as const)("retains review ownership when save is %s", async outcome => {
     const client = scopedContextClient(async command => {
       if (command.action === "generation-start") return acceptedContextStart;

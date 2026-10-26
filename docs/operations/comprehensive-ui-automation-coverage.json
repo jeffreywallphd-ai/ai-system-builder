@@ -1003,6 +1003,18 @@
           "name": "exact saved manual content digest, one-entry/no-source shape and valid original UTF-8/line endings",
           "tier": "production-runtime-byte-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+          "name": "manual Context full-catalog discard/delete oracle: no extra publication, no unrelated loss/change, immutable metadata, stable ordering, exact retained and removed target, duplicate/malformed refusals",
+          "tier": "public-read-result-oracle-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+          "name": "requires exact confirmation, preserves cancelled deletion and removes only the confirmed artifact",
+          "tier": "shared-renderer-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
