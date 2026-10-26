@@ -11781,6 +11781,21 @@
           "Real training, physical desktop security, native file checks and final host testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "378110020b899fc0ae9e996b5c6decb6c3d2909f2702b6be4faeba309a6d7bdf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed and committed duplicate desktop Download starts while the first request is pending.",
+          "Tests use the real desktop bridge, application code, notification center and saved model records.",
+          "Progress survives navigation. The open notification panel in another workspace shows no owner activity or progress.",
+          "A completed download registers once and reopens correctly. Failed tasks can be retried, and cancellation does not register a model.",
+          "A request from another workspace is refused before the worker is read. The worker, desktop connection and downloaded bytes are test fixtures.",
+          "Real model downloads, physical desktop security, native files and final host testing remain pending."
+        ]
+      }
     }
   ]
 }

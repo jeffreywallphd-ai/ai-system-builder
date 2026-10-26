@@ -4435,6 +4435,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "desktop-model-download-preload-notification-journeys",
+      "work_criteria": [
+        "download-single-admission-and-owned-progress",
+        "download-terminal-durable-registration-and-retry",
+        "download-fixture-scope-and-cleanup"
+      ],
+      "receipt_digest": "92120844d71cac787cbda9f3997ac634e2f203482487847aec664813610ef139",
+      "review_digest": "79b96491cc32136382a64d57a20256d6575dcdf58a8f1b0512b9913eaa4da750",
+      "scope": "Tested, independently reviewed and committed desktop download single-admission fix plus actual model client/preload/registered handlers/task use case/notification center/JSON registry journeys. Paused start, navigation progress, visible foreign-workspace empty panel, exact durable single registration, failed-task retry, foreign completion refusal and confirmed cancellation pass with finite offline worker/completion records.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

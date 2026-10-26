@@ -1329,6 +1329,12 @@
           "name": "Real desktop download preload/handlers/task use case and notification center with single-click admission, workspace/navigation progress, one durable registration, failed retry and foreign/cancel denial",
           "tier": "desktop-model-download-in-process-preload-with-offline-task-and-completion-fixtures-real-json-registry",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/model-management/tests/model-download-http.ui.test.tsx",
+          "name": "Mounted browser Models with actual secure client/loopback routes/task use case/notifications and reopened JSON registry; owned progress, exact single completion, access failure/retry, foreign refusal and cancellation",
+          "tier": "browser-model-download-real-loopback-http-with-offline-task-completion-and-test-access-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",

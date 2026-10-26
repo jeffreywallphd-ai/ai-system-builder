@@ -1286,3 +1286,15 @@ show fixed progress/failure copy without worker diagnostics or local paths. Owne
 fixture cleanup checks identity, containment, entry/byte bounds and regular files.
 No retained resources, real model/provider, native file proof or physical host
 authorization is qualified by these synthetic task records.
+
+Composed browser download tests use only a new loopback listener, a fixed synthetic
+credential and identity-checked bounded files. The real client serializes requests
+through actual routes and the task use case; test middleware refuses missing test
+credentials before admission. The visible foreign-workspace notification panel
+contains no owner activity or progress, and foreign completion is denied before
+runtime reads. Path-free public records and fixed task messages preserve host
+paths and worker diagnostics. Durable model identity is checked after reopening
+the actual JSON registry; replay does not register again. Tests restore previous
+browser storage/globals, close the exact listener and remove only the newly owned
+regular-file tree. The synthetic access fixture grants no production-authentication
+qualification, and no real provider/model or native/physical host pass follows.

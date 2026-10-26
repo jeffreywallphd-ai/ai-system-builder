@@ -815,3 +815,14 @@ across feature navigation and workspace return, single registration, failure and
 explicit retry, foreign completion refusal and confirmed cancellation. Physical
 IPC/sender policy, actual model downloads, native effects and production SQLite
 remain separate qualification.
+
+Browser download journeys also join mounted Models, the actual secure API client,
+loopback HTTP model routes, owned task use case, shared notifications and a reopened
+JSON registry. They verify one immediate start, progress during feature navigation,
+visible workspace separation, exact single registration and subsequent inventory
+refresh. Repeated completion remains idempotent; unauthenticated fixture requests
+never enter the worker, an explicit authorized retry succeeds, and foreign
+completion is refused before worker reads. Access middleware and task/completion
+records are finite fixtures. This is not production authentication, a real model
+download, a physical browser shell, native file effects or production SQLite
+qualification. No production client/controller change was needed for these cases.

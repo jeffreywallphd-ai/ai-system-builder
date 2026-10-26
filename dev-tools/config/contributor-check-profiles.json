@@ -426,7 +426,8 @@
         "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
         "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
         "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx"
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
+        "apps/thin-client/src/features/model-management/tests/model-download-http.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
