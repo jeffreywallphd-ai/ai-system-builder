@@ -3835,6 +3835,25 @@
         "Thin supported-settings restore, actual full-app saved-version/provider publication/restart, large-data and advanced preparation qualification remain pending. Accepted model accuracy results remain closed.",
         "Metadata lookup does not prove source bytes or runtime/provider readiness. Timing out stops this caller and later reads; an already-issued read-only detail request is not cancelled. No automatic task/model/provider dispatch or publication authority is granted."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-thin-supported-version-replay",
+      "work_criteria": [
+        "authoritative-shared-source-lookup",
+        "exact-supported-thin-restore",
+        "actual-page-and-failure-regressions"
+      ],
+      "receipt_digest": "fc59fc5af8c5c02211fc677bc7eeb554e32d1f95810e4471418d06ac093f4403",
+      "review_digest": "a31e7981f0e4a5aa572b9d8b598137e021315e884a6a87972d5d783ea3926d21",
+      "scope": "Reviewed shared bounded exact-key source lookup and actual Thin Browser-to-Preparation restoration. Complete command equality, current-frame guards and one-use post-commit acknowledgment preserve settings and later edits. Unsupported settings deny without partial writes or dispatch. Exact18-file checkpoint:934 focused tests, zero Desktop type errors and successful Thin build; seven current check groups and independent review passed. No parent qualification.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "Whole-host saved-version/provider publication/restart, large-data and advanced preparation qualification remain pending. Accepted model accuracy results remain closed.",
+        "Thin has a smaller editable settings set than Desktop. Any unsupported saved value rejects the whole restore before setters. Metadata checks prove no source bytes, runtime readiness or provider authority; preparation and publication still require explicit user actions."
+      ]
     }
   ]
 }

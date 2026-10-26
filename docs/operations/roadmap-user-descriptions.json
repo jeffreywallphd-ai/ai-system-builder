@@ -11238,6 +11238,37 @@
           "The app checks saved settings and file details. You must review the setup and start preparation yourself. A slow lookup stops restoring settings; a file-detail request already sent may still finish."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "949b5ba402d8494d4718213dd1c308e86b924459213d016fed5505738c3369ce",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both apps can now open a saved version in Preparation and restore supported settings together. The browser app checks the complete setup before changing the form. A slow or old request cannot overwrite later edits.",
+          "Tests cover all nine training goals and preserve saved output layouts. Remaining Data work and final tests stay open. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "167cdedf1e58d43802a1f160313b03a455958f75476903904de506e62a070120",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saved-settings reuse is implemented in both apps. The agent must finish full-app, online publishing, recovery, large-data and advanced preparation checks. No action needed. Completed model accuracy tests stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7af78e6d33278657537299f695e23fdd6708fb6c31978043b98aa26a41eb1460",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "If the browser app cannot represent a saved setting, it leaves the current form unchanged. Review the setup and start a task yourself. These tests do not prove source-file contents or online publishing."
+        ]
+      }
     }
   ]
 }
