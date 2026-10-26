@@ -11825,6 +11825,35 @@
           "The tests use real local application code and new JSON files. App windows, production access controls, native file protection and final combined testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6582aa2ced1f8d0ba1f6afd91b58c24d814996ff6b54ec9801679ffa7f06c5a3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed website data capture through the desktop and browser components.",
+          "Eight interface scenarios cover selected pages, one sitemap, exact saved content, retry, workspace refusal and confirmed cancellation.",
+          "Cancellation now removes a new capture from the data list after its files are removed. A refused file cleanup keeps its saved record.",
+          "Additional checks cover failure order and the desktop and server connections. Tests use new files, a temporary record store and synthetic website content and access rules.",
+          "Live website access, installed app windows, production security, database restart, native recovery and final combined testing remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0f81d3f1d0747b48a633edf9e38f0f824b7b516ba002362ae440a755b3d56763",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed safer data browsing, previews and deletion in the browser component.",
+          "Seventeen new scenarios check exact text, CSV cells, JSON values, both JSONL records and formatted Markdown. Active page content stays inert.",
+          "The tests also check workspace separation, exact delete confirmation, one pending deletion, failure retry and partial bulk results. Only failed items remain selected for retry.",
+          "Old replies cannot replace a current selection or another workspace. A delayed replacement screen leaves the visible screen usable.",
+          "Sixteen scenarios use real local HTTP, application code, saved records and new files. One controls reply timing at the client connection. Access rules are synthetic test inputs.",
+          "Installed app windows, image and PDF decoding, production security, SQLite restart, providers, native recovery and final combined testing remain pending."
+        ]
+      }
     }
   ]
 }

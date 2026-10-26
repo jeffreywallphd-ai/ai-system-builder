@@ -4489,6 +4489,42 @@
       "receipt_digest": "cba39527000687dd7f6bcf993c81fec4f68d9ce0947d9ae67c1e9a3685e77bb2",
       "review_digest": "98e221b5bb69c6d879cca2a9364e68f0fb8fc924454cea2c81c8d51fadb10fc7",
       "scope": "Tested, independently reviewed and committed workspace first-run journeys through both real forms, switchers, gates and default clients, actual preload/handlers or local HTTP, the creation use case and new JSON repositories. Exact identity and reopen checks cover two Foundation reference choices, stored selection, one pending creation, failed-create retry and rejected failed/malformed selection responses; canonical empty selection and valid-but-absent readiness remain distinct."
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "website-cancelled-catalog-compensation",
+      "work_criteria": [
+        "website-composed-source-and-cancellation-catalog",
+        "website-cleanup-order-and-production-wiring",
+        "website-bounded-authority-and-honest-evidence"
+      ],
+      "receipt_digest": "ecdcf0219680654171ca56ec93bbf234b8985c42c53710761f6508e6fe3d79e5",
+      "review_digest": "6edd7eb43aff8ef7b52a88be3ec092935a2a22987469f475ce2b805cee5a8569",
+      "scope": "Reviewed and committed eight desktop/browser website journeys with actual transports, application tasks, temporary structured records and filesystem bytes. Explicit pages/sitemap, exact raw/text reopen, retry, scope refusal and held cancellation pass. Application and two-host wiring checks support catalog-after-byte compensation. Capture/access are offline fixtures; recovery, provider and physical-host qualification remain pending.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "artifact-browser-http-preview-and-delete",
+      "work_criteria": [
+        "artifact-browser-composed-local-roundtrips",
+        "artifact-browser-action-ownership",
+        "artifact-browser-fixture-and-evidence-safety"
+      ],
+      "receipt_digest": "7b4e761446cd7c058b4fdd2a749e7f5194518cdab895ece1bb0f6c3f65fc2a57",
+      "review_digest": "24e9ad1433b2fa969a1f9e6eab979de59bbb536a8da41407b18d75b5ccf204d9",
+      "scope": "Reviewed and committed browser preview/deletion fixes and17 scenarios:16 real local HTTP/application/JSON/filesystem journeys and one controlled client reply. Exact text/CSV/JSON/JSONL/Markdown, hidden metadata, workspace separation, typed deletion, one pending request, partial retry and committed-view lifetime checks pass. Access/timing are fixtures; physical formats/hosts, production security, SQLite restart, provider and native recovery remain pending.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
