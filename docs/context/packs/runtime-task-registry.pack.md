@@ -117,3 +117,9 @@ quality review discard never imply stopped work. See the runtime model.
 Python process absence and startup outcome are separate facts: close after a
 spawn error releases the handle while preserving failed startup diagnostics.
 An explicit confirmed stop can subsequently reach stopped.
+
+- Desktop training presentation retires workspace/client sessions at commit and
+  keeps one synchronous action owner. Status, cancel and review replies must name
+  the accepted run. Unconfirmed review remains available; a later inventory error
+  cannot revoke confirmed save success. Host task and resource authority stays
+  unchanged. See `docs/architecture/runtime-model.md`.

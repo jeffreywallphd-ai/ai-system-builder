@@ -183,3 +183,8 @@ renderer, hook and API-client tests. Its explicit source mapping replaces coarse
 app-wide ownership only for declared paths. Unknown impact and explicitly required
 focused checks remain selected. These synthetic tests do not download or run
 models. Workflow authority, runner commands and full-suite policy are unchanged.
+
+The existing `functionality-tasks` profile also covers the actual Desktop Train
+Model form and its hook. Focused cases use synthetic task/model/source clients;
+the separately mocked provider-default panel is not qualified by those cases.
+No model accuracy, OCR or physical training is rerun.

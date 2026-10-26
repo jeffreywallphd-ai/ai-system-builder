@@ -114,8 +114,8 @@ function createClientDouble() {
       .mockResolvedValue({ runId: "run-1", status: "cancelled" }),
     saveModelTraining: vi
       .fn()
-      .mockResolvedValue({
-        runId: "run-1",
+      .mockImplementation(async ({ runId }: { runId: string }) => ({
+        runId,
         status: "succeeded",
         outputModel: {
           modelRecordId: "generated-1",
@@ -126,10 +126,10 @@ function createClientDouble() {
           provider: "unknown",
           createdAt: "2026-04-27T00:05:00.000Z",
         },
-      }),
+      })),
     discardModelTraining: vi
       .fn()
-      .mockResolvedValue({ runId: "run-1", status: "cancelled" }),
+      .mockImplementation(async ({ runId }: { runId: string }) => ({ runId, status: "cancelled" })),
     validateModel: vi
       .fn()
       .mockResolvedValue({

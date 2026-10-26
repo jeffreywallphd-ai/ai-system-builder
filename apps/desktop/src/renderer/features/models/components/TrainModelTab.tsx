@@ -1,15 +1,13 @@
 import { useState } from "react";
 
-import {
-  ApplicationIcon,
-  PanelHeading,
-  TermWithHint,
-  TypeBadge,
-  WorkflowSequence,
-  WorkflowStep,
-} from "../../../../../../../modules/ui/shared";
+import { ApplicationIcon } from "../../../../../../../modules/ui/shared/components/ApplicationIcon";
+import { PanelHeading } from "../../../../../../../modules/ui/shared/components/PanelHeading";
+import { TermWithHint } from "../../../../../../../modules/ui/shared/glossary";
+import { TypeBadge } from "../../../../../../../modules/ui/shared/components/TypeBadge";
+import { WorkflowSequence, WorkflowStep } from "../../../../../../../modules/ui/shared/components/WorkflowSequence";
+import { TransientNotificationPublisher } from "../../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
 import { CollapsiblePanel } from "../../../components/ui/CollapsiblePanel";
-import { SettingsPanel } from "../../settings";
+import { SettingsPanel } from "../../settings/components/SettingsPanel";
 import type { useModelTrainingFeature } from "../hooks/useModelTrainingFeature";
 import { MODEL_TRAINING_TASK_PROFILE_OPTIONS } from "../profiles/modelTrainingTaskProfiles";
 
@@ -556,7 +554,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                   className="ui-button"
                   type="button"
                   onClick={() => void s.saveTrainedModel()}
-                  disabled={Boolean(s.reviewActionInFlight)}
+                  disabled={Boolean(s.reviewActionInFlight) || s.stopTrainingInFlight}
                 >
                   {s.reviewActionInFlight === "save" ? "Saving model..." : "Save model"}
                 </button>
@@ -564,16 +562,17 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                   className="ui-button"
                   type="button"
                   onClick={() => void s.discardTrainedModel()}
-                  disabled={Boolean(s.reviewActionInFlight)}
+                  disabled={Boolean(s.reviewActionInFlight) || s.stopTrainingInFlight}
                 >
                   {s.reviewActionInFlight === "discard" ? "Discarding model..." : "Discard model"}
                 </button>
               </div>
             ) : null}
-            {s.message ? (
+            <TransientNotificationPublisher message={s.notificationError ?? (s.status === "failed" ? s.message : undefined)} title="Model training needs attention" tone="error" source="Model training" workspaceId={s.workspaceId} />
+            {s.message && s.status !== "failed" ? (
               <p
                 className="ui-workflow__status"
-                role={s.status === "failed" ? "alert" : "status"}
+                role="status"
               >
                 {s.message}
               </p>

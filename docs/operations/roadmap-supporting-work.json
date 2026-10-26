@@ -7,7 +7,8 @@
     "asset-experience-layered-customization",
     "data-management-quality-and-usability",
     "optional-constrained-json-generation",
-    "optional-low-memory-inference"
+    "optional-low-memory-inference",
+    "comprehensive-ui-automation"
   ],
   "criterion_labels": [
     {
@@ -4024,6 +4025,78 @@
       "scope": "Committed source765f9d56d exposes the existing desktop identity-seeding routine for reviewed callers with verified packages. Normal shared setup still builds before seeding; the reusable routine starts no web service and adds no skip-build flag. Fourteen app-free Node cases verify both launch plans, exact seed settings, pre-allocation denial and bounded redacted failures. Focused, documentation and agent checks plus independent review pass. No real seed process or app was run.",
       "limitations": [
         "The agent must still compose and review the serial operator, bind fresh source/package/helpers, prove exact native retirement before the next app, enforce a finite total deadline and collect per-host memory/runtime evidence. Draft helpers are unexecuted and grant no authority. This support adds no parent qualification and does not close the Data increment or roadmap. The earlier memory-limit failure stays failed; actual app fit and savings remain unproven. The user-deferred private-provider browser page test stays incomplete. Completed model-accuracy and OCR results stay closed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "daily-ingestion-races",
+      "work_criteria": [
+        "scoped-single-acquisition",
+        "honest-cancellation-and-recovery",
+        "truthful-census-and-checkpoint"
+      ],
+      "receipt_digest": "afd068b6b5bc12a690b319e1f009fadee11ddecfa3d58d20387c93b030906901",
+      "review_digest": "67706f7b8049ebd2e46a5585b3dea26537da35799ff528fb3fca6295cfbe29e7",
+      "scope": "Tested and committed Add data action, cancellation and workspace handling.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "context-ui-scope-and-roundtrips",
+      "work_criteria": [
+        "scoped-context-effects",
+        "single-context-actions",
+        "context-flow-coverage"
+      ],
+      "receipt_digest": "79a00ee250223e413be31a2ec6dc89d710296a5eda977ce1c09645c44e381256",
+      "review_digest": "bb149dd3b244f22343f8ebc110e76fecdd52b4d3d4940053e29a1ba323390c2f",
+      "scope": "Tested and committed Context create, review, save and artifact actions.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "dataset-ui-goals-and-session-ownership",
+      "work_criteria": [
+        "all-dataset-goal-commands",
+        "scoped-single-preparation-actions",
+        "dataset-roundtrip-preservation"
+      ],
+      "receipt_digest": "242ee3379bd5a63a291beb0a9a882d0b5147483ff8041a280a79bcc07c638619",
+      "review_digest": "eb0920b9ec3fbb93a8dc7a61d36e06d226da941c64c78204487b931376cf6eb0",
+      "scope": "Tested and committed nine Dataset goal forms and exact review/task replies.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "model-ui-complete-boundaries",
+      "work_criteria": [
+        "model-session-and-selection",
+        "model-user-intent-and-failure",
+        "daily-model-checkpoint"
+      ],
+      "receipt_digest": "840121633239324f29b5e15098251119c52cc7828b31376c1df6c05d85223d28",
+      "review_digest": "2b74ccfe0864625f71e84402102eb10cc3b2eb9b73711bcd22385e28cab24079",
+      "scope": "Tested and committed model browsing, reference, download, file-list and record controls with safe diagnostics.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
     }
   ]

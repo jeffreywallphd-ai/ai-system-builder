@@ -602,3 +602,34 @@ selection or workspace/client replacement invalidates earlier file results. Mode
 files load only after explicit selection of Show model files. Unexpected exceptions
 are not public diagnostic payloads. Focused renderer/client tests do not qualify
 physical downloads, real model execution, native ownership or the final UI matrix.
+
+### Desktop training presentation ownership
+
+The training hook creates a committed workspace/model-client session. Layout
+retirement invalidates old action replies, input follow-ups, model-status reads
+and settings callbacks. The replacement clears selected input identities and
+reconciles an opaque saved run through the current client. Leaving the page never
+asserts task cancellation or physical worker termination. A recovered run keeps
+Start disabled and Stop available until current status proves its outcome.
+
+A synchronous session action owner covers start/stop/review/unload before busy
+render. Only the accepted run may update observation or cancellation. A separate
+review-run identity admits explicit save/discard once, retaining review after
+unconfirmed, foreign or nonterminal results. Save requires a matching succeeded
+result without pending review and a registered output model; discard requires a
+matching cancelled result without pending review. Inventory refresh failure after
+a confirmed save cannot turn that save into failure.
+
+Seed and LoRA dropout use explicit numeric values rather than truthiness, so zero
+is preserved. Other runtime/resource/provider policies are unchanged. Public
+action failures use fixed Notifications copy; active progress remains in the form.
+Nine rendered task variants assert model identity, Parquet train plus JSONL
+validation input, method and explicit review without executing a model. The
+provider-default settings panel is outside those new form oracles. Actual
+training, host/native and final combined qualification remain separate.
+
+Recovery storage writes also require the current committed session. A delayed
+Start reply cannot replace a newer saved run. Once observation proves terminal
+review, a pending Stop reply or rejection cannot restore active-run state.
+An uncertain Stop retains observation and controls and publishes a fixed error
+through Notifications without converting the active task to failed.

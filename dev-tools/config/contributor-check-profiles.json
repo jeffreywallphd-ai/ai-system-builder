@@ -548,7 +548,8 @@
         "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
         "apps/thin-client/src/features/model-management/components/ModelManagementFeature.tsx",
         "apps/thin-client/src/features/model-management/api/apiModelManagementClient.ts",
-        "apps/thin-client/README.md"
+        "apps/thin-client/README.md",
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
       ]
     },
     "functionality-context": {

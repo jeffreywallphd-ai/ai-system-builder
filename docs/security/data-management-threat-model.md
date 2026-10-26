@@ -1080,3 +1080,26 @@ bounded query length, identifier-presence flags, status and elapsed time; they o
 raw queries, identifiers, endpoints, provider error text/code/details and content
 type. Thrown API error message/status/code/details remain unchanged for typed
 callers. Actual client-to-renderer denial tests cover that separate boundary.
+
+### Desktop training task and review replies
+
+Protected presentation state includes exact workspace/client/run identity, selected
+prepared datasets, parameter values and explicit save/discard intent. A committed
+session retires stale callbacks and follow-up reads. Synchronous action ownership
+refuses duplicate starts and mutations. Status/cancellation replies must name the
+accepted run. Review mutation keeps its identity until matching terminal save or
+discard proof; missing registered save output remains unconfirmed. Accepted host
+work is not cancelled by navigation. Host authorization and resource bounds remain
+authoritative and unchanged.
+
+Unexpected action exceptions do not enter rendered messages. Errors use fixed
+workspace-scoped Notifications copy. Successful-save status remains authoritative
+when a subsequent inventory read fails. Focused real-form/hook cases cover nine
+profiles, explicit zero values, duplicate/stale/foreign actions, uncertain task
+status and review retention. Synthetic results prove no physical training, model
+quality, provider publication, native staging or worker retirement.
+
+Focused deferred-reply tests also cover recovery-key ownership and terminal
+observation during cancellation. Neither a retired Start nor a late Stop may
+replace a newer accepted identity or confirmed review. Uncertain cancellation
+remains observable with safe Notifications and unchanged host authority.

@@ -1232,12 +1232,20 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
+          "name": "Nine two-dataset rendered training profiles plus zero values, action/session/task/review/failure regressions",
+          "tier": "desktop-training-form-and-hook-with-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "existing approved tiny training assets/runtime, sufficient measured resources"
-      ]
+      ],
+      "scope_limit": "Actual training UI/hook; provider-default panel mocked separately. No physical training, model accuracy, provider, native or final-host qualification."
     },
     {
       "id": "image-generation-create-and-register",
