@@ -3923,6 +3923,23 @@
       "limitations": [
         "Source checks and reviews do not qualify an actual provided-data package/two-app run or complete a parent criterion, Data increment3, the Data roadmap or a release. Failed native attempts remain failed. Private-provider publication/rendering/cleanup, scale and advanced preparation remain pending. Accepted model-accuracy and earlier OCR results stay closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "semantic-curation-improves-measured-quality",
+      "work_id": "dataset-semantic-curation-qualified",
+      "work_criteria": [
+        "bounded-counted-comparison-work",
+        "deterministic-reference-outcomes-preserved",
+        "owned-profile-documentation-and-scope"
+      ],
+      "receipt_digest": "8b3f01346ad5bf82f164f1e6e2308898edfc8eacbc40656bfa7d0c655a8304a0",
+      "scope": "The reviewed semantic-curation fix bounds both candidate passes and counts every actual cosine comparison. Same-source skips consume candidate slots without a cosine call. For 64 rows with K = 3, actual and reported calls are 378 within 384. Enabled curation records algorithmVersion 2; the hashed-token-v1 embedding and disabled version 1 path are unchanged. Exact selected worker tests, the dedicated three-file model/native-free profile and five current checks passed. Component evidence only.",
+      "limitations": [
+        "This source/component evidence does not complete a parent criterion, Data increment 5, the Data roadmap or a release. Bounded hashed-token search is approximate. Larger-data, generated-data, provider and full-host qualification remain separate. Earlier unsuccessful broad/native and app attempts remain recorded. Completed model-accuracy and OCR results are unchanged; no accepted check is reopened."
+      ],
+      "review_digest": "b609edc9de6e9ec25767502e972d172296f52f62d72d5e113b655e264263df1c"
     }
   ]
 }

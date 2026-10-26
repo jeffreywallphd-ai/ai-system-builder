@@ -11340,6 +11340,26 @@
           "The agent must still complete the supplied-data journeys in both real apps within the enforced limits. Earlier failures stay failed. These fixes do not complete dataset lineage or publishing, large-data checks, advanced preparation, or the Data roadmap. Completed model-accuracy and OCR checks are not reopened."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a3415fedc392a05f02415868de671f2572be896ceec24834d2d504e85b698280",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Data cleanup now stays within its set comparison limit and reports all comparisons. In the small test, it made 378 comparisons within a 384 limit. Checks for repeated rows, source balance and suggestions for difficult examples still pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "23a7fb7cffa61de17d80cee00f3b9181396294517388c5429f1cb7e23ebcdf5b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks use small reference examples. They do not complete the remaining large-data, online-service or full-app checks. Earlier failed attempts remain recorded. Completed model-accuracy and text-recognition checks stay closed."
+        ]
+      }
     }
   ]
 }
