@@ -3702,6 +3702,44 @@
         "Artifact Browser mounting, page-owned request freshness, ready source state, one-use handoff and actual application acknowledgment still need implementation and host tests.",
         "No provider publication, native/offload, scale or model-accuracy qualification was run or granted by this component. Previously accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-version-browser-history",
+      "work_criteria": [
+        "exact-browser-history",
+        "explicit-current-publication",
+        "bounded-reviewed-delivery"
+      ],
+      "receipt_digest": "f6d570e90b87784d3a8bab47354ad9a2841b175aec4d22fb62a6fdeefcc004c8",
+      "review_digest": "4da69899554805402722e9be03854b98b2f1c9623f25a2271c5bcfc52a089788",
+      "scope": "Reviewed Browser history/publication wiring in both app pages through existing clients. Exact unique complete-dataset association, retry/refresh/comparison, current-session replies, duplicate guard, input-bound public consent/private default and exact publication-result identity. Thirty UI tests, ten-file focused profile, five gates, desktop typecheck and thin build passed. Setup reuse remains absent pending the complete page consumer.",
+      "limitations": [
+        "Local component/build evidence does not complete a parent criterion, Data increment3, a roadmap work chunk, the roadmap or a release.",
+        "The one-use page consumer, ready authorized sources, later-edit protection and actual setup application acknowledgment remain unfinished. Neither app offers setup reuse yet.",
+        "Actual packaged/browser journeys, private-provider publication/restart, scale and other parent checks remain pending. No native/offload/model accuracy test was run or reopened."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "publication-is-explicit-and-recoverable",
+      "work_id": "dataset-version-browser-history",
+      "work_criteria": [
+        "exact-browser-history",
+        "explicit-current-publication",
+        "bounded-reviewed-delivery"
+      ],
+      "receipt_digest": "f6d570e90b87784d3a8bab47354ad9a2841b175aec4d22fb62a6fdeefcc004c8",
+      "review_digest": "4da69899554805402722e9be03854b98b2f1c9623f25a2271c5bcfc52a089788",
+      "scope": "Reviewed Browser history/publication wiring in both app pages through existing clients. Exact unique complete-dataset association, retry/refresh/comparison, current-session replies, duplicate guard, input-bound public consent/private default and exact publication-result identity. Thirty UI tests, ten-file focused profile, five gates, desktop typecheck and thin build passed. Setup reuse remains absent pending the complete page consumer.",
+      "limitations": [
+        "Local component/build evidence does not complete a parent criterion, Data increment3, a roadmap work chunk, the roadmap or a release.",
+        "The one-use page consumer, ready authorized sources, later-edit protection and actual setup application acknowledgment remain unfinished. Neither app offers setup reuse yet.",
+        "Actual packaged/browser journeys, private-provider publication/restart, scale and other parent checks remain pending. No native/offload/model accuracy test was run or reopened."
+      ]
     }
   ]
 }

@@ -11071,6 +11071,48 @@
           "This work does not test online publishing, large datasets or model accuracy. Earlier accepted model accuracy tests stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "77f74303e25b94487f817efadf33c50ac3d67b4a67b51080c514afd51937ed20",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saved version history is now connected to Artifact Browser in both apps. It checks the exact dataset file, shows changes and provides retry controls.",
+          "Publishing starts only after an explicit action. Private access is the default, and changed public publishing settings require new confirmation.",
+          "Thirty UI tests, the focused checks, the desktop type check and the browser app build passed. The agent is completing safe setup reuse next. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4281ecaa716f47d02ce9e209d7b573f445c5e9100eb2fde2411b5dfd8e353bbd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This tested app component does not finish Data step3 or the full Data roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d7af82f09b57d83d1e1b8e2c0deada70415f9aeda0efa24fa499e2818351210c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must connect and test safe setup reuse. It must wait for the current source files and preserve later edits. This action is not available in either app yet."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e367c2ae12a299c66ddfd1e14b34fad9ff3ac89f2a4f587696a1aa1e876abce5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Full app and online publishing tests, restart recovery and large-data checks remain pending. No model accuracy test was repeated; earlier accepted results stay closed."
+        ]
+      }
     }
   ]
 }
