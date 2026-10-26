@@ -1,3 +1,4 @@
+import { datasetVersionReplayFixture } from "./datasetVersionReplayFixture";
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -277,15 +278,18 @@ describe("DatasetPreparationFeature", () => {
 
   it.each(["standard", "offload-v1"] as const)("rejects an unsupported reused profile without partially replacing %s setup", async (initialMode) => {
     const dispatch = vi.fn();
-    const client = { browseSourceArtifacts: async () => [], startPrepareTrainingDataset: dispatch } as any;
+    const fixture = datasetVersionReplayFixture("llm-instruction", "pdf");
+    fixture.recipe.generation.model.modelId = "fixture/replacement";
+    const client = { browseSourceArtifacts: async () => [fixture.source], startPrepareTrainingDataset: dispatch } as any;
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
     let memoryMode: unknown = "offload-v99";
     function ReuseProbe() {
       feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient });
-      return <button onClick={() => feature.onReuseDatasetVersion({
-        sourceArtifactIds: ["replacement-source"],
-        recipeSnapshot: { recipe: { generation: { model: { modelId: "fixture/replacement", memoryMode } } } },
-      } as any)}>Reuse saved setup</button>;
+      return <button onClick={() => {
+        if (memoryMode === undefined) delete fixture.recipe.generation.model.memoryMode;
+        else fixture.recipe.generation.model.memoryMode = memoryMode;
+        feature.onReuseDatasetVersion(fixture.reproduction, fixture.selection);
+      }}>Reuse saved setup</button>;
     }
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => { root!.render(<ReuseProbe />); await flushAsyncWork(); });
@@ -303,7 +307,7 @@ describe("DatasetPreparationFeature", () => {
       expect(feature.status.kind).toBe("idle");
       expect(feature.modelId).toBe("fixture/replacement");
       expect(feature.modelMemoryMode).toBe(validMode ?? "standard");
-      expect(feature.selectedArtifactIds).toEqual(["replacement-source"]);
+      expect(feature.selectedArtifactIds).toEqual([fixture.source.artifactId]);
       expect(dispatch).not.toHaveBeenCalled();
     }
   });

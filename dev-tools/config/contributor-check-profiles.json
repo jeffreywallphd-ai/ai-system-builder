@@ -1323,7 +1323,8 @@
         "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
         "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx",
         "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx",
-        "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts"
+        "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1362,7 +1363,9 @@
         "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx",
         "apps/thin-client/src/features/artifact-browser/api/apiArtifactBrowserClient.ts",
         "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts",
-        "apps/thin-client/README.md"
+        "apps/thin-client/README.md",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/datasetVersionReplayFixture.ts",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx"
       ]
     }
   }

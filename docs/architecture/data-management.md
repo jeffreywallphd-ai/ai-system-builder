@@ -47,6 +47,17 @@ rejects missing or nonarray source items. Its real-client Preparation test cover
 safe failure followed by direct retry to a genuine empty list. These controls prepare
 for, but do not implement, setup reuse.
 
+The internal Desktop restore hook now validates the exact selected version/file,
+complete current sources and every saved setting. It builds a full replacement,
+reconstructs the normal request and requires the same normalized meaning before
+any configuration setter. The last committed form frame and source request must
+still match. Edits, source retry, client/workspace changes, unmount and task start
+retire old callbacks; active tasks and reviews retain their progress unchanged.
+A successful restore retires that invocation and resets provider destinations to
+local-only. This synchronous internal result is not page acknowledgment. Neither
+app exposes setup reuse yet; the page-owned one-use handoff and Thin consumer
+remain pending, as do actual host/provider/scale checks.
+
 The shared Artifact Browser uses the same card presentation for uploaded and
 generated artifacts. User data remains previewable without exposing active
 content: JSON and JSON Lines are formatted and capped at 100 displayed lines,

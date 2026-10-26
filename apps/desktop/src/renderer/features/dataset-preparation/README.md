@@ -63,3 +63,12 @@ The desktop task client maps the closed `ocr_unavailable` and
 It preserves the validated normalization stage while discarding raw worker
 messages and details. Unknown codes keep the generic safe failure message;
 private runtime paths, prompts and supplier exceptions are never UI copy.
+
+Saved-version settings restore is an internal consumer, not an exposed Browser
+action yet. It requires the exact selected version/file and a complete current
+source read. It validates all settings, rebuilds the actual request and compares
+normalized meaning before applying a complete replacement. Retired callbacks,
+unavailable sources and active tasks or reviews cannot replace settings. Provider
+choices reset to local-only; approval and provider authority are never restored.
+The page-owned one-use handoff, applied acknowledgment and Thin consumer remain
+pending. These local hook checks do not qualify native, provider or scale work.

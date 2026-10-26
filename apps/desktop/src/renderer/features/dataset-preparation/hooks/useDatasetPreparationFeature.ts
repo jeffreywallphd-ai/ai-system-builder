@@ -13,6 +13,7 @@ import {
 
 import type { ModelDefaultInferenceMode } from "../../../../../../../modules/contracts/settings";
 import type { DatasetVersionReproduction } from "../../../../../../../modules/contracts/dataset";
+import { validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import type {
   DatasetPreparationTaskType,
@@ -357,7 +358,7 @@ export interface UseDatasetPreparationFeatureResult {
   onDownloadGenerationModel: () => Promise<void>;
   onSaveTrainingSettings: () => void;
   onLoadTrainingSettings: () => void;
-  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction) => void;
+  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction, context?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">) => boolean;
 }
 
 export interface UseDatasetPreparationFeatureOptions {
@@ -2078,190 +2079,139 @@ export function useDatasetPreparationFeature(
     selectedSavedTrainingSettingsId,
   ]);
 
+  // A callback can be kept by an async caller. Only the last committed frame
+  // may replace the form; source retry, edits, client/scope changes and unmount
+  // retire every older callback before any setter runs.
+  const replaySourceEpoch = sourceRequestId.current;
+  const replaySourceScope = sourceScope.current;
+  const replayFrame = useMemo(() => ({}), [
+    workspaceId, datasetClient, artifacts, sourceLoadState, replaySourceEpoch, replaySourceScope,
+    currentTrainingSettingsSnapshot, selectedArtifactIds, selectedArtifactStorageFilter,
+    status, activeTaskRequestId, qualityReview, reviewActionInFlight,
+  ]);
+  const committedReplayFrame = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    committedReplayFrame.current = replayFrame;
+    return () => { if (committedReplayFrame.current === replayFrame) committedReplayFrame.current = undefined; };
+  });
+
   const onReuseDatasetVersion = useCallback(
-    (reproduction: DatasetVersionReproduction) => {
-      const snapshot = reproduction.recipeSnapshot as any;
-      const recipe = snapshot.recipe ?? {};
-      const task = recipe.task ?? {};
-      const normalization = recipe.normalization ?? {};
-      const chunking = recipe.chunking ?? {};
-      const generation = recipe.generation ?? {};
-      const structuredOutput = generation.structuredOutput ?? {};
-      const model = generation.model ?? {};
-      let restoredMemoryMode: DatasetPreparationMemoryMode;
+    (reproduction: DatasetVersionReproduction, selection?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">): boolean => {
+      const current = () => committedReplayFrame.current === replayFrame &&
+        sourceScope.current === replaySourceScope && sourceRequestId.current === replaySourceEpoch &&
+        replaySourceScope?.workspaceId === workspaceId && replaySourceScope?.client === datasetClient;
+      // Retired callbacks must not change even the current task's message.
+      if (!current()) return false;
+      if (status.kind === "loading" || activePollingRequestIdRef.current || activeTaskRequestId || qualityReview || reviewActionInFlight) return false;
+      const deny = () => { setStatus({ kind: "error", message: "This saved setup cannot be used here. It was not restored; your current setup is unchanged." }); return false; };
+      if (!selection || !workspaceId ||
+          sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") return deny();
+      let context: DatasetVersionReplayContext;
       try {
-        restoredMemoryMode = normalizeDatasetPreparationMemoryMode(model.memoryMode);
-      } catch {
-        setStatus({ kind: "error", message: "This saved setup uses an unsupported memory mode. It was not restored; your current setup is unchanged." });
-        return;
-      }
-      const generationParams = generation.generationParams ?? {};
-      const split = snapshot.split ?? {};
-      const output = snapshot.output ?? {};
-      const policy = snapshot.effectiveQualityPolicy ?? {};
-      const advanced = snapshot.advanced ?? {};
-      const reusedTaskType = isDatasetPreparationTaskType(task.taskType) ? task.taskType : taskType;
-      const replaySources = reproduction.sourceArtifactIds.flatMap((id) => {
-        const source = artifacts.find((entry) => entry.artifactId === id);
-        const capability = source && resolveDatasetPreparationSourceCapability({
-          fileName: source.label || source.storageKey, mediaType: source.mediaType,
+        if (selection.workspaceId !== workspaceId) return deny();
+        context = {
+          workspaceId, selectedVersion: selection.selectedVersion, datasetArtifactKey: selection.datasetArtifactKey,
+          requestedVersionId: selection.selectedVersion.versionId,
+          sources: { status: "ready", workspaceId, items: artifacts },
+        };
+      } catch { return deny(); }
+      const result = validateDatasetVersionReplay(reproduction, context);
+      if (!result.ok) return deny();
+      const replay = result.value, recipe = replay.recipe, task = recipe.task;
+      const generation = recipe.generation, model = generation?.model;
+      const defaults = createDefaultTrainingSettingsSnapshot(task.taskType);
+      const settings: DatasetPreparationTrainingSettingsSnapshot = {
+        ...defaults,
+        taskType: task.taskType,
+        preparationMethodId: replay.preparation.method,
+        advancedPreset: replay.advanced?.preset ?? "standard",
+        labelSet: "labelSet" in task ? task.labelSet?.join(", ") ?? "" : "",
+        multiLabel: "multiLabel" in task && task.multiLabel === true,
+        extractionStrictSchema: "strictSchema" in task ? task.strictSchema ?? true : true,
+        diffusionConceptKind: "conceptKind" in task ? task.conceptKind ?? "subject" : "subject",
+        diffusionTriggerToken: "triggerToken" in task ? task.triggerToken ?? "" : "",
+        diffusionRegularizationClass: "regularizationClass" in task ? task.regularizationClass ?? "" : "",
+        detectionBoxFormat: "boxFormat" in task ? task.boxFormat ?? "coco" : "coco",
+        segmentationMaskFormat: "maskFormat" in task ? task.maskFormat ?? "png" : "png",
+        textInputMode: task.textInputMode ?? "provided",
+        textGenerationPrompt: generation?.promptTemplate ?? defaults.textGenerationPrompt,
+        visualOutputShape: generation?.structuredOutput?.visualShape
+          ? JSON.parse(JSON.stringify(generation.structuredOutput.visualShape)) as DatasetPreparationVisualOutputShape
+          : createDefaultDatasetPreparationVisualOutputShape(task.taskType, { multiLabel: "multiLabel" in task && task.multiLabel === true }),
+        constrainedDecodingPreference: generation?.structuredOutput?.constrainedDecoding ?? false,
+        normalizationMode: recipe.normalization?.normalizationMode ?? "",
+        unsupportedDocumentPolicy: recipe.normalization?.unsupportedDocumentPolicy ?? "",
+        ocrEnabled: replay.advanced?.content?.ocrEnabled === true,
+        ocrLanguage: replay.advanced?.content?.ocrLanguage ?? "",
+        chunkSize: stringifyDefaultNumber(recipe.chunking?.chunkSize) || defaults.chunkSize,
+        chunkOverlap: stringifyDefaultNumber(recipe.chunking?.chunkOverlap) || defaults.chunkOverlap,
+        preserveDocumentBoundaries: recipe.chunking?.preserveDocumentBoundaries ?? true,
+        maxChunkCount: stringifyDefaultNumber(recipe.chunking?.maxChunkCount),
+        maxTokensPerChunk: stringifyDefaultNumber(replay.advanced?.content?.maxTokensPerChunk) || defaults.maxTokensPerChunk,
+        maxSourceSpans: stringifyDefaultNumber(replay.advanced?.content?.maxSourceSpans) || defaults.maxSourceSpans,
+        topicBoundarySensitivity: stringifyDefaultNumber(replay.advanced?.content?.semanticBoundaryThreshold) || defaults.topicBoundarySensitivity,
+        similarityThreshold: stringifyDefaultNumber(replay.advanced?.semantic?.similarityThreshold) || defaults.similarityThreshold,
+        modelId: model?.modelId ?? defaults.modelId,
+        modelInferenceMode: model?.inferenceMode ?? defaults.modelInferenceMode,
+        modelDevice: model?.device ?? defaults.modelDevice,
+        modelTorchDtype: model?.torchDtype ?? defaults.modelTorchDtype,
+        modelMemoryMode: model?.memoryMode ?? "standard",
+        modelMemoryOverflowPolicy: model?.memoryOverflowPolicy ?? "none",
+        maxExamplesPerChunk: stringifyDefaultNumber(replay.advanced?.synthetic?.candidatesPerChunk),
+        batchSize: stringifyDefaultNumber(generation?.batchSize),
+        failurePolicy: generation?.failurePolicy ?? "",
+        generationTemperature: stringifyDefaultNumber(generation?.generationParams?.temperature),
+        generationTopP: stringifyDefaultNumber(generation?.generationParams?.topP),
+        generationMaxNewTokens: stringifyDefaultNumber(generation?.generationParams?.maxNewTokens),
+        trainRatio: String(replay.split.trainRatio), validationRatio: String(replay.split.validationRatio ?? 0), testRatio: String(replay.split.testRatio),
+        seed: stringifyDefaultNumber(replay.split.seed), shuffle: replay.split.shuffle ?? false,
+        outputFormat: replay.output.format, outputBaseName: replay.output.naming?.baseName ?? "",
+        localDestinationEnabled: true, huggingFaceDestinationEnabled: false,
+        huggingFaceRepository: "", huggingFaceRevision: "", huggingFacePathPrefix: "",
+        qualityPreset: replay.quality.preset, requireLicenseMetadata: replay.quality.requireLicenseMetadata,
+        requireConsentMetadata: replay.quality.requireConsentMetadata, includeSourceAttribution: replay.quality.includeSourceAttribution,
+      };
+      const selectedArtifactIds = [...replay.sourceArtifactIds];
+      const preparation = JSON.parse(JSON.stringify(replay.preparation)) as DatasetPreparationExecutionPlan;
+      const parsed = validateAndParseDatasetPreparationInputs({ ...settings, selectedArtifactIds, preparation });
+      if (!parsed.ok) return deny();
+      try {
+        const sourceFormats = selectedArtifactIds.map(id => {
+          const source = artifacts.find(item => item.artifactId === id)!;
+          return resolveDatasetPreparationSourceCapability({ fileName: source.label || source.storageKey, mediaType: source.mediaType })!.format;
         });
-        return capability ? [capability] : [];
-      });
-      const replayResolution = resolveDatasetPreparationAdaptivePlan({ taskType: reusedTaskType, sources: replaySources });
-      const savedPlan = snapshot.preparation;
-      const invalidExplicitOcrPlan = savedPlan !== undefined && (
-        !savedPlan || savedPlan.schemaVersion !== "1" || savedPlan.method !== "structure-aware" ||
-        savedPlan.inputIntent !== "create-from-source-material" || savedPlan.generationMode !== "task-examples" ||
-        !Array.isArray(savedPlan.sourceKinds) || savedPlan.sourceKinds.length !== 1 || savedPlan.sourceKinds[0] !== "document"
-      );
-      const invalidOcrConfiguration = advanced.content?.ocrEnabled === true && (
-        advanced.preset !== "structure-aware" || advanced.content.strategy !== "layout" ||
-        advanced.content.layoutEnabled !== true || normalization.targetFormat !== "markdown" ||
-        !isDatasetPreparationTaskType(task.taskType) || invalidExplicitOcrPlan ||
-        !resolveDatasetPreparationMethodOption(replayResolution, "structure-aware")
-      );
-      const reusedOcr = resolveDatasetPreparationOcrChoice({
-        enabled: advanced.content?.ocrEnabled,
-        language: advanced.content?.ocrLanguage,
-        // Current snapshots store exact advanced settings without a separate plan.
-        method: savedPlan?.method ?? (advanced.preset === "structure-aware" ? "structure-aware" : undefined),
-        sourceCount: reproduction.sourceArtifactIds.length,
-        sourceFormats: replaySources.map((source) => source.format),
-      });
-      if (invalidOcrConfiguration || reusedOcr.ok === false) {
-        setStatus({ kind: "error", message: "This saved setup has invalid text recognition settings. It was not restored; your current setup is unchanged." });
-        return;
-      }
-      const reusedOutputFormat = ["jsonl", "json", "csv", "parquet"].includes(
-        output.format,
-      )
-        ? output.format
-        : outputFormat;
-      const reusedVisualShapeCompilation =
-        structuredOutput.visualShape &&
-        typeof structuredOutput.visualShape === "object"
-          ? compileDatasetPreparationVisualOutputShape(
-              structuredOutput.visualShape,
-              {
-                taskType: reusedTaskType,
-                outputFormat: reusedOutputFormat,
-                multiLabel:
-                  typeof task.multiLabel === "boolean"
-                    ? task.multiLabel
-                    : multiLabel,
-                allowedLabels: Array.isArray(task.labelSet)
-                  ? (() => {
-                      const labels = task.labelSet.filter(
-                        (label: unknown): label is string =>
-                          typeof label === "string" && label.trim().length > 0,
-                      );
-                      return labels.length > 0 ? labels : undefined;
-                    })()
-                  : undefined,
-              },
-            )
-          : undefined;
-      setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
-      if (reusedOcr.content) setPreparationMethodId("structure-aware");
-      setOcrEnabled(advanced.content?.ocrEnabled === true);
-      setOcrLanguage(reusedOcr.content?.ocrLanguage ?? "");
-      if (
-        [
-          "standard",
-          "better-document-understanding",
-          "generate-examples",
-        ].includes(advanced.preset)
-      ) {
-        setAdvancedPreset(advanced.preset);
-      } else {
-        setAdvancedPreset("standard");
-      }
-      suppressNextTaskDefaultResetRef.current = reusedTaskType !== taskType;
-      if (isDatasetPreparationTaskType(task.taskType))
-        setTaskType(task.taskType);
-      if (Array.isArray(task.labelSet)) setLabelSet(task.labelSet.join(", "));
-      if (typeof task.multiLabel === "boolean") setMultiLabel(task.multiLabel);
-      if (typeof task.strictSchema === "boolean")
-        setExtractionStrictSchema(task.strictSchema);
-      if (["subject", "style", "concept"].includes(task.conceptKind))
-        setDiffusionConceptKind(task.conceptKind);
-      if (typeof task.triggerToken === "string")
-        setDiffusionTriggerToken(task.triggerToken);
-      if (typeof task.regularizationClass === "string")
-        setDiffusionRegularizationClass(task.regularizationClass);
-      if (["coco", "xyxy", "xywh"].includes(task.boxFormat))
-        setDetectionBoxFormat(task.boxFormat);
-      if (["png", "coco-rle", "polygon"].includes(task.maskFormat))
-        setSegmentationMaskFormat(task.maskFormat);
-      if (["provided", "generate"].includes(task.textInputMode))
-        setTextInputMode(task.textInputMode);
-      if (typeof generation.promptTemplate === "string")
-        setTextGenerationPrompt(generation.promptTemplate);
-      if (reusedVisualShapeCompilation?.ok)
-        setVisualOutputShape(reusedVisualShapeCompilation.value.shape);
-      if (typeof structuredOutput.constrainedDecoding === "boolean")
-        setConstrainedDecodingPreference(structuredOutput.constrainedDecoding);
-      if (["fail", "skip"].includes(normalization.unsupportedDocumentPolicy))
-        setUnsupportedDocumentPolicy(normalization.unsupportedDocumentPolicy);
-      if (["best-effort", "strict"].includes(normalization.normalizationMode))
-        setNormalizationMode(normalization.normalizationMode);
-      if (typeof chunking.chunkSize === "number")
-        setChunkSize(String(chunking.chunkSize));
-      if (typeof chunking.chunkOverlap === "number")
-        setChunkOverlap(String(chunking.chunkOverlap));
-      if (typeof chunking.preserveDocumentBoundaries === "boolean")
-        setPreserveDocumentBoundaries(chunking.preserveDocumentBoundaries);
-      if (typeof chunking.maxChunkCount === "number")
-        setMaxChunkCount(String(chunking.maxChunkCount));
-      if (typeof model.modelId === "string") setModelId(model.modelId);
-      if (["auto", "text2text", "causal", "chat"].includes(model.inferenceMode))
-        setModelInferenceMode(model.inferenceMode);
-      if (["auto", "cpu", "cuda"].includes(model.device))
-        setModelDevice(model.device);
-      if (["auto", "float16", "bfloat16", "float32"].includes(model.torchDtype))
-        setModelTorchDtype(model.torchDtype);
-      setModelMemoryMode(restoredMemoryMode);
-      if (typeof generation.maxExamplesPerChunk === "number")
-        setMaxExamplesPerChunk(String(generation.maxExamplesPerChunk));
-      if (typeof generation.batchSize === "number")
-        setBatchSize(String(generation.batchSize));
-      if (["fail", "skip"].includes(generation.failurePolicy))
-        setFailurePolicy(generation.failurePolicy);
-      if (typeof generationParams.temperature === "number")
-        setGenerationTemperature(String(generationParams.temperature));
-      if (typeof generationParams.topP === "number")
-        setGenerationTopP(String(generationParams.topP));
-      if (typeof generationParams.maxNewTokens === "number")
-        setGenerationMaxNewTokens(String(generationParams.maxNewTokens));
-      if (typeof split.trainRatio === "number")
-        setTrainRatio(String(split.trainRatio));
-      if (typeof split.validationRatio === "number")
-        setValidationRatio(String(split.validationRatio));
-      if (typeof split.testRatio === "number")
-        setTestRatio(String(split.testRatio));
-      if (typeof split.seed === "number") setSeed(String(split.seed));
-      if (typeof split.shuffle === "boolean") setShuffle(split.shuffle);
-      if (["jsonl", "json", "csv", "parquet"].includes(output.format))
-        setOutputFormat(output.format);
-      if (typeof output.naming?.baseName === "string")
-        setOutputBaseName(output.naming.baseName);
-      if (["recommended", "strict", "minimal"].includes(policy.preset))
-        setQualityPreset(policy.preset);
-      if (typeof policy.requireLicenseMetadata === "boolean")
-        setRequireLicenseMetadata(policy.requireLicenseMetadata);
-      if (typeof policy.requireConsentMetadata === "boolean")
-        setRequireConsentMetadata(policy.requireConsentMetadata);
-      if (typeof policy.includeSourceAttribution === "boolean")
-        setIncludeSourceAttribution(policy.includeSourceAttribution);
+        const rebuilt = buildDatasetPreparationRequest({
+          ...settings, selectedArtifactIds, preparation, sourceFormats,
+          constrainedDecoding: settings.constrainedDecodingPreference,
+          parsed: parsed.parsed,
+          resolvedDefault: { provider: "transformers", modelId: settings.modelId, inferenceMode: settings.modelInferenceMode,
+            device: settings.modelDevice || "auto", torchDtype: settings.modelTorchDtype || "auto", source: "builtin" },
+        });
+        // The persisted producer is JSON: optional undefined properties are
+        // omitted by serialization, rather than accepted as untrusted values.
+        const roundTrip = validateDatasetVersionReplay(JSON.parse(JSON.stringify({
+          versionId: replay.versionId, sourceArtifactIds: selectedArtifactIds, lineage: selection.selectedVersion.lineage,
+          recipeSnapshot: { recipe: rebuilt.recipe, preparation: rebuilt.preparation, advanced: rebuilt.advanced,
+            split: rebuilt.split, output: { format: rebuilt.output.format, naming: rebuilt.output.naming }, effectiveQualityPolicy: replay.quality },
+        })), context);
+        if (!roundTrip.ok || JSON.stringify(roundTrip.value) !== JSON.stringify(replay)) return deny();
+      } catch { return deny(); }
+      if (!current()) return false;
+      // Retire synchronously: another call from this frame cannot apply twice.
+      committedReplayFrame.current = undefined;
+      if (!applyTrainingSettingsSnapshot(settings)) return false;
+      setSelectedArtifactStorageFilter("all");
+      setSelectedArtifactIds(selectedArtifactIds);
       setStatus({ kind: "idle" });
+      return true;
     },
-    [artifacts, multiLabel, outputFormat, taskType],
+    [replayFrame, replaySourceEpoch, replaySourceScope, datasetClient, workspaceId, artifacts, sourceLoadState, status, activeTaskRequestId, qualityReview, reviewActionInFlight, applyTrainingSettingsSnapshot],
   );
 
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      committedReplayFrame.current = undefined;
       if (sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") {
         setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
         return;

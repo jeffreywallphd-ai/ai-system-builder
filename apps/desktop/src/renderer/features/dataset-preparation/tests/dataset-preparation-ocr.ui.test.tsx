@@ -1,3 +1,4 @@
+import { datasetVersionReplayFixture } from "./datasetVersionReplayFixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -143,37 +144,29 @@ describe("desktop scanned-PDF preparation", () => {
     expect(field("Text recognition language")).toBeUndefined();
   });
 
-  it("restores version OCR settings only for sources actually present as PDFs", async () => {
+  it("restores complete version OCR settings only for sources actually present as PDFs", async () => {
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
-    const client = { browseSourceArtifacts: async () => [{ artifactId: "pdf", label: "scanned.pdf", storageKey: "uploads/scanned.pdf", mediaType: "application/pdf" }] } as any;
+    const fixture = datasetVersionReplayFixture("llm-instruction", "ocr");
+    const client = { browseSourceArtifacts: async () => [fixture.source] } as any;
     function Probe() { feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client }); return null; }
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => { root!.render(<Probe />); await flush(); });
-    const reproduction = { sourceArtifactIds: ["pdf"], recipeSnapshot: {
-      recipe: { normalization: { targetFormat: "markdown" }, task: { taskType: "llm-instruction" } },
-      // Match the actual finalizer snapshot, which stores advanced settings
-      // without a separate preparation plan.
-      advanced: { preset: "structure-aware", content: { strategy: "layout", layoutEnabled: true, ocrEnabled: true, ocrLanguage: "en-US" } },
-    } } as any;
-    await act(async () => { feature.onReuseDatasetVersion(reproduction); await flush(); });
-    expect(feature.ocrEnabled).toBe(true);
-    expect(feature.ocrLanguage).toBe("en-US");
-    expect(feature.preparationMethodId).toBe("structure-aware");
-    await act(async () => { feature.onReuseDatasetVersion({ ...reproduction, sourceArtifactIds: ["not-present"] }); await flush(); });
-    expect(feature.selectedArtifactIds).toEqual(["pdf"]);
-    expect(feature.status.message).toContain("was not restored");
-    expect(feature.ocrLanguage).toBe("en-US");
+    await act(async () => { expect(feature.onReuseDatasetVersion(fixture.reproduction, fixture.selection)).toBe(true); await flush(); });
+    expect(feature.ocrEnabled).toBe(true); expect(feature.ocrLanguage).toBe("en-US"); expect(feature.preparationMethodId).toBe("structure-aware");
+    await act(async () => { expect(feature.onReuseDatasetVersion({ ...fixture.reproduction, sourceArtifactIds: ["not-present"] }, fixture.selection)).toBe(false); await flush(); });
+    expect(feature.selectedArtifactIds).toEqual([fixture.source.artifactId]); expect(feature.status.message).toContain("was not restored"); expect(feature.ocrLanguage).toBe("en-US");
   });
 
   it("refuses contradictory version settings atomically even with an explicit structure-aware plan", async () => {
     let feature!: ReturnType<typeof useDatasetPreparationFeature>;
-    const client = { browseSourceArtifacts: async () => [{ artifactId: "pdf", label: "scanned.pdf", storageKey: "uploads/scanned.pdf", mediaType: "application/pdf" }] } as any;
+    const fixture = datasetVersionReplayFixture("llm-instruction", "ocr");
+    const client = { browseSourceArtifacts: async () => [fixture.source] } as any;
     function Probe() { feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client }); return null; }
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => { root!.render(<Probe />); await flush(); });
     const plan = { schemaVersion: "1", inputIntent: "create-from-source-material", method: "structure-aware", sourceKinds: ["document"], generationMode: "task-examples" };
-    const recipe = { normalization: { targetFormat: "markdown" }, task: { taskType: "llm-instruction" } };
-    const advanced = { preset: "structure-aware", content: { strategy: "layout", layoutEnabled: true, ocrEnabled: true, ocrLanguage: "en-US" } };
+    const recipe = fixture.recipe;
+    const advanced = fixture.snapshot.advanced;
     const patches = [
       { advanced: { preset: "standard", content: { ...advanced.content, strategy: "token", layoutEnabled: false } } },
       { preparation: { ...plan, generationMode: "none" } },
@@ -185,7 +178,7 @@ describe("desktop scanned-PDF preparation", () => {
       { recipe: { ...recipe, task: { taskType: "vision-classification" } } },
     ];
     for (const patch of patches) {
-      await act(async () => { feature.onReuseDatasetVersion({ sourceArtifactIds: ["pdf"], recipeSnapshot: { recipe, preparation: plan, advanced, ...patch } } as any); await flush(); });
+      await act(async () => { feature.onReuseDatasetVersion({ ...fixture.reproduction, recipeSnapshot: { ...fixture.snapshot, recipe, preparation: plan, advanced, ...patch } }, fixture.selection); await flush(); });
       expect(feature.selectedArtifactIds).toEqual([]);
       expect(feature.ocrEnabled).toBe(false);
       expect(feature.ocrLanguage).toBe("");

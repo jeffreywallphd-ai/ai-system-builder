@@ -949,5 +949,13 @@ checks; do not accept caller metadata as proof of recognized content.
   approval and consent must be resolved again. Do not restore destinations.
 - Residual scope: no proof of current source bytes, async page freshness, runtime
   memory admission, installed OCR language, model readiness or provider authority.
-  The pure validator is not yet wired into either app. Independent consumer/UI
-  checks remain required; no parent roadmap pass follows from component tests.
+  The internal Desktop restore hook now calls the validator with the exact
+  selected version/file and the complete current authorized source list. It
+  builds a complete replacement, rebuilds the normal serialized request and
+  requires identical normalized meaning before setters. A committed-frame and
+  source-request fence retires stale edits, workspace/client/retry/unmount and
+  task-start callbacks; active tasks and reviews retain their status. Successful
+  application retires the invocation and resets all provider controls to local.
+  The page-owned one-use handoff, applied acknowledgment and Thin consumer remain
+  pending. No reuse action is offered yet, and these local hook checks grant no
+  parent, provider, native, source-byte or authorization qualification.
