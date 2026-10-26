@@ -50,6 +50,30 @@ recommendation loop. The `dataset-semantic-curation` source-owned profile includ
 the semantic, advanced-preparation and dataset-quality unit files; it does not
 run model accuracy or qualify a parent roadmap.
 
+The model-free semantic reference tests use fixed 128-row and 1,024-row
+token-permutation cohorts. They compare the disabled baseline with optional
+curation, preserve each known unique row, source and label, verify source mixing
+and resolve contrast recommendations to another selected source. The measured
+curation call has prospective 60-second and 64 MiB traced-Python-allocation
+assertions. The allocation measurement starts after fixture creation and stops
+in `finally`; neither assertion enforces a native process or whole-app limit.
+These known token permutations do not measure general natural-language recall.
+
+The real provided-row preparation test uses 1,024 rows over 16 source files,
+including 512 known reordered duplicates. It runs baseline, advanced and repeated
+advanced preparation with the existing recommended mandatory quality checks.
+The recommended baseline already removes all 512 known duplicates through its
+fuzzy check. Advanced processing removes them through semantic curation before
+the unchanged mandatory checks. This cohort proves compatibility rather than
+additional end-to-end quality improvement beyond that effective baseline.
+It verifies exact accepted/quarantined content, source and label counts, review
+requirements, source-disjoint train/test groups and identical replay output
+bytes. Model readiness and generation raise if called. Each pipeline call has
+a prospective 120-second observed-duration assertion; this is not a hard deadline.
+Owned temporary files are removed on success or failure. Printed measurements
+contain only counts, time and allocation totals. Model accuracy, OCR, provider,
+mounted UI and native resource qualification remain separate.
+
 Scanned-PDF preparation uses the host-only `staged-pdf-ocr-v1` source map and an
 explicit installed Windows recognition language. `ocr/task_sources.py` validates
 the complete map before source/model/output access. Normalization captures exact

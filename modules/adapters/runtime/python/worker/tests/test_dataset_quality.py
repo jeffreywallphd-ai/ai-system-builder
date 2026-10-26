@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections import Counter
+import hashlib
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +22,7 @@ from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset impor
     _validate_source_associations,
     prepare_training_dataset,
 )
+from modules.adapters.runtime.python.worker.tests.test_semantic_curation import semantic_reference_rows
 
 
 def _quality_config(**overrides: object) -> DatasetQualityRuntimeConfig:
@@ -61,6 +65,122 @@ def _quality_config(**overrides: object) -> DatasetQualityRuntimeConfig:
 
 
 class DatasetQualityTests(unittest.TestCase):
+    def test_controlled_reference_pipeline_preserves_review_and_group_safe_replay(self) -> None:
+        rows = semantic_reference_rows()
+        source_ids = sorted({row["sourceArtifactId"] for row in rows})
+        self.assertEqual(len(rows), 1024)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sources = []
+            for source_id in source_ids:
+                file = root / f"{source_id}.jsonl"
+                file.write_text("".join(json.dumps({"text": row["text"], "label": row["label"]}) + "\n"
+                                        for row in rows if row["sourceArtifactId"] == source_id), encoding="utf-8")
+                sources.append({"artifactId": source_id, "localPath": str(file),
+                                "mediaType": "application/x-ndjson", "originalName": file.name,
+                                "metadata": {"language": "en"}})
+            request = {
+                "workspaceId": "reference-workspace", "sourceInputs": sources,
+                "recipe": {"normalization": {"targetFormat": "markdown"},
+                           "chunking": {"strategy": "character", "chunkSize": 1000, "chunkOverlap": 0},
+                           "generation": {"mode": "qa", "model": {"provider": "transformers", "modelId": "unused-local-model"}},
+                           "task": {"taskType": "llm-classification", "textInputMode": "provided",
+                                    "textField": "text", "labelField": "label"}},
+                "split": {"trainRatio": 0.5, "testRatio": 0.5, "seed": 7, "shuffle": True},
+                "output": {"format": "jsonl"}, "quality": _quality_config().model_dump(mode="json"),
+            }
+            results = {}
+            elapsed = {}
+
+            def deny_model(*_args, **_kwargs):
+                raise AssertionError("Provided-row qualification must not load a model or generate examples.")
+
+            for case in ("baseline", "advanced", "replay"):
+                output = root / case
+                output.mkdir()
+                payload = PrepareTrainingDatasetRequest.model_validate({**request, **({"advanced": {
+                    "preset": "better-document-understanding", "semantic": {"enabled": True,
+                    "embeddingAlgorithm": "hashed-token-v1", "similarityThreshold": 0.99,
+                    "maxComparisonsPerRow": 16, "hardNegativeMining": True},
+                }} if case != "baseline" else {})})
+                started = time.perf_counter()
+                with patch("modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.ensure_generation_model_is_available",
+                           side_effect=deny_model) as readiness:
+                    results[case] = prepare_training_dataset(payload, example_generator=deny_model, output_directory=output)
+                    readiness.assert_not_called()
+                elapsed[case] = round((time.perf_counter() - started) * 1000)
+                self.assertLess(elapsed[case], 120_000)
+
+            def output_rows(result, role):
+                matches = [item for item in result.outputs if item.role == role]
+                self.assertEqual(len(matches), 1)
+                return [json.loads(line) for line in Path(matches[0].tempPath).read_text(encoding="utf-8").splitlines()]
+
+            baseline = results["baseline"]
+            self.assertEqual(baseline.summary.acceptedRowCount, 512)
+            self.assertEqual(baseline.summary.quarantinedRowCount, 512)
+            self.assertEqual(baseline.qualityReport["reasonCounts"], {"fuzzy-duplicate": 512})
+            expected_text = {row["text"] for row in rows if row["sourceRowIndex"] % 2 == 0}
+            expected_rejected_text = {row["text"] for row in rows if row["sourceRowIndex"] % 2 == 1}
+
+            def exact_rows(values):
+                return Counter((row["sourceArtifactId"], row["sourceRowIndex"], row["text"], row["label"])
+                               for row in values)
+
+            expected_accepted_rows = exact_rows(row for row in rows if row["sourceRowIndex"] % 2 == 0)
+            expected_rejected_rows = exact_rows(row for row in rows if row["sourceRowIndex"] % 2 == 1)
+            for case in ("baseline", "advanced", "replay"):
+                result = results[case]
+                self.assertEqual(result.summary.generatedExampleCount, 1024)
+                self.assertEqual(result.summary.acceptedRowCount, 512)
+                self.assertEqual(result.summary.quarantinedRowCount, 512)
+                self.assertTrue(result.qualityReport["reviewRequired"])
+                reason = "fuzzy-duplicate" if case == "baseline" else "semantic-duplicate"
+                self.assertEqual(result.qualityReport["reasonCounts"], {reason: 512})
+                if case != "baseline":
+                    self.assertEqual(result.advancedReport["semantic"]["duplicateRowCount"], 512)
+                    self.assertLessEqual(result.advancedReport["semantic"]["comparedPairCount"], 2 * 1024 * 16)
+                train, test = output_rows(result, "train"), output_rows(result, "test")
+                accepted = train + test
+                self.assertEqual(exact_rows(accepted), expected_accepted_rows)
+                self.assertEqual(len(train), 256)
+                self.assertEqual(len(test), 256)
+                self.assertEqual({row["text"] for row in accepted}, expected_text)
+                self.assertEqual(Counter(row["label"] for row in accepted), {"billing": 256, "profile": 256})
+                self.assertEqual(Counter(row["sourceArtifactId"] for row in accepted), {source: 32 for source in source_ids})
+                self.assertTrue({row["sourceArtifactId"] for row in train}.isdisjoint(
+                    {row["sourceArtifactId"] for row in test}))
+                review = output_rows(result, "review")
+                self.assertEqual(exact_rows(review), expected_accepted_rows)
+                self.assertEqual(len(review), 512)
+                self.assertEqual({row["text"] for row in review}, expected_text)
+                quarantine = output_rows(result, "quarantine")
+                self.assertEqual(exact_rows(row["row"] for row in quarantine), expected_rejected_rows)
+                self.assertEqual(Counter((row["sourceArtifactId"], row["sourceRowIndex"],
+                                          row["row"]["text"], row["row"]["label"]) for row in quarantine),
+                                 expected_rejected_rows)
+                self.assertTrue(all((row["sourceArtifactId"], row["sourceRowIndex"])
+                                    == (row["row"]["sourceArtifactId"], row["row"]["sourceRowIndex"])
+                                    for row in quarantine))
+                self.assertEqual({row["row"]["text"] for row in quarantine}, expected_rejected_text)
+                self.assertTrue(all(row["reasonCodes"] == [reason] for row in quarantine))
+                for report in (result.qualityReport, result.advancedReport or {}):
+                    self.assertNotIn("synthetic-reference-only-marker", json.dumps(report))
+                    self.assertNotIn(str(root), json.dumps(report))
+            first, replay = results["advanced"], results["replay"]
+            self.assertEqual(first.advancedReport, replay.advancedReport)
+            self.assertEqual(first.qualityReport["reportFingerprint"], replay.qualityReport["reportFingerprint"])
+            for role in ("train", "test", "review", "quarantine"):
+                first_file = next(item for item in first.outputs if item.role == role)
+                replay_file = next(item for item in replay.outputs if item.role == role)
+                self.assertEqual(hashlib.sha256(Path(first_file.tempPath).read_bytes()).digest(),
+                                 hashlib.sha256(Path(replay_file.tempPath).read_bytes()).digest())
+            print(json.dumps({"schemaVersion": "provided-semantic-pipeline-measurement-v1",
+                              "inputRows": 1024, "sources": 16, "baselineAcceptedRows": 512,
+                              "semanticAcceptedRows": 512, "knownDuplicatesQuarantined": 512,
+                              "elapsedMilliseconds": elapsed, "reviewRequired": True, "deterministicReplay": True,
+                              "scope": "Local synthetic provided-row compatibility only; baseline fuzzy checks already remove these duplicates. No extra end-to-end quality gain, model, OCR, provider, full-app or native resource qualification."}))
+
     def test_accepts_renamed_nested_generated_fields_through_purpose_paths(self) -> None:
         result = curate_dataset_rows(
             [
