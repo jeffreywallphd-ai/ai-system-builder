@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { sanitizeVisualComposerQualificationDiagnostic } from "./visual-composer-qualification-core.mjs";
 import { readAssetSystemSourceIdentity, assertAssetSystemSourceIdentity } from "../asset-system-source-identity.mjs";
+import { resolveVisualComposerQualificationEnvironment } from "./visual-composer-qualification-environment.mjs";
 
 // Compare only bounded inventory values from the fixed regular-file reader.
 // Physical identity, realpath and reparse checks remain that reader's job.
@@ -101,24 +102,7 @@ export async function startVisualComposerQualification(config, launchPlan) {
   process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID = launchPlan.runId;
   process.env.VISUAL_COMPOSER_QUALIFICATION_ENVIRONMENT_ID = `local-${process.platform}-${process.arch}`;
   const sourceRevision = await readAssetSystemSourceIdentity(launchPlan.repoRoot);
-  process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION = sourceRevision;
-  process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE =
-    launchPlan.desktop.executablePath;
-  process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT =
-    launchPlan.paths.desktopDataRoot;
-  process.env.VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE =
-    launchPlan.desktop.seed.command;
-  for (const name of [
-    "PYTHON_RUNTIME_BASE_URL",
-    "PYTHON_RUNTIME_HOST",
-    "PYTHON_RUNTIME_PORT",
-    "PYTHON_RUNTIME_COMMAND",
-    "PYTHON_RUNTIME_ARGS",
-    "PYTHON_RUNTIME_WORKER_DIR",
-    "PYTHON_RUNTIME_STARTUP_TIMEOUT_MS",
-  ]) {
-    process.env[name] = launchPlan.desktop.env[name];
-  }
+  Object.assign(process.env, resolveVisualComposerQualificationEnvironment(launchPlan, sourceRevision));
 
   const projects = resolveRequestedProjects(
     config.projects.map((project) => project.name),

@@ -10,6 +10,8 @@ import {
   waitForVisualComposerEndpoint,
 } from "../visual-composer/visual-composer-host-lifecycle.mjs";
 import { buildPackagedDesktopFromCurrentWorktree } from "../visual-composer/visual-composer-global-setup.mjs";
+import { resolveVisualComposerQualificationEnvironment } from "../visual-composer/visual-composer-qualification-environment.mjs";
+import { createProvidedDatasetHostLaunchPlan } from "../visual-composer/provided-dataset-host-launch-plan.mjs";
 
 test("visual composer host plan isolates roots, security, ports, and direct child commands", () => {
   const repoRoot = path.resolve("C:/work/ai-system-builder");
@@ -189,4 +191,89 @@ test("visual composer shutdown terminates only the owned Windows process tree", 
   });
   await stopping;
   assert.deepEqual(terminated, [4_321]);
+});
+
+const environmentKeys = [
+  "VISUAL_COMPOSER_QUALIFICATION_RUN_ID", "VISUAL_COMPOSER_QUALIFICATION_ENVIRONMENT_ID",
+  "VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", "VISUAL_COMPOSER_DESKTOP_EXECUTABLE",
+  "VISUAL_COMPOSER_DESKTOP_DATA_ROOT", "VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE",
+  "PYTHON_RUNTIME_BASE_URL", "PYTHON_RUNTIME_HOST", "PYTHON_RUNTIME_PORT",
+  "PYTHON_RUNTIME_COMMAND", "PYTHON_RUNTIME_ARGS", "PYTHON_RUNTIME_WORKER_DIR",
+  "PYTHON_RUNTIME_STARTUP_TIMEOUT_MS",
+];
+const bindingSource = `source.${"a".repeat(64)}`;
+function bindingPlan(provided = false) {
+  const options = { repoRoot: path.resolve("C:/work/ai-system-builder"), runId: "serial-bindings",
+    serverPort: 45_001, thinClientPort: 45_002, runtimePort: 45_003, serverRuntimePort: 45_004,
+    environment: { PATH: "synthetic-path", HF_TOKEN: "synthetic-do-not-forward", DATABASE_URL: "synthetic-do-not-forward" } };
+  return provided ? createProvidedDatasetHostLaunchPlan({ ...options,
+    pythonExecutable: path.resolve("C:/runtime/python.exe"), sourceRevision: bindingSource }) : createVisualComposerHostLaunchPlan(options);
+}
+
+test("pure qualification bindings preserve normal and provided desktop placement without ambient effects", () => {
+  for (const provided of [false, true]) {
+    const plan = bindingPlan(provided);
+    plan.desktop.env.HF_TOKEN = "synthetic-do-not-forward";
+    plan.desktop.env.DATABASE_URL = "synthetic-do-not-forward";
+    const before = JSON.stringify(plan);
+    const ambient = new Map(environmentKeys.map(key => [key, process.env[key]]));
+    const bindings = resolveVisualComposerQualificationEnvironment(plan, bindingSource);
+    assert.deepEqual(Object.keys(bindings).sort(), [...environmentKeys].sort());
+    assert.equal(bindings.VISUAL_COMPOSER_QUALIFICATION_RUN_ID, plan.runId);
+    assert.equal(bindings.VISUAL_COMPOSER_QUALIFICATION_ENVIRONMENT_ID, `local-${process.platform}-${process.arch}`);
+    assert.equal(bindings.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, bindingSource);
+    assert.equal(bindings.VISUAL_COMPOSER_DESKTOP_EXECUTABLE, plan.desktop.executablePath);
+    assert.equal(bindings.VISUAL_COMPOSER_DESKTOP_DATA_ROOT, plan.paths.desktopDataRoot);
+    assert.equal(bindings.VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE, plan.desktop.seed.command);
+    for (const key of environmentKeys.filter(key => key.startsWith("PYTHON_"))) {
+      assert.equal(bindings[key], plan.desktop.env[key]);
+    }
+    assert.equal(bindings.PYTHON_RUNTIME_BASE_URL, "http://127.0.0.1:45003");
+    assert.notEqual(bindings.PYTHON_RUNTIME_BASE_URL, plan.server.env.PYTHON_RUNTIME_BASE_URL);
+    if (provided) {
+      assert.equal(bindings.PYTHON_RUNTIME_COMMAND, path.resolve("C:/runtime/python.exe"));
+      assert.equal(bindings.PYTHON_RUNTIME_ARGS, "-I -B ../../../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py");
+    }
+    assert.equal(Object.hasOwn(bindings, "HF_TOKEN"), false);
+    assert.equal(Object.hasOwn(bindings, "DATABASE_URL"), false);
+    assert.equal(Object.isFrozen(bindings), true);
+    assert.throws(() => { bindings.PYTHON_RUNTIME_PORT = "changed"; }, TypeError);
+    assert.equal(JSON.stringify(plan), before);
+    assert.ok(environmentKeys.every(key => process.env[key] === ambient.get(key)), "The pure helper must not change the ambient environment.");
+  }
+});
+
+test("pure qualification bindings reject incomplete, oversized and injected values with fixed safe errors", () => {
+  const denied = action => assert.throws(action, { message: "Invalid qualification environment bindings." });
+  for (const source of [undefined, null, "source.not-a-digest", `source.${"a".repeat(64)}\nsynthetic-private`]) {
+    denied(() => resolveVisualComposerQualificationEnvironment(bindingPlan(), source));
+  }
+  for (const input of [undefined, null, {}, { desktop: {} }]) {
+    denied(() => resolveVisualComposerQualificationEnvironment(input, bindingSource));
+  }
+  for (const key of environmentKeys.filter(key => key.startsWith("PYTHON_"))) {
+    for (const value of [undefined, 42, "", "synthetic\0private", "synthetic\r\nprivate", "x".repeat(32_769)]) {
+      const plan = bindingPlan(); plan.desktop.env[key] = value;
+      const before = JSON.stringify(plan);
+      denied(() => resolveVisualComposerQualificationEnvironment(plan, bindingSource));
+      assert.equal(JSON.stringify(plan), before);
+    }
+  }
+  for (const mutate of [plan => { delete plan.runId; }, plan => { delete plan.paths.desktopDataRoot; },
+    plan => { delete plan.desktop.executablePath; }, plan => { delete plan.desktop.seed.command; }]) {
+    const plan = bindingPlan(); mutate(plan);
+    denied(() => resolveVisualComposerQualificationEnvironment(plan, bindingSource));
+  }
+});
+
+test("qualification binding results are independent and preserve exact argument bytes", () => {
+  const plan = bindingPlan(true);
+  plan.desktop.env.PYTHON_RUNTIME_ARGS = `  ${plan.desktop.env.PYTHON_RUNTIME_ARGS}  `;
+  const first = resolveVisualComposerQualificationEnvironment(plan, bindingSource);
+  assert.equal(first.PYTHON_RUNTIME_ARGS, plan.desktop.env.PYTHON_RUNTIME_ARGS);
+  plan.desktop.env.PYTHON_RUNTIME_PORT = "45005";
+  const second = resolveVisualComposerQualificationEnvironment(plan, bindingSource);
+  assert.equal(first.PYTHON_RUNTIME_PORT, "45003");
+  assert.equal(second.PYTHON_RUNTIME_PORT, "45005");
+  assert.notEqual(first, second);
 });

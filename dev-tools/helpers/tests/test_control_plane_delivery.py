@@ -277,6 +277,29 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         selected = catalog.plan(self.root, [source, "modules/unknown/source.ts"], ["security-authority"], "candidate")["selected"]
         self.assertIn("focused-tests", [c["id"] for c in selected])
 
+    def test_host_setup_policy_profile_is_exact_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root=HELPERS.parents[1];config="dev-tools/config/contributor-check-profiles.json"
+        tests="dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+        source="dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs"
+        setup="dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"
+        profiles=read_json(root/config);profile=profiles["profiles"]["host-setup-policy"]
+        self.assertEqual(profile["test_paths"],[tests])
+        self.assertEqual(run_focused_checks.profile_commands(root,"host-setup-policy"),[["node","--test","--",tests]])
+        self.put(config,json.dumps(profiles))
+        for path in (source,setup,tests):
+            ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
+            self.assertIn("host-setup-policy",ids)
+            self.assertNotIn("native-host-policy",ids)
+            self.assertNotIn("ocr-provider-contract",ids)
+            self.assertNotIn("focused-tests",ids)
+        for paths,required,focused in (([source,config],["host-setup-policy"],False),([source,"modules/unknown/source.ts"],["host-setup-policy"],True),([source],["host-setup-policy","focused-tests"],True)):
+            ids={row["id"] for row in catalog.plan(self.root,paths,required,"candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids,focused)
+        ids={row["id"] for row in catalog.plan(self.root,["dev-tools/scripts/qualification/visual-composer/unknown.mjs"],["documentation"],"candidate")["selected"]}
+        self.assertNotIn("host-setup-policy",ids)
+        self.assertIn("focused-tests",ids)
+
     def test_native_host_policy_profile_is_exact_and_keeps_unknown_impact(self):
         import run_focused_checks
         root=HELPERS.parents[1]

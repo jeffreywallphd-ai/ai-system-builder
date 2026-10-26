@@ -1,6 +1,22 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "host-setup-policy": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs",
+        "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "docs/diagnostics/ai-development-control-plane.md",
+        "docs/security/ai-development-control-plane-threat-model.md"
+      ]
+    },
     "native-host-policy": {
       "test_paths": [
         "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"

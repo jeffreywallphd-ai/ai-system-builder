@@ -130,6 +130,16 @@ actual native readback, serial app setup, per-host measurements and parent
 qualification pending until separately executed. Unknown impact and an explicit
 `focused-tests` requirement retain generic coverage.
 
+The `host-setup-policy` profile runs one fixed Node lifecycle/binding test file.
+It checks the pure thirteen-key environment projection, normal and provided-data
+plans, invalid values, exact argument preservation, input/ambient immutability,
+credential exclusion and existing injected lifecycle cases. It opens no app,
+browser or model. The shared setup still reads actual source identity before
+applying runtime bindings. A separately reviewed desktop-only consumer can use
+the pure projection without calling the combined service-starting setup; it must
+still validate its source/package and prove actual native retirement and app
+results. Unknown impact and explicit generic focused checks remain selected.
+
 The broader `functionality-outcomes` profile remains intact; a narrow profile
 cannot cover unrelated changed paths or grant a parent qualification.
 

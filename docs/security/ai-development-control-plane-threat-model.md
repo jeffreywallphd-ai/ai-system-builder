@@ -451,3 +451,22 @@ native readback, app fit, memory savings or parent qualification. Fresh actual
 evidence remains required. Do not reinterpret the earlier per-process limit
 failure as a solved aggregate-overlap problem, repeat accepted model accuracy,
 or inspect/recover old processes, retained trees or offload slots.
+
+### Pure qualification environment projection
+
+The shared setup projects thirteen fixed qualification, desktop and runtime
+fields through a pure helper. It accepts only trusted existing launch plans and
+returns an immutable string map; unrelated provider credentials, database
+configuration and ambient environment values are excluded. Missing, oversized
+or NUL/line-break-bearing values fail with a fixed diagnostic. No command,
+resource limit, source path, input plan or ambient environment is changed by the
+helper itself. It imports no file, network or process API.
+
+The normal setup retains its actual source-identity read before applying runtime
+bindings, and its existing package/authentication/lifecycle/cleanup code. A
+source-shaped revision string is not authentication. A future separately
+reviewed desktop-only consumer must independently validate source and package,
+then configure its app without invoking combined web-service startup. This
+source extraction does not prove actual app topology, native readback, owned
+retirement, memory fit or savings. Those observations remain pending; no model
+accuracy, provider publication or old-owner recovery authority is added.

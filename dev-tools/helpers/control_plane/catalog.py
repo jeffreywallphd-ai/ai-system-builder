@@ -13,11 +13,16 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy",
+    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "host-setup-policy": [
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+        "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+    ],
     "native-host-policy": [
         "dev-tools/helpers/native-qualification/owned_command_job.py",
         "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
