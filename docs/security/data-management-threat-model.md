@@ -1311,3 +1311,21 @@ acknowledged raw output. Old committed snapshots, unknown data and generic
 storage deletion are unchanged. Focused tests cover catalog visibility after
 held cancellation and byte-denial/raw-only ordering. They do not qualify native
 races, durable cleanup recovery, real egress or production access policy.
+
+## Browser artifact deletion intent and stale replies
+
+Single and bulk local deletion share a synchronous pending owner. Confirmation
+stays exact and workspace-scoped. Changing workspace or client clears old
+selection and confirmation; accepted host work is not reported as cancelled.
+Each layout setup owns a fresh lease and retires it during layout cleanup.
+Uncommitted renders cannot revoke the visible session. Async work captures its
+exact lease, including across development effect replay. Older list/detail/media
+replies cannot replace current state. Deletion retires
+prior reads and holds its guard until every dispatched bulk request settles.
+Partial success removes only acknowledged targets from the retry selection and
+refreshes authoritative records. UI admission is not an authorization boundary.
+The existing application workspace checks, catalog-last deletion and prohibition
+on remote-provider deletion remain authoritative. New synthetic fixture roots
+are identity, containment, type, entry and byte checked before removal; exact
+owned listeners and requests are retired. This local evidence does not qualify
+production authentication, physical/native races, provider or durable restart.

@@ -1119,3 +1119,29 @@ its catalog evidence. A failed derived write compensates only the successful
 raw output. Old committed snapshots and unknown resources are not cleanup
 inputs. This local correction does not qualify crash recovery or uncertain
 cleanup; existing task compensation failures still require separate evidence.
+
+## Browser artifact read and deletion ownership
+
+The browser Artifact Browser scopes list and preview responses to the current
+committed workspace/client lease. Layout cleanup retires the exact lease before
+passive effects; a suspended replacement cannot invalidate the committed view.
+Monotonic read identities discard superseded replies.
+Changing scope clears selection and typed deletion intent. A shared synchronous
+guard admits one single or bulk delete until all dispatched requests settle.
+Deletion retires earlier reads, so late previews cannot hide a failure. On a
+partial bulk failure, the UI refreshes authoritative records and retains only
+failed targets for explicit retry. An accepted host deletion continues after
+navigation; its old reply cannot refresh or notify another workspace.
+
+The composed feature test mounts the actual browser UI and secure HTTP client
+with registered routes, application use cases, JSON catalog/bindings and fresh
+filesystem objects. It checks text, CSV, JSON, JSONL and inert Markdown previews,
+hidden internal metadata, workspace isolation, exact confirmation, duplicate
+admission, failure retry, delayed replies and partial bulk outcomes. Access and
+scheduling are finite synthetic fixtures. A separate client-boundary fixture
+checks retirement before passive cleanup; a suspended-render case retains the
+committed view. Physical browser/image/PDF decoding,
+production authentication, SQLite/restart, provider publication and native
+recovery remain separate qualification. The current browser has Refresh and
+selection controls; desktop search/filter/paging requirements are not claimed
+as browser UI behavior.

@@ -214,3 +214,18 @@ identity. Closing or selecting another model invalidates pending file reads.
 Deletion retains confirmation and always requests record-only deletion. Unexpected
 exceptions use fixed notification and diagnostic copy. Focused tests use synthetic
 clients; they do not qualify provider downloads, model accuracy or physical files.
+
+## Artifact Browser request ownership
+
+Artifact lists and previews belong to the current workspace and API client.
+New reads retire earlier replies. A workspace or client change clears prior
+selection and typed deletion intent. Single and bulk deletion share one
+synchronous admission guard. A partial bulk failure waits for all dispatched
+requests, refreshes the list and retains only failed items for explicit retry.
+Leaving the workspace does not cancel an accepted host deletion. Old replies
+cannot refresh or notify the new workspace. Application authorization, local
+cleanup order and provider deletion policy remain unchanged.
+
+The focused HTTP UI fixture uses actual routes, use cases, local JSON catalog
+and filesystem bytes. Synthetic access and scheduling faults are test inputs.
+It does not qualify a physical browser, SQLite, provider access or native races.

@@ -129,6 +129,7 @@ export function ArtifactBrowserFeature({
     selectNextImage,
     requestDeleteRegisteredArtifact,
     confirmPendingDelete,
+    isDeleting,
     cancelPendingDelete,
     setDeleteConfirmationInput,
     toggleSelectedArtifactKey,
@@ -334,6 +335,7 @@ export function ArtifactBrowserFeature({
                 setDeleteConfirmationInput(event.target.value)
               }
               placeholder="Delete"
+              disabled={isDeleting}
             />
           </label>
           <div className="ui-grid ui-grid--two">
@@ -341,7 +343,8 @@ export function ArtifactBrowserFeature({
               className="ui-button ui-button--destructive"
               type="button"
               onClick={() => void confirmPendingDelete()}
-              disabled={deleteConfirmationInput !== "Delete"}
+              disabled={isDeleting || deleteConfirmationInput !== "Delete"}
+              aria-busy={isDeleting}
             >
               Confirm delete
             </button>
@@ -589,6 +592,7 @@ export function ArtifactBrowserFeature({
                   setBulkDeleteConfirmationInput(event.target.value)
                 }
                 placeholder="Delete All"
+                disabled={isDeleting}
               />
             </label>
             <div className="ui-stack ui-stack--sm">
@@ -598,6 +602,7 @@ export function ArtifactBrowserFeature({
                 onClick={() => void deleteSelectedArtifacts()}
                 disabled={
                   selectedArtifactKeys.length === 0 ||
+                  isDeleting ||
                   bulkDeleteConfirmationInput !== "Delete All"
                 }
               >
@@ -749,6 +754,7 @@ export function ArtifactBrowserFeature({
               onClick={() =>
                 requestDeleteRegisteredArtifact(detail.locator.storageKey)
               }
+              disabled={isDeleting}
             >
               Delete artifact
             </button>

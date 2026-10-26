@@ -432,7 +432,10 @@
         "dev-tools/scripts/qualification/tests/website-ingestion-transports.ui.test.tsx",
         "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
         "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -582,7 +585,9 @@
         "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
         "modules/application/use-cases/README.md",
         "modules/hosts/desktop/composition/README.md",
-        "modules/hosts/server/composition/README.md"
+        "modules/hosts/server/composition/README.md",
+        "apps/thin-client/src/features/artifact-browser/hooks/useArtifactBrowserFeature.ts",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
       ]
     },
     "functionality-context": {

@@ -628,10 +628,18 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
+          "name": "Mounted browser with real secure HTTP/routes/use cases/JSON catalog/filesystem: five text formats, hidden metadata, workspace scope, typed single/bulk deletion, duplicate guard, delayed replies and partial-failure retry",
+          "tier": "component-real-http-application-and-filesystem",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Browser component support only. Access admission and scheduling faults are finite synthetic fixtures; storage/catalog/bindings are actual local JSON/filesystem adapters. No physical browser, production authentication, SQLite/restart, image/PDF pixel decoding, provider publication or native recovery pass. Browser currently has Refresh/selection controls; desktop search/filter/paging and all remaining variations stay pending."
     },
     {
       "id": "artifact-backing-publish-delete",
@@ -658,12 +666,20 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
+          "name": "Mounted browser with real secure HTTP/routes/use cases/JSON catalog/filesystem: five text formats, hidden metadata, workspace scope, typed single/bulk deletion, duplicate guard, delayed replies and partial-failure retry",
+          "tier": "component-real-http-application-and-filesystem",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "explicit provider publication/repository creation authority if external roundtrip is run"
-      ]
+      ],
+      "scope_limit": "Browser component support only. Access admission and scheduling faults are finite synthetic fixtures; storage/catalog/bindings are actual local JSON/filesystem adapters. No physical browser, production authentication, SQLite/restart, image/PDF pixel decoding, provider publication or native recovery pass. Browser currently has Refresh/selection controls; desktop search/filter/paging and all remaining variations stay pending."
     },
     {
       "id": "dataset-goal-and-input-intent",
