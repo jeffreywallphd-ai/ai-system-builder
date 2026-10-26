@@ -749,3 +749,21 @@ The journeys cover pagination, saved references, workspace separation, reopened
 registry state, exact deletion and safe failure. The existing native-location
 denial adapter remains in place. This tier does not qualify physical Electron
 IPC, sender authorization, production SQLite, whole-app or provider/model behavior.
+
+Image start transports keep the workspace identifier in application request
+context, separate from generation options. Their mapping step inspects a passive descriptor snapshot of the generation
+settings and removes only the known workspace field. Other unknown fields still reach the fixed application allowlist and
+deny before task creation. Correlation and request identities are preserved.
+
+The composed browser image test mounts the real feature/client and loopback HTTP
+routes over task ownership, finalization, filesystem PNG bytes, catalog, primary
+binding and reopened JSON image registry. It verifies exact output and retry
+without duplicate persistence, plus refused cancellation and workspace isolation.
+The engine, HTTP access policy, passive reads and preview URL facility are
+fixtures. Physical image inference, browser pixel decoding, production SQLite,
+whole-host security and final roadmap qualification remain separate.
+
+The HTTP image start route snapshots passive body descriptors before reading
+workspace context or diagnostic fields. Rejected snapshots retain header
+correlation only. Diagnostics record model presence, never the model selector
+or prompt. These rules also apply to failed start summaries.

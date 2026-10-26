@@ -1423,6 +1423,16 @@
           "name": "Both image hooks: settings, task/session ownership, complete output, cancellation and retry",
           "tier": "cross-host-hooks-with-finite-clients",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
+          "name": "mounted browser image controls through real HTTP/use cases and physical synthetic PNG/catalog/binding/JSON registration, exact output, retry without duplicate persistence, cancellation refusal/recovery and workspace isolation",
+          "related_tests": [
+            "modules/adapters/transport/api-express/tests/register-image-generation-api-routes.unit.test.ts",
+            "modules/adapters/transport/ipc-electron/tests/register-image-generation-ipc.unit.test.ts"
+          ],
+          "tier": "real-browser-feature-http-and-filesystem-with-offline-worker-and-passive-provider-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -1471,6 +1481,16 @@
           "file": "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
           "name": "Both image hooks: settings, task/session ownership, complete output, cancellation and retry",
           "tier": "cross-host-hooks-with-finite-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
+          "name": "mounted browser image controls through real HTTP/use cases and physical synthetic PNG/catalog/binding/JSON registration, exact output, retry without duplicate persistence, cancellation refusal/recovery and workspace isolation",
+          "related_tests": [
+            "modules/adapters/transport/api-express/tests/register-image-generation-api-routes.unit.test.ts",
+            "modules/adapters/transport/ipc-electron/tests/register-image-generation-ipc.unit.test.ts"
+          ],
+          "tier": "real-browser-feature-http-and-filesystem-with-offline-worker-and-passive-provider-fixtures",
           "qualification": "focused-execution-and-independent-review-required"
         }
       ],

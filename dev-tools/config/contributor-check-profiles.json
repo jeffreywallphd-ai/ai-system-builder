@@ -423,7 +423,8 @@
         "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
         "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
         "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx"
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+        "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -560,7 +561,8 @@
         "apps/thin-client/README.md",
         "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx",
         "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts",
-        "apps/desktop/src/renderer/features/dataset-preparation/README.md"
+        "apps/desktop/src/renderer/features/dataset-preparation/README.md",
+        "modules/adapters/transport/api-express/image-generation/registerImageGenerationApiRoutes.ts"
       ]
     },
     "functionality-context": {

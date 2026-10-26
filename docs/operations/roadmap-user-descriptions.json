@@ -11710,6 +11710,20 @@
           "Actual app, native file, provider and final roadmap checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bd67b784e552bcfb1ff97ed930e55e17ffe21165ca31c4591171034267325d8c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the Desktop model journey through the real local bridge functions and saved registry.",
+          "The tests find, save, list and delete model references, and check that file-action refusals preserve the files and record.",
+          "They also check workspace separation and reopened data.",
+          "The connection between the bridge and handlers is a test fixture.",
+          "Actual Electron, native file actions, production sign-in and final roadmap checks remain pending."
+        ]
+      }
     }
   ]
 }

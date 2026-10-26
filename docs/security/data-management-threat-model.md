@@ -1214,3 +1214,26 @@ bridge/registry reconstruction. The invoke event and provider are bounded offlin
 fixtures, not sender-authentication or native-effect qualification. Temporary
 cleanup checks only the fresh owned regular tree after UI retirement; old
 retained resources and production credentials are never inspected.
+
+When separating image start contexts, API and IPC mappings inspect passive
+generation-field descriptors. Only workspace context is removed. The mapping
+and fixed application allowlist together deny unknown, accessor and hidden
+generation fields. The application
+request allowlist, workspace task authority and existing failure envelopes remain
+unchanged. Positive and denial regressions preserve transport correlation.
+
+The browser image HTTP fixture uses a bounded deterministic worker and an exact
+synthetic credential/authorization policy. Its new owned output tree feeds the
+real persistence, catalog, binding, asset registry and finalizer. A registration
+failure retains the completed persistence receipt and retries without recopying
+or duplicating publication. Refused cancellation remains active; after UI
+retirement an isolated foreign read must fail before worker I/O. Byte/pixel and
+registry oracles do not qualify real ComfyUI, browser decoding, production auth,
+native ownership, provider behavior or the restricted legacy security review.
+
+Image HTTP start validation precedes context extraction and diagnostic reads.
+Accessor and hidden-field regressions run with logging enabled, prove no getter
+execution and retain header correlation. Diagnostic summaries use a model-presence
+flag instead of a selector that could contain a local path; prompt text is absent.
+The passive snapshot and fixed application allowlist still reject unsupported
+requests before worker admission.

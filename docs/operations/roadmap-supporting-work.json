@@ -4345,6 +4345,23 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "desktop-model-preload-ui-roundtrips",
+      "work_criteria": [
+        "desktop-model-preload-roundtrips",
+        "desktop-model-preload-safe-failure-and-scope"
+      ],
+      "receipt_digest": "02a32847a1e529a379ec71012086e6178280d36398d776102bad5cc671582a61",
+      "review_digest": "1c7fd7f50965abb3e8f99b18b9a8cb11992ac466698ffe3a74fdc508b8a5222e",
+      "scope": "Tested, independently reviewed and committed mounted Desktop Models journeys through the real client, preload functions, registered handlers/use cases and reopened JSON registry using an injected in-process invoke port, including preserved native-file denials.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

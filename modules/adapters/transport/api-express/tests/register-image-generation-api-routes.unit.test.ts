@@ -2,10 +2,60 @@ import { describe, expect, it, testDouble } from "../../../../testing/node-test"
 import { registerImageGenerationApiRoutes, type ExpressRoutePort } from "../image-generation/registerImageGenerationApiRoutes";
 import { RuntimeCapabilityUnavailableError } from "../../../../application/services/runtime";
 import { createRuntimeCapabilityStatus } from "../../../../contracts/runtime";
+import { snapshotBoundedImageGenerationRequest, type ImageGenerationRequest } from "../../../../contracts/image-generation";
+import type { ApplicationRequestContext } from "../../../../application/ports";
 
 function response() { const json = testDouble.fn(); const status = testDouble.fn(); const res:any={status:status.mockImplementation(()=>res),json}; return {res,json,status}; }
 
 describe("registerImageGenerationApiRoutes", () => {
+  it("keeps workspace context separate from strict generation options", async () => {
+    const handlers = new Map<string, Parameters<ExpressRoutePort["post"]>[1]>();
+    const start = testDouble.fn(async (request: ImageGenerationRequest, _context?: ApplicationRequestContext) => {
+      snapshotBoundedImageGenerationRequest(request); return { requestId: "image-result" };
+    });
+    registerImageGenerationApiRoutes({ app: { post: (path, handler) => { handlers.set(path, handler); } }, generateImageUseCase: { startImageGeneration: start, readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn() } });
+    const result = response();
+    await handlers.get("/api/image-generation/start")!({ body: { workspaceId: "workspace-a", prompt: " cat ", seed: 0, width: 64 }, headers: { "x-request-id": "request-a", "x-correlation-id": "correlation-a" } }, result.res);
+    expect(result.status).toHaveBeenCalledWith(200);
+    expect(result.json.mock.calls[0]?.[0]).toMatchObject({ ok: true, requestId: "request-a", correlationId: "correlation-a", value: { requestId: "image-result" } });
+    expect(start.mock.calls[0]?.[0]).toEqual({ prompt: "cat", seed: 0, width: 64 });
+    expect(start.mock.calls[0]?.[1]).toMatchObject({ workspaceId: "workspace-a", requestId: "request-a", correlationId: "correlation-a" });
+  });
+  it("does not silently drop unknown generation fields while separating context", async () => {
+    const handlers = new Map<string, Parameters<ExpressRoutePort["post"]>[1]>(); let admitted = 0;
+    registerImageGenerationApiRoutes({ app: { post: (path, handler) => { handlers.set(path, handler); } }, generateImageUseCase: {
+      startImageGeneration: async request => { snapshotBoundedImageGenerationRequest(request); admitted++; return { requestId: "unexpected" }; },
+      readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn(),
+    } });
+    const result = response(); await handlers.get("/api/image-generation/start")!({ body: { workspaceId: "workspace-a", prompt: "cat", unapprovedExecution: true } }, result.res);
+    expect(admitted).toBe(0); expect(result.status).toHaveBeenCalledWith(500); expect(result.json.mock.calls[0]?.[0]).toMatchObject({ ok: false, error: { code: "internal", message: "Image generation request failed." } });
+  });
+  for (const malformed of ["prompt-accessor", "workspace-accessor", "model-accessor", "hidden-field"] as const) it(`denies ${malformed} generation data before context or diagnostic reads`, async () => {
+    const handlers = new Map<string, Parameters<ExpressRoutePort["post"]>[1]>(); let reads = 0;
+    const start = testDouble.fn();
+    const logger = { info: testDouble.fn(), warn: testDouble.fn() };
+    registerImageGenerationApiRoutes({ app: { post: (path, handler) => { handlers.set(path, handler); } }, logger, generateImageUseCase: { startImageGeneration: start, readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn() } });
+    const body = { workspaceId: "workspace-a", prompt: "cat" };
+    if (malformed !== "hidden-field") Object.defineProperty(body, malformed === "workspace-accessor" ? "workspaceId" : malformed === "model-accessor" ? "model" : "prompt", { enumerable: true, get: () => { reads++; return "synthetic-private-value"; } });
+    else Object.defineProperty(body, "unapprovedExecution", { value: true, enumerable: false });
+    const result = response(); await handlers.get("/api/image-generation/start")!({ body, headers: { "x-request-id": "request-a", "x-correlation-id": "correlation-a" } }, result.res);
+    expect(reads).toBe(0); expect(start).not.toHaveBeenCalled();
+    expect(result.json.mock.calls[0]?.[0]).toMatchObject({ ok: false, requestId: "request-a", correlationId: "correlation-a" });
+    expect(logger.warn).toHaveBeenCalled();
+    expect(JSON.stringify([logger.info.mock.calls, logger.warn.mock.calls])).not.toContain("synthetic-private-value");
+  });
+  it("logs model presence without copying a private selector or prompt", async () => {
+    const handlers = new Map<string, Parameters<ExpressRoutePort["post"]>[1]>();
+    const logger = { info: testDouble.fn(), warn: testDouble.fn() };
+    registerImageGenerationApiRoutes({ app: { post: (path, handler) => { handlers.set(path, handler); } }, logger,
+      generateImageUseCase: { startImageGeneration: testDouble.fn(async () => ({ requestId: "image-result" })), readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn() } });
+    const result = response();
+    await handlers.get("/api/image-generation/start")!({ body: { workspaceId: "workspace-a", prompt: "synthetic private prompt", model: "C:/synthetic-private/model.safetensors" }, headers: { "x-correlation-id": "correlation-a" } }, result.res);
+    expect(result.status).toHaveBeenCalledWith(200);
+    expect(logger.info).toHaveBeenCalledWith("api.image-generation.request.received", expect.objectContaining({ hasModel: true, hasPrompt: true, correlationId: "correlation-a" }));
+    const logs = JSON.stringify([logger.info.mock.calls, logger.warn.mock.calls]);
+    expect(logs).not.toContain("C:/synthetic-private"); expect(logs).not.toContain("synthetic private prompt");
+  });
   it("validates start/read/cancel/finalize request bodies", async () => {
     const handlers = new Map<string, any>();
     const app: ExpressRoutePort = { post: testDouble.fn((p,h)=>handlers.set(p,h)) };
