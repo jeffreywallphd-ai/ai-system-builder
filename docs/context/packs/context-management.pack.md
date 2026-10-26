@@ -110,3 +110,25 @@
 - Add `desktop-implementation` for shared desktop/thin-client Context UI.
 - Add `security` whenever inputs, models, storage, transports, or diagnostics
   change.
+
+## Renderer session checks
+
+- Workspace/client replacement retires the Context form during layout cleanup;
+  guard dispatch and replies before task-storage, notification or follow-up effects.
+- Synchronous action ownership prevents duplicate generation and mutations. Retain
+  accepted task ownership through review and unconfirmed cancellation; matching
+  terminal evidence permits a new preparation. Never cancel host work on navigation.
+- Require matching action/source/task/artifact replies. Save needs the matching
+  saved result and returned artifact. Retire old detail/list presentation when a
+  newer request wins. The shell task-list bridge has its own committed scope fence.
+- Show fixed transport failure copy; local Markdown validation has fixed detailed
+  messages. Focused renderer fixtures do not qualify actual host/model/native work.
+
+Each accepted generation has a local observation epoch. Later cancellation or
+poll replies cannot replace a confirmed terminal or ready-for-review state. A
+fresh explicit acceptance resets presentation for the next generation without
+reviving the old observation. This is renderer ownership, not runtime authority.
+
+Delete confirmation binds the selected artifact ID and verified storage key.
+Only an acknowledgement of that exact key can clear the confirmation, refresh
+the list or report deletion. A different key leaves the selected view intact.

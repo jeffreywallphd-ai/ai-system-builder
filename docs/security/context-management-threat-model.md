@@ -145,3 +145,36 @@ database. Package ceilings, catalog digests and exact index-bypassed search are
 unchanged. Late-batch corruption and cancellation/retry regressions exercise
 this boundary. Synthetic RSS/timing evidence cannot substitute for representative
 local-model CPU/accelerator and retrieval-quality qualification.
+
+## Renderer asynchronous ownership
+
+Protected presentation assets include workspace source/manual content, accepted
+task identity, task-recovery storage, saved-artifact selection and notifications.
+A late workspace/client reply, duplicate action or substituted source/task/result
+can confuse those assets even when the host independently authorizes requests.
+Committed layout retirement fences page and shell task-list sessions. Typed client
+checks precede dispatch and follow await; reply identity is checked before use.
+
+A synchronous action owner prevents duplicate generation, save/discard, rebuild
+and delete before React renders busy state. Accepted generation ownership stays
+through review and unconfirmed cancellation; terminal evidence releases it. Save
+requires a matching saved result and returned artifact, never a success claim from
+a nonterminal response. Newer detail/list reads retire earlier presentation.
+Raw transport exceptions never become UI diagnostic copy; local Markdown
+validation emits only its fixed messages. Application authorization, bounded
+staging, model isolation, review authority and host task observation remain.
+
+The focused shared-renderer cases include real pre-fix race failures, mismatched
+source/task/artifact denial, duplicate actions, delayed replies, cancellation,
+review and saved-artifact readback. Their client fixtures do not qualify physical
+RAG semantics, host transports, provider access or native cleanup. Existing model
+quality and OCR evidence is retained; unknown offload objects are untouched.
+
+Each accepted generation has a local observation epoch. Later cancellation or
+poll replies cannot replace a confirmed terminal or ready-for-review state. A
+fresh explicit acceptance resets presentation for the next generation without
+reviving the old observation. This is renderer ownership, not runtime authority.
+
+Delete confirmation binds the selected artifact ID and verified storage key.
+Only an acknowledgement of that exact key can clear the confirmation, refresh
+the list or report deletion. A different key leaves the selected view intact.

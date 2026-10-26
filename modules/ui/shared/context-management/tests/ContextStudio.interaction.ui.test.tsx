@@ -159,6 +159,338 @@ async function renderStudio(
   return container;
 }
 
+function deferredContextValue() {
+  let resolve!: (value: ContextManagementTransportValue) => void;
+  const promise = new Promise<ContextManagementTransportValue>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+const acceptedContextStart = {
+  action: "generation-start", value: { requestId: "owned-context", taskType: "generate-context-artifact", accepted: true, status: "running" },
+} as const;
+
+function scopedContextClient(
+  respond: (command: ContextManagementTransportCommand) => Promise<ContextManagementTransportValue>,
+  withSource = false,
+): ContextManagementClient {
+  return {
+    listSourceArtifacts: vi.fn(async () => withSource ? [{ artifactId: "uploads/support.parquet", label: "support.parquet" }] : []),
+    execute: vi.fn(async ({ command }: Parameters<ContextManagementClient["execute"]>[0]): Promise<ContextManagementTransportValue> => {
+      if (command.action === "browser-list") return { action: "browser-list", items: [] };
+      return respond(command);
+    }),
+  };
+}
+
+async function fillScopedManualPack() {
+  await act(async () => button("Context Packs").click());
+  await act(async () => buttonContaining("Manual entry").click());
+  const panel = container!.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")!;
+  await act(async () => {
+    setInput(panel.querySelector<HTMLInputElement>("input[placeholder='product-support-context']")!, "scoped-pack");
+    setInput(panel.querySelector<HTMLTextAreaElement>("textarea")!, "# Local policy\n\nKeep the accepted source.");
+  });
+}
+
+function savedContextDetail(item = savedItem) {
+  return { item, manifest: { ...manifest, name: item.name }, freshness: [], chunkCount: 2, packageEntries: [], topics: [], rebuildAllowed: true };
+}
+
+function browserContextClient(
+  respond: (command: ContextManagementTransportCommand) => Promise<ContextManagementTransportValue | undefined>,
+  items = [savedItem],
+): ContextManagementClient {
+  return {
+    listSourceArtifacts: async () => [],
+    execute: vi.fn(async ({ command }: Parameters<ContextManagementClient["execute"]>[0]): Promise<ContextManagementTransportValue> => {
+      const overridden = await respond(command);
+      if (overridden) return overridden;
+      if (command.action === "browser-list") return { action: "browser-list", items };
+      if (command.action === "browser-detail") return { action: "browser-detail", detail: savedContextDetail(items.find(item => item.artifactId === command.artifactId)!) };
+      throw new Error("Synthetic unexpected command");
+    }),
+  };
+}
+
+async function openScopedBrowser() {
+  await act(async () => button("Context Browser").click());
+  await act(async () => button("View Details").click());
+}
+
+describe("ContextStudio scoped actions", () => {
+  it("admits one generation before React renders busy state", async () => {
+    const start = deferredContextValue();
+    const client = scopedContextClient(async command => command.action === "generation-start" ? start.promise : { action: "generation-read", status: { requestId: "owned-context", state: "running" } });
+    await renderStudio(client); await fillScopedManualPack();
+    try {
+      await act(async () => { const prepare = button("Prepare context pack"); prepare.click(); prepare.click(); });
+      expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-start")).toHaveLength(1);
+    } finally { await act(async () => start.resolve(acceptedContextStart)); }
+  });
+
+  for (const replacement of ["workspace", "client"] as const) {
+    it(`ignores generation acceptance after ${replacement} replacement`, async () => {
+      const start = deferredContextValue();
+      const respond = async (command: ContextManagementTransportCommand): Promise<ContextManagementTransportValue> => command.action === "generation-start" ? start.promise : { action: "generation-read", status: { requestId: "owned-context", state: "running" } };
+      const client = scopedContextClient(respond), nextClient = replacement === "client" ? scopedContextClient(respond) : client;
+      await renderStudio(client); await fillScopedManualPack();
+      await act(async () => button("Prepare context pack").click());
+      const workspaceId = replacement === "workspace" ? "workspace-b" : "workspace-a";
+      await act(async () => root!.render(<NotificationProvider><ContextStudio workspaceId={workspaceId} client={nextClient} /><NotificationRecordProbe workspaceId={workspaceId} /></NotificationProvider>));
+      await act(async () => start.resolve(acceptedContextStart));
+      expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+      expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-b")).toBeNull();
+      expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-read")).toHaveLength(0);
+      expect(container!.querySelector("[data-testid='notification-records']")!.textContent).not.toContain("Preparing context artifact");
+      expect(container!.textContent).not.toContain("Stop");
+    });
+  }
+
+  it("does not dispatch generation after unmount during source inspection", async () => {
+    const inspection = deferredContextValue();
+    const client = scopedContextClient(async command => command.action === "source-inspect" ? inspection.promise : acceptedContextStart, true);
+    await renderStudio(client);
+    await act(async () => {
+      container!.querySelector<HTMLInputElement>(".context-studio__checkbox-row input")!.click();
+      setInput(container!.querySelector<HTMLInputElement>("input[placeholder='product-support-rag']")!, "owned-rag");
+    });
+    await act(async () => button("Prepare RAG database").click());
+    await act(async () => root!.unmount()); root = undefined;
+    await act(async () => inspection.resolve({ action: "source-inspect", readiness: { artifactId: "uploads/support.parquet", ready: true, locallyReadable: true, textFields: ["text"], alreadyChunked: true } }));
+    expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-start")).toHaveLength(0);
+    expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+  });
+
+  it("rejects a source inspection for a different artifact", async () => {
+    const client = scopedContextClient(async command => command.action === "source-inspect" ? { action: "source-inspect", readiness: { artifactId: "foreign-artifact", ready: true, locallyReadable: true, textFields: ["foreign-private-field"], alreadyChunked: true } } : acceptedContextStart, true);
+    await renderStudio(client);
+    await act(async () => {
+      container!.querySelector<HTMLInputElement>(".context-studio__checkbox-row input")!.click();
+      setInput(container!.querySelector<HTMLInputElement>("input[placeholder='product-support-rag']")!, "owned-rag");
+    });
+    await act(async () => button("Prepare RAG database").click());
+    expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-start")).toHaveLength(0);
+    expect(container!.textContent).not.toContain("foreign-private-field");
+  });
+
+  it("rejects generation progress for a different request", async () => {
+    const client = scopedContextClient(async command => command.action === "generation-start" ? acceptedContextStart : { action: "generation-read", status: { requestId: "foreign-request", state: "failed", error: { code: "synthetic", message: "foreign private progress", retryable: false } } });
+    await renderStudio(client); await fillScopedManualPack();
+    await act(async () => button("Prepare context pack").click());
+    await vi.waitFor(() => expect(vi.mocked(client.execute).mock.calls.some(([input]) => input.command.action === "generation-read")).toBe(true));
+    expect(container!.textContent).not.toContain("foreign private progress");
+    expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBe("owned-context");
+  });
+
+  for (const action of ["generation-save", "generation-discard"] as const) {
+    it(`admits one ${action} and retains active review until confirmation`, async () => {
+      const reviewed = deferredContextValue();
+      const savedPack = { ...savedItem, artifactId: "generated/context/scoped-pack.zip", storageKey: "generated/context/scoped-pack.zip", kind: "markdown-context-pack" as const, name: "scoped-pack", mediaType: "application/vnd.ai-system-builder.markdown-context-pack+zip" as const };
+      const client = scopedContextClient(async command => {
+        if (command.action === "generation-start") return acceptedContextStart;
+        if (command.action === action) return reviewed.promise;
+        if (command.action === "browser-detail") return { action: "browser-detail", detail: { ...savedContextDetail(), item: savedPack, manifest: { ...manifest, name: savedPack.name, kind: savedPack.kind, mediaType: savedPack.mediaType, embedding: undefined } } };
+        return { action: "generation-read", status: { requestId: "owned-context", state: "review-required", preview: {
+          kind: "markdown-context-pack", name: "scoped-pack", sourceCount: 0, manualEntryCount: 1, chunkCount: 1,
+          items: [{ id: "manual-1", kind: "manual", text: "# Local policy", citations: [{ manualEntryId: "manual-1" }] }],
+        } } };
+      });
+      await renderStudio(client); await fillScopedManualPack();
+      await act(async () => button("Prepare context pack").click());
+      await vi.waitFor(() => expect(button("Discard context pack")).toBeTruthy());
+      try {
+        await act(async () => { const control = button(action === "generation-save" ? "Save context pack" : "Discard context pack"); control.click(); control.click(); });
+        expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === action)).toHaveLength(1);
+        expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBe("owned-context");
+      } finally { await act(async () => reviewed.resolve({ action, status: { requestId: "owned-context", state: action === "generation-save" ? "saved" : "discarded", ...(action === "generation-save" ? { savedArtifact: savedPack } : {}) } })); }
+      expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+      if (action === "generation-save") {
+        expect(container!.textContent).toContain("scoped-pack is available in Context Browser.");
+        expect(document.querySelector(".artifact-browser__detail-dialog")!.textContent).toContain("scoped-pack");
+      }
+    });
+  }
+
+  for (const outcome of ["running", "error"] as const) {
+    it(`keeps the generation owned after ${outcome} cancellation`, async () => {
+      const client = scopedContextClient(async command => {
+        if (command.action === "generation-start") return acceptedContextStart;
+        if (command.action === "generation-cancel") {
+          if (outcome === "error") throw new Error("private provider exception");
+          return { action: "generation-cancel", status: { requestId: command.requestId, state: "running" } };
+        }
+        return { action: "generation-read", status: { requestId: "owned-context", state: "running" } };
+      });
+      await renderStudio(client); await fillScopedManualPack();
+      await act(async () => button("Prepare context pack").click());
+      await act(async () => { const stop = button("Stop"); stop.click(); stop.click(); });
+      expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-cancel")).toHaveLength(1);
+      expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBe("owned-context");
+      expect(button("Stop")).toBeTruthy();
+      expect(container!.textContent).not.toContain("private provider exception");
+      expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-start")).toHaveLength(1);
+    });
+  }
+
+  for (const replacement of ["workspace", "client"] as const) {
+    it(`retires delayed shell task activity after ${replacement} replacement`, async () => {
+      const pending = deferredContextValue();
+      const first = { execute: vi.fn(async ({ workspaceId }: { workspaceId: string }): Promise<ContextManagementTransportValue> => workspaceId === "workspace-a" ? pending.promise : { action: "task-list", tasks: [] }) };
+      const next = { execute: vi.fn(async (): Promise<ContextManagementTransportValue> => ({ action: "task-list", tasks: [] })) };
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      const render = (workspaceId: string, client: typeof first | typeof next) => <NotificationProvider><ContextTaskNotificationBridge workspaceId={workspaceId} client={client} /><NotificationRecordProbe workspaceId={workspaceId} /></NotificationProvider>;
+      await act(async () => root!.render(render("workspace-a", first)));
+      await act(async () => root!.render(render(replacement === "workspace" ? "workspace-b" : "workspace-a", replacement === "client" ? next : first)));
+      await act(async () => pending.resolve({ action: "task-list", tasks: [{ requestId: "old-task", taskType: "context-generation", status: "running", progress: { message: "old session activity" } }] }));
+      expect(container!.textContent).not.toContain("old session activity");
+    });
+  }
+
+  it("keeps the newest detail after a closed earlier detail returns late", async () => {
+    const first = deferredContextValue(), second = deferredContextValue();
+    const other = { ...savedItem, artifactId: "generated/context/other.zip", storageKey: "generated/context/other.zip", name: "other-context" };
+    const client = browserContextClient(async command => command.action === "browser-detail" ? (command.artifactId === savedItem.artifactId ? first.promise : second.promise) : undefined, [savedItem, other]);
+    await renderStudio(client);
+    await act(async () => button("Context Browser").click());
+    const detailButtons = () => [...container!.querySelectorAll<HTMLButtonElement>("button")].filter(value => value.textContent?.trim() === "View Details");
+    await act(async () => detailButtons()[0].click());
+    await act(async () => document.querySelector<HTMLButtonElement>("button[aria-label='Close context detail and preview']")!.click());
+    await act(async () => detailButtons()[1].click());
+    await act(async () => second.resolve({ action: "browser-detail", detail: savedContextDetail(other) }));
+    const dialog = () => document.querySelector(".artifact-browser__detail-dialog");
+    expect(dialog()!.textContent).toContain("other-context");
+    await act(async () => first.resolve({ action: "browser-detail", detail: savedContextDetail(savedItem) }));
+    expect(dialog()!.textContent).toContain("other-context");
+    expect(dialog()!.textContent).not.toContain("support-rag");
+  });
+
+  it("rejects retrieval output for a different artifact", async () => {
+    const client = browserContextClient(async command => command.action === "browser-query" ? { action: "browser-query", result: { artifactId: "foreign-artifact", matches: [{ id: "foreign-match", excerpt: "foreign private excerpt", score: 1, citation: { sourceArtifactId: "foreign-source", sourceDigest: `sha256:${"d".repeat(64)}`, chunkIndex: 0 } }] } } : undefined);
+    await renderStudio(client); await openScopedBrowser();
+    const query = [...document.querySelectorAll<HTMLInputElement>("input")].find(input => input.parentElement?.textContent?.trim() === "Query")!;
+    await act(async () => setInput(query, "What is the policy?"));
+    await act(async () => button("Run test query").click());
+    expect(document.body.textContent).not.toContain("foreign private excerpt");
+    expect(vi.mocked(client.execute).mock.calls.some(([input]) => input.command.action === "browser-query" && input.command.request.artifactId === savedItem.artifactId)).toBe(true);
+  });
+
+  it("refresh errors are handled without exposing transport payloads", async () => {
+    let lists = 0;
+    const client = browserContextClient(async command => {
+      if (command.action === "browser-list" && ++lists > 1) throw new Error("private transport payload");
+      return undefined;
+    });
+    await renderStudio(client);
+    await act(async () => button("Context Browser").click());
+    await act(async () => button("Refresh").click());
+    expect(container!.textContent).toContain("Saved context artifacts could not be refreshed.");
+    expect(container!.textContent).not.toContain("private transport payload");
+    expect(button("Refresh").disabled).toBe(false);
+  });
+
+  for (const action of ["browser-rebuild", "browser-delete"] as const) {
+    it(`admits one ${action} before the busy render`, async () => {
+      const pending = deferredContextValue();
+      const client = browserContextClient(async command => {
+        if (command.action === action) return pending.promise;
+        if (command.action === "generation-read") return { action: "generation-read", status: { requestId: command.requestId, state: "running" } };
+        return undefined;
+      });
+      await renderStudio(client); await openScopedBrowser();
+      if (action === "browser-delete") {
+        await act(async () => button("Delete").click());
+        await act(async () => setInput(document.querySelector<HTMLInputElement>("input[placeholder='Delete']")!, "Delete"));
+      }
+      const label = action === "browser-rebuild" ? "Rebuild" : "Confirm delete";
+      try {
+        await act(async () => { const control = button(label); control.click(); control.click(); });
+        expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === action)).toHaveLength(1);
+      } finally {
+        await act(async () => pending.resolve(action === "browser-rebuild" ? { ...acceptedContextStart, action: "browser-rebuild" } : { action: "browser-delete", storageKey: savedItem.storageKey }));
+      }
+    });
+  }
+
+  it("retains confirmation when a delete acknowledgement names a different artifact", async () => {
+    const client = browserContextClient(async command => command.action === "browser-delete" ? { action: "browser-delete", storageKey: "generated/context/other-artifact.zip" } : undefined);
+    await renderStudio(client); await openScopedBrowser();
+    await act(async () => button("Delete").click());
+    await act(async () => setInput(document.querySelector<HTMLInputElement>("input[placeholder='Delete']")!, "Delete"));
+    await act(async () => button("Confirm delete").click());
+    expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "browser-list")).toHaveLength(1);
+    expect(document.querySelector(".artifact-browser__detail-dialog")!.textContent).toContain("support-rag");
+    expect(document.querySelector<HTMLInputElement>("input[placeholder='Delete']")!.value).toBe("Delete");
+    expect(container!.textContent).not.toContain("was deleted from Context Browser");
+  });
+
+  it.each(["running", "missing-artifact"] as const)("retains review ownership when save is %s", async outcome => {
+    const client = scopedContextClient(async command => {
+      if (command.action === "generation-start") return acceptedContextStart;
+      if (command.action === "generation-save") return { action: "generation-save", status: { requestId: command.requestId, state: outcome === "running" ? "running" : "saved" } };
+      return { action: "generation-read", status: { requestId: "owned-context", state: "review-required", preview: {
+        kind: "markdown-context-pack", name: "scoped-pack", sourceCount: 0, manualEntryCount: 1, chunkCount: 1,
+        items: [{ id: "manual-1", kind: "manual", text: "# Local policy", citations: [{ manualEntryId: "manual-1" }] }],
+      } } };
+    });
+    await renderStudio(client); await fillScopedManualPack();
+    await act(async () => button("Prepare context pack").click());
+    await act(async () => button("Save context pack").click());
+    expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBe("owned-context");
+    expect(container!.textContent).toContain(outcome === "running" ? "not confirmed" : "did not include its artifact");
+    expect(container!.textContent).not.toContain("artifact discarded");
+    expect(button("Prepare context pack").disabled).toBe(true);
+  });
+
+  it("permits a new preparation after an authoritative terminal failure", async () => {
+    let failed = false;
+    const client = scopedContextClient(async command => {
+      if (command.action === "generation-start") return { ...acceptedContextStart, value: { ...acceptedContextStart.value, requestId: failed ? "second-context" : "owned-context" } };
+      if (command.action === "generation-read") {
+        failed = true;
+        return { action: "generation-read", status: { requestId: command.requestId, state: "failed", error: { code: "synthetic", message: "Local preparation failed.", retryable: true } } };
+      }
+      throw new Error("Synthetic unexpected command");
+    });
+    await renderStudio(client); await fillScopedManualPack();
+    await act(async () => button("Prepare context pack").click());
+    await vi.waitFor(() => expect(container!.textContent).toContain("Local preparation failed."));
+    expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+    expect(button("Prepare context pack").disabled).toBe(false);
+    await act(async () => button("Prepare context pack").click());
+    expect(vi.mocked(client.execute).mock.calls.filter(([input]) => input.command.action === "generation-start")).toHaveLength(2);
+  });
+
+  it.each(["failed", "review-required"] as const)("late cancellation cannot replace confirmed %s progress", async state => {
+    vi.useFakeTimers();
+    const pending = deferredContextValue();
+    let progressed = false;
+    try {
+      const client = scopedContextClient(async command => {
+        if (command.action === "generation-start") return acceptedContextStart;
+        if (command.action === "generation-cancel") return pending.promise;
+        return { action: "generation-read", status: { requestId: "owned-context", state: progressed ? state : "running",
+          ...(progressed && state === "failed" ? { error: { code: "synthetic", message: "Confirmed terminal failure.", retryable: true } } : {}),
+          ...(progressed && state === "review-required" ? { preview: { kind: "markdown-context-pack" as const, name: "scoped-pack", sourceCount: 0, manualEntryCount: 1, chunkCount: 1, items: [{ id: "manual-1", kind: "manual" as const, text: "# Local policy", citations: [{ manualEntryId: "manual-1" }] }] } } : {}),
+        } };
+      });
+      await renderStudio(client); await fillScopedManualPack();
+      await act(async () => button("Prepare context pack").click());
+      await act(async () => button("Stop").click());
+      progressed = true;
+      await act(async () => vi.advanceTimersByTimeAsync(1100));
+      const expected = state === "failed" ? "Confirmed terminal failure." : "Discard context pack";
+      expect(container!.textContent).toContain(expected);
+      await act(async () => pending.resolve({ action: "generation-cancel", status: { requestId: "owned-context", state: "running" } }));
+      expect(container!.textContent).toContain(expected);
+      expect([...container!.querySelectorAll("button")].some(value => value.textContent?.trim() === "Stop")).toBe(false);
+    } finally {
+      await act(async () => pending.resolve({ action: "generation-cancel", status: { requestId: "owned-context", state: "cancelled" } }));
+      await act(async () => root?.unmount()); root = undefined;
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("ContextStudio", () => {
   it("resets transient embedding placement when the workspace changes", async () => {
     const client: ContextManagementClient = {

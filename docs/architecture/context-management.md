@@ -233,3 +233,37 @@ reviewable after compensation so the user can retry.
 > AI documentation reminder: when behavior in this area changes, update the
 > related ADRs, threat model, context pack, runtime docs, and host/UI READMEs in
 > the same change.
+
+## Renderer session and action ownership
+
+Context Studio replaces its form session when the workspace or typed client
+changes. Layout cleanup retires the old session during commit. Its client checks
+that session before dispatch and after each asynchronous reply, before another
+command, task-storage write or notification can occur. The shell notification
+bridge has a separate committed workspace/client fence and remains independent
+of the page. Leaving the page does not cancel or remove accepted host work.
+
+Generation, inspection, review, query, rebuild and delete use synchronous action
+ownership before the busy render. An accepted generation stays owned through
+review or unconfirmed cancellation. Matching terminal status permits a later
+preparation. Save/discard require their matching terminal result; Save also
+requires the returned artifact before claiming success. Closing a detail view
+retires its local read/query presentation. A newer detail or browser-list request
+cannot be overwritten by an older reply.
+
+Source inspection, saved detail, retrieval and generation status replies must
+match the requested action and source, artifact or task identity. This renderer
+fence supplements existing host authorization; it grants no backend authority.
+Transport exceptions use fixed user messages. Only local fixed Markdown
+validation diagnostics and renderer-owned diagnostics retain detailed copy.
+Focused UI fixtures exercise these behaviors and existing RAG/pack round trips.
+Actual host, model, native and final combined qualification remain separate.
+
+Each accepted generation has a local observation epoch. Later cancellation or
+poll replies cannot replace a confirmed terminal or ready-for-review state. A
+fresh explicit acceptance resets presentation for the next generation without
+reviving the old observation. This is renderer ownership, not runtime authority.
+
+Delete confirmation binds the selected artifact ID and verified storage key.
+Only an acknowledgement of that exact key can clear the confirmation, refresh
+the list or report deletion. A different key leaves the selected view intact.

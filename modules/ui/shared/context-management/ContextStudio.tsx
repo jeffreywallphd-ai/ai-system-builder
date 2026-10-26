@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 
 import type {
   ContextBrowserDetail,
@@ -71,13 +71,61 @@ const DEFAULT_CHUNKING = {
 };
 const DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2";
 
-export function ContextStudio({
+// Only renderer-owned, fixed diagnostics may pass through safeMessage.
+class ContextUiError extends Error {}
+
+export function ContextStudio(props: ContextStudioProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.client, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.client) {
+    setScope({ workspaceId: props.workspaceId, client: props.client, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedContextStudio key={scope.key} {...props} />;
+}
+
+function ScopedContextStudio({
   workspaceId,
-  client,
+  client: sourceClient,
   initialArtifactId,
   onInitialArtifactHandled,
   onViewSource,
 }: ContextStudioProps) {
+  const mountedRef = useRef(true);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  const client = useMemo<ContextManagementClient>(() => {
+    function assertCurrent() {
+      if (!mountedRef.current) throw new ContextUiError("This Context session is no longer active.");
+    }
+    return {
+      listSourceArtifacts: async input => {
+        assertCurrent();
+        const value = await sourceClient.listSourceArtifacts(input);
+        assertCurrent(); return value;
+      },
+      ...(sourceClient.listLocalTextModels ? { listLocalTextModels: async (input: { workspaceId: string }) => {
+        assertCurrent();
+        const value = await sourceClient.listLocalTextModels!(input);
+        assertCurrent(); return value;
+      } } : {}),
+      execute: async input => {
+        assertCurrent();
+        const value = await sourceClient.execute(input);
+        assertCurrent();
+        const command = input.command;
+        if (value.action !== command.action ||
+            (command.action === "source-inspect" && value.action === "source-inspect" && value.readiness.artifactId !== command.artifactId) ||
+            (command.action === "browser-detail" && value.action === "browser-detail" && value.detail.item.artifactId !== command.artifactId) ||
+            (command.action === "browser-query" && value.action === "browser-query" && value.result.artifactId !== command.request.artifactId) ||
+            ("requestId" in command && "status" in value && value.status.requestId !== command.requestId)) {
+          throw new ContextUiError("The Context response did not match the requested action or item.");
+        }
+        return value;
+      },
+    };
+  }, [sourceClient]);
   const notifications = useOptionalNotificationCenter();
   const observer = useTaskObservationManager();
   const [activeTab, setActiveTab] = useState<StudioTab>("rag-databases");
@@ -121,8 +169,30 @@ export function ContextStudio({
   const [packInputMode, setPackInputMode] = useState<ContextPackInputMode>();
   const [summaryLines, setSummaryLines] = useState("200");
   const [manualContent, setManualContent] = useState("");
-  const [requestId, setRequestId] = useState<string>();
-  const [generation, setGeneration] = useState<ContextGenerationStatus>();
+  const [requestId, setRequestIdState] = useState<string>();
+  const activeRequestRef = useRef<string | undefined>(undefined);
+  const requestEpochRef = useRef(0);
+  const [requestEpoch, setRequestEpoch] = useState(0);
+  function setRequestId(value: string | undefined) {
+    if (activeRequestRef.current === value) return;
+    activeRequestRef.current = value;
+    setRequestEpoch(++requestEpochRef.current);
+    setRequestIdState(value);
+  }
+  const [generation, setGenerationState] = useState<ContextGenerationStatus>();
+  const generationRef = useRef<ContextGenerationStatus | undefined>(undefined);
+  function setGeneration(value: ContextGenerationStatus | undefined) {
+    const previous = generationRef.current;
+    if (value && previous?.requestId === value.requestId) {
+      const terminal = ["saved", "discarded", "cancelled", "failed"].includes(previous.state);
+      if ((terminal && value.state !== previous.state) ||
+          (previous.state === "review-required" && ["queued", "running"].includes(value.state)) ||
+          (previous.state === "running" && value.state === "queued")) return false;
+    }
+    generationRef.current = value;
+    setGenerationState(value);
+    return true;
+  }
   const [message, setMessage] = useState<string>();
   const [outcome, setOutcome] = useState<{
     readonly title: string;
@@ -138,6 +208,23 @@ export function ContextStudio({
   const [query, setQuery] = useState("");
   const [queryResult, setQueryResult] = useState<ContextRetrievalResult>();
   const [busyAction, setBusyAction] = useState<string>();
+  const actionSequenceRef = useRef(0);
+  const actionOwnerRef = useRef<{ token: number; kind: string } | undefined>(undefined);
+  const browserListSequenceRef = useRef(0);
+  function beginAction(kind: string) {
+    const previous = actionOwnerRef.current;
+    if (!mountedRef.current || (previous && !(kind === "detail" && previous.kind === "detail"))) return;
+    const token = ++actionSequenceRef.current;
+    actionOwnerRef.current = { token, kind };
+    setBusyAction(kind);
+    return token;
+  }
+  const ownsAction = (token: number) => mountedRef.current && actionOwnerRef.current?.token === token;
+  function endAction(token: number) {
+    if (!ownsAction(token)) return;
+    actionOwnerRef.current = undefined;
+    setBusyAction(undefined);
+  }
   const [pendingDeleteId, setPendingDeleteId] = useState<string>();
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [browserDetailOpen, setBrowserDetailOpen] = useState(false);
@@ -179,17 +266,19 @@ export function ContextStudio({
   );
 
   const loadBrowser = useCallback(async () => {
+    const sequence = ++browserListSequenceRef.current;
     const result = await client.execute({
       workspaceId,
       command: { action: "browser-list" },
     });
     if (result.action !== "browser-list")
-      throw new Error("Context Browser response was invalid.");
-    setBrowserItems(result.items);
+      throw new ContextUiError("Context Browser response was invalid.");
+    if (sequence === browserListSequenceRef.current) setBrowserItems(result.items);
   }, [client, workspaceId]);
 
   useEffect(() => {
     let current = true;
+    const browserSequence = ++browserListSequenceRef.current;
     setSources([]);
     setSelectedSourceIds([]);
     setSourceStorageFilter("all");
@@ -253,7 +342,7 @@ export function ContextStudio({
             ? "Select one or more workspace artifacts."
             : "No compatible workspace artifacts are available yet.",
         );
-        if (browser.action === "browser-list") setBrowserItems(browser.items);
+        if (browser.action === "browser-list" && browserSequence === browserListSequenceRef.current) setBrowserItems(browser.items);
         setModelOptions(nextModels);
         setModelStatus(
           nextModels.length
@@ -286,16 +375,24 @@ export function ContextStudio({
   useEffect(() => {
     if (!requestId) return;
     return observer.subscribe({ workspaceId, family: "context", requestId: `generation:${requestId}` }, async () => {
+      if (requestEpochRef.current !== requestEpoch) throw new ContextUiError("This Context observation is no longer active.");
       const result = await client.execute({ workspaceId, command: { action: "generation-read", requestId } });
-      if (result.action !== "generation-read") throw new Error("Context generation status is unavailable.");
+      if (requestEpochRef.current !== requestEpoch) throw new ContextUiError("This Context observation is no longer active.");
+      if (result.action !== "generation-read") throw new ContextUiError("Context generation status is unavailable.");
       return { value: result.status, activity: result.status.state === "queued" || result.status.state === "running" ? "active" : "terminal" };
     }, (result) => {
+      if (!mountedRef.current || activeRequestRef.current !== requestId || requestEpochRef.current !== requestEpoch) return;
       if (!result) { setMessage("Context generation status is temporarily unavailable."); return; }
-      setGeneration(result.value); publishActivity(result.value);
+      if (!setGeneration(result.value)) return;
+      publishActivity(result.value);
+      if (["failed", "cancelled", "saved", "discarded"].includes(result.value.state)) {
+        sessionStorage.removeItem(requestStorageKey);
+        setRequestId(undefined);
+      }
     });
     // Notification methods are stable provider callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, observer, requestId, workspaceId]);
+  }, [client, observer, requestId, workspaceId, requestEpoch]);
 
   async function readSourceInspections(
     ids: readonly string[],
@@ -315,7 +412,7 @@ export function ContextStudio({
           },
         });
         if (result.action !== "source-inspect")
-          throw new Error("Source inspection response was invalid.");
+          throw new ContextUiError("Source inspection response was invalid.");
         return result.readiness;
       }),
     );
@@ -337,7 +434,8 @@ export function ContextStudio({
       setMessage("Select at least one artifact before checking data.");
       return;
     }
-    setBusyAction("inspect");
+    const owner = beginAction("inspect");
+    if (owner === undefined) return;
     setMessage(undefined);
     try {
       const results = await readSourceInspections(
@@ -353,13 +451,14 @@ export function ContextStudio({
     } catch (error) {
       setMessage(safeMessage(error, "Selected data could not be checked."));
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
   async function startGeneration(
     kind: "rag-database" | "markdown-context-pack",
   ) {
+    if (activeRequestRef.current || actionOwnerRef.current || !mountedRef.current) return;
     setMessage(undefined);
     let selectedReadiness = selectedSourceIds.map((id) => readiness[id]);
     if (kind === "rag-database" && !selectedSourceIds.length) {
@@ -400,11 +499,13 @@ export function ContextStudio({
       try {
         validateContextMarkdown(manualContent);
       } catch (error) {
-        setMessage(safeMessage(error, "Context pack Markdown is invalid."));
+        // This local validator emits fixed diagnostic strings, never source text.
+        setMessage(error instanceof Error ? error.message.slice(0, 256) : "Context pack Markdown is invalid.");
         return;
       }
     }
-    setBusyAction("generate");
+    const owner = beginAction("generate");
+    if (owner === undefined) return;
     try {
       if (
         kind === "rag-database" ||
@@ -491,9 +592,9 @@ export function ContextStudio({
         command: { action: "generation-start", command },
       });
       if (result.action !== "generation-start")
-        throw new Error("Generation start response was invalid.");
-      observer.invalidate({ workspaceId, family: "context" });
+        throw new ContextUiError("Generation start response was invalid.");
       setRequestId(result.value.requestId);
+      generationRef.current = undefined;
       setReviewModalOpen(false);
       setReviewIndex(0);
       setReviewDecisions({});
@@ -505,12 +606,13 @@ export function ContextStudio({
         requestId: result.value.requestId,
         state: result.value.status,
       });
+      observer.invalidate({ workspaceId, family: "context" });
       sessionStorage.setItem(requestStorageKey, result.value.requestId);
       notifications?.setPanelOpen(true);
     } catch (error) {
       setMessage(safeMessage(error, "Context generation could not start."));
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
@@ -527,22 +629,27 @@ export function ContextStudio({
       );
       return;
     }
-    setBusyAction(action);
+    const owner = beginAction(action);
+    if (owner === undefined) return;
     try {
       const result = await client.execute({
         workspaceId,
         command: { action, requestId },
       });
       if (result.action !== action)
-        throw new Error("Context review response was invalid.");
-      setGeneration(result.status);
+        throw new ContextUiError("Context review response was invalid.");
+      if (result.status.state !== (action === "generation-save" ? "saved" : "discarded"))
+        throw new ContextUiError("The Context review action is not confirmed. Check its status before trying again.");
+      if (action === "generation-save" && !result.status.savedArtifact)
+        throw new ContextUiError("The saved Context response did not include its artifact. Check Context Browser before trying again.");
+      if (!setGeneration(result.status)) throw new ContextUiError("The Context result conflicts with its confirmed status. Check Context Browser before trying again.");
       setReviewModalOpen(false);
       sessionStorage.removeItem(requestStorageKey);
       setRequestId(undefined);
       if (action === "generation-save" && result.status.savedArtifact) {
         await loadBrowser();
         setActiveTab("context-browser");
-        await selectBrowserItem(result.status.savedArtifact.artifactId);
+        await readBrowserItem(result.status.savedArtifact.artifactId, owner);
         setOutcome({
           title: "Context artifact saved",
           message: `${result.status.savedArtifact.name} is available in Context Browser.`,
@@ -558,25 +665,27 @@ export function ContextStudio({
         });
       }
     } catch (error) {
-      setMessage(
+      if (ownsAction(owner)) setMessage(
         safeMessage(error, "The context review action could not be completed."),
       );
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
   async function stopGeneration() {
     if (!requestId) return;
-    setBusyAction("cancel");
+    const owner = beginAction("cancel");
+    if (owner === undefined) return;
     try {
       const result = await client.execute({
         workspaceId,
         command: { action: "generation-cancel", requestId },
       });
+      if (!ownsAction(owner) || activeRequestRef.current !== requestId) return;
       observer.invalidate({ workspaceId, family: "context" });
       if (result.action === "generation-cancel") {
-        setGeneration(result.status);
+        if (!setGeneration(result.status)) return;
         publishActivity(result.status);
       }
       if (
@@ -587,38 +696,52 @@ export function ContextStudio({
         setRequestId(undefined);
       }
     } catch (error) {
-      setMessage(
+      if (ownsAction(owner)) setMessage(
         safeMessage(error, "Context generation could not be stopped."),
       );
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
   async function selectBrowserItem(artifactId: string) {
+    const owner = beginAction("detail");
+    if (owner === undefined) return;
+    try {
+      await readBrowserItem(artifactId, owner);
+    } catch (error) {
+      if (ownsAction(owner)) setMessage(safeMessage(error, "Context detail could not be opened."));
+    } finally {
+      endAction(owner);
+    }
+  }
+
+  async function refreshBrowser() {
+    const owner = beginAction("browser-list");
+    if (owner === undefined) return;
+    try { await loadBrowser(); }
+    catch (error) { if (ownsAction(owner)) setMessage(safeMessage(error, "Saved context artifacts could not be refreshed.")); }
+    finally { endAction(owner); }
+  }
+
+  async function readBrowserItem(artifactId: string, owner: number) {
     setSelectedBrowserId(artifactId);
     setBrowserDetailOpen(true);
     setDetail(undefined);
     setQueryResult(undefined);
-    setBusyAction("detail");
-    try {
-      const result = await client.execute({
-        workspaceId,
-        command: { action: "browser-detail", artifactId },
-      });
-      if (result.action !== "browser-detail")
-        throw new Error("Context detail response was invalid.");
-      setDetail(result.detail);
-    } catch (error) {
-      setMessage(safeMessage(error, "Context detail could not be opened."));
-    } finally {
-      setBusyAction(undefined);
-    }
+    const result = await client.execute({
+      workspaceId,
+      command: { action: "browser-detail", artifactId },
+    });
+    if (result.action !== "browser-detail")
+      throw new ContextUiError("Context detail response was invalid.");
+    if (ownsAction(owner)) setDetail(result.detail);
   }
 
   async function runQuery() {
     if (!selectedBrowserId) return;
-    setBusyAction("query");
+    const owner = beginAction("query");
+    if (owner === undefined) return;
     try {
       const result = await client.execute({
         workspaceId,
@@ -629,29 +752,32 @@ export function ContextStudio({
         },
       });
       if (result.action !== "browser-query")
-        throw new Error("Context query response was invalid.");
-      setQueryResult(result.result);
+        throw new ContextUiError("Context query response was invalid.");
+      if (ownsAction(owner)) setQueryResult(result.result);
     } catch (error) {
-      setMessage(
+      if (ownsAction(owner)) setMessage(
         safeMessage(error, "The RAG test query could not be completed."),
       );
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
   async function rebuildSelected() {
-    if (!selectedBrowserId) return;
-    setBusyAction("rebuild");
+    if (!selectedBrowserId || !detail?.rebuildAllowed || activeRequestRef.current) return;
+    const owner = beginAction("rebuild");
+    if (owner === undefined) return;
     try {
       const result = await client.execute({
         workspaceId,
         command: { action: "browser-rebuild", artifactId: selectedBrowserId },
       });
       if (result.action !== "browser-rebuild")
-        throw new Error("Context rebuild response was invalid.");
-      observer.invalidate({ workspaceId, family: "context" });
+        throw new ContextUiError("Context rebuild response was invalid.");
       setRequestId(result.value.requestId);
+      generationRef.current = undefined;
+      setGeneration({ requestId: result.value.requestId, state: result.value.status });
+      observer.invalidate({ workspaceId, family: "context" });
       sessionStorage.setItem(requestStorageKey, result.value.requestId);
       publishActivity({
         requestId: result.value.requestId,
@@ -668,21 +794,29 @@ export function ContextStudio({
         safeMessage(error, "This context artifact could not be rebuilt."),
       );
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
   async function deleteSelected() {
-    if (!pendingDeleteId) return;
-    const deletedName = detail?.item.name ?? "Context artifact";
-    setBusyAction("delete");
+    if (!pendingDeleteId || deleteConfirmation !== "Delete") return;
+    const target = detail?.item;
+    if (!target || target.artifactId !== pendingDeleteId) {
+      setMessage("The selected context artifact changed. Close this confirmation and open the artifact again.");
+      return;
+    }
+    const deletedName = target.name;
+    const owner = beginAction("delete");
+    if (owner === undefined) return;
     try {
       const result = await client.execute({
         workspaceId,
         command: { action: "browser-delete", artifactId: pendingDeleteId },
       });
       if (result.action !== "browser-delete")
-        throw new Error("Context delete response was invalid.");
+        throw new ContextUiError("Context delete response was invalid.");
+      if (result.storageKey !== target.storageKey)
+        throw new ContextUiError("The delete response did not match the selected context artifact. Its deletion is not confirmed.");
       setSelectedBrowserId(undefined);
       setDetail(undefined);
       setBrowserDetailOpen(false);
@@ -700,7 +834,7 @@ export function ContextStudio({
         safeMessage(error, "The context artifact could not be deleted."),
       );
     } finally {
-      setBusyAction(undefined);
+      endAction(owner);
     }
   }
 
@@ -745,6 +879,7 @@ export function ContextStudio({
   }
 
   function publishActivity(status: ContextGenerationStatus) {
+    if (!mountedRef.current || activeRequestRef.current !== status.requestId) return;
     notifications?.upsertActivity({
       id: `context-task:${workspaceId}:${status.requestId}`,
       title:
@@ -1005,7 +1140,7 @@ export function ContextStudio({
                   <select
                     className="ui-input"
                     value={sourceStorageFilter}
-                    disabled={running}
+                    disabled={Boolean(requestId) || Boolean(busyAction)}
                     onChange={(event) =>
                       setSourceStorageFilter(
                         event.target.value as SourceStorageFilter,
@@ -1042,7 +1177,7 @@ export function ContextStudio({
                             checked={selectedSourceIds.includes(
                               source.artifactId,
                             )}
-                            disabled={running}
+                            disabled={Boolean(requestId) || Boolean(busyAction)}
                             onChange={(event) => {
                               setSelectedSourceIds((current) =>
                                 event.target.checked
@@ -1113,7 +1248,7 @@ export function ContextStudio({
                     <select
                       className="ui-input"
                       value={sourceCheckPreset}
-                      disabled={running}
+                      disabled={Boolean(requestId) || Boolean(busyAction)}
                       onChange={(event) => {
                         setSourceCheckPreset(
                           event.target.value as "recommended" | "strict",
@@ -1138,7 +1273,7 @@ export function ContextStudio({
                           <input
                             type="checkbox"
                             checked={requireLicenseMetadata}
-                            disabled={running}
+                            disabled={Boolean(requestId) || Boolean(busyAction)}
                             onChange={(event) => {
                               setRequireLicenseMetadata(event.target.checked);
                               setReadiness({});
@@ -1158,7 +1293,7 @@ export function ContextStudio({
                           <input
                             type="checkbox"
                             checked={requireConsentMetadata}
-                            disabled={running}
+                            disabled={Boolean(requestId) || Boolean(busyAction)}
                             onChange={(event) => {
                               setRequireConsentMetadata(event.target.checked);
                               setReadiness({});
@@ -1178,7 +1313,7 @@ export function ContextStudio({
                           <input
                             type="checkbox"
                             checked={includeSourceAttribution}
-                            disabled={running}
+                            disabled={Boolean(requestId) || Boolean(busyAction)}
                             onChange={(event) => {
                               setIncludeSourceAttribution(event.target.checked);
                               setReadiness({});
@@ -1323,7 +1458,7 @@ export function ContextStudio({
                 </label>
                 <label>
                   Embedding device
-                  <select value={embeddingDevice} disabled={running}
+                  <select value={embeddingDevice} disabled={Boolean(requestId) || Boolean(busyAction)}
                     onChange={event => setEmbeddingDevice(event.target.value as "cpu" | "cuda" | "auto")}>
                     <option value="cpu">CPU (default)</option>
                     <option value="cuda">CUDA accelerator</option>
@@ -1421,8 +1556,7 @@ export function ContextStudio({
                     !manualEntryReady ||
                     !chunkSettingsValid ||
                     !name.trim() ||
-                    running ||
-                    busyAction === "generate"
+                    Boolean(requestId) || Boolean(busyAction)
                   }
                   onClick={() => void startGeneration(kind)}
                 >
@@ -1699,7 +1833,7 @@ export function ContextStudio({
               <button
                 className={`context-studio__mode-card${packInputMode === "manual" ? " context-studio__mode-card--selected" : ""}`}
                 type="button"
-                disabled={Boolean(requestId)}
+                disabled={Boolean(requestId) || Boolean(busyAction)}
                 aria-pressed={packInputMode === "manual"}
                 onClick={() => {
                   setPackInputMode("manual");
@@ -1717,7 +1851,7 @@ export function ContextStudio({
               <button
                 className={`context-studio__mode-card${packInputMode === "source-materials" ? " context-studio__mode-card--selected" : ""}`}
                 type="button"
-                disabled={Boolean(requestId)}
+                disabled={Boolean(requestId) || Boolean(busyAction)}
                 aria-pressed={packInputMode === "source-materials"}
                 onClick={() => {
                   setPackInputMode("source-materials");
@@ -1747,7 +1881,7 @@ export function ContextStudio({
                     value={name}
                     maxLength={120}
                     placeholder="product-support-context"
-                    disabled={running}
+                    disabled={Boolean(requestId) || Boolean(busyAction)}
                     onChange={(event) => setName(event.target.value)}
                   />
                 </label>
@@ -1758,7 +1892,7 @@ export function ContextStudio({
                     value={manualContent}
                     maxLength={200_000}
                     rows={14}
-                    disabled={running}
+                    disabled={Boolean(requestId) || Boolean(busyAction)}
                     onChange={(event) => setManualContent(event.target.value)}
                   />
                   <small className="ui-text-muted">
@@ -1773,8 +1907,7 @@ export function ContextStudio({
                     disabled={
                       !name.trim() ||
                       !manualContent.trim() ||
-                      running ||
-                      busyAction === "generate"
+                      Boolean(requestId) || Boolean(busyAction)
                     }
                     onClick={() =>
                       void startGeneration("markdown-context-pack")
@@ -1835,7 +1968,7 @@ export function ContextStudio({
                     <select
                       className="ui-input"
                       value={packCleaningPreset}
-                      disabled={running}
+                      disabled={Boolean(requestId) || Boolean(busyAction)}
                       onChange={(event) =>
                         setPackCleaningPreset(
                           event.target.value as typeof packCleaningPreset,
@@ -1866,7 +1999,7 @@ export function ContextStudio({
                       value={name}
                       maxLength={120}
                       placeholder="product-support-context"
-                      disabled={running}
+                      disabled={Boolean(requestId) || Boolean(busyAction)}
                       onChange={(event) => setName(event.target.value)}
                     />
                   </label>
@@ -1875,7 +2008,7 @@ export function ContextStudio({
                     <select
                       className="ui-input"
                       value={packMethod}
-                      disabled={running}
+                      disabled={Boolean(requestId) || Boolean(busyAction)}
                       onChange={(event) =>
                         setPackMethod(event.target.value as typeof packMethod)
                       }
@@ -1892,7 +2025,7 @@ export function ContextStudio({
                       <select
                         className="ui-input"
                         value={packModel}
-                        disabled={running}
+                        disabled={Boolean(requestId) || Boolean(busyAction)}
                         onChange={(event) => setPackModel(event.target.value)}
                       >
                         <option value="">Choose an installed model</option>
@@ -1913,7 +2046,7 @@ export function ContextStudio({
                         min="1"
                         max="1000"
                         value={summaryLines}
-                        disabled={running}
+                        disabled={Boolean(requestId) || Boolean(busyAction)}
                         onChange={(event) => setSummaryLines(event.target.value)}
                       />
                       <small className="ui-text-muted">
@@ -1942,8 +2075,7 @@ export function ContextStudio({
                       !name.trim() ||
                       !summaryLineLimitValid ||
                       (packMethod === "local-model" && !packModel) ||
-                      running ||
-                      busyAction === "generate"
+                      Boolean(requestId) || Boolean(busyAction)
                     }
                     onClick={() =>
                       void startGeneration("markdown-context-pack")
@@ -2006,6 +2138,7 @@ export function ContextStudio({
                 >
                   <input
                     type="checkbox"
+                    disabled={Boolean(requestId) || Boolean(busyAction)}
                     checked={selectedSourceIds.includes(source.artifactId)}
                     onChange={(event) => {
                       setSelectedSourceIds((current) =>
@@ -2130,7 +2263,8 @@ export function ContextStudio({
               <button
                 className="ui-button ui-button--outline"
                 type="button"
-                onClick={() => void loadBrowser()}
+                disabled={Boolean(busyAction)}
+                onClick={() => void refreshBrowser()}
               >
                 Refresh
               </button>
@@ -2144,6 +2278,10 @@ export function ContextStudio({
             closeLabel="Close context detail and preview"
             dialogClassName="artifact-browser__detail-dialog"
             onClose={() => {
+              if (actionOwnerRef.current?.kind === "detail" || actionOwnerRef.current?.kind === "query") {
+                actionOwnerRef.current = undefined;
+                setBusyAction(undefined);
+              }
               setBrowserDetailOpen(false);
               setSelectedBrowserId(undefined);
               setDetail(undefined);
@@ -2318,14 +2456,22 @@ export function ContextTaskNotificationBridge({
   const notifications = useOptionalNotificationCenter();
   const observer = useTaskObservationManager();
   const upsertActivity = notifications?.upsertActivity;
+  const scope = useMemo(() => ({ client, workspaceId }), [client, workspaceId]);
+  const committedScopeRef = useRef<typeof scope | undefined>(scope);
+  useLayoutEffect(() => {
+    committedScopeRef.current = scope;
+    return () => { if (committedScopeRef.current === scope) committedScopeRef.current = undefined; };
+  }, [scope]);
   useEffect(() => {
     if (!workspaceId || !upsertActivity) return;
     return observer.subscribe({ workspaceId, family: "context", requestId: "list" }, async () => {
+      if (committedScopeRef.current !== scope) throw new ContextUiError("Context task observation is no longer active.");
       const result = await client.execute({ workspaceId, command: { action: "task-list" } });
-      if (result.action !== "task-list") throw new Error("Context task list is unavailable.");
+      if (committedScopeRef.current !== scope) throw new ContextUiError("Context task observation is no longer active.");
+      if (result.action !== "task-list") throw new ContextUiError("Context task list is unavailable.");
       return { value: result.tasks, activity: result.tasks.some((task) => task.status === "queued" || task.status === "running") ? "active" : "idle" };
-    }, (result) => { if (result) for (const task of result.value) upsertActivity(taskNotification(task, workspaceId)); });
-  }, [client, observer, upsertActivity, workspaceId]);
+    }, (result) => { if (committedScopeRef.current === scope && result) for (const task of result.value) upsertActivity(taskNotification(task, workspaceId)); });
+  }, [client, observer, upsertActivity, workspaceId, scope]);
   return null;
 }
 
@@ -2503,7 +2649,7 @@ function isUploadedSource(source: ContextSourceOption): boolean {
 }
 
 function safeMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim()
-    ? error.message
+  return error instanceof ContextUiError && error.message.trim()
+    ? error.message.slice(0, 256)
     : fallback;
 }
