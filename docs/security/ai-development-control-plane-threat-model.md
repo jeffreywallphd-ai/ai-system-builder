@@ -426,3 +426,28 @@ RAM reservation or production model policy. New exact-source native readback and
 separate reviewed calibration must establish their actual results. Preserve all
 earlier failures and their old limits. No dependency preparation, OCR app, model,
 offload or parent-roadmap pass follows from this profile or its portable tests.
+
+### Separate single-host qualification commands
+
+The private `ui-thin` and `ui-desktop` roles construct exactly one literal
+Playwright project argument each. They retain all candidate, phase-directory,
+source, Node, helper and environment witnesses. Unknown or injected roles fail
+before identity reads and directory effects. Original package and combined UI
+commands remain byte-for-byte equivalent; the public CLI is unchanged.
+
+Both roles use the existing UI budget and deadline per job: Standard 1 GiB
+process/3 GiB job or the already approved OCR 2 GiB/4 GiB, 32 members and 420
+seconds. No numeric override or new quota is introduced. Native creation,
+readback, inherited handles, drain, zero-member retirement and uncertainty
+fencing are unchanged. The shared active/pending registry prevents overlap or a
+successor when retirement is unknown. Only a separately reviewed consumer can
+compose serial runs; it must use host-specific setup, await strict retirement
+and retain a finite whole-run deadline and per-host results. A project argument
+alone cannot prove which services its trusted setup starts.
+
+Portable policy checks cover exact arguments, unchanged limits, wrong folders,
+injected roles and active/pending-owner refusal. They do not prove physical
+native readback, app fit, memory savings or parent qualification. Fresh actual
+evidence remains required. Do not reinterpret the earlier per-process limit
+failure as a solved aggregate-overlap problem, repeat accepted model accuracy,
+or inspect/recover old processes, retained trees or offload slots.

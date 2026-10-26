@@ -277,6 +277,31 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         selected = catalog.plan(self.root, [source, "modules/unknown/source.ts"], ["security-authority"], "candidate")["selected"]
         self.assertIn("focused-tests", [c["id"] for c in selected])
 
+    def test_native_host_policy_profile_is_exact_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root=HELPERS.parents[1]
+        config="dev-tools/config/contributor-check-profiles.json"
+        source="dev-tools/helpers/native-qualification/owned_command_job.py"
+        tests="dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
+        readme="dev-tools/helpers/native-qualification/README.md"
+        profiles=read_json(root/config)
+        profile=profiles["profiles"]["native-host-policy"]
+        self.assertEqual(profile["test_paths"],[tests])
+        commands=run_focused_checks.profile_commands(root,"native-host-policy")
+        self.assertEqual(commands,[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(tests).parent.as_posix()),"-p",Path(tests).name]])
+        self.put(config,json.dumps(profiles))
+        for path in (source,tests,readme):
+            ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
+            self.assertIn("native-host-policy",ids)
+            self.assertNotIn("ocr-provider-contract",ids)
+            self.assertNotIn("focused-tests",ids)
+        for paths,required,focused in (([source,config],["native-host-policy"],False),([source,"modules/unknown/source.ts"],["native-host-policy"],True),([source],["native-host-policy","focused-tests"],True)):
+            ids={row["id"] for row in catalog.plan(self.root,paths,required,"candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids,focused)
+        ids={row["id"] for row in catalog.plan(self.root,["dev-tools/helpers/native-qualification/unknown.py"],["documentation"],"candidate")["selected"]}
+        self.assertNotIn("native-host-policy",ids)
+        self.assertIn("agent-support",ids)
+
     def test_all_registered_profiles_require_coverage_and_keep_explicit_focused_gate(self):
         config = "dev-tools/config/contributor-check-profiles.json"
         source = "modules/example/source.ts"
@@ -496,7 +521,6 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             (["dev-tools/scripts/qualification/visual-composer/ocr-qualification-worker.py"], ["documentation"], True, False),
             (["dev-tools/scripts/qualification/visual-composer/ocr-host-launch-plan.mjs"], ["documentation"], True, False),
             (["dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts"], ["documentation"], True, False),
-            (["dev-tools/helpers/native-qualification/owned_command_job.py"], ["documentation"], True, False),
             # Shared host/barrel paths are covered only when this bounded OCR
             # profile is selected. They must not auto-own unrelated host work.
             ([host_source], ["documentation"], False, True),

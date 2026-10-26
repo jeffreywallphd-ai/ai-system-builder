@@ -120,6 +120,16 @@ It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no
 controlled-provider, scale, native-race, offload or parent-roadmap qualification.
 
+The `native-host-policy` profile runs only the fixed native-launcher policy
+test file. It checks exact private package, combined UI, web-only and desktop-only
+commands, unchanged limit selection, source/environment witnesses and injected
+owner retirement refusals. Normal execution leaves actual Windows qualification
+skipped. An explicit physical run still needs its separate review and authority.
+This profile does not start an app, run a model or prove memory savings. Keep
+actual native readback, serial app setup, per-host measurements and parent
+qualification pending until separately executed. Unknown impact and an explicit
+`focused-tests` requirement retain generic coverage.
+
 The broader `functionality-outcomes` profile remains intact; a narrow profile
 cannot cover unrelated changed paths or grant a parent qualification.
 

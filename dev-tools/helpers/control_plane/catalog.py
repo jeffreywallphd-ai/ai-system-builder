@@ -13,11 +13,16 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation",
+    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "native-host-policy": [
+        "dev-tools/helpers/native-qualification/owned_command_job.py",
+        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
+        "dev-tools/helpers/native-qualification/README.md",
+    ],
     "dataset-semantic-curation": [
         "modules/adapters/runtime/python/worker/tasks/semantic_curation.py",
         "modules/adapters/runtime/python/worker/tests/test_semantic_curation.py",
@@ -55,9 +60,7 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/ocr-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
-        "dev-tools/helpers/native-qualification/owned_command_job.py",
-        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"],
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts"],
 }
 
 

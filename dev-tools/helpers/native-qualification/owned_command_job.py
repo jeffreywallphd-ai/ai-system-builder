@@ -32,6 +32,11 @@ _LIVE={}
 _ISSUED={}
 _FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
+_HOST_UI_PROJECTS={
+    "ui":("thin-chrome","packaged-desktop"),
+    "ui-thin":("thin-chrome",),
+    "ui-desktop":("packaged-desktop",),
+}
 _OCR_IMPORT_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v1/runs"
 _OCR_IMPORT_V2_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v2/runs"
 _OCR_IMPORT_PYTHON_SHA="1c4e9fbd9259294528031a567cef76b0a45254b66d612cf58de267928d1defbb"
@@ -189,10 +194,10 @@ def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,fold
     """Private trusted-source composition; never routed from command JSON/CLI.
 
     The owning reviewed consumer supplies immutable source/environment witnesses.
-    This validates their exact bytes and constructs only two literal argv forms;
+    This validates their exact bytes and constructs only fixed literal argv forms;
     these local attestations coordinate cooperative code, not hostile-user auth.
     """
-    need(phase in ("package","ui"),"unknown-fixed-host-role")
+    need(type(phase) is str and (phase=="package" or phase in _HOST_UI_PROJECTS),"unknown-fixed-host-role")
     need(candidate.is_absolute() and candidate.resolve()==candidate and re.fullmatch(r"\.local-codex/q/[a-f0-9]{8}/c",candidate.relative_to(_REPO).as_posix()),"fixed-candidate")
     helpers=candidate/".local-codex/native-fixed-host-operator/v1"
     need(run.parent==candidate/".local-codex/native-fixed-host-operator/runs" and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-host-run")
@@ -209,7 +214,7 @@ def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,fold
     need(env.get("TEMP")==env.get("TMP")==str(candidate.parent/"t") and env.get("HOME")==env.get("USERPROFILE")==str(candidate.parent/"h"),"short-owned-temp-home")
     need(_digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())==environment_sha256,"reviewed-environment-drift")
     _regular_directory(folder,_REPO);_regular_directory(candidate.parent/"t",_REPO);_regular_directory(candidate.parent/"h",_REPO)
-    argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),"--project=thin-chrome","--project=packaged-desktop")
+    argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*("--project="+project for project in _HOST_UI_PROJECTS[phase]))
     bindings[str(node_executable)]=node_sha256
     return _remember(_Intent(phase,argv,candidate,MappingProxyType(env),420,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
 
@@ -295,10 +300,10 @@ def _memory_limits(intent):
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package","ui","ocr-runtime-import","ocr-runtime-import-v2") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
-    ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or (phase in ("package","ui") and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
+    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or ((phase=="package" or phase in _HOST_UI_PROJECTS) and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
     if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
-    return PROCESS_BYTES,UI_JOB_BYTES if phase in ("ui","fixture:ui-budget") else JOB_BYTES
+    return PROCESS_BYTES,UI_JOB_BYTES if phase in _HOST_UI_PROJECTS or phase=="fixture:ui-budget" else JOB_BYTES
 
 
 def _job_memory_limit(intent):return _memory_limits(intent)[1]

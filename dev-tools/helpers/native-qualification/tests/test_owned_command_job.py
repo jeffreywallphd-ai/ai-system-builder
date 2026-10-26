@@ -40,7 +40,7 @@ class PortableNativePolicyTests(unittest.TestCase):
     def test_job_memory_profiles_are_fixed_and_require_an_issued_identity(self):
         for phase in ("package", "fixture:stdio", "fixture:failure", "fixture:hold", "ocr-runtime-import"):
             self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),2*1024**3)
-        for phase in ("ui", "fixture:ui-budget"):
+        for phase in ("ui", "ui-thin", "ui-desktop", "fixture:ui-budget"):
             self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),3*1024**3)
         for phase in ("shell", "ui:custom", "fixture:unknown", None, True):
             with self.subTest(phase=phase),self.assertRaises(job.NativeFailure):
@@ -49,13 +49,13 @@ class PortableNativePolicyTests(unittest.TestCase):
         with self.assertRaises(job.NativeFailure):job._job_memory_limit(unissued)
 
     def test_approved_ocr_limits_are_fixed_and_standard_and_legacy_limits_stay_separate(self):
-        for phase in ("package","ui","ocr-runtime-import","ocr-runtime-import-v2","fixture:ui-budget","fixture:ocr-budget"):
+        for phase in ("package","ui","ui-thin","ui-desktop","ocr-runtime-import","ocr-runtime-import-v2","fixture:ui-budget","fixture:ocr-budget"):
             for scenario in (None,"dataset-profile","ocr-documents"):
                 with self.subTest(phase=phase,scenario=scenario):
                     env={} if scenario is None else {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
                     intent=job._remember(job._Intent(phase,(),SOURCE.parent,env,.01,SOURCE.parent,{},{}))
-                    is_ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or phase in ("package","ui") and scenario=="ocr-documents"
-                    expected=(2,4) if is_ocr else (1,3 if phase in ("ui","fixture:ui-budget") else 2)
+                    is_ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or phase in ("package","ui","ui-thin","ui-desktop") and scenario=="ocr-documents"
+                    expected=(2,4) if is_ocr else (1,3 if phase in ("ui","ui-thin","ui-desktop","fixture:ui-budget") else 2)
                     self.assertEqual(job._memory_limits(intent),tuple(value*1024**3 for value in expected))
         forged=job._Intent("ocr-runtime-import-v2",(),SOURCE.parent,{},.01,SOURCE.parent,{},{})
         with self.assertRaises(job.NativeFailure):job._process_memory_limit(forged)
@@ -418,7 +418,9 @@ class PortableNativePolicyTests(unittest.TestCase):
         with self.assertRaises(job.NativeFailure):job._fixture_intent("../other",Path("unowned"))
 
     def test_unknown_host_phase_is_denied_before_native_work(self):
-        with self.assertRaises(job.NativeFailure):job._reviewed_host_intent("shell",candidate=Path("none"),node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},environment={},environment_sha256="",review_digest="")
+        for phase in ("shell","ui-thin --project=packaged-desktop","ui-desktop/..","ui:thin","",None,True,[],{}):
+            with self.subTest(phase=phase),patch.object(job,"_digest",side_effect=AssertionError("identity read after unknown role")),patch.object(job,"_regular_directory",side_effect=AssertionError("directory work after unknown role")),self.assertRaises(job.NativeFailure):
+                job._reviewed_host_intent(phase,candidate=Path("none"),node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},environment={},environment_sha256="",review_digest="")
 
     def test_host_scenarios_keep_exact_commands_and_select_only_the_approved_ocr_budget(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -430,7 +432,7 @@ class PortableNativePolicyTests(unittest.TestCase):
             for name in job._CONSUMER_FILES:
                 (helpers/name).write_bytes(b"synthetic reviewed helper identity")
                 hashes[name]=job._digest(helpers/name)
-            for folder in (run/"package",run/"ui",candidate.parent/"t",candidate.parent/"h"):
+            for folder in (run/"package",run/"ui",run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h"):
                 folder.mkdir(parents=True,exist_ok=True)
             env={"NODE_OPTIONS":"", "AISB_LOCAL_DESKTOP_UI_RUN":str(run),
                  "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1",
@@ -438,7 +440,7 @@ class PortableNativePolicyTests(unittest.TestCase):
                  "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
             with patch.object(job,"_REPO",root):
                 for scenario in ("dataset-profile","ocr-documents","ocr-document","ocr-documents --command", ""):
-                    for phase in ("package","ui"):
+                    for phase in ("package","ui","ui-thin","ui-desktop"):
                         with self.subTest(scenario=scenario,phase=phase):
                             values={**env,"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
                             kwargs=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),run=run,
@@ -449,11 +451,90 @@ class PortableNativePolicyTests(unittest.TestCase):
                             else:
                                 intent=job._reviewed_host_intent(phase,**kwargs)
                                 expected=(str(node),str(helpers/"offline-package.mjs")) if phase=="package" else (
-                                    str(node),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),"--project=thin-chrome","--project=packaged-desktop")
+                                    str(node),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*{"ui":("--project=thin-chrome","--project=packaged-desktop"),"ui-thin":("--project=thin-chrome",),"ui-desktop":("--project=packaged-desktop",)}[phase])
                                 self.assertEqual(intent.argv,expected)
+                                self.assertEqual(intent.folder,run/phase)
+                                self.assertEqual(intent.seconds,420)
+                                wrong_folder=run/("ui" if phase!="ui" else "ui-thin")
+                                with self.assertRaisesRegex(job.NativeFailure,"fixed-host-run"):
+                                    job._reviewed_host_intent(phase,**{**kwargs,"folder":wrong_folder})
                                 expected=(2,4) if scenario=="ocr-documents" else (1,2 if phase=="package" else 3)
                                 self.assertEqual(job._memory_limits(intent),tuple(value*1024**3 for value in expected))
                                 self.assertEqual(job.PROCESS_BYTES,1024**3);self.assertEqual(job.MEMBERS,32)
+
+    def test_single_host_witness_tamper_and_post_issue_drift_are_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32)
+            node=root/"node.exe";node_bytes=b"synthetic reviewed Node identity; never executed";node.write_bytes(node_bytes)
+            helper_bytes=b"synthetic reviewed helper identity"
+            for name in job._CONSUMER_FILES:(helpers/name).write_bytes(helper_bytes)
+            hashes={name:job._digest(helpers/name) for name in job._CONSUMER_FILES}
+            for folder in (run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h"):
+                folder.mkdir(parents=True,exist_ok=True)
+            env={"NODE_OPTIONS":"","AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1",
+                 "TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1",
+                 "TEMP":str(candidate.parent/"t"),"TMP":str(candidate.parent/"t"),
+                 "HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+            with patch.object(job,"_REPO",root),patch.object(job,"_Win") as native:
+                for scenario in ("dataset-profile","ocr-documents"):
+                    for phase in ("ui-thin","ui-desktop"):
+                        with self.subTest(scenario=scenario,phase=phase):
+                            values={**env,"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+                            kwargs=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),run=run,
+                                folder=run/phase,reviewed_file_hashes=dict(hashes),environment=values,
+                                environment_sha256=hashlib.sha256(json.dumps(values,sort_keys=True,separators=(",",":")).encode()).hexdigest(),review_digest="b"*64)
+                            intent=job._reviewed_host_intent(phase,**kwargs)
+                            job._validate_intent(intent,run/phase)
+                            altered_hashes={**hashes,"global-setup.mjs":"0"*64}
+                            for overrides,code in (({"node_sha256":"0"*64},"reviewed-node-identity"),
+                                    ({"reviewed_file_hashes":altered_hashes},"consumer-source-drift"),
+                                    ({"environment_sha256":"0"*64},"reviewed-environment-drift"),
+                                    ({"environment":{**values,"SAFE_CHANGED_VALUE":"changed"}},"reviewed-environment-drift")):
+                                with self.assertRaisesRegex(job.NativeFailure,code):
+                                    job._reviewed_host_intent(phase,**{**kwargs,**overrides})
+                            values["NODE_OPTIONS"]="changed after issuance"
+                            self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+                            job._validate_intent(intent,run/phase)
+                            values["NODE_OPTIONS"]=""
+                            for file,original in ((helpers/"global-setup.mjs",helper_bytes),(node,node_bytes)):
+                                file.write_bytes(b"changed after issuance")
+                                try:
+                                    with self.assertRaisesRegex(job.NativeFailure,"reviewed-consumer-drift"):
+                                        job._validate_intent(intent,run/phase)
+                                finally:file.write_bytes(original)
+                                job._validate_intent(intent,run/phase)
+                            with patch.object(job,"_implementation_hashes",return_value={"owned_command_job.py":"0"*64}):
+                                with self.assertRaisesRegex(job.NativeFailure,"launcher-source-drift"):
+                                    job._validate_intent(intent,run/phase)
+                            unissued=job._Intent(intent.phase,intent.argv,intent.cwd,intent.environment,intent.seconds,
+                                intent.folder,intent.source_hashes,intent.consumer_hashes)
+                            with self.assertRaisesRegex(job.NativeFailure,"external-intent-denied"):
+                                job._validate_intent(unissued,run/phase)
+                native.assert_not_called()
+            self.assertEqual({p.name for p in helpers.iterdir()},set(job._CONSUMER_FILES))
+            self.assertTrue(all(not list((run/phase).iterdir()) for phase in ("ui-thin","ui-desktop")))
+
+    def test_single_host_successor_requires_the_previous_owner_to_retire(self):
+        native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native) as create:
+            first=job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
+            with self.assertRaisesRegex(job.NativeFailure,"active-owned-state-blocks-successor"):
+                job._OwnedJob(self.issued_intent("ui-desktop"),SOURCE.parent)
+            self.assertEqual(create.call_count,1)
+            retired=first.finish()
+            self.assertTrue(retired["cleanup_confirmed"])
+            self.assertNotIn(id(first),job._LIVE)
+            second=job._OwnedJob(self.issued_intent("ui-desktop"),SOURCE.parent)
+            self.assertEqual(create.call_count,2)
+            self.assertTrue(second.finish()["cleanup_confirmed"])
+        # This is a portable injected-owner oracle, not physical process proof.
+        job._retain_pending(object())
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win") as create:
+            with self.assertRaisesRegex(job.NativeFailure,"uncertain-owned-state-blocks-successor"):
+                job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
+            create.assert_not_called()
 
     def test_unissued_intent_cannot_reach_native_creation(self):
         with self.assertRaises(job.NativeFailure):job._validate_intent(object(),Path("none"))

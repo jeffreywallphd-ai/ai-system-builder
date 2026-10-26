@@ -1,6 +1,21 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "native-host-policy": {
+      "test_paths": [
+        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
+      ],
+      "source_paths": [
+        "dev-tools/helpers/native-qualification/owned_command_job.py",
+        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
+        "dev-tools/helpers/native-qualification/README.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "docs/security/ai-development-control-plane-threat-model.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
+    },
     "security-authority": {
       "test_paths": [
         "modules/application/services/security/tests/transport-authentication-invariant.unit.test.ts",

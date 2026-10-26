@@ -90,8 +90,9 @@ not allocate 3 GiB or prove that a UI journey fits. A fresh separately reviewed
 real-host run must establish that outcome. Earlier observations and fences remain
 untouched; the revision grants no old-process, offload or parent qualification.
 
-A separately reviewed ignored consumer may compose only the two private fixed
-host forms: hash-bound offline Forge adapter and exact two-spec ingestion UI.
+A separately reviewed ignored consumer may compose the private fixed host
+forms: hash-bound offline Forge adapter, exact two-spec ingestion UI, or one
+exact web-only or desktop-only UI project.
 Its candidate, installed Node digest, environment digest, four helper hashes and
 review witness remain local. This is trusted-source cooperative composition,
 not authority from an untrusted caller JSON file or proof of reviewer identity.
@@ -135,3 +136,28 @@ factory refuses `runs/FENCED.json` in either diagnostic family and also refuses
 a parent-level fence. A fresh source review, native
 qualification and separate one-use calibration are required; no startup, host,
 model or parent pass follows from the approved budget alone.
+
+The additional private `ui-thin` and `ui-desktop` forms select only
+`--project=thin-chrome` or `--project=packaged-desktop`. Original package and
+combined `ui` argv remain unchanged. Each role requires its own exact fresh phase
+directory and the same reviewed four-helper, source, executable and environment
+witnesses. Unknown roles and injected project names fail before identity reads
+or directory work. No public selector or caller command is added.
+
+Both single-host forms retain the existing per-job UI policy: Standard 1 GiB per
+process and 3 GiB per job, or the already approved OCR 2 GiB/4 GiB profile; 32
+members and 420 seconds remain fixed. The active/pending-owner guard still
+refuses a successor until exact native retirement and handle closure are proven.
+Selecting one project does not prove that its reviewed setup starts only that
+app. A separately reviewed serial consumer must supply host-specific setup,
+complete retirement before the next app, a finite whole-run deadline and
+separate per-host observations. Do not reuse a combined-UI setup that starts web
+services during a desktop-only phase.
+
+`native-host-policy` runs this area's one fixed policy test file through the
+control plane. Normal execution leaves its physical Windows case explicitly
+skipped. Physical opt-in still requires separate source review and controlled
+execution authority. These portable command, limit-selection and injected-owner
+checks do not qualify new native readback, actual apps or memory savings. The
+earlier 1 GiB process-limit failure remains failed; reducing overlap need not
+resolve that single-process limit. Existing old-run and offload guards remain.
