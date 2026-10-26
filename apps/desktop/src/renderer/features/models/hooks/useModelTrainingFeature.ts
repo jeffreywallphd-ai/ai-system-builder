@@ -2,10 +2,10 @@ import { useTaskObservationManager } from "../../../../../../../modules/ui/share
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 
 import type { DesktopArtifactBrowseItem } from "../../../lib/desktopApi";
-import type { DesktopModelInventoryRecord, DesktopModelTrainingResult } from "../../../lib/desktopApi";
+import type { DesktopModelTrainingResult } from "../../../lib/desktopApi";
 import { createDesktopApplicationSettingsClient } from "../../settings/api/desktopApplicationSettingsClient";
 import { createDesktopPythonRuntimeClient } from "../../python-runtime/api/desktopPythonRuntimeClient";
-import type { DesktopModelsClient } from "../api/desktopModelsClient";
+import type { DesktopManagedModelInventoryRecord, DesktopModelsClient } from "../api/desktopModelsClient";
 import { announceModelTrainingStarted } from "./modelTrainingNotificationEvents";
 import { useModelsClient } from "./useModelsClient";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
@@ -91,8 +91,14 @@ function isTrainingDatasetArtifact(
     );
 }
 
+function hasLocalModelFiles(model: DesktopManagedModelInventoryRecord): boolean {
+  return typeof model.localFilesAvailable === "boolean"
+    ? model.localFilesAvailable
+    : Boolean(model.localPath);
+}
+
 function isLocalTextTrainingBaseModel(
-  model: DesktopModelInventoryRecord,
+  model: DesktopManagedModelInventoryRecord,
 ): boolean {
   const isTextModel = model.inferenceMode === "causal"
     || model.inferenceMode === "chat"
@@ -100,21 +106,21 @@ function isLocalTextTrainingBaseModel(
     || model.taskTags?.includes("text-generation");
   const isTrainableForm = model.artifactForm === "full-model"
     || model.artifactForm === "merged-model";
-  return Boolean(model.localPath && isTextModel && isTrainableForm);
+  return hasLocalModelFiles(model) && Boolean(isTextModel) && isTrainableForm;
 }
 
 function isDatasetPreparationGenerationModel(
-  model: DesktopModelInventoryRecord,
+  model: DesktopManagedModelInventoryRecord,
 ): boolean {
   return model.metadata?.["source"] === "dataset-preparation"
     || model.metadata?.["usage"] === "text-field-generation";
 }
 
 function selectDefaultTrainingBaseModel(
-  models: readonly DesktopModelInventoryRecord[],
-): DesktopModelInventoryRecord | undefined {
+  models: readonly DesktopManagedModelInventoryRecord[],
+): DesktopManagedModelInventoryRecord | undefined {
   const localTrainableModels = models.filter((model) =>
-    Boolean(model.localPath)
+    hasLocalModelFiles(model)
     && (
       model.artifactForm === "full-model"
       || model.artifactForm === "merged-model"
@@ -167,7 +173,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
     [],
   );
 
-  const [models, setModels] = useState<DesktopModelInventoryRecord[]>([]);
+  const [models, setModels] = useState<DesktopManagedModelInventoryRecord[]>([]);
   const [datasetArtifacts, setDatasetArtifacts] = useState<DesktopArtifactBrowseItem[]>([]);
   const [baseModelRecordId, setBaseModelRecordId] = useState("");
   const [selectedDatasetArtifactIds, setSelectedDatasetArtifactIds] = useState<string[]>([]);

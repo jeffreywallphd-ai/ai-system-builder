@@ -776,3 +776,12 @@ a fixed waiting message. Runtime progress text and internal run identifiers stay
 out of public status copy. Validation reports show availability without exposing
 a local report path. The run identity remains internal for observation, recovery
 and explicit save/discard; these presentation changes grant no task authority.
+
+The Training default-model selector consumes the Models client
+`localFilesAvailable` flag. The real client strips local paths before presentation;
+selection must not require those hidden paths. An explicit boolean flag takes
+precedence, with the existing path-presence fallback retained for legacy injected
+clients. Full/merged forms, preferred text models, preparation-source preference
+and newest-record ordering stay intact. These are form defaults only: requests
+carry the selected record ID, and application ownership, loading and runtime
+guards still decide whether training can start.

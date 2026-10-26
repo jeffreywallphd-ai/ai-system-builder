@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useModelTrainingFeature } from "../hooks/useModelTrainingFeature";
 import { TrainModelTab } from "../components/TrainModelTab";
-import type { DesktopModelsClient } from "../api/desktopModelsClient";
+import { createDesktopModelsClient, type DesktopModelsClient } from "../api/desktopModelsClient";
 import type { DesktopModelTrainingResult } from "../../../lib/desktopApi";
 import { NotificationTestHarness, readNotificationMessages } from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { TaskObservationProvider, useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
@@ -252,4 +252,48 @@ it.each([
   expect(training.status).toBe(status); expect(training.message).toBe(message);
   expect(container!.textContent).not.toContain("synthetic-private-terminal"); expect(training.message).not.toContain("Epoch");
   expect(training.canStopTraining).toBe(false); expect(client.saveModelTraining).not.toHaveBeenCalled();
+});
+
+it("chooses and submits the prepared text model from the real client's path-free inventory", async () => {
+  const list = vi.fn(async () => ({ ok: true, value: { models: [
+    { ...baseModel, modelRecordId: "newer-text", createdAt: "2026-10-01", localPath: "C:/synthetic-private/newer" },
+    { ...baseModel, modelRecordId: "newer-image", inferenceMode: "text-to-image", taskTags: [], createdAt: "2026-10-23", localPath: "C:/synthetic-private/newer-image" },
+    { ...baseModel, modelRecordId: "prepared-text", createdAt: "2026-01-01", metadata: { source: "dataset-preparation" }, localPath: "C:/synthetic-private/prepared" },
+    { ...baseModel, modelRecordId: "remote-reference", createdAt: "2026-10-20", lifecycleStatus: "saved-reference", localPath: undefined },
+    { ...baseModel, modelRecordId: "adapter-only", createdAt: "2026-10-20", artifactForm: "adapter", localPath: "C:/synthetic-private/adapter" },
+  ] } }));
+  Object.assign(window, { desktopApi: { listModels: list } });
+  const actualClient = createDesktopModelsClient();
+  const client = trainingClient({ listModels: actualClient.listModels });
+  await mountTraining(client); await selectTrainingInputs();
+  expect(list).toHaveBeenCalledWith({ workspaceId: "workspace-a" });
+  expect(training.models.find(model => model.modelRecordId === "prepared-text")).toMatchObject({ localFilesAvailable: true });
+  expect(training.models.every(model => model.localPath === undefined)).toBe(true);
+  expect(training.baseModelRecordId).toBe("prepared-text");
+  expect(trainingButton("Start Training").disabled).toBe(false);
+  await act(async () => trainingButton("Start Training").click());
+  expect(client.trainModel).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: "workspace-a", baseModel: { modelRecordId: "prepared-text" } }));
+  expect(JSON.stringify(vi.mocked(client.trainModel).mock.calls)).not.toContain("synthetic-private");
+  expect(container!.textContent).not.toContain("C:/synthetic-private");
+});
+
+it("does not choose a remote reference or an adapter as the installed training default", async () => {
+  Object.assign(window, { desktopApi: { listModels: vi.fn(async () => ({ ok: true, value: { models: [
+    { ...baseModel, modelRecordId: "remote-reference", localPath: undefined, lifecycleStatus: "saved-reference" },
+    { ...baseModel, modelRecordId: "adapter-only", localPath: "C:/synthetic-private/adapter", artifactForm: "adapter" },
+  ] } })) } });
+  const actualClient = createDesktopModelsClient(); const client = trainingClient({ listModels: actualClient.listModels });
+  await mountTraining(client); await selectTrainingInputs();
+  expect(training.baseModelRecordId).toBe(""); expect(trainingButton("Start Training").disabled).toBe(true);
+  expect(client.trainModel).not.toHaveBeenCalled(); expect(container!.textContent).not.toContain("C:/synthetic-private");
+});
+
+it("retains the newest installed nontext fallback when no local text model exists", async () => {
+  Object.assign(window, { desktopApi: { listModels: vi.fn(async () => ({ ok: true, value: { models: [
+    { ...baseModel, modelRecordId: "older-image", inferenceMode: "text-to-image", taskTags: [], createdAt: "2026-01-01", localPath: "C:/synthetic-private/older-image" },
+    { ...baseModel, modelRecordId: "newer-image", inferenceMode: "text-to-image", taskTags: [], createdAt: "2026-10-01", localPath: "C:/synthetic-private/newer-image" },
+  ] } })) } });
+  const actualClient = createDesktopModelsClient(); const client = trainingClient({ listModels: actualClient.listModels });
+  await mountTraining(client);
+  expect(training.baseModelRecordId).toBe("newer-image"); expect(container!.textContent).not.toContain("C:/synthetic-private");
 });

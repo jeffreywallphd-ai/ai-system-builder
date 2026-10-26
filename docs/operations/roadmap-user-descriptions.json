@@ -11738,6 +11738,20 @@
           "Real image inference, browser image decoding, production sign-in and final host checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9845a41f22c401de21958d5199f2df89f5b7f24f5f39ae1f19fa617ce5c47e2d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed clearer Training progress and report messages.",
+          "The form shows fixed status messages and valid epoch and batch counts.",
+          "It keeps private runtime text, run identifiers and local report paths out of those messages.",
+          "Stop, task recovery and explicit Save model or Discard model controls remain available when required.",
+          "These tests use model-client fixtures. Real training and final host checks remain pending."
+        ]
+      }
     }
   ]
 }

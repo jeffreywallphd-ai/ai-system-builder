@@ -1246,3 +1246,12 @@ cannot claim progress or remove Stop/review controls. Report availability is a
 fixed message. The current run remains internal for ownership and explicit
 review. Rendered client-fixture regressions preserve those controls and do not
 qualify physical training, native behavior, providers or final host execution.
+
+Training default selection must not restore a path removed by the Models client.
+It consumes the existing safe availability flag, retaining the legacy direct-client
+path-presence fallback only when no boolean flag exists. The hint grants no file,
+native or loading authority. The form still submits an exact workspace/model
+record; application resolution and admission remain unchanged. Rendered tests
+exercise the actual client sanitizer with finite preload envelopes and verify
+path-free presentation/requests, unsuitable-default refusal and existing model
+preference/fallback behavior. They do not qualify actual training or native files.

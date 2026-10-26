@@ -4380,6 +4380,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "training-public-progress-and-report-status",
+      "work_criteria": [
+        "training-safe-numeric-progress",
+        "training-report-and-control-retention",
+        "training-evidence-scope-and-history"
+      ],
+      "receipt_digest": "27369047e0d5ebc3931b20b8404acfb9e20c11dab66e7e1ad5e7858afa9a2f77",
+      "review_digest": "60429add96a9629cef7ce480e572b308016f95a58bd6689054055f8f4a865dc9",
+      "scope": "Tested, independently reviewed and committed safe Training progress and report presentation with fixed state copy, independently validated numeric counters and retained owned task, stop and explicit model-review controls.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
