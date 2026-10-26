@@ -1377,7 +1377,8 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1442,7 +1443,9 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json"
       ]
     },
     "dataset-semantic-curation": {

@@ -4151,6 +4151,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "manual-context-pack-byte-integrity",
+      "work_criteria": [
+        "context-manual-byte-integrity",
+        "context-manual-lineage-shape",
+        "context-integrity-evidence-and-support"
+      ],
+      "receipt_digest": "dbf7c5a5075b4ca1302d2779b4bd464189b947c8efb98571ba5dcb4a1eaadbc8",
+      "review_digest": "9645ce5f7088037be45e74ee40dbfbe371a5609506bf93674d7a7cf1ccf65cd3",
+      "scope": "Tested and committed exact manual Context pack byte and entry checks. Valid original text stays unchanged; inconsistent saved packs are refused.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

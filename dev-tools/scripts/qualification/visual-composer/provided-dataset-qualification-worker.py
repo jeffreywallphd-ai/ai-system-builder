@@ -1,16 +1,88 @@
-"""Fixed provided-data qualification: real packaged processor, no model fixture.
+"""Fixed provided-data/manual Context qualification: real packaged processors.
 
 The outer reviewed operator owns finite native limits and exact source identity.
-This entry cannot run arbitrary tasks, downloads, generation or OCR.
+This entry cannot run arbitrary tasks, downloads, model generation or OCR.
 """
 from __future__ import annotations
 import importlib
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import sys
+
+
+def manual_fixture():
+    source = Path(__file__).parent / "daily-context-fixture.json"
+    info = source.lstat()
+    if (not stat.S_ISREG(info.st_mode) or source.resolve() != source
+            or getattr(info, "st_file_attributes", 0) & 0x400 or info.st_size > 4096):
+        raise ValueError("The fixed manual fixture is unavailable.")
+    with source.open("rb") as stream:
+        raw = stream.read(4097)
+    if len(raw) > 4096:
+        raise ValueError("The fixed manual fixture exceeded its limit.")
+    value = json.loads(raw)
+    if (type(value) is not dict or set(value) != {"schema_version", "name", "markdown"}
+            or value["schema_version"] != "fixed-daily-context-v1"
+            or value["name"] != "ui-daily-manual-context"
+            or type(value["markdown"]) is not str or not 0 < len(value["markdown"].encode("utf-8")) <= 1024):
+        raise ValueError("The fixed manual fixture is invalid.")
+    return value
+
+
+def context_temp_root(repo_root):
+    root = Path(repo_root)
+    run = Path(os.getenv("AISB_LOCAL_DESKTOP_UI_RUN", ""))
+    expected = root.parent / "t"
+    if (not re.fullmatch(r".*/\.local-codex/q/[a-f0-9]{8}/c", root.as_posix()) or root.resolve() != root
+            or run.parent != root / ".local-codex/native-fixed-host-operator/runs"
+            or not re.fullmatch(r"[a-f0-9]{32}", run.name)
+            or os.getenv("TEMP") != str(expected) or os.getenv("TMP") != str(expected)):
+        raise ValueError("The reviewed current Context temp root is required.")
+    return expected
+
+
+def regular_context_directory(payload, temp_root, operation=False):
+    root = Path(payload.runtime.runtimeWorkingDirectory)
+    prefix = "ai-system-builder-context-operation-" if operation else "ai-system-builder-context-"
+    if (not root.is_absolute() or root.parent != temp_root
+            or not re.fullmatch(re.escape(prefix) + r"[A-Za-z0-9]{6,32}", root.name) or root.resolve() != root):
+        raise ValueError("A current staged Context directory is required.")
+    for directory in (temp_root, root):
+        info = directory.lstat()
+        if not stat.S_ISDIR(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+            raise ValueError("A regular staged Context directory is required.")
+    return root
+
+
+def validate_manual_context(payload, temp_root):
+    fixed = manual_fixture()
+    if (payload.kind != "markdown-context-pack" or payload.name != fixed["name"] or payload.sources
+            or len(payload.manualEntries) != 1 or payload.embedding is not None
+            or payload.contextPack is None or payload.contextPack.inputMode != "manual"
+            or payload.contextPack.method != "none" or payload.contextPack.model is not None):
+        raise ValueError("Only the fixed manual Context pack is permitted.")
+    entry = payload.manualEntries[0]
+    if (entry.id != "manual-entry-1" or entry.title != fixed["name"] or entry.content != fixed["markdown"]
+            or entry.digest != "sha256:" + hashlib.sha256(fixed["markdown"].encode("utf-8")).hexdigest()):
+        raise ValueError("Only the fixed manual Context bytes are permitted.")
+    regular_context_directory(payload, temp_root)
+
+
+def validate_manual_inspection(payload, temp_root):
+    if (payload.operation != "inspect-artifact"
+            or payload.mediaType != "application/vnd.ai-system-builder.markdown-context-pack+zip"
+            or any(getattr(payload, key) is not None for key in (
+                "query", "maximumResults", "embeddingDevice", "chunking", "sourceChecks", "sourceInformation"))):
+        raise ValueError("Only bounded manual Context inspection is permitted.")
+    root = regular_context_directory(payload, temp_root, operation=True)
+    if Path(payload.localPath) != root / "input.bin" or not 0 < payload.sizeBytes <= 16_384:
+        raise ValueError("Only the staged Context package is permitted.")
+    require_regular_source(root, payload)
 
 
 def require_regular_source(root, source):
@@ -43,7 +115,7 @@ def validate_provided(payload, root):
 
 
 def dispatch_allowed(request):
-    if request.taskType not in ("prepare-training-dataset", "review-dataset"):
+    if request.taskType not in ("prepare-training-dataset", "review-dataset", "generate-context-artifact", "context-artifact-operation"):
         raise ValueError("This qualification worker cannot execute that task.")
 
 
@@ -85,6 +157,8 @@ def main():
     application = importlib.import_module("_ai_system_builder_worker.app")
     task = importlib.import_module("_ai_system_builder_worker.tasks.prepare_training_dataset")
     original_prepare, original_dispatch = task.prepare_training_dataset, application._run_task
+    original_context = application.generate_context_artifact
+    original_inspection = application.operate_on_context_artifact
     with (cache / f"qualification-worker-identity-{os.getpid()}.json").open("x", encoding="utf-8") as stream:
         json.dump({"pid": os.getpid(), "parentPid": os.getppid(), "scenario": "dataset-profile"}, stream)
     failures = 0
@@ -116,6 +190,16 @@ def main():
         raise ValueError("Model downloads are unavailable in this qualification fixture.")
 
     application.prepare_training_dataset = observe(prepare, "preparation")
+    def context(payload, **kwargs):
+        validate_manual_context(payload, context_temp_root(root))
+        return original_context(payload, **kwargs)
+
+    def inspect_context(payload, **kwargs):
+        validate_manual_inspection(payload, context_temp_root(root))
+        return original_inspection(payload, **kwargs)
+
+    application.generate_context_artifact = observe(context, "task")
+    application.operate_on_context_artifact = observe(inspect_context, "task")
     application._run_task = observe(dispatch, "task")
     application._ensure_model_download_data = deny_download
     import uvicorn

@@ -1,13 +1,15 @@
-# Provided-data version journeys
+# Provided-data and manual Context journeys
 
-This private qualification composition tests saved dataset versions in the real
+This private qualification composition tests saved dataset versions and a manual Context pack in the real
 packaged Desktop app and the browser app. It does not generate model output.
 Normal qualification commands keep their existing controlled worker.
 
 The fixed worker admits one small synthetic CSV, classification, provided rows,
 validation and splitting, JSON Lines output, and the normal review operation.
 It delegates to the packaged production task, quality checks and output writer.
-It rejects other task types, generation, OCR, model downloads, advanced processing,
+It also admits one fixed synthetic manual Context pack and bounded pack inspection
+through their production tasks.
+It rejects other task types, model generation, OCR, model downloads, advanced processing,
 external paths, directory links and inputs larger than 16 KiB. Offline flags,
 launch authentication and production runtime dependency preparation remain active.
 Failure records contain closed error categories, not source data or exceptions.
@@ -49,7 +51,24 @@ the existing time, environment, ownership and retirement checks. Do not select
 the OCR role or raise limits after failure. Source checks alone do not run or
 qualify these host journeys. Retain actual failed and incomplete evidence.
 
-This work supports Data increment 3. It does not grant parent qualification,
+This work supports Data increment 3 and the comprehensive daily UI increment. It does not grant parent qualification,
 remote provider card rendering, remote cleanup, scale, advanced quality gains,
 model accuracy or OCR qualification. Existing successful provider and OCR
 evidence remains separate; do not repeat accepted model accuracy checks.
+
+The same two app cases also use mounted Context controls to enter the fixed
+`daily-context-fixture.json`, prepare it, open formatted review, approve its
+section and explicitly save. They read the current public catalog/detail and
+bounded artifact bytes. The oracle requires exact workspace and artifact identity,
+one manual entry/no sources, the known content digest, valid package entries and
+the stored-byte digest/size. Restart must preserve that exact snapshot.
+
+The extra private worker operations permit only manual generation with the
+declared bytes and pack inspection, never model generation, embedding or RAG.
+Context staging is an immediate regular child of the existing fixed operator's
+temp root. Its existing candidate/run/temp bindings must match. No new launcher,
+quota, recovery or old-owner path is introduced. Existing native limits remain.
+Focused tests exercise admission/denial, actual model-free task delegation,
+snapshot-oracle refusals and Playwright module collection. Skipped app cases do
+not qualify UI selectors, app behavior or native retirement. Actual source-bound
+app execution and final combined testing remain pending until separately run.

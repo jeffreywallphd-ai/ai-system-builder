@@ -5,15 +5,17 @@ import path from "node:path";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart } from "./provided-dataset-version-journey";
+import { prepareManualContext, verifyManualContextAfterRestart, type ManualContextSnapshot } from "./manual-context-host-journey";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
   process.env.PYTHON_RUNTIME_ARGS !== "-I -B ../../../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py",
   "Requires the separately reviewed real provided-data composition.");
-test("packaged desktop saves, compares and explicitly reuses provided dataset versions across complete app restart", async () => {
+test("packaged desktop saves dataset versions and manual Context across complete app restart", async () => {
   test.setTimeout(300_000);
   const isolated = prepareIsolatedDesktopCase("dataset");
   let saved: Awaited<ReturnType<typeof prepareProvidedVersions>> | undefined;
+  let savedContext: ManualContextSnapshot | undefined;
   for (const phase of ["before-restart", "after-restart"] as const) {
     const cache = path.join(isolated.dataRoot, `provided-cache-${phase}`);
     await mkdir(cache, { recursive: false }); expect(await realpath(cache)).toBe(cache);
@@ -31,9 +33,11 @@ test("packaged desktop saves, compares and explicitly reuses provided dataset ve
         await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
         await page.getByRole("button", { name: "Data", exact: true }).click();
         saved = await prepareProvidedVersions(page, "desktop");
+        savedContext = await prepareManualContext(page, "desktop");
       } else {
-        if (!saved) throw new Error("The first app session did not qualify.");
+        if (!saved || !savedContext) throw new Error("The first app session did not qualify.");
         await verifyProvidedVersionsAfterRestart(page, "desktop", saved, test.info());
+        await verifyManualContextAfterRestart(page, "desktop", savedContext, test.info());
       }
     } catch (error) { journeyError = error; }
     try { await closeDesktopAndQualifyOwnedWorkers(app, cache, test.info(), phase); }

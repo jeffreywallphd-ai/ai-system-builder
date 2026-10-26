@@ -191,3 +191,14 @@ authenticity. Positive Unicode/line-ending cases and substituted bytes, stale
 digests, invalid shape and invalid text cases exercise the production operation.
 These local fixtures do not qualify actual hosts, model semantics or native
 ownership. Rollback must retain denial of inconsistent manual packages.
+
+### Fixed manual Context app-journey support
+
+The private provided-data fixture also permits one declared manual pack and
+bounded pack inspection through production tasks. Its current candidate/run/temp
+bindings, regular immediate staging, one-entry bytes and no-model/no-source rules
+prevent fixture scope expansion. Existing native quotas and ownership stay intact.
+The UI journey uses only public controls for mutation and scoped bounded reads
+for identity, validated manifest and exact stored-byte oracles. Error/report data
+exclude credentials, content and local paths. Local fixture/oracle/collection
+checks do not qualify app selectors, host execution, native retirement or a parent.

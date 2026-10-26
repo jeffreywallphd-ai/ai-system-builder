@@ -971,7 +971,22 @@
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "runtime_integrity_scope": "Production pack generation/inspection with small synthetic bytes only. Actual app, model, native and final combined qualification remains pending."
+      "runtime_integrity_scope": "Production pack generation/inspection with small synthetic bytes only. Actual app, model, native and final combined qualification remains pending.",
+      "manual_host_journey_wiring": {
+        "helper": "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
+        "cases": [
+          "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+          "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts"
+        ],
+        "fixture": "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json",
+        "local_tests": [
+          "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+          "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
+          "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
+        ],
+        "actual_host_qualification": "pending",
+        "scope": "Real app consumers are wired; local fixture/oracle/collection checks do not prove app selectors or host execution."
+      }
     },
     {
       "id": "context-source-packs",

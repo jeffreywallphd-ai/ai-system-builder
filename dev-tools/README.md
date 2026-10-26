@@ -200,3 +200,8 @@ invalid UTF-8 and responses over 256 KiB, with a 30-second network deadline.
 It cancels and releases response streams and uses fixed failure categories.
 The same value bound applies to Desktop replies. Its focused transport fixtures
 do not launch either app or qualify host delivery, inference or native cleanup.
+
+The provided-data app cases now include one fixed manual Context pack across
+complete restart. Local admission/oracle/module-collection checks are separate
+from actual app execution. See the private provided-data qualification guide;
+no model, native quota or parent qualification follows from those local checks.
