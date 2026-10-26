@@ -635,11 +635,17 @@
           "name": "Mounted browser with real secure HTTP/routes/use cases/JSON catalog/filesystem: five text formats, hidden metadata, workspace scope, typed single/bulk deletion, duplicate guard, delayed replies and partial-failure retry",
           "tier": "component-real-http-application-and-filesystem",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
+          "name": "Mounted desktop default client/preload/registered handlers/use cases/JSON/filesystem: exact five text formats, type/storage filters, hidden metadata, workspace scope, typed deletion/retry and delayed or retired/suspended-view request ownership",
+          "tier": "component-real-preload-application-and-filesystem",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "scope_limit": "Browser component support only. Access admission and scheduling faults are finite synthetic fixtures; storage/catalog/bindings are actual local JSON/filesystem adapters. No physical browser, production authentication, SQLite/restart, image/PDF pixel decoding, provider publication or native recovery pass. Browser currently has Refresh/selection controls; desktop search/filter/paging and all remaining variations stay pending."
+      "scope_limit": "Desktop and browser component support only. Actual transports/application/local catalog and filesystem are composed; sender/access/provider/settings/timing fixtures remain explicit. Desktop type/storage filters and browser Refresh/selection controls are covered only as currently supported. No physical hosts, production security, SQLite/restart, image/PDF pixel decoding, live provider publication or native recovery qualification; remaining variations and final combined testing stay pending."
     },
     {
       "id": "artifact-backing-publish-delete",
@@ -673,13 +679,19 @@
           "name": "Mounted browser with real secure HTTP/routes/use cases/JSON catalog/filesystem: five text formats, hidden metadata, workspace scope, typed single/bulk deletion, duplicate guard, delayed replies and partial-failure retry",
           "tier": "component-real-http-application-and-filesystem",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
+          "name": "Mounted desktop default client/preload/registered handlers/use cases/JSON/filesystem: exact five text formats, type/storage filters, hidden metadata, workspace scope, typed deletion/retry and delayed or retired/suspended-view request ownership",
+          "tier": "component-real-preload-application-and-filesystem",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "explicit provider publication/repository creation authority if external roundtrip is run"
       ],
-      "scope_limit": "Browser component support only. Access admission and scheduling faults are finite synthetic fixtures; storage/catalog/bindings are actual local JSON/filesystem adapters. No physical browser, production authentication, SQLite/restart, image/PDF pixel decoding, provider publication or native recovery pass. Browser currently has Refresh/selection controls; desktop search/filter/paging and all remaining variations stay pending."
+      "scope_limit": "Desktop and browser component support only. Actual transports/application/local catalog and filesystem are composed; sender/access/provider/settings/timing fixtures remain explicit. Desktop type/storage filters and browser Refresh/selection controls are covered only as currently supported. No physical hosts, production security, SQLite/restart, image/PDF pixel decoding, live provider publication or native recovery qualification; remaining variations and final combined testing stay pending."
     },
     {
       "id": "dataset-goal-and-input-intent",

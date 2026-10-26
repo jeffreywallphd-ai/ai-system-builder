@@ -252,3 +252,35 @@ actual desktop/browser journeys must qualify before the app advertises it.
 - Desktop Artifact Browser now includes a **Hugging Face token** section with masked configured-state display.
 - Use **Save token** / **Clear token** in renderer; desktop host persists the token and reuses it for register/localize/publish/verify flows.
 - Public Hugging Face repos may work without token; private/gated repos may require token configuration.
+
+## Artifact Browser action ownership
+
+Desktop data lists and previews use fresh leases committed and retired during
+layout. Workspace/client changes clear prior selection and deletion intent.
+Type/storage filter changes retire old list replies. Superseded detail replies
+cannot request more content or replace the current preview. Popup requests also
+check their exact scope and request identity before opening or updating.
+
+Registered and unregistered deletion share one synchronous pending owner. Exact
+typed confirmation remains until deletion succeeds, so failure can be retried.
+An accepted host deletion continues after navigation; its old reply cannot
+clear or refresh another workspace. Application authorization, catalog-last
+local deletion and remote-provider policy remain authoritative.
+
+Focused component journeys use the real client, preload, registered handlers,
+application code and new JSON/filesystem records. Sender trust, unavailable
+provider/settings operations and timing are finite fixtures. These tests do
+not qualify installed Electron windows, production sender/access security,
+SQLite restart, live providers, image/PDF decoding or native recovery.
+
+Deletion captures the selected target, committed lease and selection sequence
+before dispatch. Completion clears only that exact selection; choosing another
+artifact or choosing the same artifact again creates a new selection. A newer
+preview is a retained snapshot, not proof that deleted bytes still exist. Clearing
+the current selection also closes its detail popup.
+
+After a current-workspace deletion succeeds, refresh uses the latest committed
+list callback. Changing type or storage filters while deletion is pending cannot
+leave the removed item in the displayed list. The callback is updated in layout,
+never during an uncommitted render; the existing workspace/client lease check
+still prevents refreshing another view.

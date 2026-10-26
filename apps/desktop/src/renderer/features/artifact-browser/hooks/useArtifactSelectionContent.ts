@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   ARTIFACT_PREVIEW_MAX_BYTES,
@@ -36,6 +36,7 @@ export interface UseArtifactSelectionContentResult {
   artifactPreview: ArtifactPreviewView;
   selectArtifact: (storageKey: string) => Promise<void>;
   clearSelectedArtifact: () => void;
+  captureSelectionClear: (storageKey: string) => () => void;
 }
 
 export function useArtifactSelectionContent(
@@ -43,6 +44,7 @@ export function useArtifactSelectionContent(
   setViewState: (value: ArtifactBrowserViewState) => void,
   workspaceId?: string,
 ): UseArtifactSelectionContentResult {
+  const scope = useMemo(() => ({ lease: undefined as object | undefined, selection: 0, storageKey: undefined as string | undefined }), [client, workspaceId]);
   const [selectedStorageKey, setSelectedStorageKey] = useState<
     string | undefined
   >(undefined);
@@ -91,13 +93,24 @@ export function useArtifactSelectionContent(
   );
 
   const clearSelectedArtifact = useCallback(() => {
+    scope.selection++;
+    scope.storageKey = undefined;
     setSelectedStorageKey(undefined);
     setDetail(undefined);
     setContent(undefined);
     setManagedPreviewMediaUrl(undefined);
     setHtmlPreview(undefined);
     setArtifactPreview(createIdleArtifactPreview());
-  }, [setManagedPreviewMediaUrl]);
+  }, [scope, setManagedPreviewMediaUrl]);
+
+  const captureSelectionClear = useCallback((storageKey: string) => {
+    const lease = scope.lease, selection = scope.selection;
+    return () => {
+      if (lease && scope.lease === lease && scope.selection === selection && scope.storageKey === storageKey) {
+        clearSelectedArtifact();
+      }
+    };
+  }, [clearSelectedArtifact, scope]);
 
   const createPreviewSource = useCallback(
     (
@@ -114,6 +127,11 @@ export function useArtifactSelectionContent(
 
   const selectArtifact = useCallback(
     async (storageKey: string) => {
+      const lease = scope.lease;
+      if (!lease) return;
+      const request = ++scope.selection;
+      scope.storageKey = storageKey;
+      const current = () => scope.lease === lease && scope.selection === request;
       setSelectedStorageKey(storageKey);
       setArtifactPreview(createLoadingArtifactPreview({ storageKey }));
       setViewState({ status: "loading", message: `Loading ${storageKey}...` });
@@ -123,6 +141,7 @@ export function useArtifactSelectionContent(
         const artifactDetail = await client.readArtifactDetail(locator, {
           workspaceId,
         });
+        if (!current()) return;
 
         setDetail(artifactDetail);
 
@@ -130,6 +149,7 @@ export function useArtifactSelectionContent(
           const contentDescriptor = await client.readArtifactContent(locator, {
             workspaceId,
           });
+          if (!current()) return;
           setContent(contentDescriptor);
           setHtmlPreview(undefined);
           const previewSource = createPreviewSource(
@@ -149,11 +169,13 @@ export function useArtifactSelectionContent(
                     workspaceId,
                     maximumBytes: ARTIFACT_MEDIA_PREVIEW_MAX_BYTES,
                   });
+                  if (!current()) return;
                   const nextPreviewMediaUrl =
                     await createCompressedImagePreviewObjectUrl(
                       media.bytes,
                       media.mediaType ?? previewSource.mediaType,
                     );
+                  if (!current()) { revokeObjectUrl(nextPreviewMediaUrl); return; }
                   setManagedPreviewMediaUrl(nextPreviewMediaUrl);
                   setArtifactPreview(
                     createMediaArtifactPreview(
@@ -165,11 +187,13 @@ export function useArtifactSelectionContent(
                     ),
                   );
                 } catch {
+                  if (!current()) return;
                   const fallbackPreviewMediaUrl =
                     await client.createArtifactMediaViewUrl(locator, {
                       workspaceId,
                       maximumBytes: ARTIFACT_MEDIA_PREVIEW_MAX_BYTES,
                     });
+                  if (!current()) { revokeObjectUrl(fallbackPreviewMediaUrl); return; }
                   setManagedPreviewMediaUrl(fallbackPreviewMediaUrl);
                   setArtifactPreview(
                     createMediaArtifactPreview(
@@ -183,8 +207,10 @@ export function useArtifactSelectionContent(
                   workspaceId,
                   maximumBytes: ARTIFACT_PDF_PREVIEW_MAX_BYTES,
                 });
+                if (!current()) return;
                 const nextPreviewMediaUrl =
                   await createPdfFirstPagePreviewObjectUrl(media.bytes);
+                if (!current()) { revokeObjectUrl(nextPreviewMediaUrl); return; }
                 setManagedPreviewMediaUrl(nextPreviewMediaUrl);
                 setArtifactPreview(
                   createMediaArtifactPreview(
@@ -201,6 +227,7 @@ export function useArtifactSelectionContent(
                     workspaceId,
                     maximumBytes: ARTIFACT_MEDIA_PREVIEW_MAX_BYTES,
                   });
+                if (!current()) { revokeObjectUrl(nextPreviewMediaUrl); return; }
                 setManagedPreviewMediaUrl(nextPreviewMediaUrl);
                 setArtifactPreview(
                   createMediaArtifactPreview(
@@ -210,6 +237,7 @@ export function useArtifactSelectionContent(
                 );
               }
             } catch {
+              if (!current()) return;
               setManagedPreviewMediaUrl(undefined);
               setArtifactPreview(
                 createUnavailableArtifactPreview(
@@ -225,6 +253,7 @@ export function useArtifactSelectionContent(
                 workspaceId,
                 maximumBytes: ARTIFACT_PREVIEW_MAX_BYTES,
               });
+              if (!current()) return;
               const nextPreview = createTextArtifactPreview(
                 {
                   ...previewSource,
@@ -235,6 +264,7 @@ export function useArtifactSelectionContent(
               setArtifactPreview(nextPreview);
               setHtmlPreview(nextPreview.text);
             } catch {
+              if (!current()) return;
               setArtifactPreview(
                 createUnavailableArtifactPreview(
                   previewSource,
@@ -247,6 +277,7 @@ export function useArtifactSelectionContent(
             setArtifactPreview(createUnsupportedArtifactPreview(previewSource));
           }
         } catch {
+          if (!current()) return;
           setContent({
             locator,
             availability: "unavailable",
@@ -257,8 +288,9 @@ export function useArtifactSelectionContent(
           setArtifactPreview(createUnavailableArtifactPreview({ storageKey }));
         }
 
-        setViewState({ status: "success" });
+        if (current()) setViewState({ status: "success" });
       } catch (error) {
+        if (!current()) return;
         clearSelectedArtifact();
         setViewState({
           status: "error",
@@ -275,15 +307,19 @@ export function useArtifactSelectionContent(
       createPreviewSource,
       setManagedPreviewMediaUrl,
       setViewState,
+      revokeObjectUrl,
+      scope,
       workspaceId,
     ],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const lease = {}; scope.lease = lease;
     clearSelectedArtifact();
-  }, [clearSelectedArtifact, workspaceId]);
+    return () => { if (scope.lease === lease) scope.lease = undefined; };
+  }, [clearSelectedArtifact, scope]);
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
       if (activePreviewMediaUrl.current) {
         revokeObjectUrl(activePreviewMediaUrl.current);
@@ -302,5 +338,6 @@ export function useArtifactSelectionContent(
     artifactPreview,
     selectArtifact,
     clearSelectedArtifact,
+    captureSelectionClear,
   };
 }

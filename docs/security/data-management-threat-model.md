@@ -1329,3 +1329,34 @@ on remote-provider deletion remain authoritative. New synthetic fixture roots
 are identity, containment, type, entry and byte checked before removal; exact
 owned listeners and requests are retired. This local evidence does not qualify
 production authentication, physical/native races, provider or durable restart.
+
+## Desktop Artifact Browser leases and deletion intent
+
+Local artifact lists, previews and popup updates are admitted only by their
+current committed lease and exact request identity. Layout cleanup retires the
+lease before passive effects. An uncommitted replacement does not alter the
+visible owner. Retired replies cannot issue subsequent content/media requests;
+prepared orphan object URLs use existing revocation. Current type/storage
+filters cannot be undone by an older list response.
+
+Registered and unregistered deletion share synchronous pending admission with
+exact typed confirmation. A failure retains confirmation for explicit retry.
+Old completion cannot clear a new workspace or publish success there. This is
+UI intent coordination; application authorization, storage containment and
+catalog-last local deletion still enforce access and effects. Remote provider
+deletion is unchanged. Only fresh bounded fixture trees are inspected/removed,
+with exact root identity, containment, regular types and entry/byte limits.
+Composed preload tests use finite sender/provider/settings/timing fixtures and
+do not qualify physical Electron, production access, native races or recovery.
+
+Deletion captures the selected target, committed lease and selection sequence
+before dispatch. Completion clears only that exact selection; choosing another
+artifact or choosing the same artifact again creates a new selection. A newer
+preview is a retained snapshot, not proof that deleted bytes still exist. Clearing
+the current selection also closes its detail popup.
+
+After a current-workspace deletion succeeds, refresh uses the latest committed
+list callback. Changing type or storage filters while deletion is pending cannot
+leave the removed item in the displayed list. The callback is updated in layout,
+never during an uncommitted render; the existing workspace/client lease check
+still prevents refreshing another view.

@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -129,7 +130,14 @@ export function ArtifactBrowserFeature({
     readiness?: ContextConversionReadiness;
   }>({ status: "idle" });
   const previewRequestId = useRef(0);
+  const previewScope = useMemo(() => ({ lease: undefined as object | undefined }), [client, workspaceId]);
   const initialSelectionHandledRef = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    const lease = {}; previewScope.lease = lease; previewRequestId.current++;
+    initialSelectionHandledRef.current = undefined;
+    setDetailPopupOpen(false); setParquetPreview(undefined);
+    return () => { if (previewScope.lease === lease) previewScope.lease = undefined; previewRequestId.current++; };
+  }, [previewScope]);
   const {
     uploadedItems,
     generatedItems,
@@ -155,6 +163,7 @@ export function ArtifactBrowserFeature({
     deleteConfirmationInput,
     setDeleteConfirmationInput,
     confirmPendingDelete,
+    isDeleting,
     cancelPendingDelete,
     selectedArtifactFamily,
     setSelectedArtifactFamily,
@@ -173,6 +182,13 @@ export function ArtifactBrowserFeature({
     togglePublishForm,
     readArtifactMedia,
   } = useArtifactBrowserFeature(client, workspaceId);
+  useLayoutEffect(() => {
+    if (!selectedStorageKey) {
+      previewRequestId.current++;
+      setDetailPopupOpen(false);
+      setParquetPreview(undefined);
+    }
+  }, [selectedStorageKey]);
   const transientViewState = Boolean(
     viewState.message &&
     (/^(Deleted|Registered)\b/.test(viewState.message) ||
@@ -225,7 +241,10 @@ export function ArtifactBrowserFeature({
 
   const openArtifactDetails = useCallback(
     async (storageKey: string) => {
+      const lease = previewScope.lease;
+      if (!lease) return;
       const requestId = ++previewRequestId.current;
+      const current = () => previewScope.lease === lease && requestId === previewRequestId.current;
       const item = [...uploadedItems, ...generatedItems, ...otherItems].find(
         (candidate) => candidate.storageKey === storageKey,
       );
@@ -240,7 +259,7 @@ export function ArtifactBrowserFeature({
         isParquet ? createLoadingArtifactPreview(source) : undefined,
       );
       await selectArtifact(storageKey);
-      if (requestId !== previewRequestId.current) return;
+      if (!current()) return;
       setDetailPopupOpen(true);
       if (!isParquet) return;
       if (!workspaceId || !readParquetPreview) {
@@ -257,7 +276,7 @@ export function ArtifactBrowserFeature({
           workspaceId,
           artifactKey: storageKey,
         });
-        if (requestId !== previewRequestId.current) return;
+        if (!current()) return;
         setParquetPreview(
           createParquetArtifactPreview(
             source,
@@ -266,7 +285,7 @@ export function ArtifactBrowserFeature({
           ),
         );
       } catch {
-        if (requestId !== previewRequestId.current) return;
+        if (!current()) return;
         setParquetPreview(
           createUnavailableArtifactPreview(
             source,
@@ -279,6 +298,7 @@ export function ArtifactBrowserFeature({
       generatedItems,
       otherItems,
       readParquetPreview,
+      previewScope,
       selectArtifact,
       uploadedItems,
       workspaceId,
@@ -506,6 +526,7 @@ export function ArtifactBrowserFeature({
                 setDeleteConfirmationInput(event.target.value)
               }
               placeholder="Delete"
+              disabled={isDeleting}
             />
           </label>
           <div className="ui-grid ui-grid--two">
@@ -513,7 +534,8 @@ export function ArtifactBrowserFeature({
               className="ui-button ui-button--destructive"
               type="button"
               onClick={() => void confirmPendingDelete()}
-              disabled={deleteConfirmationInput !== "Delete"}
+              disabled={isDeleting || deleteConfirmationInput !== "Delete"}
+              aria-busy={isDeleting}
             >
               Confirm delete
             </button>

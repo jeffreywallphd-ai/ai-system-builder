@@ -435,7 +435,16 @@
         "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
         "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
         "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
-        "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts"
+        "apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/artifact-storage-grouping.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/desktop-artifact-browser-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/html-artifact-preview.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-artifacts.unit.test.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-delete-confirmation.unit.test.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-delete-flow.unit.test.tsx",
+        "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -587,7 +596,13 @@
         "modules/hosts/desktop/composition/README.md",
         "modules/hosts/server/composition/README.md",
         "apps/thin-client/src/features/artifact-browser/hooks/useArtifactBrowserFeature.ts",
-        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactBrowserArtifacts.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactSelectionContent.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactDeleteFlow.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactBrowserFeature.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/desktop/README.md"
       ]
     },
     "functionality-context": {

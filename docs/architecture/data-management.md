@@ -1145,3 +1145,39 @@ production authentication, SQLite/restart, provider publication and native
 recovery remain separate qualification. The current browser has Refresh and
 selection controls; desktop search/filter/paging requirements are not claimed
 as browser UI behavior.
+
+## Desktop Artifact Browser request lifetimes
+
+Desktop list ownership includes the workspace, client and current type/storage
+filters. Each committed layout owns a fresh lease; cleanup retires that exact
+lease. Reads also carry an ordered request identity. Selection ownership uses
+the workspace/client and an ordered selection identity, including continuation
+checks before content/media reads and after image/PDF preparation. Orphan
+object URLs are revoked through the existing renderer cleanup path.
+
+The detail popup checks its own committed scope and request identity after
+selection and Parquet reads. A suspended replacement cannot retire the visible
+view. Single registered/unregistered deletion uses one synchronous pending
+owner, preserves exact confirmation after failure and reports completion only
+to its original current scope. Leaving the view does not cancel accepted host
+work. Existing application authorization and local cleanup order are unchanged.
+
+Composed component tests use default desktop clients, actual preload/registered
+IPC and application/catalog/filesystem implementations. They assert exact
+rendered text, CSV, JSON, JSONL and Markdown, actual type/storage filters, hidden
+metadata, workspace refusal, deletion retry and delayed/suspended/retired view
+behavior. Sender admission, disabled provider/settings operations and timing
+are finite fixtures. Physical Electron, production access, SQLite/restart,
+image/PDF decoding, live providers and native recovery remain separate checks.
+
+Deletion captures the selected target, committed lease and selection sequence
+before dispatch. Completion clears only that exact selection; choosing another
+artifact or choosing the same artifact again creates a new selection. A newer
+preview is a retained snapshot, not proof that deleted bytes still exist. Clearing
+the current selection also closes its detail popup.
+
+After a current-workspace deletion succeeds, refresh uses the latest committed
+list callback. Changing type or storage filters while deletion is pending cannot
+leave the removed item in the displayed list. The callback is updated in layout,
+never during an uncommitted render; the existing workspace/client lease check
+still prevents refreshing another view.
