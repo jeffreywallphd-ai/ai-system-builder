@@ -281,3 +281,13 @@ valid definition-list semantics on Assets and Systems.
 
 Notification bell controls reference the panel only while it is mounted;
 expanded state, Escape dismissal and focus restoration remain unchanged.
+
+- Saved dataset setup validation lives in `dataset-version/datasetVersionReplay.ts`.
+  It produces one complete frozen value or a fixed denial before any form change.
+  Supply the exact workspace/version/dataset artifact and a ready, authorized
+  source-list projection; retain duplicate matches so ambiguity is rejected.
+  It validates configuration only. The page must separately check async freshness,
+  consume an explicit one-use handoff and acknowledge actual application. The
+  application remains responsible for authorization, bytes, runtime readiness
+  and publication. Do not restore provider destinations or historical approvals.
+  The pure component does not yet replace either host's existing reuse handler.

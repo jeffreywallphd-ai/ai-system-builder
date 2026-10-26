@@ -1270,6 +1270,39 @@
         "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
         "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"
       ]
+    },
+    "dataset-version-replay": {
+      "test_paths": [
+        "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
+        "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-memory.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-output-shape.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts"
+      ],
+      "source_paths": [
+        "modules/ui/shared/dataset-version/datasetVersionReplay.ts",
+        "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
+        "modules/ui/shared/dataset-version/index.ts",
+        "modules/ui/shared/README.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/data-management.pack.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-memory.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-output-shape.unit.test.ts",
+        "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts"
+      ]
     }
   }
 }

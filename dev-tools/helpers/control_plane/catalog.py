@@ -13,11 +13,16 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract",
+    "review-site", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "dataset-version-replay": [
+        "modules/ui/shared/dataset-version/datasetVersionReplay.ts",
+        "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
+        "modules/ui/shared/dataset-version/index.ts",
+    ],
     "review-site": ["dev-tools/review-site/index.html", "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"],
     "ocr-provider-contract": ["modules/adapters/runtime/python/worker/ocr/*", "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py", "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py", "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py", "modules/adapters/runtime/python/worker/tests/test_ocr_process.py", "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py",
 "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py",

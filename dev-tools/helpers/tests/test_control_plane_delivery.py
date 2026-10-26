@@ -122,6 +122,50 @@ class StorageTests(Fixture):
 
 
 class CatalogTests(Fixture):
+    def test_dataset_replay_profile_is_exact_bounded_and_keeps_unrelated_coverage(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profile = read_json(root / config)["profiles"]["dataset-version-replay"]
+        expected = [
+            "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
+            "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-memory.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-output-shape.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+            "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts",
+        ]
+        self.assertEqual(profile["test_paths"], expected)
+        commands = run_focused_checks.profile_commands(root, "dataset-version-replay")
+        self.assertEqual([p for command in commands for p in command if p in expected], sorted(expected))
+        self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] for command in commands))
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"dataset-version-replay": profile}}))
+        exact = ["modules/ui/shared/dataset-version/datasetVersionReplay.ts", expected[0], "modules/ui/shared/dataset-version/index.ts"]
+        for path in exact:
+            selected = catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]
+            ids = {row["id"] for row in selected}
+            self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), {"dataset-version-replay"})
+            self.assertNotIn("focused-tests", ids)
+            self.assertIn("architecture", ids)
+        for paths, required, focused in [(exact + [config], ["control-plane"], False),
+                                          (exact, ["focused-tests"], True),
+                                          (exact + ["modules/unknown/source.ts"], ["documentation"], True)]:
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+        for path in ["modules/ui/shared/dataset-version/DatasetVersionPanel.tsx", "modules/ui/shared/other/source.ts"]:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+            self.assertNotIn("dataset-version-replay", ids)
+        for path in ["dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_delivery.py"]:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("control-plane", ids)
+        ids = {row["id"] for row in catalog.plan(self.root, ["docs/context/packs/data-management.pack.md"], ["documentation"], "candidate")["selected"]}
+        self.assertTrue({"documentation", "agent-support"}.issubset(ids))
+
+
     def test_focused_python_checks_never_expand_into_controlled_ai_suite(self):
         import run_focused_checks
         files = {"modules/adapters/runtime/python/worker/tests/" + n: "x" for n in ("test_unit.py", "test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py", "test_model_training_task_matrix_e2e.py")}

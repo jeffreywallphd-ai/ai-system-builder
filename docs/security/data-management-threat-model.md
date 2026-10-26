@@ -889,3 +889,29 @@ and its empty-browser-MIME fallback does not change backend admission or validat
 a PDF signature. Existing source authorization, raw-byte publication and native
 PDF decoding remain required. Preserve all structured file choices and streaming
 checks; do not accept caller metadata as proof of recognized content.
+
+## Saved-version renderer integrity admission
+
+- Boundary: untrusted saved preparation JSON and selected workspace metadata to
+  one complete shared form value. Existing application authorization and recipe
+  digest verification remain authoritative; renderer validation grants no access.
+- Threats: source/version substitution, ambiguous source matches, unsupported
+  settings causing a partially restored form, oversized or prototype-bearing
+  JSON, executable accessors and disclosure through raw errors.
+- Controls: exact workspace/version/dataset/artifact association; canonical full
+  lineage equality; ordered unique source IDs and exact logical storage keys;
+  ready workspace-scoped source projection with duplicate matches preserved;
+  closed supported settings and whole-value rejection before any setter.
+- Bounds: recipe snapshot 512 KiB, reproduction envelope 1 MiB, JSON depth 16
+  and 20,000 nodes, selected-source projection 256. The existing version-record
+  normalizer still limits persisted lists to 100. Inspect property descriptors
+  before cloning; reject accessors, unsafe prototype keys, non-JSON values and
+  non-finite numbers. Compile output shapes through the existing contract.
+- Return fixed safe failure copy only. Do not expose prompts, raw exceptions,
+  paths, credentials or provider details. Returned values are cloned and frozen.
+  Retain only form-supported quality choices; current backend mandatory policy,
+  approval and consent must be resolved again. Do not restore destinations.
+- Residual scope: no proof of current source bytes, async page freshness, runtime
+  memory admission, installed OCR language, model readiness or provider authority.
+  The pure validator is not yet wired into either app. Independent consumer/UI
+  checks remain required; no parent roadmap pass follows from component tests.

@@ -910,3 +910,52 @@ OCR language field does the same for its caption, recognition limits and languag
 guidance. React-generated IDs preserve each form's associations without changing
 task settings, authorization or readiness. Exact-caption host queries and focused
 description-association regressions cover this behavior.
+
+## Saved preparation setup validation
+
+`modules/ui/shared/dataset-version/datasetVersionReplay.ts` is a pure shared
+integrity check for the ADR-0040 saved-version reuse path. Before any form change,
+it validates the exact selected workspace, requested version, dataset identity,
+complete-dataset artifact key and canonically normalized immutable lineage. Each
+ordered source ID must match one current authorized source-list row with the
+same logical storage key and compatible source capability. Metadata has no byte
+digest; this check does not authorize or prove current source bytes.
+
+The helper reads the actual finalizer snapshot: recipe, optional advanced
+configuration, split, output format/name and form-supported quality choices.
+Snapshots containing only operation or split metadata are not reusable setups.
+It validates every supported active setting before returning a complete deeply
+frozen value. Inactive settings have canonical absence, without merging current
+form values. Missing optional settings use contract defaults. Explicit unknown or
+contradictory values fail as a whole. An explicit saved execution plan must equal
+the full canonical method tuple; it cannot bypass OCR or source compatibility.
+
+The current methods can replay standard legacy recipes and current topic-aware
+or structure-aware producer configurations. A historical advanced recipe whose
+fixed layout, curation or critic settings cannot be expressed by the current
+form is rejected rather than silently changed. OCR replay requires exact
+structure-aware/layout/Markdown settings, only PDF inputs and a valid explicit
+language. It does not establish installed engine or language readiness.
+
+This component performs no I/O, dispatch, notification, persistence, provider
+operation or form mutation. It returns no destination or historical approval
+authority. Reuse still needs page-owned request freshness, ready source state,
+one-use consumption and an applied/not-applied acknowledgment in both apps.
+Those consumers, host journeys, publication and parent qualification remain
+separate work; exporting the validator does not complete saved-version reuse.
+
+Saved omissions retain implemented worker behavior: batch size 1, maximum new
+tokens 256, no explicit temperature/top-p override, no overflow permission, and
+strict document normalization. An omitted generation failure policy follows
+normalization (best-effort skips; strict fails). Explicit null is invalid, not
+an omission. Current thin-client duplicate prompt/memory/model form fields are
+accepted only when consistent with the primary recipe and are not returned as
+a second source of authority.
+
+An omitted shuffle flag keeps the worker default (off). Task mappings and
+prompt styles that the current forms cannot express are rejected; labels that
+contain a comma are also rejected because the form uses comma-separated labels.
+
+Generation inference mode must be present. Historical omission requests worker
+discovery, but current forms serialize an explicit auto mode that the application
+normalizes differently. Reject that missing meaning instead of selecting chat.
