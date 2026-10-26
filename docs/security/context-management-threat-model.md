@@ -202,3 +202,21 @@ The UI journey uses only public controls for mutation and scoped bounded reads
 for identity, validated manifest and exact stored-byte oracles. Error/report data
 exclude credentials, content and local paths. Local fixture/oracle/collection
 checks do not qualify app selectors, host execution, native retirement or a parent.
+
+### Context shell notification boundaries
+
+Task-list replies and cached observations must form the complete bounded page
+with unique normalized IDs, known generation/retrieval families and closed task
+statuses before any row is published. The100-record bound follows the existing
+application task-list use case; request IDs retain the existing512-character
+contract bound. Committed client/workspace fences continue to reject retired
+results. Unknown task state stays uncertain instead of becoming failed.
+
+Fixed state/family messages replace arbitrary runtime progress. Only the exact
+static managed-installation hint is retained; embedding text is rebuilt from
+ordered safe-integer counts. A finite in-range percentage is allowed when counts
+are absent. Known units alone are retained. Focused actual bridge regressions
+exercise malformed/duplicate/oversized/family-invalid pages, safe copy, numeric
+progress and shared snapshots. Existing installation/embedding UI regressions
+remain unchanged. These fixtures grant no actual RAG/model, host, native recovery
+or parent-roadmap qualification, and full testing stays deferred by user direction.

@@ -686,3 +686,18 @@ or a finite percentage when counts are absent; only known units are displayed.
 Invalid values and runtime error/progress text stay out of notification history.
 These renderer checks supplement host/application authorization and do not grant
 provider, download, registration, model-quality or native execution authority.
+
+### Context notification progress
+
+The Context shell bridge validates the complete task page before notification
+publication, including the existing100-task bound, normalized512-character IDs,
+unique identities and known Context families/statuses. Current committed scope
+checks also fence shared snapshots and retired client replies. Unknown status
+stays unknown and is not presented as confirmed failure.
+
+Notification copy is fixed by state and task family. The exact managed vector
+database installation hint remains available. Embedding count copy is derived
+from validated numeric progress and known chunk units; other runtime free text
+is not displayed. Invalid numeric progress and unknown units are omitted. These
+presentation checks preserve host authorization and do not qualify actual RAG,
+models, native runtime or complete host execution.

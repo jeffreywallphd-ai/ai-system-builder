@@ -2468,9 +2468,9 @@ export function ContextTaskNotificationBridge({
       if (committedScopeRef.current !== scope) throw new ContextUiError("Context task observation is no longer active.");
       const result = await client.execute({ workspaceId, command: { action: "task-list" } });
       if (committedScopeRef.current !== scope) throw new ContextUiError("Context task observation is no longer active.");
-      if (result.action !== "task-list") throw new ContextUiError("Context task list is unavailable.");
+      if (result?.action !== "task-list" || !isContextNotificationPage(result.tasks)) throw new ContextUiError("Context task list is unavailable.");
       return { value: result.tasks, activity: result.tasks.some((task) => task.status === "queued" || task.status === "running") ? "active" : "idle" };
-    }, (result) => { if (committedScopeRef.current === scope && result) for (const task of result.value) upsertActivity(taskNotification(task, workspaceId)); });
+    }, (result) => { if (committedScopeRef.current === scope && result && isContextNotificationPage(result.value)) for (const task of result.value) upsertActivity(taskNotification(task, workspaceId)); });
   }, [client, observer, upsertActivity, workspaceId, scope]);
   return null;
 }
@@ -2482,25 +2482,56 @@ function taskNotification(task: ContextTaskSummary, workspaceId: string) {
       task.taskType === "context-generation"
         ? "Context preparation"
         : "Context retrieval",
-    message:
-      task.progress?.message ??
-      (task.status === "succeeded"
-        ? "Context work completed."
-        : "Context work is in progress."),
+    message: contextTaskMessage(task),
     source: "Context",
     workspaceId,
-    status: task.status === "unknown" ? ("failed" as const) : task.status,
-    progress: task.progress?.total
-      ? {
-          current: task.progress.current ?? 0,
-          total: task.progress.total,
-          ...(task.progress.percent === undefined
-            ? {}
-            : { percent: task.progress.percent }),
-          ...(task.progress.unit ? { unit: task.progress.unit } : {}),
-        }
-      : undefined,
+    status: task.status,
+    progress: contextTaskProgress(task.progress),
   };
+}
+
+function isContextNotificationPage(value: unknown): value is readonly ContextTaskSummary[] {
+  // The existing owning task-list use case returns at most100 records.
+  if (!Array.isArray(value) || value.length > 100) return false;
+  const identities = new Set<string>();
+  for (const task of value) {
+    if (!task || typeof task !== "object" || typeof task.requestId !== "string"
+      || !task.requestId.trim() || task.requestId !== task.requestId.trim() || task.requestId.length > 512
+      || identities.has(task.requestId)
+      || (task.taskType !== "context-generation" && task.taskType !== "context-retrieval")
+      || !["queued", "running", "succeeded", "failed", "cancelled", "unknown"].includes(task.status)) return false;
+    identities.add(task.requestId);
+  }
+  return true;
+}
+
+function contextTaskProgress(progress: ContextTaskSummary["progress"]) {
+  if (!progress) return undefined;
+  const { current, total, percent } = progress;
+  if (current !== undefined || total !== undefined) {
+    if (typeof current !== "number" || !Number.isSafeInteger(current) || current < 0
+      || typeof total !== "number" || !Number.isSafeInteger(total) || total <= 0 || current > total) return undefined;
+    return { current, total, percent: current / total * 100,
+      ...(["chunk", "chunks", "sources", "items", "bytes", "tokens"].includes(progress.unit ?? "") ? { unit: progress.unit } : {}) };
+  }
+  return typeof percent === "number" && Number.isFinite(percent) && percent >= 0 && percent <= 100 ? { percent } : undefined;
+}
+
+function contextTaskMessage(task: ContextTaskSummary): string {
+  if (task.status === "queued") return "Waiting to start Context work.";
+  if (task.status === "succeeded") return "Context work completed.";
+  if (task.status === "failed") return "Context work failed. Return to Context to review the task and retry.";
+  if (task.status === "cancelled") return "Context work was cancelled.";
+  if (task.status === "unknown") return "Context task status is unavailable.";
+  // Preserve this exact managed-installation hint. No other free text is copied.
+  const installing = "Installing the local vector database. This runs once for the managed Python runtime.";
+  if (task.progress?.message === installing) return installing;
+  const progress = contextTaskProgress(task.progress);
+  if (task.taskType === "context-generation" && progress && "current" in progress
+    && (progress.unit === "chunk" || progress.unit === "chunks")) {
+    return `Embedding chunk ${progress.current} of ${progress.total}.`;
+  }
+  return task.taskType === "context-generation" ? "Preparing Context." : "Retrieving Context.";
 }
 
 function notificationStatus(state: ContextGenerationStatus["state"]) {

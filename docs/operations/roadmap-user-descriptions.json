@@ -11621,6 +11621,18 @@
           "These local results do not complete actual host checks or the roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6c5c0c515e1a48735b7ac9cc309e0a7bf3f70bba2c2e7851252daffac7e39efb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed download notifications for the current workspace and matching task.",
+          "They keep safe progress and existing download history.",
+          "These local results do not complete actual download or host checks or the roadmap."
+        ]
+      }
     }
   ]
 }

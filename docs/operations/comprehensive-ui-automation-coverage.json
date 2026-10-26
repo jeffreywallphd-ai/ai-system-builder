@@ -228,6 +228,12 @@
           "name": "current download scope, complete-page admission, captured completion identity and safe numeric progress",
           "tier": "shared-rendered-download-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
+          "name": "whole Context task page, safe progress, retained installation hint and truthful unknown state",
+          "tier": "shared-rendered-context-task-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",

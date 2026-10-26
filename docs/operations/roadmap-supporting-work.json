@@ -4223,6 +4223,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "model-download-notification-boundaries",
+      "work_criteria": [
+        "download-notification-scope-and-bounds",
+        "download-notification-safe-compatible-progress",
+        "download-notification-evidence-and-limits"
+      ],
+      "receipt_digest": "8c081eb4d0d2dff7f38a1c14522b4a22bfcb377e2fbbf8b591963f15f082d368",
+      "review_digest": "53f9ca42257d4eef7b10fb708c3a849278b484b078982272bb844f4517ed3ab9",
+      "scope": "Tested and committed download notifications with current-workspace checks, matching task completion, safe progress and preserved download history.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
