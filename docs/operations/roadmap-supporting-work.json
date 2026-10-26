@@ -4416,6 +4416,25 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "desktop-training-bridge-contract-and-durable-review",
+      "work_criteria": [
+        "training-bridge-workspace-contract",
+        "training-preload-staging-and-explicit-review",
+        "training-durable-save-retry-and-discard",
+        "training-preload-fixture-scope-and-cleanup"
+      ],
+      "receipt_digest": "460019b87b0883de0d69d44dbcd7849906f038dca80043b351ca23f87d51ccc8",
+      "review_digest": "38e41b743878c66047b559a15563cb679509da04683d1b7e33b61dbb0d8c9ccd",
+      "scope": "Tested, independently reviewed and committed canonical Training bridge request alignment plus composed real preload/handler/use-case journeys with exact staged inputs, explicit durable Save/Discard, reopened registry, retained failed-save review, single-copy retry and workspace refusal. Exact selected checkpoint applicability was separately tested with the HEAD storage adapter.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

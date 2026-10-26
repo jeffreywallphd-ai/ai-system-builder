@@ -802,3 +802,16 @@ normalizes that identity before entering a status-read bridge. Real preload
 function assignment and a rejected-workspace regression cover this boundary.
 The composed input byte store is also real; input bindings and artifact listings
 remain finite fixtures rather than a complete artifact-host qualification.
+
+Desktop model downloads acquire a synchronous pending-action ticket before the
+start bridge call. A second immediate click in the same view cannot admit another
+task, and Find Models disables Download until that start request returns. The
+existing workspace/client lifetime rejects late replies and clears retired tickets.
+This is request admission, not a ban on separately requested concurrent tasks.
+The composed download fixture joins the actual feature/client/preload, registered
+handlers, task use case, notification center and reopened JSON model registry.
+Finite offline task/completion records supply synthetic files. It checks progress
+across feature navigation and workspace return, single registration, failure and
+explicit retry, foreign completion refusal and confirmed cancellation. Physical
+IPC/sender policy, actual model downloads, native effects and production SQLite
+remain separate qualification.

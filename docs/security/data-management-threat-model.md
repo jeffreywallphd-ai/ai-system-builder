@@ -1273,3 +1273,16 @@ preload contract and preserves all handler/application validation. Exact consume
 preload methods type-check without hiding the mismatch behind a broad cast.
 The composed fixture reads input bytes from a real new filesystem store, while
 input binding and artifact-list policy remain declared fixtures.
+
+Desktop Download uses one view-owned synchronous ticket while its start request
+is pending. Disabled controls are presentation; the hook ticket prevents same-tick
+reentry before React renders. Retirement releases the old view ticket and rejects
+late state changes without changing host/application authorization. Composed
+fixtures use exact workspace/task/model identities, finite offline worker records
+and a new bounded file tree. The real completion handler supplies write authority;
+renderer payloads do not. Repeated completion registers once, failed tasks do not
+register, and a foreign completion is refused before worker reads. Notifications
+show fixed progress/failure copy without worker diagnostics or local paths. Owned
+fixture cleanup checks identity, containment, entry/byte bounds and regular files.
+No retained resources, real model/provider, native file proof or physical host
+authorization is qualified by these synthetic task records.

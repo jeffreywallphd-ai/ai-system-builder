@@ -11766,6 +11766,21 @@
           "The connection to the desktop bridge and the training action are fixtures. Real training and final host checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aece93205094506a87990cbdee931030fc31501e9d7da89f143a58376e23a831",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed Training requests through the real desktop bridge and application code.",
+          "The tests read two staged input files and save or discard synthetic output only after an explicit review action.",
+          "Saved records reopen correctly. A failed save retains the review and can retry without copying the output twice.",
+          "The tests refuse requests from another workspace and preserve a refused Stop action.",
+          "The same tests passed against the exact files selected for the commit. The worker and desktop connection are test fixtures.",
+          "Real training, physical desktop security, native file checks and final host testing remain pending."
+        ]
+      }
     }
   ]
 }

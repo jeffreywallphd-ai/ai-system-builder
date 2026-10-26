@@ -26,6 +26,7 @@ interface ModelViewScope {
   browse?: object;
   details?: object;
   inventory?: object;
+  downloading?: object;
   deleting?: object;
   confirmation?: ModelDeleteConfirmation;
   refresh?: () => Promise<boolean>;
@@ -122,7 +123,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     return () => {
       if (scope.lease === lease) {
         scope.lease = undefined; scope.browse = undefined; scope.details = undefined;
-        scope.inventory = undefined; scope.deleting = undefined; scope.refresh = undefined;
+        scope.inventory = undefined; scope.downloading = undefined; scope.deleting = undefined; scope.refresh = undefined;
         scope.confirmation = undefined;
       }
     };
@@ -319,11 +320,12 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }, []);
 
   const downloadModel = useCallback(async (model?: DesktopModelBrowseItem) => {
-    const lease = scope.lease; if (!lease) return;
+    const lease = scope.lease; if (!lease || scope.downloading) return;
     const modelToDownload = model ?? selectedBrowseModel;
     if (!modelToDownload) {
       return;
     }
+    const ticket = {}; scope.downloading = ticket;
     setDownloadState({ status: "loading", message: "Downloading model..." });
     try {
       if (!workspaceId) { setDownloadState({ status: "error", message: "Select a workspace before downloading models." }); return; }
@@ -356,6 +358,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     } catch (error) {
       if (!ownsView(scope, lease)) return;
       setDownloadState({ status: "error", message: "Failed to download model. Try again." });
+    } finally {
+      if (scope.downloading === ticket) scope.downloading = undefined;
     }
   }, [modelClient, observer, selectedBrowseModel, workspaceId, scope]);
 
