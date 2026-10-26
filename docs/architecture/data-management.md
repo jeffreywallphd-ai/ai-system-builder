@@ -1093,3 +1093,29 @@ A review-required result retains task ownership until its quality report and
 review state exist, the state is review-required and their fingerprints match.
 Incomplete or inconsistent evidence keeps observation and Stop preparation
 available. It cannot admit a fresh start, save or review-page request.
+
+## Composed website acquisition test boundary
+
+The focused website-acquisition UI fixture mounts the current shared Add data
+panel with both production host clients. It composes actual preload/registered
+IPC or loopback HTTP, the command and website use cases, the structured
+acquisition repository and new filesystem artifact storage. Explicit pages and
+a single sitemap each produce two synthetic captures, with exact raw/readable
+bytes reopened through a fresh storage adapter and immutable source metadata.
+The fixture also checks same-task retry, safe capture errors, foreign-task denial
+and cancellation while a capture is held.
+
+Capture and access policy are finite offline fixtures. The structured document
+store is the real in-memory adapter; it does not qualify durable database restart.
+These checks do not qualify real URL resolution, robots policy, HTML extraction,
+production authentication, physical hosts, native races or final combined tests.
+The existing refresh command remains an application/API capability. The guided
+panel has no refresh control; application refresh tests are not UI evidence.
+
+Website compensation now removes the catalog entry for a known newly created
+capture only after its corresponding byte-delete result succeeds. Both hosts
+wire the existing canonical catalog-delete port. A failed byte cleanup keeps
+its catalog evidence. A failed derived write compensates only the successful
+raw output. Old committed snapshots and unknown resources are not cleanup
+inputs. This local correction does not qualify crash recovery or uncertain
+cleanup; existing task compensation failures still require separate evidence.

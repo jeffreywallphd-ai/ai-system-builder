@@ -77,3 +77,8 @@ First-use asset composition still waits for validated Foundation definitions and
 trusted implementations. Bounded bootstrap batching reduces that work; readiness
 never skips integrity checks. Foundation failures retain the generic public
 message with safe internal stage/version/count/code attribution.
+
+Website ingestion receives the same canonical artifact catalog for compensation
+as stream publication. Exact new capture bytes are deleted before their catalog
+entries. Generic storage deletion, workspace authorization and native guards
+retain their existing responsibilities.

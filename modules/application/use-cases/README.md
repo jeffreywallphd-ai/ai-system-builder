@@ -160,3 +160,9 @@ memory, host admission fairness, private-stage filesystem identity and physical
 resource qualification remain pending. Existing worker queue/deadline controls
 remain in force, including the two-hour dataset-review deadline. No new expanded
 memory budget, model/provider download or runtime authority is introduced.
+
+Website compensation uses the existing optional artifact catalog-delete port
+when stream storage also registers output. It removes only current-call capture
+keys, after successful byte cleanup. A byte failure retains catalog evidence;
+a derived-write failure compensates only the raw output. This does not change
+registered user deletion, old source snapshots or native recovery policy.

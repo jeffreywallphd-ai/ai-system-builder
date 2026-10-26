@@ -3,6 +3,7 @@ import type { GovernedWebsiteCapturePort, GovernedWebsitePageCapture, IngestionA
 import type { WorkspaceOperationAuthorizationPort } from "../../ports/security";
 import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../ports/storage";
 import type { WorkspaceRepository } from "../../ports/workspace";
+import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
 import {
   normalizeGovernedWebsiteScopeRequest, normalizeIngestionSourceId, normalizeIngestionTaskFileId,
   normalizeIngestionTaskId, normalizeIngestionTaskRecord, type GovernedWebsiteScopeRequest,
@@ -11,6 +12,7 @@ import {
 } from "../../../contracts/ingestion";
 import { createContractError, createFailureResult, createSuccessResult, type ContractResult } from "../../../contracts/shared";
 import { createDeleteArtifactRequest } from "../../../contracts/storage";
+import { createWorkspaceId } from "../../../contracts/workspace";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 
 export type GovernedWebsiteTaskResult<T = IngestionTaskRecord> = ContractResult<T>;
@@ -19,6 +21,8 @@ export interface GovernedWebsiteIngestionUseCasesDependencies {
   readonly capture: GovernedWebsiteCapturePort;
   readonly streamStorage: ArtifactStreamStoragePort;
   readonly artifactCleanup: Pick<ArtifactStoragePort, "deleteArtifact">;
+  /** Supply when stream storage also registers its output in an artifact catalog. */
+  readonly artifactCatalogCleanup?: ArtifactCatalogDeletePort;
   readonly workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
   readonly workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
   readonly now?: () => string;
@@ -171,7 +175,7 @@ export class GovernedWebsiteIngestionUseCases {
       maximumBytes: capture.derivedTextBytes.byteLength, expectedSizeBytes: capture.derivedTextBytes.byteLength,
     }, context);
     if (!derived.ok) {
-      await this.dependencies.artifactCleanup.deleteArtifact(createDeleteArtifactRequest(rawKey), context).catch(() => undefined);
+      await this.deleteStoredArtifact(rawKey, context).catch(() => undefined);
       return derived;
     }
     return createSuccessResult({ rawKey, derivedKey }, context);
@@ -185,11 +189,20 @@ export class GovernedWebsiteIngestionUseCases {
     }), task.revision);
   }
   private async deleteStoredCapture(stored: { readonly rawKey: string; readonly derivedKey: string }, context: ApplicationRequestContext): Promise<void> {
-    const results = await Promise.all([
-      this.dependencies.artifactCleanup.deleteArtifact(createDeleteArtifactRequest(stored.rawKey), context),
-      this.dependencies.artifactCleanup.deleteArtifact(createDeleteArtifactRequest(stored.derivedKey), context),
+    await Promise.all([
+      this.deleteStoredArtifact(stored.rawKey, context),
+      this.deleteStoredArtifact(stored.derivedKey, context),
     ]);
-    if (results.some((result) => !result.ok)) throw new Error("The uncommitted website capture could not be cleaned up.");
+  }
+  private async deleteStoredArtifact(key: string, context: ApplicationRequestContext): Promise<void> {
+    const bytes = await this.dependencies.artifactCleanup.deleteArtifact(createDeleteArtifactRequest(key), context);
+    if (!bytes.ok) throw new Error("The uncommitted website capture could not be cleaned up.");
+    if (this.dependencies.artifactCatalogCleanup) {
+      const catalog = await this.dependencies.artifactCatalogCleanup.deleteArtifactCatalogRecord({
+        workspaceId: createWorkspaceId(context.workspaceId ?? ""), storageKey: key,
+      }, context);
+      if (!catalog.ok) throw new Error("The uncommitted website capture catalog entry could not be cleaned up.");
+    }
   }
   private async requireTask(workspaceId: string, taskId: ReturnType<typeof normalizeIngestionTaskId>): Promise<IngestionTaskRecord> {
     const task = await this.dependencies.repository.readTask(workspaceId as never, taskId); if (!task) throw new MissingWebsiteTaskError(); return task;

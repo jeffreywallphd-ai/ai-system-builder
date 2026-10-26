@@ -428,7 +428,11 @@
         "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
         "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
         "apps/thin-client/src/features/model-management/tests/model-download-http.ui.test.tsx",
-        "dev-tools/scripts/qualification/tests/workspace-first-run-transports.ui.test.tsx"
+        "dev-tools/scripts/qualification/tests/workspace-first-run-transports.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/website-ingestion-transports.ui.test.tsx",
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -573,7 +577,12 @@
         "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspace.tsx",
         "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
         "apps/desktop/src/renderer/features/workspace/components/WorkspaceCreateForm.tsx",
-        "apps/thin-client/src/features/workspace/components/WorkspaceCreateForm.tsx"
+        "apps/thin-client/src/features/workspace/components/WorkspaceCreateForm.tsx",
+        "modules/application/use-cases/ingestion-acquisition/governed-website-ingestion.use-case.ts",
+        "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
+        "modules/application/use-cases/README.md",
+        "modules/hosts/desktop/composition/README.md",
+        "modules/hosts/server/composition/README.md"
       ]
     },
     "functionality-context": {

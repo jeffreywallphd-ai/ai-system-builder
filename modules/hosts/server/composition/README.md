@@ -71,3 +71,8 @@ Current artifact-repo provider registration is Hugging Face only.
   files are cleaned after terminal or failed execution.
 - The default server workflow avoids custom InstantID/InsightFace nodes so the feature remains usable with the managed ComfyUI install.
 - When no explicit latent reference is provided, the first FaceID reference is used as the image-to-image latent source for facial retention.
+
+Website ingestion receives the organization-scoped canonical artifact catalog
+for compensation. The application removes exact new capture catalog entries
+only after corresponding byte cleanup succeeds; existing authorization, object
+storage and native recovery controls remain authoritative.

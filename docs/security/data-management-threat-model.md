@@ -1298,3 +1298,16 @@ the actual JSON registry; replay does not register again. Tests restore previous
 browser storage/globals, close the exact listener and remove only the newly owned
 regular-file tree. The synthetic access fixture grants no production-authentication
 qualification, and no real provider/model or native/physical host pass follows.
+
+## Website capture catalog compensation
+
+A cancelled or losing website capture can have written raw and readable objects
+before its source transaction is refused. Both hosts supply the existing
+catalog-delete port to the website application use case. Compensation uses only
+those current-call generated keys and current workspace/request context. It
+removes each catalog entry after that object deletion returns success. A byte
+denial preserves its catalog evidence. A derived-write failure cleans only its
+acknowledged raw output. Old committed snapshots, unknown data and generic
+storage deletion are unchanged. Focused tests cover catalog visibility after
+held cancellation and byte-denial/raw-only ordering. They do not qualify native
+races, durable cleanup recovery, real egress or production access policy.

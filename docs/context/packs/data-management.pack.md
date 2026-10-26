@@ -28,11 +28,11 @@
   runtime-local paths. Localization is an explicit application/storage action
   that requires workspace context at the boundary and preserves that context
   through binding, provider, object-storage, and catalog operations.
-- Add data acquisition uses bounded workspace-scoped tasks. Local files stream
-  through digest-verified ordered checkpoints; provider files require exact
-  commit revisions; website capture is secure-egress mediated, robots-aware,
-  user-bounded to explicit pages or one sitemap, and has no recursive crawl or
-  permissive robots override.
+- Add data uses bounded workspace-scoped tasks. Local files use digest-verified ordered checkpoints.
+  Provider files require exact commit revisions. Website capture uses secure egress and robots policy,
+  accepts user-bounded explicit pages or one sitemap, and has no recursive crawl or permissive robots override.
+  Compensate only known new capture keys. Both hosts delete each catalog entry after its byte cleanup succeeds.
+  Byte denial preserves metadata. Old snapshots, unknown data and native/uncertain recovery stay separate.
 - The shared Hugging Face selector browses a bounded namespace and bounded
   importable file list through host clients, lets users check exact files, and
   passes only adapter-returned immutable revisions to the governed task. Do not

@@ -1120,6 +1120,7 @@ export function composeServerHost(
               capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
               streamStorage: storage,
               artifactCleanup: storage,
+              artifactCatalogCleanup: artifactCatalog,
               workspaceRepository:
                 workspaceFoundation.workspaceRepositories.workspaceRepository,
               workspaceAuthorization,

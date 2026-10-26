@@ -2,6 +2,7 @@ import type { OrganizationRequestContextProviderPort } from "../../../applicatio
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../../application/ports/storage";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
+import type { ArtifactCatalogDeletePort } from "../../../application/ports/artifact-catalog";
 import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
@@ -20,7 +21,7 @@ import type { IngestionTaskTransportCommand, IngestionTaskTransportValue } from 
 import { createContractError, createFailureResult, type ContractResult } from "../../../contracts/shared";
 
 export interface ComposeDesktopIngestionFeatureOptions {
-  readonly artifacts: { readonly storage: ArtifactStoragePort & ArtifactStreamStoragePort };
+  readonly artifacts: { readonly storage: ArtifactStoragePort & ArtifactStreamStoragePort; readonly artifactCatalog?: ArtifactCatalogDeletePort };
   readonly remoteArtifacts: { readonly registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute"> };
   readonly storageRootDirectory: string;
   readonly documents?: StructuredDocumentStore;
@@ -69,6 +70,7 @@ export function composeDesktopIngestionFeature(options: ComposeDesktopIngestionF
           capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
           streamStorage: options.artifacts.storage,
           artifactCleanup: options.artifacts.storage,
+          artifactCatalogCleanup: options.artifacts.artifactCatalog,
           workspaceRepository: options.workspaceRepository,
           workspaceAuthorization: options.workspaceAuthorization,
           now: options.now,
