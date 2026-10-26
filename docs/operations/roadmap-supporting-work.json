@@ -3974,6 +3974,23 @@
       "limitations": [
         "This fixed token-permutation reference demonstrates compatibility with the already effective baseline, not extra end-to-end quality gain, natural-language recall or model accuracy. Traced allocations are not process RSS or native admission; timing assertions are not hard deadlines. This does not complete a parent criterion, increment or roadmap. Real generated-data, private-provider, full-app and broader resource checks remain pending. The user deferred the browser-dependent page check. Prior failures and completed model-accuracy/OCR results stay unchanged."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "serial-host-qualification-policy",
+      "work_criteria": [
+        "fixed-single-host-commands-and-original-compatibility",
+        "unchanged-limits-and-retirement-authority",
+        "narrow-policy-verification-and-truthful-docs"
+      ],
+      "receipt_digest": "e596517dd33cf16069448160cedd02c4ca32e11c04b382958f34cb421d20f229",
+      "review_digest": "0907ed803e4116ff3994ceb3d288fb9a16f66759893454bd70fcafc0946970dd",
+      "scope": "Committed source86bcc8a23 adds exact private web-only and desktop-only UI commands. Original combined/package commands, limits and ownership guards remain. All48 portable policy tests and two exact-selected routing tests pass; the physical native case stays skipped. Four governed source checks and independent review pass, including witness-tamper and post-issuance drift denials. This is command-policy support for the provided-data journeys, not actual app qualification.",
+      "limitations": [
+        "A separately reviewed serial consumer must connect each command to host-specific setup, prove native retirement before the next app, preserve a finite whole-run deadline and collect per-host memory/runtime observations. Portable checks prove no actual app fit, memory savings or new native readback. The earlier1GiB process-limit failure remains failed. This support adds no parent qualification and does not close the Data increment or roadmap. The user deferred the private-provider browser page check; completed model-accuracy/OCR checks stay closed."
+      ]
     }
   ]
 }

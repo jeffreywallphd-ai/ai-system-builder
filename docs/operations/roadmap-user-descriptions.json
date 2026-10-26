@@ -11400,6 +11400,26 @@
           "These synthetic examples check local data cleanup and Python allocations. Generated-data workflows, real-app memory use and online-service behavior still need checks. This evidence does not prove whole-app memory limits or complete the roadmap. The browser page check is deferred at your request. Completed model-accuracy and text-recognition checks stay closed. Earlier failures remain recorded."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "35ea90ba371c7ee677aa3ac04e799971a36578a5c8ddc7e1e6330560a7e342b3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Separate browser-app and desktop-app test commands are now available. Code checks confirmed that they keep the existing limits and reject changed code or settings. These checks did not open either app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1e7650ad6879af50303acb2514872fe2f5025f7d214c4f654d78a7e5d62a592b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still connect each command to the correct app setup, prove that the first run has stopped, and collect separate memory and runtime results. App performance and memory savings are not yet proven. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for the setup work."
+        ]
+      }
     }
   ]
 }
