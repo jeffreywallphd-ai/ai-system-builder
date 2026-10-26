@@ -583,9 +583,9 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 {s.result.outputModel.displayName}
               </p>
             ) : null}
-            {s.result?.validationReportPath ? (
+            {typeof s.result?.validationReportPath === "string" && s.result.validationReportPath.trim() ? (
               <p className="ui-workflow__status">
-                Validation report: {s.result.validationReportPath}
+                Validation report is available.
               </p>
             ) : null}
           </WorkflowStep>

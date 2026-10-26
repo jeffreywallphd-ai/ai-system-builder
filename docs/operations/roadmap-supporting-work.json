@@ -4362,6 +4362,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "image-request-context-and-durable-ui-roundtrips",
+      "work_criteria": [
+        "image-transport-context-separation",
+        "image-ui-http-and-durable-results",
+        "image-ui-retry-denial-and-evidence-scope"
+      ],
+      "receipt_digest": "3bb2a07c507af6354e0b0d724441f5d482038d6ec9c1519bb1cc4e4600932173",
+      "review_digest": "aef42f21f04dfa68d5e8652c152dbf642fbffbdc8ac5e0c5ec0426592e3b9476",
+      "scope": "Tested, independently reviewed and committed the Image start context repair and mounted browser HTTP journeys over task authority, finalization, actual synthetic PNG/catalog/binding bytes and a reopened JSON image registry, including no-duplicate retry and refused cancellation.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

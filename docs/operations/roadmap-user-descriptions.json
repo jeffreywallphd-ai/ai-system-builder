@@ -11724,6 +11724,20 @@
           "Actual Electron, native file actions, production sign-in and final roadmap checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b40a0828905c91fceff5d3d251df3bbd3936927be1f816089fee12d2b25e2c60",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the Image request fix and browser journey through the real HTTP routes and saved image records.",
+          "The tests check exact image bytes, workspace separation, reopened records, a safe retry and a refused cancellation.",
+          "They also check that invalid request fields cannot start work or expose private text in logs.",
+          "The image worker, sign-in policy and preview URL facility are test fixtures.",
+          "Real image inference, browser image decoding, production sign-in and final host checks remain pending."
+        ]
+      }
     }
   ]
 }

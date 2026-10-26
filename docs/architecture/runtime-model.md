@@ -767,3 +767,12 @@ The HTTP image start route snapshots passive body descriptors before reading
 workspace context or diagnostic fields. Rejected snapshots retain header
 correlation only. Diagnostics record model presence, never the model selector
 or prompt. These rules also apply to failed start summaries.
+
+Training form progress uses fixed queued/running/terminal messages. Epoch and
+batch counters are independently shown only for nonnegative safe integer current
+values, positive safe integer totals and current within total. Zero current is
+preserved. Invalid counters leave the task and controls active and fall back to
+a fixed waiting message. Runtime progress text and internal run identifiers stay
+out of public status copy. Validation reports show availability without exposing
+a local report path. The run identity remains internal for observation, recovery
+and explicit save/discard; these presentation changes grant no task authority.

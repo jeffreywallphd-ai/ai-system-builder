@@ -35,20 +35,24 @@ function isTerminalTrainingStatus(status: PollableTrainingStatus): boolean {
 }
 
 function toTrainingMessage(result: DesktopModelTrainingResult): string {
+  switch (result.status) {
+    case "succeeded": return "Training completed.";
+    case "failed": return "Training failed.";
+    case "cancelled": return "Training cancelled.";
+    case "queued":
+    case "running": break;
+    default: return "Training status is temporarily unavailable.";
+  }
+  const counter = (label: string, current: number | undefined, total: number | undefined) =>
+    typeof current === "number" && typeof total === "number"
+      && Number.isSafeInteger(current) && Number.isSafeInteger(total)
+      && current >= 0 && total > 0 && current <= total
+      ? `${label} ${current} of ${total}.` : undefined;
   const progress = result.progress;
-  if (progress?.message) {
-    return `Training ${result.status}. Run ID: ${result.runId}. ${progress.message}`;
-  }
-
-  if (progress && (typeof progress.totalEpochs === "number" || typeof progress.totalBatches === "number")) {
-    return (
-      `Training ${result.status}. Run ID: ${result.runId}. `
-      + `Epoch [${progress.epoch ?? 0}]/[${progress.totalEpochs ?? 0}], `
-      + `Batch [${progress.batch ?? 0}]/[${progress.totalBatches ?? 0}]`
-    );
-  }
-
-  return `Training ${result.status}. Run ID: ${result.runId}. Waiting for runtime progress...`;
+  const details = [counter("Epoch", progress?.epoch, progress?.totalEpochs), counter("Batch", progress?.batch, progress?.totalBatches)]
+    .filter((value): value is string => value !== undefined).join(" ");
+  const status = result.status === "queued" ? "Training queued." : "Training running.";
+  return `${status} ${details || "Waiting for runtime progress."}`;
 }
 
 function resolveHuggingFaceRepositoryInput(repository: string, defaultNamespace?: string): string | undefined {

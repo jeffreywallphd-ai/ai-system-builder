@@ -186,3 +186,70 @@ it("notifies an uncertain stop without hiding active task controls",async()=>{
   await mountTraining(client);await act(async()=>trainingButton("Stop training").click());
   expect(training.canStopTraining).toBe(true);expect(readNotificationMessages(container!)).toEqual(expect.arrayContaining([expect.stringContaining("Stop could not be confirmed")]));expect(container!.querySelector('[role="alert"]')).toBeNull();expect(container!.textContent).not.toContain("private-cancel-payload");
 });
+
+it("shows bounded training counters without runtime text or the internal run identifier", async () => {
+  sessionStorage.setItem("ai-system-builder.training-task.v1:workspace-a", "run-a");
+  const client = trainingClient({ readModelTrainingStatus: vi.fn<DesktopModelsClient["readModelTrainingStatus"]>(async () => ({
+    runId: "run-a", status: "running", progress: { message: "synthetic-private-runtime C:/synthetic-private/train.log", epoch: 1, totalEpochs: 2, batch: 3, totalBatches: 4 },
+  })) });
+  await mountTraining(client);
+  expect(training.result?.runId).toBe("run-a");
+  expect(container!.textContent).toContain("Epoch 1 of 2"); expect(container!.textContent).toContain("Batch 3 of 4");
+  expect(container!.textContent).not.toContain("synthetic-private-runtime"); expect(container!.textContent).not.toContain("C:/synthetic-private");
+  expect(container!.textContent).not.toContain("run-a");
+  expect(training.canStopTraining).toBe(true); expect(training.canSubmit).toBe(false);
+});
+
+it.each([
+  { epoch: -1, totalEpochs: 2 }, { epoch: 3, totalEpochs: 2 },
+  { epoch: 0.5, totalEpochs: 2 }, { epoch: 0, totalEpochs: 0 },
+  { epoch: Number.NaN, totalEpochs: 2 }, { epoch: 0, totalEpochs: Number.POSITIVE_INFINITY },
+  { epoch: 0, totalEpochs: Number.MAX_SAFE_INTEGER + 1 }, { totalEpochs: 2 },
+])("omits invalid epoch progress %j while retaining valid batch progress and task controls", async progress => {
+  sessionStorage.setItem("ai-system-builder.training-task.v1:workspace-a", "run-a");
+  const client = trainingClient({ readModelTrainingStatus: vi.fn<DesktopModelsClient["readModelTrainingStatus"]>(async () => ({
+    runId: "run-a", status: "running", progress: { ...progress, batch: 0, totalBatches: 4 },
+  })) });
+  await mountTraining(client);
+  expect(container!.textContent).toContain("Batch 0 of 4"); expect(training.message).not.toContain("Epoch");
+  expect(training.canStopTraining).toBe(true); expect(training.canSubmit).toBe(false);
+});
+
+it("retains valid epoch progress when batch counters are invalid", async () => {
+  sessionStorage.setItem("ai-system-builder.training-task.v1:workspace-a", "run-a");
+  const client = trainingClient({ readModelTrainingStatus: vi.fn<DesktopModelsClient["readModelTrainingStatus"]>(async () => ({
+    runId: "run-a", status: "queued", progress: { epoch: 0, totalEpochs: 2, batch: 5, totalBatches: 4 },
+  })) });
+  await mountTraining(client);
+  expect(training.message).toContain("Training queued."); expect(training.message).toContain("Epoch 0 of 2");
+  expect(training.message).not.toContain("Batch"); expect(training.canStopTraining).toBe(true);
+});
+
+it("keeps a fixed waiting message when no numeric progress is valid", async () => {
+  sessionStorage.setItem("ai-system-builder.training-task.v1:workspace-a", "run-a");
+  const client = trainingClient({ readModelTrainingStatus: vi.fn<DesktopModelsClient["readModelTrainingStatus"]>(async () => ({
+    runId: "run-a", status: "running", progress: { message: "synthetic-private-progress", epoch: -1, totalEpochs: 2, batch: 2, totalBatches: 1 },
+  })) });
+  await mountTraining(client);
+  expect(training.message).toBe("Training running. Waiting for runtime progress.");
+  expect(container!.textContent).not.toContain("synthetic-private-progress"); expect(training.canStopTraining).toBe(true);
+});
+
+it("shows report availability without a local path and keeps explicit model review", async () => {
+  const client = trainingClient({ trainModel: vi.fn(async () => ({ ...reviewRun(), validationReportPath: "C:/synthetic-private/report.json" })) });
+  await mountTraining(client); await selectTrainingInputs(); await act(async () => trainingButton("Start Training").click());
+  expect(container!.textContent).toContain("Validation report is available.");
+  expect(container!.textContent).not.toContain("C:/synthetic-private"); expect(container!.textContent).not.toContain("report.json");
+  expect(trainingButton("Save model")).toBeTruthy(); expect(trainingButton("Discard model")).toBeTruthy();
+  expect(client.saveModelTraining).not.toHaveBeenCalled(); expect(client.discardModelTraining).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["succeeded", "Training completed."], ["failed", "Training failed."], ["cancelled", "Training cancelled."],
+] as const)("uses fixed %s terminal copy without stale progress", async (status, message) => {
+  const client = trainingClient({ trainModel: vi.fn(async () => ({ runId: "run-a", status, progress: { message: "synthetic-private-terminal", epoch: 1, totalEpochs: 2 } })) });
+  await mountTraining(client); await selectTrainingInputs(); await act(async () => trainingButton("Start Training").click());
+  expect(training.status).toBe(status); expect(training.message).toBe(message);
+  expect(container!.textContent).not.toContain("synthetic-private-terminal"); expect(training.message).not.toContain("Epoch");
+  expect(training.canStopTraining).toBe(false); expect(client.saveModelTraining).not.toHaveBeenCalled();
+});

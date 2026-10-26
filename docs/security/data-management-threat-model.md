@@ -1237,3 +1237,12 @@ execution and retain header correlation. Diagnostic summaries use a model-presen
 flag instead of a selector that could contain a local path; prompt text is absent.
 The passive snapshot and fixed application allowlist still reject unsupported
 requests before worker admission.
+
+The Desktop Training form does not copy runtime progress messages, task IDs or
+validation-report paths into public status messages. It generates fixed state
+copy plus independently validated epoch/batch pairs: safe integers, nonnegative
+current, positive total and current no greater than total. Malformed counters
+cannot claim progress or remove Stop/review controls. Report availability is a
+fixed message. The current run remains internal for ownership and explicit
+review. Rendered client-fixture regressions preserve those controls and do not
+qualify physical training, native behavior, providers or final host execution.
