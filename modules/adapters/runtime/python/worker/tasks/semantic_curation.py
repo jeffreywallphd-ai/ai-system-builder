@@ -191,10 +191,16 @@ def curate_semantic_rows(
         for index, embedding in enumerate(embeddings):
             best_index: int | None = None
             best_similarity = -1.0
-            for candidate_index, candidate in enumerate(embeddings):
-                if index == candidate_index or accepted_lineage[index][0] == accepted_lineage[candidate_index][0]:
+            # Visit at most K indices, including skipped same-source rows.
+            # Searching until K cross-source matches would still scan all N
+            # rows for a single-source dataset. The cyclic window is stable
+            # for the recorded input order; it is not a global nearest search.
+            for offset in range(1, min(len(embeddings), maximum_comparisons + 1)):
+                candidate_index = (index + offset) % len(embeddings)
+                if accepted_lineage[index][0] == accepted_lineage[candidate_index][0]:
                     continue
-                similarity = cosine_similarity(embedding, candidate)
+                compared_pairs += 1
+                similarity = cosine_similarity(embedding, embeddings[candidate_index])
                 if similarity > best_similarity:
                     best_index = candidate_index
                     best_similarity = similarity
@@ -241,7 +247,7 @@ def curate_semantic_rows(
     ) if nearest_similarities else (1.0 if accepted else 0.0)
     report = {
         "embeddingAlgorithm": "hashed-token-v1",
-        "algorithmVersion": "1",
+        "algorithmVersion": "2",
         "similarityThreshold": threshold,
         "comparedPairCount": compared_pairs,
         "duplicateRowCount": duplicate_count,

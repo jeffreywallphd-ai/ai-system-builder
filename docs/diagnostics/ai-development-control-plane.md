@@ -513,6 +513,17 @@ exact native 3 GiB UI-budget readback. Readback allocates no such amount and
 grants no UI pass. A new separately reviewed actual host run is still required.
 No product, model, retained-file or offload guard changes with this test profile.
 
+## Bounded semantic curation checks
+
+The `dataset-semantic-curation` profile runs three fixed ordinary Python unit
+files for semantic curation, advanced content lineage and dataset quality. Exact
+semantic source, test and worker README changes select it automatically. Its
+declared controller/configuration paths do not cover unrelated runtime changes;
+those retain generic focused verification. The profile loads no model or native
+supplier and makes no provider call. It does not qualify real host delivery,
+physical memory, the separate native identity profile or a parent roadmap.
+Broader functionality and native checks remain separate and retain their results.
+
 ## Portable OCR provider checks
 
 `ocr-provider-contract` is a fixed source-owned profile for the bounded request,

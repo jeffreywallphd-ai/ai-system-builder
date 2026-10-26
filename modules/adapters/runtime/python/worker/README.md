@@ -28,6 +28,28 @@ authoritative. No driver install or model work occurs during this read. See
 
 This directory contains the managed Python sidecar worker.
 
+Semantic curation runs before split assignment. Its enabled curation algorithm
+version `2` retains the `hashed-token-v1` embedding and applies
+`maxComparisonsPerRow` separately to duplicate filtering and to coverage/contrast
+recommendations. The second pass visits at most that many subsequent accepted-row
+indices, wrapping once at the end; same-source skips consume candidate slots.
+It never scans the full collection to find more cross-source matches.
+`comparedPairCount` includes actual cosine comparisons from both passes, bounded
+by twice the input row count times the configured comparison limit. Existing
+version `1` reports remain historical; disabled curation keeps its unchanged
+zero-comparison path and original rows.
+
+This is an approximate bounded search, not a guarantee of a global nearest
+example. Candidate order can affect recommendations. Embedding storage still
+grows with accepted rows; a comparison bound does not prove native memory or
+whole-app qualification. Reports retain aggregate metrics and at most 20 lineage
+examples without row text or vectors. Existing source caps, split leakage checks,
+quarantine and explicit approval remain in force. If a correction must be
+withdrawn, disable optional semantic curation rather than restore an unbounded
+recommendation loop. The `dataset-semantic-curation` source-owned profile includes
+the semantic, advanced-preparation and dataset-quality unit files; it does not
+run model accuracy or qualify a parent roadmap.
+
 Scanned-PDF preparation uses the host-only `staged-pdf-ocr-v1` source map and an
 explicit installed Windows recognition language. `ocr/task_sources.py` validates
 the complete map before source/model/output access. Normalization captures exact

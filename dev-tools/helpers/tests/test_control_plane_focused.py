@@ -120,6 +120,31 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         other = catalog.plan(self.root, ['dev-tools/config/other.ini'], ['control-plane'], 'fixture')
         self.assertIn('focused-tests', other['coverage']['dev-tools/config/other.ini'])
 
+    def test_semantic_curation_profile_covers_only_its_declared_runtime_paths(self):
+        import json
+        root = Path(__file__).resolve().parents[3]
+        data = json.loads((root / 'dev-tools/config/contributor-check-profiles.json').read_bytes())
+        profile = data['profiles']['dataset-semantic-curation']
+        tests = {
+            'modules/adapters/runtime/python/worker/tests/test_semantic_curation.py',
+            'modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py',
+            'modules/adapters/runtime/python/worker/tests/test_dataset_quality.py',
+        }
+        self.assertEqual(set(profile['test_paths']), tests)
+        owned = [
+            'modules/adapters/runtime/python/worker/tasks/semantic_curation.py',
+            'modules/adapters/runtime/python/worker/tests/test_semantic_curation.py',
+            'modules/adapters/runtime/python/worker/README.md',
+        ]
+        self.assertTrue(set(owned).issubset(profile['source_paths']))
+        plan = catalog.plan(root, owned, ['control-plane'], 'fixture')
+        self.assertIn('dataset-semantic-curation', [row['id'] for row in plan['selected']])
+        self.assertNotIn('focused-tests', [row['id'] for row in plan['selected']])
+        other = catalog.plan(root, [*owned,
+            'modules/adapters/runtime/python/worker/tasks/unowned_task.py'],
+            ['control-plane'], 'fixture')
+        self.assertIn('focused-tests', [row['id'] for row in other['selected']])
+
 
 if __name__ == '__main__':
     unittest.main()

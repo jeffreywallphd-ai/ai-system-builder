@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import unittest
+from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker.models import AdvancedSemanticCurationConfig
+from modules.adapters.runtime.python.worker.tasks import semantic_curation
 from modules.adapters.runtime.python.worker.tasks.semantic_curation import (
     cosine_similarity,
     curate_semantic_rows,
@@ -58,9 +60,16 @@ class SemanticCurationTests(unittest.TestCase):
             {"labelField": "label"},
             _config(similarityThreshold=0.75),
         )
+        baseline = curate_semantic_rows(
+            rows, "llm-classification", {"labelField": "label"}, _config(enabled=False),
+        )
 
         self.assertEqual(first.report, second.report)
         self.assertEqual(first.accepted_rows, second.accepted_rows)
+        self.assertEqual(len(baseline.accepted_rows), 3)
+        self.assertEqual(len(first.accepted_rows), 2)
+        self.assertEqual({row["label"] for row in first.accepted_rows}, {"billing", "profile"})
+        self.assertEqual(first.report["algorithmVersion"], "2")
         self.assertEqual(first.report["duplicateRowCount"], 1)
         self.assertEqual(
             first.quarantine_records[0]["reasonCodes"],
@@ -156,7 +165,58 @@ class SemanticCurationTests(unittest.TestCase):
             {},
             _config(similarityThreshold=1.0, maxComparisonsPerRow=3),
         )
-        self.assertLessEqual(result.report["comparedPairCount"], 20 * 3)
+        self.assertLessEqual(result.report["comparedPairCount"], 2 * 20 * 3)
+
+    def test_both_passes_bound_and_report_actual_similarity_calls(self) -> None:
+        rows = [
+            {
+                "sourceArtifactId": f"source-{index}",
+                "sourceRowIndex": index,
+                "anchorText": " ".join(
+                    f"topic-{index}-{word}"
+                    for word in ("alpha", "bravo", "charlie", "delta", "echo", "foxtrot")
+                ),
+                "positiveText": f"example-{index}",
+            }
+            for index in range(64)
+        ]
+        config = _config(similarityThreshold=1.0, maxComparisonsPerRow=3)
+        with patch.object(semantic_curation, "cosine_similarity", wraps=cosine_similarity) as compare:
+            result = curate_semantic_rows(rows, "llm-embedding", {}, config)
+
+        self.assertEqual(len(result.accepted_rows), len(rows))
+        self.assertLessEqual(compare.call_count, 2 * len(rows) * 3)
+        self.assertEqual(result.report["comparedPairCount"], compare.call_count)
+
+    def test_disabled_curation_keeps_rows_and_does_not_compute_embeddings(self) -> None:
+        rows = [{"sourceArtifactId": "source-a", "text": "Keep the original provided row."}]
+        with patch.object(semantic_curation, "hashed_token_embedding") as embed:
+            result = curate_semantic_rows(rows, "llm-instruction", {}, _config(enabled=False))
+        self.assertIs(result.accepted_rows, rows)
+        self.assertEqual(result.quarantine_records, [])
+        self.assertEqual(result.report["comparedPairCount"], 0)
+        self.assertEqual(result.report["algorithmVersion"], "1")
+        embed.assert_not_called()
+
+    def test_unknown_algorithm_is_denied_before_embedding_rows(self) -> None:
+        config = _config().model_copy(update={"embeddingAlgorithm": "unreviewed"})
+        with patch.object(semantic_curation, "hashed_token_embedding") as embed:
+            with self.assertRaisesRegex(ValueError, "algorithm is unavailable"):
+                curate_semantic_rows([{"text": "Synthetic row."}], "llm-instruction", {}, config)
+        embed.assert_not_called()
+
+    def test_bounded_window_does_not_claim_a_distant_global_match(self) -> None:
+        rows = [
+            {"sourceArtifactId": "source-a", "text": f"account invoice number-{index}"}
+            for index in range(4)
+        ] + [{"sourceArtifactId": "source-b", "text": "account invoice receipt"}]
+        config = _config(similarityThreshold=1.0, maxComparisonsPerRow=2)
+        first = curate_semantic_rows(rows, "llm-embedding", {}, config)
+        second = curate_semantic_rows(rows, "llm-embedding", {}, config)
+        self.assertEqual(first, second)
+        self.assertEqual(len(first.accepted_rows), len(rows))
+        self.assertNotIn("hardNegativeRecommendation", first.accepted_rows[0])
+        self.assertLessEqual(len(first.report["reviewExamples"]), 20)
 
 
 if __name__ == "__main__":

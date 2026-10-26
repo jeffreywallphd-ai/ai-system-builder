@@ -1401,6 +1401,22 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
         "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts"
       ]
+    },
+    "dataset-semantic-curation": {
+      "test_paths": [
+        "modules/adapters/runtime/python/worker/tests/test_semantic_curation.py",
+        "modules/adapters/runtime/python/worker/tests/test_advanced_dataset_preparation.py",
+        "modules/adapters/runtime/python/worker/tests/test_dataset_quality.py"
+      ],
+      "source_paths": [
+        "modules/adapters/runtime/python/worker/tasks/semantic_curation.py",
+        "modules/adapters/runtime/python/worker/tests/test_semantic_curation.py",
+        "modules/adapters/runtime/python/worker/README.md",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_focused.py",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }
