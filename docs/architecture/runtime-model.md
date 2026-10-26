@@ -633,3 +633,33 @@ Start reply cannot replace a newer saved run. Once observation proves terminal
 review, a pending Stop reply or rejection cannot restore active-run state.
 An uncertain Stop retains observation and controls and publishes a fixed error
 through Notifications without converting the active task to failed.
+
+### Image presentation request ownership
+
+Both image hooks retire a committed workspace/client session before late reads or
+actions can change presentation. Start and mutating controls use synchronous
+ownership; status replies must name the accepted request. Unknown or foreign
+status retains observation and request identity. Recovery storage writes require
+the current session. A workspace change clears source/model form identities.
+
+Finalization admits one pending attempt and requires one to eight complete
+registered assets with distinct asset and artifact identities. Failure retains
+the same request for retry. A late cancellation cannot replace confirmed output.
+The current form rejects values outside the existing request contract bounds,
+including fractional dimensions, unsafe seeds and non-finite enabled FaceID
+settings. A disabled FaceID does not send its inactive settings.
+
+Unexpected failures use fixed public copy. Generation errors publish through
+workspace Notifications instead of duplicate status/result banners. Field
+validation, progress and explicit retry controls remain contextual. Focused
+fixtures exercise the actual hooks and notification consumers; they do not prove
+physical image quality, host execution or native retirement. Host authorization,
+resource admission, finalization and supported cancellation remain authoritative.
+
+A consumer refresh failure cannot revoke a confirmed browser generation. Desktop
+preview URLs created by the retired presentation session are released on client
+replacement as well as page exit. Focused regressions cover both cases.
+
+Retired Refresh actions return before advancing list-read identities or changing
+loading state. Browser generation callbacks update only after React commits a
+render; a suspended replacement cannot take ownership of confirmed output.

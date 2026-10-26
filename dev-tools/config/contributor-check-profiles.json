@@ -414,7 +414,9 @@
         "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
         "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
         "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
-        "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts"
+        "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
+        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-feature.unit.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",

@@ -1103,3 +1103,22 @@ Focused deferred-reply tests also cover recovery-key ownership and terminal
 observation during cancellation. Neither a retired Start nor a late Stop may
 replace a newer accepted identity or confirmed review. Uncertain cancellation
 remains observable with safe Notifications and unchanged host authority.
+
+### Image presentation isolation and output evidence
+
+Image presentation protects workspace/client/request identity, source references,
+explicit start/cancel/finalize intent and artifact-backed output. A committed
+session retires old replies and recovery writes. Synchronous mutation admission,
+exact observed request identity and complete bounded registered-asset checks
+prevent duplicate submissions and false completion. Uncertain status retains
+accepted task identity; cancellation cannot regress confirmed finalization.
+
+The form applies existing contract bounds before dispatch. Public unexpected
+failures omit supplier exception text; Notifications owns generation errors.
+Finite regressions include duplicate, stale, foreign, malformed, unsafe numeric,
+late-cancel and retry cases on both hooks. They grant no runtime readiness, model
+quality, provider, native staging or worker-stop proof. Existing host guards and
+retained-object restrictions remain unchanged.
+
+Focused review regressions also deny retired Refresh admission and preserve the
+committed output consumer during a suspended replacement render.

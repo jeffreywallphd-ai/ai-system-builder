@@ -11214,7 +11214,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -11458,6 +11458,76 @@
         "owner": "agent",
         "sentences": [
           "The agent must still connect and review the separate app runs, check their code and packages, prove each run has stopped, and collect memory and runtime results. The setup drafts have not run. The earlier memory-limit failure stays recorded; app fit and memory savings are not yet proven. This does not complete the Data increment or roadmap. Your deferred browser page check stays incomplete. Completed model-accuracy and text-recognition checks stay closed. No action is needed from you for this implementation work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8285fbf8620c8dd09978712999fef2cb5cbaf195dd8efa5bdcc28a29989614bb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed Add data action, cancellation and workspace handling. These results apply to the tested code and local feature scope."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "831e0a1c2890132aa84f38dab99bf3f2d293bb85b0c4324106f00eac7818edfe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These reviewed local feature results apply to their recorded code versions. They do not pass the whole acceptance criterion or complete an increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c264c7a0e910a4e9e5430c510eccc0360a6fd82c2a08a6bb58a6a64771140412",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still complete the separate app, runtime, provider and native checks. Full testing is deferred as requested. Accepted model accuracy and text-recognition checks will not run again. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4ce00fec789f2f3b7da935aba4e9de4d9a4203d8712a61e0d0ae7b28baa6cea9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed Context create, review, save and artifact actions. These results apply to the tested code and local feature scope."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "213662bf019810e28f505f2fc33f7439712d3dccaf83b35267b4aa11ac50ddc4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed nine Dataset goal forms and exact review/task replies. These results apply to the tested code and local feature scope."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "be04bb55217941b07181e949e7ddca0ed307b764df82bccd10dd795dee3eabc6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed model browsing, reference, download, file-list and record controls with safe diagnostics. These results apply to the tested code and local feature scope."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aa594308adc3eef788823ca65288d625ca8f1f9e8a40553b8fa3d9d0c412767a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed nine Desktop training profiles, exact task/review ownership, seed and LoRA dropout set to zero and safe failure notifications. These results apply to the tested code and local feature scope."
         ]
       }
     }

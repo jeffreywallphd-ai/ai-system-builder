@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 const { secureFetchMock } = vi.hoisted(() => ({ secureFetchMock: vi.fn() }));
 vi.mock("../../../security/secureFetch", () => ({
   secureFetch: secureFetchMock,
@@ -116,7 +117,7 @@ describe("ImageGenerationFeature", () => {
     const c = document.createElement("div");
     const root = createRoot(c);
     await act(async () => {
-      root.render(<ImageGenerationFeature onNavigateToArtifacts={() => {}} />);
+      root.render(<NotificationTestHarness><ImageGenerationFeature onNavigateToArtifacts={() => {}} /></NotificationTestHarness>);
     });
     await act(async () => {
       await Promise.resolve();
@@ -136,6 +137,9 @@ describe("ImageGenerationFeature", () => {
     );
     const img = c.querySelector("img") as HTMLImageElement;
     expect(img.src).toContain("blob:preview");
+    expect(readNotificationMessages(c)).toContain("boom");
+    expect(c.textContent).not.toContain("boom");
+    await act(async () => root.unmount());
     URL.createObjectURL = originalCreateObjectUrl;
   });
 

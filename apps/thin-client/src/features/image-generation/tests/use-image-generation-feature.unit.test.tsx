@@ -10,6 +10,19 @@ import {
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
 
+const imageClientDefaults = {
+  unloadModel: async () => ({ unloaded: true }),
+  readRuntimeResources: async () => ({ memoryUsagePercent: 0, cpuUsagePercent: 0, gpuUsagePercent: 0 }),
+};
+const unexpectedModelOperation = async (): Promise<never> => { throw new Error("Unexpected model operation in the image fixture."); };
+const modelClientDefaults = {
+  browseModels: unexpectedModelOperation, getModelDetails: unexpectedModelOperation,
+  listModelFiles: unexpectedModelOperation, saveModelReference: unexpectedModelOperation,
+  downloadModel: unexpectedModelOperation, updateModelRecord: unexpectedModelOperation,
+  deleteModelRecord: unexpectedModelOperation, validateModel: unexpectedModelOperation,
+  publishModel: unexpectedModelOperation,
+};
+
 const mountedRoots = new Set<Root>();
 function createRoot(container: Element | DocumentFragment): Root {
   const root = createReactRoot(container);
@@ -30,8 +43,8 @@ function Harness({ client, modelClient }: { client: any; modelClient: any }) {
 
 describe("useImageGenerationFeature", () => {
   it("retries finalization for the same generation and reports unconfirmed cancellation truthfully", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockRejectedValueOnce(new Error("transient")).mockResolvedValue({ finalized: true, assets: [{ assetId: "a", storageKey: "output" }] }), cancelImageGeneration: vi.fn().mockResolvedValue({ cancelled: false }) };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockRejectedValueOnce(new Error("transient")).mockResolvedValue({ finalized: true, assets: [{ assetId: "a", artifactId: "retry-artifact", storageKey: "output", mediaType: "image/png" }] }), cancelImageGeneration: vi.fn().mockResolvedValue({ cancelled: false }) };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     let feature!: ReturnType<typeof useImageGenerationFeature>;
     function H() { feature = useImageGenerationFeature(client as any, undefined, modelClient as any, undefined, "workspace-a"); return null; }
     const root = createRoot(document.createElement("div")); await act(async () => { root.render(<H />); });
@@ -49,8 +62,8 @@ describe("useImageGenerationFeature", () => {
 
   it("keeps workspace drafts private and ignores a former workspace's late terminal response", async () => {
     let finish!: (value: any) => void;
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "scoped-id" }), readImageGeneration: vi.fn(() => new Promise((resolve) => { finish = resolve; })), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "scoped-id" }), readImageGeneration: vi.fn(() => new Promise((resolve) => { finish = resolve; })), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     let feature!: ReturnType<typeof useImageGenerationFeature>;
     function H({ workspaceId }: { workspaceId: string }) { feature = useImageGenerationFeature(client as any, undefined, modelClient as any, undefined, workspaceId); return null; }
     const root = createRoot(document.createElement("div"));
@@ -75,8 +88,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("sends latest selected model record id and selection does not reload inventory", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [model("a", "downloaded"), model("b", "downloaded")] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [model("a", "downloaded"), model("b", "downloaded")] }) };
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async () => { root.render(<Harness client={client} modelClient={modelClient} />); });
     expect(modelClient.listModels).toHaveBeenCalledTimes(1);
@@ -87,8 +100,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("manual model fallback applies only when no selected record", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={()=>void f.start()}>s</button><button id="manual" onClick={()=>f.setForm((x)=>({...x,prompt:"cat",model:"manual.ckpt"}))}>m</button></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H/>);});
@@ -98,7 +111,7 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("auto-selects downloaded image model records across server inventory model forms", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
     const modelClient1 = { listModels: vi.fn().mockResolvedValue({ models: [model("txt", "downloaded", "chat"), model("full", "downloaded", "text-to-image", "full-model"), model("img", "downloaded", "text-to-image")] }) };
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<Harness client={client} modelClient={modelClient1} />);});
@@ -114,8 +127,8 @@ describe("useImageGenerationFeature", () => {
 
 
   it("treats validated checkpoint image models as generation-ready inventory", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [model("validated", "validated", "text-to-image")] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [model("validated", "validated", "text-to-image")] }) };
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<Harness client={client} modelClient={modelClient} />);});
     expect((c.querySelector("#downloaded") as HTMLElement).textContent).toBe("validated");
@@ -130,8 +143,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("does not submit a selected reference-only checkpoint image model", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [model("ref", "saved-reference", "text-to-image")] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [model("ref", "saved-reference", "text-to-image")] }) };
     let feature!: ReturnType<typeof useImageGenerationFeature>;
     function H() {
       const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a");
@@ -174,8 +187,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("does not show prompt validation until generate attempt", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<Harness client={client} modelClient={modelClient} />);});
     await act(async()=>{(c.querySelector("#prompt") as HTMLInputElement).value = ""; (c.querySelector("#prompt") as HTMLInputElement).dispatchEvent(new Event("input", { bubbles: true }));});
@@ -185,8 +198,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("initializes server generation defaults", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     function H() {
       const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a");
       return <div><span id="defaults">{[f.form.prompt, f.form.negativePrompt, f.form.width, f.form.height, f.form.sampler, f.form.scheduler].join("|")}</span></div>;
@@ -197,7 +210,7 @@ describe("useImageGenerationFeature", () => {
   });
 
   it('loads model inventory without invalid list source metadata', async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
     const listModels = vi.fn().mockResolvedValue({ models: [model('img', 'downloaded', 'text-to-image')] });
     const c = document.createElement('div'); const root = createRoot(c);
     await act(async()=>{root.render(<Harness client={client} modelClient={{ listModels }} />);});
@@ -207,8 +220,8 @@ describe("useImageGenerationFeature", () => {
 
 
   it("auto-finalizes on success and assigns random seed when omitted", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockResolvedValue({ finalized: true, assets: [{ assetId: "a1", artifactId: "artifact-1", storageKey: "generated/images/a.png", mediaType: "image/png" }] }), cancelImageGeneration: vi.fn() };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockResolvedValue({ finalized: true, assets: [{ assetId: "a1", artifactId: "artifact-1", storageKey: "generated/images/a.png", mediaType: "image/png" }] }), cancelImageGeneration: vi.fn() };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={()=>void f.start()}>s</button><button id="prompt" onClick={()=>f.setForm((x)=>({...x,prompt:"cat",seed:""}))}>p</button><span id="result">{f.results[0]?.storageKey ?? ""}</span></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H/>);});
@@ -219,7 +232,7 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("strict mode still loads model inventory", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
     const listModels = vi.fn().mockResolvedValue({ models: [model("img", "downloaded", "text-to-image")] });
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<React.StrictMode><Harness client={client} modelClient={{ listModels }} /></React.StrictMode>);});
@@ -228,8 +241,8 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("includes faceId payload when enabled with up to three references", async () => {
-    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn(), readRuntimeResources: vi.fn().mockResolvedValue({ memoryUsagePercent: 1, cpuUsagePercent: 2, gpuUsagePercent: 3 }) };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const client = { ...imageClientDefaults, createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "failed" }), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn(), readRuntimeResources: vi.fn().mockResolvedValue({ memoryUsagePercent: 1, cpuUsagePercent: 2, gpuUsagePercent: 3 }) };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="setup" onClick={() => f.setForm((x) => ({ ...x, prompt: "face", faceIdEnabled: true, faceIdArtifactId1: "a1", faceIdArtifactId2: "a1", faceIdArtifactId3: "a2" }))}>set</button><button id="start" onClick={() => void f.start()}>s</button></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />);});
@@ -239,7 +252,7 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("shows artifact-backed results after automatic finalization", async () => {
-    const client = {
+    const client = { ...imageClientDefaults,
       createArtifactMediaViewUrl: vi.fn(),
       startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }),
       readImageGeneration: vi.fn().mockResolvedValue({
@@ -252,7 +265,7 @@ describe("useImageGenerationFeature", () => {
       readRuntimeResources: vi.fn().mockResolvedValue({ memoryUsagePercent: 1, cpuUsagePercent: 2, gpuUsagePercent: 3 }),
       unloadModel: vi.fn(),
     };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<Harness client={client} modelClient={modelClient} />);});
     await act(async()=>{(c.querySelector("#prompt") as HTMLInputElement).value = "cat"; (c.querySelector("#prompt") as HTMLInputElement).dispatchEvent(new Event("input", { bubbles: true })); (c.querySelector("#start") as HTMLButtonElement).click(); await flush();});
@@ -262,7 +275,7 @@ describe("useImageGenerationFeature", () => {
   });
 
   it("reports a failure when automatic finalization registers no image artifacts", async () => {
-    const client = {
+    const client = { ...imageClientDefaults,
       createArtifactMediaViewUrl: vi.fn(),
       startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r-empty" }),
       readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r-empty", status: "succeeded", data: { outputs: [{ fileName: "x.png" }] } }),
@@ -271,7 +284,7 @@ describe("useImageGenerationFeature", () => {
       readRuntimeResources: vi.fn().mockResolvedValue({ memoryUsagePercent: 1, cpuUsagePercent: 2, gpuUsagePercent: 3 }),
       unloadModel: vi.fn(),
     };
-    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    const modelClient = { ...modelClientDefaults, listModels: vi.fn().mockResolvedValue({ models: [] }) };
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={() => void f.start()}>s</button><button id="prompt" onClick={() => f.setForm((x) => ({ ...x, prompt: "cat" }))}>p</button><span id="status">{f.status}</span><span id="error">{f.error ?? ""}</span></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />);});

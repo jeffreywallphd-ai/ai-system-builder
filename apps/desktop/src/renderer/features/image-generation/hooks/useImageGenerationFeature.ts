@@ -1,5 +1,5 @@
 import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { ImageGenerationRequest } from "../../../../../../../modules/contracts/image-generation";
 import type { ModelInventoryRecord } from "../../../../../../../modules/contracts/model";
@@ -121,14 +121,14 @@ type DesktopImageGenerationClient = ReturnType<
 const parsePositiveNumber = (value: string) => {
   if (value.trim() === "") return undefined;
   const parsed = Number(value);
-  if (Number.isNaN(parsed) || !Number.isFinite(parsed) || parsed <= 0)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0)
     return undefined;
   return parsed;
 };
 const parseSeed = (seed: string): number | undefined => {
   if (seed.trim() === "") return undefined;
   const parsed = Number(seed);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return undefined;
+  if (!Number.isSafeInteger(parsed)) return undefined;
   return parsed;
 };
 function normalizeInstallStatus(status: unknown): RuntimeInstallStatus {
@@ -226,28 +226,12 @@ export function normalizeImageGenerationOutputs(
 }
 const hasFinalizedAssets = (
   assets: ImageGenerationFinalizedAssetReference[],
-): boolean => assets.length > 0;
+): boolean => Array.isArray(assets) && assets.length > 0 && assets.length <= 8
+  && assets.every((asset) => asset && [asset.assetId, asset.artifactId, asset.storageKey].every((value) => typeof value === "string" && value.trim().length > 0))
+  && new Set(assets.map((asset) => asset.assetId)).size === assets.length
+  && new Set(assets.map((asset) => asset.artifactId)).size === assets.length;
 
-export function useImageGenerationFeature(
-  client?: DesktopImageGenerationClient,
-  modelsClient?: DesktopModelsClient,
-  artifactClient?: DesktopArtifactBrowserClient,
-  workspaceId?: string,
-) {
-  const imageGenerationClient = useMemo(
-    () => client ?? createDesktopImageGenerationClient(),
-    [client],
-  );
-  const modelInventoryClient = useMemo(
-    () => modelsClient ?? createDesktopModelsClient(),
-    [modelsClient],
-  );
-  const artifacts = useMemo(
-    () => artifactClient ?? createDesktopArtifactBrowserClient(),
-    [artifactClient],
-  );
-  const previewUrlsRef = useRef<string[]>([]);
-  const [form, setForm] = useState<ImageGenerationFormValues>({
+const createDefaultForm = (): ImageGenerationFormValues => ({
     prompt: "",
     negativePrompt: "",
     seed: "42",
@@ -269,6 +253,29 @@ export function useImageGenerationFeature(
     faceIdStructureStrength: "0.75",
     faceIdNoise: "0.35",
   });
+
+export function useImageGenerationFeature(
+  client?: DesktopImageGenerationClient,
+  modelsClient?: DesktopModelsClient,
+  artifactClient?: DesktopArtifactBrowserClient,
+  workspaceId?: string,
+) {
+  const imageGenerationClient = useMemo(
+    () => client ?? createDesktopImageGenerationClient(),
+    [client],
+  );
+  const modelInventoryClient = useMemo(
+    () => modelsClient ?? createDesktopModelsClient(),
+    [modelsClient],
+  );
+  const artifacts = useMemo(
+    () => artifactClient ?? createDesktopArtifactBrowserClient(),
+    [artifactClient],
+  );
+  const formWorkspaceRef = useRef(workspaceId);
+  const session = useMemo(() => ({ active: false, action: undefined as "start" | "cancel" | "repair" | undefined, finalizing: false }), [imageGenerationClient, modelInventoryClient, artifacts, workspaceId]);
+  const previewUrlsRef = useRef<string[]>([]);
+  const [form, setForm] = useState<ImageGenerationFormValues>(createDefaultForm);
   const [status, setStatus] = useState<ImageGenerationUiStatus>("idle");
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -302,17 +309,15 @@ export function useImageGenerationFeature(
   const [artifactLoadMessage, setArtifactLoadMessage] = useState<
     string | undefined
   >(undefined);
-  const mountedRef = useRef(true);
   const observer = useTaskObservationManager();
-  const currentWorkspaceRef = useRef(workspaceId); currentWorkspaceRef.current = workspaceId;
   const pollStopRef = useRef<(() => void) | undefined>(undefined);
   const taskStorageKey = `ai-system-builder.image-task.v1:${workspaceId ?? "none"}`;
   const finalizedAssetsRef = useRef(finalizedAssets);
   const activePollRef = useRef<string | undefined>(undefined);
   const installStatusSequenceRef = useRef(0);
   const isPollingStillActive = useCallback(
-    (id: string) => mountedRef.current && currentWorkspaceRef.current === workspaceId && activePollRef.current === id,
-    [workspaceId],
+    (id: string) => session.active && activePollRef.current === id,
+    [session],
   );
   useEffect(
     () => () => {
@@ -326,27 +331,31 @@ export function useImageGenerationFeature(
           detail: {
             pageKey: "image-generation",
             sectionKey: "image-generation.gallery",
-            reason: "page-unmount",
+            reason: "session-retirement",
           },
         });
       }
       previewUrlsRef.current = [];
     },
-    [],
+    [session],
   );
-  useEffect(() => {
-    mountedRef.current = true;
+  useLayoutEffect(() => {
+    session.active = true;
+    if (formWorkspaceRef.current !== workspaceId) { formWorkspaceRef.current = workspaceId; setForm(createDefaultForm()); }
+    setRequestId(undefined); setStatus("idle"); setError(undefined); setMessage(undefined); setTaskData(undefined); setProgress(undefined); setOutputs([]);
+    setFinalizedAssets([]); finalizedAssetsRef.current = []; setSessionGallery([]); setAvailableModels([]); setAvailableImageArtifacts([]); setInstallStatus("unknown");
     recordSectionLoadMilestone("renderer.section.load.skipped", {
       pageKey: "image-generation",
       sectionKey: "image-generation.runtime-readiness",
       trigger: "initial",
     });
     return () => {
-      mountedRef.current = false;
+      session.active = false;
+      installStatusSequenceRef.current += 1;
       pollStopRef.current?.();
       activePollRef.current = undefined;
     };
-  }, []);
+  }, [session]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -363,7 +372,7 @@ export function useImageGenerationFeature(
               workspaceId: createWorkspaceId(workspaceId),
             })
           : [];
-        if (cancelled) return;
+        if (cancelled || !session.active) return;
         const optionByValue = new Map<string, ImageGenerationModelOption>();
         for (const model of models) {
           const option = toImageGenerationModelDropdownOption(model);
@@ -384,13 +393,11 @@ export function useImageGenerationFeature(
           trigger: "initial",
         });
       } catch (e) {
-        if (!cancelled) {
+        if (!cancelled && session.active) {
           setAvailableModels([]);
           setModelLoadStatus("error");
           setModelLoadMessage(
-            e instanceof Error
-              ? `Failed to load model inventory for image generation: ${e.message}`
-              : "Failed to load model inventory for image generation.",
+            "Failed to load model inventory for image generation. Refresh the page to try again.",
           );
           recordSectionLoadMilestone("renderer.section.load.failed", {
             pageKey: "image-generation",
@@ -403,7 +410,7 @@ export function useImageGenerationFeature(
     return () => {
       cancelled = true;
     };
-  }, [modelInventoryClient, workspaceId]);
+  }, [modelInventoryClient, workspaceId, session]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -427,7 +434,7 @@ export function useImageGenerationFeature(
               workspaceId,
             })
           : [];
-        if (cancelled) return;
+        if (cancelled || !session.active) return;
         setAvailableImageArtifacts(
           items
             .filter(
@@ -447,10 +454,10 @@ export function useImageGenerationFeature(
           trigger: "initial",
         });
       } catch (e) {
-        if (!cancelled) {
+        if (!cancelled && session.active) {
           setAvailableImageArtifacts([]);
           setArtifactLoadMessage(
-            e instanceof Error ? e.message : "Failed to load image artifacts.",
+            "Failed to load image artifacts. Refresh the page to try again.",
           );
           recordSectionLoadMilestone("renderer.section.load.failed", {
             pageKey: "image-generation",
@@ -463,24 +470,30 @@ export function useImageGenerationFeature(
     return () => {
       cancelled = true;
     };
-  }, [artifacts, workspaceId]);
+  }, [artifacts, workspaceId, session]);
   const validationError = useMemo(() => {
     if (!form.prompt.trim()) return "Prompt is required.";
+    if (form.prompt.length > 10000 || form.negativePrompt.length > 10000) return "Prompt and negative prompt must each contain at most 10,000 characters.";
     if (
       !parsePositiveNumber(form.width) ||
       !parsePositiveNumber(form.height) ||
       !parsePositiveNumber(form.steps) ||
       !parsePositiveNumber(form.numImages)
     )
-      return "Width, height, steps, and number of images must be positive finite numbers.";
+      return "Width, height, steps, and number of images must be positive integers.";
+    if (Number(form.width) < 64 || Number(form.width) > 4096 || Number(form.height) < 64 || Number(form.height) > 4096 || Number(form.steps) > 200 || Number(form.numImages) > 8) return "Use dimensions from 64 to 4096, at most 200 steps and at most 8 images.";
     if (form.seed.trim() && parseSeed(form.seed) === undefined)
       return "Seed must be a finite integer when provided.";
     const cfg = Number(form.cfg);
-    if (!Number.isFinite(cfg) || cfg <= 0)
-      return "CFG must be a positive number.";
+    if (!Number.isFinite(cfg) || cfg <= 0 || cfg > 50)
+      return "CFG must be greater than zero and at most 50.";
     const denoise = Number(form.denoise);
     if (!Number.isFinite(denoise) || denoise < 0 || denoise > 1)
       return "Denoise must be between 0 and 1.";
+    if (form.faceIdEnabled) {
+      if (!form.faceIdArtifactId1.trim()) return "FaceID requires at least one face reference image.";
+      if (![form.faceIdIdentityStrength, form.faceIdStructureStrength, form.faceIdNoise].every((value) => value.trim() && Number.isFinite(Number(value)))) return "FaceID strength and noise settings must be finite numbers.";
+    }
     return undefined;
   }, [form]);
   const isStartDisabled = ACTIVE_STATUSES.includes(status);
@@ -497,7 +510,7 @@ export function useImageGenerationFeature(
             const viewUrl = await artifacts.createArtifactMediaViewUrl({
               storageKey: a.storageKey ?? a.artifactId,
             });
-            if (!mountedRef.current || currentWorkspaceRef.current !== workspaceId) { URL.revokeObjectURL?.(viewUrl); return { ...a, previewStatus: "failed" as const, previewError: "Preview request is no longer active." }; }
+            if (!session.active) { URL.revokeObjectURL?.(viewUrl); return { ...a, previewStatus: "failed" as const, previewError: "Preview request is no longer active." }; }
             previewUrlsRef.current.push(viewUrl);
             return {
               ...a,
@@ -508,15 +521,14 @@ export function useImageGenerationFeature(
             return {
               ...a,
               previewStatus: "failed" as const,
-              previewError:
-                e instanceof Error ? e.message : "Failed to load preview.",
+              previewError: "Image preview could not be loaded.",
             };
           }
         }),
       );
       return resolved;
     },
-    [artifacts, workspaceId],
+    [artifacts, workspaceId, session],
   );
 
   const replaceFinalizedAssets = useCallback((assets: ImageGenerationFinalizedAssetReference[], completedRequestId?: string) => {
@@ -526,25 +538,26 @@ export function useImageGenerationFeature(
   }, []);
 
   const poll = useCallback(async (id: string) => {
-    if (!workspaceId || activePollRef.current === id) return;
+    if (!session.active || !workspaceId || activePollRef.current === id) return;
     pollStopRef.current?.(); activePollRef.current = id;
     let finalizing = false;
     const scope = { workspaceId, family: "image-generation", requestId: id };
     const stop = observer.subscribe(scope, async () => {
       const response = await imageGenerationClient.readImageGeneration({ requestId: id, workspaceId });
       if (!response.ok) throw new Error("Image progress is unavailable.");
+      if (response.value.requestId !== id) throw new Error("Image task identity is unconfirmed.");
       return { value: response.value, activity: ["succeeded", "failed", "cancelled"].includes(response.value.status) || "recordType" in response.value ? "terminal" : "active" };
     }, (snapshot) => {
       if (!isPollingStillActive(id)) return;
       if (!snapshot) { setError("Image progress is temporarily unavailable. It will retry automatically."); return; }
       const record = snapshot.value;
-      if ("recordType" in record) { setStatus("failed"); setError("The image task is no longer available on this host."); return; }
+      if ("recordType" in record) { setStatus("unknown"); setError("The image task is no longer available on this host."); return; }
       const view: ImageGenerationTaskDataView = { status: record.status, progress: record.progress, outputs: normalizeImageGenerationOutputs(record) };
       setTaskData(view); setProgress(view.progress); setOutputs(view.outputs);
       if (record.status === "queued" || record.status === "running") { setStatus(record.status); setError(undefined); return; }
-      if (record.status === "failed" || record.status === "cancelled") { setStatus(record.status); if (record.status === "failed") setError("Image generation failed. Review runtime diagnostics before trying again."); return; }
+      if (record.status === "failed" || record.status === "cancelled") { activePollRef.current = undefined; setStatus(record.status); if (record.status === "failed") setError("Image generation failed. Review runtime diagnostics before trying again."); return; }
       if (record.status !== "succeeded") { setStatus("unknown"); setError("Runtime progress is unavailable. The task identity is retained."); return; }
-      if (finalizing) return; finalizing = true; setStatus("finalizing");
+      if (finalizing) return; finalizing = true; session.finalizing = true; setStatus("finalizing");
       void (async () => {
         try {
           const result = await imageGenerationClient.finalizeImageGenerationIfCompleted({ requestId: id, workspaceId });
@@ -558,21 +571,23 @@ export function useImageGenerationFeature(
           pollStopRef.current?.(); activePollRef.current = undefined;
         } catch {
           if (isPollingStillActive(id)) { setStatus("failed"); setError("Image finalization could not finish. Retry finalization to keep the same generation."); }
-        } finally { finalizing = false; }
+        } finally { finalizing = false; session.finalizing = false; }
       })();
     });
     pollStopRef.current = stop;
-  }, [imageGenerationClient, observer, isPollingStillActive, hydratePreviews, replaceFinalizedAssets, workspaceId]);
+  }, [imageGenerationClient, observer, isPollingStillActive, hydratePreviews, replaceFinalizedAssets, workspaceId, session]);
 
   useEffect(() => {
-    try { const id = sessionStorage.getItem(taskStorageKey); if (id && id.length <= 512) { setRequestId(id); void poll(id); } } catch { /* Session storage is optional. */ }
+    try { const id = sessionStorage.getItem(taskStorageKey); if (session.active && id?.trim() && id.length <= 512) { setRequestId(id); setStatus("queued"); void poll(id); } } catch { /* Session storage is optional. */ }
     return () => { pollStopRef.current?.(); activePollRef.current = undefined; };
-  }, [poll, taskStorageKey]);
+  }, [poll, taskStorageKey, session]);
   const retryFinalization = () => { if (workspaceId && requestId) observer.invalidate({ workspaceId, family: "image-generation", requestId }); };
   const canRetryFinalization = status === "failed" && taskData?.status === "succeeded";
 
   const start = useCallback(async () => {
-    if (validationError || isStartDisabled) return false;
+    if (!session.active || session.action || session.finalizing || activePollRef.current || validationError || isStartDisabled) return false;
+    session.action = "start";
+    try {
     setStatus("starting");
     setError(undefined);
     setMessage(
@@ -628,21 +643,21 @@ export function useImageGenerationFeature(
       ...payload,
       workspaceId,
     } as never);
-    if (started.ok) { try { sessionStorage.setItem(taskStorageKey, started.value.requestId); } catch { /* Optional recovery identity. */ } }
-    if (!mountedRef.current || currentWorkspaceRef.current !== workspaceId) return false;
-    if (!started.ok || !started.value.requestId) {
+    if (!session.active) return false;
+    if (!started.ok || typeof started.value.requestId !== "string" || !started.value.requestId.trim() || started.value.requestId.length > 512) {
       setStatus("failed");
       setError(
-        started.ok
-          ? "Failed to start image generation."
-          : started.error.message,
+        "Image generation could not start. Check runtime status and try again.",
       );
       return false;
     }
+    try { sessionStorage.setItem(taskStorageKey, started.value.requestId); } catch { /* Optional recovery identity. */ }
     setRequestId(started.value.requestId);
     setStatus("queued");
     void poll(started.value.requestId);
     return true;
+    } catch { if (session.active) { setStatus("failed"); setError("Image generation could not start. Check runtime status and try again."); } return false; }
+    finally { session.action = undefined; }
   }, [
     validationError,
     isStartDisabled,
@@ -650,29 +665,31 @@ export function useImageGenerationFeature(
     imageGenerationClient,
     poll,
     workspaceId,
+    session,
   ]);
   const cancel = useCallback(async () => {
-    if (!requestId) return;
+    if (!session.active || session.action || session.finalizing || !requestId || !isPollingStillActive(requestId)) return;
+    session.action = "cancel";
+    try {
     const cancelled = await imageGenerationClient.cancelImageGeneration({
       requestId,
       workspaceId,
     } as never);
-    if (!isPollingStillActive(requestId)) return;
+    if (!isPollingStillActive(requestId) || session.finalizing) return;
     if (workspaceId) observer.invalidate({ workspaceId, family: "image-generation", requestId });
     if (cancelled.ok && cancelled.value.cancelled === true) {
       setStatus("cancelled");
-      setMessage(cancelled.value.message);
+      setMessage("Image generation was cancelled.");
       activePollRef.current = undefined;
       pollStopRef.current?.();
       return;
     }
     setMessage(
-      cancelled.ok
-        ? (cancelled.value.message ??
-            "Cancellation is not supported for this request.")
-        : cancelled.error.message,
+      "Cancellation remains unconfirmed. Runtime progress will continue to be checked.",
     );
-  }, [imageGenerationClient, isPollingStillActive, requestId, workspaceId]);
+    } catch { if (isPollingStillActive(requestId)) setError("Cancellation could not be confirmed. The task remains active."); }
+    finally { session.action = undefined; }
+  }, [imageGenerationClient, isPollingStillActive, requestId, workspaceId, session]);
   const refreshInstallStatus = async () => {
     const sequence = ++installStatusSequenceRef.current;
     recordSectionLoadMilestone("renderer.section.load.start", {
@@ -683,7 +700,7 @@ export function useImageGenerationFeature(
     setInstallStatus("checking");
     try {
       const result = await imageGenerationClient.readComfyUiInstallStatus?.();
-      if (!mountedRef.current || installStatusSequenceRef.current !== sequence)
+      if (!session.active || installStatusSequenceRef.current !== sequence)
         return;
       if (!result || !result.ok) {
         setInstallStatus("unknown");
@@ -701,7 +718,7 @@ export function useImageGenerationFeature(
         trigger: "refresh",
       });
     } catch {
-      if (mountedRef.current && installStatusSequenceRef.current === sequence)
+      if (session.active && installStatusSequenceRef.current === sequence)
         setInstallStatus("unknown");
       recordSectionLoadMilestone("renderer.section.load.failed", {
         pageKey: "image-generation",
@@ -711,25 +728,24 @@ export function useImageGenerationFeature(
     }
   };
   const repairInstall = async () => {
+    if (!session.active || session.action || session.finalizing || activePollRef.current) return;
+    session.action = "repair";
     const sequence = ++installStatusSequenceRef.current;
     setInstallStatus("installing");
     try {
       const result = await imageGenerationClient.repairComfyUiInstall?.();
-      if (!mountedRef.current || installStatusSequenceRef.current !== sequence)
+      if (!session.active || installStatusSequenceRef.current !== sequence)
         return;
       if (!result || !result.ok) {
         setInstallStatus("failed");
-        setError(result?.error?.message ?? "Failed to repair ComfyUI install.");
+        setError("ComfyUI repair could not be confirmed. Check runtime status and try again.");
         return;
       }
       setInstallStatus(normalizeInstallStatus(result.value.status));
       setError(undefined);
     } catch (e) {
-      setInstallStatus("failed");
-      setError(
-        e instanceof Error ? e.message : "Failed to repair ComfyUI install.",
-      );
-    }
+      if (session.active && installStatusSequenceRef.current === sequence) { setInstallStatus("failed"); setError("ComfyUI repair could not be confirmed. Check runtime status and try again."); }
+    } finally { session.action = undefined; }
   };
   return {
     form,

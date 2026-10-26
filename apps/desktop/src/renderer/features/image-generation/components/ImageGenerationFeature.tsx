@@ -9,6 +9,7 @@ import { useImageGenerationFeature } from "../hooks/useImageGenerationFeature";
 import { ImageGenerationForm } from "./ImageGenerationForm";
 import { ImageGenerationResults } from "./ImageGenerationResults";
 import { ImageGenerationStatus } from "./ImageGenerationStatus";
+import { TransientNotificationPublisher } from "../../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
 
 export function ImageGenerationFeature(
   props: { workspaceId?: string; workspaceName?: string } = {},
@@ -111,8 +112,8 @@ function WorkspaceImageGenerationFeature(
               requestId={feature.requestId}
               message={feature.message}
               progress={feature.progress}
-              error={feature.error}
             />
+            <TransientNotificationPublisher message={feature.error} title="Image generation needs attention" tone="error" source="Image Generation" workspaceId={props.workspaceId} />
             {feature.canRetryFinalization ? <button type="button" className="ui-button" onClick={feature.retryFinalization}>Retry finalization</button> : null}
             {feature.status === "queued" || feature.status === "running" ? (
               <div className="ui-workflow__actions">
@@ -139,7 +140,6 @@ function WorkspaceImageGenerationFeature(
               finalizedAssets={feature.finalizedAssets}
               sessionGallery={feature.sessionGallery}
               status={feature.status}
-              error={feature.error}
               previewWidth={hasPreviewDimensions ? previewWidth : undefined}
               previewHeight={hasPreviewDimensions ? previewHeight : undefined}
             />

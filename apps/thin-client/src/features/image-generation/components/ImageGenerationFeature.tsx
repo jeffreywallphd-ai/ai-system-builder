@@ -617,7 +617,7 @@ function WorkspaceImageGenerationFeature({
               {feature.requestId ? (
                 <p>Request ID: {feature.requestId}</p>
               ) : null}
-              {feature.error ? <p role="alert">{feature.error}</p> : null}
+              <TransientNotificationPublisher message={feature.error === feature.validationError ? undefined : feature.error} title="Image generation needs attention" tone="error" source="Image Generation" workspaceId={workspaceId} />
               {feature.canRetryFinalization ? <button type="button" className="ui-button" onClick={feature.retryFinalization}>Retry finalization</button> : null}
               <TransientNotificationPublisher message={feature.unloadModelState.status !== "loading" ? feature.unloadModelState.message : undefined} title={feature.unloadModelState.status === "error" ? "Model unload needs attention" : "Model unloaded"} tone={feature.unloadModelState.status === "error" ? "error" : "success"} source="Image Generation" workspaceId={workspaceId} />
             </div>

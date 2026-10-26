@@ -188,3 +188,8 @@ The existing `functionality-tasks` profile also covers the actual Desktop Train
 Model form and its hook. Focused cases use synthetic task/model/source clients;
 the separately mocked provider-default panel is not qualified by those cases.
 No model accuracy, OCR or physical training is rerun.
+
+The `functionality-tasks` profile includes cross-host image request ownership
+regressions and the actual image notification consumers. These finite UI/client
+fixtures do not run image models or replace host/native qualification. Full-suite
+qualification remains separate from component checkpoints.

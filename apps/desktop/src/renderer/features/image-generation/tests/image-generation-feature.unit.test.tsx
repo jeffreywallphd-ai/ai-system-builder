@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { ImageGenerationFeature } from "../components/ImageGenerationFeature";
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 vi.mock("../../settings/components", () => ({
   SettingsPanel: () => <div>settings-panel</div>,
 }));
@@ -30,7 +31,7 @@ vi.mock("../hooks/useImageGenerationFeature", () => ({
     requestId: "r1",
     message: "cancel unsupported",
     progress: { message: "doing work", current: 1, total: 2 },
-    error: undefined,
+    error: "Synthetic generation failure",
     taskData: {
       outputs: [
         { fileName: "a.png", subfolder: "x", engine: "comfy", promptId: "p1" },
@@ -67,11 +68,13 @@ describe("ImageGenerationFeature", () => {
     const c = document.createElement("div");
     const root = createRoot(c);
     await act(async () => {
-      root.render(<ImageGenerationFeature />);
+      root.render(<NotificationTestHarness><ImageGenerationFeature workspaceId="workspace-a" /></NotificationTestHarness>);
     });
     expect(c.textContent).toContain("doing work");
     expect(c.textContent).toContain("Asset ID: as1");
     expect(c.textContent).toContain("cancel unsupported");
+    expect(readNotificationMessages(c)).toContain("Synthetic generation failure");
+    expect(c.textContent).not.toContain("Synthetic generation failure");
     expect(c.textContent).not.toContain("Loaded 1 image generation model.");
     expect(c.querySelectorAll(".ui-workflow__step").length).toBeGreaterThan(4);
     await act(async () => {

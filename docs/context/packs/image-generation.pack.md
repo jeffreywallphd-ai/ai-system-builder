@@ -84,3 +84,14 @@ Use this pack for tasks involving image generation contracts, runtime lifecycle 
 - Image-generation routes should require image-generation scopes through centralized route policy.
 - Generated image artifacts should be authorized via artifact storage/media routes.
 - ComfyUI temp paths must not be exposed as security-relevant client state.
+
+## Presentation ownership
+
+- Both host hooks use committed workspace/client sessions, synchronous mutation
+  admission and exact accepted-task reads. Retired replies cannot replace recovery
+  identity. Unknown progress keeps the task observable.
+- Finalization needs complete bounded registered assets and preserves same-request
+  retry. Late cancellation cannot revoke confirmed output. Form validation follows
+  existing request bounds; unexpected errors use safe Notifications copy.
+- Focused fixtures do not qualify physical generation or native cleanup. See
+  `docs/architecture/runtime-model.md` for the owning boundary and limitations.

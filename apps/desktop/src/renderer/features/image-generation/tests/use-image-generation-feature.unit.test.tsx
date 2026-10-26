@@ -103,7 +103,8 @@ describe("useImageGenerationFeature", () => {
 
     client.repairComfyUiInstall.mockResolvedValueOnce({ ok: false, error: { code: "boom", message: "repair failed" } });
     await act(async () => { await hook.repairInstall(); });
-    expect(hook.error).toBe("repair failed");
+    expect(hook.error).toBe("ComfyUI repair could not be confirmed. Check runtime status and try again.");
+    expect(hook.error).not.toContain("repair failed");
     await act(async () => root.unmount());
   });
 
@@ -153,7 +154,8 @@ describe("useImageGenerationFeature", () => {
     await act(async () => Promise.resolve());
     expect(hook.availableModels).toEqual([]);
     expect(hook.modelLoadStatus).toBe("error");
-    expect(hook.modelLoadMessage).toBe("Failed to load model inventory for image generation: inventory offline");
+    expect(hook.modelLoadMessage).toBe("Failed to load model inventory for image generation. Refresh the page to try again.");
+    expect(hook.modelLoadMessage).not.toContain("inventory offline");
     await act(async () => root.unmount());
   });
 
@@ -255,7 +257,7 @@ describe("useImageGenerationFeature", () => {
 
     await act(async () => root.render(<Harness client={client} onReady={(h) => { hook = h; }} />));
     await act(async () => {
-      hook.setForm({ prompt: "cat", negativePrompt: "", seed: "", width: "1024", height: "1024", steps: "30", cfg: "8", denoise: "1", sampler: "", scheduler: "", model: "stabilityai/stable-diffusion-xl-base-1.0", numImages: "1", latentSourceArtifactId: "" });
+      hook.setForm({ ...hook.form, prompt: "cat", negativePrompt: "", seed: "", width: "1024", height: "1024", steps: "30", cfg: "8", denoise: "1", sampler: "", scheduler: "", model: "stabilityai/stable-diffusion-xl-base-1.0", numImages: "1", latentSourceArtifactId: "" });
     });
     await act(async () => { await hook.start(); });
 
@@ -292,7 +294,7 @@ describe("useImageGenerationFeature", () => {
     client.startImageGeneration
       .mockResolvedValueOnce({ ok: true, value: { requestId: "r-old" } })
       .mockResolvedValueOnce({ ok: true, value: { requestId: "r-new" } });
-    client.readImageGeneration.mockResolvedValue({ ok: true, value: { status: "succeeded", requestId: "r", taskType: "image-generation", concurrencyClass: "image-generation", data: { outputs: [{ fileName: "temp.png" }] } } });
+    client.readImageGeneration.mockImplementation(async ({requestId}: {requestId:string}) => ({ ok: true, value: { status: "succeeded", requestId, taskType: "image-generation", concurrencyClass: "image-generation", data: { outputs: [{ fileName: "temp.png" }] } } }));
     client.finalizeImageGenerationIfCompleted
       .mockResolvedValueOnce({ ok: true, value: { finalized: true, assets: [{ assetId: "asset-old", artifactId: "artifact-old", storageKey: "generated/images/old.png" }] } })
       .mockResolvedValueOnce({ ok: true, value: { finalized: true, assets: [{ assetId: "asset-new", artifactId: "artifact-new", storageKey: "generated/images/new.png" }] } });
