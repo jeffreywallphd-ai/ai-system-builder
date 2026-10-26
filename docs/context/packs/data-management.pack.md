@@ -5,7 +5,7 @@
 ## Purpose
 
 - Route work involving ingestion, staged source artifacts, dataset preparation, split integrity, curation, versioning, or dataset publication.
-- Summarize the implemented boundary without replacing canonical architecture, ADR, security, storage, or runtime guidance.
+- Summarize the implemented boundary without replacing canonical guidance. Real provided-data host tests: `dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md`; source checks grant no host or parent pass.
 
 ## Use When
 

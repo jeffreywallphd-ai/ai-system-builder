@@ -1,5 +1,12 @@
 # Data Management
 
+The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
+composes the real packaged processor and local SQLite adapter for two-host
+save, compare, setup reuse and restart journeys. The browser test closes and
+reopens complete server resources and its caller-owned SQLite connection;
+it does not substitute an in-memory history store or qualify PostgreSQL.
+Production host composition and normal qualification entry points are unchanged.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0008-ingestion-and-staged-artifact-semantic-model.md`, `docs/adr/ADR-0009-artifact-identity-and-backing-domain-model.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`, `docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md`
 - Verification: `docs/architecture/architecture-verification.md`

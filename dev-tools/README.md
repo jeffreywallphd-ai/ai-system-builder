@@ -2,6 +2,12 @@
 
 # Developer tools
 
+Saved-version full-app test support is described in
+[Provided-data version journeys](scripts/qualification/visual-composer/provided-dataset-qualification.md).
+It uses the real packaged processor with synthetic supplied rows and a durable
+test-only server composition. Source verification and actual bounded native
+execution are separate; neither may be inferred from the other.
+
 To run cached model tests after closing the coding agent, use
 `scripts/qualification/run-model-tests.cmd` from Command Prompt, or
 `scripts/qualification/run-model-tests.ps1` from PowerShell. Both preserve incremental JSON

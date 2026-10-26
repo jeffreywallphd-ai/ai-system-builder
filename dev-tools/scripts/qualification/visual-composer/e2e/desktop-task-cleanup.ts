@@ -5,7 +5,16 @@ import {createHash} from "node:crypto";
 import path from "node:path";
 import {observeOwnedNativeProcessExit} from "../owned-native-process-exit.mjs";
 
-export async function persistOwnedHostReport(kind:"cleanup"|"worker-recovery",report:Record<string,unknown>,info:TestInfo) {
+export type DesktopRestartPhase = "before-restart" | "after-restart";
+export function ownedDesktopCleanupIdentity(project: string, title: string, phase?: DesktopRestartPhase) {
+  if (phase !== undefined && phase !== "before-restart" && phase !== "after-restart") throw new Error("Unknown owned restart phase.");
+  const identity = `${project}\0${title}${phase === undefined ? "" : `\0${phase}`}`;
+  return { key: createHash("sha256").update(identity).digest("hex").slice(0,16),
+    acknowledgment: phase === undefined ? "qualification-will-quit.json" : `qualification-will-quit-${phase}.json` };
+}
+
+export async function persistOwnedHostReport(kind:"cleanup"|"worker-recovery",report:Record<string,unknown>,info:TestInfo,phase?:DesktopRestartPhase) {
+  const identity = ownedDesktopCleanupIdentity(info.project.name, info.title, phase);
   const run=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
   expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
@@ -21,8 +30,7 @@ export async function persistOwnedHostReport(kind:"cleanup"|"worker-recovery",re
   expect(Buffer.byteLength(bytes)).toBeLessThanOrEqual(8192);
   const folder=path.resolve("artifacts/qualification/visual-composer/runs",run!,"owned-host");
   await mkdir(folder,{recursive:true});expect(await realpath(folder)).toBe(folder);
-  const key=createHash("sha256").update(`${info.project.name}\0${info.title}`).digest("hex").slice(0,16);
-  await writeFile(path.join(folder,`${kind}-${key}.json`),bytes,{flag:"wx"});
+  await writeFile(path.join(folder,`${kind}-${identity.key}.json`),bytes,{flag:"wx"});
 }
 
 export async function triggerObservedOwnedWorkerFault(cache:string,parentPid:number) {
@@ -39,10 +47,11 @@ export async function triggerObservedOwnedWorkerFault(cache:string,parentPid:num
   await writeFile(path.join(cache,`qualification-fault-trigger-${identity.pid}.txt`),"trigger-owned-qualification-fault-v1\n",{flag:"wx"});
 }
 
-export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication,cache:string,info:TestInfo) {
+export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication,cache:string,info:TestInfo,phase?:DesktopRestartPhase) {
+  const cleanupIdentity = ownedDesktopCleanupIdentity(info.project.name, info.title, phase);
   const started=performance.now(),errors:unknown[]=[];let parentPid:number|undefined,observer:Awaited<ReturnType<typeof observeOwnedNativeProcessExit>>|undefined;
   let mainExitCode:number|undefined,physicalWorkersObserved=0,launchedPid:number|undefined,willQuitAcknowledged=false;
-  const ack=path.join(cache,"qualification-will-quit.json");
+  const ack=path.join(cache,cleanupIdentity.acknowledgment);
   try {
     launchedPid=app.process().pid;
     expect(await realpath(cache)).toBe(cache);
@@ -80,7 +89,7 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
   }catch(error){errors.push(error);}
   const report={sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,status:errors.length?"failed":"passed",mainPid:parentPid,launchedPid,mainExitCode,willQuitAcknowledged,cleanupMilliseconds:performance.now()-started,physicalWorkersObserved,physicalWorkersAlive:errors.length?null:0,failures:errors.length,failureTypes:errors.map(error=>error instanceof Error?error.name:"Unknown")};
   await info.attach("desktop-owned-worker-cleanup",{body:JSON.stringify(report),contentType:"application/json"});
-  if(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID || !errors.length)await persistOwnedHostReport("cleanup",report,info);
+  if(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID || !errors.length)await persistOwnedHostReport("cleanup",report,info,phase);
   if(errors.length)throw new AggregateError(errors,"Desktop owned shutdown qualification failed.");
   return report;
 }

@@ -1,5 +1,16 @@
 # Data Management Threat Model
 
+The private provided-data version fixture accepts only its small synthetic
+provided-row classification source and production review path. It denies
+generation, OCR, downloads, other tasks and linked or external source paths.
+It retains authentication, offline dependency preparation and Standard native
+limits. Restart qualification requires complete resource close/reopen, fresh
+per-session evidence and exclusive closed-phase shutdown records. A readiness
+response, old acknowledgment or source test cannot supply a restart pass.
+Uncertain shutdown prevents another owner. Reports exclude inputs, credentials
+and supplier exception text. Actual host evidence and parent review remain
+separate from portable source checks.
+
 ## Current preparation source-list admission
 
 Desktop retires source reads with an exact workspace/client scope and a monotonic

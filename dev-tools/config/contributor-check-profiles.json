@@ -1330,7 +1330,11 @@
         "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
         "modules/ui/shared/dataset-version/tests/readDatasetVersionReplaySources.unit.test.ts",
         "apps/thin-client/src/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx",
-        "apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx"
+        "apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
+        "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1382,7 +1386,20 @@
         "modules/ui/shared/dataset-version/tests/readDatasetVersionReplaySources.unit.test.ts",
         "apps/thin-client/src/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx",
         "apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx",
-        "apps/thin-client/src/features/dataset-preparation/tests/datasetVersionReplayFixture.ts"
+        "apps/thin-client/src/features/dataset-preparation/tests/datasetVersionReplayFixture.ts",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-server-entry.ts",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-server-lifecycle.ts",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md",
+        "dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+        "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py",
+        "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts"
       ]
     }
   }
