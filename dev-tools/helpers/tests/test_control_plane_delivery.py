@@ -320,6 +320,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
             "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
             "apps/server/src/tests/create-server.integration.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts",
         ]
         self.assertEqual(profile["test_paths"], expected)
         commands = run_focused_checks.profile_commands(root, "ingestion-publication")

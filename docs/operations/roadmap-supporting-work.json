@@ -3940,6 +3940,23 @@
         "This source/component evidence does not complete a parent criterion, Data increment 5, the Data roadmap or a release. Bounded hashed-token search is approximate. Larger-data, generated-data, provider and full-host qualification remain separate. Earlier unsuccessful broad/native and app attempts remain recorded. Completed model-accuracy and OCR results are unchanged; no accepted check is reopened."
       ],
       "review_digest": "b609edc9de6e9ec25767502e972d172296f52f62d72d5e113b655e264263df1c"
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "ingestion-streaming-scale-recovery",
+      "work_criteria": [
+        "real-larger-file-streaming-and-progress",
+        "durable-retry-resume-and-cancel",
+        "bounded-source-owned-evidence-and-docs"
+      ],
+      "receipt_digest": "43a05434e6688f3aeac3b5d0f1f99d9775c2528d0b513fe1dd40b93d9e626b37",
+      "review_digest": "0c624513d45a7e6e151681a6884f20129edd23440280e83a6f22d4c62a594cd5",
+      "scope": "Real application, SQLite and filesystem tests complete serial 8 MiB and 64 MiB synthetic JSONL transfers with 1 MiB producer chunks and 64 KiB output reads. They assert exact per-chunk progress, full output hashes, duplicate retries, immutable database-reopen retry, wrong-digest recovery and partial-cancel cleanup. Observed test-process RSS stays within a 1 GiB assertion. The fifteen-file ingestion profile, documentation, architecture and independent review pass. Local component evidence only.",
+      "limitations": [
+        "These local application/storage tests do not complete the parent criterion or Data roadmap. They do not prove renderer memory, hard memory admission, maximum 4 GiB inputs, private-provider or website transfer, or hostile native filesystem races. Separate full-app/provider/website and broader resource checks remain pending. All prior failures and completed model-accuracy/OCR results remain unchanged."
+      ]
     }
   ]
 }

@@ -50,38 +50,100 @@
       "originalDigest": "c08505e81cfa15d800d2b5a9ad83c5cf4e156ceb60e80f30e9550f59f3a45ead",
       "reason": "Mixed record: available advanced/local/model/scale/UI work is agent-owned. OCR is intentionally unsupported. A concrete new provider/package choice may require user approval, but the agent must first prepare bounded options; no selected supplier or unasked approval is invented.",
       "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data increment 3 provider presentation and increment 4 private-source ingestion qualification",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+        "completionCondition": "Remaining private-provider presentation and ingestion requirements have actual current evidence and independent review. Existing successful publication/retry/denial observations remain preserved and do not supply unrun checks.",
+        "requiredAction": "Reuse the reviewed synthetic private-publication and durable-retry evidence. Finish the remaining provider presentation and private-source ingestion checks, with bounded resource/cleanup evidence and exact-target review. Use only the existing secure credential path and approved test repository; do not request the token again or imply new external publication authority.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "blockerId": "private-provider-and-advanced-runtime-unavailable",
+      "originalBlocker": {
+        "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+        "id": "private-provider-and-advanced-runtime-unavailable",
+        "kind": "credential",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Coding agent",
+        "status": "open",
+        "summary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+      },
+      "originalDigest": "c77e0a5725aee60b361d21a86ebd2e83ad426a94f89d59eaa0fe80a91917495f",
+      "reason": "Reviewed private-provider observations supersede the old claim that basic publication and saved access are untested. Remaining requirements are unchanged and are not resolved by this status correction.",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "revisedSummary": "The saved credential and exact private test repository are authorized. Fixed synthetic publication, exact commit downloads, durable idempotent retry and credential/visibility denial checks have passed. Provider presentation and controlled application ingestion/resource/cleanup qualification remain unfinished. No new credential request or repeated publication is implied."
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data increment 5 remaining advanced-preparation qualification",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+        "completionCondition": "The unchanged remaining advanced-capability requirements have measured evidence and independent review. Completed two-host OCR and accepted model-quality checks stay closed.",
+        "requiredAction": "Reuse completed OCR and accepted model-quality evidence. Complete remaining approved semantic, synthetic-generation, automated UI and bounded resource qualification with fresh exact-target checks and independent review. Preserve prior failed attempts and unresolved requirements; do not rerun accepted accuracy checks or reopen completed OCR.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "blockerId": "advanced-runtime-qualification-unavailable",
+      "originalBlocker": {
+        "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+        "id": "advanced-runtime-qualification-unavailable",
+        "kind": "technical",
+        "recordedAt": "2026-10-22T16:25:39Z",
+        "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Coding agent",
+        "status": "open",
+        "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+      },
+      "originalDigest": "c0cdc5cb8885a281ca42eafc4274530175c7b831a518ef882166ccc161faa4c6",
+      "reason": "The existing pending record predates the approved and qualified Windows OCR adapter. Correct obsolete OCR/provider-selection facts without changing criteria or claiming the broader advanced capability work is done.",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "revisedSummary": "Controlled two-host Windows OCR is qualified and accepted model-accuracy checks stay closed. Remaining advanced-capability work includes larger-data semantic outcomes, generated-candidate admission and criticism, full-app controls, progress/cancellation/cleanup and resource evidence. These are agent-owned technical checks."
     }
   ],
   "blockers": [
     {
-      "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+      "actionLocation": "Data increment 3 provider presentation and increment 4 private-source ingestion qualification",
       "actionOwner": "agent",
-      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
-      "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "completionCondition": "Remaining private-provider presentation and ingestion requirements have actual current evidence and independent review. Existing successful publication/retry/denial observations remain preserved and do not supply unrun checks.",
       "id": "private-provider-and-advanced-runtime-unavailable",
       "kind": "credential",
       "recordedAt": "2026-10-22T16:25:38Z",
-      "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+      "requiredAction": "Reuse the reviewed synthetic private-publication and durable-retry evidence. Finish the remaining provider presentation and private-source ingestion checks, with bounded resource/cleanup evidence and exact-target review. Use only the existing secure credential path and approved test repository; do not request the token again or imply new external publication authority.",
       "resolution": null,
       "resolvedAt": null,
       "responsibleRole": "Coding agent",
       "status": "open",
-      "summary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+      "summary": "The saved credential and exact private test repository are authorized. Fixed synthetic publication, exact commit downloads, durable idempotent retry and credential/visibility denial checks have passed. Provider presentation and controlled application ingestion/resource/cleanup qualification remain unfinished. No new credential request or repeated publication is implied."
     },
     {
-      "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+      "actionLocation": "Data increment 5 remaining advanced-preparation qualification",
       "actionOwner": "agent",
-      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
-      "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "completionCondition": "The unchanged remaining advanced-capability requirements have measured evidence and independent review. Completed two-host OCR and accepted model-quality checks stay closed.",
       "id": "advanced-runtime-qualification-unavailable",
       "kind": "technical",
       "recordedAt": "2026-10-22T16:25:39Z",
-      "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+      "requiredAction": "Reuse completed OCR and accepted model-quality evidence. Complete remaining approved semantic, synthetic-generation, automated UI and bounded resource qualification with fresh exact-target checks and independent review. Preserve prior failed attempts and unresolved requirements; do not rerun accepted accuracy checks or reopen completed OCR.",
       "resolution": null,
       "resolvedAt": null,
       "responsibleRole": "Coding agent",
       "status": "open",
-      "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+      "summary": "Controlled two-host Windows OCR is qualified and accepted model-accuracy checks stay closed. Remaining advanced-capability work includes larger-data semantic outcomes, generated-candidate admission and criticism, full-app controls, progress/cancellation/cleanup and resource evidence. These are agent-owned technical checks."
     }
   ],
   "chunks": [
@@ -2577,6 +2639,18 @@
       "recordedAt": "2026-10-24T00:07:14Z",
       "sequence": 135,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7987993656215fdb7d62baf6815fe0b56b22f0ee7b0343ac03ccd33b2e434777",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "sequence": 136,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "9a7516ce27a50c0bda4f0690f7cd47b90c9a0db6b3b80dd2e9dc0ddc9ee29303",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "sequence": 137,
+      "type": "blocker-reclassified"
     }
   ],
   "humanAcceptanceTransfers": [
@@ -4435,5 +4509,5 @@
   "schemaVersion": 1,
   "slug": "data-management-quality-and-usability",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T00:07:14Z"
+  "updatedAt": "2026-10-26T08:18:53Z"
 }

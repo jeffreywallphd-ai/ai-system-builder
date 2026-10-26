@@ -11360,6 +11360,26 @@
           "These checks use small reference examples. They do not complete the remaining large-data, online-service or full-app checks. Earlier failed attempts remain recorded. Completed model-accuracy and text-recognition checks stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "86da875194a1bf5acd87edab03a8da4bd849c4183d4eb8b2f4690416aeaf48d8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Local-file tests passed for 8 MiB and 64 MiB files using real database and file storage. The tests checked exact progress, saved-file checksums, restart and retry, recovery after a wrong checksum, and cancellation cleanup. The test process stayed within its 1 GiB memory ceiling."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0fcbe32d0d3a467a18a7865b1a4f2f76e75f12b115d913b96950bc3bdf8e063e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover local storage. They do not complete the full-app, private-service, website or maximum-file-size tests. They do not enforce a memory limit in the product. Earlier failures remain recorded. Completed model-accuracy and text-recognition checks stay closed."
+        ]
+      }
     }
   ]
 }

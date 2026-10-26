@@ -3,7 +3,7 @@
 # Data Management Quality and Usability Implementation Roadmap
 
 - Status: `implementation-complete-qualification-pending`
-- Updated: `2026-10-24T00:07:14Z`
+- Updated: `2026-10-26T08:18:53Z`
 
 ## Objective
 
@@ -509,13 +509,13 @@ Remove the additive intent and adaptive capability mapping plus task-specific va
 ## Pending work
 
 Owner: coding agent. No user action is needed. Technical checks are not passed.
-- **private-provider-and-advanced-runtime-unavailable**: Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-...
+- **private-provider-and-advanced-runtime-unavailable**: The saved credential and exact private test repository are authorized. Fixed synthetic publication, exact commit downloads, durable idempotent retry and credential/visibility de...
   - Owner: Coding agent
-  - Action: Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and sc...
-  - Where: Approved private Hugging Face dataset repository and existing secure app credential store
-  - Done when: Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.
-- **advanced-runtime-qualification-unavailable**: OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset cove...
+  - Action: Reuse the reviewed synthetic private-publication and durable-retry evidence. Finish the remaining provider presentation and private-source ingestion checks, with bounded resource/cleanup evidence and exact-target revi...
+  - Where: Data increment 3 provider presentation and increment 4 private-source ingestion qualification
+  - Done when: Remaining private-provider presentation and ingestion requirements have actual current evidence and independent review. Existing successful publication/retry/denial observations remain preserved and do not supply unru...
+- **advanced-runtime-qualification-unavailable**: Controlled two-host Windows OCR is qualified and accepted model-accuracy checks stay closed. Remaining advanced-capability work includes larger-data semantic outcomes, generated...
   - Owner: Coding agent
-  - Action: Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.
-  - Where: Data roadmap advanced preparation and scalable ingestion increments
-  - Done when: The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.
+  - Action: Reuse completed OCR and accepted model-quality evidence. Complete remaining approved semantic, synthetic-generation, automated UI and bounded resource qualification with fresh exact-target checks and independent revie...
+  - Where: Data increment 5 remaining advanced-preparation qualification
+  - Done when: The unchanged remaining advanced-capability requirements have measured evidence and independent review. Completed two-host OCR and accepted model-quality checks stay closed.

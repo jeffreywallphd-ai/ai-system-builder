@@ -30,15 +30,15 @@
       "blockers": [
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
-          "source_blocker_digest": "579fbd0f0800c327f0bf7c22d70ccc5a5d812ed0b7d01e2cc739423946563b4e",
-          "prevents": "Real publication to a private Hugging Face test repository requires an authorized repository and provider credentials configured through the existing secure credential path.",
+          "source_blocker_digest": "eae0d8298d8fd77541de18f998695cc5f4257cad13c2f788134bb033fe869621",
+          "prevents": "Provider presentation and controlled private-source application ingestion/resource/cleanup checks remain unfinished. Existing saved access, synthetic publication, exact commit downloads, durable retry and credential/visibility-denial observations are retained as scoped passing evidence.",
           "plain_language": {
-            "needed": "Test the authorized private Hugging Face repository.",
-            "prevents": "You have supplied the credential and approved the test repository. Publishing and reading test files still need to be checked.",
+            "needed": "Finish the private-service presentation and source-import tests.",
+            "prevents": "Small private uploads, exact downloads, restart-safe retries and access-denial checks have passed. The remaining tests must check the provider display and the app source-import path.",
             "responsible_role": "Coding agent",
-            "user_action": "None. The saved credential and existing test-repository approval are sufficient to start these checks.",
-            "action": "Verify the saved access. Create the approved private test repository if needed. Upload and read small synthetic files. Record the results.",
-            "done_when": "The private publishing and ingestion tests pass. An independent review confirms the results without exposing the credential."
+            "user_action": "You do not need to supply the saved token again. Existing approval covers the synthetic test repository.",
+            "action": "Reuse the successful results. Check the provider presentation and private-source import, including progress, resource limits and cleanup. Keep tests within the approved repository.",
+            "done_when": "The remaining private-service requirements have current measured results and independent review. Earlier failed and successful attempts remain recorded."
           }
         }
       ]
@@ -51,15 +51,15 @@
       "blockers": [
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
-          "source_blocker_digest": "579fbd0f0800c327f0bf7c22d70ccc5a5d812ed0b7d01e2cc739423946563b4e",
-          "prevents": "The private-provider portion of ingestion qualification needs an authorized private test repository and provider credentials. Independent local/website/scale subchecks can continue.",
+          "source_blocker_digest": "eae0d8298d8fd77541de18f998695cc5f4257cad13c2f788134bb033fe869621",
+          "prevents": "Provider presentation and controlled private-source application ingestion/resource/cleanup checks remain unfinished. Existing saved access, synthetic publication, exact commit downloads, durable retry and credential/visibility-denial observations are retained as scoped passing evidence.",
           "plain_language": {
-            "needed": "Test the authorized private Hugging Face repository.",
-            "prevents": "You have supplied the credential and approved the test repository. Publishing and reading test files still need to be checked.",
+            "needed": "Finish the private-service presentation and source-import tests.",
+            "prevents": "Small private uploads, exact downloads, restart-safe retries and access-denial checks have passed. The remaining tests must check the provider display and the app source-import path.",
             "responsible_role": "Coding agent",
-            "user_action": "None. The saved credential and existing test-repository approval are sufficient to start these checks.",
-            "action": "Verify the saved access. Create the approved private test repository if needed. Upload and read small synthetic files. Record the results.",
-            "done_when": "The private publishing and ingestion tests pass. An independent review confirms the results without exposing the credential."
+            "user_action": "You do not need to supply the saved token again. Existing approval covers the synthetic test repository.",
+            "action": "Reuse the successful results. Check the provider presentation and private-source import, including progress, resource limits and cleanup. Keep tests within the approved repository.",
+            "done_when": "The remaining private-service requirements have current measured results and independent review. Earlier failed and successful attempts remain recorded."
           }
         }
       ]
@@ -72,15 +72,15 @@
       "blockers": [
         {
           "blocker_id": "advanced-runtime-qualification-unavailable",
-          "source_blocker_digest": "cbd72d5815ac82f2923fd87c384c03458475c62e36812201bae0050001921895",
-          "prevents": "The OCR and layout-extraction portion cannot qualify until a selected OCR provider/runtime is governed and available. Available model/UI subchecks can continue.",
+          "source_blocker_digest": "317dbce488bbb9bf6681f6a801c5004ee03ef3863960ad689917a0ca1e6af110",
+          "prevents": "Larger-data semantic quality, generated-candidate admission/criticism, full-app controls, progress/cancellation/cleanup and bounded-resource qualification remain pending. Completed two-host Windows OCR and accepted model-accuracy checks are not reopened.",
           "plain_language": {
-            "needed": "Finish the advanced data-processing tests and prepare the text-recognition options.",
-            "prevents": "Some document, model, interface and scale checks remain unfinished. Text recognition is not yet a supported capability.",
+            "needed": "Finish the remaining advanced data-processing checks.",
+            "prevents": "Text recognition has passed in both apps. Larger-data cleanup, generated-example checks, app controls, cancellation and resource tests still need evidence.",
             "responsible_role": "Coding agent",
-            "user_action": "None now. The agent must prepare clear options before asking you to choose any new text-recognition tool.",
-            "action": "Complete the available approved tests. Prepare options for a tool that reads scanned text. Obtain approval before adopting a new supplier.",
-            "done_when": "The unchanged data-processing requirements have measured results and independent review. Any new tool is approved and tested before support is claimed."
+            "user_action": "No action needed for this work. The agent must complete the remaining automated checks.",
+            "action": "Reuse completed text-recognition and model-accuracy results. Test the remaining data-cleanup, generated-example and interface behavior within the approved resource limits.",
+            "done_when": "The remaining advanced-processing requirements have measured results and independent review. Completed text-recognition and model-accuracy checks stay closed."
           }
         }
       ]
