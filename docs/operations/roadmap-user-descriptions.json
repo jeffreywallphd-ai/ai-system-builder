@@ -11165,6 +11165,48 @@
           "The agent must complete the full-app tests, online publishing tests, recovery checks and large-data tests. No action needed. Accepted model accuracy tests stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f3b35aa4d561651a897fc9a72515f2962face671c6940407ace9f0c9685424a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop app can restore all supported saved settings together. It checks that the form can represent the saved setup before changing any fields. Old restore requests cannot replace later edits or interrupt a running task.",
+          "The agent is completing the remaining Data work. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "94c70ee594a7f41771f10ab242fdbfce74cfa09e9903f0e99d64268cb1da1c98",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In Desktop, Use this setup again now opens Preparation and fills the form. The success notice appears after the form changes. Leaving the page, changing workspaces, editing the form or a failed file read cancels an old request.",
+          "The agent is completing the remaining Data work. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1177808d89e475981121ed5813ed9908763a00fc38f24868642a11b6a2953ab6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish saved-settings reuse in the browser app, finish and test reuse with large source lists, and finish the full-app, online publishing, recovery, large-data and advanced preparation checks. No action needed. Completed model accuracy tests stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ec9e5e8e0919294a7f2af6c6975b2604ec3292beeee6440d222fe5508909c8fc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop app checks saved settings and the current file list. You must still review the setup and start a task yourself. These tests do not prove file contents or online publishing."
+        ]
+      }
     }
   ]
 }

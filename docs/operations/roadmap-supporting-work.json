@@ -3778,6 +3778,44 @@
         "The one-use page/form consumer for saved setup reuse and actual application acknowledgment are still pending. No source-readiness test grants reuse, source-byte integrity or authorization.",
         "Actual packaged/browser journeys, authorized private-provider publication and restart, scale, advanced runtime and other parent checks remain pending. Accepted model accuracy outcomes stay closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-desktop-validated-replay",
+      "work_criteria": [
+        "strict-current-replay-context",
+        "atomic-complete-settings",
+        "reviewed-consumer-regressions"
+      ],
+      "receipt_digest": "d94dd93dc1ea9796040938a3119f326f07d6e946d3d42846190ccf9e40d5888e",
+      "review_digest": "942bb6e9fa8ebd0628e004a9681611aee9ce35ccc238e7de2cd694f598abd262",
+      "scope": "Reviewed complete Desktop settings replacement with exact workspace/version/file/current-source validation, fresh represented defaults, actual request-builder persisted-JSON roundtrip equality, provider reset, stale-frame and active-task denial. Exact selected12-file source projection passed the19-file Browser profile with218 tests and Desktop full-program type check had zero diagnostics. Six current gates and separate review passed.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "Thin supported-settings restore and page integration remain pending. Large source-list matching projection, actual host/provider publication and restart, scale and advanced runtime remain separate unqualified parent work. Existing accepted model accuracy outcomes stay closed.",
+        "Desktop restore validates the represented saved configuration and its current source identities, not source bytes, runtime readiness or publication authorization. No automatic task, model or provider dispatch is granted."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-desktop-one-use-handoff",
+      "work_criteria": [
+        "page-owned-one-use-request",
+        "actual-current-form-acknowledgment",
+        "reviewed-handoff-delivery"
+      ],
+      "receipt_digest": "7521b3784bfd4d44122b9eb464629d10741fd993db1616abe4e211a6b71738a8",
+      "review_digest": "0b008102bc1d2a719521dc334f033f95075fd088cd0bccd0e30cc8125377c7e8",
+      "scope": "Reviewed shared ephemeral page-owned one-use request, separate consumer-session identity, bounded data capture, current workspace/tab/source checks, post-form-commit acknowledgment and scoped success notification. Actual Desktop Browser-to-Preparation journeys and lifecycle denials passed; exact selected16-file source projection passed the21-file Browser profile with243 tests and Desktop full-program type check had zero diagnostics. Five current gates and separate review passed.",
+      "limitations": [
+        "Reviewed local implementation support does not complete a parent criterion, Data increment3, the Data roadmap or release qualification.",
+        "Thin supported-settings restore and page integration remain pending. Large source-list matching projection, actual host/provider publication and restart, scale and advanced runtime remain separate unqualified parent work. Existing accepted model accuracy outcomes stay closed.",
+        "Desktop restore validates the represented saved configuration and its current source identities, not source bytes, runtime readiness or publication authorization. No automatic task, model or provider dispatch is granted."
+      ]
     }
   ]
 }
