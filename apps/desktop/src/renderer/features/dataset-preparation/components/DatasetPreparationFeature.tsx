@@ -1,3 +1,4 @@
+import { useDatasetVersionReplayConsumer, type DatasetVersionReplayHandoff } from "../../../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
 import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
 import { useId, useMemo, useState, type ReactNode } from "react";
 
@@ -42,6 +43,7 @@ import {
 } from "../profiles/datasetPreparationTaskProfiles";
 
 export interface DatasetPreparationFeatureProps {
+  replayHandoff?: DatasetVersionReplayHandoff;
   onPrepared?: (artifactStorageKey: string) => void;
   client?: DesktopDatasetPreparationClient;
   settingsClient?: DesktopApplicationSettingsClient;
@@ -129,6 +131,7 @@ export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps)
 }
 
 function WorkspaceDatasetPreparationFeature({
+  replayHandoff,
   onPrepared,
   client,
   settingsClient,
@@ -284,6 +287,7 @@ function WorkspaceDatasetPreparationFeature({
     onDownloadGenerationModel,
     onSaveTrainingSettings,
     onLoadTrainingSettings,
+    onReuseDatasetVersion,
   } = useDatasetPreparationFeature({
     client,
     settingsClient,
@@ -292,6 +296,9 @@ function WorkspaceDatasetPreparationFeature({
     onPrepared,
     workspaceId,
   });
+  const cancelReplayOnEdit = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus,
+    request => onReuseDatasetVersion(request.reproduction, request.selection));
+
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
@@ -478,6 +485,9 @@ function WorkspaceDatasetPreparationFeature({
       <div className="ui-panel__section-body dataset-preparation ui-stack ui-stack--sm">
         <p>Prepare training datasets from selected artifacts.</p>
         <form
+          onInputCapture={cancelReplayOnEdit}
+          onChangeCapture={cancelReplayOnEdit}
+          onClickCapture={cancelReplayOnEdit}
           className="dataset-preparation__form ui-stack ui-stack--sm"
           onSubmit={(event) => void onSubmit(event)}
         >

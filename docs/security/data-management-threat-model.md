@@ -956,6 +956,18 @@ checks; do not accept caller metadata as proof of recognized content.
   source-request fence retires stale edits, workspace/client/retry/unmount and
   task-start callbacks; active tasks and reviews retain their status. Successful
   application retires the invocation and resets all provider controls to local.
-  The page-owned one-use handoff, applied acknowledgment and Thin consumer remain
-  pending. No reuse action is offered yet, and these local hook checks grant no
-  parent, provider, native, source-byte or authorization qualification.
+  Desktop now offers reuse through a page-owned exact one-use request and opaque
+  consumer claim. Capture inspects descriptors without invoking getters/toJSON,
+  limits each reproduction/selection capture to 1 MiB, 20,000 nodes and depth16, clones
+  and freezes data, and releases settled request references. Recipe undefined
+  values remain invalid; only normalized selection optional object fields omit
+  undefined values. Current page scope retires navigation/workspace/superseded
+  requests before the consumer's passive post-commit acknowledgment. Consumer
+  identity, current source status, form edit capture and one-use application
+  prevent stale writes and false success. StrictMode cleanup tickets preserve a
+  still-mounted session and retire actual disposal. The surviving page announces
+  one fixed scoped success after commit, never after queue/navigation. Cancellation
+  makes no unchanged-state, rollback or publication claim. Reuse dispatches no
+  task/model/provider action. Thin consumer and actual host/provider/scale checks
+  remain pending; these local UI checks grant no parent, native, source-byte or
+  application authorization qualification.

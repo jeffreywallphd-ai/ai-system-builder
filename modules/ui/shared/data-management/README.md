@@ -233,3 +233,11 @@ Preparation method captions and the recognition-language caption have stable,
 short accessible names. Associate changing instructions as descriptions rather
 than including them in the control name. Use component-generated IDs so multiple
 forms do not share label or help targets. Real OCR journeys use the exact captions.
+
+Desktop Artifact Browser now offers Use this setup again for an exact saved
+version. The page owns one request; Preparation waits for its current source
+list and applies only complete validated settings. Success is announced from
+the surviving page after the resulting form commit. Input, navigation, workspace
+changes, source failure or replacement requests retire older delivery. The action
+never runs preparation or publishes a dataset. Thin-client reuse remains absent
+until its complete supported-settings consumer is connected and tested.

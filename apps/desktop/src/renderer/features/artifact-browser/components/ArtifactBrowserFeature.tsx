@@ -34,10 +34,11 @@ import { copyArtifactMediaBytesToArrayBuffer } from "../helpers/artifactMediaByt
 import { ModalDialog } from "../../../../../../../modules/ui/shared/components/ModalDialog";
 import type { ContextConversionReadiness } from "../../../../../../../modules/contracts/context-management";
 
-import { DatasetVersionPanel, type DatasetVersionPanelService } from "../../../../../../../modules/ui/shared/dataset-version";
+import { DatasetVersionPanel, type DatasetVersionPanelService, type DatasetVersionPanelProps } from "../../../../../../../modules/ui/shared/dataset-version";
 
 export interface ArtifactBrowserFeatureProps {
   datasetVersionService?: DatasetVersionPanelService;
+  onReuseDatasetVersion?: DatasetVersionPanelProps["onReuse"];
   client?: DesktopArtifactBrowserClient;
   workspaceId?: string;
   workspaceName?: string;
@@ -103,6 +104,7 @@ function PublishedBackingPanel(props: {
 export function ArtifactBrowserFeature({
   client,
   datasetVersionService,
+  onReuseDatasetVersion,
   workspaceId,
   readParquetPreview,
   initialSelectedStorageKey,
@@ -936,6 +938,7 @@ export function ArtifactBrowserFeature({
                     workspaceId={workspaceId}
                     datasetArtifactKey={detail.locator.storageKey}
                     service={datasetVersionService}
+                    onReuse={onReuseDatasetVersion}
                   />
                 ) : null}
                 {backingState.isRemoteOnly ? (

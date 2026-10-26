@@ -49,7 +49,7 @@ it("mounts the real Browser history through the page's current client adapter an
  const {publication}=setup(); await act(async()=>root!.render(<NotificationProvider><ArtifactsPage workspaceId="workspace-a" workspaceName="Test" initialSelectedStorageKey="data/v2.jsonl" refreshToken={0} onUploaded={()=>{}}/></NotificationProvider>));
  expect(document.body.textContent).toContain("Saved versions");expect(document.body.querySelector('select')||document.body.textContent).toBeTruthy();
  expect(state.client.listVersions).toHaveBeenCalledWith("workspace-a",undefined);
- expect(document.body.textContent).not.toContain("Use this setup again");expect(publication).not.toHaveBeenCalled();
+ expect(document.body.textContent).toContain("Use this setup again");expect(publication).not.toHaveBeenCalled();
  const field=document.body.querySelector<HTMLInputElement>('input[placeholder="owner/dataset-name"]')!;expect(field).toBeTruthy();
  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!.call(field,"owner/support");field.dispatchEvent(new Event("input",{bubbles:true}));});
  await click("Publish privately");expect(publication).toHaveBeenCalledExactlyOnceWith({workspaceId:"workspace-a",versionId:"v2",repositoryId:"owner/support",visibility:"private"});

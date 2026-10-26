@@ -32,8 +32,10 @@ History and comparison failures retain visible retry controls. Refresh is also
 available for empty and successful history. Publication defaults to private,
 requires explicit dispatch, and validates the returned workspace, version,
 repository and visibility. Changing publication inputs clears public consent.
-The page-owned setup reuse consumer remains separate pending work; the Browser
-does not offer reuse until that consumer can acknowledge actual application.
+Desktop Browser offers setup reuse through a page-owned one-use handoff. Its
+Preparation consumer waits for current sources and acknowledges actual settings
+application from the resulting form commit. Thin reuse remains absent pending
+its complete supported-settings consumer.
 
 Preparation source loading in both hosts distinguishes loading, failed and
 successfully ready lists, including a genuine empty result. Add data offers a
@@ -45,7 +47,7 @@ progress. Desktop source and version-list replies without an array fail instead
 of claiming an empty result. The shared thin-client HTTP source client also
 rejects missing or nonarray source items. Its real-client Preparation test covers
 safe failure followed by direct retry to a genuine empty list. These controls prepare
-for, but do not implement, setup reuse.
+for setup reuse; each host must also enforce its page and consumer checks.
 
 The internal Desktop restore hook now validates the exact selected version/file,
 complete current sources and every saved setting. It builds a full replacement,
@@ -54,9 +56,14 @@ any configuration setter. The last committed form frame and source request must
 still match. Edits, source retry, client/workspace changes, unmount and task start
 retire old callbacks; active tasks and reviews retain their progress unchanged.
 A successful restore retires that invocation and resets provider destinations to
-local-only. This synchronous internal result is not page acknowledgment. Neither
-app exposes setup reuse yet; the page-owned one-use handoff and Thin consumer
-remain pending, as do actual host/provider/scale checks.
+local-only. This synchronous internal result is not page acknowledgment. Desktop
+now carries one bounded frozen ephemeral request through the surviving page,
+claims it with an opaque consumer session and acknowledges only from the resulting
+committed form render. Edits, scope/navigation changes, source failure and
+supersession retire older delivery; no queued navigation, stale panel or canceled
+request can announce success. Request data is released after settlement. Reuse
+starts no task, model or publication. Thin reuse and actual host/provider/scale
+checks remain pending.
 
 The shared Artifact Browser uses the same card presentation for uploaded and
 generated artifacts. User data remains previewable without exposing active

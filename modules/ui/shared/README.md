@@ -298,3 +298,10 @@ expanded state, Escape dismissal and focus restoration remain unchanged.
   to the current version and destination. Public confirmation resets on input
   changes. Setup reuse is shown only when an applying consumer is supplied;
   navigation alone cannot acknowledge application.
+
+The dataset-version `useDatasetVersionReplayHandoff` hook owns one ephemeral
+page request and a separate consumer-session claim. It captures bounded frozen
+JSON without getters, retires stale scope/navigation/edits and resolves success
+only after the consumer's applied-state commit. Desktop uses this with its
+complete validated settings hook. The coordinator grants no authorization,
+source-byte proof, runtime readiness, provider action or parent qualification.

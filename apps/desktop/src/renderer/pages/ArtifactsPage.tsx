@@ -12,6 +12,7 @@ import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDash
 import { createDesktopContextManagementClient } from "../features/context-management/api/desktopContextManagementClient";
 
 import type { DatasetVersionPanelService } from "../../../../../modules/ui/shared/dataset-version";
+import { useDatasetVersionReplayHandoff } from "../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
 
 export interface ArtifactsPageProps {
   workspaceId: string;
@@ -32,6 +33,7 @@ export function ArtifactsPage({
   onConvertToRag,
 }: ArtifactsPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
+  const replayHandoff = useDatasetVersionReplayHandoff(workspaceId, activeTabId === "dataset-preparation", () => setActiveTabId("dataset-preparation"));
   const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
     useState<string>();
   const onDatasetPrepared = (artifactStorageKey: string) => {
@@ -167,6 +169,7 @@ export function ArtifactsPage({
                 key={`${workspaceId}-${refreshToken}`}
                 workspaceId={workspaceId}
                 datasetVersionService={datasetVersionService}
+                onReuseDatasetVersion={replayHandoff.enqueue}
                 readParquetPreview={parquetPreviewReader}
                 initialSelectedStorageKey={
                   preparedArtifactStorageKey ?? initialSelectedStorageKey
@@ -191,6 +194,7 @@ export function ArtifactsPage({
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
                 onPrepared={onDatasetPrepared}
+                replayHandoff={replayHandoff}
               />
             ),
           },
