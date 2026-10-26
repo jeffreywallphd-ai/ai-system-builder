@@ -3683,6 +3683,25 @@
         "Advanced semantic preparation, representative data/resource/scale qualification, saved-version history/reuse and safe publication remain separate agent work. Earlier component descriptions and failed attempts remain historical.",
         "This run uses one installed Windows language and a synthetic five-page PDF. Generation is synthetic; no model-accuracy tests were repeated. It does not qualify other engines, languages or broader format/scale accuracy, in-flight native OCR cancellation or general accessibility."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "lineage-supports-reproduction-and-comparison",
+      "work_id": "dataset-version-replay-validation",
+      "work_criteria": [
+        "complete-pure-replay-value",
+        "exact-reproduction-source-association",
+        "security-and-bounded-component-evidence"
+      ],
+      "receipt_digest": "cc6b82e95e2e7465325a86a34c48d2b8f0c32e54bcf66bc5aeca61fd26094be3",
+      "review_digest": "8ac5c0e67099fb075c5705b4df1ab871938a8ea372e9c98616c1f73629b3abbe",
+      "scope": "Reviewed pure dataset replay validates exact workspace/version/artifact/lineage/source association and complete supported settings before side effects. Returns a frozen typed value or fixed denial; handles current producer shapes, worker defaults, OCR, model/memory, output shape, split and quality. Primary130 focused tests, scoped TypeScript and five gates passed. Independent review closed four findings. This component is not yet wired to either app.",
+      "limitations": [
+        "Component evidence does not complete Data increment3, a parent criterion, a work chunk, the roadmap or a release.",
+        "Artifact Browser mounting, page-owned request freshness, ready source state, one-use handoff and actual application acknowledgment still need implementation and host tests.",
+        "No provider publication, native/offload, scale or model-accuracy qualification was run or granted by this component. Previously accepted model accuracy stays closed."
+      ]
     }
   ]
 }

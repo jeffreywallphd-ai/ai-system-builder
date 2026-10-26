@@ -11029,6 +11029,48 @@
           "The test uses the installed Windows reader, one language and a new five-page scanned PDF. Example generation is simulated. It does not repeat model accuracy tests or prove other languages, readers, large collections or general accessibility. Cancellation is checked after recognition; stopping an OCR read in progress remains separate."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "772974ab837e229582cd07042f8add1dcc7d0c33eb8e8e0d1fbd17af3544f358",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The new saved-setup validation code passed 130 focused tests, a TypeScript check and five repository checks.",
+          "It checks the source files and all supported saved settings as one set. It returns a complete result or a safe error.",
+          "The agent must still connect this code to both apps and test the restore workflow. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "97a668b5ae5d249af4e7b2b71f16533a46311fbf904ddee8114f67b85025f585",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is one tested code component. It does not finish Data step3 or the Data roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f34b1e17893bf2609219e13d8b618b1054abf9a15e54cc64cf8c1803c82640b8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must add version history to Artifact Browser and finish the safe handoff to the preparation form in both apps. Full app tests are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c1955543eff81d5df51ea9341c5e79381b960d96d45251a18c944222ad8f2829",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This work does not test online publishing, large datasets or model accuracy. Earlier accepted model accuracy tests stay closed."
+        ]
+      }
     }
   ]
 }
