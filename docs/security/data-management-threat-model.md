@@ -1164,3 +1164,21 @@ unknown outcome. A bounded terminal cache refuses replay. Host authority, memory
 guards, task lifetime and model expectations do not change. Synthetic rendered
 and real client-mapping regressions are local support, not physical model/OCR,
 native recovery, actual host or parent-roadmap qualification.
+
+### Shared model-download notification boundaries
+
+A complete download page is checked for current workspace, bounded unique task
+identity, model/display fields and supported status before optional completion.
+No valid prefix of an invalid page can trigger completion. Identity capture
+prevents a caller from changing the expected task while completion is awaiting.
+Returned completion and shared cached pages are checked before publication.
+Committed client/workspace cleanup fences late replies. Existing live/history
+reconciliation and host/application registration controls remain authoritative.
+
+Fixed public messages replace runtime progress/error text. Numeric progress uses
+ordered safe integers or a finite in-range percentage when counts are absent;
+unknown units and invalid values are omitted. Only bounded valid timestamps are
+forwarded. Synthetic UI regressions preserve the existing history behavior and
+exercise malformed/foreign/duplicate/oversized pages, mutable identity, wrong
+completion, retirement and safe copy. They do not qualify downloads, models, real
+hosts, physical native protections or any parent roadmap.

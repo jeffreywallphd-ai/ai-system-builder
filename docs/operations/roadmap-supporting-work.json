@@ -4205,6 +4205,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "dataset-notification-safe-outcomes",
+      "work_criteria": [
+        "dataset-notification-safe-copy-and-memory",
+        "dataset-notification-owned-lifetime",
+        "dataset-notification-evidence-and-scope"
+      ],
+      "receipt_digest": "082eaf8d0fe5389f1be168b4ab46b556e3c8ea448ed0a15412eb22cb2927bc62",
+      "review_digest": "d94297487af86890bd2cf24627d109b60476006cbe6584040de1e1bb46219516",
+      "scope": "Tested and committed Dataset notifications with safe messages, measured memory-shortfall advice, valid progress and current-session task outcomes.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

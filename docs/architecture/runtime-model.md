@@ -671,3 +671,18 @@ session. Unknown or mismatched status stays uncertain and retries. Progress uses
 validated integer counts and fixed copy; runtime free text and error details do
 not enter notification history. Matching terminal outcomes are not replayed by a
 duplicate start event. Focused rendered tests do not qualify physical training.
+
+### Download notification scope
+
+The shared download bridge validates the complete current-workspace page before
+optional completion calls. Pages contain at most 100 unique contract-valid task
+identities and closed statuses. Captured identity fields stay fixed across awaits;
+completion must match the requested task, workspace and model. Committed client
+retirement rejects late replies. Existing bounded live/terminal history behavior
+still reconciles navigation without replaying unrelated terminal history.
+
+Public download messages are fixed. Progress keeps valid ordered integer counts
+or a finite percentage when counts are absent; only known units are displayed.
+Invalid values and runtime error/progress text stay out of notification history.
+These renderer checks supplement host/application authorization and do not grant
+provider, download, registration, model-quality or native execution authority.

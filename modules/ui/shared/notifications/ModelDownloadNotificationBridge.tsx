@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useTaskObservationManager } from "./TaskObservationProvider";
 import { BoundedTaskIds } from "./taskObservation";
 
@@ -38,7 +38,7 @@ export function ModelDownloadNotificationBridge({
   const liveIdsRef = useRef(new BoundedTaskIds());
   const failureReportedRef = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     initializedRef.current = false;
     terminalIdsRef.current.clear();
     failureReportedRef.current = false;
@@ -47,18 +47,23 @@ export function ModelDownloadNotificationBridge({
     let disposed = false;
     const unsubscribe = observer.subscribe({ workspaceId, family: "model-download", requestId: "list" }, async () => {
       const result = await client.listModelDownloads({ workspaceId: createWorkspaceId(workspaceId), includeCompleted: true, limit: 100 });
+      // Refuse the entire page before a completion call can have side effects.
+      // Host/application authorization remains authoritative below this client.
+      if (!result || !isScopedPage(result.activities, workspaceId)) throw new Error("Download status is unavailable.");
+      const page = result.activities.map(captureActivity);
       const activities: ModelDownloadTaskActivity[] = [];
-      for (const observed of result.activities) {
+      for (const observed of page) {
         if (disposed) break;
         const activity = observed.status === "succeeded" && !observed.model && client.completeModelDownload
           ? (await client.completeModelDownload({ workspaceId: createWorkspaceId(workspaceId), requestId: observed.requestId })).activity
           : observed;
-        if (!disposed) activities.push(activity);
+        if (!isScopedActivity(activity, workspaceId) || activity.requestId !== observed.requestId || activity.modelId !== observed.modelId) throw new Error("Download completion is unavailable.");
+        if (!disposed) activities.push(captureActivity(activity));
       }
       return { value: activities, activity: activities.some((a) => a.status === "queued" || a.status === "running") ? "active" : "idle" };
     }, (result) => {
       if (disposed) return;
-      if (!result) {
+      if (!result || !isScopedPage(result.value, workspaceId)) {
         if (!failureReportedRef.current) notifications.publish({ title: "Download status unavailable", message: "Model download status could not be refreshed. Progress will retry automatically.", tone: "warning", source: "Model downloads", workspaceId, dedupeKey: "model-download-status-unavailable" });
         failureReportedRef.current = true;
         return;
@@ -90,7 +95,7 @@ function toNotificationActivity(activity: ModelDownloadTaskActivity) {
     title: activity.displayName,
     message: activityMessage(activity),
     status: normalizeStatus(activity.status),
-    progress: activity.progress,
+    progress: downloadProgress(activity.progress),
     source: "Model downloads",
     workspaceId: activity.workspaceId,
     updatedAt: activity.updatedAt,
@@ -105,12 +110,52 @@ function normalizeStatus(status: ModelDownloadTaskActivity["status"]): Notificat
 
 function activityMessage(activity: ModelDownloadTaskActivity): string {
   if (activity.status === "succeeded") return "Model download completed.";
-  if (activity.status === "failed") return activity.error?.message ?? "Model download failed.";
+  if (activity.status === "failed") return "Model download failed. Open Models to review the download and retry.";
   if (activity.status === "cancelled") return "Model download was cancelled.";
   if (activity.status === "queued") return "Waiting to download.";
-  return activity.progress?.message ?? "Downloading model.";
+  return activity.status === "unknown" ? "Model download status is unavailable." : "Downloading model.";
 }
 
 function isTerminal(status: ModelDownloadTaskActivity["status"]): boolean {
   return status === "succeeded" || status === "failed" || status === "cancelled";
+}
+
+function isScopedActivity(value: ModelDownloadTaskActivity | null | undefined, workspaceId: string): value is ModelDownloadTaskActivity {
+  return Boolean(value && value.workspaceId === workspaceId
+    && typeof value.requestId === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(value.requestId)
+    && typeof value.modelId === "string" && value.modelId.trim() && value.modelId.length <= 512
+    && typeof value.displayName === "string" && value.displayName.trim() && value.displayName.length <= 512
+    && (value.status === "queued" || value.status === "running" || value.status === "succeeded"
+      || value.status === "failed" || value.status === "cancelled" || value.status === "unknown"));
+}
+
+function isScopedPage(value: unknown, workspaceId: string): value is readonly ModelDownloadTaskActivity[] {
+  if (!Array.isArray(value) || value.length > 100) return false;
+  const identities = new Set<string>();
+  for (const activity of value) {
+    if (!isScopedActivity(activity, workspaceId) || identities.has(activity.requestId)) return false;
+    identities.add(activity.requestId);
+  }
+  return true;
+}
+
+function captureActivity(activity: ModelDownloadTaskActivity): ModelDownloadTaskActivity {
+  const updatedAt = typeof activity.updatedAt === "string" && activity.updatedAt.length <= 40
+    && Number.isFinite(Date.parse(activity.updatedAt)) ? activity.updatedAt : undefined;
+  return Object.freeze({ requestId: activity.requestId, workspaceId: activity.workspaceId,
+    modelId: activity.modelId, displayName: activity.displayName, status: activity.status,
+    model: activity.model, progress: downloadProgress(activity.progress), updatedAt });
+}
+
+function downloadProgress(progress: ModelDownloadTaskActivity["progress"]) {
+  if (!progress) return undefined;
+  const { current, total, percent } = progress;
+  if (current !== undefined || total !== undefined) {
+    if (typeof current !== "number" || !Number.isSafeInteger(current) || current < 0
+      || typeof total !== "number" || !Number.isSafeInteger(total) || total <= 0 || current > total) return undefined;
+    return { current, total, percent: current / total * 100,
+      ...(progress.unit === "bytes" || progress.unit === "files" ? { unit: progress.unit } : {}) };
+  }
+  return typeof percent === "number" && Number.isFinite(percent) && percent >= 0 && percent <= 100
+    ? { percent } : undefined;
 }

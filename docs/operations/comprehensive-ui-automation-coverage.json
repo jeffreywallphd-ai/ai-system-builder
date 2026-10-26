@@ -222,6 +222,12 @@
           "name": "safe progress/failure copy, measured memory guidance, exact session and terminal listener ownership",
           "tier": "rendered-notification-and-real-client-mapping-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
+          "name": "current download scope, complete-page admission, captured completion identity and safe numeric progress",
+          "tier": "shared-rendered-download-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",

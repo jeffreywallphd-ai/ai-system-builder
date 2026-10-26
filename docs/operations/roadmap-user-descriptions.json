@@ -11609,6 +11609,18 @@
           "These local results do not complete actual host checks or the roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "37c7c71ed0e6eae27be9eb6cf4ae9ed644a426029b5fc8f88910f4b6f1650d8e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed safe Dataset notifications and valid progress.",
+          "Memory messages retain the measured amount to free when that information is available.",
+          "These local results do not complete actual host checks or the roadmap."
+        ]
+      }
     }
   ]
 }

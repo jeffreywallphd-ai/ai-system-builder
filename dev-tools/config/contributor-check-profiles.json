@@ -418,7 +418,8 @@
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-feature.unit.test.tsx",
         "dev-tools/scripts/qualification/tests/owned-task-journey-boundary.unit.test.ts",
-        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts"
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts",
+        "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
