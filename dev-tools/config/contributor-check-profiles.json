@@ -422,7 +422,8 @@
         "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
         "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
         "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx"
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",

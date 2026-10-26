@@ -741,3 +741,11 @@ Each deletion confirmation has its own object identity. Closing, reopening or
 editing it retires the earlier identity, even for the same record. A late delete
 result may refresh current inventory but cannot close a newer confirmation or
 publish its success or failure there. The same rule applies during refresh.
+
+Focused Desktop Models integration mounts the actual feature and joins its
+client to the real preload factory, registered handlers, application use cases
+and fresh durable JSON registry through an injected in-process invoke port.
+The journeys cover pagination, saved references, workspace separation, reopened
+registry state, exact deletion and safe failure. The existing native-location
+denial adapter remains in place. This tier does not qualify physical Electron
+IPC, sender authorization, production SQLite, whole-app or provider/model behavior.

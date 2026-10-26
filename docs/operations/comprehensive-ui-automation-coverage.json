@@ -1239,6 +1239,12 @@
           "name": "current workspace/client and latest result ordering, Strict Mode retirement, exact single-admission deletion/effect acknowledgement, safe errors and failed-refresh preservation",
           "tier": "real-desktop-model-panels-and-controller-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "mounted feature with real client, preload, registered handlers, use cases and reopened JSON registry; pagination, exact reference lifecycle, workspace separation, safe provider retry and preserved native-file denial",
+          "tier": "real-desktop-model-feature-and-preload-handlers-registry-with-in-process-invoke-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -1310,6 +1316,12 @@
           "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
           "name": "current workspace/client and latest result ordering, Strict Mode retirement, exact single-admission deletion/effect acknowledgement, safe errors and failed-refresh preservation",
           "tier": "real-desktop-model-panels-and-controller-bounded-client-fixture",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "mounted feature with real client, preload, registered handlers, use cases and reopened JSON registry; pagination, exact reference lifecycle, workspace separation, safe provider retry and preserved native-file denial",
+          "tier": "real-desktop-model-feature-and-preload-handlers-registry-with-in-process-invoke-fixture",
           "qualification": "focused-execution-and-independent-review-required"
         }
       ],

@@ -1205,3 +1205,12 @@ Delete confirmation ownership is separate from request and workspace ownership.
 A replacement form retires earlier consent. Exact current target and text are
 checked at dispatch; a late result cannot clear a replacement or publish an
 outcome over it, including same-record reopening and follow-up refresh races.
+
+The Desktop Models composed UI fixture retains the real native-location denial
+adapter. A requested file action must remain non-successful and leave the fresh
+fixture record and bytes intact. The actual renderer client omits location paths.
+Provider failures use fixed public copy, and workspace-owned references survive
+bridge/registry reconstruction. The invoke event and provider are bounded offline
+fixtures, not sender-authentication or native-effect qualification. Temporary
+cleanup checks only the fresh owned regular tree after UI retirement; old
+retained resources and production credentials are never inspected.

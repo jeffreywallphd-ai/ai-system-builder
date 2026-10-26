@@ -11696,6 +11696,20 @@
           "Actual app, provider, production sign-in and final roadmap checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1c52ffca18baf62d1c68751f563cedb0bd88f00cb7d7364c78bc3cbad1547cd6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed the Desktop Models repairs.",
+          "Old workspace results cannot replace the current view.",
+          "A late deletion result cannot close a newer confirmation.",
+          "Tests also check exact deletion results, safe error messages and retry guidance.",
+          "Actual app, native file, provider and final roadmap checks remain pending."
+        ]
+      }
     }
   ]
 }
