@@ -4310,6 +4310,23 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "model-reference-http-ui-roundtrips",
+      "work_criteria": [
+        "model-reference-composed-ui-storage",
+        "model-reference-http-failure-and-scope"
+      ],
+      "receipt_digest": "a4e75a64d0b5942e87370bdd34d473144767ce98d11e2f2b38a2ffb495f53bd9",
+      "review_digest": "fed478d5bb3cc72d58d24fd8073bf67c4fc333cade4ff45a6bebd97ec68d8dfa",
+      "scope": "Tested and committed the mounted browser Models reference journey through actual loopback HTTP, production routes/use cases and durable registry, with workspace separation, record-only deletion and safe retry.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

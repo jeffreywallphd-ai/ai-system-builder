@@ -1190,3 +1190,18 @@ under another code and a known code on unknown status cannot assert worker exit.
 Existing real host recovery assertions remain unchanged. Local bridge/runtime
 fixtures support this compatibility repair without claiming an actual host fault
 or native retirement qualification.
+
+Desktop model views use commit-bound object leases and exact read tickets to
+reject late results after workspace/client retirement and out-of-order reads.
+Strict Mode replay cannot reactivate earlier ownership. Scope retirement clears
+private model selection, destructive confirmation and action outcomes. Model
+exceptions never enter public view/notification copy. Deletion is single-admission
+and requires exact record, success and requested-effects acknowledgement before
+confirmation closes; a failed follow-up read retains its retry guidance. These
+rendered synthetic regressions do not qualify native file effects, main-process
+sender authorization, provider/model behavior or the restricted legacy review.
+
+Delete confirmation ownership is separate from request and workspace ownership.
+A replacement form retires earlier consent. Exact current target and text are
+checked at dispatch; a late result cannot clear a replacement or publish an
+outcome over it, including same-record reopening and follow-up refresh races.

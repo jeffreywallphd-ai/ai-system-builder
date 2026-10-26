@@ -11683,6 +11683,19 @@
           "The desktop and browser journey source includes these checks; actual app runs, physical file removal and final qualification remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f8050af4ffebf470aa6a7b8ef0bc257e016165e5dc162e1a5c2c9a9b64f22ab4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed browser model references through the real local HTTP routes and saved registry.",
+          "The tests check workspace separation, cancelled deletion, record-only removal, saved state and safe retry.",
+          "They use a local provider and credential fixture.",
+          "Actual app, provider, production sign-in and final roadmap checks remain pending."
+        ]
+      }
     }
   ]
 }

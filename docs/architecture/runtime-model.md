@@ -722,3 +722,22 @@ and fixture credential middleware do not qualify remote provider integration,
 production authentication, full-app mounting, model execution or native file
 effects. Ambient model discovery is disabled. Each test retires only its owned
 listener and bounded new regular temporary tree; it never opens saved app tokens.
+
+Desktop Models applies asynchronous views only to their committed workspace and
+client lifetime. Fresh object leases distinguish Strict Mode effect replay from
+earlier calls. Exact tickets keep the latest inventory, browse and detail reads;
+retirement clears selections, confirmations and public outcomes. Completed model
+actions refresh the latest committed inventory filter. A failed refresh remains
+visible instead of being replaced by an unrelated success message.
+
+One confirmed deletion is admitted at a time. Its acknowledgement must match the
+record, confirm registry removal, match requested local-file effects and report
+no unrequested backing-artifact removal. Uncertain acknowledgement retains the
+confirmation. Error copy is fixed and public-safe. These UI checks grant no
+native effect, physical IPC, provider or whole-app qualification. Existing host
+ownership and file-effect denials remain authoritative.
+
+Each deletion confirmation has its own object identity. Closing, reopening or
+editing it retires the earlier identity, even for the same record. A late delete
+result may refresh current inventory but cannot close a newer confirmation or
+publish its success or failure there. The same rule applies during refresh.
