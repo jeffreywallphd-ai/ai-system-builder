@@ -23,7 +23,10 @@ import { useArtifactBrowserFeature } from "../hooks/useArtifactBrowserFeature";
 import { ModalDialog } from "../../../../../../modules/ui/shared/components/ModalDialog";
 import type { ContextConversionReadiness } from "../../../../../../modules/contracts/context-management";
 
+import { DatasetVersionPanel, type DatasetVersionPanelService } from "../../../../../../modules/ui/shared/dataset-version";
+
 export interface ArtifactBrowserFeatureProps {
+  datasetVersionService?: DatasetVersionPanelService;
   client?: ArtifactBrowserApiClient;
   workspaceId?: string;
   workspaceName?: string;
@@ -83,6 +86,7 @@ function PublishedBackingPanel(props: {
 
 export function ArtifactBrowserFeature({
   client,
+  datasetVersionService,
   workspaceId,
   readParquetPreview,
   initialSelectedStorageKey,
@@ -772,6 +776,13 @@ export function ArtifactBrowserFeature({
               </dd>
             </dl>
             <ArtifactPreviewPanel preview={parquetPreview ?? artifactPreview} />
+                {workspaceId && datasetVersionService && selectedStorageKey === detail.locator.storageKey ? (
+                  <DatasetVersionPanel
+                    workspaceId={workspaceId}
+                    datasetArtifactKey={detail.locator.storageKey}
+                    service={datasetVersionService}
+                  />
+                ) : null}
             {artifactPreview.descriptor?.kind === "image" ? (
               <div className="ui-grid ui-grid--two">
                 <button

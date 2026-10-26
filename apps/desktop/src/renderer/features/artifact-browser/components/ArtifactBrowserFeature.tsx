@@ -34,7 +34,10 @@ import { copyArtifactMediaBytesToArrayBuffer } from "../helpers/artifactMediaByt
 import { ModalDialog } from "../../../../../../../modules/ui/shared/components/ModalDialog";
 import type { ContextConversionReadiness } from "../../../../../../../modules/contracts/context-management";
 
+import { DatasetVersionPanel, type DatasetVersionPanelService } from "../../../../../../../modules/ui/shared/dataset-version";
+
 export interface ArtifactBrowserFeatureProps {
+  datasetVersionService?: DatasetVersionPanelService;
   client?: DesktopArtifactBrowserClient;
   workspaceId?: string;
   workspaceName?: string;
@@ -99,6 +102,7 @@ function PublishedBackingPanel(props: {
 
 export function ArtifactBrowserFeature({
   client,
+  datasetVersionService,
   workspaceId,
   readParquetPreview,
   initialSelectedStorageKey,
@@ -927,6 +931,13 @@ export function ArtifactBrowserFeature({
                 <ArtifactPreviewPanel
                   preview={parquetPreview ?? artifactPreview}
                 />
+                {workspaceId && datasetVersionService && selectedStorageKey === detail.locator.storageKey ? (
+                  <DatasetVersionPanel
+                    workspaceId={workspaceId}
+                    datasetArtifactKey={detail.locator.storageKey}
+                    service={datasetVersionService}
+                  />
+                ) : null}
                 {backingState.isRemoteOnly ? (
                   <p role="status">
                     Remote-only artifact. Local preview is unavailable until

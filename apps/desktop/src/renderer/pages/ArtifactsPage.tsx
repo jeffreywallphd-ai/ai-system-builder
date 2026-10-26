@@ -11,6 +11,8 @@ import { createDesktopDatasetPreparationClient } from "../features/dataset-prepa
 import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 import { createDesktopContextManagementClient } from "../features/context-management/api/desktopContextManagementClient";
 
+import type { DatasetVersionPanelService } from "../../../../../modules/ui/shared/dataset-version";
+
 export interface ArtifactsPageProps {
   workspaceId: string;
   workspaceName: string;
@@ -37,6 +39,27 @@ export function ArtifactsPage({
     setActiveTabId("browser");
     onUploaded();
   };
+  const datasetVersionService = useMemo<DatasetVersionPanelService>(() => {
+    const client = createDesktopDatasetPreparationClient();
+    return {
+      list: async (workspaceId, datasetId) => {
+        if (!client.listVersions) throw new Error("Version history is unavailable.");
+        return client.listVersions(workspaceId, datasetId);
+      },
+      compare: async (workspaceId, fromVersionId, toVersionId) => {
+        if (!client.compareVersions) throw new Error("Version comparison is unavailable.");
+        return client.compareVersions(workspaceId, fromVersionId, toVersionId);
+      },
+      reproduce: async (workspaceId, versionId) => {
+        if (!client.readReproduction) throw new Error("Saved setup is unavailable.");
+        return client.readReproduction(workspaceId, versionId);
+      },
+      publish: async input => {
+        if (!client.publishVersion) throw new Error("Version publication is unavailable.");
+        return client.publishVersion(input);
+      },
+    };
+  }, []);
   const datasetReviewService = useMemo(() => {
     const client = createDesktopDatasetPreparationClient();
     return {
@@ -143,6 +166,7 @@ export function ArtifactsPage({
               <ArtifactBrowserFeature
                 key={`${workspaceId}-${refreshToken}`}
                 workspaceId={workspaceId}
+                datasetVersionService={datasetVersionService}
                 readParquetPreview={parquetPreviewReader}
                 initialSelectedStorageKey={
                   preparedArtifactStorageKey ?? initialSelectedStorageKey

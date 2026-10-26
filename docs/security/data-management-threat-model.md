@@ -1,5 +1,23 @@
 # Data Management Threat Model
 
+## Saved-version Browser response and consent controls
+
+Both Browser detail views associate history only through an exact unique
+complete-dataset artifact key in normalized workspace-qualified records.
+Ambiguous, duplicate, foreign, malformed and mismatched version responses are
+denied. Scope-keyed sessions retire late reads and action replies on selection,
+workspace or service replacement. List and comparison errors use fixed inline
+retry text; publication failures use fixed notification text and do not claim
+that a dispatched remote operation was cancelled or rolled back.
+
+Explicit publication captures the current workspace, version, repository,
+visibility and creation choice. A synchronous guard prevents duplicate dispatch.
+Public consent resets when any relevant input changes and after dispatch. Only
+an exact matching normalized publication response produces success. Application
+authorization, provider credentials and immutable-byte verification remain below
+the UI. Local component tests do not qualify real provider availability or the
+later page-owned setup reuse, source freshness and edit-preservation boundary.
+
 The direct Python worker entrypoint loads relative application and task modules
 only from its own deployment directory, using a fixed private package. It does
 not search repository ancestors or change the interpreter search path. A missing

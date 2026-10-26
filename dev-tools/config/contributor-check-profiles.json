@@ -1303,6 +1303,44 @@
         "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
         "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts"
       ]
+    },
+    "dataset-version-browser": {
+      "test_paths": [
+        "modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx",
+        "apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx",
+        "apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts",
+        "apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts",
+        "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx"
+      ],
+      "source_paths": [
+        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+        "modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx",
+        "apps/desktop/src/renderer/pages/ArtifactsPage.tsx",
+        "apps/thin-client/src/pages/ArtifactsPage.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx",
+        "apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx",
+        "modules/ui/shared/README.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/data-management.pack.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_delivery.py",
+        "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts",
+        "apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts",
+        "modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts",
+        "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx"
+      ]
     }
   }
 }

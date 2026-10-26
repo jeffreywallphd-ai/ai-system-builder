@@ -25,6 +25,16 @@ Browser, select the exact saved dataset, and open its detail view for inspection
 or optional Hugging Face publication. Dataset Preparation does not embed version
 history after save.
 
+Both Artifact Browser detail views now load saved versions through the existing
+workspace-authorized clients. Only one exact `dataset` role artifact key may
+identify the selected dataset; file names and the newest record are not identity.
+History and comparison failures retain visible retry controls. Refresh is also
+available for empty and successful history. Publication defaults to private,
+requires explicit dispatch, and validates the returned workspace, version,
+repository and visibility. Changing publication inputs clears public consent.
+The page-owned setup reuse consumer remains separate pending work; the Browser
+does not offer reuse until that consumer can acknowledge actual application.
+
 The shared Artifact Browser uses the same card presentation for uploaded and
 generated artifacts. User data remains previewable without exposing active
 content: JSON and JSON Lines are formatted and capped at 100 displayed lines,

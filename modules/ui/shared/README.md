@@ -291,3 +291,10 @@ expanded state, Escape dismissal and focus restoration remain unchanged.
   application remains responsible for authorization, bytes, runtime readiness
   and publication. Do not restore provider destinations or historical approvals.
   The pure component does not yet replace either host's existing reuse handler.
+
+- Artifact Browser details in both apps mount `DatasetVersionPanel` through the
+  existing version clients. The panel resolves one exact complete-dataset key,
+  exposes history/comparison retry and refresh, and binds explicit publication
+  to the current version and destination. Public confirmation resets on input
+  changes. Setup reuse is shown only when an applying consumer is supplied;
+  navigation alone cannot acknowledge application.

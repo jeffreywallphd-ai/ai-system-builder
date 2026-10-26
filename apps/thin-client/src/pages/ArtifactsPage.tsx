@@ -9,6 +9,8 @@ import { createApiDatasetPreparationClient } from "../features/dataset-preparati
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 import { createContextManagementPageClient } from "../features/context-management/api/contextManagementPageClient";
 
+import type { DatasetVersionPanelService } from "../../../../modules/ui/shared/dataset-version";
+
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
   workspaceName: string;
@@ -29,6 +31,27 @@ export function ArtifactsPage({
     setPreparedArtifactStorageKey(artifactStorageKey);
     setActiveTabId("browser");
   };
+  const datasetVersionService = useMemo<DatasetVersionPanelService>(() => {
+    const client = createApiDatasetPreparationClient();
+    return {
+      list: async (workspaceId, datasetId) => {
+        if (!client.listVersions) throw new Error("Version history is unavailable.");
+        return (await client.listVersions({ workspaceId, datasetId })).versions;
+      },
+      compare: async (workspaceId, fromVersionId, toVersionId) => {
+        if (!client.compareVersions) throw new Error("Version comparison is unavailable.");
+        return (await client.compareVersions({ workspaceId, fromVersionId, toVersionId })).comparison;
+      },
+      reproduce: async (workspaceId, versionId) => {
+        if (!client.readReproduction) throw new Error("Saved setup is unavailable.");
+        return (await client.readReproduction({ workspaceId, versionId })).reproduction;
+      },
+      publish: async input => {
+        if (!client.publishVersion) throw new Error("Version publication is unavailable.");
+        return (await client.publishVersion(input)).publication;
+      },
+    };
+  }, []);
   const datasetReviewService = useMemo(() => {
     const client = createApiDatasetPreparationClient();
     return {
@@ -130,6 +153,7 @@ export function ArtifactsPage({
               <ArtifactBrowserFeature
                 key={`browser-${workspaceId}`}
                 workspaceId={workspaceId}
+                datasetVersionService={datasetVersionService}
                 readParquetPreview={parquetPreviewReader}
                 initialSelectedStorageKey={
                   preparedArtifactStorageKey ?? initialSelectedStorageKey

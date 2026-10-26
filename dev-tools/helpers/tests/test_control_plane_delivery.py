@@ -122,6 +122,32 @@ class StorageTests(Fixture):
 
 
 class CatalogTests(Fixture):
+    def test_dataset_browser_profile_keeps_exact_host_coverage_and_unrelated_fallback(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profile = read_json(root / config)["profiles"]["dataset-version-browser"]
+        expected = ['modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts', 'modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts', 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx']
+        self.assertEqual(profile["test_paths"], expected)
+        commands = run_focused_checks.profile_commands(root, "dataset-version-browser")
+        self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
+        self.assertTrue(all(command[0] == "node" for command in commands))
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"dataset-version-browser": profile}}))
+        exact = ['modules/ui/shared/dataset-version/DatasetVersionPanel.tsx', 'modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/ArtifactsPage.tsx', 'apps/thin-client/src/pages/ArtifactsPage.tsx', 'apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx']
+        for path in exact:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("dataset-version-browser", ids)
+            self.assertIn("architecture", ids)
+            self.assertNotIn("focused-tests", ids)
+        for paths, required, focused in [(exact + [config], ["control-plane"], False),
+                                         (exact, ["focused-tests"], True),
+                                         (exact + ["apps/thin-client/src/other.ts"], ["documentation"], True)]:
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+        ids = {row["id"] for row in catalog.plan(self.root, ["modules/ui/shared/other/source.ts"], ["documentation"], "candidate")["selected"]}
+        self.assertIn("focused-tests", ids)
+        self.assertNotIn("dataset-version-browser", ids)
+
     def test_dataset_replay_profile_is_exact_bounded_and_keeps_unrelated_coverage(self):
         import run_focused_checks
         root = HELPERS.parents[1]
@@ -155,7 +181,7 @@ class CatalogTests(Fixture):
                                           (exact + ["modules/unknown/source.ts"], ["documentation"], True)]:
             ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
             self.assertEqual("focused-tests" in ids, focused)
-        for path in ["modules/ui/shared/dataset-version/DatasetVersionPanel.tsx", "modules/ui/shared/other/source.ts"]:
+        for path in ["modules/ui/shared/other/source.ts"]:
             ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
             self.assertIn("focused-tests", ids)
             self.assertNotIn("dataset-version-replay", ids)
