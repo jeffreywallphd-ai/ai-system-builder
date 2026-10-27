@@ -458,3 +458,7 @@ injected; the managed runner template is operator evidence, not sandbox proof.
 Build/release support must not be inferred from design validation, and a release
 must not be treated as deployed or running. See
 `docs/architecture/system-build-and-release.md`.
+
+## Manage request ownership and recovery
+
+The Manage view starts a fresh UI session when its workspace or client changes. Late replies cannot populate a former list/dialog, publish a notification or invoke a former active-systems callback. Initial reads and paging recover from transport rejections. Paging and requested preview results belong to the accepting query sequence. Accepted mutations remain owner-scoped across search/filter changes; a view refresh is not mutation cancellation. Synchronous operation tokens precede awaits and only their owner releases busy state. Notifications distinguish failed requests and saved results; raw thrown transport details are not displayed. These UI controls supplement existing exact revision and server/workspace authority. Local rendered fixtures do not qualify physical app/runtime/native or final combined behavior. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.

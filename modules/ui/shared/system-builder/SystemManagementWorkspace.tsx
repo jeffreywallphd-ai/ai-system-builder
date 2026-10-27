@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import type {
   SystemBuilderComposerAsset,
   SystemBuilderManagementItem,
@@ -49,7 +49,23 @@ function publicationBadgeClass(item: SystemBuilderManagementItem): string {
   return "";
 }
 
-export function SystemManagementWorkspace({
+export function SystemManagementWorkspace(props: SystemManagementWorkspaceProps) {
+  const [scope, setScope] = useState({workspaceId: props.workspaceId, client: props.client, key: 0});
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.client) {
+    setScope({workspaceId: props.workspaceId, client: props.client, key: scope.key + 1});
+    return null;
+  }
+  return <SystemManagementSession key={scope.key} {...props} />;
+}
+
+interface ManagementQueryOwner {active: boolean;}
+
+interface ManagementOperation {
+  readonly systemId: string;
+  readonly queryOwner?: ManagementQueryOwner;
+}
+
+function SystemManagementSession({
   workspaceId,
   client,
   onOpenInCompose,
@@ -79,36 +95,81 @@ export function SystemManagementWorkspace({
   const cancelCloneRef = useRef<HTMLButtonElement>(null);
   const requestSequence = useRef(0);
 
+  const mounted = useRef(false);
+  const queryOwner = useRef<ManagementQueryOwner>({active: false});
+  const pendingOperation = useRef<ManagementOperation | undefined>(undefined);
+  const pendingPage = useRef<object | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      requestSequence.current++;
+      pendingOperation.current = undefined;
+      pendingPage.current = undefined;
+    };
+  }, []);
+
+  const ownsOperation = (operation: ManagementOperation) => mounted.current
+    && pendingOperation.current === operation
+    && (operation.queryOwner === undefined || operation.queryOwner.active && operation.queryOwner === queryOwner.current);
+  const beginOperation = (item: SystemBuilderManagementItem, queryBound = false) => {
+    if (!mounted.current || !queryOwner.current.active || pendingOperation.current) return;
+    const operation: ManagementOperation = {systemId: String(item.systemId),
+      ...(queryBound ? {queryOwner: queryOwner.current} : {})};
+    pendingOperation.current = operation;
+    setBusySystemId(operation.systemId);
+    setError(undefined);
+    setNotice(undefined);
+    return operation;
+  };
+  const finishOperation = (operation: ManagementOperation) => {
+    if (mounted.current && pendingOperation.current === operation) {
+      pendingOperation.current = undefined;
+      setBusySystemId(undefined);
+    }
+  };
+
+  const notifyActiveSystemsChanged = () => {
+    try {onActiveSystemsChanged?.();}
+    catch {setError("The system was updated. Select Refresh to reload the list.");}
+  };
+
+  useLayoutEffect(() => {
+    const owner: ManagementQueryOwner = {active: true};
+    queryOwner.current = owner;
+    pendingPage.current = undefined;
+    setLoadingMore(false); setNextCursor(undefined); setLoading(true);
+    if (pendingOperation.current?.queryOwner) finishOperation(pendingOperation.current);
+    return () => {owner.active = false;};
+  }, [appliedSearchText, client, refreshToken, sort, view, workspaceId]);
+
   useEffect(() => {
     const requestId = ++requestSequence.current;
-    setLoading(true);
+    const owner = queryOwner.current;
+    const current = () => mounted.current && owner.active && queryOwner.current === owner && requestId === requestSequence.current;
     setError(undefined);
-    void client
-      .listManagement({
-        workspaceId: workspaceId as Parameters<
-          SystemBuilderClient["listManagement"]
-        >[0]["workspaceId"],
-        searchText: appliedSearchText || undefined,
-        view,
-        sort,
-        limit: PAGE_SIZE,
-      })
-      .then((result) => {
-        if (requestId !== requestSequence.current) return;
-        if (result.ok) {
-          setItems(result.value.items);
-          setTotalCount(result.value.totalCount);
-          setNextCursor(result.value.nextCursor);
-        } else {
-          setItems([]);
-          setTotalCount(0);
-          setNextCursor(undefined);
-          setError(result.error.message);
-        }
-      })
-      .finally(() => {
-        if (requestId === requestSequence.current) setLoading(false);
-      });
+    void Promise.resolve().then(async () => {
+      if (!current()) return;
+      const result = await client.listManagement({
+      workspaceId: workspaceId as Parameters<SystemBuilderClient["listManagement"]>[0]["workspaceId"],
+      searchText: appliedSearchText || undefined, view, sort, limit: PAGE_SIZE,
+    });
+      if (!current()) return;
+      if (result.ok) {
+        setItems(result.value.items);
+        setTotalCount(result.value.totalCount);
+        setNextCursor(result.value.nextCursor);
+      } else {
+        setItems([]); setTotalCount(0); setNextCursor(undefined);
+        setError(result.error.message);
+      }
+    }).catch(() => {
+      if (!current()) return;
+      setItems([]); setTotalCount(0); setNextCursor(undefined);
+      setError("Could not load systems. Select Refresh to try again.");
+    }).finally(() => {if (current()) setLoading(false);});
+    return () => {if (requestSequence.current === requestId) requestSequence.current++;};
   }, [appliedSearchText, client, refreshToken, sort, view, workspaceId]);
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -122,131 +183,113 @@ export function SystemManagementWorkspace({
   };
 
   const loadMore = async () => {
-    if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    setError(undefined);
-    const result = await client.listManagement({
-      workspaceId: workspaceId as Parameters<
-        SystemBuilderClient["listManagement"]
-      >[0]["workspaceId"],
-      searchText: appliedSearchText || undefined,
-      view,
-      sort,
-      cursor: nextCursor,
-      limit: PAGE_SIZE,
-    });
-    if (result.ok) {
-      setItems((current) => {
-        const knownIds = new Set(current.map((item) => String(item.systemId)));
-        return [
-          ...current,
-          ...result.value.items.filter(
-            (item) => !knownIds.has(String(item.systemId)),
-          ),
-        ];
+    if (!nextCursor || loading || pendingPage.current) return;
+    const token = {}, requestId = requestSequence.current, owner = queryOwner.current;
+    pendingPage.current = token;
+    const current = () => mounted.current && owner.active && queryOwner.current === owner && pendingPage.current === token && requestSequence.current === requestId;
+    setLoadingMore(true); setError(undefined);
+    try {
+      const result = await client.listManagement({
+        workspaceId: workspaceId as Parameters<SystemBuilderClient["listManagement"]>[0]["workspaceId"],
+        searchText: appliedSearchText || undefined, view, sort, cursor: nextCursor, limit: PAGE_SIZE,
       });
-      setTotalCount(result.value.totalCount);
-      setNextCursor(result.value.nextCursor);
-    } else {
-      setError(result.error.message);
+      if (!current()) return;
+      if (result.ok) {
+        setItems((existing) => {
+          const knownIds = new Set(existing.map(item => String(item.systemId)));
+          const added = result.value.items.filter(item => {
+            if (knownIds.has(String(item.systemId))) return false;
+            knownIds.add(String(item.systemId)); return true;
+          });
+          return [...existing, ...added];
+        });
+        setTotalCount(result.value.totalCount); setNextCursor(result.value.nextCursor);
+      } else setError(result.error.message);
+    } catch {
+      if (current()) setError("Could not load more systems. Try Load more systems again.");
+    } finally {
+      if (mounted.current && pendingPage.current === token) {pendingPage.current = undefined; setLoadingMore(false);}
     }
-    setLoadingMore(false);
   };
 
   const openPreview = async (item: SystemBuilderManagementItem) => {
-    setBusySystemId(String(item.systemId));
-    setError(undefined);
-    const [revisionResult, catalogResult] = await Promise.all([
-      client.readRevision({
-        workspaceId,
-        systemId: String(item.systemId),
-        revisionId: item.currentRevisionId
-          ? String(item.currentRevisionId)
-          : undefined,
-      }),
-      client.listComposerAssets({
-        workspaceId,
-        limit: 200,
-      }),
-    ]);
-    if (!revisionResult.ok) {
-      setError(revisionResult.error.message);
-    } else if (!catalogResult.ok) {
-      setError(catalogResult.error.message);
-    } else {
-      setPreview({
-        item,
-        revision: revisionResult.value,
-        catalog: catalogResult.value.items,
-      });
-    }
-    setBusySystemId(undefined);
+    if (!item.actions.canPreview) return;
+    const operation = beginOperation(item, true);
+    if (!operation) return;
+    try {
+      const [revisionResult, catalogResult] = await Promise.all([
+        Promise.resolve().then(() => ownsOperation(operation) ? client.readRevision({workspaceId, systemId: String(item.systemId), revisionId: item.currentRevisionId ? String(item.currentRevisionId) : undefined}) : undefined),
+        Promise.resolve().then(() => ownsOperation(operation) ? client.listComposerAssets({workspaceId, limit: 200}) : undefined),
+      ]);
+      if (!ownsOperation(operation)) return;
+      if (!revisionResult || !catalogResult) throw new Error("Invalid system preview result.");
+      if (!revisionResult.ok) setError(revisionResult.error.message);
+      else if (!catalogResult.ok) setError(catalogResult.error.message);
+      else setPreview({item, revision: revisionResult.value, catalog: catalogResult.value.items});
+    } catch {
+      if (ownsOperation(operation)) setError("Could not open the system preview. Select Preview to try again.");
+    } finally {finishOperation(operation);}
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setBusySystemId(String(deleteTarget.systemId));
-    setError(undefined);
-    const result = await client.archive({
-      workspaceId,
-      systemId: String(deleteTarget.systemId),
-      expectedRevision: deleteTarget.recordRevision,
-    });
-    if (result.ok) {
-      setDeleteTarget(undefined);
-      setNotice(
-        `${deleteTarget.name} was removed from active systems and can be restored from the Archived view.`,
-      );
-      setRefreshToken((current) => current + 1);
-      onActiveSystemsChanged?.();
-    } else {
-      setError(result.error.message);
-    }
-    setBusySystemId(undefined);
+    if (!deleteTarget || !deleteTarget.actions.canDelete) return;
+    const target = deleteTarget, operation = beginOperation(target);
+    if (!operation) return;
+    try {
+      const result = await client.archive({workspaceId, systemId: String(target.systemId), expectedRevision: target.recordRevision});
+      if (!ownsOperation(operation)) return;
+      if (result.ok) {
+        setDeleteTarget(undefined);
+        setNotice(`${target.name} was removed from active systems and can be restored from the Archived view.`);
+        setRefreshToken(current => current + 1); notifyActiveSystemsChanged();
+      } else setError(result.error.message);
+    } catch {
+      if (ownsOperation(operation)) setError("Could not archive the system. Try Delete system again.");
+    } finally {finishOperation(operation);}
   };
 
   const restoreSystem = async (item: SystemBuilderManagementItem) => {
-    setBusySystemId(String(item.systemId));
-    setError(undefined);
-    const result = await client.restore({
-      workspaceId,
-      systemId: String(item.systemId),
-      expectedRevision: item.recordRevision,
-    });
-    if (result.ok) {
-      setNotice(`${item.name} was restored to active systems.`);
-      setRefreshToken((current) => current + 1);
-      onActiveSystemsChanged?.();
-    } else {
-      setError(result.error.message);
-    }
-    setBusySystemId(undefined);
+    if (!item.actions.canRestore) return;
+    const operation = beginOperation(item);
+    if (!operation) return;
+    try {
+      const result = await client.restore({workspaceId, systemId: String(item.systemId), expectedRevision: item.recordRevision});
+      if (!ownsOperation(operation)) return;
+      if (result.ok) {
+        setNotice(`${item.name} was restored to active systems.`);
+        setRefreshToken(current => current + 1); notifyActiveSystemsChanged();
+      } else setError(result.error.message);
+    } catch {
+      if (ownsOperation(operation)) setError("Could not restore the system. Select Restore to try again.");
+    } finally {finishOperation(operation);}
   };
 
+  const openDeleteDialog = (item: SystemBuilderManagementItem) => {
+    if (mounted.current && !pendingOperation.current && item.actions.canDelete) setDeleteTarget(item);
+  };
+  const cancelDelete = () => {if (mounted.current && !pendingOperation.current) setDeleteTarget(undefined);};
+  const cancelClone = () => {if (mounted.current && !pendingOperation.current) setCloneTarget(undefined);};
+
   const openCloneDialog = (item: SystemBuilderManagementItem) => {
-    setCloneTarget(item);
-    setCloneName(`${item.name} copy`);
+    if (!mounted.current || pendingOperation.current) return;
+    setCloneTarget(item); setCloneName(`${item.name} copy`);
   };
 
   const confirmClone = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!cloneTarget || !cloneName.trim()) return;
-    setBusySystemId(String(cloneTarget.systemId));
-    setError(undefined);
-    const result = await client.clone({
-      workspaceId,
-      sourceSystemId: String(cloneTarget.systemId),
-      name: cloneName.trim(),
-    });
-    if (result.ok) {
-      setCloneTarget(undefined);
-      setNotice(`${result.value.name} was created as an unpublished system.`);
-      setRefreshToken((current) => current + 1);
-      onActiveSystemsChanged?.();
-    } else {
-      setError(result.error.message);
-    }
-    setBusySystemId(undefined);
+    const target = cloneTarget, name = cloneName.trim(), operation = beginOperation(target);
+    if (!operation) return;
+    try {
+      const result = await client.clone({workspaceId, sourceSystemId: String(target.systemId), name});
+      if (!ownsOperation(operation)) return;
+      if (result.ok) {
+        setCloneTarget(undefined); setNotice(`${result.value.name} was created as an unpublished system.`);
+        setRefreshToken(current => current + 1); notifyActiveSystemsChanged();
+      } else setError(result.error.message);
+    } catch {
+      if (ownsOperation(operation)) setError("Could not duplicate the system. Try Duplicate system again.");
+    } finally {finishOperation(operation);}
   };
 
   return (
@@ -343,7 +386,7 @@ export function SystemManagementWorkspace({
             <tbody>
               {items.map((item) => {
                 const systemId = String(item.systemId);
-                const busy = busySystemId === systemId;
+                const busy = Boolean(busySystemId);
                 return (
                   <tr key={systemId}>
                     <td data-label="System">
@@ -414,7 +457,7 @@ export function SystemManagementWorkspace({
                               type="button"
                               className="ui-button--danger"
                               disabled={!item.actions.canDelete || busy}
-                              onClick={() => setDeleteTarget(item)}
+                              onClick={() => openDeleteDialog(item)}
                             >
                               Delete
                             </button>
@@ -469,7 +512,7 @@ export function SystemManagementWorkspace({
       <ModalDialog
         open={Boolean(deleteTarget)}
         title={deleteTarget ? `Delete ${deleteTarget.name}?` : "Delete system?"}
-        onClose={() => setDeleteTarget(undefined)}
+        onClose={cancelDelete}
         closeDisabled={Boolean(busySystemId)}
         descriptionId="system-management-delete-description"
         initialFocusRef={cancelDeleteRef}
@@ -487,7 +530,7 @@ export function SystemManagementWorkspace({
               type="button"
               className="ui-button ui-button--outline"
               disabled={Boolean(busySystemId)}
-              onClick={() => setDeleteTarget(undefined)}
+              onClick={cancelDelete}
             >
               Cancel
             </button>
@@ -508,7 +551,7 @@ export function SystemManagementWorkspace({
         title={
           cloneTarget ? `Duplicate ${cloneTarget.name}` : "Duplicate system"
         }
-        onClose={() => setCloneTarget(undefined)}
+        onClose={cancelClone}
         closeDisabled={Boolean(busySystemId)}
         initialFocusRef={cancelCloneRef}
         dialogClassName="system-management__confirmation-dialog"
@@ -518,7 +561,8 @@ export function SystemManagementWorkspace({
             <span>New system name</span>
             <input
               value={cloneName}
-              onChange={(event) => setCloneName(event.target.value)}
+              disabled={Boolean(busySystemId)}
+              onChange={(event) => {if (!pendingOperation.current) setCloneName(event.target.value);}}
               required
             />
           </label>
@@ -532,7 +576,7 @@ export function SystemManagementWorkspace({
               type="button"
               className="ui-button ui-button--outline"
               disabled={Boolean(busySystemId)}
-              onClick={() => setCloneTarget(undefined)}
+              onClick={cancelClone}
             >
               Cancel
             </button>

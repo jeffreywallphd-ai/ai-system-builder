@@ -357,3 +357,5 @@ acceptance, so a fresh renderer shows the explicit Markdown review/save controls
 Legacy packs without a mode use the existing source-materials default. Manual
 packs retain the application rule that requires re-entry instead of rebuilding.
 Obsolete success/error replies cannot alter the current workspace task or mode.
+
+Manage systems owns pending reads and actions within the mounted workspace/client session. Query changes invalidate old page and newly requested preview results. Synchronous admission prevents duplicate actions, and fixed caught-error notifications retain explicit retry paths through the notification center. Exact revisions and existing archive/restore/clone authority remain in application services. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.

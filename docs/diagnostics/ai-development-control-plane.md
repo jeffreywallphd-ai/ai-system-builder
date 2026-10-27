@@ -704,3 +704,5 @@ models, native workers or final combined testing. Unknown impact retains the
 generic focused gate, explicitly required generic checks remain selected, and
 unsafe/missing/controlled-AI tests retain denial. Existing profiles and their
 failures are unchanged. The profile is verification support, not a startup pass.
+
+The system-management-ui profile provides bounded rendered Manage tests for request failures, retries, stale context and duplicate dispatch. It runs only its exact declared source-owned Vitest file through the fixed adapter. Its current receipts and independent review describe local fixtures, not whole-host, native, model or final roadmap qualification.

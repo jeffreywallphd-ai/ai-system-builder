@@ -1675,6 +1675,16 @@
         "apps/desktop/src/main/index.ts",
         "apps/desktop/src/renderer/README.md"
       ]
+    },
+    "system-management-ui": {
+      "test_paths": [
+        "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+        "modules/ui/shared/README.md"
+      ]
     }
   }
 }

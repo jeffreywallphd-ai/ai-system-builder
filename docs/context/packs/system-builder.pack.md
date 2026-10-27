@@ -29,7 +29,7 @@
 - System compositions are limited to `system` and `system-of-subsystems`.
 - System Builder lifecycle is design-time only; never substitute runtime, installer, host, or software-health status.
 - Keep asset composition planning as an optional non-executing source record.
-- Require explicit workspace identity for every future system-owned operation and persistence seam.
+- Require explicit workspace identity for every future system-owned operation and persistence seam. Manage systems uses workspace/client-owned UI state and query-owned paging/preview results. Pending operations use synchronous admission and exact-token cleanup; failed transport calls remain retryable through fixed notification-center messages. Preserve immutable revisions and application authorization. See the canonical System Builder architecture. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
 - Systems is workspace-scoped; Settings / Software status remains global and operational.
 - Design identity, immutable revisions, build attempts, immutable releases, deployments, and execution runs are separate record families.
 - Security assets may narrow but never widen platform/organization authority; the initial workflow language is finite, typed, and capability-based.
