@@ -5045,6 +5045,24 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "derived-workspace-authority-and-stable-inputs",
+      "work_criteria": [
+        "derived-authority-before-effects",
+        "derived-owned-values-through-waits",
+        "derived-positive-compatible-checkpoint"
+      ],
+      "receipt_digest": "3250a298f63f994e9f5bc7959afffe3619a4190e956d030cec0fb217d663ee22",
+      "review_digest": "b716a638c880e23fe36f6c2d23a1db259639f57b76cb59c24c47f554b1569b71",
+      "scope": "Derived customization binds nine service entries, seven direct workflow entries and two catalog reads to current workspace access. Requests keep original semantic/source data across waits. 149 focused tests, twelve type roots and twelve profile guards pass, including readiness revocation and stored-value races. IPC retains safe unavailable, validation and absent-record results. Finite desktop/server lifecycles pass. Physical hosts, atomic publication and final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }

@@ -12347,6 +12347,18 @@
           "The agent reviewed and committed this change. These checks use local test data and request controls. Actual app, saved-data, derived-asset and atomic-publication checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2e28b2ba6dc3341846ca31b98081dd6f4e8ecc8fcb963b081386dee5a2b44dfa",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed derived-asset requests so each request keeps its original workspace, source changes and review choices while it waits. Access is checked before loading features and again after startup.",
+          "All 149 focused tests, type checks and twelve test-selection checks passed. Local desktop and server fixtures select a base, create and edit a copy, review it and publish it.",
+          "The agent reviewed and committed this change. Actual app, saved-data and atomic-publication checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }
