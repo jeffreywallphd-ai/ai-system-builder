@@ -1033,6 +1033,12 @@ export function useDatasetPreparationFeature(
   const [runtimeActiveTaskCount, setRuntimeActiveTaskCount] = useState(0);
   const [stopTrainingInFlight, setStopTrainingInFlight] = useState(false);
   const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
+  const reviewActionOwnerRef = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    reviewActionOwnerRef.current = undefined;
+    setReviewActionInFlight(false);
+    return () => { reviewActionOwnerRef.current = undefined; };
+  }, [datasetClient, workspaceId]);
   const [unloadModelInFlight, setUnloadModelInFlight] = useState(false);
   const [generationModelRecords, setGenerationModelRecords] = useState<
     DesktopModelInventoryRecord[]
@@ -2598,7 +2604,8 @@ export function useDatasetPreparationFeature(
   }, [activeTaskRequestId, datasetClient, observer, status.kind, workspaceId]);
 
   const onApproveReview = useCallback(async () => {
-    if (!qualityReview || !workspaceId || reviewActionInFlight) {
+    const scope = sourceScope.current;
+    if (!qualityReview || !workspaceId || !scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient || reviewActionOwnerRef.current) {
       return;
     }
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
@@ -2606,6 +2613,9 @@ export function useDatasetPreparationFeature(
       setStatus({ kind: "error", message: saveNameError });
       return;
     }
+    const owner = {};
+    reviewActionOwnerRef.current = owner;
+    const current = () => reviewActionOwnerRef.current === owner && sourceScope.current === scope;
     setReviewActionInFlight(true);
     try {
       const response = await datasetClient.approvePreparedTrainingDataset(
@@ -2614,6 +2624,7 @@ export function useDatasetPreparationFeature(
         workspaceId,
         outputBaseName,
       );
+      if (!current()) return;
       if (!response.ok) {
         setStatus({
           kind: "error",
@@ -2640,10 +2651,13 @@ export function useDatasetPreparationFeature(
       setQualityReview(undefined);
       setStatus({ kind: "success", message: "Training dataset is ready." });
       await refreshArtifacts();
+      if (!current()) return;
       await refreshRuntimeModelStatus();
+      if (!current()) return;
       const artifactStorageKey = value.outputs.local?.dataset?.storage.key;
       if (artifactStorageKey) onPrepared?.(artifactStorageKey);
     } catch (error) {
+      if (!current()) return;
       setStatus({
         kind: "error",
         message:
@@ -2652,7 +2666,10 @@ export function useDatasetPreparationFeature(
             : "Failed to approve the dataset.",
       });
     } finally {
-      setReviewActionInFlight(false);
+      if (reviewActionOwnerRef.current === owner) {
+        reviewActionOwnerRef.current = undefined;
+        if (sourceScope.current === scope) setReviewActionInFlight(false);
+      }
     }
   }, [
     datasetClient,
@@ -2662,20 +2679,24 @@ export function useDatasetPreparationFeature(
     refreshArtifacts,
     refreshRuntimeModelStatus,
     retireTaskRecovery,
-    reviewActionInFlight,
     workspaceId,
   ]);
 
   const onDiscardReview = useCallback(async () => {
-    if (!qualityReview || !workspaceId || reviewActionInFlight) {
+    const scope = sourceScope.current;
+    if (!qualityReview || !workspaceId || !scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient || reviewActionOwnerRef.current) {
       return;
     }
+    const owner = {};
+    reviewActionOwnerRef.current = owner;
+    const current = () => reviewActionOwnerRef.current === owner && sourceScope.current === scope;
     setReviewActionInFlight(true);
     try {
       const response = await datasetClient.cancelPrepareTrainingDatasetTask(
         qualityReview.requestId,
         workspaceId,
       );
+      if (!current()) return;
       if (!response.ok) {
         setStatus({
           kind: "error",
@@ -2695,6 +2716,7 @@ export function useDatasetPreparationFeature(
       setStatus({ kind: "idle" });
       await refreshRuntimeModelStatus();
     } catch (error) {
+      if (!current()) return;
       setStatus({
         kind: "error",
         message:
@@ -2703,14 +2725,16 @@ export function useDatasetPreparationFeature(
             : "Failed to discard the prepared dataset.",
       });
     } finally {
-      setReviewActionInFlight(false);
+      if (reviewActionOwnerRef.current === owner) {
+        reviewActionOwnerRef.current = undefined;
+        if (sourceScope.current === scope) setReviewActionInFlight(false);
+      }
     }
   }, [
     datasetClient,
     qualityReview,
     refreshRuntimeModelStatus,
     retireTaskRecovery,
-    reviewActionInFlight,
     workspaceId,
   ]);
 

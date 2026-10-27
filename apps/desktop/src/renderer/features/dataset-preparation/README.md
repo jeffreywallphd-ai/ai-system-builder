@@ -109,3 +109,19 @@ local. The preparation client captures a command then refuses it before task
 admission. No decoding, inference, accuracy test, OCR, provider action or durable
 save occurs. Actual transport/runtime, installed-host and final qualification
 remain separate. No product behavior is changed by adding this matrix.
+
+## Review action ownership
+
+Save and Discard acquire one synchronous action token before awaiting a response.
+The token belongs to the committed workspace/client scope. Repeated or mixed
+clicks cannot dispatch another review action while it is held. Leaving the page
+or replacing its client retires the token. A late completion cannot notify the
+retired page, clear a new action token or change its busy state. This UI fence
+does not cancel already accepted application writes or replace backend identity
+and serialization checks. Failed approval preserves the review for corrected retry.
+
+The composed qualification tests use actual preload/registered transports and
+application/SQLite/object storage with finite worker outputs. They cover exact
+Save/Discard, task/report/workspace refusal, damaged review/output data and a
+partial storage failure. Full app windows, actual workers and final testing remain
+separate qualification.

@@ -1078,10 +1078,161 @@
           "name": "uses four ordered steps and creates a three-way dataset without advanced changes",
           "tier": "thin-feature-renderer-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: reviews real ready and set-aside rows before explicit approval saves exact splits and version lineage",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: discards reviewed output without saving a final dataset or version",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one approval before busy rendering and reopens its exact version after adapter restart",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: keeps Save and Discard mutually exclusive before the busy render",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one Discard and prevents a same-render Save",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: does not notify a retired page when its accepted save finishes",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: real transport denies a task mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: real transport denies a fingerprint mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: real transport denies a workspace mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses altered review-page bytes and reads the same review after the storage read is corrected",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: keeps a failed partial save private and retries the original review after storage recovers",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses malformed staged output and saves after the exact owned fixture is corrected",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: reviews real ready and set-aside rows before explicit approval saves exact splits and version lineage",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: discards reviewed output without saving a final dataset or version",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one approval before busy rendering and reopens its exact version after adapter restart",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: keeps Save and Discard mutually exclusive before the busy render",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one Discard and prevents a same-render Save",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: does not notify a retired page when its accepted save finishes",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: real transport denies a task mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: real transport denies a fingerprint mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: real transport denies a workspace mismatch and the original UI review remains saveable",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses altered review-page bytes and reads the same review after the storage read is corrected",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: keeps a failed partial save private and retries the original review after storage recovers",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses malformed staged output and saves after the exact owned fixture is corrected",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: a retired client's completion cannot notify or unlock its replacement's pending approval",
+          "tier": "mounted-feature-real-client-registered-ipc-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate."
     },
     {
       "id": "dataset-immutable-versioning",
@@ -1108,10 +1259,48 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: reviews real ready and set-aside rows before explicit approval saves exact splits and version lineage",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one approval before busy rendering and reopens its exact version after adapter restart",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: keeps a failed partial save private and retries the original review after storage recovers",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: reviews real ready and set-aside rows before explicit approval saves exact splits and version lineage",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one approval before busy rendering and reopens its exact version after adapter restart",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: keeps a failed partial save private and retries the original review after storage recovers",
+          "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate."
     },
     {
       "id": "context-manual-pack",

@@ -447,7 +447,8 @@
         "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
-        "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx"
+        "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -610,7 +611,10 @@
         "modules/ui/shared/data-management/README.md",
         "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
-        "modules/ui/shared/README.md"
+        "modules/ui/shared/README.md",
+        "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md"
       ]
     },
     "functionality-context": {

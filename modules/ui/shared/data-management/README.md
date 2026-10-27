@@ -324,3 +324,14 @@ credentials, or qualify installed apps, native ownership or final combined tests
 See `dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx`
 and the comprehensive UI coverage ledger. Existing accepted model accuracy remains
 with its owning roadmap and must not be rerun for these interface checks.
+
+### Composed preparation approval checks
+
+The Dataset qualification file mounts both existing preparation forms and uses
+actual clients, registered IPC or local HTTP, application review/materialization,
+SQLite version documents and filesystem bytes. The finite fixture supplies CSV
+classification input and declared worker JSONL outputs. It does not execute a
+worker, model, OCR engine or provider. Tests inspect ready and set-aside rows,
+explicit Save/Discard, exact saved split bytes and version digests/lineage.
+Same-process database reopen is not an installed-host restart. Row editing,
+successor versions, compare, reproduction and publication remain separate.

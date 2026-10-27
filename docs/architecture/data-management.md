@@ -1219,3 +1219,21 @@ and actual host journeys remain separately qualified. The UI ledger uses the
 current user-approved model-quality floors and preserves accepted historical
 results without running model accuracy again. Full combined tests remain deferred
 under the current catch-up instruction.
+
+## Composed preparation approval evidence
+
+Preparation UI approval uses existing typed clients, registered transports and
+application materialization/version finalization. Desktop Save/Discard share a
+synchronous token scoped to the committed client/workspace. A retired action
+cannot publish UI success or release its replacement. Accepted backend writes
+remain governed by existing task/report/workspace identity and serialization.
+
+The approval application boundary owns a fixed retry message for materialization
+or finalization exceptions; storage-controlled messages and paths are not reflected
+from this catch branch. Existing explicit validation/conflict/not-found denials
+remain unchanged. Composed tests check real saved bytes and mandatory immutable
+version digests, counts, source lineage and same-process store reopen. They also
+check review-read integrity, malformed staged output and partial-write retry.
+The worker, quality computation, actors and availability are finite fixtures.
+This evidence does not qualify installed hosts, process restart, actual inference,
+OCR, provider publication, native effects, final testing or a parent roadmap.

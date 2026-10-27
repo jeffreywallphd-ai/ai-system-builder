@@ -1396,3 +1396,21 @@ storage keys are restored; unrelated storage and globals retain their original
 values. These tests do not establish transport authorization, native cleanup,
 file-parser safety, model semantics, offload ownership or production security.
 No product authority, policy, guard or implementation changes in this chunk.
+
+## Preparation approval response and UI ownership
+
+The composed Dataset tests reproduced duplicate desktop approval dispatch, a
+same-render Save/Discard race and success callbacks after page retirement.
+Desktop review actions now share a synchronous token bound to committed scope;
+only its current owner can apply a response or release busy state. Existing
+application task/report/workspace checks and serialization remain authoritative.
+Accepted writes are not undone merely because the page retires.
+
+A partial materialization failure also exposed storage-controlled error text
+through both registered app connections. The approval exception boundary now
+returns fixed application-owned retry text. The tests inspect actual failure
+envelopes and UI, preserve the pending review, verify compensated output bytes
+are absent and retry after the storage port recovers. Other diagnostic paths,
+rollback durability, native/process effects and final qualification are not
+claimed by this correction. All tests use newly owned bounded synthetic resources;
+no credentials, real model/OCR/provider action or unknown retained tree is used.

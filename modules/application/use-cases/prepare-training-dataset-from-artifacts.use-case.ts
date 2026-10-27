@@ -2788,13 +2788,11 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         },
         context,
       );
-    } catch (error) {
+    } catch {
       return createFailureResult(
         createContractError(
           "internal",
-          error instanceof Error
-            ? error.message
-            : "Failed to approve the prepared dataset.",
+          "The reviewed dataset could not be saved. Try again.",
         ),
         context,
       );
