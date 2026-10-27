@@ -1561,7 +1561,9 @@
         "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
         "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.unit.test.tsx",
         "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"
+        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
+        "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
+        "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1570,7 +1572,9 @@
         "modules/ui/shared/asset-studio/README.md",
         "modules/ui/shared/asset-package/AssetPackageManager.tsx",
         "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
-        "modules/ui/shared/notifications/TransientNotificationPublisher.tsx"
+        "modules/ui/shared/notifications/TransientNotificationPublisher.tsx",
+        "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
+        "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts"
       ]
     },
     "desktop-startup-ui": {

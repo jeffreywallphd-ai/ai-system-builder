@@ -40,6 +40,8 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.unit.test.tsx",
             "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
             "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
+            "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
+            "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts",
         ]
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
@@ -50,6 +52,8 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/ui/shared/asset-package/AssetPackageManager.tsx",
             "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
             "modules/ui/shared/notifications/TransientNotificationPublisher.tsx",
+            "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
+            "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts",
         ])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
@@ -80,6 +84,27 @@ class AssetUiProfileTests(unittest.TestCase):
                 files = {} if "missing." in path else {path: "fixture"}
                 with patch("run_focused_checks.snapshot", return_value={"files": files}), self.assertRaises(ControlError):
                     profile_commands(self.root, "asset-authoring-ui")
+
+    def test_desktop_read_tests_use_their_fixed_node_and_vitest_runners(self):
+        ipc = "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts"
+        client = "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts"
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        node = next(command for command in commands if "--test" in command)
+        vitest = next(command for command in commands if "dev-tools/helpers/run_vitest_checks.mjs" in command)
+        self.assertIn(ipc, node)
+        self.assertNotIn(client, node)
+        self.assertIn(client, vitest)
+        self.assertNotIn(ipc, vitest)
+        selected = [p for command in commands for p in command if p in self.profile["test_paths"]]
+        self.assertEqual(len(selected), len(set(selected)))
+
+    def test_removing_a_declared_read_test_changes_verification_policy(self):
+        self.configure(self.profile)
+        before = catalog.policy_digest(self.root, catalog.definitions(self.root))
+        changed = copy.deepcopy(self.profile)
+        changed["test_paths"].remove("modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts")
+        self.configure(changed)
+        self.assertNotEqual(before, catalog.policy_digest(self.root, catalog.definitions(self.root)))
 
 
 if __name__ == "__main__":

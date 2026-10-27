@@ -243,3 +243,12 @@ and reject substitutions or unsafe metadata. The source helper extends no native
 launcher or model/resource policy. Actual apps/restart/physical cleanup and the
 identified fresh-session pack-rebuild regression remain pending; local collection
 and oracle passes are not whole-app qualification. No accuracy or OCR rerun.
+
+## Assets desktop read checks
+
+The `asset-authoring-ui` profile keeps the eight existing Assets interface test
+files and adds the desktop authoring client and IPC test files. Its source list
+adds only those two production files. Run it through the documented
+[control-plane feature checks](../docs/diagnostics/ai-development-control-plane.md#assets-interface-feature-checks).
+Unknown changed paths still need their own checks. Component fixtures do not prove
+actual app, authorization, storage, native or whole-roadmap qualification.

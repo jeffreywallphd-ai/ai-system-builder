@@ -672,11 +672,14 @@ state/index for reviewed recovery. Never delete it to make a command proceed.
 
 ### Assets interface feature checks
 
-`asset-authoring-ui` runs the declared Studio, package import, derived
-customization and notification-publisher interface tests through the existing
-fixed Node/Vitest runners. Use it for feature-level Assets work. It uses fixed
-clients and does not qualify actual transports, storage, desktop/browser apps,
-providers, native workers or model accuracy. Those checks remain separate.
+`asset-authoring-ui` runs ten exact files through the existing fixed Node/Vitest
+runners. It retains all eight Studio, package import, derived customization and
+notification-publisher interface files. It also runs the desktop authoring client
+and registered authoring IPC files for the Saved read boundary. These component
+tests use finite client, bridge, repository and sender fixtures. They do not launch
+Electron or qualify actual host authorization, storage, providers, native workers
+or model accuracy. Use the profile for feature-level Assets work; retain those
+separate checks and any parent qualification.
 
 The profile replaces generic focused ownership only for its exact declared
 source/test paths. Uncovered impact and an explicitly required `focused-tests`
