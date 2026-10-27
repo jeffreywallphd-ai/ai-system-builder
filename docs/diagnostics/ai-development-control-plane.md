@@ -659,3 +659,13 @@ limits and actual app failures. Only current native evidence plus completed
 identity/import/query facts and strict retirement can qualify this startup
 probe. Real production preparation and both OCR app journeys remain separate;
 no model accuracy checks are reopened.
+
+The local state writer checks both the exact state bytes and exact recovery
+journal bytes against the unchanged 8 MiB bound before publishing either. The
+journal uses compact JSON whitespace so wrapping a near-limit state does not
+add another indentation level to every saved line. State encoding, parsed-value
+digests, revision/conflict checks, atomic writes and recovery remain unchanged.
+Readable older indented journals remain supported. A genuinely full state or
+journal is refused before publication; formatting is not permission to remove
+history or enlarge the limit. Preserve any unreadable retained journal and its
+state/index for reviewed recovery. Never delete it to make a command proceed.

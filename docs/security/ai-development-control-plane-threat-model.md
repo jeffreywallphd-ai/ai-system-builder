@@ -482,3 +482,14 @@ Tests cover both launch plans, pre-allocation denial and bounded redacted child
 failures with inert owned files. They do not run a seed process or qualify apps,
 actual package/source identity, native retirement, memory fit or savings. A
 separately reviewed serial consumer and actual per-host evidence remain required.
+
+Journal publication must not create an unreadable successor solely because
+wrapping state adds indentation. The writer preflights the exact canonical state
+and compact journal encodings under the unchanged 8 MiB limit before either
+publication. Compact whitespace changes neither the parsed journal object nor
+canonical digest, schema, ownership, authority or qualification. Existing locks,
+atomic writes, revision/conflict and integrity checks remain. Near-bound restart
+tests cover interruptions after journal and state writes; capacity and corruption
+denials preserve existing records. Oversized retained journals are not silently
+normalized or deleted. Real store capacity and physical filesystem guarantees
+remain separate constraints; this fix grants no roadmap or native qualification.

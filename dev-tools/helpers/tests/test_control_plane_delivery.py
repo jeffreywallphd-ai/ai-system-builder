@@ -128,6 +128,11 @@ class CatalogTests(Fixture):
         config = "dev-tools/config/contributor-check-profiles.json"
         profile = read_json(root / config)["profiles"]["dataset-version-browser"]
         expected = ['modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts', 'modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts', 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'modules/ui/shared/dataset-version/tests/datasetVersionReplayHandoff.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx', 'modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts', 'modules/ui/shared/dataset-version/tests/readDatasetVersionReplaySources.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx', 'dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py', 'dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts']
+        expected.extend([
+            "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+            "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+            "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+        ])
         self.assertEqual(profile["test_paths"], expected)
         commands = run_focused_checks.profile_commands(root, "dataset-version-browser")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(p for p in expected if not p.endswith(".py")))
@@ -145,6 +150,18 @@ class CatalogTests(Fixture):
             self.assertNotIn("focused-tests", ids)
             if path == "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts":
                 self.assertIn("ocr-provider-contract", ids)
+        extra_sources = [
+            "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json",
+            "dev-tools/scripts/qualification/visual-composer/daily-row-review-fixture.json",
+            "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
+            "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+        ]
+        for path in extra_sources:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["dataset-version-browser", "documentation"], "candidate")["selected"]}
+            self.assertIn("dataset-version-browser", ids)
+            self.assertNotIn("focused-tests", ids)
+        exact.extend(extra_sources)
         for paths, required, focused in [(exact + [config], ["control-plane"], False),
                                          (exact, ["focused-tests"], True),
                                          (exact + ["apps/thin-client/src/other.ts"], ["documentation"], True)]:

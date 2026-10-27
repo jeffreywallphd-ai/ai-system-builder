@@ -81,3 +81,9 @@ isolation and an exact include set. It rejects missing, extra, failed or unhandl
 test results; CLI substring matching cannot admit an unselected sibling. The
 retired minWorkers option is omitted. Its source and owning regression remain
 part of contributor verification policy.
+
+Control-plane state and recovery journals retain the same 8 MiB read limit.
+The writer checks both exact encodings before publication. Journals use compact
+JSON whitespace; state and parsed-value digests keep their canonical encoding.
+This prevents nested journal indentation from making a valid state unreadable.
+It changes no workflow, qualification, approval or history-retention policy.

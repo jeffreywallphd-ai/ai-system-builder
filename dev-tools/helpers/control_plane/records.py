@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from pathlib import Path
 from typing import Callable
@@ -119,13 +120,21 @@ class Records:
             successor["revision"] = current["revision"] + 1
             successor["updated_at"] = now()
             successor["state_digest"] = digest(successor)
-            if len(canonical_bytes(successor)) > MAX_JSON:
+            state_payload = canonical_bytes(successor)
+            if len(state_payload) > MAX_JSON:
                 refuse("state.capacity", "The bounded local record store is full.", "Preserve and archive completed local work before admitting more records.")
             self.validate(successor)
-            atomic_write(self.journal, canonical_bytes({"schema_version": "development-transaction-v1", "before": digest(current), "successor": successor}))
+            # The journal wraps the same state. Indenting that nested object can
+            # exceed its reader bound even when the state itself fits. Whitespace
+            # is not part of the parsed-value digest or recovery contract.
+            journal_payload = (json.dumps({"schema_version": "development-transaction-v1", "before": digest(current), "successor": successor},
+                                          sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+            if len(journal_payload) > MAX_JSON:
+                refuse("state.capacity", "The bounded local recovery journal is full.", "Preserve and archive completed local work before admitting more records.")
+            atomic_write(self.journal, journal_payload)
             if fault_after == "journal":
                 raise OSError("injected publication interruption")
-            atomic_write(self.path, canonical_bytes(successor))
+            atomic_write(self.path, state_payload)
             if fault_after == "state":
                 raise OSError("injected publication interruption")
             self._recover()
