@@ -4723,6 +4723,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "desktop-image-preload-finalization-and-preview-regression",
+      "work_criteria": [
+        "desktop-image-exact-durable-roundtrip",
+        "desktop-image-failure-retry-and-task-ownership",
+        "desktop-image-reviewed-coverage-and-limits"
+      ],
+      "receipt_digest": "43ff1ed026fa1bc665b59ff7140b7172c2185f838666f29093e39d0576e26726",
+      "review_digest": "c9165a4c5325aff9984a60df6c0deb2ae5412c3b93dd0168c46b88f5b045f6ab",
+      "scope": "Three Desktop image cases join actual UI/client/preload/registered IPC/application and fresh PNG/catalog/bindings/JSON storage. Exact settings, decoded pixels/hash, reopen, copy-once retry, cancellation refusal and foreign task denial pass. Fix omitted preview workspace. Invoke/runtime/access/passive reads are finite. Drain requests and restore bounded owned fixtures/globals. Physical Electron/auth/SQLite/model/native/final/parent checks remain pending; no accuracy/OCR rerun.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

@@ -12031,6 +12031,24 @@
           "This is a contributor-tool repair. It does not change approvals or technical acceptance, run model accuracy or OCR, or grant a roadmap or native pass."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4dd039172b831a924d0ffea7912a4fee38505c058fa5f2e62ba9652cd45c9de5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed three Desktop image tests that connect the visible controls to the actual client, preload, registered handlers, application services and saved files.",
+          "The tests found that Desktop image preview requests omitted the active workspace. The request now includes that context; existing media authorization remains unchanged.",
+          "Checks compare every submitted generation setting, decoded image pixels, dimensions and file hash. They reopen the saved image record and verify its primary storage link and workspace ownership.",
+          "A failed registration can be retried without copying the image again or starting another generation. Private test errors do not appear in the page.",
+          "A refused cancellation keeps the task active and observed. A request from another workspace cannot read, cancel or finalize the task. Reopening the original view resumes its saved task identity.",
+          "Task generation, access, in-process invocation and passive model, settings and preview reads use fixed test inputs. These tests do not prove physical Electron, sender authentication, production database or actual model behavior.",
+          "Pending test requests are drained. Temporary files are removed only after checking the new folder identity, containment, links, file count and byte limits. The prior bridge, session, React and preview-URL state is restored.",
+          "Feature checks, scoped types, documentation and architecture checks passed. Full testing remains deferred. Accepted model accuracy and OCR were not rerun.",
+          "Physical host, native and final combined qualification remain separate. This work does not pass the whole criterion or finish the increment."
+        ]
+      }
     }
   ]
 }
