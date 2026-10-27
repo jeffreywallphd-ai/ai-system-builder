@@ -1604,3 +1604,16 @@ processors with finite embeddings. Getter-bearing/extra arrays and unsafe nested
 metadata are refused before serialization. Retained artifact bytes are read again
 after cancelled deletion. These strengthen local test evidence without claiming
 physical app execution or curing the separate fresh-session pack-mode finding.
+
+### Fresh-session rebuild ownership and manual-content protection
+
+A saved source-pack rebuild restores review mode only after accepted current
+action ownership. A refusal preserves detail; stale workspace/client/unmount
+successes and errors cannot install a task key or change current mode. The
+scoped client already provided stale-session isolation; focused regressions
+retain it, with explicit action-token checks at the renderer update. Manual
+packs remain non-rebuildable, preventing implicit loss of manual input. Both
+transport/storage fixtures re-open original/source bytes and catalog/bindings
+and require explicit review/save of a separate source-pack successor. The
+earlier fresh-session display finding is repaired locally; physical app/native
+qualification remains pending and no accepted model test is reopened.

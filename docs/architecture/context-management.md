@@ -380,3 +380,18 @@ successor. The original workspace is restored for existing dataset/manual cases.
 A source review identified that fresh-session source-pack rebuild may not restore
 the preparation mode. That separate product regression/fix remains agent work,
 not a human blocker or a qualification pass. Actual app execution is deferred.
+
+### Fresh-session saved-pack review
+
+The earlier source-review finding is repaired at the shared renderer boundary.
+An accepted, still-owned source-pack Rebuild restores its manifest input mode
+before showing preparation/review. Missing legacy mode means source materials,
+matching the application command. A refused rebuild keeps detail open and does
+not select a mode or publish an artifact. Saved manual packs remain ineligible
+for automatic rebuild because their content must be entered again. Explicit
+review and save create a separate successor; original records and bytes remain.
+Workspace/client/unmount tests preserve the existing scoped-client isolation;
+explicit action-token checks also guard acknowledgement and error updates.
+Fresh renderer tests use actual registered Desktop IPC/preload or owned HTTP,
+application and filesystem catalog/bindings, with finite worker/archive fixtures.
+They do not qualify actual app restart, models, native cleanup or parent closure.

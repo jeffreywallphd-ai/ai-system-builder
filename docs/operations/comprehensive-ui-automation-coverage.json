@@ -2004,6 +2004,18 @@
           "name": "browser: redacts refused runtime start details and retries the same manual input",
           "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-with-finite-pre-acceptance-port-faults",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: a fresh session preserves manual pack rebuild rules and original bytes",
+          "tier": "fresh-renderer-real-client-preload-or-owned-http-application-new-filesystem-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: a fresh session preserves manual pack rebuild rules and original bytes",
+          "tier": "fresh-renderer-real-client-preload-or-owned-http-application-new-filesystem-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -2025,7 +2037,13 @@
         "scope": "Real app consumers are wired; local fixture/oracle/collection checks do not prove app selectors or host execution."
       },
       "composed_local_scope": "Actual shared UI and desktop client/preload/registered IPC or browser typed HTTP client, existing host composition, application generation/browser/deletion, runtime-adapter private staging and new JSON catalog/bindings/bytes. Worker output/inspection, sender/access/model availability and scheduling are finite fixtures. Forty-two cases total across both consumers. No Python/model/OCR/provider/process, actual archive parser, physical host, SQLite/process restart, native ownership or final/parent pass.",
-      "preparation_error_scope": "Generation-start exceptions and source-staging binding/retrieval exceptions or refused results use fixed public copy across registered HTTP/IPC. Tests preserve exact refused codes, manual/source correction and explicit publication consent. Registry faults are before worker acceptance; no change or proof of native/physical worker ownership, terminal runtime redaction or final/parent qualification."
+      "preparation_error_scope": "Generation-start exceptions and source-staging binding/retrieval exceptions or refused results use fixed public copy across registered HTTP/IPC. Tests preserve exact refused codes, manual/source correction and explicit publication consent. Registry faults are before worker acceptance; no change or proof of native/physical worker ownership, terminal runtime redaction or final/parent qualification.",
+      "fresh_session_rebuild": {
+        "shared_test": "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+        "scope": "Saved manual packs remain non-rebuildable and require re-entry.",
+        "stale_scope": "Workspace/client/unmount delayed replies already denied by existing scoped client; retained regressions plus explicit action-token guards.",
+        "actual_host_qualification": "pending"
+      }
     },
     {
       "id": "context-source-packs",
@@ -2148,6 +2166,18 @@
           "name": "complete exact ordered review/citation/progress/approval sequence plus saved byte/manifest/source/settings/restart/catalog oracles and fixed source public-read admission",
           "tier": "bounded-pure-oracles-with-explicitly-synthetic-marked-bytes",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: a fresh session preserves source-materials pack rebuild rules and original bytes",
+          "tier": "fresh-renderer-real-client-preload-or-owned-http-application-new-filesystem-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: a fresh session preserves source-materials pack rebuild rules and original bytes",
+          "tier": "fresh-renderer-real-client-preload-or-owned-http-application-new-filesystem-finite-worker",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -2164,7 +2194,13 @@
           "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
         ],
         "actual_host_qualification": "pending",
-        "scope": "Existing two app cases call real source-pack/RAG UI workflows and public byte/manifest/catalog oracles. Local checks/collection do not run apps or qualify selectors/restart/native cleanup. Fresh-session source-pack rebuild display needs a separate product regression/fix."
+        "scope": "Existing app cases call source-pack/RAG UI workflows and public byte/manifest/catalog oracles. Fresh-session source-pack display repaired and covered by local joined tests. Actual apps/selectors/restart/native cleanup remain pending."
+      },
+      "fresh_session_rebuild": {
+        "shared_test": "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+        "scope": "Source and legacy-source mode restored only after accepted owned rebuild; explicit Markdown review/save and immutable original/source records.",
+        "stale_scope": "Workspace/client/unmount delayed replies already denied by existing scoped client; retained regressions plus explicit action-token guards.",
+        "actual_host_qualification": "pending"
       }
     },
     {

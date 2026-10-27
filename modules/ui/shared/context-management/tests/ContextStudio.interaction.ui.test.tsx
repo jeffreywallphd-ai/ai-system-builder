@@ -217,7 +217,97 @@ async function openScopedBrowser() {
   await act(async () => button("View Details").click());
 }
 
+function savedPackClient(
+  mode: "manual" | "source-materials" | undefined,
+  rebuild: () => Promise<ContextManagementTransportValue> = async () => ({ ...acceptedContextStart, action: "browser-rebuild" }),
+): ContextManagementClient {
+  const item = { ...savedItem, kind: "markdown-context-pack" as const, name: "saved-pack", mediaType: "application/vnd.ai-system-builder.markdown-context-pack+zip" as const };
+  const contextPack: ContextArtifactManifest["contextPack"] = mode === undefined
+    ? { method: "deterministic", topicCount: 1, maximumSummaryCharacters: 2000 }
+    : { inputMode: mode, method: "none", ...(mode === "source-materials" ? { cleaningPreset: "standard" } : {}) };
+  return browserContextClient(async command => {
+    if (command.action === "browser-list") return { action: "browser-list", items: [item] };
+    if (command.action === "browser-detail") return { action: "browser-detail", detail: { ...savedContextDetail(), item, rebuildAllowed: mode !== "manual", manifest: { ...manifest, kind: item.kind, name: item.name, mediaType: item.mediaType, embedding: undefined, contextPack } } };
+    if (command.action === "browser-rebuild") return rebuild();
+    if (command.action === "generation-read") return { action: "generation-read", status: { requestId: command.requestId, state: "review-required", preview: { kind: "markdown-context-pack", name: item.name, sourceCount: mode === "manual" ? 0 : 1, manualEntryCount: mode === "manual" ? 1 : 0, chunkCount: 1, items: [{ id: "rebuilt-entry", kind: mode === "manual" ? "manual" : "chunk", text: "# Saved policy\n\nKeep the accepted source.", citations: [] }] } } };
+    return undefined;
+  });
+}
+
 describe("ContextStudio scoped actions", () => {
+  for (const mode of ["source-materials", undefined] as const) {
+    it(`restores ${mode ?? "legacy source"} pack review after a fresh-session rebuild`, async () => {
+      const client = savedPackClient(mode), mounted = await renderStudio(client);
+      await openScopedBrowser();
+      await act(async () => button("Rebuild").click());
+      await vi.waitFor(() => {
+        const panel = mounted.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")!;
+        expect([...panel.querySelectorAll("button")].some(value => value.textContent?.trim() === "Save context pack")).toBe(true);
+      });
+      expect(buttonContaining("From source materials").getAttribute("aria-pressed")).toBe("true");
+      expect(document.querySelector(".artifact-browser__detail-dialog")).toBeNull();
+      expect(vi.mocked(client.execute).mock.calls.some(([input]) => input.command.action === "generation-save")).toBe(false);
+      await act(async () => button("Review prepared Markdown").click());
+      expect(document.querySelector(".dataset-review__modal")?.textContent).toContain("Keep the accepted source.");
+    });
+  }
+
+  it("keeps a refused fresh pack rebuild in its detail without selecting a mode", async () => {
+    const client = savedPackClient("source-materials", async () => { throw new Error("private transport failure"); });
+    await renderStudio(client); await openScopedBrowser();
+    await act(async () => button("Rebuild").click());
+    expect(document.querySelector(".artifact-browser__detail-dialog")).not.toBeNull();
+    expect(container!.textContent).toContain("This context artifact could not be rebuilt.");
+    expect(container!.textContent).not.toContain("private transport failure");
+    await act(async () => document.querySelector<HTMLButtonElement>(".artifact-browser__detail-dialog [aria-label='Close context detail and preview']")!.click());
+    await act(async () => button("Context Packs").click());
+    expect(buttonContaining("Manual entry").getAttribute("aria-pressed")).toBe("false");
+    expect(vi.mocked(client.execute).mock.calls.some(([input]) => ["generation-read", "generation-save"].includes(input.command.action))).toBe(false);
+  });
+
+  it("keeps saved manual packs non-rebuildable in a fresh session", async () => {
+    const client = savedPackClient("manual");
+    await renderStudio(client); await openScopedBrowser();
+    expect(button("Rebuild").disabled).toBe(true);
+    await act(async () => button("Rebuild").click());
+    expect(vi.mocked(client.execute).mock.calls.some(([input]) => input.command.action === "browser-rebuild")).toBe(false);
+    expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+  });
+
+  for (const replacement of ["workspace", "client", "unmount"] as const) {
+    for (const outcome of ["accepted", "failed"] as const) {
+      it(`ignores ${outcome} rebuild after ${replacement} replacement`, async () => {
+        const pending = deferredContextValue();
+        const client = savedPackClient("source-materials", async () => {
+          const value = await pending.promise;
+          if (outcome === "failed") throw new Error("private obsolete rebuild failure");
+          return value;
+        });
+        await renderStudio(client); await openScopedBrowser();
+        await act(async () => button("Rebuild").click());
+        const workspaceId = replacement === "workspace" ? "workspace-b" : "workspace-a";
+        const nextClient = replacement === "client" ? savedPackClient("manual") : client;
+        if (replacement === "unmount") { await act(async () => root!.unmount()); root = undefined; }
+        else {
+          await act(async () => root!.render(<NotificationProvider><ContextStudio workspaceId={workspaceId} client={nextClient} /><NotificationRecordProbe workspaceId={workspaceId} /></NotificationProvider>));
+          await act(async () => button("Context Packs").click());
+          await act(async () => buttonContaining("Manual entry").click());
+        }
+        await act(async () => pending.resolve({ ...acceptedContextStart, action: "browser-rebuild" }));
+        expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-a")).toBeNull();
+        expect(sessionStorage.getItem("ai-system-builder.context-task.v1:workspace-b")).toBeNull();
+        expect(vi.mocked(client.execute).mock.calls.some(([input]) => input.command.action === "generation-read")).toBe(false);
+        expect(container!.textContent).not.toContain("This context artifact could not be rebuilt.");
+        expect(container!.textContent).not.toContain("private obsolete rebuild failure");
+        if (replacement !== "unmount") {
+          expect(buttonContaining("Manual entry").getAttribute("aria-pressed")).toBe("true");
+          expect(container!.textContent).not.toContain("Stop");
+          expect(container!.querySelector("[data-testid='notification-records']")!.textContent).not.toContain("Preparing context artifact");
+        }
+      });
+    }
+  }
+
   it("admits one generation before React renders busy state", async () => {
     const start = deferredContextValue();
     const client = scopedContextClient(async command => command.action === "generation-start" ? start.promise : { action: "generation-read", status: { requestId: "owned-context", state: "running" } });

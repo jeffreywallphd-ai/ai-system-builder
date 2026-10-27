@@ -375,6 +375,52 @@ for (const host of ["desktop", "browser"] as const) {
     } finally { artifacts.storage.retrieveArtifact = retrieve; }
     await rebuildAndPreserve(row, "pack");
   }, 20_000);
+  for (const mode of ["manual", "source-materials"] as const) it(`${host}: a fresh session preserves ${mode} pack rebuild rules and original bytes`, async () => {
+    await compose(host);
+    if (mode === "manual") await prepareManual(); else await prepareSourcePack();
+    const row = await saveAndOpenDetail(), original = await exactSavedBytes(row), before = await records();
+    // Destroy the renderer only: the same real clients, application, storage and
+    // saved catalog survive, but no input mode is carried into the new session.
+    await act(async () => root!.unmount()); root = createRoot(container!);
+    await mount(); await act(async () => button("Context Browser").click());
+    await wait(() => hasButton("View Details"));
+    await act(async () => button("View Details").click()); await wait(() => hasButton("Rebuild"));
+    expect(await records()).toEqual(before); expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+    if (mode === "manual") {
+      expect(button("Rebuild").disabled).toBe(true);
+      expect(document.querySelector(".artifact-browser__detail-dialog")?.textContent).toContain("Re-enter the manual context before rebuilding this pack.");
+      await act(async () => button("Rebuild").click());
+      expect(commands.some(value => value.action === "browser-rebuild")).toBe(false);
+      expect(requestIds).toHaveLength(1); expect(await records()).toEqual(before);
+      expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+      return;
+    }
+    const savedCalls = commands.filter(value => value.action === "generation-save").length;
+    await act(async () => button("Rebuild").click()); await wait(() => hasButton("Save context pack"));
+    expect(document.querySelector(".artifact-browser__detail-dialog")).toBeNull();
+    const visible = container!.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")!;
+    const modeControl = [...visible.querySelectorAll("button")].find(value => value.textContent?.includes("From source materials"))!;
+    expect(modeControl.getAttribute("aria-pressed")).toBe("true");
+    expect(commands.filter(value => value.action === "generation-save")).toHaveLength(savedCalls);
+    expect(await records()).toEqual(before);
+    await act(async () => button("Review prepared Markdown").click());
+    expect(document.querySelector(".dataset-review__modal")?.textContent).toContain("A valid day pass covers both stops.");
+    await act(async () => button("Approve section").click());
+    await act(async () => document.querySelector<HTMLButtonElement>(".dataset-review__modal [aria-label='Close dialog']")!.click());
+    await act(async () => button("Save context pack").click()); await wait(() => hasButton("Rebuild"));
+    const after = await records(), packs = after.filter(value => value.mediaType === CONTEXT_MARKDOWN_PACK_MEDIA_TYPE);
+    expect(packs).toHaveLength(2); expect(after).toHaveLength(before.length + 1);
+    for (const prior of before) { expect(after.find(value => value.storageKey === prior.storageKey)).toEqual(prior); }
+    expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+    const successor = packs.find(value => value.storageKey !== row.storageKey)!;
+    expect(successor.storageKey).not.toBe(row.storageKey);
+    const output = results.get(requestIds[1]!)!;
+    expect((await exactSavedBytes(successor)).equals(Buffer.from(output.bytes))).toBe(true);
+    expect(output.result.manifest.contextPack?.inputMode).toBe(mode);
+    expect(output.result.manifest.sources).toEqual(results.get(requestIds[0]!)!.result.manifest.sources);
+    expect(output.result.manifest.manualEntries).toEqual(results.get(requestIds[0]!)!.result.manifest.manualEntries);
+    expect((await exactSavedBytes(before.find(value => value.storageKey === "uploads/context-ui/harbor-transit.md")!)).toString()).toBe(sourceText);
+  }, 20_000);
   for (const failure of ["cuda", "runtime-malformed"] as const) it(`${host}: rejects ${failure} query output without fallback and allows explicit CPU correction`, async () => {
     await compose(host); await prepareRag(); const row = await saveRag(), before = await exactSavedBytes(row); queryFault = failure;
     await queryRag("cuda"); expect(queryInputs).toHaveLength(1); expect(queryInputs[0].embeddingDevice).toBe("cuda");

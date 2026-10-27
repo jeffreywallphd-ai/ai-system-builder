@@ -351,3 +351,9 @@ application by the receiving page. Worker/quality/access/readiness and declared
 fault/delay seams remain fixtures. Parquet row editing, actual workers, provider,
 installed-host, native/process and final checks remain separate. Accepted model
 accuracy and OCR checks stay closed; these fixtures supply no new qualification.
+
+Saved source-pack Rebuild restores the saved input mode after current-session
+acceptance, so a fresh renderer shows the explicit Markdown review/save controls.
+Legacy packs without a mode use the existing source-materials default. Manual
+packs retain the application rule that requires re-entry instead of rebuilding.
+Obsolete success/error replies cannot alter the current workspace task or mode.

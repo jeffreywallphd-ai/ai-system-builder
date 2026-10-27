@@ -796,6 +796,10 @@ function ScopedContextStudio({
       });
       if (result.action !== "browser-rebuild")
         throw new ContextUiError("Context rebuild response was invalid.");
+      if (!ownsAction(owner)) return;
+      if (detail.item.kind === "markdown-context-pack") {
+        setPackInputMode(detail.manifest.contextPack?.inputMode ?? "source-materials");
+      }
       setBrowserDetailOpen(false);
       setRequestId(result.value.requestId);
       generationRef.current = undefined;
@@ -813,7 +817,7 @@ function ScopedContextStudio({
       );
       notifications?.setPanelOpen(true);
     } catch (error) {
-      setMessage(
+      if (ownsAction(owner)) setMessage(
         safeMessage(error, "This context artifact could not be rebuilt."),
       );
     } finally {
