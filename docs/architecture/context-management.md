@@ -350,3 +350,21 @@ archive inspection, embedding/query, access and in-process invocation are finite
 fixtures. Real UI/clients/transports/application/staging/files are composed; the
 fixture is not an actual LanceDB/model/physical-host or final roadmap pass.
 Whole-app source-pack/RAG helper wiring remains separate implementation work.
+
+### Fixed source Context processor regression
+
+The private provided-data qualification worker admits one versioned synthetic
+Markdown source and its declared source-pack/RAG settings. The existing production
+processors generate, inspect and query the actual package. A finite deterministic
+embedding callback replaces model execution; real LanceDB storage and query
+remain in use. This callback is test support, not a new production provider.
+The source digest, bounded package manifest and actual returned citations remain
+checked. Actual app restart and real model/index qualification are separate.
+
+Generated source packs now frame each topic summary with an invisible versioned
+Markdown marker and its exact character count. This preserves the cleaned group
+verbatim, including nested headings, citation-like lines and fenced examples.
+The bounded reader uses that count to find the real citation footer. Existing
+unambiguous legacy topics and manual packs retain their existing reader paths.
+Malformed frames, oversized summaries and unsupported versions fail closed;
+archive, topic, summary, line and citation limits remain unchanged.

@@ -1,0 +1,11 @@
+{
+  "schema_version": "fixed-source-context-v1",
+  "source_name": "synthetic-context-transit.md",
+  "source_markdown": "# Harbor Transit\n\n## Route\n\nLine A connects Harbor Station and the Museum. It leaves Harbor Station at 08:00. A day pass covers both stops.\n\n## Museum\n\nThe Museum opens at 09:00 and closes at 17:00. Museum tickets do not include a transit pass.\n",
+  "source_sha256": "c2e08459718b524101dc05aa33ec9ad99072877eccfd38303b1f9cc999d5b173",
+  "pack_name": "ui-daily-source-context",
+  "rag_name": "ui-daily-transit-rag",
+  "query": "Which stops does Line A connect?",
+  "query_answer": "Line A connects Harbor Station and the Museum.",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2"
+}

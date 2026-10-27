@@ -642,7 +642,8 @@
         "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py",
         "modules/adapters/runtime/python/worker/tests/test_context_bounded_validation.py",
         "dev-tools/scripts/qualification/tests/test_context_efficiency_qualification.py",
-        "modules/adapters/runtime/python/worker/tests/test_context_manual_pack_integrity.py"
+        "modules/adapters/runtime/python/worker/tests/test_context_manual_pack_integrity.py",
+        "dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -674,7 +675,10 @@
         "docs/context/packs/context-management.pack.md",
         "docs/security/context-management-threat-model.md",
         "docs/operations/context-efficiency-qualification.json",
-        "docs/functionality-optimization-review.json"
+        "docs/functionality-optimization-review.json",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py",
+        "dev-tools/scripts/qualification/visual-composer/daily-source-context-fixture.json",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md"
       ]
     },
     "functionality-outcomes": {
@@ -1525,7 +1529,8 @@
         "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json",
         "dev-tools/scripts/qualification/visual-composer/daily-row-review-fixture.json",
         "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
-        "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/daily-source-context-fixture.json"
       ]
     },
     "dataset-semantic-curation": {

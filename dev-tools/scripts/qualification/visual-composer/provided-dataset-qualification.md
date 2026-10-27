@@ -114,3 +114,16 @@ not run an app, process restart or actual IPC/network. Module collection keeps
 the same two host cases and skips them without the explicit scenario. Actual
 source-bound host execution, native retirement and parent/final qualification
 remain pending. Do not rerun accepted model accuracy or OCR for this extension.
+
+Source-derived Context tests use `daily-source-context-fixture.json`: one small
+Markdown transit document, one source pack and one RAG database. The private
+worker admits the exact source bytes/settings, bounded current staging, a closed
+RAG archive/manifest and one fixed CPU query. It delegates generation, inspection
+and LanceDB search to production code. A finite 384-dimensional embedding
+callback replaces model loading; these tests do not qualify embedding accuracy.
+The original manual pack limit remains 16 KiB. Only this declared RAG input has
+a separate 512 KiB archive limit, 32 regular entries and 2 MiB expanded bytes.
+Production parsing still validates the actual table and citations. Source bytes,
+manual/JSONL/Parquet contracts, offline bindings and native limits remain intact.
+The worker extension is tested locally; source-pack/RAG app journey wiring and
+actual Windows/browser restart execution remain separate pending work.

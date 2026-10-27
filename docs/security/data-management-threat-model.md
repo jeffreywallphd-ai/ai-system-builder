@@ -1549,3 +1549,33 @@ Physical sender/authorization/SQLite, real LanceDB/embedding/model semantics,
 native process/restart/scale and final/parent evidence remain separate. Existing
 manual/source tests and accepted model accuracy/OCR are preserved. Source-pack/
 RAG whole-app helper code is still required before its controlled execution.
+
+### Fixed source Context worker admission
+
+The private app-test worker retains its task allowlist, offline/native ownership
+and current source/run/temp bindings. The source fixture is read with regular
+single-link identity/size witnesses and exact bytes/name/digest/settings. New RAG
+operations require the current staged input, matching size/digest, bounded ZIP
+entries/expansion, no aliases/links/traversal/encryption, and the declared source
+manifest/model/dimensions. Only one fixed CPU query is admitted. Production
+archive/table/citation validation follows admission. A finite embedding callback
+replaces all real model loading; it grants no new model, download, OCR or provider
+authority. Existing manual input and all native/resource guards are unchanged.
+Negative tests deny changed bytes/settings/paths/query and malformed archives
+before processor effects; local package tests preserve original source bytes.
+App/native restart and final qualification remain pending.
+
+A real package regression found that source Markdown headings and citation-like
+lines could be mistaken for package structure. New generated topics use a fixed
+versioned header and exact bounded summary character framing. The reader consumes
+that body before requiring the citation footer and next section; it never retries
+a malformed framed document with the legacy parser. Summaries and source bytes
+are preserved exactly. Single-line titles, limits, legacy/manual compatibility
+and malformed/trailing/frame/citation denials have focused regression coverage.
+
+The same wrapper also admits only the declared source-pack manifest/name/source
+lineage/settings and exact member set. Manual packs retain their 16 KiB limit and
+fixed entry/digest identity. Changed source-pack names, source lists and model
+methods are denied before processor invocation. Reserved framing metadata is
+recognized even if a header is prefixed or damaged; it cannot enter the legacy
+parser. Titles ending with any line separator are refused by writer and reader.

@@ -60,6 +60,8 @@ MAX_MODEL_OUTPUT_CHARACTERS = 64_000
 MINIMUM_TOPIC_CONTEXT_CHARACTERS = 800
 MAXIMUM_TOPIC_CONTEXT_CHARACTERS = 12_000
 MAXIMUM_TOPIC_GROUPS = 32
+MAX_TOPIC_SUMMARY_CHARACTERS = 64_000
+TOPICS_FRAMED_HEADER = "# Topics\n\n<!-- ai-system-builder:topics-framed-v1 -->\n\n"
 SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,119}$")
 FIELD_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,127}$")
 LANGUAGE_PATTERN = re.compile(r"^[a-z]{2,3}(?:-[A-Z]{2})?$")
@@ -1344,13 +1346,19 @@ def _write_context_pack(
     topic_sections: list[str] = []
     for topic in topics:
         _validate_markdown_document(topic["summary"])
+        title = topic["title"]
+        if not isinstance(title, str) or not title.strip() or len(title) > 200 or title.splitlines() != [title]:
+            raise ValueError("Context pack topic title is invalid.")
+        summary = topic["summary"]
+        if not summary.strip() or len(summary) > MAX_TOPIC_SUMMARY_CHARACTERS:
+            raise ValueError("Context pack topic summary is invalid.")
         citations = [
             _citation_label(by_id[citation])
             for citation in topic["citationIds"]
             if citation in by_id
         ]
         topic_sections.append(
-            f"## {topic['title']}\n\n{topic['summary']}\n\n"
+            f"## {title}\n\n<!-- ai-system-builder:summary-characters:{len(summary)} -->\n\n{summary}\n\n"
             f"Sources: {', '.join(citations)}"
         )
     source_sections = [
@@ -1366,7 +1374,7 @@ def _write_context_pack(
         "artifacts. See manifest.json for exact source digests and chunk "
         "lineage.\n"
     )
-    topics_markdown = "# Topics\n\n" + "\n\n".join(topic_sections)
+    topics_markdown = TOPICS_FRAMED_HEADER + "\n\n".join(topic_sections)
     sources_markdown = "# Source chunks\n\n" + "\n\n".join(source_sections)
     _validate_markdown_document(topics_markdown)
     _validate_markdown_document(sources_markdown)

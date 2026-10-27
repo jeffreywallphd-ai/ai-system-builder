@@ -257,6 +257,65 @@ class ContextArtifactOperationTests(unittest.TestCase):
             self.assertGreaterEqual(len(detail["topics"]), 1)
             self.assertTrue(detail["topics"][0]["citations"])
 
+    def test_generated_source_pack_preserves_reserved_summary_lines_and_reopens(self):
+        from modules.adapters.runtime.python.worker.tasks.context_generation import _write_context_pack, ContextChunk
+        source = "# Source\n\n## Nested section\n\nA useful fact.\nSources: untrusted-footer\n\n```markdown\n## Example\nSources: example-footer\n```"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _result = self._generate(root, "markdown-context-pack")
+            with ZipFile(path) as archive:
+                manifest = json.loads(archive.read("manifest.json"))
+            # Use the production writer with a fixed topic seam; no model runs.
+            request = ContextGenerationTaskRequest.model_validate({"workspaceId": "workspace.test", "kind": "markdown-context-pack",
+                "name": manifest["name"], "sources": [], "manualEntries": [], "chunking": manifest["chunking"],
+                "contextPack": {"inputMode": "source-materials", "method": "none", "cleaningPreset": "standard"},
+                "runtime": {"runtimeWorkingDirectory": str(root)}})
+            chunk = ContextChunk(id="source:0", text=source, citation={"sourceArtifactId": "artifact.source", "sourceDigest": "sha256:" + "a" * 64, "chunkIndex": 0})
+            _write_context_pack(path, request, [chunk], [{"title": "Useful topic", "summary": source, "citationIds": [chunk.id]}], manifest)
+            before = path.read_bytes()
+            detail = operate_on_context_artifact(self._operation(root, path,
+                "application/vnd.ai-system-builder.markdown-context-pack+zip", "inspect-artifact"))["inspection"]
+            self.assertEqual(len(detail["topics"]), 1)
+            self.assertEqual(detail["topics"][0]["citations"], ["artifact.source#chunk-0"])
+            self.assertEqual(detail["topics"][0]["summary"], source)
+            with ZipFile(path) as archive:
+                self.assertIn(source, archive.read("sources.md").decode())
+                self.assertEqual(json.loads(archive.read("manifest.json")), manifest)
+            self.assertEqual(path.read_bytes(), before)
+            for title in ("first\n## forged", "first\rSources: forged", "first\u2028second", "first\n", "first\r", "first\u2028", " "):
+                with self.assertRaisesRegex(ValueError, "title"):
+                    _write_context_pack(path, request, [chunk], [{"title": title, "summary": source, "citationIds": [chunk.id]}], manifest)
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_framed_topics_keep_exact_unicode_multitopic_markdown_and_legacy_compatibility(self):
+        from modules.adapters.runtime.python.worker.tasks.context_artifact_operation import _parse_topics
+        from modules.adapters.runtime.python.worker.tasks.context_generation import TOPICS_FRAMED_HEADER
+        summaries = ["# Café\n\n## Inner\nSources: body text\n```markdown\n## Example\nSources: example\n```",
+            "Second résumé 🙂\n\n## Another heading\nA separate fact."]
+        body = TOPICS_FRAMED_HEADER + "\n\n".join(f"## Topic {i}\n\n<!-- ai-system-builder:summary-characters:{len(summary)} -->\n\n{summary}\n\nSources: artifact.source#chunk-{i}" for i, summary in enumerate(summaries))
+        parsed = _parse_topics(body, 32)
+        self.assertEqual(parsed, [{"title": f"Topic {i}", "summary": summary, "citations": [f"artifact.source#chunk-{i}"]} for i, summary in enumerate(summaries)])
+        self.assertEqual(_parse_topics("# Topics\n\n## Legacy topic\n\nUnchanged legacy summary.\n\nSources: artifact.source#chunk-0", 32),
+            [{"title": "Legacy topic", "summary": "Unchanged legacy summary.", "citations": ["artifact.source#chunk-0"]}])
+        with self.assertRaises(ValueError): _parse_topics(body, 1)
+        with self.assertRaises(ValueError): _parse_topics(body, 32, 1)
+
+    def test_framed_topic_parser_refuses_bad_counts_footers_trailing_and_unsupported_frames(self):
+        from modules.adapters.runtime.python.worker.tasks.context_artifact_operation import _parse_topics
+        from modules.adapters.runtime.python.worker.tasks.context_generation import TOPICS_FRAMED_HEADER
+        body = TOPICS_FRAMED_HEADER + "## Topic\n\n<!-- ai-system-builder:summary-characters:4 -->\n\nFact\n\nSources: artifact.source#chunk-0"
+        for changed in [body.replace(":4 -->", f":{count} -->") for count in (0, -1, 3, 5, 64001, 999999)] + [
+            body.replace("topics-framed-v1", "topics-framed-v9"), body.replace("Sources: ", "Source: "),
+            "\n" + body.replace(":4 -->", ":3 -->"), body.replace("# Topics", "# Changed heading"),
+            body.replace("topics-framed-v1 -->", "topics-framed-v1"),
+            body.replace("<!-- ai-system-builder:topics-framed-v1 -->\n\n", ""),
+            body.replace("## Topic\n", "## Topic\u2028\n"),
+            body + "\nextra", body + "\n\n## Incomplete", body.replace("## Topic\n", "## Topic\nInjected\n"),
+            body.replace("artifact.source#chunk-0", ""), body.replace("artifact.source#chunk-0", "x" * 641),
+            body.replace("artifact.source#chunk-0", ", ".join(["source"] * 11)),
+            body.replace("Fact", "    "), TOPICS_FRAMED_HEADER]:
+            with self.subTest(changed=changed[:130]), self.assertRaises(ValueError): _parse_topics(changed, 32)
+
     def test_rejects_no_summary_pack_manifest_with_model_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -7,12 +7,14 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import hashlib
+import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
+import zipfile
 
 
 def manual_fixture():
@@ -32,6 +34,252 @@ def manual_fixture():
             or type(value["markdown"]) is not str or not 0 < len(value["markdown"].encode("utf-8")) <= 1024):
         raise ValueError("The fixed manual fixture is invalid.")
     return value
+
+
+def stable_fixture_bytes(candidate, maximum):
+    before = candidate.lstat()
+    witness = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_nlink)
+    if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+            or getattr(before, "st_file_attributes", 0) & 0x400
+            or not 0 < before.st_size <= maximum or candidate.resolve() != candidate):
+        raise ValueError("A bounded current single-link fixture file is required.")
+    with candidate.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    if (witness(before) != witness(opened) or witness(opened) != witness(after)
+            or witness(after) != witness(candidate.lstat()) or len(raw) != before.st_size):
+        raise ValueError("The fixture file changed while being read.")
+    return raw
+
+
+def source_context_fixture():
+    candidate = Path(__file__).parent / "daily-source-context-fixture.json"
+    value = json.loads(stable_fixture_bytes(candidate, 8192))
+    keys = {"schema_version", "source_name", "source_markdown", "source_sha256", "pack_name",
+            "rag_name", "query", "query_answer", "embedding_model"}
+    if (type(value) is not dict or set(value) != keys
+            or value["schema_version"] != "fixed-source-context-v1"
+            or value["source_name"] != "synthetic-context-transit.md"
+            or value["pack_name"] != "ui-daily-source-context" or value["rag_name"] != "ui-daily-transit-rag"
+            or value["embedding_model"] != "sentence-transformers/all-MiniLM-L6-v2"
+            or value["query"] != "Which stops does Line A connect?"
+            or value["query_answer"] != "Line A connects Harbor Station and the Museum."
+            or type(value["source_markdown"]) is not str
+            or not 0 < len(value["source_markdown"].encode("utf-8")) <= 2048
+            or "\0" in value["source_markdown"] or value["query_answer"] not in value["source_markdown"]
+            or value["source_sha256"] != hashlib.sha256(value["source_markdown"].encode("utf-8")).hexdigest()):
+        raise ValueError("Only the declared fixed source Context fixture is permitted.")
+    return value
+
+
+def fixture_mapping(value):
+    if type(value) is dict:
+        return value.copy()
+    if value is None:
+        raise ValueError("The fixed Context settings are required.")
+    return value.model_dump(mode="json", exclude_none=True) if hasattr(value, "model_dump") else vars(value).copy()
+
+
+def fixed_context_chunking(value, rag):
+    actual = fixture_mapping(value)
+    if actual.get("textFields") in (None, []):
+        actual.pop("textFields", None)
+    expected = {"strategy": "fixed-length", "chunkCharacters": 128, "overlapCharacters": 0,
+                "maximumChunks": 10000} if rag else {
+                    "strategy": "topic-aware", "chunkCharacters": 1200, "overlapCharacters": 0,
+                    "maximumTokensPerChunk": 320, "topicBoundarySensitivity": 0.22, "maximumChunks": 10000}
+    if actual != expected:
+        raise ValueError("Only declared source Context chunk settings are permitted.")
+
+
+def fixed_context_checks(value):
+    expected = {"preset": "recommended", "allowedLanguages": ["en"], "requireLicenseMetadata": False,
+                "requireConsentMetadata": False, "includeSourceAttribution": True}
+    if value is None or fixture_mapping(value) != expected:
+        raise ValueError("Only the fixed source checks are permitted.")
+
+
+def validate_fixed_context_source(source, root, fixed, operation=False):
+    expected = root / ("input.bin" if operation else "source-0000.md")
+    if (Path(source.localPath) != expected or source.mediaType != "text/markdown"
+            or source.originalName != fixed["source_name"] or getattr(source, "sourceInformation", None) is not None):
+        raise ValueError("Only the current fixed staged source is permitted.")
+    raw = stable_fixture_bytes(expected, 2048)
+    claimed = getattr(source, "sourceDigest", None) if not operation else source.digest
+    if (raw != fixed["source_markdown"].encode("utf-8") or source.sizeBytes != len(raw)
+            or claimed != "sha256:" + fixed["source_sha256"]):
+        raise ValueError("Only exact fixed source Context bytes are permitted.")
+
+
+def validate_source_context(payload, temp_root):
+    fixed = source_context_fixture()
+    root = regular_context_directory(payload, temp_root)
+    rag = payload.kind == "rag-database"
+    if (payload.kind not in ("rag-database", "markdown-context-pack")
+            or payload.name != fixed["rag_name" if rag else "pack_name"]
+            or payload.manualEntries or len(payload.sources) != 1):
+        raise ValueError("Only the named fixed source Context preparation is permitted.")
+    fixed_context_chunking(payload.chunking, rag)
+    validate_fixed_context_source(payload.sources[0], root, fixed)
+    if rag:
+        fixed_context_checks(payload.sourceChecks)
+        if (payload.contextPack is not None or payload.embedding is None
+                or payload.embedding.provider != "transformers" or payload.embedding.modelId != fixed["embedding_model"]
+                or payload.embedding.device != "cpu" or payload.embedding.batchSize != 16
+                or payload.embedding.dimensions not in (None, 384)):
+            raise ValueError("Only the fixed CPU embedding fixture is permitted.")
+    elif (payload.embedding is not None or payload.sourceChecks is not None or payload.contextPack is None
+          or fixture_mapping(payload.contextPack) != {"inputMode": "source-materials", "method": "none", "cleaningPreset": "standard"}):
+        raise ValueError("Only the fixed model-free source pack is permitted.")
+
+
+def fixed_context_embeddings(texts, settings):
+    fixed = source_context_fixture()
+    if (settings.provider != "transformers" or settings.modelId != fixed["embedding_model"]
+            or settings.device != "cpu" or settings.dimensions not in (None, 384)
+            or settings.batchSize not in (1, 16) or type(texts) is not list or not 1 <= len(texts) <= 8):
+        raise ValueError("Only the bounded finite CPU embedding fixture is permitted.")
+    normalize = lambda text: " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+    original = normalize(fixed["source_markdown"])
+    vectors = []
+    for text in texts:
+        if type(text) is not str or not 0 < len(text) <= 2048:
+            raise ValueError("Only bounded fixed embedding text is permitted.")
+        normalized = normalize(text)
+        if text != fixed["query"] and (not normalized or normalized not in original):
+            raise ValueError("Embedding text must come from the fixed source or query.")
+        axis = 0 if text == fixed["query"] or "line a connects" in normalized else 1 if "museum" in normalized else 2
+        vector = [0.0] * 384
+        vector[axis] = 1.0
+        vectors.append(vector)
+    return vectors
+
+
+def fixed_package_manifest(raw, rag):
+    """Bound archive reads before production package/table validation."""
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        entries = archive.infolist()
+        if not 1 <= len(entries) <= (32 if rag else 4) or sum(info.file_size for info in entries) > (2 * 1024 * 1024 if rag else 16384):
+            raise ValueError("The fixed Context package exceeded its limits.")
+        names = set()
+        for info in entries:
+            parts = PurePosixPath(info.filename).parts
+            mode = info.external_attr >> 16
+            allowed = (info.filename == "manifest.json" or (len(parts) > 1 and parts[0] == "database")) if rag else (
+                info.filename in {"manifest.json", "README.md", "topics.md", "sources.md", "context.md"})
+            if (info.filename in names or not parts or "\\" in info.filename
+                    or info.filename.startswith("/") or any(part in (".", "..") or ":" in part for part in parts)
+                    or str(PurePosixPath(info.filename)) != info.filename or info.is_dir() or info.flag_bits & 1
+                    or (stat.S_IFMT(mode) not in (0, stat.S_IFREG))
+                    or not allowed):
+                raise ValueError("Only bounded regular fixed Context entries are permitted.")
+            names.add(info.filename)
+        if ("manifest.json" not in names or (rag and not any(name.startswith("database/") for name in names))
+                or (not rag and names not in ({"manifest.json", "README.md", "context.md"}, {"manifest.json", "README.md", "topics.md", "sources.md"}))):
+            raise ValueError("The fixed Context package is incomplete.")
+        info = archive.getinfo("manifest.json")
+        if not 0 < info.file_size <= 16384:
+            raise ValueError("The fixed RAG manifest exceeded its limit.")
+        manifest = json.loads(archive.read(info))
+    return manifest, names
+
+
+def validate_fixed_source_package(raw, fixed, rag):
+    manifest, names = fixed_package_manifest(raw, rag)
+    if not rag and names != {"manifest.json", "README.md", "topics.md", "sources.md"}:
+        raise ValueError("Only the fixed source pack members are permitted.")
+    keys = {"schemaVersion", "kind", "name", "mediaType", "createdAt", "sources", "manualEntries", "chunking"}
+    keys.update({"sourceChecks", "embedding"} if rag else {"contextPack"})
+    media_type = "application/vnd.ai-system-builder.rag-database+lancedb+zip" if rag else "application/vnd.ai-system-builder.markdown-context-pack+zip"
+    if (type(manifest) is not dict or set(manifest) != keys
+            or manifest["schemaVersion"] != "1" or manifest["kind"] != ("rag-database" if rag else "markdown-context-pack")
+            or manifest["name"] != fixed["rag_name" if rag else "pack_name"] or manifest["mediaType"] != media_type
+            or type(manifest["createdAt"]) is not str or not 1 <= len(manifest["createdAt"]) <= 80
+            or manifest["manualEntries"] != [] or type(manifest["sources"]) is not list
+            or len(manifest["sources"]) != 1):
+        raise ValueError("Only the declared fixed Context manifest is permitted.")
+    fixed_context_chunking(manifest["chunking"], rag)
+    if rag:
+        fixed_context_checks(manifest["sourceChecks"])
+        if manifest["embedding"] != {"provider": "transformers", "modelId": fixed["embedding_model"], "dimensions": 384}:
+            raise ValueError("Only the declared fixed RAG embedding manifest is permitted.")
+    elif manifest["contextPack"] != {"inputMode": "source-materials", "method": "none", "cleaningPreset": "standard"}:
+        raise ValueError("Only the declared fixed source pack is permitted.")
+    source = manifest["sources"][0]
+    if (type(source) is not dict or set(source) != {"artifactId", "digest", "mediaType", "originalName", "sizeBytes", "chunkCount", "chunkingMode"}
+            or type(source["artifactId"]) is not str or not 1 <= len(source["artifactId"]) <= 512
+            or source["digest"] != "sha256:" + fixed["source_sha256"]
+            or source["mediaType"] != "text/markdown" or source["originalName"] != fixed["source_name"]
+            or source["sizeBytes"] != len(fixed["source_markdown"].encode("utf-8"))
+            or type(source["chunkCount"]) is not int or not 1 <= source["chunkCount"] <= 8
+            or source["chunkingMode"] != "extracted"):
+        raise ValueError("Only the declared fixed source lineage is permitted.")
+
+
+def validate_fixed_rag_package(raw, fixed):
+    validate_fixed_source_package(raw, fixed, True)
+
+
+def validate_source_context_operation(payload, temp_root):
+    fixed = source_context_fixture()
+    if payload.operation not in ("inspect-source", "inspect-artifact", "query"):
+        raise ValueError("Only fixed source Context operations are permitted.")
+    root = regular_context_directory(payload, temp_root, operation=True)
+    if Path(payload.localPath) != root / "input.bin":
+        raise ValueError("Only the current staged Context input is permitted.")
+    if payload.operation == "inspect-source":
+        if any(getattr(payload, key) is not None for key in ("query", "maximumResults", "embeddingDevice", "sourceInformation")):
+            raise ValueError("The fixed source inspection request is invalid.")
+        validate_fixed_context_source(payload, root, fixed, operation=True)
+        if payload.chunking is None:
+            raise ValueError("Fixed source inspection requires chunk settings.")
+        fixed_context_chunking(payload.chunking, payload.chunking.strategy == "fixed-length")
+        if payload.sourceChecks is not None:
+            fixed_context_checks(payload.sourceChecks)
+        return
+    if (payload.mediaType != "application/vnd.ai-system-builder.rag-database+lancedb+zip"
+            or any(getattr(payload, key) is not None for key in ("chunking", "sourceChecks", "sourceInformation"))
+            or type(payload.sizeBytes) is not int or not 0 < payload.sizeBytes <= 512 * 1024):
+        raise ValueError("Only bounded fixed RAG package operations are permitted.")
+    if payload.operation == "query":
+        if (payload.query != fixed["query"] or payload.maximumResults != 5
+                or payload.embeddingDevice not in (None, "cpu")):
+            raise ValueError("Only the fixed CPU query is permitted.")
+    elif any(getattr(payload, key) is not None for key in ("query", "maximumResults", "embeddingDevice")):
+        raise ValueError("The fixed RAG inspection request is invalid.")
+    raw = stable_fixture_bytes(root / "input.bin", 512 * 1024)
+    if payload.sizeBytes != len(raw) or payload.digest != "sha256:" + hashlib.sha256(raw).hexdigest():
+        raise ValueError("The staged fixed RAG bytes do not match their identity.")
+    validate_fixed_rag_package(raw, fixed)
+
+
+def run_context_fixture(payload, temp_root, processor, **kwargs):
+    if payload.name == manual_fixture()["name"]:
+        validate_manual_context(payload, temp_root)
+    else:
+        validate_source_context(payload, temp_root)
+    return processor(payload, embedding_provider=fixed_context_embeddings, **kwargs)
+
+
+def run_context_operation_fixture(payload, temp_root, processor, **kwargs):
+    if payload.mediaType == "application/vnd.ai-system-builder.markdown-context-pack+zip":
+        validate_manual_inspection(payload, temp_root)
+        raw = stable_fixture_bytes(Path(payload.localPath), 16384)
+        if payload.sizeBytes != len(raw) or payload.digest != "sha256:" + hashlib.sha256(raw).hexdigest():
+            raise ValueError("The staged fixed pack bytes do not match their identity.")
+        manifest, names = fixed_package_manifest(raw, False)
+        fixed = manual_fixture()
+        if type(manifest) is dict and manifest.get("name") == fixed["name"]:
+            if (names != {"manifest.json", "README.md", "context.md"} or manifest.get("sources") != []
+                    or manifest.get("manualEntries") != [{"id": "manual-entry-1", "title": fixed["name"],
+                        "digest": "sha256:" + hashlib.sha256(fixed["markdown"].encode("utf-8")).hexdigest()}]):
+                raise ValueError("Only the fixed manual pack identity is permitted.")
+        else:
+            validate_fixed_source_package(raw, source_context_fixture(), False)
+    else:
+        validate_source_context_operation(payload, temp_root)
+    return processor(payload, embedding_provider=fixed_context_embeddings, **kwargs)
 
 
 def validate_row_review_fixture(value):
@@ -252,12 +500,10 @@ def main():
 
     application.prepare_training_dataset = observe(prepare, "preparation")
     def context(payload, **kwargs):
-        validate_manual_context(payload, context_temp_root(root))
-        return original_context(payload, **kwargs)
+        return run_context_fixture(payload, context_temp_root(root), original_context, **kwargs)
 
     def inspect_context(payload, **kwargs):
-        validate_manual_inspection(payload, context_temp_root(root))
-        return original_inspection(payload, **kwargs)
+        return run_context_operation_fixture(payload, context_temp_root(root), original_inspection, **kwargs)
 
     application.generate_context_artifact = observe(context, "task")
     application.operate_on_context_artifact = observe(inspect_context, "task")

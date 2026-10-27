@@ -21,6 +21,8 @@ from ..models import (
     ContextPackSettings,
 )
 from .context_generation import (
+    TOPICS_FRAMED_HEADER,
+    MAX_TOPIC_SUMMARY_CHARACTERS,
     _collect_chunks,
     _embed_with_transformers,
     _validate_markdown_document,
@@ -40,7 +42,6 @@ SOURCE_PACK_ENTRIES = {
 MANUAL_PACK_ENTRIES = {"manifest.json", "README.md", "context.md"}
 MAX_MANIFEST_BYTES = 512 * 1024
 MAX_TOPICS_BYTES = 8 * 1024 * 1024
-MAX_TOPIC_SUMMARY_CHARACTERS = 64_000
 MAX_PACKAGE_ENTRY_BYTES = 1024 * 1024 * 1024
 MAX_PACKAGE_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_RAG_PACKAGE_FILES = 4_096
@@ -722,6 +723,12 @@ def _parse_topics(
     maximum_topics: int,
     maximum_summary_lines: int | None = None,
 ) -> list[dict[str, Any]]:
+    # The reserved marker must not become inert legacy body text when a frame
+    # is prefixed, truncated or otherwise malformed.
+    if "<!-- ai-system-builder:" in markdown:
+        if not markdown.startswith(TOPICS_FRAMED_HEADER):
+            raise ValueError("Context pack topic framing is invalid.")
+        return _parse_framed_topics(markdown, maximum_topics, maximum_summary_lines)
     topics: list[dict[str, Any]] = []
     for section in re.split(r"(?m)^##\s+", markdown)[1:]:
         lines = section.splitlines()
@@ -757,6 +764,46 @@ def _parse_topics(
         })
         if len(topics) > maximum_topics:
             raise ValueError("Context pack topic count is invalid.")
+    if not topics:
+        raise ValueError("Context pack contains no topics.")
+    return topics
+
+
+def _parse_framed_topics(markdown: str, maximum_topics: int, maximum_summary_lines: int | None) -> list[dict[str, Any]]:
+    """Consume exact bounded summaries; source Markdown cannot supply structure."""
+    cursor = len(TOPICS_FRAMED_HEADER)
+    topics: list[dict[str, Any]] = []
+    heading = re.compile(r"## ([^\r\n]{1,200})\n\n<!-- ai-system-builder:summary-characters:([1-9][0-9]{0,4}) -->\n\n")
+    while cursor < len(markdown):
+        match = heading.match(markdown, cursor)
+        if match is None:
+            raise ValueError("Context pack topic framing is invalid.")
+        title = match.group(1)
+        count = int(match.group(2))
+        if not title.strip() or title.splitlines() != [title] or count > MAX_TOPIC_SUMMARY_CHARACTERS:
+            raise ValueError("Context pack topic content is invalid.")
+        cursor = match.end()
+        summary = markdown[cursor:cursor + count]
+        cursor += count
+        if (len(summary) != count or not summary.strip()
+                or (maximum_summary_lines is not None and len(summary.splitlines()) > maximum_summary_lines)
+                or not markdown.startswith("\n\nSources: ", cursor)):
+            raise ValueError("Context pack topic content is invalid.")
+        cursor += len("\n\nSources: ")
+        end = markdown.find("\n", cursor)
+        end = len(markdown) if end == -1 else end
+        citations = [value.strip() for value in markdown[cursor:end].split(",")]
+        if not 1 <= len(citations) <= 10 or any(not value or len(value) > 640 for value in citations):
+            raise ValueError("Context pack topic citations are invalid.")
+        topics.append({"title": title, "summary": summary, "citations": citations})
+        if len(topics) > maximum_topics:
+            raise ValueError("Context pack topic count is invalid.")
+        cursor = end
+        if cursor == len(markdown):
+            break
+        if not markdown.startswith("\n\n## ", cursor):
+            raise ValueError("Context pack topic framing is invalid.")
+        cursor += 2
     if not topics:
         raise ValueError("Context pack contains no topics.")
     return topics

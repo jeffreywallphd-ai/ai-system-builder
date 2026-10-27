@@ -225,3 +225,11 @@ foreign/oversized reply refusal. Accepted model accuracy and OCR are not rerun.
 Source-pack/RAG whole-app helper wiring and physical/final qualification remain
 separate; the joined tests do not turn those implementation/execution gaps into
 a pass. Existing manual/source-pack cases and owned cleanup remain included.
+
+The fixed provided-data app-test worker now supports one declared Markdown source
+pack and RAG package. Focused tests invoke real Context generation, package
+inspection and LanceDB query with a closed finite embedding callback. They check
+exact stored source lineage and a relevant cited match without loading a model,
+running OCR, downloading dependencies or contacting a provider. Local processor
+tests do not qualify app restart, native cleanup, real embedding quality or the
+parent roadmap. Source-pack/RAG app helper wiring remains a following chunk.
