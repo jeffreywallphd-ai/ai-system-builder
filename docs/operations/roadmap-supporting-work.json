@@ -5154,6 +5154,25 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "published-runtime-ui-integration",
+      "work_id": "system-published-lifecycle-request-recovery",
+      "work_criteria": [
+        "exact-current-release-controls",
+        "bounded-owned-status-action-and-poll",
+        "authoritative-lifecycle-and-compatible-diagnostics",
+        "focused-lifecycle-profile-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "3ef1ae074f93528302f3127d46c961554b561b1518eeec599088037a6692b1a4",
+      "review_digest": "be593672215775e7f760d7bdb620106f74a2f8b03bb30e39e3711118938c59b4",
+      "scope": "Published controls recover after failed status and action requests. Exact-release owners ignore obsolete replies; slow reads do not accumulate. A denied action waits for a pending read before one fresh status check. All 26 rendered lifecycle cases, 38 related Build/Publish cases, two type roots and four profile guards pass with five scoped checks. This is committed local UI support. Actual app/runtime/native/final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }

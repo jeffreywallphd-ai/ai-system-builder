@@ -12419,6 +12419,18 @@
           "All 38 focused UI cases, five related lifecycle cases, type checks for three files and four test-selection checks passed. The agent reviewed and committed the work. Actual app, runtime, native and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b5ec63d125644b11cbef2598069f58f911efb0404a41022a04c45c93cbe763a0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Published-system controls recover after failed status and action requests. They ignore old replies and prevent repeated clicks from sending duplicate commands.",
+          "Slow status checks do not pile up. If an action is denied during a status check, the app waits and then requests fresh status.",
+          "All 26 focused lifecycle UI cases and 38 related Build/Publish cases passed. Type checks for two files and four test-selection checks also passed. The agent reviewed and committed the work. Actual app, runtime, native and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

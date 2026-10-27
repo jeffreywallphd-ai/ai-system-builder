@@ -3063,10 +3063,22 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+          "name": "34 rendered cases cover list/preview/open in Compose/duplicate/archive/restore, exact committed scope, single admission, authoritative retry and saved outcome versus failed refresh.",
+          "tier": "shared-renderer-native-controls-and-finite-typed-clients-with-real-React-layout-Suspense-and-explicit-passive-timing-seam",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "system-management-request-recovery",
+          "receipt_digest": "5916c9459e62c26713eaa0d87150e99a32e770138040783e73c1c61db081f576",
+          "review_digest": "efac1ff6bb7804ae236a754a8807d70acdf9de189183eaca6c7edbecb6bae38a",
+          "commit": "efbd36f892ddda3ea84fce91a8b0dcde62e53881"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Reviewed and committed local UI support at the recorded source snapshot. Finite clients establish request ownership, visible outcomes and explicit retry only. Existing application authorization, immutable revisions and runtime policy remain. Actual hosts, transport/storage, durable restart, runtime/window/native/model/provider and final combined checks remain pending. These tests do not qualify the full scenario or parent criterion."
     },
     {
       "id": "systems-scratch-multi-component",
@@ -3155,10 +3167,22 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
+          "name": "38 rendered cases cover exact immutable build/revision/lock confirmation, matching acknowledgements, duplicate suppression, target retirement and safe failure recovery.",
+          "tier": "shared-renderer-native-controls-and-finite-typed-clients-with-real-React-layout-StrictMode-Suspense-and-explicit-passive-timing-seam",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "system-build-publication-request-recovery",
+          "receipt_digest": "04d9a317f4323e341ca2f2446487546f4ea8be9a0509e46b509c1e5e5cd56623",
+          "review_digest": "ec9f96fe30371ebd9a8e7555e034133f384dea07750a1e868edef867c179362d",
+          "commit": "f7a141b2c014dd67577760c15ef9aae3be37c2d2"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Reviewed and committed local UI support at the recorded source snapshot. Finite clients establish request ownership, visible outcomes and explicit retry only. Existing application authorization, immutable revisions and runtime policy remain. Actual hosts, transport/storage, durable restart, runtime/window/native/model/provider and final combined checks remain pending. These tests do not qualify the full scenario or parent criterion."
     },
     {
       "id": "systems-published-runtime-and-persistence",
@@ -3191,12 +3215,24 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx",
+          "name": "26 rendered cases cover authoritative published controls, committed target ownership, serialized denied-action status recovery, bounded polling and failure retry. They do not execute a runtime or prove persistence.",
+          "tier": "shared-renderer-native-controls-and-finite-typed-clients-with-real-React-layout-StrictMode-Suspense-and-explicit-passive-timing-seam",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "system-published-lifecycle-request-recovery",
+          "receipt_digest": "3ef1ae074f93528302f3127d46c961554b561b1518eeec599088037a6692b1a4",
+          "review_digest": "be593672215775e7f760d7bdb620106f74a2f8b03bb30e39e3711118938c59b4",
+          "commit": "59c1cc055a59a9235d2ff7cde6c34b314ca7452c"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "actual installed qualified model for inference; native process/window observations; no imported/authored sandbox execution authority"
-      ]
+      ],
+      "scope_limit": "Reviewed and committed local UI support at the recorded source snapshot. Finite clients establish request ownership, visible outcomes and explicit retry only. Existing application authorization, immutable revisions and runtime policy remain. Actual hosts, transport/storage, durable restart, runtime/window/native/model/provider and final combined checks remain pending. These tests do not qualify the full scenario or parent criterion."
     },
     {
       "id": "shared-accessibility-and-responsive-contract",
