@@ -480,3 +480,16 @@ their remaining output capacity; oversampling cannot advance an opaque cursor
 past compatible rows that were never returned. Final scoped membership and
 compatibility checks remain authoritative.
 
+
+Studio and derived publications additionally become visible through their
+organization-scoped workflow repositories. The shared composition passes only
+these two private published-reference readers to the workspace facade. List and
+detail membership requires the exact published definition identity/version and
+published lifecycle; global existence, user metadata and an unpublished draft
+cannot establish ownership. Floating definition reads may resolve only to an
+actually owned exact published version. Reader failure or malformed/oversized
+ownership data fails closed with a static error. The request-local identity set
+is bounded to 25,000 references per reader; it grants read visibility only and
+does not inspect source bytes, execute code, activate an asset or replace the
+existing transport/workspace authorization. Legacy authoring, reuse and trusted
+pack membership retain their separate rules.

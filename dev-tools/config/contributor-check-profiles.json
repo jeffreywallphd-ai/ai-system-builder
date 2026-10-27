@@ -1590,7 +1590,9 @@
         "modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts",
         "modules/application/use-cases/asset-authoring/tests/derived-workspace-authorization-and-capture.unit.test.ts",
         "modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts",
-        "modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts"
+        "modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts",
+        "modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts",
+        "modules/hosts/shared/composition/tests/composeInternalAssetRegistry.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1651,7 +1653,11 @@
         "modules/adapters/persistence/asset-publication/createStructuredAssetDefinitionPublication.ts",
         "modules/adapters/persistence/asset-publication/index.ts",
         "modules/adapters/persistence/asset-publication/tests/asset-publication.fixture.ts",
-        "modules/adapters/README.md"
+        "modules/adapters/README.md",
+        "modules/application/services/asset/workspace-asset-registry-read-facade.service.ts",
+        "modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts",
+        "modules/hosts/shared/composition/composeInternalAssetRegistry.ts",
+        "modules/hosts/shared/composition/tests/composeInternalAssetRegistry.unit.test.ts"
       ]
     },
     "desktop-startup-ui": {

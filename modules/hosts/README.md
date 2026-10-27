@@ -64,3 +64,5 @@ existing platform definition partition and request-owned workflow records. The
 server transaction spans those existing partitions on one structured store. The
 placement is fixed by composition, never a request field. Workspace authorization
 and desktop sender admission remain separate required controls.
+
+Shared Asset Library composition also supplies the two existing private Studio and derived published-reference readers from the workflow organization store. They add exact published definition visibility only; they create no implementation release, backing row, activation or execution authority.

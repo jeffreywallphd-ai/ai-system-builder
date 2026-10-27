@@ -444,3 +444,28 @@ publication actor/time; all other stale revisions deny. Actual Electron runtime
 qualification remains pending. Legacy record
 APIs, native filesystem publication, live PostgreSQL, complete Assets controlled
 security/UI and parent roadmap qualification remain outside this component.
+
+## Published Studio workspace visibility delta
+
+Protected assets are unpublished drafts, foreign workspace/organization records
+and exact immutable published versions. The previous workspace facade admitted
+legacy authoring/reuse but omitted Studio publication lineage. A global catalog
+row or a metadata claim must not repair that omission by granting authority.
+The existing private Studio and derived repositories normalize persisted
+published workflow records and return exact references for the requested
+workspace. Both hosts inherit these two readers from their shared registry
+composition using the same organization partition as the workflow records;
+platform definitions remain separate. Admission requires a matching published
+catalog version. Missing composition grants no new visibility; malformed,
+unavailable or oversized configured ownership data denies with a static error.
+
+The per-request source count is two and each returned reference array is capped
+at 25,000; no cross-request authority cache or metadata-derived fallback is
+introduced. Existing repositories still materialize their private collection
+before projecting references, so this count limit is not a storage I/O quota or
+an indexed-query performance claim. Tests cover recomposition, identical workspace
+IDs in different organization partitions, a foreign workspace, unpublished
+drafts with published global metadata, wrong versions/kinds and reader failure.
+Browsing still executes no authored source or runtime work. These local controls
+do not complete the separately pending legacy review, managed-host, accessibility
+or overall roadmap qualification.

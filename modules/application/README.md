@@ -112,3 +112,10 @@ Studio application entry points require the existing current-workspace read/writ
 Derived customization workflow and target-catalog entry points use current workspace authority and own their requests before awaits. Semantic patch validation alone retains some nested values; request capture deep-copies the validated result. Shared readiness wrappers and the direct workflow/catalog retain independent admission. Exact base, source, review and revision checks remain; publication uses the transaction described above.
 
 Customization target lists use a fresh per-operation view of exact definition identities. The existing ordered repository seam reads at most 250 unique references per call; ports without it retain one in-flight single read. Only the four primitive summary fields are retained before later batch or single-read waits. The 343-definition cohort requires two batch reads, while exact detail preserves its full body/source checks and avoids a duplicate definition lookup. This is request-count evidence, not whole-host latency or live pool qualification.
+
+Workspace Asset Library membership includes exact published Studio and derived
+references from private owning repositories alongside existing authoring/reuse
+and trusted packs. List/detail reads require matching published catalog versions;
+global metadata and unpublished records grant no ownership. Shared host composition
+supplies the organization-scoped readers; failures deny with bounded static
+diagnostics. See `docs/architecture/asset-kernel.md` for scope and limits.

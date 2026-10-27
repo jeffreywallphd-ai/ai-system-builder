@@ -24,6 +24,7 @@ import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../asset-packs/syste
 import {
   WorkspaceAssetRegistryReadFacade,
   WorkspaceAssetRegistryReadFacadeError,
+  type WorkspaceAssetRegistryReadFacadeDependencies,
 } from "../workspace-asset-registry-read-facade.service";
 import type {
   AssetDefinitionCard,
@@ -73,10 +74,10 @@ class FakeReadPort implements AssetRegistryDefinitionReadPort {
         definitionId: foundationRef.id,
         version: "1.0.0",
         assetType: "ui-component",
-        assetFamily: "primitive",
+        assetFamily: "structural",
         displayName: "Foundation Button",
         description: "A system foundation button.",
-        lifecycleStatus: "stable",
+        lifecycleStatus: "published",
         provenance: { sourceKind: "system-generated" },
         metadata: {
           sourcePackId: SYSTEM_FOUNDATION_PACK_ID,
@@ -686,8 +687,9 @@ async function assertWorkspaceError(
 test("custom detail membership uses scoped sources and rejects metadata-only and foreign authority", async () => {
   const { facade, readPort, authoredAssets, revisions } = setup();
   const ref = customCard().definitionRef;
-  const detail = { definition: { definitionId: ref.id, version: ref.version,
-    assetType: "ui-component", assetFamily: "primitive", displayName: "Custom",
+  const detail = { definition: { definitionId: ref.id, version: ref.version ?? "1.0.0",
+    assetType: "ui-component", assetFamily: "structural", displayName: "Custom",
+    description: "Custom fixture", lifecycleStatus: "published", provenance: {sourceKind: "human-authored"},
     metadata: { sourceKind: "workspace-authored", workspaceId: workspaceA } } } as AssetDefinitionDetail;
   readPort.readDefinitionDetail = async () => detail;
   await assertWorkspaceError(() => facade.readDefinitionDetail(ref, { workspaceId: workspaceA }), "workspace-asset-not-in-effective-view");
@@ -700,7 +702,59 @@ test("custom detail membership uses scoped sources and rejects metadata-only and
   await assertWorkspaceError(() => facade.readDefinitionDetails([ref], { workspaceId: workspaceB }), "workspace-asset-not-in-effective-view");
 });
 
-function setup() {
+test("private published Studio and derived sources admit exact owner versions without global catalog fallback", async () => {
+  const studioRef = {kind: "asset-definition-version", id: "studio.published", version: "1.0.0"} as AssetReference;
+  const derivedRef = {...studioRef, id: "derived.published"} as AssetReference;
+  const calls: WorkspaceId[] = [];
+  const sources = [studioRef, derivedRef].map(reference => ({async readPublishedAssetReferences(workspaceId: WorkspaceId) {
+    calls.push(workspaceId);
+    return workspaceId === workspaceA ? [reference] : [];
+  }}));
+  const {facade, readPort} = setup(sources);
+  const published = (reference: AssetReference): AssetDefinitionCard => ({...customCard(), definitionRef: reference,
+    definitionId: reference.id, version: reference.version!, lifecycleStatus: "published"});
+  readPort.cards = [published(studioRef), published(derivedRef), published({...studioRef, version: "2.0.0"}),
+    published({...studioRef, id: "global.unowned"} as AssetReference), {...published(studioRef), lifecycleStatus: "draft"}];
+  readPort.readDefinitionDetail = async ref => ({definition: {definitionId: ref.id, version: ref.version ?? "1.0.0", lifecycleStatus: "published"}} as AssetDefinitionDetail);
+  const owned = await facade.listDefinitionCards({workspaceId: workspaceA});
+  assert.deepEqual(owned.items.map(card => card.definitionId), [studioRef.id, derivedRef.id]);
+  assert.equal((await facade.readDefinitionDetail(studioRef, {workspaceId: workspaceA}))?.definition.definitionId, studioRef.id);
+  assert.equal((await facade.readDefinitionDetail({kind: "asset-definition", id: studioRef.id}, {workspaceId: workspaceA}))?.definition.version, "1.0.0");
+  assert.equal((await facade.listDefinitionCards({workspaceId: workspaceB})).items.length, 0);
+  for (const [reference, workspaceId] of [[studioRef, workspaceB], [{...studioRef, version: "2.0.0"}, workspaceA],
+    [{...studioRef, kind: "asset-instance"}, workspaceA]] as const) {
+    await assert.rejects(facade.readDefinitionDetail(reference, {workspaceId}), /workspace effective asset view/);
+  }
+  const before = calls.length;
+  await assert.rejects(facade.listDefinitionCards({workspaceId: archivedWorkspace}));
+  assert.equal(calls.length, before);
+  assert.deepEqual(new Set(calls), new Set([workspaceA, workspaceB]));
+});
+
+test("publication readers fail closed with static bounded errors for invalid, oversized or unavailable ownership", async () => {
+  for (const source of [
+    {},
+    {async readPublishedAssetReferences() {throw new Error("private /host/path token-value");}},
+    {async readPublishedAssetReferences() {return [{kind: "asset-definition", id: "studio.published"}] as AssetReference[];}},
+    {async readPublishedAssetReferences() {return Array(25_001).fill({kind: "asset-definition-version", id: "a", version: "1"});}},
+  ]) {
+    const {facade, readPort} = setup([source]);
+    for (const execute of [() => facade.listDefinitionCards({workspaceId: workspaceA}),
+      () => facade.readDefinitionDetail(foundationRef, {workspaceId: workspaceA})]) {
+      await assert.rejects(execute(), error => {
+        assert.ok(error instanceof WorkspaceAssetRegistryReadFacadeError);
+        assert.equal(error.code, "workspace-effective-asset-view-unavailable");
+        assert.equal(error.message, "Workspace publication visibility is unavailable.");
+        assert.equal(error.stack, undefined);
+        return true;
+      });
+    }
+    assert.equal(readPort.listCalls.length, 0);
+    assert.equal(readPort.detailCalls.length, 0);
+  }
+});
+
+function setup(workspacePublishedAssetSources: WorkspaceAssetRegistryReadFacadeDependencies["workspacePublishedAssetSources"] = []) {
   const readPort = new FakeReadPort();
   const activations = new FakeActivationRepo();
   const links = new FakeLinkRepo();
@@ -724,6 +778,7 @@ function setup() {
     authoredAssetRepository: authoredAssets as any,
     assetRevisionRepository: revisions as any,
     assetOverrideRepository: overrides as any,
+    workspacePublishedAssetSources,
   });
   return {
     facade,
@@ -745,9 +800,9 @@ function foundationCard(): AssetDefinitionCard {
     definitionId: foundationRef.id,
     version: "1.0.0",
     assetType: "ui-component",
-    assetFamily: "primitive",
+    assetFamily: "structural",
     displayName: "Foundation Button",
-    lifecycleStatus: "stable",
+    lifecycleStatus: "published",
     builtIn: true,
     sourcePackId: SYSTEM_FOUNDATION_PACK_ID,
     sourcePackVersion: SYSTEM_FOUNDATION_PACK_VERSION,
@@ -799,7 +854,7 @@ function artifactResourceCard(): AssetRegistryResourceBackedViewCard {
     viewId: "global",
     viewKind: "artifact",
     displayName: "Global leak",
-    assetType: "artifact",
+    assetType: "data-source",
     assetFamily: "resource-backed",
   } as AssetRegistryResourceBackedViewCard;
 }
