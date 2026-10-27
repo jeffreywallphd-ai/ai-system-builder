@@ -66,7 +66,8 @@ test("Forge generates distinct CJS main/preloads and relative renderers without 
     assert.equal(config.base, "./");
     assert.equal(config.build?.sourcemap, false);
     const html = readFileSync(path.join(config.root!, "index.html"), "utf8");
-    assert.match(html, /type="module" src="\.\/main\.tsx"/);
+    const entry = config.root!.endsWith("system-runtime") ? "main" : "startup";
+    assert.ok(html.includes(`type="module" src="./${entry}.tsx"`) || html.includes(`type="module" src="./${entry}.ts"`));
     assert.ok(!config.build?.rollupOptions?.external, "renderer must not externalize Node modules");
   }
 });
@@ -235,4 +236,186 @@ test("bundled default provider loaders work offline with all external package im
   status = 403;
   const denied = await artifacts.hasArtifactInRepo(request);
   assert.equal(denied.ok, false, "bundling must preserve provider authorization denial");
+});
+
+// Execute the actual createMainWindow function against finite native-event ports.
+// This verifies ordering/denials without composing storage, models or a real host.
+import { EventEmitter } from "node:events";
+
+async function mainWindowFixture(options: { synchronousPaint?: boolean; synchronousThrow?: boolean; cueRejects?: boolean } = {}) {
+  const { transform } = await import("esbuild");
+  const source = readFileSync(path.resolve("apps/desktop/src/main/index.ts"), "utf8").replaceAll("\r\n", "\n");
+  const start = source.indexOf("async function createMainWindow(): Promise<void> {");
+  const end = source.indexOf('\nrecordDesktopMemorySnapshot({\n  milestone: "desktop.app.whenReady.enter"', start);
+  assert.ok(start >= 0 && end > start, "exercise the actual main-window source function");
+  const compiled = await transform(source.slice(start, end) + "\nglobalThis.fixtureBoot = createMainWindow;", { loader: "ts", format: "cjs", target: "node24" });
+  let resolveLoad!: () => void;
+  let rejectLoad!: (error: unknown) => void;
+  const load = new Promise<void>((resolve, reject) => { resolveLoad = resolve; rejectLoad = reject; });
+  let constructed!: MockWindow;
+  const calls: string[] = [];
+  const scripts: string[] = [];
+  let rejectCue = options.cueRejects ?? false;
+  const errors: string[][] = [];
+  const deadlines = new Map<number, () => void>();
+  class MockWindow extends EventEmitter {
+    destroyed = false;
+    contentsDestroyed = false;
+    visible = false;
+    loading = false;
+    url = "";
+    webContents = Object.assign(new EventEmitter(), {
+      isDestroyed: () => this.contentsDestroyed,
+      isLoadingMainFrame: () => this.loading,
+      executeJavaScript: (script: string) => {
+        scripts.push(script);
+        return rejectCue ? Promise.reject(new Error("SYNTHETIC_PRIVATE_CUE_DETAIL")) : Promise.resolve();
+      },
+    });
+    constructor(readonly options: Record<string, any>) { super(); constructed = this; calls.push("construct"); }
+    isDestroyed() { return this.destroyed; }
+    isVisible() { return this.visible; }
+    loadURL(url: string) {
+      calls.push("load"); this.url = url;
+      if (options.synchronousThrow) throw new Error("SYNTHETIC_PRIVATE_NATIVE_DETAIL");
+      if (options.synchronousPaint) this.emit("ready-to-show");
+      return load;
+    }
+    maximize() { calls.push("maximize"); this.visible = true; this.emit("show"); }
+    show() { calls.push("show"); this.visible = true; }
+    destroy() { this.destroyed = true; this.contentsDestroyed = true; calls.push("destroy"); this.emit("closed"); }
+  }
+  const context: Record<string, any> = {
+    BrowserWindow: MockWindow, openWindows: new Set(), recordDesktopMemorySnapshot() {},
+    path, pathToFileURL: (await import("node:url")).pathToFileURL,
+    __dirname: path.resolve(".vite/build"), MAIN_WINDOW_VITE_DEV_SERVER_URL: "http://127.0.0.1:3005", MAIN_WINDOW_VITE_NAME: "main_window",
+    dialog: { showErrorBox: (...values: string[]) => { calls.push("error"); errors.push(values); } },
+    setTimeout: (callback: () => void, ms: number) => { assert.equal(ms, 60_000); deadlines.set(1, callback); return 1; },
+    clearTimeout: (id: number) => deadlines.delete(id),
+  };
+  runInNewContext(compiled.code, context);
+  const running: Promise<void> = context.fixtureBoot();
+  await Promise.resolve();
+  return { window: constructed, running, calls, scripts, errors, deadlines, resolveLoad, rejectLoad,
+    cueSucceeds() { rejectCue = false; },
+    async flush() { await Promise.resolve(); await Promise.resolve(); },
+    timeout() { const callback = deadlines.get(1); assert.ok(callback); callback(); },
+  };
+}
+
+for (const order of ["paint-first", "load-first", "synchronous-paint"] as const) {
+  test(`main window stays hidden until both load and first paint: ${order}`, async () => {
+    const f = await mainWindowFixture({ synchronousPaint: order === "synchronous-paint" });
+    assert.deepEqual(f.calls, ["construct", "load"]);
+    assert.equal(f.window.options.show, false);
+    assert.equal(f.window.options.backgroundColor, "#06101e");
+    assert.equal(f.window.options.webPreferences.contextIsolation, true);
+    assert.equal(f.window.options.webPreferences.nodeIntegration, false);
+    assert.notEqual(f.window.options.webPreferences.sandbox, false);
+    assert.notEqual(f.window.options.webPreferences.paintWhenInitiallyHidden, false);
+    if (order === "load-first") { f.resolveLoad(); await f.flush(); }
+    else if (order === "paint-first") f.window.emit("ready-to-show");
+    assert.equal(f.calls.includes("maximize"), false, "maximize implicitly reveals and must wait");
+    if (order === "load-first") f.window.emit("ready-to-show"); else f.resolveLoad();
+    await f.running;
+    assert.deepEqual(f.calls, ["construct", "load", "maximize", "show"]);
+    assert.equal(f.deadlines.size, 0);
+    assert.equal(f.window.listenerCount("ready-to-show"), 0);
+    assert.equal(f.window.webContents.listenerCount("preload-error"), 0);
+    assert.equal(f.window.webContents.listenerCount("render-process-gone"), 0);
+    assert.equal(f.errors.length, 0);
+    f.window.emit("ready-to-show"); assert.equal(f.calls.filter(c => c === "show").length, 1);
+  });
+}
+
+for (const failure of ["reject", "throw", "preload-error", "render-process-gone", "deadline"] as const) {
+  test(`main window fails safely without revealing an empty document: ${failure}`, async () => {
+    const f = await mainWindowFixture({ synchronousThrow: failure === "throw" });
+    if (failure === "reject") f.rejectLoad(new Error("SYNTHETIC_PRIVATE_NATIVE_DETAIL"));
+    else if (failure === "deadline") f.timeout();
+    else if (failure !== "throw") f.window.webContents.emit(failure, {}, new Error("SYNTHETIC_PRIVATE_NATIVE_DETAIL"));
+    await f.running;
+    assert.equal(f.calls.includes("maximize") || f.calls.includes("show"), false);
+    assert.equal(f.window.destroyed, true);
+    assert.equal(f.errors.length, 1);
+    assert.deepEqual(f.calls.slice(-2), ["error", "destroy"], "show the safe dialog before last-window shutdown");
+    assert.equal(JSON.stringify(f.errors).includes("SYNTHETIC_PRIVATE_NATIVE_DETAIL"), false);
+    assert.equal(f.deadlines.size, 0);
+    assert.equal(f.window.listenerCount("ready-to-show"), 0);
+    f.resolveLoad(); f.window.emit("ready-to-show"); await f.flush();
+    assert.equal(f.calls.includes("show"), false, "late callbacks cannot resurrect a retired window");
+  });
+}
+
+test("closing a still-hidden window retires startup without a failure dialog", async () => {
+  const f = await mainWindowFixture(); f.window.destroy(); await f.running;
+  assert.equal(f.errors.length, 0); assert.equal(f.deadlines.size, 0);
+  f.resolveLoad(); f.window.emit("ready-to-show"); await f.flush();
+  assert.equal(f.calls.includes("maximize") || f.calls.includes("show"), false);
+});
+
+test("visible documents receive only the fixed presentation cue, including a minimized menu reload", async () => {
+  const f = await mainWindowFixture(); f.window.webContents.emit("did-finish-load");
+  assert.equal(f.scripts.length, 0, "do not announce native visibility before show");
+  f.window.emit("ready-to-show"); f.resolveLoad(); await f.running;
+  const expected = 'document.documentElement.dataset.desktopWindowShown = "true"; document.dispatchEvent(new Event("desktop-window-shown"));';
+  assert.deepEqual(f.scripts, [expected]);
+  f.window.visible = false; f.window.webContents.emit("did-finish-load");
+  await f.flush();
+  assert.deepEqual(f.scripts, [expected, expected], "reload replays show history; renderer still counts only visible time");
+  f.window.destroy(); f.window.webContents.emit("did-finish-load");
+  await f.flush();
+  assert.equal(f.scripts.length, 2);
+});
+
+test("a live document's failed presentation cue shows fixed recovery and retires its unusable window", async () => {
+  const f = await mainWindowFixture({ cueRejects: true });
+  f.window.emit("ready-to-show"); f.resolveLoad(); await f.running; await f.flush();
+  assert.equal(f.errors.length, 1); assert.equal(f.window.destroyed, true);
+  assert.equal(JSON.stringify(f.errors).includes("SYNTHETIC_PRIVATE_CUE_DETAIL"), false);
+  assert.deepEqual(f.calls.slice(-2), ["error", "destroy"]);
+});
+
+test("a superseded loading document can reject its cue and replay it after the new load", async () => {
+  const f = await mainWindowFixture({ cueRejects: true });
+  f.window.loading = true; f.window.emit("ready-to-show"); f.resolveLoad();
+  await f.running; await f.flush();
+  assert.equal(f.errors.length, 0); assert.equal(f.window.destroyed, false);
+  f.window.loading = false; f.cueSucceeds(); f.window.webContents.emit("did-finish-load");
+  await f.flush();
+  assert.equal(f.scripts.length, 2); assert.equal(f.errors.length, 0);
+});
+
+test("production Vite rewrites the real startup document, styles and controller to local packaged assets", async () => {
+  const { build } = await import("vite");
+  const { renderers } = await generatedConfigs();
+  const config = renderers.find(row => path.resolve(row.root!) === path.resolve("apps/desktop/src/renderer"));
+  assert.ok(config);
+  const appEntry = path.resolve("apps/desktop/src/renderer/main.tsx").replaceAll("\\", "/");
+  const result = await build({
+    ...config, configFile: false, logLevel: "silent",
+    // Keep real HTML/CSS/controller processing; replace only the heavy App graph.
+    // This is asset/bootstrap qualification, not a build or run of the full host.
+    plugins: [...(config.plugins ?? []), {
+      name: "bounded-startup-app-fixture", enforce: "pre",
+      load(id) {
+        if (id.replaceAll("\\", "/") === appEntry) return 'import { markDesktopRendererLoaded, markDesktopRendererReady } from "./startup/desktopStartup"; markDesktopRendererLoaded(); markDesktopRendererReady();';
+      },
+    }],
+    build: { ...config.build, write: false, minify: false },
+  });
+  assert.ok(!Array.isArray(result) && "output" in result);
+  const document = result.output.find(row => row.type === "asset" && row.fileName === "index.html");
+  assert.ok(document && document.type === "asset");
+  const html = String(document.source);
+  assert.match(html, /id="desktop-startup"/);
+  assert.match(html, /<link[^>]+href="\.\/assets\/[^\"]+\.css"/);
+  assert.match(html, /<script[^>]+src="\.\/assets\/[^\"]+\.js"/);
+  assert.equal(html.includes('src="./startup.ts"'), false);
+  const styles = result.output.filter(row => row.type === "asset" && row.fileName.endsWith(".css"));
+  assert.ok(styles.some(row => row.type === "asset" && String(row.source).includes("desktop-startup-orbit")));
+  assert.ok(styles.some(row => row.type === "asset" && /#06101e/i.test(String(row.source))));
+  const scripts = result.output.filter(row => row.type === "chunk");
+  assert.ok(scripts.some(row => row.type === "chunk" && row.code.includes("desktop-window-shown")));
+  assert.ok(scripts.every(row => row.type === "chunk" && !row.code.includes("require(\"electron\")")));
 });

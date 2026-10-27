@@ -3,10 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
     <title>AI System Builder Desktop</title>
+    <link rel="stylesheet" href="./styles/startup.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="./main.tsx"></script>
+    <div id="root" aria-hidden="true" inert></div>
+    <section id="desktop-startup" class="desktop-startup" aria-labelledby="desktop-startup-title" data-state="loading" data-milestone="document" data-motion="running">
+      <div class="desktop-startup__card">
+        <div class="desktop-startup__emblem" aria-hidden="true"><img class="desktop-startup__logo" src="../../../../modules/ui/shared/assets/branding/logo.svg" width="64" height="64" alt="" /></div>
+        <p class="desktop-startup__brand">AI System Builder</p>
+        <div id="desktop-startup-status" role="status" aria-live="polite" aria-atomic="true">
+          <h1 id="desktop-startup-title">Getting things ready</h1>
+          <p id="desktop-startup-message">Loading your workspace experience…</p>
+          <p id="desktop-startup-stage" class="desktop-startup__stage">Desktop document opened</p>
+        </div>
+        <div id="desktop-startup-progress" class="desktop-startup__progress" aria-hidden="true"><span></span></div>
+        <section class="desktop-startup__tip-card" aria-labelledby="desktop-startup-tip-label" aria-live="off">
+          <div class="desktop-startup__tip-heading"><h2 id="desktop-startup-tip-label">While you wait</h2><span id="desktop-startup-tip-count">Tip 1 of 4</span></div>
+          <p id="desktop-startup-tip">Switch workspaces with Current Workspace in the header, then choose Change.</p>
+          <div id="desktop-startup-tip-controls" class="desktop-startup__tip-controls">
+            <button id="desktop-startup-tip-next" type="button" class="ui-button ui-button--outline" aria-controls="desktop-startup-tip">Next tip</button>
+            <button id="desktop-startup-tip-pause" type="button" class="ui-button ui-button--outline" aria-pressed="false">Pause tips</button>
+          </div>
+        </section>
+        <a id="desktop-startup-reload" class="ui-button ui-button--outline" href="./index.html">Reload app</a>
+        <noscript><p>JavaScript is required to start the app.</p></noscript>
+      </div>
+    </section>
+    <script type="module" src="./startup.ts"></script>
   </body>
 </html>

@@ -334,3 +334,275 @@ describe("desktop renderer lazy page loading", () => {
     expect(lines).toEqual([]);
   });
 });
+
+// The actual static document and controller run against a finite monotonic clock.
+// No app process, model, provider or remote resource is started by these cases.
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
+import { createDesktopStartupController, type DesktopStartupHost } from "../startup/desktopStartup";
+
+function startupFixture(options: { reduced?: boolean; alreadyShown?: boolean } = {}) {
+  const source = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const fixture = new JSDOM(source, { url: "http://127.0.0.1:3005/", pretendToBeVisual: true });
+  const d = fixture.window.document;
+  let hidden = false;
+  Object.defineProperty(d, "hidden", { get: () => hidden });
+  let time = 0;
+  let sequence = 0;
+  let reloads = 0;
+  const timers = new Map<number, { due: number; callback: () => void }>();
+  const frames = new Map<number, () => void>();
+  const mediaListeners = new Set<() => void>();
+  const motion = {
+    matches: options.reduced ?? false,
+    addEventListener: (_event: string, listener: EventListenerOrEventListenerObject) => { mediaListeners.add(listener as () => void); },
+    removeEventListener: (_event: string, listener: EventListenerOrEventListenerObject) => { mediaListeners.delete(listener as () => void); },
+  };
+  const host: DesktopStartupHost = {
+    now: () => time,
+    setTimeout: (callback, ms) => { const id = ++sequence; timers.set(id, { due: time + ms, callback }); return id; },
+    clearTimeout: id => { timers.delete(id); },
+    requestFrame: callback => { const id = ++sequence; frames.set(id, callback); return id; },
+    cancelFrame: id => { frames.delete(id); },
+    motion: motion as DesktopStartupHost["motion"],
+    reload: () => { reloads += 1; },
+  };
+  if (options.alreadyShown) d.documentElement.dataset.desktopWindowShown = "true";
+  const controller = createDesktopStartupController(d, host);
+  const e = (id: string) => d.getElementById(id)!;
+  const fixtureApi = {
+    controller, d, source, timers, frames, mediaListeners, e,
+    get reloads() { return reloads; },
+    tick(ms: number) {
+      const end = time + ms;
+      let steps = 0;
+      for (;;) {
+        const next = [...timers].filter(([, v]) => v.due <= end).sort((a, b) => a[1].due - b[1].due)[0];
+        if (!next) break;
+        assert.ok(++steps < 1_000, "controller must not spin a zero-delay loop");
+        time = next[1].due; timers.delete(next[0]); next[1].callback();
+      }
+      time = end;
+    },
+    frame() { const pending = [...frames.values()]; frames.clear(); for (const fn of pending) fn(); },
+    show() { d.documentElement.dataset.desktopWindowShown = "true"; d.dispatchEvent(new fixture.window.Event("desktop-window-shown")); },
+    hidden(value: boolean) { hidden = value; d.dispatchEvent(new fixture.window.Event("visibilitychange")); },
+    reduce(value: boolean) { motion.matches = value; for (const fn of [...mediaListeners]) fn(); },
+    close() { controller.dispose(); fixture.window.close(); },
+  };
+  return fixtureApi;
+}
+
+async function usingStartup(run: (f: ReturnType<typeof startupFixture>) => void | Promise<void>, options?: Parameters<typeof startupFixture>[0]) {
+  const f = startupFixture(options);
+  try { await run(f); } finally { f.close(); }
+}
+
+describe("desktop first document startup", () => {
+  it("supplies themed, accessible static feedback before any React module runs", () => usingStartup(f => {
+    assert.equal(f.e("root").getAttribute("aria-hidden"), "true");
+    assert.equal(f.e("root").hasAttribute("inert"), true);
+    assert.equal(f.e("desktop-startup").hidden, false);
+    assert.equal(f.e("desktop-startup-status").getAttribute("role"), "status");
+    assert.equal(f.e("desktop-startup-tip").closest("section")!.getAttribute("aria-live"), "off");
+    assert.equal(f.e("desktop-startup-reload").getAttribute("href"), "./index.html");
+    assert.match(f.source, /rel="stylesheet" href="\.\/styles\/startup\.css"/);
+    assert.match(f.source, /type="module" src="\.\/startup\.ts"/);
+    assert.match(f.e("desktop-startup-stage").textContent!, /document opened/i);
+  }));
+
+  it("holds a fast committed shell until native reveal, two paints and1500 visible milliseconds", () => usingStartup(f => {
+    f.controller.initialize(); f.controller.loaded(); f.controller.ready();
+    f.tick(10_000);
+    assert.equal(f.e("desktop-startup").hidden, false, "hidden-window time does not count");
+    f.show(); f.tick(5_000); f.frame(); f.tick(5_000); f.frame();
+    f.tick(1_499); assert.equal(f.e("desktop-startup").hidden, false);
+    f.tick(1); assert.equal(f.e("desktop-startup").hidden, true);
+    assert.equal(f.e("root").inert, false);
+    assert.equal(f.e("root").hasAttribute("aria-hidden"), false);
+    assert.equal(f.timers.size + f.frames.size + f.mediaListeners.size, 0);
+  }));
+
+  it("replays an early native cue and ignores duplicate show/StrictMode ready notifications", () => usingStartup(f => {
+    f.controller.initialize(); f.controller.initialize(); f.frame(); f.frame();
+    f.controller.ready(); f.tick(1_000); f.show(); f.controller.ready();
+    f.tick(499); assert.equal(f.e("desktop-startup").hidden, false);
+    f.tick(1); assert.equal(f.e("desktop-startup").hidden, true);
+    f.controller.ready(); f.show(); f.tick(30_000);
+    assert.equal(f.e("desktop-startup").hidden, true);
+    assert.equal(f.timers.size + f.frames.size, 0);
+  }, { alreadyShown: true }));
+
+  it("does not count hidden time toward the minimum visible display", () => usingStartup(f => {
+    f.controller.initialize(); f.show(); f.frame(); f.frame(); f.controller.ready();
+    f.tick(700); f.hidden(true); f.tick(30_000);
+    assert.equal(f.e("desktop-startup").hidden, false);
+    assert.equal(f.timers.size + f.frames.size, 0);
+    f.hidden(false); f.frame(); f.frame(); f.tick(799); assert.equal(f.e("desktop-startup").hidden, false);
+    f.tick(1); assert.equal(f.e("desktop-startup").hidden, true);
+  }));
+
+  it("waits for restored paint opportunities even with only1ms visible time remaining", () => usingStartup(f => {
+    f.controller.initialize(); f.show(); f.frame(); f.frame(); f.controller.ready();
+    f.tick(1_499); f.hidden(true); f.tick(10_000); f.hidden(false);
+    f.tick(1_000); assert.equal(f.e("desktop-startup").hidden, false);
+    f.frame(); f.tick(1_000); assert.equal(f.e("desktop-startup").hidden, false);
+    f.frame(); assert.equal(f.e("desktop-startup").hidden, false);
+    f.tick(1); assert.equal(f.e("desktop-startup").hidden, true);
+  }));
+
+  it("retires explicit reload so late module, failure or frame callbacks cannot restart it", () => usingStartup(async f => {
+    const pending = deferred<unknown>(); const running = f.controller.start(() => pending.promise);
+    f.show(); const frame = [...f.frames.values()][0]; assert.ok(frame);
+    f.e("desktop-startup-reload").click(); frame();
+    pending.resolve({}); await running; f.controller.loaded(); f.controller.ready(); f.controller.fail();
+    let starts = 0; await f.controller.start(async () => { starts += 1; });
+    f.tick(60_000);
+    assert.equal(f.reloads, 1); assert.equal(starts, 0);
+    assert.equal(f.timers.size + f.frames.size + f.mediaListeners.size, 0);
+    assert.notEqual(f.e("desktop-startup").dataset.state, "failed");
+  }));
+
+  it("keeps a pending module visible, reports only actual milestones and permits late success", () => usingStartup(async f => {
+    const main = deferred<unknown>();
+    const running = f.controller.start(() => main.promise);
+    assert.match(f.e("desktop-startup-stage").textContent!, /Loading interface modules/);
+    f.show(); f.frame(); f.frame(); f.tick(20_000);
+    assert.equal(f.e("desktop-startup").dataset.state, "delayed");
+    assert.match(f.e("desktop-startup-message").textContent!, /still starting/);
+    assert.equal(f.e("desktop-startup").hidden, false);
+    main.resolve({}); await running; f.controller.loaded();
+    assert.match(f.e("desktop-startup-stage").textContent!, /modules loaded/);
+    f.controller.ready(); assert.equal(f.e("desktop-startup").hidden, true);
+  }));
+
+  it("rotates accurate tips with working Pause, Resume and Next controls", () => usingStartup(f => {
+    f.controller.initialize(); const first = f.e("desktop-startup-tip").textContent;
+    f.tick(6_499); assert.equal(f.e("desktop-startup-tip").textContent, first);
+    f.tick(1); assert.match(f.e("desktop-startup-tip").textContent!, /Artifact Ingestion/);
+    f.e("desktop-startup-tip-pause").click();
+    assert.equal(f.e("desktop-startup-tip-pause").getAttribute("aria-pressed"), "true");
+    f.tick(13_000); assert.match(f.e("desktop-startup-tip").textContent!, /Artifact Ingestion/);
+    f.e("desktop-startup-tip-next").click(); assert.match(f.e("desktop-startup-tip").textContent!, /aisb-package/);
+    f.e("desktop-startup-tip-pause").click(); f.tick(6_500);
+    assert.match(f.e("desktop-startup-tip").textContent!, /Refresh Models/);
+    f.tick(6_500); assert.equal(f.e("desktop-startup-tip").textContent, first);
+  }));
+
+  it("pauses hidden activity without a catch-up burst", () => usingStartup(f => {
+    f.controller.initialize(); f.tick(6_000); f.hidden(true);
+    const tip = f.e("desktop-startup-tip").textContent;
+    f.tick(60_000); assert.equal(f.timers.size + f.frames.size, 0);
+    f.hidden(false); assert.equal(f.e("desktop-startup-tip").textContent, tip);
+    f.tick(6_499); assert.equal(f.e("desktop-startup-tip").textContent, tip);
+    f.tick(1); assert.notEqual(f.e("desktop-startup-tip").textContent, tip);
+  }));
+
+  it("honors reduced motion while leaving Next available and adapting to preference changes", () => usingStartup(f => {
+    f.controller.initialize(); const tip = f.e("desktop-startup-tip").textContent;
+    f.tick(10_000); assert.equal(f.e("desktop-startup-tip").textContent, tip);
+    assert.equal(f.e("desktop-startup-tip-pause").hidden, true);
+    assert.equal(f.e("desktop-startup").dataset.motion, "paused");
+    f.e("desktop-startup-tip-next").click(); assert.notEqual(f.e("desktop-startup-tip").textContent, tip);
+    f.reduce(false); assert.equal(f.e("desktop-startup-tip-pause").hidden, false);
+    f.tick(6_500); assert.match(f.e("desktop-startup-tip").textContent!, /aisb-package/);
+  }, { reduced: true }));
+
+  for (const failure of ["throw", "reject"] as const) {
+    it(`recovers a ${failure} from bootstrap without exposing exception details`, () => usingStartup(async f => {
+      const sensitive = "SYNTHETIC_PRIVATE_PATH_OR_TOKEN";
+      await f.controller.start(() => { if (failure === "throw") throw new Error(sensitive); return Promise.reject(new Error(sensitive)); });
+      assert.equal(f.e("desktop-startup").dataset.state, "failed");
+      assert.equal(f.e("desktop-startup-status").getAttribute("role"), "alert");
+      assert.equal(f.d.body.textContent!.includes(sensitive), false);
+      assert.equal(f.d.activeElement, f.e("desktop-startup-title"));
+      assert.equal(f.timers.size + f.frames.size + f.mediaListeners.size, 0);
+      f.e("desktop-startup-reload").click(); assert.equal(f.reloads, 1);
+    }));
+  }
+
+  it("does not dismiss an error that arrives during the minimum display", () => usingStartup(f => {
+    f.controller.initialize(); f.show(); f.frame(); f.frame(); f.controller.ready();
+    f.tick(700); f.controller.fail(); f.tick(5_000); f.controller.ready();
+    assert.equal(f.e("desktop-startup").hidden, false);
+    assert.equal(f.e("desktop-startup").dataset.state, "failed");
+    assert.equal(f.e("root").inert, true);
+  }));
+
+  it("can restore the safe failure surface after the shell was already shown", () => usingStartup(f => {
+    f.controller.initialize(); f.show(); f.frame(); f.frame(); f.controller.ready(); f.tick(1_500);
+    assert.equal(f.e("desktop-startup").hidden, true);
+    f.controller.fail(); assert.equal(f.e("desktop-startup").hidden, false);
+    assert.equal(f.e("desktop-startup-progress").hidden, true);
+    assert.equal(f.e("desktop-startup-tip-controls").hidden, true);
+  }));
+
+  it("transfers focus from a loading control only at final dismissal", () => usingStartup(f => {
+    f.e("root").innerHTML = '<main><h1>Home</h1><button>App action</button></main>';
+    f.controller.initialize(); f.show(); f.frame(); f.frame();
+    f.e("desktop-startup-tip-next").focus(); f.controller.ready(); f.controller.ready();
+    f.tick(1_499); assert.equal(f.d.activeElement, f.e("desktop-startup-tip-next"));
+    f.tick(1); const heading = f.e("root").querySelector("h1")!;
+    assert.equal(f.d.activeElement, heading);
+    f.e("root").querySelector("button")!.focus(); assert.equal(heading.hasAttribute("tabindex"), false);
+  }));
+
+  it("does not steal existing app focus and cleans up an explicit reload", () => usingStartup(f => {
+    f.e("root").innerHTML = '<button>App action</button>';
+    f.controller.initialize(); f.show(); f.frame(); f.frame();
+    const button = f.e("root").querySelector("button")!; button.focus();
+    f.controller.ready(); f.tick(1_500); assert.equal(f.d.activeElement, button);
+    f.controller.fail(); f.e("desktop-startup-reload").click();
+    assert.equal(f.reloads, 1); assert.equal(f.timers.size + f.frames.size + f.mediaListeners.size, 0);
+  }));
+
+  for (const fails of [false, true]) {
+    it(`uses the actual renderer entry to ${fails ? "recover an uncaught React error" : "commit the shell behind the minimum display"}`, () => usingStartup(async f => {
+      const { transform } = await import("esbuild");
+      const source = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
+      const compiled = await transform(source, { loader: "tsx", format: "cjs", jsx: "automatic", target: "node24" });
+      let mounted: Root | undefined;
+      let signal!: () => void;
+      const settled = new Promise<void>(resolve => { signal = resolve; });
+      const flag = (globalThis as any).IS_REACT_ACT_ENVIRONMENT;
+      (globalThis as any).IS_REACT_ACT_ENVIRONMENT = false;
+      f.controller.initialize(); f.show(); f.frame(); f.frame();
+      let deadline: ReturnType<typeof setTimeout> | undefined;
+      try {
+        runInNewContext(compiled.code, {
+          document: f.d,
+          require(specifier: string) {
+            if (specifier === "react" || specifier === "react/jsx-runtime") return require(specifier);
+            if (specifier === "react-dom/client") return { createRoot: (node: HTMLElement, options: Parameters<typeof createRoot>[1]) => (mounted = createRoot(node, options)) };
+            if (specifier === "./App") return { __esModule: true, default: () => {
+              if (fails) throw new Error("SYNTHETIC_PRIVATE_REACT_DETAIL");
+              return require("react").createElement("main", null, require("react").createElement("h1", null, "Fixture shell"));
+            } };
+            if (specifier === "./styles/app.css") return {};
+            if (specifier === "./startup/desktopStartup") return {
+              markDesktopRendererLoaded: () => f.controller.loaded(),
+              markDesktopRendererReady: () => { f.controller.ready(); signal(); },
+              showDesktopStartupFailure: () => { f.controller.fail(); signal(); },
+            };
+            throw new Error("Unexpected bootstrap fixture dependency");
+          },
+        });
+        await Promise.race([settled, new Promise<never>((_, reject) => { deadline = setTimeout(() => reject(new Error("Renderer entry did not report its outcome")), 1_000); })]);
+        if (fails) {
+          assert.equal(f.e("desktop-startup").dataset.state, "failed");
+          assert.equal(f.e("desktop-startup").hidden, false);
+          assert.equal(f.d.body.textContent!.includes("SYNTHETIC_PRIVATE_REACT_DETAIL"), false);
+        } else {
+          assert.match(f.e("root").textContent!, /Fixture shell/);
+          f.tick(1_499); assert.equal(f.e("desktop-startup").hidden, false);
+          f.tick(1); assert.equal(f.e("desktop-startup").hidden, true);
+        }
+      } finally {
+        if (deadline !== undefined) clearTimeout(deadline);
+        (globalThis as any).IS_REACT_ACT_ENVIRONMENT = flag;
+        if (mounted) await act(async () => mounted!.unmount());
+      }
+    }));
+  }
+});
