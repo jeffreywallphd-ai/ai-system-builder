@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+import { createWorkspaceAssetAuthoringReaders } from "../../../../application/services/asset/workspace-asset-authoring-readers";
 import type { Request } from "express";
 import { describe, expect, it, testDouble } from "../../../../testing/node-test";
 import { registerAssetAuthoringApiRoutes } from "../asset-authoring/registerAssetAuthoringApiRoutes";
@@ -98,7 +100,7 @@ describe("registerAssetAuthoringApiRoutes", () => {
 
   it("exposes exact backing resources and attributes mutations to the authenticated actor", async () => {
     const { app, handlers } = appAndHandlers();
-    const listTargets = testDouble.fn(async () => ({ targets: [{ displayName: "Button" }] }));
+    const listTargets = testDouble.fn(async (_query: unknown) => ({ targets: [{ displayName: "Button" }] }));
     const readTarget = testDouble.fn(async () => ({ displayName: "Button", backingResources: [{ path: "frontend/component.tsx", role: "frontend-structure", mediaType: "text/typescript", content: "export const Button = true;", editable: true, sizeCharacters: 27 }] }));
     const create = testDouble.fn(async (command) => ({ kind: "success", value: { customizationId: "customization-1", createdBy: command.actorId } }));
     registerAssetAuthoringApiRoutes({ app, derivedCustomizations: { listTargets, readTarget, create } as any });
@@ -127,4 +129,288 @@ describe("registerAssetAuthoringApiRoutes", () => {
     ).rejects.toThrow("Authenticated principal context is required.");
     expect(create).not.toHaveBeenCalled();
   });
+});
+
+const legacyReadCases = [
+  {
+    "tag": "LIST_AUTHORED_ASSETS",
+    "repository": "authoredAssetRepository",
+    "method": "listAuthoredAssetRecords",
+    "suffix": "authored-assets",
+    "key": "assets",
+    "operation": "list-authored-assets",
+    "payload": {
+      "workspaceId": "workspace.legacy-test",
+      "limit": 2,
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test"
+    },
+    "query": {
+      "limit": "2",
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "item": {
+      "workspaceId": "workspace.legacy-test"
+    },
+    "ipcArgs": [
+      {
+        "workspaceId": "workspace.legacy-test",
+        "limit": 2,
+        "cursor": "fixture-cursor",
+        "status": "draft"
+      }
+    ]
+  },
+  {
+    "tag": "READ_AUTHORED_ASSET",
+    "repository": "authoredAssetRepository",
+    "method": "readAuthoredAssetRecordByWorkspace",
+    "suffix": "authored-assets/:authoredAssetId",
+    "key": null,
+    "operation": "read-authored-asset",
+    "payload": {
+      "workspaceId": "workspace.legacy-test",
+      "authoredAssetId": "authored.test"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test",
+      "authoredAssetId": "authored.test"
+    },
+    "query": {},
+    "item": {
+      "workspaceId": "workspace.legacy-test",
+      "authoredAssetId": "authored.test"
+    },
+    "ipcArgs": [
+      "workspace.legacy-test",
+      "authored.test"
+    ]
+  },
+  {
+    "tag": "LIST_DRAFTS",
+    "repository": "assetDraftRepository",
+    "method": "listAssetDraftRecords",
+    "suffix": "drafts",
+    "key": "drafts",
+    "operation": "list-drafts",
+    "payload": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "limit": 2,
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test"
+    },
+    "query": {
+      "limit": "2",
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "item": {
+      "targetWorkspaceId": "workspace.legacy-test"
+    },
+    "ipcArgs": [
+      {
+        "limit": 2,
+        "cursor": "fixture-cursor",
+        "status": "draft",
+        "workspaceId": "workspace.legacy-test"
+      }
+    ]
+  },
+  {
+    "tag": "READ_DRAFT",
+    "repository": "assetDraftRepository",
+    "method": "readAssetDraftRecord",
+    "suffix": "drafts/:draftId",
+    "key": null,
+    "operation": "read-draft",
+    "payload": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "draftId": "draft.test"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test",
+      "draftId": "draft.test"
+    },
+    "query": {},
+    "item": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "draftId": "draft.test"
+    },
+    "ipcArgs": [
+      "workspace.legacy-test",
+      "draft.test"
+    ]
+  },
+  {
+    "tag": "LIST_REVISIONS",
+    "repository": "assetRevisionRepository",
+    "method": "listAssetRevisionRecords",
+    "suffix": "revisions",
+    "key": "revisions",
+    "operation": "list-revisions",
+    "payload": {
+      "workspaceId": "workspace.legacy-test",
+      "authoredAssetId": "authored.test",
+      "limit": 2,
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test"
+    },
+    "query": {
+      "authoredAssetId": "authored.test",
+      "limit": "2",
+      "cursor": "fixture-cursor",
+      "status": "draft"
+    },
+    "item": {
+      "workspaceId": "workspace.legacy-test",
+      "authoredAssetId": "authored.test"
+    },
+    "ipcArgs": [
+      {
+        "workspaceId": "workspace.legacy-test",
+        "authoredAssetId": "authored.test",
+        "limit": 2,
+        "cursor": "fixture-cursor",
+        "status": "draft"
+      }
+    ]
+  },
+  {
+    "tag": "READ_REVISION",
+    "repository": "assetRevisionRepository",
+    "method": "readAssetRevisionRecord",
+    "suffix": "revisions/:revisionId",
+    "key": null,
+    "operation": "read-revision",
+    "payload": {
+      "workspaceId": "workspace.legacy-test",
+      "revisionId": "revision.test",
+      "authoredAssetId": "authored.test"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test",
+      "revisionId": "revision.test"
+    },
+    "query": {
+      "authoredAssetId": "authored.test"
+    },
+    "item": {
+      "workspaceId": "workspace.legacy-test",
+      "revisionId": "revision.test",
+      "authoredAssetId": "authored.test"
+    },
+    "ipcArgs": [
+      "workspace.legacy-test",
+      "authored.test",
+      "revision.test"
+    ]
+  },
+  {
+    "tag": "LIST_OVERRIDES",
+    "repository": "assetOverrideRepository",
+    "method": "listAssetOverrideRecords",
+    "suffix": "overrides",
+    "key": "overrides",
+    "operation": "list-overrides",
+    "payload": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "limit": 2,
+      "cursor": "fixture-cursor",
+      "status": "draft",
+      "conflictStatus": "none"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test"
+    },
+    "query": {
+      "limit": "2",
+      "cursor": "fixture-cursor",
+      "status": "draft",
+      "conflictStatus": "none"
+    },
+    "item": {
+      "targetWorkspaceId": "workspace.legacy-test"
+    },
+    "ipcArgs": [
+      {
+        "targetWorkspaceId": "workspace.legacy-test",
+        "limit": 2,
+        "cursor": "fixture-cursor",
+        "status": "draft",
+        "conflictStatus": "none"
+      }
+    ]
+  },
+  {
+    "tag": "READ_OVERRIDE",
+    "repository": "assetOverrideRepository",
+    "method": "readAssetOverrideRecord",
+    "suffix": "overrides/:overrideId",
+    "key": null,
+    "operation": "read-override",
+    "payload": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "overrideId": "override.test"
+    },
+    "params": {
+      "workspaceId": "workspace.legacy-test",
+      "overrideId": "override.test"
+    },
+    "query": {},
+    "item": {
+      "targetWorkspaceId": "workspace.legacy-test",
+      "overrideId": "override.test"
+    },
+    "ipcArgs": [
+      "workspace.legacy-test",
+      "override.test"
+    ]
+  }
+] as const;
+
+for (const fixture of legacyReadCases) it(`legacy API ${fixture.operation}: safe authority denial, positive mapping and revalidation`, async () => {
+  const {app, handlers} = appAndHandlers();
+  let allowed = false, effects = 0;
+  const authorizations: unknown[] = [];
+  const item = fixture.item;
+  const repository = {[fixture.method]: async (...args: any[]) => {
+    effects++;
+    assert.deepEqual(args, fixture.ipcArgs);
+    return fixture.key ? {records: [item], nextCursor: "next-fixture"} : item;
+  }};
+  const readers = createWorkspaceAssetAuthoringReaders({
+    workspaceAccess: {async authorize(workspaceId: unknown, operation: string, scope: string) {
+      authorizations.push([workspaceId, operation, scope]);
+      if (!allowed) throw new Error("private policy detail");
+    }}, authoredAssetRepository: repository, assetDraftRepository: repository,
+    assetRevisionRepository: repository, assetOverrideRepository: repository,
+  } as any);
+  registerAssetAuthoringApiRoutes({app, ...readers});
+  const handler = handlers.get(`GET /api/asset-authoring/workspaces/:workspaceId/${fixture.suffix}`);
+  for (const state of [false, true, false]) {
+    allowed = state;
+    const result = response();
+    await handler(authenticatedRequest({params: fixture.params, query: fixture.query}), result.res);
+    const body = result.json.mock.calls[0][0];
+    assert.equal(body.ok, state);
+    assert.equal(body.operation, `asset-authoring.${fixture.operation}`);
+    assert.equal(result.status.mock.calls[0][0], state ? 200 : 503);
+    if (state) assert.deepEqual(body.value, fixture.key ? {[fixture.key]: [item], nextCursor: "next-fixture"} : item);
+    else {assert.equal(body.error.code, "unavailable"); assert.ok(!JSON.stringify(body).includes("private policy detail"));}
+  }
+  assert.equal(effects, 1);
+  assert.deepEqual(authorizations, Array(3).fill(["workspace.legacy-test", `asset-authoring.${fixture.operation}`, "asset:read"]));
+  const invalid = response(); await handler(authenticatedRequest({params: {}, query: {}}), invalid.res);
+  assert.equal(invalid.json.mock.calls[0][0].error.code, "validation");
+  assert.equal(authorizations.length, 3); assert.equal(effects, 1);
 });

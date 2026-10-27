@@ -1,3 +1,4 @@
+import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
@@ -2530,12 +2531,12 @@ export function composeServerHost(
                 })
               : undefined;
           return {
-            ...assetAuthoringRepositories,
+            ...createWorkspaceAssetAuthoringReaders({workspaceAccess: assetCompositionWorkspaceAccess, ...assetAuthoringRepositories}),
             ...(derivedCustomizations
               ? { derivedCustomizations: derivedCustomizations.service }
               : {}),
             createWorkspaceAuthoredAssetUseCase:
-              new CreateWorkspaceAuthoredAssetUseCase({
+              new CreateWorkspaceAuthoredAssetUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
                 authoredAssetRepository:
                   assetAuthoringRepositories.authoredAssetRepository,
                 assetRevisionRepository:
@@ -2544,18 +2545,18 @@ export function composeServerHost(
                 generateAuthoredAssetId: () => randomUUID(),
                 generateAssetRevisionId: () => randomUUID(),
               }),
-            createAssetDraftUseCase: new CreateAssetDraftUseCase({
+            createAssetDraftUseCase: new CreateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetDraftRepository:
                 assetAuthoringRepositories.assetDraftRepository,
               now: options.now,
               generateAssetDraftId: () => randomUUID(),
             }),
-            updateAssetDraftUseCase: new UpdateAssetDraftUseCase({
+            updateAssetDraftUseCase: new UpdateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetDraftRepository:
                 assetAuthoringRepositories.assetDraftRepository,
               now: options.now,
             }),
-            publishAssetDraftUseCase: new PublishAssetDraftUseCase({
+            publishAssetDraftUseCase: new PublishAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               authoredAssetRepository:
                 assetAuthoringRepositories.authoredAssetRepository,
               assetDraftRepository:
@@ -2566,19 +2567,19 @@ export function composeServerHost(
               generateAuthoredAssetId: () => randomUUID(),
               generateAssetRevisionId: () => randomUUID(),
             }),
-            createAssetOverrideUseCase: new CreateAssetOverrideUseCase({
+            createAssetOverrideUseCase: new CreateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               targetReader: unavailableTargetReader,
               now: options.now,
               generateAssetOverrideId: () => randomUUID(),
             }),
-            updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({
+            updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               now: options.now,
             }),
-            disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({
+            disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               now: options.now,

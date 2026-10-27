@@ -83,3 +83,14 @@ without rewriting it or repeating checkpoint effects. See the canonical
 data-management architecture and threat model for tests and remaining provider,
 native publication and controlled-workflow qualification. No retry creates a missing storage
 binding or adopts legacy data.
+
+Legacy authoring mutations require `WorkspaceAssetAccessPort` before repository,
+target, clock or ID effects. Public legacy list/detail methods use the eight-method
+`createWorkspaceAssetAuthoringReaders` facade, which exposes no write or unscoped
+by-ID method. Both paths retain existing safe-field and provenance semantics.
+
+
+Read-policy and repository failures settle as fixed unavailable API/IPC responses.
+Missing required fields retain validation failures. Focused tests cover every
+public read, query capture and current persisted membership. No request may
+fall back to raw repositories after access is denied.

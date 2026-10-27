@@ -49,6 +49,13 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts",
             "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
             "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "modules/application/use-cases/asset-authoring/tests/asset-authoring.use-cases.unit.test.ts",
+            "modules/application/use-cases/asset-authoring/tests/asset-authoring.versioning-conflict-provenance.unit.test.ts",
+            "modules/application/use-cases/asset-authoring/tests/asset-override.use-cases.unit.test.ts",
+            "modules/application/use-cases/asset-authoring/tests/legacy-workspace-authorization.unit.test.ts",
+            "modules/application/services/asset/tests/workspace-asset-authoring-readers.unit.test.ts",
+            "modules/adapters/transport/api-express/tests/register-asset-authoring-api-routes.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/legacy-authoring-workspace-authority.integration.test.ts",
         ]
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
@@ -72,6 +79,19 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/adapters/transport/README.md",
             "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFilters.tsx",
             "apps/thin-client/src/features/asset-library/components/AssetLibraryFilters.tsx",
+            "modules/application/services/asset/workspace-asset-access.service.ts",
+            "modules/application/services/asset/workspace-asset-authoring-readers.ts",
+            "modules/application/use-cases/asset-authoring/create-workspace-authored-asset.use-case.ts",
+            "modules/application/use-cases/asset-authoring/create-asset-draft.use-case.ts",
+            "modules/application/use-cases/asset-authoring/update-asset-draft.use-case.ts",
+            "modules/application/use-cases/asset-authoring/publish-asset-draft.use-case.ts",
+            "modules/application/use-cases/asset-authoring/create-asset-override.use-case.ts",
+            "modules/application/use-cases/asset-authoring/update-asset-override.use-case.ts",
+            "modules/application/use-cases/asset-authoring/disable-asset-override.use-case.ts",
+            "modules/adapters/transport/api-express/asset-authoring/registerAssetAuthoringApiRoutes.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/application/README.md",
+            "modules/hosts/README.md",
         ])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
@@ -153,6 +173,18 @@ class AssetUiProfileTests(unittest.TestCase):
             command = next(command for command in commands if path in command)
             self.assertEqual(command[:4], ["node", "--import", "tsx", "--test"])
         self.assertFalse(any("playwright" in part or ".e2e.spec." in part for command in commands for part in command))
+
+
+    def test_legacy_authority_uses_only_fixed_finite_node_tests(self):
+        expected = ['modules/application/use-cases/asset-authoring/tests/asset-authoring.use-cases.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/asset-authoring.versioning-conflict-provenance.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/asset-override.use-cases.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/legacy-workspace-authorization.unit.test.ts', 'modules/application/services/asset/tests/workspace-asset-authoring-readers.unit.test.ts', 'modules/adapters/transport/api-express/tests/register-asset-authoring-api-routes.unit.test.ts', 'modules/hosts/desktop/composition/tests/legacy-authoring-workspace-authority.integration.test.ts']
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        for path in expected:
+            command = next(command for command in commands if path in command)
+            self.assertEqual(command[:4], ["node", "--import", "tsx", "--test"])
+        self.assertFalse(any("playwright" in part or ".ai." in part or "security-authority" in part for command in commands for part in command))
+        self.configure(self.profile)
+        selected = catalog.plan(self.root, self.profile["source_paths"] + self.profile["test_paths"], ["asset-authoring-ui"], "candidate")["selected"]
+        self.assertNotIn("focused-tests", {check["id"] for check in selected})
 
 
 if __name__ == "__main__":

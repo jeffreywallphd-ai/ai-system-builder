@@ -396,3 +396,22 @@ validation and workspace/use-case controls remain authoritative after admission.
 This local proof does not qualify real Electron events, resource authorization,
 publication transactions, persistence, native or parent roadmap outcomes. Repair
 forward; rollback must retain sender admission rather than restore open handlers.
+
+Legacy resource-authority correction: a trusted desktop sender previously could
+create a legacy draft for a nonexistent workspace and read/update it after real
+membership suspension. Seven mutation entries now require current workspace write
+authority before protected effects; eight public reads use a workspace read facade
+without mutation or unscoped by-ID access. Both hosts bind existing persisted
+workspace and organization policy. Actual host tests cover missing, archived and
+foreign workspaces, membership suspension and valid create/read/update. Missing or
+throwing policy denies without private exception detail; source and sender controls
+remain intact. This is not a server middleware bypass claim and does not qualify
+legacy multi-record publication races, native storage or complete parent security.
+
+Legacy read denial settles inside each registered handler. Three IPC list reads
+previously rejected their promises after access denial; they now return fixed
+unavailable envelopes with the original trusted request context. Four detail
+read failures use the same unavailable classification. Empty required context
+still fails validation before admission. Finite production-composition tests
+exercise persisted membership suspension and prove retained draft bytes, without
+claiming a live HTTP/Electron process or storage transaction qualification.

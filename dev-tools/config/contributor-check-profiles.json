@@ -1570,7 +1570,14 @@
         "modules/adapters/transport/api-express/asset-package/tests/asset-package-transport-parity.unit.test.ts",
         "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts",
         "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
-        "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx"
+        "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+        "modules/application/use-cases/asset-authoring/tests/asset-authoring.use-cases.unit.test.ts",
+        "modules/application/use-cases/asset-authoring/tests/asset-authoring.versioning-conflict-provenance.unit.test.ts",
+        "modules/application/use-cases/asset-authoring/tests/asset-override.use-cases.unit.test.ts",
+        "modules/application/use-cases/asset-authoring/tests/legacy-workspace-authorization.unit.test.ts",
+        "modules/application/services/asset/tests/workspace-asset-authoring-readers.unit.test.ts",
+        "modules/adapters/transport/api-express/tests/register-asset-authoring-api-routes.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/legacy-authoring-workspace-authority.integration.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1592,7 +1599,20 @@
         "modules/hosts/desktop/composition/composeDesktopHost.ts",
         "modules/adapters/transport/README.md",
         "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFilters.tsx",
-        "apps/thin-client/src/features/asset-library/components/AssetLibraryFilters.tsx"
+        "apps/thin-client/src/features/asset-library/components/AssetLibraryFilters.tsx",
+        "modules/application/services/asset/workspace-asset-access.service.ts",
+        "modules/application/services/asset/workspace-asset-authoring-readers.ts",
+        "modules/application/use-cases/asset-authoring/create-workspace-authored-asset.use-case.ts",
+        "modules/application/use-cases/asset-authoring/create-asset-draft.use-case.ts",
+        "modules/application/use-cases/asset-authoring/update-asset-draft.use-case.ts",
+        "modules/application/use-cases/asset-authoring/publish-asset-draft.use-case.ts",
+        "modules/application/use-cases/asset-authoring/create-asset-override.use-case.ts",
+        "modules/application/use-cases/asset-authoring/update-asset-override.use-case.ts",
+        "modules/application/use-cases/asset-authoring/disable-asset-override.use-case.ts",
+        "modules/adapters/transport/api-express/asset-authoring/registerAssetAuthoringApiRoutes.ts",
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "modules/application/README.md",
+        "modules/hosts/README.md"
       ]
     },
     "desktop-startup-ui": {

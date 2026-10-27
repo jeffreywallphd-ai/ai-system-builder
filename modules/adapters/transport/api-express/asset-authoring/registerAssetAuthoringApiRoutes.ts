@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAuthoringReaders } from "../../../../application/services/asset/workspace-asset-authoring-readers";
 import type { Request } from "express";
 import type { WorkspaceAssetAuthoringReadModelService } from "../../../../application/services/asset/workspace-asset-authoring-read-model.service";
 import type { AssetDerivedCustomizationApplicationPort, AuthoredAssetRepositoryPort, AssetDraftRepositoryPort, AssetOverrideRepositoryPort, AssetRevisionRepositoryPort } from "../../../../application/ports/asset-authoring";
@@ -23,10 +24,10 @@ export interface RegisterAssetAuthoringApiRoutesDependencies {
   createAssetOverrideUseCase?: CreateAssetOverrideUseCase;
   updateAssetOverrideUseCase?: UpdateAssetOverrideUseCase;
   disableAssetOverrideUseCase?: DisableAssetOverrideUseCase;
-  authoredAssetRepository?: AuthoredAssetRepositoryPort;
-  assetDraftRepository?: AssetDraftRepositoryPort;
-  assetRevisionRepository?: AssetRevisionRepositoryPort;
-  assetOverrideRepository?: AssetOverrideRepositoryPort;
+  authoredAssetRepository?: WorkspaceAssetAuthoringReaders["authoredAssetRepository"];
+  assetDraftRepository?: WorkspaceAssetAuthoringReaders["assetDraftRepository"];
+  assetRevisionRepository?: WorkspaceAssetAuthoringReaders["assetRevisionRepository"];
+  assetOverrideRepository?: WorkspaceAssetAuthoringReaders["assetOverrideRepository"];
   effectiveSummaryReader?: WorkspaceAssetAuthoringReadModelService;
   derivedCustomizations?: AssetDerivedCustomizationApplicationPort;
 }
@@ -84,14 +85,17 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
   command("post", "/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId/disable", API_ASSET_AUTHORING_DISABLE_OVERRIDE_OPERATION, dependencies.disableAssetOverrideUseCase, "targetWorkspaceId");
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/authored-assets", async (req, res) => {
+    try {
     if (!dependencies.authoredAssetRepository) return fail(res, API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     if (!workspace.ok) return fail(res, API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, "validation", 400, "workspaceId is required.");
     const result = await dependencies.authoredAssetRepository.listAuthoredAssetRecords({ workspaceId: createWorkspaceId(workspace.value), status: optionalText(req.query?.status) as never, limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, { assets: result.records, nextCursor: result.nextCursor }));
+    } catch { return fail(res, API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/authored-assets/:authoredAssetId", async (req, res) => {
+    try {
     if (!dependencies.authoredAssetRepository) return fail(res, API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     const id = required(req, "authoredAssetId");
@@ -99,17 +103,21 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
     const item = await dependencies.authoredAssetRepository.readAuthoredAssetRecordByWorkspace(createWorkspaceId(workspace.value), normalizeAuthoredAssetId(id.value));
     if (!item) return fail(res, API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, "not-found", 404, "Authored asset was not found.");
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, item));
+    } catch { return fail(res, API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/drafts", async (req, res) => {
+    try {
     if (!dependencies.assetDraftRepository) return fail(res, API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     if (!workspace.ok) return fail(res, API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, "validation", 400, "workspaceId is required.");
     const result = await dependencies.assetDraftRepository.listAssetDraftRecords({ workspaceId: createWorkspaceId(workspace.value), status: optionalText(req.query?.status) as never, limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, { drafts: result.records, nextCursor: result.nextCursor }));
+    } catch { return fail(res, API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/drafts/:draftId", async (req, res) => {
+    try {
     if (!dependencies.assetDraftRepository) return fail(res, API_ASSET_AUTHORING_READ_DRAFT_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     const id = required(req, "draftId");
@@ -117,18 +125,22 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
     const item = await dependencies.assetDraftRepository.readAssetDraftRecord(createWorkspaceId(workspace.value), normalizeAssetDraftId(id.value));
     if (!item) return fail(res, API_ASSET_AUTHORING_READ_DRAFT_OPERATION, "not-found", 404, "Draft was not found.");
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_READ_DRAFT_OPERATION, item));
+    } catch { return fail(res, API_ASSET_AUTHORING_READ_DRAFT_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/revisions", async (req, res) => {
+    try {
     if (!dependencies.assetRevisionRepository) return fail(res, API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     const authoredAssetId = optionalText(req.query?.authoredAssetId);
     if (!workspace.ok || !authoredAssetId) return fail(res, API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, "validation", 400, "workspaceId and authoredAssetId are required.");
     const result = await dependencies.assetRevisionRepository.listAssetRevisionRecords({ workspaceId: createWorkspaceId(workspace.value), authoredAssetId: normalizeAuthoredAssetId(authoredAssetId), status: optionalText(req.query?.status) as never, limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, { revisions: result.records, nextCursor: result.nextCursor }));
+    } catch { return fail(res, API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/revisions/:revisionId", async (req, res) => {
+    try {
     if (!dependencies.assetRevisionRepository) return fail(res, API_ASSET_AUTHORING_READ_REVISION_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     const authoredAssetId = optionalText(req.query?.authoredAssetId);
@@ -137,17 +149,21 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
     const item = await dependencies.assetRevisionRepository.readAssetRevisionRecord(createWorkspaceId(workspace.value), normalizeAuthoredAssetId(authoredAssetId), normalizeAssetRevisionId(revisionId.value));
     if (!item) return fail(res, API_ASSET_AUTHORING_READ_REVISION_OPERATION, "not-found", 404, "Revision was not found.");
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_READ_REVISION_OPERATION, item));
+    } catch { return fail(res, API_ASSET_AUTHORING_READ_REVISION_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/overrides", async (req, res) => {
+    try {
     if (!dependencies.assetOverrideRepository) return fail(res, API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     if (!workspace.ok) return fail(res, API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, "validation", 400, "workspaceId is required.");
     const result = await dependencies.assetOverrideRepository.listAssetOverrideRecords({ targetWorkspaceId: createWorkspaceId(workspace.value), status: optionalText(req.query?.status) as never, conflictStatus: optionalText(req.query?.conflictStatus) as never, limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, { overrides: result.records, nextCursor: result.nextCursor }));
+    } catch { return fail(res, API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId", async (req, res) => {
+    try {
     if (!dependencies.assetOverrideRepository) return fail(res, API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, "unavailable", 503, "Read unavailable.");
     const workspace = required(req, "workspaceId");
     const id = required(req, "overrideId");
@@ -155,6 +171,7 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
     const item = await dependencies.assetOverrideRepository.readAssetOverrideRecord(createWorkspaceId(workspace.value), normalizeAssetOverrideId(id.value));
     if (!item) return fail(res, API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, "not-found", 404, "Override was not found.");
     return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, item));
+    } catch { return fail(res, API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, "unavailable", 503, "Workspace asset read is unavailable."); }
   });
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/effective-summaries", async (_req, res) =>

@@ -39,3 +39,15 @@ Desktop's lazy System Builder and reuse readers preserve the same ordered batch
 detail method as the scoped registry. Opening the host does not initialize that
 feature. An admitted batch forwards its original workspace/options once; reader
 failure propagates without replaying one full collection read per component.
+
+Legacy authoring IPC and API now receive the authorized workspace read facade,
+while all seven mutation use cases receive the same persisted-workspace policy.
+Desktop rechecks current membership even after sender admission; server resource
+checks supplement its existing organization middleware. Raw internal repository
+references remain internal and confer no public legacy read bypass.
+
+
+Read-policy and repository failures settle as fixed unavailable API/IPC responses.
+Missing required fields retain validation failures. Focused tests cover every
+public read, query capture and current persisted membership. No request may
+fall back to raw repositories after access is denied.

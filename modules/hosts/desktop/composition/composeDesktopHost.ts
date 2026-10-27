@@ -1,3 +1,4 @@
+import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
@@ -1262,23 +1263,23 @@ export function composeDesktopHost(
 
       const assetAuthoringUseCases = {
         createWorkspaceAuthoredAssetUseCase:
-          new CreateWorkspaceAuthoredAssetUseCase({
+          new CreateWorkspaceAuthoredAssetUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             authoredAssetRepository,
             assetRevisionRepository,
             generateAuthoredAssetId: () => `authored.${randomUUID()}`,
             generateAssetRevisionId: () => `revision.${randomUUID()}`,
             now: options.now,
           }),
-        createAssetDraftUseCase: new CreateAssetDraftUseCase({
+        createAssetDraftUseCase: new CreateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           generateAssetDraftId: () => `draft.${randomUUID()}`,
           now: options.now,
         }),
-        updateAssetDraftUseCase: new UpdateAssetDraftUseCase({
+        updateAssetDraftUseCase: new UpdateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           now: options.now,
         }),
-        publishAssetDraftUseCase: new PublishAssetDraftUseCase({
+        publishAssetDraftUseCase: new PublishAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           authoredAssetRepository,
           assetRevisionRepository,
@@ -1286,7 +1287,7 @@ export function composeDesktopHost(
           generateAssetRevisionId: () => `revision.${randomUUID()}`,
           now: options.now,
         }),
-        createAssetOverrideUseCase: new CreateAssetOverrideUseCase({
+        createAssetOverrideUseCase: new CreateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           targetReader: {
             async readCustomizationTargetByReference() {
@@ -1296,11 +1297,11 @@ export function composeDesktopHost(
           generateAssetOverrideId: () => `override.${randomUUID()}`,
           now: options.now,
         }),
-        updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({
+        updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           now: options.now,
         }),
-        disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({
+        disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           now: options.now,
         }),
@@ -1689,10 +1690,7 @@ export function composeDesktopHost(
           ipcMain: registerOptions.ipcMain,
           senderTrust: registerOptions.senderTrust,
           ...assetAuthoringUseCases,
-          authoredAssetRepository,
-          assetDraftRepository,
-          assetRevisionRepository,
-          assetOverrideRepository,
+          ...createWorkspaceAssetAuthoringReaders({workspaceAccess: assetCompositionWorkspaceAccess, authoredAssetRepository, assetDraftRepository, assetRevisionRepository, assetOverrideRepository}),
           getDerivedCustomizations: async () =>
             (await getAssetFeatures()).derivedCustomizations?.service,
         },

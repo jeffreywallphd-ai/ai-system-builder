@@ -20,3 +20,18 @@ export class WorkspaceAssetAccessService implements WorkspaceAssetAccessPort {
     }
   }
 }
+
+/** Keep missing composition or private policy errors from becoming authority or diagnostics. */
+export async function requireWorkspaceAssetAccess(
+  access: WorkspaceAssetAccessPort,
+  workspaceId: Parameters<WorkspaceAssetAccessPort["authorize"]>[0],
+  operation: string,
+  scope: "asset:read" | "asset:write",
+): Promise<void> {
+  try {
+    if (!access) throw new Error();
+    await access.authorize(workspaceId, operation, scope);
+  } catch {
+    throw new Error("Workspace asset access is unavailable or forbidden.");
+  }
+}

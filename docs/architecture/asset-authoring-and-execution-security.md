@@ -159,3 +159,20 @@ controls but do not qualify a sandbox or authorize executable assets.
 - [Node permission model limitations](https://nodejs.org/api/permissions.html)
 - [WASI capability-based security](https://wasi.dev/)
 - [OWASP Secure Coding with AI](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Coding_with_AI_Cheat_Sheet.html)
+
+Legacy authoring uses the same required resource boundary: seven application
+mutations authorize `asset:write` before protected reads/writes, target lookup or
+ID/clock effects. Public list/detail endpoints receive a typed eight-method read
+facade requiring `asset:read`; raw repositories and unscoped by-ID lookup are not
+exposed by that facade. List queries are captured before asynchronous admission.
+Both hosts compose the existing persisted-workspace/organization policy. Missing,
+archived or other-organization workspaces and suspended membership deny with safe
+transport failures; server membership middleware remains a separate control.
+Legacy multi-record draft publication is not made atomic by this resource guard;
+its concurrency and complete controlled Assets qualification remain separate.
+
+
+Read-policy and repository failures settle as fixed unavailable API/IPC responses.
+Missing required fields retain validation failures. Focused tests cover every
+public read, query capture and current persisted membership. No request may
+fall back to raw repositories after access is denied.

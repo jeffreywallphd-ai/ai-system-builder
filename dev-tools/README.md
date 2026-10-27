@@ -280,3 +280,14 @@ the public desktop bridge or paired same-origin browser GET. The probes have a
 exercise finite preload/fetch environments without real network or app reads.
 This does not prove hidden Browse selection, persisted overlay bytes, a released
 implementation or a new customization target. Those checks remain separate.
+
+### Legacy Assets workspace-access checks
+
+The fixed `asset-authoring-ui` profile also covers the connected legacy
+application, read facade, API/IPC and finite desktop/server composition tests.
+The seven write entries and eight public reads use the existing current
+workspace policy. All earlier rendered, transport and profile-safety tests
+remain selected. Host fixtures use in-memory documents and owned temporary
+roots; they do not open apps, listen on ports, run models or qualify physical
+Electron, native storage, provider or parent outcomes. Publication transactions
+and Studio/package/derived policy changes remain separate.
