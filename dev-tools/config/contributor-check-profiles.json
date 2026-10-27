@@ -1582,7 +1582,11 @@
         "modules/application/use-cases/asset-package/tests/asset-package-workspace-authorization.unit.test.ts",
         "modules/hosts/desktop/composition/tests/assets-package-workspace-authorization.integration.test.ts",
         "modules/application/use-cases/asset-package/tests/package-command-snapshots.unit.test.ts",
-        "dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs"
+        "dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs",
+        "modules/application/use-cases/asset-studio/tests/asset-studio-workflow.unit.test.ts",
+        "modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts",
+        "modules/application/use-cases/asset-studio/tests/studio-workspace-authorization-and-capture.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/studio-workspace-authority.integration.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1626,7 +1630,14 @@
         "modules/contracts/asset-package/asset-package-contracts.ts",
         "modules/adapters/package/aisb/createAisbPackageInspector.ts",
         "modules/application/services/asset-package/capture-package-commands.ts",
-        "dev-tools/scripts/architecture/check-asset-system-fitness.mjs"
+        "dev-tools/scripts/architecture/check-asset-system-fitness.mjs",
+        "modules/application/use-cases/asset-studio/start-asset-studio.use-case.ts",
+        "modules/application/use-cases/asset-studio/propose-asset-studio-change.use-case.ts",
+        "modules/application/use-cases/asset-studio/review-asset-studio-proposal.use-case.ts",
+        "modules/application/use-cases/asset-studio/read-asset-studio-workflows.use-case.ts",
+        "modules/application/use-cases/asset-studio/asset-studio-asset-draft-workflow.use-case.ts",
+        "modules/hosts/shared/composition/composeAssetStudioWorkflow.ts",
+        "modules/application/services/asset-studio/capture-studio-requests.ts"
       ]
     },
     "desktop-startup-ui": {

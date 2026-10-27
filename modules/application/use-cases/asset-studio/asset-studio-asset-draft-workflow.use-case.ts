@@ -1,3 +1,6 @@
+import { captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../services/asset-studio/capture-studio-requests";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetDefinition, AssetReference } from "../../../contracts/asset";
 import {
   ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
@@ -47,6 +50,7 @@ export class AssetStudioAssetDraftWorkflowUseCase {
 
   public constructor(
     private readonly dependencies: {
+      readonly workspaceAccess: WorkspaceAssetAccessPort;
       readonly drafts: AssetStudioAssetDraftRepositoryPort;
       readonly definitions: AssetDefinitionRepositoryPort;
       readonly implementations: AssetImplementationRepositoryPort;
@@ -71,6 +75,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: CreateAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftCreate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.create", "asset:write");
       if (command.sourceLegacyDraftId) {
         const existing = await this.findLegacyDraft(
           command.workspaceId,
@@ -149,6 +155,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: UpdateAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftUpdate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.update", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -187,6 +195,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     query: ReadAssetStudioAssetDraftQuery,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftView>> {
     try {
+      query = captureStudioDraftRead(query);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-studio.asset-draft.read", "asset:read");
       const record = await this.readRecord(query.workspaceId, query.draftId);
       if (!record) {
         return studioFailure(
@@ -210,6 +220,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     query: ListAssetStudioAssetDraftsQuery,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftListView>> {
     try {
+      query = captureStudioDraftList(query);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-studio.asset-draft.list", "asset:read");
       const page = await this.dependencies.drafts.list(query);
       return studioSuccess({
         drafts: page.records.map(toSummary),
@@ -227,6 +239,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.review", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -298,6 +312,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.publish", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -374,6 +390,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.abandon", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,

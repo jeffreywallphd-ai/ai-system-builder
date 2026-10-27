@@ -1,3 +1,6 @@
+import { captureStudioReview } from "../../services/asset-studio/capture-studio-requests";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetImplementationArtifactPort } from "../../ports/asset-implementation";
 import type { AssetSourceSnapshotId } from "../../../contracts/asset-implementation";
 import type { AssetStudioWorkflowRepositoryPort } from "../../ports/asset-studio";
@@ -8,6 +11,7 @@ import { studioFailure, studioSuccess } from "./asset-studio-result";
 
 export class ReviewAssetStudioProposalUseCase {
   public constructor(private readonly dependencies: {
+    readonly workspaceAccess: WorkspaceAssetAccessPort;
     readonly workflows: AssetStudioWorkflowRepositoryPort;
     readonly artifacts: AssetImplementationArtifactPort;
     readonly snapshotSource: Pick<SnapshotAssetImplementationSourceUseCase, "execute">;
@@ -16,6 +20,10 @@ export class ReviewAssetStudioProposalUseCase {
   }) {}
 
   public async execute(command: ReviewAssetStudioProposalCommand): Promise<AssetStudioResult<AssetStudioWorkflowRecord>> {
+    try { command = captureStudioReview(command); }
+    catch { return studioFailure("studio.request.invalid", "The authoring request is invalid."); }
+    try { await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.review", "asset:write"); }
+    catch { return studioFailure("studio.workspace.forbidden", "Workspace asset access is unavailable or forbidden."); }
     const current = await this.dependencies.workflows.read(command.workspaceId, command.workflowId);
     if (!current) return studioFailure("studio.workflow.not-found", "The authoring workflow was not found.");
     if (current.revision !== command.expectedRevision || current.status !== "proposed") return studioFailure("studio.workflow.stale", "The proposal changed or was already reviewed. Reload before continuing.");

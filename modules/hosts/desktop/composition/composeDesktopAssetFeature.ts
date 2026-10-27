@@ -116,6 +116,7 @@ export async function composeDesktopAssetFeature(
   const assetStudio =
     options.documents && assetImplementation
       ? composeAssetStudioWorkflow({
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           implementations: assetImplementation,
           artifacts: implementationArtifacts,

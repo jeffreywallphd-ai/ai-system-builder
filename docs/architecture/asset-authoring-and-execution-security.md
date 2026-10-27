@@ -178,3 +178,5 @@ public read, query capture and current persisted membership. No request may
 fall back to raw repositories after access is denied.
 
 Package authority is checked against the same captured workspace and request values used for all later effects. Inspection owns a bounded byte copy; admission owns capability consent; activation changes own workspace, record and actor fields. Desktop also checks before lazy feature initialization. The shared32MiB production upload default is checked before copying, without importing adapter policy into application. Independently configured inspector overrides are preserved; ordinary application uploads keep their existing production budget.
+
+Studio captures fixed request fields before awaiting current workspace authorization. Nested proposal files, context, allowlists, approval arrays, semantic input and resources are owned by the request. Coding providers receive a separate request copy and their output is captured before later waits. Canonical limits remain; policy allowlist universes are not capped at proposal cardinalities. Atomic publication and physical-host qualification remain separate.

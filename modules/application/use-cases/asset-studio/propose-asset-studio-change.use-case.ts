@@ -1,3 +1,6 @@
+import { captureStudioPropose, captureStudioProposal } from "../../services/asset-studio/capture-studio-requests";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetImplementationArtifactPort, AssetImplementationRepositoryPort } from "../../ports/asset-implementation";
 import type { AssetCodingModelPort, AssetStudioWorkflowRepositoryPort } from "../../ports/asset-studio";
 import { validateAssetStudioProposal, validateAssetStudioRequest } from "../../services/asset-studio";
@@ -7,6 +10,7 @@ import { studioFailure, studioSuccess } from "./asset-studio-result";
 
 export class ProposeAssetStudioChangeUseCase {
   public constructor(private readonly dependencies: {
+    readonly workspaceAccess: WorkspaceAssetAccessPort;
     readonly workflows: AssetStudioWorkflowRepositoryPort;
     readonly implementations: AssetImplementationRepositoryPort;
     readonly artifacts: AssetImplementationArtifactPort;
@@ -17,6 +21,10 @@ export class ProposeAssetStudioChangeUseCase {
   }) {}
 
   public async execute(command: ProposeAssetStudioChangeCommand): Promise<AssetStudioResult<AssetStudioProposalView>> {
+    try { command = captureStudioPropose(command); }
+    catch { return studioFailure("studio.request.invalid", "The authoring request is invalid."); }
+    try { await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.propose", "asset:write"); }
+    catch { return studioFailure("studio.workspace.forbidden", "Workspace asset access is unavailable or forbidden."); }
     const requestDiagnostics = validateAssetStudioRequest(command);
     if (requestDiagnostics.length) return studioFailure("studio.request.invalid", "The authoring request is invalid.", requestDiagnostics);
     const draft = await this.dependencies.implementations.readDraft(command.workspaceId, command.implementationDraftId);
@@ -30,7 +38,7 @@ export class ProposeAssetStudioChangeUseCase {
         proposal = command.manualProposal;
       } else {
         if (!this.dependencies.codingModel) return studioFailure("studio.coding-model.unavailable", "No coding model provider is configured for Asset Studio.");
-        proposal = await withTimeout(this.dependencies.codingModel, command, this.dependencies.timeoutMs ?? 120_000);
+        proposal = captureStudioProposal(await withTimeout(this.dependencies.codingModel, captureStudioPropose(command), this.dependencies.timeoutMs ?? 120_000));
       }
     } catch (error) {
       return studioFailure(error instanceof TimeoutError ? "studio.coding-model.timeout" : "studio.coding-model.failed", error instanceof TimeoutError ? "The coding model proposal timed out." : "The coding model could not produce a valid proposal.");

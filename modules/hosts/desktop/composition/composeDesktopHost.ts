@@ -1,3 +1,4 @@
+import { captureStudioStart, captureStudioPropose, captureStudioReview, captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../../application/services/asset-studio/capture-studio-requests";
 import { capturePackageInspection, capturePackageAdmission, capturePackageActivation } from "../../../application/services/asset-package/capture-package-commands";
 import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
 import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
@@ -1908,6 +1909,8 @@ export function composeDesktopHost(
           senderTrust: registerOptions.senderTrust,
           start: {
             async execute(command) {
+              command = captureStudioStart(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.start", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1916,6 +1919,8 @@ export function composeDesktopHost(
           },
           propose: {
             async execute(command) {
+              command = captureStudioPropose(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.propose", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1924,6 +1929,8 @@ export function composeDesktopHost(
           },
           review: {
             async execute(command) {
+              command = captureStudioReview(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.review", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1932,6 +1939,7 @@ export function composeDesktopHost(
           },
           read: {
             async execute(workspaceId, workflowId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-studio.read", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1940,6 +1948,7 @@ export function composeDesktopHost(
           },
           list: {
             async execute(workspaceId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-studio.list", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1948,42 +1957,56 @@ export function composeDesktopHost(
           },
           assetDrafts: {
             create: async (command) => {
+              command = captureStudioDraftCreate(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.create", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.create(command);
             },
             update: async (command) => {
+              command = captureStudioDraftUpdate(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.update", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.update(command);
             },
             read: async (query) => {
+              query = captureStudioDraftRead(query);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, query.workspaceId, "asset-studio.asset-draft.read", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.read(query);
             },
             list: async (query) => {
+              query = captureStudioDraftList(query);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, query.workspaceId, "asset-studio.asset-draft.list", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.list(query);
             },
             review: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.review", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.review(command);
             },
             publish: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.publish", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.publish(command);
             },
             abandon: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.abandon", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");

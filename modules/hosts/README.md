@@ -53,3 +53,5 @@ public read, query capture and current persisted membership. No request may
 fall back to raw repositories after access is denied.
 
 Package composition passes the existing persisted workspace/current membership policy from an early host guard, before eager server package construction. Desktop package wrappers capture commands and admit resource access before deferred feature loading, then application entries reauthorize. Upload copies at both boundaries remain bounded by the existing32MiB production default. This does not qualify Studio/derived authority, atomic publication or physical hosts.
+
+Desktop Studio requests capture their contract values and check persisted workspace access before deferred feature construction. Shared Studio composition supplies the same policy to application use cases, which recheck access after readiness. Finite composition fixtures do not qualify physical app startup, process restart or durable storage.

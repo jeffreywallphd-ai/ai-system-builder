@@ -1598,6 +1598,7 @@ export function composeServerHost(
       const assetStudio =
         organizationDocuments && assetImplementation
           ? composeAssetStudioWorkflow({
+              workspaceAccess: assetWorkspaceAccess,
               documents: organizationDocuments,
               implementations: assetImplementation,
               artifacts: createAssetImplementationArtifactAdapter(storage),

@@ -1,3 +1,5 @@
+// Synthetic Studio lifecycle fixtures explicitly admit their finite workspace.
+const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "../../../../testing/node-test";
@@ -164,7 +166,7 @@ describe("Studio asset draft workflow", () => {
     expect(unpublished.ok).toBe(true);
     if (unpublished.ok) expect(unpublished.value.drafts).toEqual([]);
 
-    const restartedWorkflow = new AssetStudioAssetDraftWorkflowUseCase({
+    const restartedWorkflow = new AssetStudioAssetDraftWorkflowUseCase({ workspaceAccess,
       drafts: restartedRepository,
       definitions: fixture.definitions,
       implementations: fixture.implementations,
@@ -304,7 +306,7 @@ function createFixture() {
     version: "1.0.0" as never,
   };
   let tick = 0;
-  const workflow = new AssetStudioAssetDraftWorkflowUseCase({
+  const workflow = new AssetStudioAssetDraftWorkflowUseCase({ workspaceAccess,
     drafts,
     definitions,
     implementations,
@@ -334,8 +336,8 @@ function semanticDefinition(displayName: string) {
       purpose: "Exercise the Studio asset draft lifecycle.",
       userFacingSummary: "A Studio-authored test tool.",
       developerFacingSummary: "A deterministic test fixture.",
-      capabilities: ["test-behavior"],
-      limitations: ["Test-only fixture."],
+      capabilities: [{ summary: "test-behavior" }],
+      limitations: [{ summary: "Test-only fixture." }],
     },
   };
 }
