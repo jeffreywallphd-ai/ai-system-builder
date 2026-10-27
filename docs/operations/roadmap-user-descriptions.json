@@ -12139,6 +12139,39 @@
           "These tests do not pass real transport, storage, app, provider, native or final combined qualification."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ba21dd31f11b3f27727735f31da2460f58f4d669dfa08ae90288c497b910980e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed package actions that repeated, stopped responding or changed a newer workspace after a late reply.",
+          "Package imports keep explicit permission approval and separate install, activate, disable and rollback actions.",
+          "The exact committed interface change passed 103 tests with fixed clients. Tests cover retaining the accepted result after an inconsistent refresh and restoring other installed packages through a fresh list.",
+          "Real package trust, transport, storage, app, native and final combined qualification remain pending. The authoring work package is still partial."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bdeb6c1547a8e1a41e00c12e7ff0c33a93b5c18e9396eb53003d98f7e32aecb7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover the reviewed interface change. The full acceptance criterion, work package and increment still need other checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "184199b20835b8b257dff5a5ba08e1504a6cec89216efc9962156322164afa01",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Real package reading and trust checks, connections, storage, apps, native workers and providers need separate tests. Final combined tests are deferred. Completed model accuracy and OCR tests will not run again."
+        ]
+      }
     }
   ]
 }

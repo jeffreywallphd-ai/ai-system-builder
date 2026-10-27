@@ -684,3 +684,20 @@ check retain the ordinary gate. Existing path confinement, controlled-AI
 exclusion, fixed argv, exact Vitest collection and policy digest rules apply.
 Selecting this profile does not erase failed broader receipts or close parent
 roadmap qualification. Adding an unrelated path requires its own coverage.
+
+### Desktop startup feature checks
+
+`desktop-startup-ui` runs the exact desktop lazy-page interface and Forge
+packaging-boundary test files through the fixed Node runner. These cover finite
+rendering, relative renderer/preload packaging and owned loopback Vite fixtures.
+The profile declares only the desktop bootstrap, startup display, main window,
+area guidance and configuration surfaces needed by the startup work. Some
+declared startup paths can be introduced by its next governed feature change;
+no missing test or arbitrary command is allowed.
+
+Use this profile for startup feedback and failure recovery. It does not launch
+the actual Electron application or qualify its first cold start, providers,
+models, native workers or final combined testing. Unknown impact retains the
+generic focused gate, explicitly required generic checks remain selected, and
+unsafe/missing/controlled-AI tests retain denial. Existing profiles and their
+failures are unchanged. The profile is verification support, not a startup pass.

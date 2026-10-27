@@ -1572,6 +1572,22 @@
         "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
         "modules/ui/shared/notifications/TransientNotificationPublisher.tsx"
       ]
+    },
+    "desktop-startup-ui": {
+      "test_paths": [
+        "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx",
+        "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "apps/desktop/src/renderer/index.html",
+        "apps/desktop/src/renderer/startup.ts",
+        "apps/desktop/src/renderer/startup/desktopStartup.ts",
+        "apps/desktop/src/renderer/styles/startup.css",
+        "apps/desktop/src/renderer/main.tsx",
+        "apps/desktop/src/main/index.ts",
+        "apps/desktop/src/renderer/README.md"
+      ]
     }
   }
 }

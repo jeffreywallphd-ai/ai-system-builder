@@ -4848,6 +4848,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "asset-package-owned-ui-lifecycle-and-retry",
+      "work_criteria": [
+        "package-explicit-ui-lifecycle-and-consent",
+        "package-list-and-action-session-recovery",
+        "package-scoped-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "cacc523e013979d31f70388c7f692f89b11529a78ea1ff1b85db7e3eb0131fd1",
+      "review_digest": "76daa44a27cf2af498997c898af72b79dc5d40df287d5aba19bf7c2297e34c91",
+      "scope": "Completed and checkpointed package interface session/retry repair with exact capability consent, independent activation/disable/previous-target rollback, typed-summary and catalogue consistency checks, and fixed-client UI denials. The first authoring work package remains partial.",
+      "limitations": [
+        "These are reviewed local interface results at the recorded source snapshot. They do not pass the whole criterion or complete its work package or increment.",
+        "Actual parsing/trust decisions, transports, storage, apps, native/runtime/providers and final combined tests remain separate. Accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
