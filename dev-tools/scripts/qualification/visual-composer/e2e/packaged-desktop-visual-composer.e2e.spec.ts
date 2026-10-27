@@ -6,13 +6,19 @@ import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import {
   assertGuidedLifecycleReflow,
-  completeGuidedSystemLifecycle,
+  prepareGuidedSystemLifecycle,
+  type GuidedSystemRuntimeHandle,
 } from "./guided-system-lifecycle";
 
-test.setTimeout(240_000);
+// A second bounded build/turn adds 120 seconds; existing action/launch limits stay.
+test.setTimeout(360_000);
+import { createOwnedRuntimePageObserver, readRuntimeReleasePair, runObservedRuntimeLifecycle, RUNTIME_QUALIFICATION_MESSAGES, type RuntimeReleaseContext } from "../runtime-lifecycle-oracles";
+import { SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS } from "../../../../../modules/contracts/system-deployment";
+
 const QUALIFICATION_MODEL_NAME = "Controlled qualification model";
-const FIRST_QUALIFICATION_MESSAGE = "Button qualification turn";
-const SECOND_QUALIFICATION_MESSAGE = "Keyboard qualification turn";
+const FIRST_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[0][0];
+const SECOND_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[0][1];
+const ISOLATED_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[1][0];
 const axeSource = readFileSync(
   path.resolve(process.cwd(), "node_modules", "axe-core", "axe.min.js"),
   "utf8",
@@ -67,6 +73,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
   electronApp.process().stdout?.on("data", captureFeatureLoadDiagnostics);
   electronApp.process().stderr?.on("data", captureFeatureLoadDiagnostics);
   let qualificationWorkspaceId = "";
+  let qualificationContexts: readonly RuntimeReleaseContext[] = [];
 
   try {
     const page = await electronApp.firstWindow({ timeout: 60_000 });
@@ -99,10 +106,19 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Systems", level: 1 }),
     ).toBeVisible();
 
-    await completeGuidedSystemLifecycle(page, "Packaged portal", {
-      modelDisplayName: QUALIFICATION_MODEL_NAME,
-      restartRuntime: true,
-      exerciseStartedRuntime: async (attempt) => {
+    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME });
+    const runtimePages = () => electronApp.windows().filter(candidate => candidate !== page);
+    const observer = createOwnedRuntimePageObserver(runtimePages);
+    let secondary: GuidedSystemRuntimeHandle | undefined;
+    async function observeStop(context: RuntimeReleaseContext): Promise<void> {
+      const captured = observer.current(context);
+      await expect.poll(() => captured.isClosed() && !electronApp.windows().includes(captured), { timeout: 30_000 }).toBe(true);
+      observer.stopped(context);
+      expect(runtimePages()).toHaveLength(0);
+    }
+    await runObservedRuntimeLifecycle({
+      start: () => primary.start(), stop: () => primary.stop(), uninstall: () => primary.uninstall(),
+      exercise: async (attempt) => {
         await expect
           .poll(
             () =>
@@ -116,6 +132,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
           .find((candidate) => candidate !== page);
         if (!runtimePage)
           throw new Error("Published runtime window is unavailable.");
+        observer.opened(primary.context, runtimePage);
         runtimePage.on("console", (message) => {
           if (message.type() === "error") rendererErrors.push(message.text());
         });
@@ -136,6 +153,15 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             runtimePage.getByText("Start a conversation"),
           ).toBeVisible();
           await expect(transcript.locator("li")).toHaveCount(0);
+          const input = runtimePage.getByLabel("Message");
+          await expect(input).toHaveAttribute("maxlength", String(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS));
+          const fullInput = "x".repeat(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS);
+          await input.fill(fullInput);
+          await input.press("End");
+          await input.press("y");
+          await expect(input).toHaveValue(fullInput);
+          await expect(transcript.locator("li")).toHaveCount(0);
+
           await runtimePage.evaluate(axeSource);
           const runtimeViolations = await runtimePage.evaluate(async () => {
             const result = await (
@@ -173,6 +199,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
               { exact: true },
             ),
           ).toBeVisible({ timeout: 30_000 });
+          await expect(transcript.locator("li")).toHaveCount(2);
           return;
         }
         await expect(
@@ -184,6 +211,11 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             { exact: true },
           ),
         ).toBeVisible();
+        await expect(transcript.getByText(ISOLATED_QUALIFICATION_MESSAGE, { exact: true })).toHaveCount(0);
+        await expect(transcript.getByText(`Controlled response to: ${ISOLATED_QUALIFICATION_MESSAGE}`, { exact: true })).toHaveCount(0);
+        await runtimePage.getByLabel("Message").fill("Keyboard qualification");
+        await runtimePage.getByLabel("Message").press("Shift+Enter");
+        await expect(runtimePage.getByLabel("Message")).toHaveValue("Keyboard qualification\n");
         await runtimePage
           .getByLabel("Message")
           .fill(SECOND_QUALIFICATION_MESSAGE);
@@ -198,8 +230,42 @@ test("packaged desktop completes the guided build and publication lifecycle", as
           ),
         ).toBeVisible({ timeout: 30_000 });
         expect(electronApp.windows()).toHaveLength(2);
+        await expect(transcript.locator("li")).toHaveCount(4);
       },
-    });
+      afterStop: async attempt => {
+        await observeStop(primary.context);
+        if (attempt !== 1) return;
+        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME });
+        qualificationContexts = readRuntimeReleasePair([primary.context, secondary.context]);
+        const isolatedRuntime = secondary;
+        await runObservedRuntimeLifecycle({
+          start: () => isolatedRuntime.start(), stop: () => isolatedRuntime.stop(),
+          exercise: async () => {
+            await expect.poll(() => runtimePages().length, { timeout: 30_000 }).toBe(1);
+            const runtimePage = runtimePages()[0];
+            if (!runtimePage) throw new Error("Isolated runtime window is unavailable.");
+            observer.opened(isolatedRuntime.context, runtimePage);
+            runtimePage.on("console", message => { if (message.type() === "error") rendererErrors.push(message.text()); });
+            runtimePage.on("pageerror", error => rendererErrors.push(error.message));
+            await expect(runtimePage.getByRole("heading", { name: "Isolated portal", level: 1 })).toBeVisible({ timeout: 30_000 });
+            const transcript = runtimePage.getByRole("log", { name: "Conversation history" });
+            await expect(runtimePage.getByText("Start a conversation")).toBeVisible();
+            await expect(transcript.locator("li")).toHaveCount(0);
+            for (const message of RUNTIME_QUALIFICATION_MESSAGES[0]) {
+              await expect(transcript.getByText(message, { exact: true })).toHaveCount(0);
+            }
+            await runtimePage.getByLabel("Message").fill(ISOLATED_QUALIFICATION_MESSAGE);
+            await runtimePage.getByRole("button", { name: "Send", exact: true }).click();
+            await expect(transcript.getByText(ISOLATED_QUALIFICATION_MESSAGE, { exact: true })).toBeVisible({ timeout: 30_000 });
+            await expect(transcript.getByText(`Controlled response to: ${ISOLATED_QUALIFICATION_MESSAGE}`, { exact: true })).toBeVisible({ timeout: 30_000 });
+            await expect(transcript.locator("li")).toHaveCount(2);
+          },
+          afterStop: () => observeStop(isolatedRuntime.context),
+        });
+      },
+    }, true);
+    if (!secondary) throw new Error("The second published system was not exercised.");
+    await secondary.uninstall();
     await page.evaluate(axeSource);
     const axeViolations = await page.evaluate(async () => {
       const result = await (
@@ -232,7 +298,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
   } finally {
     await electronApp.close();
   }
-  verifyIsolatedRuntimeData(dataRoot, qualificationWorkspaceId);
+  verifyIsolatedRuntimeData(dataRoot, qualificationWorkspaceId, readRuntimeReleasePair(qualificationContexts));
 });
 
 async function seedDesktopQualificationModel(
@@ -331,6 +397,7 @@ async function seedDesktopQualificationModel(
 function verifyIsolatedRuntimeData(
   dataRoot: string,
   workspaceId: string,
+  contexts: readonly RuntimeReleaseContext[],
 ): void {
   const executable = requiredEnvironment(
     "VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE",
@@ -353,6 +420,7 @@ function verifyIsolatedRuntimeData(
         ELECTRON_RUN_AS_NODE: "1",
         VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot,
         VISUAL_COMPOSER_QUALIFICATION_WORKSPACE_ID: workspaceId,
+        VISUAL_COMPOSER_QUALIFICATION_RELEASE_CONTEXTS: JSON.stringify(readRuntimeReleasePair(contexts)),
       },
       windowsHide: true,
       encoding: "utf8",

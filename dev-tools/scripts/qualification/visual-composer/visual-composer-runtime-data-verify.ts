@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { createStructuredSystemBuildRepository } from "../../../../modules/adapters/persistence/system-build";
+import { normalizeSystemReleaseId } from "../../../../modules/contracts/system-build";
+import { readRuntimeReleasePair, assertRuntimeReleaseBinding, assertRuntimeDataIsolation, type RuntimeDataObservation } from "./runtime-lifecycle-oracles";
 
 import { createLocalConversationRepositoryAdapters } from "../../../../modules/adapters/persistence/conversations";
 import { createLocalExecutionRunRepositoryAdapters } from "../../../../modules/adapters/persistence/execution-runs";
@@ -14,11 +17,6 @@ import {
 import { readLocalIdentityProfile } from "../../../../modules/adapters/security/local-identity";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 
-const EXPECTED_USER_MESSAGES = [
-  "Button qualification turn",
-  "Keyboard qualification turn",
-];
-
 async function main(): Promise<void> {
   const dataRoot = process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT?.trim();
   const workspaceValue =
@@ -27,6 +25,12 @@ async function main(): Promise<void> {
     throw new Error("Runtime data qualification context is unavailable.");
   }
   const workspaceId = createWorkspaceId(workspaceValue);
+  const encodedContexts = process.env.VISUAL_COMPOSER_QUALIFICATION_RELEASE_CONTEXTS;
+  if (!encodedContexts || Buffer.byteLength(encodedContexts) > 4096) {
+    throw new Error("Runtime release qualification context is unavailable.");
+  }
+  const contexts = readRuntimeReleasePair(JSON.parse(encodedContexts));
+  assert.ok(contexts.every(context => context.workspaceId === workspaceId));
   const database = await openLocalSqliteDatabase({
     policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: dataRoot }),
   });
@@ -43,52 +47,39 @@ async function main(): Promise<void> {
       await createStructuredSystemRuntimeInstanceRepository(
         organizationDocuments,
       ).listRuntimeInstances(identity.organizationId, workspaceId);
-    assert.equal(runtimeInstances.length, 1);
-    assert.equal(runtimeInstances[0]?.status, "retained");
-
-    const runtimeSession = await createSystemRuntimeRepositorySessionFactory(
-      runtimeDatabases,
-    ).open(runtimeInstances[0]!);
-    try {
-      const sessions =
-        await runtimeSession.conversationSessionRepository.listConversationSessions(
-          {
-            workspaceId,
-          },
-        );
-      assert.equal(sessions.sessions.length, 1);
-      const sessionId = sessions.sessions[0]!.id;
-      const messages =
-        await runtimeSession.conversationMessageRepository.listConversationMessagesBySession(
-          workspaceId,
-          sessionId,
-        );
-      const responses =
-        await runtimeSession.assistantResponseRepository.listAssistantResponsesBySession(
-          workspaceId,
-          sessionId,
-        );
-      assert.deepEqual(
-        messages.map((message) => message.text),
-        EXPECTED_USER_MESSAGES,
-      );
-      assert.deepEqual(
-        responses.map((response) => response.text),
-        EXPECTED_USER_MESSAGES.map(
-          (message) => `Controlled response to: ${message}`,
-        ),
-      );
-      assert.equal(
-        (
-          await runtimeSession.executionRunRepository.listExecutionRuns({
-            workspaceId,
-          })
-        ).runs.length,
-        EXPECTED_USER_MESSAGES.length,
-      );
-    } finally {
-      await runtimeSession.close();
+    assert.equal(runtimeInstances.length, 2);
+    const releaseRepository = createStructuredSystemBuildRepository(organizationDocuments);
+    const observations: RuntimeDataObservation[] = [];
+    for (const context of contexts) {
+      const matches = runtimeInstances.filter(instance => instance.releaseId === context.releaseId);
+      assert.equal(matches.length, 1);
+      const instance = matches[0]!;
+      assert.equal(instance.status, "retained");
+      assert.equal(instance.organizationId, identity.organizationId);
+      assert.equal(instance.workspaceId, workspaceId);
+      const release = await releaseRepository.readRelease(workspaceId, normalizeSystemReleaseId(context.releaseId));
+      assert.ok(release, "The exact qualification release is unavailable.");
+      assertRuntimeReleaseBinding(context, release);
+      const runtimeSession = await createSystemRuntimeRepositorySessionFactory(runtimeDatabases).open(instance);
+      try {
+        const sessions = await runtimeSession.conversationSessionRepository.listConversationSessions({ workspaceId });
+        assert.equal(sessions.sessions.length, 1);
+        const sessionId = sessions.sessions[0]!.id;
+        const messages = await runtimeSession.conversationMessageRepository.listConversationMessagesBySession(workspaceId, sessionId);
+        const responses = await runtimeSession.assistantResponseRepository.listAssistantResponsesBySession(workspaceId, sessionId);
+        const execution = await runtimeSession.executionRunRepository.listExecutionRuns({ workspaceId });
+        observations.push({
+          context, runtimeInstanceId: instance.runtimeInstanceId,
+          dataBindingId: instance.dataBindingId, sessionId,
+          userMessages: messages.map(message => message.text),
+          assistantResponses: responses.map(response => response.text),
+          executionCount: execution.runs.length,
+        });
+      } finally {
+        await runtimeSession.close();
+      }
     }
+    assertRuntimeDataIsolation(contexts, observations);
 
     const controlConversations = createLocalConversationRepositoryAdapters({
       rootDir: ".",

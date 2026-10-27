@@ -309,3 +309,33 @@ Use `functionality-browse` for the related feature tests. The fixed helper
 classifies the Vitest import automatically; no runner or dependency change is
 needed. The earlier Node import-time failure remains failed harness evidence.
 Passing these local tests does not qualify an actual host or process restart.
+
+## Exact runtime shutdown and separate conversations
+
+The controlled desktop lifecycle keeps two separately built and installed
+systems in one isolated workspace. It sends the original button message to A,
+stops A and requires that captured window to close. It then starts B with an
+empty conversation, sends B's own message and checks its exact window closes.
+Reopening A must retain A's first message, exclude B's message and accept the
+original keyboard message. The input limit and Shift+Enter are also checked.
+
+Each action selects the exact public system and build card and rechecks its
+workspace, saved version and release. Preparation captures the Compose selection
+and completed build's public details, then selects that exact build in Publish.
+The existing thin-client wrapper retains
+its single-system flow. It does not expect a local desktop runtime window.
+The desktop case has 120 additional seconds for the second build and conversation;
+individual action, build, launch and shutdown timeouts remain unchanged.
+
+After shutdown, the existing isolated data verifier checks two distinct runtime,
+database and conversation session IDs. Both must match the public release
+observations and their stored release records. It checks exactly two A turns
+and one B turn, the corresponding responses and execution counts, and no
+conversation or execution data in the control store.
+
+Run `functionality-browse` for finite wrong-identity, reused-window,
+open-window, pending/failing-stop and mixed-transcript checks. Only the new test
+and its four owning source paths are added to that existing profile. These tests
+and test discovery qualify the definitions. Actual host execution, native
+revocation and worker cleanup, browser-server restart and combined qualification
+still need separate evidence. No model accuracy or OCR check is repeated here.

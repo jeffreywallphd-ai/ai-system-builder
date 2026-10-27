@@ -164,7 +164,8 @@
         "modules/ui/shared/system-builder/tests/SystemComposerDefinitionReader.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/tests/composer-protocol-evidence.unit.test.ts",
         "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
-        "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs"
+        "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/preload/exposedApi.ts",
@@ -354,7 +355,11 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-reference-performance.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
-        "modules/adapters/persistence/asset/README.md"
+        "modules/adapters/persistence/asset/README.md",
+        "dev-tools/scripts/qualification/visual-composer/runtime-lifecycle-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-runtime-data-verify.ts"
       ]
     },
     "functionality-tasks": {
