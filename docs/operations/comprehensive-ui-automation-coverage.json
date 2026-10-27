@@ -1296,11 +1296,120 @@
           "name": "browser: keeps a failed partial save private and retries the original review after storage recovers",
           "tier": "mounted-feature-real-client-registered-ipc-or-owned-http-application-sqlite-and-filesystem-with-finite-worker",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: compares two UI-saved versions and reuses the exact selected recipe through real transports",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses missing saved recipe bytes and reuses after the read port is corrected",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses corrupt saved recipe bytes and reuses after the read port is corrected",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retires a completed real recipe read after unmount before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retires a completed real recipe read after workspace before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retires a completed real recipe read after client before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retires a completed real recipe read after selection before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses a workspace mismatch in the saved-version panel without a reuse callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses a current-version mismatch in the saved-version panel without a reuse callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: compares two UI-saved versions and reuses the exact selected recipe through real transports",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses missing saved recipe bytes and reuses after the read port is corrected",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses corrupt saved recipe bytes and reuses after the read port is corrected",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retires a completed real recipe read after unmount before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retires a completed real recipe read after workspace before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retires a completed real recipe read after client before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retires a completed real recipe read after selection before its delayed callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses a workspace mismatch in the saved-version panel without a reuse callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses a current-version mismatch in the saved-version panel without a reuse callback",
+          "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate."
+      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate.",
+      "additional_version_panel_scope": "18 added cases,43 composed Dataset cases total. Both connections prepare/save two versions with different supported split settings, inspect the real comparison and exact visible change list, compare mandatory saved digests, and send exact persisted recipe/source lineage to the selected-version reuse callback. Missing/corrupt recipe read faults refuse callback and permit correction. Late real reads are retired by unmount or changed workspace/client/artifact props; mismatched workspace/current version is denied. Fixed recipe-only comparison text that falsely claimed changed data files. Finite worker/quality/access/readiness and explicit read/delay fixtures remain. A successful test callback does not prove the receiving page applied replay. Parquet row editing/rejection, physical hosts, real workers/provider/native/restart/final/parent qualification remain separate. Accepted model accuracy/OCR checks stay closed."
     },
     {
       "id": "context-manual-pack",

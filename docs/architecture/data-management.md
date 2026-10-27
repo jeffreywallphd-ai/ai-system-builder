@@ -1237,3 +1237,22 @@ check review-read integrity, malformed staged output and partial-write retry.
 The worker, quality computation, actors and availability are finite fixtures.
 This evidence does not qualify installed hosts, process restart, actual inference,
 OCR, provider publication, native effects, final testing or a parent roadmap.
+
+## Saved-version panel comparison and reproduction evidence
+
+The composed local Dataset tests create two approved versions through the existing
+preparation forms and real transports/application/SQLite/object storage. They
+change a split setting exposed by each host, compare actual stored digests and
+assert the exact rendered change list. A recipe-only change no longer claims
+that dataset files changed. That message now requires a dataset, train, validation,
+test or quarantine role digest change. Other comparison copy is unchanged.
+
+Reproduction checks the selected version, exact persisted recipe object and source
+lineage at the panel callback. Missing/corrupt read faults deny callback and permit
+retry. An owned delayed real read tests retirement on unmount or changed client,
+workspace or artifact props. A test callback is not proof of receiving-page replay.
+The provided-row worker/quality/access/readiness fixtures and declared read/delay
+seams are finite. Existing25approval cases remain covered, with18added version
+cases. No Parquet edit, physical host, actual inference/OCR/provider/native process,
+restart, final or parent qualification follows. Accepted model/OCR results remain
+closed and are not rerun.

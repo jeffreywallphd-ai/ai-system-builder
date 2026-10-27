@@ -14,7 +14,7 @@ import { createDesktopDatasetPreparationClient } from "../../../../apps/desktop/
 import { createApiDatasetPreparationClient } from "../../../../apps/thin-client/src/features/dataset-preparation/api/apiDatasetPreparationClient";
 import { createApiArtifactBrowserClient } from "../../../../apps/thin-client/src/features/artifact-browser/api/apiArtifactBrowserClient";
 import { createDesktopPreloadApi } from "../../../../apps/desktop/src/preload/exposedApi";
-import { NotificationTestHarness } from "../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
+import { NotificationTestHarness, readNotificationMessages } from "../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { DatasetVersionPanel, type DatasetVersionPanelService } from "../../../../modules/ui/shared/dataset-version";
 import { composeDesktopArtifactFeature } from "../../../../modules/hosts/desktop/composition/composeDesktopArtifactFeature";
 import { composeDesktopDatasetPreparationFeature } from "../../../../modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature";
@@ -35,10 +35,13 @@ import { TaskType, type PrepareTrainingDatasetRequest, type RuntimeTaskStatusRec
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createRetrieveArtifactRequest } from "../../../../modules/contracts/storage";
 import { createContractError, createFailureResult } from "../../../../modules/contracts/shared";
+import type { DatasetVersionRecord } from "../../../../modules/contracts/dataset";
 
 // Existing mounted forms -> real clients/registered transports -> existing
 // application/host composition -> actual Node SQLite and filesystem bytes.
-// Only worker outputs/quality computation, access and readiness are fixtures.
+// Worker outputs/quality computation, access/readiness and declared fault/delay
+// seams are finite fixtures. Version reuse asserts the panel callback only;
+// it does not qualify replay by the receiving preparation page.
 // No worker/model/parser/OCR/provider/native/installed-host qualification follows.
 type Host = "desktop" | "browser";
 const now = "2026-10-26T12:00:00.000Z", tokenKey = "ai-system-builder.paired-device-token", token = "synthetic-dataset-loopback-only";
@@ -60,6 +63,8 @@ let environment: { act?: PropertyDescriptor; api?: PropertyDescriptor; local: Ma
 let calls = 0, runtimeCalls = 0, runtimeReads = 0, providerCalls = 0, approveGate: Promise<void> | undefined, release: (() => void) | undefined;
 let approval: any, preparedKeys: string[] = [];
 let failTrainWrite = false, corruptReview = false;
+let clockOffset = 0, recipeFault: { key: string; kind: "missing" | "corrupt" } | undefined, reuseRelease: (() => void) | undefined;
+const fixtureNow = () => new Date(Date.parse(now) + clockOffset).toISOString();
 const privateFailure = "synthetic-private-storage-marker";
 const storedKeys = new Map<string, string>(), rawReplies: string[] = [];
 const flights = new Set<Promise<unknown>>(), stages = new Map<string, { dev: bigint; ino: bigint }>();
@@ -73,15 +78,20 @@ const storageEntries = (storage: Storage) => new Map(Object.keys(storage).map(ke
 async function closeListener() { if (server) { const owned = server; await new Promise<void>((resolve, reject) => owned.close(error => error ? reject(error) : resolve())); expect(owned.listening).toBe(false); server = undefined; } }
 async function composeConnections() {
   database = await openLocalSqliteDatabase({ policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: directory! }) }); expect(database.checkHealth().healthy).toBe(true);
-  artifacts = composeDesktopArtifactFeature({ storageRootDirectory: directory!, documents: database.documents, loggingPort: { log: async () => {} }, workspaceShell: {}, now: () => now });
+  artifacts = composeDesktopArtifactFeature({ storageRootDirectory: directory!, documents: database.documents, loggingPort: { log: async () => {} }, workspaceShell: {}, now: fixtureNow });
   const store = artifacts.storage.storeArtifact.bind(artifacts.storage);
   artifacts.storage.storeArtifact = async (...args: any[]) => {
-    expect(storeRoles.length).toBeLessThan(20); const role = args[0].descriptor.metadata?.runtimeRole ?? "source"; storeRoles.push(role);
+    expect(storeRoles.length).toBeLessThan(40); const role = args[0].descriptor.metadata?.runtimeRole ?? "source"; storeRoles.push(role);
     if (failTrainWrite && role === "train") return createFailureResult(createContractError("unavailable", `${privateFailure}: ${directory}`));
     const result = await store(...args); if (result.ok) storedKeys.set(String(result.value.key), role); return result;
   };
   const retrieve = artifacts.storage.retrieveArtifact.bind(artifacts.storage);
-  artifacts.storage.retrieveArtifact = async (...args: any[]) => { const result = await retrieve(...args); return corruptReview && storedKeys.get(String(args[0].key)) === "review" && result.ok ? { ...result, value: { ...result.value, content: new Uint8Array(Buffer.from("{broken-review-json\n")) } } : result; };
+  artifacts.storage.retrieveArtifact = async (...args: any[]) => {
+    const fault = recipeFault?.key === String(args[0].key) ? recipeFault : undefined;
+    if (fault?.kind === "missing") return createFailureResult(createContractError("unavailable", privateFailure));
+    const result = await retrieve(...args);
+    return (corruptReview && storedKeys.get(String(args[0].key)) === "review" || fault?.kind === "corrupt") && result.ok ? { ...result, value: { ...result.value, content: new Uint8Array(Buffer.from(fault ? "{}" : "{broken-review-json\n")) } } : result;
+  };
   const registry: RuntimeTaskRegistryPort = {
     async startTask(request) {
       expect(++runtimeCalls).toBeLessThanOrEqual(3); expect(request.taskType).toBe(TaskType.DATASET_PREPARATION); const payload = request.payload as PrepareTrainingDatasetRequest, id = request.requestId ?? randomUUID();
@@ -101,7 +111,7 @@ async function composeConnections() {
     async cancelTask(id) { expect(tasks.has(id)).toBe(true); return { requestId: id, cancelled: true, status: "cancelled" }; },
     async listTasks() { return { tasks: [] }; },
   };
-  feature = composeDesktopDatasetPreparationFeature({ artifacts, documents: database.documents, runtime: { runtimeTaskRegistry: registry, taskPowerLifecycle: { startTask: async () => {}, completeTask: async () => {} } }, getArtifactRemoteFeatures: async () => { providerCalls++; throw new Error("Synthetic provider action unavailable."); }, now: () => now });
+  feature = composeDesktopDatasetPreparationFeature({ artifacts, documents: database.documents, runtime: { runtimeTaskRegistry: registry, taskPowerLifecycle: { startTask: async () => {}, completeTask: async () => {} } }, getArtifactRemoteFeatures: async () => { providerCalls++; throw new Error("Synthetic provider action unavailable."); }, now: fixtureNow });
   const actual: PrepareTrainingDatasetFromArtifactsUseCase = feature.prepareTrainingDatasetUseCase;
   const call = <T,>(action: string, scope: any, operation: () => Promise<T>) => track((async () => { expect(++calls).toBeLessThanOrEqual(100); actions.push({ action, workspaceId: scope.workspaceId }); const result = await operation(); if (result && typeof result === "object" && "ok" in result && !result.ok) { const error = (result as any).error; rawReplies.push(JSON.stringify(result)); refusals.push({ action, code: String(error?.code).slice(0, 64), message: String(error?.message).replace(/[A-Za-z]:[\\/][^\r\n]*/g, "<local-path>").slice(0, 300) }); } return result; })());
   const facade = { startPrepareTrainingDataset: (command: any, scope: any) => call("start", scope, () => actual.startPrepareTrainingDataset(command, scope)), readPrepareTrainingDataset: (id: string, scope: any) => call("read", scope, () => actual.readPrepareTrainingDataset(id, scope)), cancelPrepareTrainingDataset: (id: string, scope: any) => call("cancel", scope, () => actual.cancelPrepareTrainingDataset(id, scope)), approvePreparedTrainingDataset: (input: any, scope: any) => call("approve", scope, async () => { await approveGate; const result = await actual.approvePreparedTrainingDataset(input, scope); if (result.ok) approval = result.value; return result; }), readPreparedDatasetQualityReviewPage: (input: any, scope: any) => call("review-page", scope, () => actual.readPreparedDatasetQualityReviewPage(input, scope)) };
@@ -149,27 +159,28 @@ function reviewValues() {
   return Object.fromEntries(values);
 }
 async function versions() { return createStructuredDatasetVersionRepository(database!.documents).listVersions(workspaceId); }
-async function assertSavedBytes() {
+async function assertSavedBytes(expectedVersionCount = 1) {
   expect(approval?.result).toBeDefined();
   const local = approval.result.outputs.local, expected = outputs.values().next().value!, saved = await versions();
-  expect(saved.length).toBe(1);
+  expect(saved.length).toBe(expectedVersionCount);
+  const selected = saved.find(version => version.artifacts.some(value => value.role === "dataset" && value.artifactKey === local.dataset.storage.key)); expect(selected).toBeDefined();
   for (const role of ["dataset", "train", "validation", "test"] as const) {
     expect(local[role]).toBeDefined();
     const key = local[role].storage.key, result = await artifacts.storage.retrieveArtifact(createRetrieveArtifactRequest(key), context());
     expect(result.ok).toBe(true); if (!result.ok) throw new Error("Synthetic approved output unavailable.");
     expect(Buffer.from(result.value.content).equals(Buffer.from(expected[role]!))).toBe(true);
-    expect(saved[0]!.artifacts.find(value => value.role === role)).toMatchObject({ artifactKey: key, digest: `sha256:${sha(result.value.content)}`, sizeBytes: expected[role]!.length, rowCount: role === "dataset" ? 4 : role === "train" ? 2 : 1 });
+    expect(selected!.artifacts.find(value => value.role === role)).toMatchObject({ artifactKey: key, digest: `sha256:${sha(result.value.content)}`, sizeBytes: expected[role]!.length, rowCount: role === "dataset" ? 4 : role === "train" ? 2 : 1 });
   }
   return local.dataset.storage.key as string;
 }
 function restoreEnvironment() { if (!environment) return; for (const [object, key, descriptor] of [[globalThis, "IS_REACT_ACT_ENVIRONMENT", environment.act], [window, "desktopApi", environment.api]] as const) if (descriptor) Object.defineProperty(object, key, descriptor); else Reflect.deleteProperty(object, key); for (const [storage, baseline] of [[localStorage, environment.local], [sessionStorage, environment.session]] as const) { for (const key of Object.keys(storage)) if (!baseline.has(key)) storage.removeItem(key); for (const [key, value] of baseline) storage.setItem(key, value); } }
 afterEach(async () => {
   try {
-    if (root) await act(async () => root!.unmount()); root = undefined; container?.remove(); container = undefined; await act(async () => { release?.(); await Promise.allSettled([...flights]); });
+    if (root) await act(async () => root!.unmount()); root = undefined; container?.remove(); container = undefined; await act(async () => { release?.(); reuseRelease?.(); await Promise.allSettled([...flights]); });
     for (const [id, owner] of owners) await owner.cancelPrepareTrainingDataset(id, context()); await closeListener(); database?.close(); database = undefined; restoreEnvironment();
     for (const stage of stages.keys()) { let exists = false; try { await lstat(stage); exists = true; } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } expect(exists).toBe(false); }
     if (directory) { const owned = directory, info = await lstat(owned, { bigint: true }); expect({ dev: info.dev, ino: info.ino }).toEqual(identity); expect(info.isDirectory() && !info.isSymbolicLink() && await realpath(owned) === owned && path.dirname(owned) === await realpath(tmpdir())).toBe(true); let count = 0, bytes = 0; async function inspect(parent: string) { for (const name of await readdir(parent)) { const file = path.join(parent, name), info = await lstat(file); expect(++count).toBeLessThanOrEqual(256); expect(info.isSymbolicLink()).toBe(false); if (info.isDirectory()) await inspect(file); else { expect(info.isFile() && info.nlink === 1).toBe(true); bytes += info.size; expect(bytes).toBeLessThanOrEqual(4 * 1024 * 1024); } } } await inspect(owned); await rm(owned, { recursive: true }); }
-  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; database = undefined; approveGate = undefined; release = undefined; approval = undefined; preparedKeys = []; calls = runtimeCalls = runtimeReads = providerCalls = 0; failTrainWrite = corruptReview = false; storedKeys.clear(); rawReplies.length = 0; tasks.clear(); outputs.clear(); owners.clear(); stages.clear(); flights.clear(); actions.length = refusals.length = storeRoles.length = 0; }
+  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; database = undefined; approveGate = undefined; release = undefined; approval = undefined; preparedKeys = []; calls = runtimeCalls = runtimeReads = providerCalls = 0; failTrainWrite = corruptReview = false; clockOffset = 0; recipeFault = undefined; reuseRelease = undefined; storedKeys.clear(); rawReplies.length = 0; tasks.clear(); outputs.clear(); owners.clear(); stages.clear(); flights.clear(); actions.length = refusals.length = storeRoles.length = 0; }
 });
 for (const selected of ["desktop", "browser"] as const) {
   it(`${selected}: reviews real ready and set-aside rows before explicit approval saves exact splits and version lineage`, async () => {
@@ -249,3 +260,54 @@ it("desktop: a retired client's completion cannot notify or unlock its replaceme
   } finally { await act(async () => { releaseOld(); release?.(); }); }
   await wait(() => preparedKeys.length === 1); await assertSavedBytes();
 }, 20_000);
+
+async function saveReviewedDataset(expectedSaves = 1) {
+  await act(async () => button("Approve and save dataset").click()); await wait(() => preparedKeys.length === expectedSaves);
+  const key = await assertSavedBytes(expectedSaves), saved = await versions();
+  return saved.find(version => version.artifacts.some(value => value.role === "dataset" && value.artifactKey === key))!;
+}
+async function renderSavedVersions(options: { workspace?: string; artifactKey?: string; currentVersionId?: string; service?: DatasetVersionPanelService } = {}) {
+  const observed: { reproduction: any; scope: any }[] = [], key = options.artifactKey ?? approval.result.outputs.local.dataset.storage.key;
+  await act(async () => root!.render(<NotificationTestHarness><DatasetVersionPanel workspaceId={options.workspace ?? workspaceId} datasetArtifactKey={key} currentVersionId={options.currentVersionId} service={options.service ?? versionService} onReuse={(reproduction, scope) => { observed.push({ reproduction, scope }); return true; }} /></NotificationTestHarness>));
+  await wait(() => hasButton("Refresh versions") && !button("Refresh versions").disabled || hasButton("Retry version history"));
+  return observed;
+}
+async function savedRecipe(version: DatasetVersionRecord) {
+  const result = await artifacts.storage.retrieveArtifact(createRetrieveArtifactRequest(version.lineage.recipe.artifactKey), context()); expect(result.ok).toBe(true); if (!result.ok) throw new Error("Synthetic saved recipe unavailable.");
+  expect(`sha256:${sha(result.value.content)}`).toBe(version.lineage.recipe.digest); return JSON.parse(Buffer.from(result.value.content).toString("utf8"));
+}
+for (const selected of ["desktop", "browser"] as const) {
+  it(`${selected}: compares two UI-saved versions and reuses the exact selected recipe through real transports`, async () => {
+    await compose(selected); await prepare(); const first = await saveReviewedDataset(), firstRecipe = await savedRecipe(first); clockOffset = 1000;
+    await reveal(); await act(async () => { change(control(host === "desktop" ? "Train ratio" : "Training share"), "0.7"); change(control(host === "desktop" ? "Validation ratio" : "Validation share"), "0.2"); }); await wait(() => !button("Run checks and prepare").disabled); await act(async () => button("Run checks and prepare").click()); await wait(() => tasks.size === 2 && hasButton("Approve and save dataset")); const second = await saveReviewedDataset(2), secondRecipe = await savedRecipe(second);
+    expect(first.datasetId).toBe(second.datasetId); expect(first.versionId).not.toBe(second.versionId); expect(first.lineage.recipe.digest).not.toBe(second.lineage.recipe.digest); expect(firstRecipe).toMatchObject({ split: { trainRatio: 0.8, validationRatio: 0.1 } }); expect(secondRecipe).toMatchObject({ split: { trainRatio: 0.7, validationRatio: 0.2 } });
+    const observed = await renderSavedVersions({ currentVersionId: second.versionId }); await wait(() => container!.textContent?.includes("Preparation setup changed") === true); expect(control("Version", "select").options.length).toBe(2); expect(control("Version", "select").value).toBe(second.versionId);
+    const comparison = await versionService.compare(workspaceId, first.versionId, second.versionId);
+    expect(comparison).toEqual({ fromVersionId: first.versionId, toVersionId: second.versionId, identical: false, rowDelta: 0, sources: { added: 0, removed: 0, changed: 0 }, changedArtifactRoles: ["recipe"], recipeChanged: true, qualityPolicyChanged: false, documentationChanged: false });
+    const changeList = [...container!.querySelectorAll("h4")].find(value => value.textContent === "What changed")!.nextElementSibling!; expect([...changeList.querySelectorAll("li")].map(value => value.textContent)).toEqual(["Preparation setup changed"]);
+    await act(async () => change(control("Version", "select"), first.versionId)); await act(async () => button("Use this setup again").click()); await wait(() => observed.length === 1);
+    expect(observed[0]!.reproduction).toEqual({ versionId: first.versionId, sourceArtifactIds: [sourceKey], recipeSnapshot: firstRecipe, lineage: first.lineage }); expect(observed[0]!.scope).toEqual({ workspaceId, datasetArtifactKey: approval.result.outputs.local.dataset.storage.key, selectedVersion: first });
+    await act(async () => change(control("Version", "select"), second.versionId)); await wait(() => !button("Use this setup again").disabled); await act(async () => button("Use this setup again").click()); await wait(() => observed.length === 2);
+    expect(observed[1]!.reproduction).toEqual({ versionId: second.versionId, sourceArtifactIds: [sourceKey], recipeSnapshot: secondRecipe, lineage: second.lineage }); expect(runtimeCalls).toBe(2); expect(providerCalls).toBe(0);
+    for (const artifact of first.artifacts.filter(value => finalRoles.includes(value.role))) { const bytes = await artifacts.storage.retrieveArtifact(createRetrieveArtifactRequest(artifact.artifactKey), context()); expect(bytes.ok).toBe(true); if (!bytes.ok) throw new Error("Synthetic original version bytes unavailable."); expect(`sha256:${sha(bytes.value.content)}`).toBe(artifact.digest); }
+  }, 20_000);
+  for (const kind of ["missing", "corrupt"] as const) it(`${selected}: refuses ${kind} saved recipe bytes and reuses after the read port is corrected`, async () => {
+    await compose(selected); await prepare(); const version = await saveReviewedDataset(), observed = await renderSavedVersions(); recipeFault = { key: version.lineage.recipe.artifactKey, kind };
+    await act(async () => button("Use this setup again").click()); await wait(() => readNotificationMessages(container!).some(value => value === "Saved setup could not be loaded. Your setup was not changed.")); expect(observed).toEqual([]); expect(readNotificationMessages(container!).join("\n")).not.toContain(privateFailure); expect(button("Use this setup again").disabled).toBe(false);
+    recipeFault = undefined; await act(async () => button("Use this setup again").click()); await wait(() => observed.length === 1); expect(observed[0]!.reproduction).toMatchObject({ versionId: version.versionId, sourceArtifactIds: [sourceKey], lineage: version.lineage }); expect(runtimeCalls).toBe(1); expect(providerCalls).toBe(0);
+  }, 20_000);
+  for (const retirement of ["unmount", "workspace", "client", "selection"] as const) it(`${selected}: retires a completed real recipe read after ${retirement} before its delayed callback`, async () => {
+    await compose(selected); await prepare(); await saveReviewedDataset(); const actual = versionService, gate = new Promise<void>(resolve => { reuseRelease = resolve; }); let readFinished = false;
+    const service = { ...actual, reproduce: (scope: string, id: string) => track((async () => { const value = await actual.reproduce(scope, id); readFinished = true; await gate; return value; })()) }, observed = await renderSavedVersions({ service });
+    try {
+      await act(async () => button("Use this setup again").click()); await wait(() => readFinished);
+      if (retirement === "unmount") { await act(async () => root!.unmount()); root = undefined; }
+      else { const next = await renderSavedVersions(retirement === "workspace" ? { workspace: "workspace.dataset-reuse-new-scope" } : retirement === "selection" ? { artifactKey: sourceKey } : { service: { ...actual } }); expect(next).toEqual([]); }
+    } finally { await act(async () => { reuseRelease?.(); await Promise.allSettled([...flights]); }); }
+    expect(observed).toEqual([]); expect(runtimeCalls).toBe(1); expect(providerCalls).toBe(0);
+  }, 20_000);
+  for (const mismatch of ["workspace", "current-version"] as const) it(`${selected}: refuses a ${mismatch} mismatch in the saved-version panel without a reuse callback`, async () => {
+    await compose(selected); await prepare(); await saveReviewedDataset(); const observed = await renderSavedVersions(mismatch === "workspace" ? { workspace: "workspace.dataset-history-foreign" } : { currentVersionId: "unknown-version" });
+    expect(hasButton("Use this setup again")).toBe(false); expect(observed).toEqual([]); if (mismatch === "workspace") expect(container!.textContent).toContain("No saved dataset version matches this file."); else expect(container!.textContent).toContain("Version history could not be loaded."); expect(runtimeCalls).toBe(1); expect(providerCalls).toBe(0);
+  }, 20_000);
+}

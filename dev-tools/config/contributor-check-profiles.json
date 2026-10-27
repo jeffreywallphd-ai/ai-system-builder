@@ -614,7 +614,8 @@
         "modules/ui/shared/README.md",
         "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
         "docs/architecture/data-management.md",
-        "docs/security/data-management-threat-model.md"
+        "docs/security/data-management-threat-model.md",
+        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx"
       ]
     },
     "functionality-context": {

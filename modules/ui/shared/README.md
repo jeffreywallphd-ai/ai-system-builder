@@ -334,3 +334,20 @@ show fixed public text, keep source bytes or manual input available, and permit
 a corrected preparation. Exact public envelopes are checked before rendering.
 The faults occur before worker acceptance. They do not qualify running-worker
 shutdown, terminal runtime errors, installed hosts or final combined testing.
+
+### Saved-version comparison and reuse checks
+
+The composed Dataset qualification file also mounts the saved-version panel
+after two actual preparation approvals. Both app connections use real version
+comparison/reproduction, SQLite documents and recipe/object bytes. Eighteen
+added cases inspect exact settings-only change text and exact saved recipe/source
+lineage sent to the selected-version callback. Read failures or damaged bytes
+refuse reuse and allow correction. Late replies cannot call a retired panel
+after unmount or changed workspace, client or selected artifact. These are
+component-boundary prop changes, not full page navigation qualification.
+
+The callback is a finite test consumer. Acknowledging it does not qualify setup
+application by the receiving page. Worker/quality/access/readiness and declared
+fault/delay seams remain fixtures. Parquet row editing, actual workers, provider,
+installed-host, native/process and final checks remain separate. Accepted model
+accuracy and OCR checks stay closed; these fixtures supply no new qualification.

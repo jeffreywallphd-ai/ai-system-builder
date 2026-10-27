@@ -69,7 +69,8 @@ function comparisonMessages(comparison: DatasetVersionComparison): string[] {
     );
   if (comparison.recipeChanged) messages.push("Preparation setup changed");
   if (comparison.qualityPolicyChanged) messages.push("Data checks changed");
-  if (comparison.changedArtifactRoles.length > 0)
+  if (comparison.changedArtifactRoles.some(role =>
+    ["dataset", "train", "validation", "test", "quarantine"].includes(role)))
     messages.push("Saved data files changed");
   return messages.length > 0 ? messages : ["Documentation changed"];
 }

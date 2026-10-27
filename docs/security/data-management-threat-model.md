@@ -1414,3 +1414,23 @@ are absent and retry after the storage port recovers. Other diagnostic paths,
 rollback durability, native/process effects and final qualification are not
 claimed by this correction. All tests use newly owned bounded synthetic resources;
 no credentials, real model/OCR/provider action or unknown retained tree is used.
+
+## Saved-version callback scope and recipe read checks
+
+Eighteen composed local cases exercise real persisted recipe digests and version
+identity through the existing mounted panel and registered app connections.
+Missing or changed recipe bytes refuse the callback, hide a synthetic private
+port marker and permit corrected retry. Wrong workspace/current-version
+association cannot select a setup. Completed actual recipe reads held by a finite
+delay fixture cannot call a retired panel after unmount or changed client,
+workspace or artifact props. Existing version, source and consent guards remain.
+
+The comparison UI correction only distinguishes recipe changes from changed
+data-role digests. It changes no stored bytes, hash, authorization, publication
+or runtime policy. A successful synthetic consumer callback is not proof that
+a receiving page applied setup. Actor/access/readiness and worker quality/output
+computation remain fixtures. Current new owned roots, SQLite/listener/tasks and
+globals use the prior bounded teardown; store-call admission is prospectively40
+per case to allow two versions. Other resource bounds are unchanged. No actual
+model/accuracy/OCR/provider, physical/native/process restart or final/parent
+qualification is granted, and accepted model/OCR checks remain closed.
