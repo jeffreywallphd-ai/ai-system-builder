@@ -4937,6 +4937,42 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "asset-authoring-two-host-core-and-exact-oracles",
+      "work_criteria": [
+        "exact-bounded-authoring-observations",
+        "shared-core-in-both-ordinary-host-drivers",
+        "reviewed-owned-checkpoint-and-honest-coverage"
+      ],
+      "receipt_digest": "5166ab443ba2ff97f1b824c4fcdcdb26b8b0a43754571a58735ee53708cbcd12",
+      "review_digest": "fdf82d0ec911767af93eb19ec9c80f25166f7c843e12fc590bb7e6e60988ae8b",
+      "scope": "Completed shared authoring journeys build distinct Foundation and imported copies, save a three-resource Studio tool, review and publish, reload documents and preserve original bases. Thirty exact-oracle tests, two host-spec collections, five-root type checks and six profile tests pass. Both ordinary host drivers retain Systems browsing. Actual app runs, process restarts, published resource bytes, access and storage checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "assets-ipc-sender-admission-and-lazy-host-wiring",
+      "work_criteria": [
+        "sender-admission-before-protected-effects",
+        "trusted-workflows-and-real-composition-wiring",
+        "owned-verified-checkpoint"
+      ],
+      "receipt_digest": "7e210d0e7f931b75af710cadffb5f88e393afd6d47ceb9562da9e25dfae10b03",
+      "review_digest": "d813426f77fab11c1e3055198894fd54bd756b3b1bbe7c0bb001704d3fa22c7c",
+      "scope": "Completed desktop Assets sender admission uses the existing live app-window main-frame policy before request data or deferred work. Fourteen selected tests, ten-root types, seven profile guards and focused control-plane checks pass. Exact channel sets, valid requests, response identity, independent destruction cases, parity and actual finite host wiring are covered. Real Electron, workspace authorization, persistence and parent qualification remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }

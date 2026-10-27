@@ -12269,6 +12269,33 @@
           "The agent still needs to check actual app startup and restart, access to resources, saved data, providers and native features where required. Final combined testing is deferred. Completed model accuracy and OCR will not run again. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "13d7bca51f6d5d5e0f66ce1f8c664af6d6e9f3dfee7209176e5dfa266b50416a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added the same useful Assets journey to the desktop and browser test drivers. Both keep their earlier Systems browse tests.",
+          "The journey creates different workspace copies from Foundation and imported assets. It also saves a Studio tool with a screen, styles and request handling.",
+          "The tests check exact identities, saved content, review and publish steps, document reloads and unchanged original assets.",
+          "Thirty focused tests, type checks and collection of both host test files passed. Collection does not run the apps. The change is reviewed and committed.",
+          "The agent still needs actual app runs, process restart, access and saved-data checks. These results do not complete the whole roadmap requirement. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "19eeaf3b25c31e36090e381cb32fa968fc07db9e73fdaeae6ef9dcc09b7aa640",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent connected all three desktop Assets areas to the existing app-window check. Other windows are refused before requests can read or change Assets data.",
+          "The tests check all registered requests, valid app-window requests, wrong frames, closed windows and unavailable or invalid checks. Refused requests do not load features.",
+          "The existing Saved behavior and package and Studio request results still pass. Fourteen selected tests, ten-file type checks and seven test-selection checks passed.",
+          "The change is independently reviewed and committed. Actual Electron identity, workspace access and saved-data checks still need agent work. These local checks do not complete the whole roadmap requirement. No action needed from you."
+        ]
+      }
     }
   ]
 }
