@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { canonicalMeaningfulSystem, assertMeaningfulSystemPreserved, assertMeaningfulSystemSet,
+  type CanvasPropertyObservation, type MeaningfulSystemObservation } from "../meaningful-system-oracles";
 
 interface ElementSpec { key: string; definition: string; parent: string; slot: string; properties?: Record<string, string | boolean>; }
 export interface MeaningfulSystemCase { id: string; name: string; purpose: string; elements: readonly ElementSpec[]; }
@@ -278,6 +280,7 @@ export async function buildMeaningfulSystem(page: Page, scenario: MeaningfulSyst
     await record(measurements);
     const persistedNodes = await readCanvasStructure(page);
     expect(persistedNodes).toEqual(intendedNodes);
+    const savedObservation = await observeMeaningfulSystem(page, scenario, ids);
     await exerciseCheckedBuild(page, scenario);
     measurements.editingLongTasks = await finishLongTasks(page);
     const reopenStarted = performance.now();
@@ -291,20 +294,7 @@ export async function buildMeaningfulSystem(page: Page, scenario: MeaningfulSyst
     await waitForDraftReady(page);
     const reopenedNodes = await readCanvasStructure(page);
     expect(reopenedNodes).toEqual(persistedNodes);
-    for (const element of scenario.elements) {
-      for (const [field, value] of Object.entries(element.properties ?? {})) {
-        await canvasNode(page, ids.get(element.key)!).locator(":scope > .system-composer__canvas-node-heading button").first().click();
-        const inspector = page.getByRole("complementary", { name: "Composer details" });
-        await inspector.getByRole("tab", { name: "Properties", exact: true }).click();
-        const control = inspector.locator(`[id="${field}"]`);
-        for (const panel of ["Design", "Data", "Events"]) {
-          await inspector.getByRole("tab", { name: panel, exact: true }).click();
-          if (await control.isVisible()) break;
-        }
-        if (typeof value === "boolean") await expect(control).toBeChecked({ checked: value });
-        else await expect(control).toHaveValue(value);
-      }
-    }
+    assertMeaningfulSystemPreserved(savedObservation, await observeMeaningfulSystem(page, scenario, ids));
     await page.getByRole("button", { name: "Preview UI", exact: true }).click();
     preview = page.getByRole("dialog", { name: `${scenario.name} UI preview` });
     await expect(preview.locator(".foundation-preview--unsupported")).toHaveCount(0);
@@ -314,11 +304,35 @@ export async function buildMeaningfulSystem(page: Page, scenario: MeaningfulSyst
     measurements.reopenedLongTasks = await finishLongTasks(page);
     Object.assign(measurements, { status: "passed", phase: "reopened", persistedInstanceCount: persistedNodes.length, totalMs: performance.now() - started, behavior: "actual-composed-preview-controls-and-save-reopen", build: scenario.id === "conversation-interface" ? "denied-invalid-composition" : scenario.id === "request-intake" ? "denied-missing-platform-policy" : "checked-build", runtimeQualification: "unavailable-custom-authoring-not-qualified" });
     await record(measurements);
-    return measurements;
+    return { ...measurements, savedObservation };
   } catch (error) {
     await record({ ...measurements, status: "failed", totalMs: performance.now() - started });
     throw error;
   } finally { page.off("pageerror", pageError); }
+}
+
+async function observeMeaningfulSystem(page: Page, scenario: MeaningfulSystemCase, ids: Map<string, string>) {
+  const properties: CanvasPropertyObservation[] = [];
+  for (const element of scenario.elements) {
+    for (const [field, value] of Object.entries(element.properties ?? {})) {
+      const instanceId = ids.get(element.key); expect(instanceId).toBeTruthy();
+      await canvasNode(page, instanceId!).locator(":scope > .system-composer__canvas-node-heading button").first().click();
+      const inspector = page.getByRole("complementary", { name: "Composer details" });
+      await inspector.getByRole("tab", { name: "Properties", exact: true }).click();
+      const control = inspector.locator(`[id="${field}"]`);
+      for (const panel of ["Design", "Data", "Events"]) {
+        await inspector.getByRole("tab", { name: panel, exact: true }).click();
+        if (await control.isVisible()) break;
+      }
+      if (typeof value === "boolean") await expect(control).toBeChecked({ checked: value });
+      else await expect(control).toHaveValue(value);
+      properties.push({instanceId: instanceId!, field, value: typeof value === "boolean" ? await control.isChecked() : await control.inputValue()});
+    }
+  }
+  return canonicalMeaningfulSystem({schemaVersion: "meaningful-system-snapshot-v1", scenarioId: scenario.id,
+    workspaceId: await page.getByLabel("Select current workspace").inputValue(),
+    systemId: await page.getByRole("combobox", {name: "System", exact: true}).inputValue(),
+    nodes: await readCanvasStructure(page), properties});
 }
 
 async function readCanvasStructure(page: Page) {
@@ -423,24 +437,33 @@ async function finishLongTasks(page: Page) {
   });
 }
 
-export async function revisitMeaningfulSystems(page: Page, record: (value: Record<string, unknown>) => Promise<void>) {
+export async function revisitMeaningfulSystems(page: Page, expected: readonly MeaningfulSystemObservation[], record: (value: Record<string, unknown>) => Promise<void>) {
+  const savedSystems = assertMeaningfulSystemSet(expected);
   const observations: Record<string, unknown>[] = [];
   for (let index = 0; index < meaningfulSystemCases.length; index += 1) {
     const scenario = meaningfulSystemCases[index]!;
+    const saved = savedSystems.find(value => value.scenarioId === scenario.id)!;
+    expect(await page.getByLabel("Select current workspace").inputValue()).toBe(saved.workspaceId);
     await startLongTasks(page);
     const start = performance.now();
-    await page.getByRole("combobox", { name: "System", exact: true }).selectOption({ label: scenario.name });
+    await page.getByRole("combobox", { name: "System", exact: true }).selectOption(saved.systemId);
     await page.getByRole("button", { name: "Edit system", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Canvas", exact: true })).toBeVisible({ timeout: 30_000 });
     await waitForDraftReady(page);
     await expect(page.locator(".system-composer__canvas-node")).toHaveCount(scenario.elements.length + 3);
     const readyMs = performance.now() - start;
+    const ids = new Map<string, string>();
+    for (const element of scenario.elements) {
+      const matches = saved.nodes.filter(node => node.reference === `${element.definition}@3.0.0`);
+      expect(matches).toHaveLength(1); ids.set(element.key, matches[0]!.id);
+    }
+    assertMeaningfulSystemPreserved(saved, await observeMeaningfulSystem(page, scenario, ids));
     await page.getByRole("button", { name: "Preview UI", exact: true }).click();
     const preview = page.getByRole("dialog", { name: `${scenario.name} UI preview`, exact: true });
     await expect(preview.locator(".foundation-preview--unsupported")).toHaveCount(0);
     await exercisePurpose(preview, scenario);
     await preview.press("Escape");
-    observations.push({ scenario: scenario.id, mode: index === 0 ? "fresh-view" : "warm-system-switch", canvasReadyMs: readyMs, longTasks: await finishLongTasks(page) });
+    observations.push({ scenario: scenario.id, mode: index === 0 ? "fresh-view" : "warm-system-switch", exactSavedIdentityStructureAndProperties: true, canvasReadyMs: readyMs, longTasks: await finishLongTasks(page) });
     await record({ schemaVersion: "meaningful-canvas-revisit-v1", status: index === meaningfulSystemCases.length - 1 ? "passed" : "running", sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, observations });
   }
 }

@@ -254,3 +254,21 @@ selected-tree detail contrast, unsupported preview labels and lost tree focus.
 The Canvas now wraps labels/actions and reduces nested padding on narrow screens;
 opaque reading surfaces keep contrast independent of decoration. Tree items name
 only their own labels and retain exposed keyboard focus after pointer expansion.
+
+## Exact saved-system observations
+
+The meaningful-system journeys retain the selected workspace and system IDs, every
+observed instance and exact definition version, parent/slot/sibling order, and
+the configured synthetic labels and required fields. Save/reopen and later
+system switches compare the same bounded observations. A matching node count
+alone cannot pass. The comparison rejects duplicate IDs, missing parents, cycles,
+extra fields and excessive data without changing the caller's observations.
+
+The browser case builds all three examples in one newly created workspace and
+then revisits each captured system ID. It has the same aggregate budget as the
+former three creation cases and one revisit case. Both host drivers keep all
+existing edit, useful-control and explicit unsupported-build assertions. This is
+local test implementation; actual app execution, process restart and final
+combined qualification remain separate. Run the bounded
+`system-canvas-authoring-ui` profile for the oracle/protocol/draft unit files and
+four related rendered Canvas files. Profile tests do not launch a host or model.

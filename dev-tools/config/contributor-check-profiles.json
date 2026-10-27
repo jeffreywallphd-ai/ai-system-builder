@@ -1709,6 +1709,24 @@
         "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx",
         "apps/desktop/src/system-runtime-preload/systemRuntimePreloadApi.ts"
       ]
+    },
+    "system-canvas-authoring-ui": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/tests/composer-protocol-evidence.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx",
+        "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+        "modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-meaningful-systems.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/meaningful-system-oracles.ts"
+      ]
     }
   }
 }

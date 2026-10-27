@@ -710,3 +710,8 @@ The system-management-ui profile provides bounded rendered Manage tests for requ
 The system-build-publication-ui profile runs the two exact Build/Publish and published lifecycle interaction files through the fixed Vitest adapter. Source-owned routing covers these three shared surfaces and preserves generic coverage for other impact. Cases cover exact target/reply identity, explicit named lock approval, retry, one-command admission, committed retirement and abandoned renders. Lifecycle checks also cover one physical status-read slot, stale-poll refusal and one authoritative reconciliation after a denied action. Local fixture receipts do not qualify actual hosts, runtime/native, models, providers or final roadmaps.
 
 The `system-runtime-conversation-ui` profile owns only the exact published conversation renderer/preload source and test files. Its fixed Node/tsx and Vitest commands retain the existing safe IPC refusal checks and finite rendered read/turn recovery variants. A connection retry is read-only; successful tests grant no runtime launch, model execution, sender-security, durable restart, native cleanup or roadmap completion. Unknown and explicitly requested generic impact remains covered, and unsafe, missing, non-test and controlled inputs are refused.
+
+The `system-canvas-authoring-ui` profile covers bounded meaningful-system
+identity/tree/configuration oracles, protocol/draft units and four related Canvas
+rendered files. Its fixed runners exclude whole-host and controlled AI tests.
+Actual desktop/browser execution and restart remain separate qualification.

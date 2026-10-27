@@ -309,3 +309,8 @@ The system-management-ui profile owns the single exact Manage systems rendered t
 The system-build-publication-ui profile runs two exact shared Build/Publish and published lifecycle interaction files with the fixed one-worker Vitest adapter. Its selection guards retain unknown and explicit generic coverage, unsafe-path and controlled-test refusal. It starts no host, provider, model or native worker and grants no parent qualification.
 
 The `system-runtime-conversation-ui` profile runs only the published desktop conversation interaction file and its existing dedicated preload unit file. It uses the fixed Vitest and Node/tsx runners, retains whitespace/size/unavailable and malformed-envelope refusal coverage, and automatically owns only the exact runtime renderer/preload source and test paths. Unknown app impact retains generic focused checks. The profile loads no model or app and grants no runtime/native or parent qualification.
+
+The `system-canvas-authoring-ui` check profile runs the exact saved-system
+comparison, existing protocol/draft unit files and four related rendered Canvas
+files. It collects no whole-host or model cases. See
+`docs/diagnostics/system-builder-canvas-testing.md` for observation scope.
