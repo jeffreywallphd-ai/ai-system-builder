@@ -12113,6 +12113,32 @@
           "This work is reviewed and committed. These are local feature results, not actual app, model, native or whole-roadmap qualification. Full testing remains deferred. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5d52634550fe96e6887e704ae32d06ec159a4ee1c798d2a608c02b996b9cbdf7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added a focused check for Studio, package import and customized-copy interface tests.",
+          "The check keeps the existing safety rules and still requires checks for unrelated changed code.",
+          "Earlier broader failures remain recorded for follow-up. This helper does not complete an authoring requirement."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5bfa4151ab3f93fa8f89f829bf7d1558244399e240c78cf653e633b1c2680ee8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed duplicate draft actions, late replies from an old workspace, lost edits during Save and controls stuck after failures.",
+          "A saved draft stays read-only while it opens. If opening fails, use Retry opening saved asset. The notification center explains the failure.",
+          "The exact committed Studio change passed 105 interface tests using fixed clients. The working checkout passed 108, including 3 separate Saved tests that were kept out of this commit.",
+          "Save, review, publish and abandon remain separate actions. Package import and customized-copy work are still pending in this work package.",
+          "These tests do not pass real transport, storage, app, provider, native or final combined qualification."
+        ]
+      }
     }
   ]
 }

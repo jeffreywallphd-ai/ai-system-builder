@@ -4813,6 +4813,41 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "asset-ui-exact-feature-verification-profile",
+      "work_criteria": [
+        "bounded-assets-ui-profile",
+        "documented-reviewed-helper-checkpoint"
+      ],
+      "receipt_digest": "8f3360100a080483471cb67b781000c768c1ac9a3eec63352641310865040e7c",
+      "review_digest": "47855c8571fb9f7aad907e381d112b0b4d27df262ce2c9f60bc80d16d723a201",
+      "scope": "Completed and checkpointed exact Assets UI check selection with preserved verification-policy and fallback controls; this helper grants no feature or parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "studio-draft-session-owned-actions-and-read-recovery",
+      "work_criteria": [
+        "studio-explicit-draft-lifecycle-and-owned-ack",
+        "studio-rejections-and-session-recovery",
+        "studio-scoped-reviewed-checkpoint"
+      ],
+      "receipt_digest": "c1c66e1b5c057ffbb4fa3d78ccde7fa523a84e010acb09d774414cf61f322f7a",
+      "review_digest": "2ae81c2e82cffe554fe38f8a0446fcf5bd8304a9e7058f3ae36b1c09ce3aa565",
+      "scope": "Completed and checkpointed Studio draft session and read-retry repair, meaningful resource-backed lifecycle fixtures and exact selected-source testing; first authoring work package remains partial.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
