@@ -4597,6 +4597,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "context-preparation-public-error-boundary",
+      "work_criteria": [
+        "preparation-errors-private-and-actionable",
+        "preparation-refusal-retains-safe-retry",
+        "owned-resources-and-reviewed-scope"
+      ],
+      "receipt_digest": "ed9365584c28998ef1e3bda0d5be8d382b83100ca907f44fdbec475d55f7f793",
+      "review_digest": "b5db5e7177d9822773f4771dbea57e6e5ae02df9ade608c52217b3e816246f81",
+      "scope": "Added10 composed Context cases for runtime-start and source-staging failures through mounted UI and registered HTTP/IPC. Fixed private exception and refused-port text disclosure, preserved safe codes, source/manual input and corrective retry. Prior32cases remain covered. Finite faults occur before worker acceptance. No terminal-runtime, real worker/parser/model/OCR/provider, physical/native/restart, parent or full qualification.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

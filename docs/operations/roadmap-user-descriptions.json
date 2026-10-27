@@ -11911,6 +11911,21 @@
           "These results do not qualify real model execution, archive parsing, OCR, providers, installed app windows, native recovery or process restart. Final combined testing stays pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1b5f52c2fc674cfc290e141f6c43901d8c620f5c5ea0c3da8e30d9fcc197c43c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed 10 Context preparation failure cases across both app connections.",
+          "The tests check generation-start errors and source binding or file-read failures. They inspect the actual responses and visible failure state.",
+          "These tested failure responses hide local paths and internal error text. They keep the existing error codes and allow corrected retry.",
+          "Manual input and source data are preserved. If the app cannot read the source, generation does not start and no Context pack is saved.",
+          "The faults use controlled test inputs before a worker accepts generation. Previous Save, Discard, deletion and exact-data checks remain covered.",
+          "Real workers, archive reading, models, OCR, providers, installed app windows, recovery after an app or worker stops, and errors after task acceptance need separate checks. Final combined testing stays pending."
+        ]
+      }
     }
   ]
 }
