@@ -90,3 +90,12 @@ Focused UI cases cover meaningful open/retry behavior, one in-flight action,
 malformed and foreign replies, partial lists, retired results and dispatch, and
 idempotent record reuse. They use fixed clients. Actual application, transport,
 storage, host and native qualification remain separate and pending.
+
+## Stable editor field names
+
+Asset type, asset family, definition, JSON and resource-content controls expose
+explicit accessible names as well as their visible labels. Their names stay
+fixed when values change. Both app hosts reuse this shared editor. These names
+support assistive tools and exact UI automation; they do not change editing,
+validation, saving, review or publication. Local editor tests are separate from
+actual-host and final accessibility qualification.

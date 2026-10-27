@@ -534,6 +534,7 @@ function ScopedAssetStudioWorkspace({
               <label>
                 Asset type
                 <select
+                  aria-label="Asset type"
                   value={editor.assetType}
                   onChange={(event) =>
                     change("assetType", event.currentTarget.value as AssetType)
@@ -549,6 +550,7 @@ function ScopedAssetStudioWorkspace({
               <label>
                 Asset family
                 <select
+                  aria-label="Asset family"
                   value={editor.assetFamily}
                   onChange={(event) =>
                     change(
@@ -568,6 +570,7 @@ function ScopedAssetStudioWorkspace({
             <label>
               Definition
               <textarea
+                aria-label="Definition"
                 value={editor.description}
                 onChange={(event) =>
                   change("description", event.currentTarget.value)
@@ -773,6 +776,7 @@ function JsonEditor({
     <label>
       {label}
       <textarea
+        aria-label={label}
         className="asset-studio__json"
         spellCheck={false}
         value={value}
@@ -890,6 +894,7 @@ function ResourceEditor({
       <label>
         Resource content
         <textarea
+          aria-label="Resource content"
           className="asset-studio__source"
           spellCheck={false}
           value={resource.content}
