@@ -55,6 +55,37 @@ class JournalCapacityTests(unittest.TestCase):
             self.assertEqual(read_json(self.records.index)["revision"], 1)
             self.assertFalse(self.records.journal.exists())
 
+    def test_normal_state_retains_exact_canonical_bytes(self):
+        expected = self.successor({"retained": {"text": "Caf\u00e9 \u03bb", "history": [False, None, 3]}})
+        with bounded_records(100_000):
+            self.records.mutate(lambda state: state["feedback"].update(expected["feedback"]))
+            self.assertEqual(self.records.path.read_bytes(), canonical_bytes(expected))
+
+    def test_indentation_overflow_falls_back_and_recovers_all_history(self):
+        values = self.nested()
+        values["unicode"] = {"text": "Caf\u00e9 \u03bb \\ \" quoted\nline", "original": [1, False, None]}
+        expected = self.successor(values)
+        journal = {"schema_version": "development-transaction-v1", "before": digest(Records.empty()), "successor": expected}
+        limit = len((json.dumps(journal, sort_keys=True, separators=(",", ":")) + "\n").encode("utf8"))
+        self.assertGreater(len(canonical_bytes(expected)), limit, "exercise actual state-format fallback")
+        for phase in (None, "journal", "state"):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory(prefix="compact-state-recovery-") as directory:
+                records = Records(Path(directory))
+                with bounded_records(limit):
+                    if phase is None:
+                        records.mutate(lambda state: state["feedback"].update(values))
+                    else:
+                        with self.assertRaises(OSError):
+                            records.mutate(lambda state: state["feedback"].update(values), fault_after=phase)
+                        self.assertLessEqual(records.journal.stat().st_size, limit)
+                        self.assertTrue(records.recover())
+                    self.assertEqual(records.load(), expected)
+                    self.assertLessEqual(records.path.stat().st_size, limit)
+                    self.assertEqual(json.loads(records.path.read_bytes()), expected)
+                    self.assertEqual(read_json(records.index)["state_digest"], digest(expected))
+                    self.assertFalse(records.journal.exists())
+                    self.assertFalse(records.recover())
+
     def test_near_limit_interrupted_journal_and_state_recover_idempotently(self):
         for phase in ("journal", "state"):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory(prefix="journal-restart-") as directory:

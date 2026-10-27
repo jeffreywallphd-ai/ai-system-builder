@@ -49,6 +49,15 @@ These tools reduce consecutive prompts by grouping related commands. They do not
 bypass the Codex sandbox or approval system, mutate Git history, perform
 destructive cleanup, or provide a general command runner.
 
+The local control-plane state keeps its existing 8 MiB file limit. If JSON
+indentation alone exceeds the limit, publication and journal recovery use compact
+JSON for that state file. Parsed history, authority and evidence digests stay
+unchanged. Snapshots and normal small state keep their canonical formatting.
+State or journals that still exceed the limit are refused before publication;
+formatting does not grant qualification or remove old work. Capacity and
+interrupted-recovery regressions are in
+`tests/test_control_plane_journal_capacity.py`.
+
 ## Maintenance
 
 Improve these loops when a secure action becomes repetitive or a portability
@@ -84,6 +93,7 @@ part of contributor verification policy.
 
 Control-plane state and recovery journals retain the same 8 MiB read limit.
 The writer checks both exact encodings before publication. Journals use compact
-JSON whitespace; state and parsed-value digests keep their canonical encoding.
+JSON whitespace. State formatting can use the bounded compact fallback above;
+parsed-value digests keep their canonical encoding.
 This prevents nested journal indentation from making a valid state unreadable.
 It changes no workflow, qualification, approval or history-retention policy.

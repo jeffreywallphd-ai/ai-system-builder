@@ -11,6 +11,16 @@ from .common import MAX_JSON, digest, fields, now, read_json, refuse, relative
 from .storage import atomic_write, canonical_bytes, confined_path, exclusive_lock
 
 
+def state_bytes(value):
+    """Bound state formatting without changing parsed evidence or its digest."""
+    payload = canonical_bytes(value)
+    if len(payload) > MAX_JSON:
+        payload = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    if len(payload) > MAX_JSON:
+        refuse("state.capacity", "The bounded local record store is full.", "Preserve and archive completed local work before admitting more records.")
+    return payload
+
+
 class Records:
     def __init__(self, root: Path):
         self.root = root.resolve()
@@ -95,7 +105,10 @@ class Records:
             refuse("transaction.conflict", "Recovery conflicts with the current revision.")
         if digest(current) not in {j["before"], digest(successor)}:
             refuse("transaction.conflict", "Recovery input changed outside the recorded transaction.")
-        atomic_write(self.path, canonical_bytes(successor))
+        # Recovery must use the same bound as normal publication. A compact
+        # journal must never expand into an unreadable indented state file.
+        payload = state_bytes(successor)
+        atomic_write(self.path, payload)
         atomic_write(self.index, canonical_bytes({"schema_version": "development-index-v1", "revision": successor["revision"], "state_digest": digest(successor)}))
         self.journal.unlink()
         return True
@@ -120,9 +133,7 @@ class Records:
             successor["revision"] = current["revision"] + 1
             successor["updated_at"] = now()
             successor["state_digest"] = digest(successor)
-            state_payload = canonical_bytes(successor)
-            if len(state_payload) > MAX_JSON:
-                refuse("state.capacity", "The bounded local record store is full.", "Preserve and archive completed local work before admitting more records.")
+            state_payload = state_bytes(successor)
             self.validate(successor)
             # The journal wraps the same state. Indenting that nested object can
             # exceed its reader bound even when the state itself fits. Whitespace
