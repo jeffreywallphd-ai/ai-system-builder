@@ -1521,3 +1521,31 @@ invocations and checks root identity/containment, regular single-link files and
 count/byte limits, then restores prior bridge/React/session/URL state. Physical
 Electron sender isolation, production authorization/SQLite, real model/provider
 semantics, native effects and parent qualification remain separate and pending.
+
+### Joined Context query and rebuild follow-up
+
+Security-relevant assets are selected workspace/source/artifact/task identity,
+saved bytes and lineage, public excerpts/citations, device choices and errors.
+The existing two-host join now exercises real Context UI/clients/preload/IPC or
+owned loopback HTTP/application/runtime-adapter/staging/catalog/bindings/bytes.
+Closed finite task/archive/embedding/query/access/invoke seams are explicit.
+A post-application acknowledgement fault tests renderer refusal; it is not proof
+of transport redaction. Separate malformed runtime output and unavailable CUDA
+failures cross the actual adapter/application failure boundary without leaking
+the synthetic private diagnostic or silently choosing CPU.
+
+The tests found an old detail dialog covering an accepted rebuild and a malformed
+score crashing query presentation. Accepted rebuild now closes that dialog;
+refusal keeps correction available. Query display validates bounds/score/selected
+artifact and canonical citations before storing results, and retires an earlier
+answer on a new attempt. Denial cases include foreign identity, malformed score
+or citation, oversized excerpt and more matches than requested. A corrected
+explicit query succeeds; earlier source/artifact bytes remain unchanged.
+
+Actual saved records/primary bindings/digests and source/chunk lineage are checked
+after reopen. Owned stage witnesses, task/power pairing, finite calls/bytes and
+restored environments/closed listeners retain the existing cleanup controls.
+Physical sender/authorization/SQLite, real LanceDB/embedding/model semantics,
+native process/restart/scale and final/parent evidence remain separate. Existing
+manual/source tests and accepted model accuracy/OCR are preserved. Source-pack/
+RAG whole-app helper code is still required before its controlled execution.

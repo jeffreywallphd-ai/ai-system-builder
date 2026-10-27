@@ -24,7 +24,7 @@ import { setExpressAuthContext } from "../../../../modules/adapters/transport/ap
 import type { IpcMainHandleListener, IpcMainHandlePort } from "../../../../modules/adapters/transport/ipc-electron/ipcMainHandlePort";
 import type { RuntimeTaskRegistryPort } from "../../../../modules/application/ports/runtime";
 import { TaskType, type ContextGenerationTaskRequest, type RuntimeTaskStatusRecord, type ContextGenerationTaskResult } from "../../../../modules/contracts/runtime";
-import { CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, evaluateContextSourceCapability, type ContextArtifactManifest, type ContextManagementTransportCommand } from "../../../../modules/contracts/context-management";
+import { CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, CONTEXT_RAG_DATABASE_MEDIA_TYPE, evaluateContextSourceCapability, type ContextArtifactManifest, type ContextManagementTransportCommand } from "../../../../modules/contracts/context-management";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createStoreArtifactRequest, createRetrieveArtifactRequest } from "../../../../modules/contracts/storage";
 import { createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter, createFilesystemArtifactObjectStorageAdapter } from "../../../../modules/adapters/storage/filesystem";
@@ -44,6 +44,9 @@ let directory: string | undefined, identity: { dev: bigint; ino: bigint } | unde
 let client: ContextManagementClient, artifacts: ReturnType<typeof composeDesktopArtifactFeature>, feature: ReturnType<typeof composeDesktopContextManagementFeature>;
 let environment: { act?: PropertyDescriptor; api?: PropertyDescriptor; token: string | null; sessions: Map<string, string | null> } | undefined;
 let calls = 0, runtimeCalls = 0, runtimeReads = 0, outputMismatch = false, gate: Promise<void> | undefined, release: (() => void) | undefined;
+let queryFault: "none" | "cuda" | "runtime-malformed" = "none", queryAckFault: "none" | "foreign" | "malformed" | "missing-citation" | "oversized" | "excess" = "none";
+const queryInputs: any[] = [];
+const excerpt = "Line A connects Harbor Station and the Museum.";
 let generationStartFault: (() => void) | undefined, runtimeStartFault = false;
 const privateStartMarker = "synthetic-private-context-start-marker";
 const flights = new Set<Promise<unknown>>(), commands: ContextManagementTransportCommand[] = [];
@@ -66,7 +69,7 @@ function zip(entries: Record<string, string>) {
   const locals: Buffer[] = [], centrals: Buffer[] = []; let offset = 0;
   expect(Object.keys(entries).length).toBeLessThanOrEqual(4);
   for (const [name, text] of Object.entries(entries)) {
-    expect(["manifest.json", "README.md", "context.md", "sources.md", "topics.md"]).toContain(name);
+    expect(["manifest.json", "README.md", "context.md", "sources.md", "topics.md", "chunks.jsonl"]).toContain(name);
     const data = Buffer.from(text), label = Buffer.from(name); expect(data.length).toBeLessThanOrEqual(32_768);
     let crc = 0xffffffff; for (const byte of data) { crc ^= byte; for (let n = 0; n < 8; n++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0); } crc = (crc ^ 0xffffffff) >>> 0;
     const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50); local.writeUInt16LE(20, 4); local.writeUInt32LE(crc, 14); local.writeUInt32LE(data.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(label.length, 26);
@@ -90,21 +93,30 @@ async function compose(host: Host) {
       if (request.taskType === TaskType.CONTEXT_GENERATION && runtimeStartFault) throw new Error(`${privateStartMarker} ${payload.runtime.runtimeWorkingDirectory}`);
       let data: any;
       if (request.taskType === TaskType.CONTEXT_GENERATION) {
-        const value = payload as ContextGenerationTaskRequest; expect(value.kind).toBe("markdown-context-pack"); requestIds.push(requestId); expect(requestIds.length).toBeLessThanOrEqual(3);
+        const value = payload as ContextGenerationTaskRequest; expect(["markdown-context-pack", "rag-database"]).toContain(value.kind); const rag = value.kind === "rag-database"; requestIds.push(requestId); expect(requestIds.length).toBeLessThanOrEqual(3);
         const inspections = await Promise.all(value.sources.map(async source => { const bytes = await readFile(source.localPath); expect(digest(bytes)).toBe(source.sourceDigest); return { artifactId: source.artifactId, digest: source.sourceDigest, mediaType: source.mediaType, originalName: source.originalName, sizeBytes: bytes.length, ready: true, sourceKind: "document" as const, format: "markdown", textFields: [], alreadyChunked: false, chunkCount: 1 }; }));
-        const manifest: ContextArtifactManifest = { schemaVersion: "1", kind: value.kind, name: value.name, mediaType: CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, createdAt: now, sources: inspections.map(source => ({ artifactId: source.artifactId, digest: source.digest as `sha256:${string}`, mediaType: source.mediaType, originalName: source.originalName, sizeBytes: source.sizeBytes, chunkCount: 1, chunkingMode: "extracted" })), manualEntries: value.manualEntries.map(entry => ({ id: entry.id, title: entry.title, digest: digest(new Uint8Array(Buffer.from(entry.content))) as `sha256:${string}` })), chunking: value.chunking, contextPack: value.contextPack };
+        const manifest: ContextArtifactManifest = { schemaVersion: "1", kind: value.kind, name: value.name, mediaType: rag ? CONTEXT_RAG_DATABASE_MEDIA_TYPE : CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, createdAt: now, sources: inspections.map(source => ({ artifactId: source.artifactId, digest: source.digest as `sha256:${string}`, mediaType: source.mediaType, originalName: source.originalName, sizeBytes: source.sizeBytes, chunkCount: 1, chunkingMode: "extracted" })), manualEntries: value.manualEntries.map(entry => ({ id: entry.id, title: entry.title, digest: digest(new Uint8Array(Buffer.from(entry.content))) as `sha256:${string}` })), chunking: value.chunking, ...(rag ? { embedding: { provider: "transformers", modelId: value.embedding!.modelId, dimensions: 384 }, sourceChecks: value.sourceChecks } : { contextPack: value.contextPack }) };
         const content = value.manualEntries[0]?.content ?? sourceText;
-        const entries: Record<string, string> = value.manualEntries.length ? { "manifest.json": JSON.stringify(manifest), "README.md": "# Synthetic Harbor Transit context pack", "context.md": content } : { "manifest.json": JSON.stringify(manifest), "README.md": "# Synthetic Harbor Transit source pack", "sources.md": sourceText, "topics.md": content };
+        const entries: Record<string, string> = rag ? { "manifest.json": JSON.stringify(manifest), "README.md": "# Finite RAG package fixture; not a LanceDB engine", "chunks.jsonl": JSON.stringify({ id: "harbor-chunk-0", text: sourceText, citation: { sourceArtifactId: inspections[0]!.artifactId, sourceDigest: inspections[0]!.digest, chunkIndex: 0 } })+"\n" } : value.manualEntries.length ? { "manifest.json": JSON.stringify(manifest), "README.md": "# Synthetic Harbor Transit context pack", "context.md": content } : { "manifest.json": JSON.stringify(manifest), "README.md": "# Synthetic Harbor Transit source pack", "sources.md": sourceText, "topics.md": content };
         const bytes = zip(entries); await writeFile(path.join(value.runtime.runtimeWorkingDirectory, "harbor-transit.zip"), bytes, { flag: "wx" });
-        const result: ContextGenerationTaskResult = { output: { name: "harbor-transit.zip", outputHandle: "harbor-transit.zip", mediaType: CONTEXT_MARKDOWN_PACK_MEDIA_TYPE, sizeBytes: bytes.length, digest: (outputMismatch ? `sha256:${"0".repeat(64)}` : digest(bytes)) as `sha256:${string}` }, sourceInspections: inspections, preview: { kind: value.kind, name: value.name, sourceCount: value.sources.length, manualEntryCount: value.manualEntries.length, chunkCount: 1, items: [{ id: "context-section-0", kind: value.manualEntries.length ? "manual" : "topic", title: "Harbor Transit", text: content, citations: inspections.map(source => ({ sourceArtifactId: source.artifactId, chunkIndex: 0 })) }] }, manifest };
+        const result: ContextGenerationTaskResult = { output: { name: "harbor-transit.zip", outputHandle: "harbor-transit.zip", mediaType: manifest.mediaType, sizeBytes: bytes.length, digest: (outputMismatch ? `sha256:${"0".repeat(64)}` : digest(bytes)) as `sha256:${string}` }, sourceInspections: inspections, preview: { kind: value.kind, name: value.name, sourceCount: value.sources.length, manualEntryCount: value.manualEntries.length, chunkCount: 1, items: [{ id: "context-section-0", kind: rag ? "chunk" : value.manualEntries.length ? "manual" : "topic", title: "Harbor Transit", text: content, citations: inspections.map(source => ({ sourceArtifactId: source.artifactId, chunkIndex: 0 })) }] }, manifest };
         results.set(requestId, { bytes, result, stage: value.runtime.runtimeWorkingDirectory }); data = result;
       } else {
         expect(request.taskType).toBe(TaskType.CONTEXT_RETRIEVAL);
         const content = await readFile(payload.localPath); expect(digest(content)).toBe(payload.digest);
         if (payload.operation === "inspect-source") data = { operation: payload.operation, inspection: { artifactId: payload.artifactId, digest: payload.digest, mediaType: payload.mediaType, originalName: payload.originalName, sizeBytes: content.length, ready: true, sourceKind: "document", format: "markdown", textFields: [], alreadyChunked: false, chunkCount: 1 } };
         else {
-          expect(payload.operation).toBe("inspect-artifact"); const known = [...results.values()].find(value => digest(value.bytes) === payload.digest); expect(Boolean(known)).toBe(true); expect(content.equals(Buffer.from(known!.bytes))).toBe(true);
-          data = { operation: payload.operation, inspection: { manifest: known!.result.manifest, chunkCount: 1, packageEntries: known!.result.manifest.manualEntries.length ? ["manifest.json", "README.md", "context.md"] : ["manifest.json", "README.md", "sources.md", "topics.md"], topics: [] } };
+          const known = [...results.values()].find(value => digest(value.bytes) === payload.digest); expect(Boolean(known)).toBe(true); expect(content.equals(Buffer.from(known!.bytes))).toBe(true);
+          if (payload.operation === "query") {
+            expect(queryInputs.length).toBeLessThan(8); queryInputs.push(structuredClone(payload));
+            expect(payload.workspaceId).toBe(workspaceId); expect(payload.query).toBe("Where does Line A go?"); expect(payload.maximumResults).toBe(5);
+            if (queryFault === "cuda" && payload.embeddingDevice === "cuda") throw new Error(privateStartMarker);
+            const source = known!.result.manifest.sources[0]!;
+            data = { operation: "query", matches: [{ id: "harbor-chunk-0", excerpt, score: 0.875, citation: { sourceArtifactId: source.artifactId, sourceDigest: queryFault === "runtime-malformed" ? "invalid-digest" : source.digest, chunkIndex: 0 } }] };
+          } else {
+            expect(payload.operation).toBe("inspect-artifact");
+            data = { operation: payload.operation, inspection: { manifest: known!.result.manifest, chunkCount: 1, packageEntries: known!.result.manifest.kind === "rag-database" ? ["manifest.json", "README.md", "chunks.jsonl"] : known!.result.manifest.manualEntries.length ? ["manifest.json", "README.md", "context.md"] : ["manifest.json", "README.md", "sources.md", "topics.md"], topics: [] } };
+          }
         }
       }
       tasks.set(requestId, { requestId, workspaceId: request.workspaceId!, taskType: request.taskType, status: "succeeded", concurrencyClass: "cpu-heavy", startedAt: now, updatedAt: now, completedAt: now, data } as RuntimeTaskStatusRecord);
@@ -115,7 +127,21 @@ async function compose(host: Host) {
     async listTasks() { return { tasks: [] }; },
   };
   feature = composeDesktopContextManagementFeature({ artifacts, runtime: { runtimeTaskRegistry: registry, taskPowerLifecycle: { startTask: async (id: string) => { powerStarts.push(id); }, completeTask: async (id: string) => { powerEnds.push(id); } } }, now: () => now });
-  const facade = { executeCommand: (command: ContextManagementTransportCommand, requestContext: any) => track((async () => { expect(++calls).toBeLessThanOrEqual(100); commands.push(command); scopes.push({ action: command.action, workspaceId: requestContext.workspaceId }); if (command.action === "generation-save") await gate; if (command.action === "generation-start") generationStartFault?.(); return feature.contextManagement.executeCommand(command, requestContext); })()) };
+  const facade = { executeCommand: (command: ContextManagementTransportCommand, requestContext: any) => track((async () => { expect(++calls).toBeLessThanOrEqual(100); commands.push(command); scopes.push({ action: command.action, workspaceId: requestContext.workspaceId }); if (command.action === "generation-save") await gate; if (command.action === "generation-start") generationStartFault?.(); const result = await feature.contextManagement.executeCommand(command, requestContext);
+    // Declared post-application acknowledgement fault: production task output
+    // validation is tested separately by runtime-malformed. This seam exercises
+    // renderer admission of a malformed/foreign transport response.
+    if (command.action === "browser-query" && result.ok && queryAckFault !== "none") {
+      if (queryAckFault === "foreign") return { ...result, value: { ...result.value, result: { ...result.value.result, artifactId: "foreign-context-artifact" } } };
+      const original = result.value.result.matches[0];
+      const matches = queryAckFault === "excess"
+        ? Array.from({ length: 6 }, (_, index) => ({ ...original, id: `excess-${index}`, excerpt: privateStartMarker }))
+        : [{ ...original, excerpt: queryAckFault === "oversized" ? privateStartMarker.repeat(100) : privateStartMarker,
+             ...(queryAckFault === "malformed" ? { score: "not-a-score" } : {}),
+             ...(queryAckFault === "missing-citation" ? { citation: { ...original.citation, sourceDigest: undefined } } : {}) }];
+      return { ...result, value: { ...result.value, result: { ...result.value.result, matches } } };
+    }
+    return result; })()) };
   if (host === "desktop") {
     const handlers = new Map<string, IpcMainHandleListener>(); const ipcMain: IpcMainHandlePort = { handle: (channel, handler) => { handlers.set(channel, handler as IpcMainHandleListener); } };
     registerContextManagementIpc({ ipcMain, senderTrust: { isTrustedSender: () => true }, contextManagement: facade, getAuthoritativeRequestContext: () => ({ principalId: context.principalId }) });
@@ -170,6 +196,59 @@ async function prepareSourcePack() {
   await wait(preparationSettled);
   return source;
 }
+async function prepareRag() {
+  const source = await seedSource(); await mount();
+  await wait(() => [...container!.querySelectorAll("label")].some(value => value.textContent?.includes("harbor-transit.md")));
+  await act(async () => [...container!.querySelectorAll("label")].find(value => value.textContent?.includes("harbor-transit.md"))!.querySelector<HTMLInputElement>("input")!.click());
+  await act(async () => setValue(container!.querySelector<HTMLInputElement>('input[placeholder="product-support-rag"]')!, "Harbor Transit retrieval"));
+  const device = [...container!.querySelectorAll("label")].find(value => value.textContent?.trim().startsWith("Embedding device"))!.querySelector("select")!;
+  await act(async () => { device.value = "auto"; device.dispatchEvent(new Event("change", { bubbles: true })); });
+  await act(async () => button("Prepare RAG database").click()); await wait(() => hasButton("Approve and save RAG database"));
+  expect((await records()).map(value => value.storageKey)).toEqual([source]);
+  await act(async () => button("Review preview chunks").click());
+  expect(document.querySelector('[role="dialog"]')?.textContent).toContain(sourceText);
+  await act(async () => button("Approve chunk").click());
+  await act(async () => document.querySelector<HTMLButtonElement>('[role="dialog"] [aria-label="Close dialog"]')!.click());
+  expect(commands.some(value => value.action === "generation-save")).toBe(false);
+  return source;
+}
+async function saveRag() {
+  await act(async () => button("Approve and save RAG database").click()); await wait(() => hasButton("Run test query") && hasButton("Rebuild"));
+  const rows = (await records()).filter(row => row.mediaType === CONTEXT_RAG_DATABASE_MEDIA_TYPE); expect(rows.length).toBe(1); return rows[0]!;
+}
+async function exactSavedBytes(row: Awaited<ReturnType<typeof saved>>) {
+  const storage = createFilesystemArtifactObjectStorageAdapter({ rootDirectory: directory! });
+  const value = await storage.retrieveArtifact(createRetrieveArtifactRequest(row.storageKey), context); expect(value.ok).toBe(true); if (!value.ok) throw new Error("Saved fixture bytes unavailable.");
+  expect(digest(value.value.content).slice(7)).toBe(row.checksum?.value);
+  const binding = await createLocalArtifactStorageBindingAdapter({ rootDirectory: directory! }).readArtifactStorageBindings({ workspaceId, artifactId: row.storageKey }, context);
+  if (row.mediaType === CONTEXT_RAG_DATABASE_MEDIA_TYPE || row.mediaType === CONTEXT_MARKDOWN_PACK_MEDIA_TYPE) {
+    expect(binding).toMatchObject({ ok: true, value: { bindings: [{ workspaceId, artifactId: row.storageKey, role: "primary", backing: { kind: "artifact-object", locator: row.storageKey } }] } });
+  } else expect(binding).toMatchObject({ ok: true, value: { bindings: [] } }); // Existing upload fixture uses direct catalog/object backing.
+
+  return Buffer.from(value.value.content);
+}
+async function queryRag(device: "cpu" | "cuda" | "auto") {
+  const dialog = document.querySelector('[role="dialog"]')!;
+  const select = [...dialog.querySelectorAll("label")].find(value => value.textContent?.trim().startsWith("Retrieval embedding device"))!.querySelector("select")!;
+  const input = [...dialog.querySelectorAll("label")].find(value => value.textContent?.trim() === "Query")!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => { select.value = device; select.dispatchEvent(new Event("change", { bubbles: true })); setValue(input, "Where does Line A go?"); });
+  const before = commands.filter(value => value.action === "browser-query").length;
+  await act(async () => button("Run test query").click());
+  await wait(() => commands.filter(value => value.action === "browser-query").length === before + 1 && !button("Run test query").disabled);
+}
+async function rebuildAndPreserve(row: Awaited<ReturnType<typeof saved>>, kind: "rag" | "pack") {
+  const original = await exactSavedBytes(row), source = await exactSavedBytes((await records()).find(value => value.storageKey === "uploads/context-ui/harbor-transit.md")!);
+  await act(async () => button("Rebuild").click()); const save = kind === "rag" ? "Approve and save RAG database" : "Save context pack";
+  await wait(() => hasButton(save)); expect(document.querySelector(".artifact-browser__detail-dialog")).toBeNull(); expect((await records()).filter(value => value.mediaType === row.mediaType).length).toBe(1);
+  expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+  await act(async () => button(save).click()); await wait(() => hasButton("Rebuild"));
+  const rows = (await records()).filter(value => value.mediaType === row.mediaType); expect(rows.length).toBe(2); expect(new Set(rows.map(value => value.storageKey)).size).toBe(2);
+  expect(rows.find(value => value.storageKey === row.storageKey)).toEqual(row); expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+  const successor = rows.find(value => value.storageKey !== row.storageKey)!; const output = results.get(requestIds[1]!)!;
+  expect((await exactSavedBytes(successor)).equals(Buffer.from(output.bytes))).toBe(true);
+  expect((await exactSavedBytes((await records()).find(value => value.storageKey === "uploads/context-ui/harbor-transit.md")!)).equals(source)).toBe(true);
+  expect(output.result.manifest.sources[0]).toMatchObject({ artifactId: "uploads/context-ui/harbor-transit.md", digest: digest(source), chunkCount: 1, chunkingMode: "extracted" });
+}
 async function replaceOwnedOutput(output: { bytes: Uint8Array; stage: string }, bytes: Uint8Array) {
   const stage = await realpath(output.stage), info = await lstat(stage, { bigint: true }); expect({ dev: info.dev, ino: info.ino }).toEqual(stages.get(stage));
   const file = path.join(stage, "harbor-transit.zip"), stat = await lstat(file); expect(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 && path.dirname(await realpath(file)) === stage).toBe(true); expect(bytes.length).toBeLessThanOrEqual(128 * 1024);
@@ -195,7 +274,7 @@ afterEach(async () => {
     restoreEnvironment();
     for (const owned of stages.keys()) { let present = false; try { await lstat(owned); present = true; } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } expect(present).toBe(false); }
     if (directory) { const owned = directory, info = await lstat(owned, { bigint: true }); expect({ dev: info.dev, ino: info.ino }).toEqual(identity); expect(info.isDirectory() && !info.isSymbolicLink() && await realpath(owned) === owned && path.dirname(owned) === await realpath(tmpdir())).toBe(true); let entries = 0, bytes = 0; async function inspect(parent: string) { for (const name of await readdir(parent)) { const file = path.join(parent, name), value = await lstat(file); expect(++entries).toBeLessThanOrEqual(256); expect(value.isSymbolicLink()).toBe(false); if (value.isDirectory()) await inspect(file); else { expect(value.isFile() && value.nlink === 1).toBe(true); bytes += value.size; expect(bytes).toBeLessThanOrEqual(1024 * 1024); } } } await inspect(owned); await rm(owned, { recursive: true }); }
-  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; gate = undefined; release = undefined; generationStartFault = undefined; runtimeStartFault = false; calls = runtimeCalls = runtimeReads = 0; outputMismatch = false; commands.length = scopes.length = requestIds.length = powerStarts.length = powerEnds.length = wireResponses.length = 0; tasks.clear(); results.clear(); stages.clear(); flights.clear(); }
+  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; gate = undefined; release = undefined; generationStartFault = undefined; runtimeStartFault = false; queryFault = queryAckFault = "none"; queryInputs.length = 0; calls = runtimeCalls = runtimeReads = 0; outputMismatch = false; commands.length = scopes.length = requestIds.length = powerStarts.length = powerEnds.length = wireResponses.length = 0; tasks.clear(); results.clear(); stages.clear(); flights.clear(); }
 });
 for (const host of ["desktop", "browser"] as const) {
   it(`${host}: reviews manual context privately then saves exact bytes and reopens durable records`, async () => {
@@ -271,6 +350,52 @@ for (const host of ["desktop", "browser"] as const) {
     const row = await saveAndOpenDetail(); expect(button("Rebuild").disabled).toBe(false); expect((await records()).length).toBe(2);
     expect(row.checksum?.value).toBe(digest(output.bytes).slice(7));
   }, 15_000);
+  it(`${host}: RAG review/save/query/rebuild preserves exact source, chunks, device and original bytes`, async () => {
+    await compose(host); const source = await prepareRag(), prepared = results.get(requestIds[0]!)!;
+    expect(prepared.result.manifest).toMatchObject({ kind: "rag-database", embedding: { provider: "transformers", modelId: "sentence-transformers/all-MiniLM-L6-v2", dimensions: 384 }, sources: [{ artifactId: source, digest: digest(new Uint8Array(Buffer.from(sourceText))), chunkCount: 1 }] });
+    expect(prepared.result.manifest.embedding).not.toHaveProperty("device");
+    expect(commands.find(value => value.action === "generation-start")).toMatchObject({ command: { kind: "rag-database", embedding: { modelId: "sentence-transformers/all-MiniLM-L6-v2", device: "auto" } } });
+    const row = await saveRag(); expect((await exactSavedBytes(row)).equals(Buffer.from(prepared.bytes))).toBe(true); expect((await records(foreign)).length).toBe(0);
+    await queryRag("auto"); const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain(excerpt); expect(dialog.textContent).toContain(`Score 0.875 · ${source} · chunk 1`);
+    expect(queryInputs).toHaveLength(1); expect(queryInputs[0]).toMatchObject({ artifactId: row.storageKey, embeddingDevice: "auto", query: "Where does Line A go?", maximumResults: 5, digest: digest(prepared.bytes) });
+    const queryResponses = wireResponses.filter(value => value?.ok && value.value?.action === "browser-query"); const response = queryResponses[queryResponses.length - 1];
+    expect(response.value.result).toEqual({ artifactId: row.storageKey, matches: [{ id: "harbor-chunk-0", excerpt, score: 0.875, citation: { sourceArtifactId: source, sourceDigest: digest(new Uint8Array(Buffer.from(sourceText))), chunkIndex: 0 } }] });
+    expect(JSON.stringify(response)).not.toContain('"vector"'); expect(JSON.stringify(response)).not.toContain('"embedding"');
+    await rebuildAndPreserve(row, "rag");
+  }, 20_000);
+  it(`${host}: source-pack Rebuild refuses an unavailable source then permits explicit restored-source retry`, async () => {
+    await compose(host); const source = await prepareSourcePack(), row = await saveAndOpenDetail(), original = await exactSavedBytes(row);
+    const retrieve = artifacts.storage.retrieveArtifact.bind(artifacts.storage);
+    artifacts.storage.retrieveArtifact = (request: any, scope: any) => request.key === source ? Promise.resolve({ ok: false, error: { code: "not-found", message: "Synthetic source is unavailable." } }) : retrieve(request, scope);
+    try {
+      await act(async () => button("Rebuild").click()); await wait(() => commands.some(value => value.action === "browser-rebuild") && !button("Rebuild").disabled);
+      expect(requestIds).toHaveLength(1); expect((await records()).length).toBe(2); expect((await exactSavedBytes(row)).equals(original)).toBe(true);
+      expect(container!.querySelector(".context-studio__message")?.textContent).toBe("This context artifact could not be rebuilt.");
+    } finally { artifacts.storage.retrieveArtifact = retrieve; }
+    await rebuildAndPreserve(row, "pack");
+  }, 20_000);
+  for (const failure of ["cuda", "runtime-malformed"] as const) it(`${host}: rejects ${failure} query output without fallback and allows explicit CPU correction`, async () => {
+    await compose(host); await prepareRag(); const row = await saveRag(), before = await exactSavedBytes(row); queryFault = failure;
+    await queryRag("cuda"); expect(queryInputs).toHaveLength(1); expect(queryInputs[0].embeddingDevice).toBe("cuda");
+    expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain(excerpt); expect(document.body.textContent).not.toContain(privateStartMarker);
+    expect(container!.querySelector(".context-studio__message")?.textContent).toBe("The RAG test query could not be completed.");
+    const failures = wireResponses.filter(value => value?.ok === false);
+    expect(failures[failures.length - 1]).toMatchObject({ error: { code: "unavailable", message: "Context retrieval could not be completed. Verify the local model and selected embedding device, or choose CPU and retry." } });
+    expect(JSON.stringify(wireResponses)).not.toContain(privateStartMarker);
+    for (const stage of stages.keys()) expect(JSON.stringify(wireResponses)).not.toContain(stage);
+    expect((await exactSavedBytes(row)).equals(before)).toBe(true);
+    queryFault = "none"; await queryRag("cpu"); expect(queryInputs).toHaveLength(2); expect(queryInputs[1].embeddingDevice).toBeUndefined();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain(excerpt); expect((await exactSavedBytes(row)).equals(before)).toBe(true);
+  }, 20_000);
+  for (const failure of ["foreign", "malformed", "missing-citation", "oversized", "excess"] as const) it(`${host}: rejects ${failure} query acknowledgement before public rendering`, async () => {
+    await compose(host); await prepareRag(); await saveRag();
+    await queryRag("cpu"); expect(document.querySelector('[role="dialog"]')?.textContent).toContain(excerpt);
+    queryAckFault = failure;
+    await queryRag("cpu"); expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain(excerpt); expect(document.body.textContent).not.toContain(privateStartMarker);
+    expect(container!.querySelector(".context-studio__message")?.textContent).toMatch(/Context response|RAG test query/);
+    queryAckFault = "none"; await queryRag("cpu"); expect(document.querySelector('[role="dialog"]')?.textContent).toContain(excerpt);
+  }, 20_000);
   it(`${host}: compensates a late catalog refusal and retries without an orphan`, async () => {
     await compose(host); await prepareManual();
     const original = artifacts.artifactCatalog.appendArtifactCatalogRecord.bind(artifacts.artifactCatalog); let generatedAppends = 0, fail = true, failedKey = "";

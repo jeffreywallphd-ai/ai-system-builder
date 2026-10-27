@@ -213,3 +213,15 @@ after restart. The `dataset-version-browser` profile includes focused fixture
 and oracle checks. Those checks do not execute the app cases or qualify native
 shutdown; use the existing reviewed source-bound operator for that later step.
 Accepted model accuracy and OCR results remain separate.
+
+The existing two-host `context-ui-transports-storage.ui.test.tsx` now has 18
+additional RAG/query/rebuild cases. They use actual mounted ContextStudio, clients,
+preload/registered IPC or owned HTTP, application staging and fresh saved files,
+catalog and bindings. A closed finite worker produces synthetic package/chunk/
+query results; it does not qualify a LanceDB engine or embedding model. Tests
+check explicit review/save, exact source lineage and visible cited answers,
+original-preserving rebuild, unavailable-source/device correction and malformed/
+foreign/oversized reply refusal. Accepted model accuracy and OCR are not rerun.
+Source-pack/RAG whole-app helper wiring and physical/final qualification remain
+separate; the joined tests do not turn those implementation/execution gaps into
+a pass. Existing manual/source-pack cases and owned cleanup remain included.

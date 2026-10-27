@@ -326,3 +326,27 @@ or exact source bytes, refuse generation when staging fails and permit correctio
 and retry. The finite registry refuses before worker acceptance; this correction
 does not change or qualify existing worker ownership, cancellation, native cleanup,
 process restart, terminal-runtime diagnostics or final combined testing.
+
+### Joined retrieval and rebuild regression
+
+An accepted Rebuild closes the old Context detail dialog before showing the
+preparation/review workflow. A refused rebuild leaves the detail available for
+correction and retry. The source and original saved artifact remain unchanged;
+the rebuilt candidate still requires explicit review and save.
+
+The renderer admits query results only for the selected artifact, within the
+requested/canonical result and excerpt limits, with finite valid scores and
+citations validated by the existing contract helper. Invalid replies get fixed
+public copy before result rendering. Starting a new query clears the old answer
+so a failed or refused reply cannot appear to answer the new request. These
+checks support display safety; application/transport authorization remains the
+authority and no UI value grants access or a device fallback.
+
+Eighteen additional two-host composed tests check RAG review/save/query/rebuild,
+source-pack rebuild/restoration, exact source/chunk/citation/device context,
+reopened catalog/bindings/bytes and preserved originals. Explicit CUDA refusal
+requires an explicit corrected retry. Runtime output, malformed acknowledgement,
+archive inspection, embedding/query, access and in-process invocation are finite
+fixtures. Real UI/clients/transports/application/staging/files are composed; the
+fixture is not an actual LanceDB/model/physical-host or final roadmap pass.
+Whole-app source-pack/RAG helper wiring remains separate implementation work.

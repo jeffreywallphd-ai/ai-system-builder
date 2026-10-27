@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 
 import type {
+  ContextChunkCitation,
   ContextBrowserDetail,
   ContextBrowserItem,
   ContextConversionReadiness,
@@ -12,7 +13,7 @@ import type {
   ContextTaskSummary,
   StartContextGenerationCommand,
 } from "../../../contracts/context-management";
-import { validateContextMarkdown } from "../../../contracts/context-management";
+import { CONTEXT_GENERATION_LIMITS, validateContextChunkCitation, validateContextMarkdown } from "../../../contracts/context-management";
 import { SafeMarkdownPreview } from "../artifact-preview";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { TabbedPanel } from "../components/TabbedPanel";
@@ -74,6 +75,22 @@ const DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2";
 // Only renderer-owned, fixed diagnostics may pass through safeMessage.
 class ContextUiError extends Error {}
 
+function isBoundedRetrievalResult(value: unknown, artifactId: string, maximumResults: number): value is ContextRetrievalResult {
+  const record = (input: unknown): input is Record<string, unknown> => input !== null && typeof input === "object" && !Array.isArray(input);
+  if (!record(value) || value.artifactId !== artifactId || !Array.isArray(value.matches) ||
+      value.matches.length > Math.min(maximumResults, CONTEXT_GENERATION_LIMITS.maximumQueryResults)) return false;
+  return value.matches.every(match => {
+    if (!record(match) || typeof match.id !== "string" || !match.id || match.id.length > 640 ||
+        typeof match.excerpt !== "string" || !match.excerpt || match.excerpt.length > CONTEXT_GENERATION_LIMITS.maximumRetrievalExcerptCharacters ||
+        typeof match.score !== "number" || !Number.isFinite(match.score) || match.score < -1 || match.score > 1 || !record(match.citation)) return false;
+    const citation = match.citation;
+    if (typeof citation.sourceArtifactId !== "string" || citation.sourceArtifactId.length > 512 ||
+        typeof citation.sourceDigest !== "string" || (citation.field !== undefined && typeof citation.field !== "string")) return false;
+    try { validateContextChunkCitation(citation as unknown as ContextChunkCitation); return true; }
+    catch { return false; }
+  });
+}
+
 export function ContextStudio(props: ContextStudioProps) {
   const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.client, key: 0 });
   if (scope.workspaceId !== props.workspaceId || scope.client !== props.client) {
@@ -115,6 +132,10 @@ function ScopedContextStudio({
         const value = await sourceClient.execute(input);
         assertCurrent();
         const command = input.command;
+        if (command.action === "browser-query" && value.action === "browser-query" &&
+            !isBoundedRetrievalResult(value.result, command.request.artifactId, command.request.maximumResults ?? 5)) {
+          throw new ContextUiError("The Context response was invalid. Run the query again.");
+        }
         if (value.action !== command.action ||
             (command.action === "source-inspect" && value.action === "source-inspect" && value.readiness.artifactId !== command.artifactId) ||
             (command.action === "browser-detail" && value.action === "browser-detail" && value.detail.item.artifactId !== command.artifactId) ||
@@ -742,6 +763,7 @@ function ScopedContextStudio({
     if (!selectedBrowserId) return;
     const owner = beginAction("query");
     if (owner === undefined) return;
+    setQueryResult(undefined);
     try {
       const result = await client.execute({
         workspaceId,
@@ -774,6 +796,7 @@ function ScopedContextStudio({
       });
       if (result.action !== "browser-rebuild")
         throw new ContextUiError("Context rebuild response was invalid.");
+      setBrowserDetailOpen(false);
       setRequestId(result.value.requestId);
       generationRef.current = undefined;
       setGeneration({ requestId: result.value.requestId, state: result.value.status });
