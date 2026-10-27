@@ -2769,10 +2769,48 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package UI session and retry regressions",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package explicit lifecycle and capability consent",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package action and list failure recovery",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package rendered-summary and list consistency",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package delayed action ownership",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+          "name": "Package acknowledgement identity denials",
+          "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "package_session_scope": "Shared rendered fixtures cover exact inert file forwarding, summary shape/identity, capability consent, separate install/activate/disable/previous-record rollback, explicit retry, safe action/list failures, synchronous ownership, old scope and stale catalogue results. Actual inspector/trust/transport/storage/host/runtime/native/provider and parent qualification remain separate. The first authoring work package is still partial."
     },
     {
       "id": "asset-studio-saved-lifecycle",

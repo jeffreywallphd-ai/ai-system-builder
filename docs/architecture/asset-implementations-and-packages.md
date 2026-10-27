@@ -224,3 +224,35 @@ that invocation alone. Ordinary publish APIs retain direct reads; later bootstra
 calls revalidate releases, backing resources and bindings. Successful and failed
 flights are released only after settlement, with no persistent trust/readiness cache.
 Partial immutable publication is preserved for healthy idempotent retry.
+
+## Package interface sessions and retry
+
+The shared package interface owns a session per workspace and client. Context
+replacement retires the old view and its pending callbacks. Synchronous action
+admission prevents duplicate inspect/install/activate/disable/rollback requests
+before the busy render. After an asynchronous file read, ownership is checked
+before creating the inspection byte view or calling the client. This does not
+cancel an already admitted server operation or replace application policy.
+
+Inspection summaries are checked for the identity and typed fields needed to
+render the review. Eligible summaries need package identity; ineligible summaries
+can omit it and still show safe inspection issues. Every requested capability
+still needs explicit consent. Installation does not activate or execute content.
+Lifecycle replies must match the expected workspace and package record; rollback
+returns the previous active record. No sequential revision requirement is added
+to idempotent lifecycle commands that do not take an expected revision.
+
+List reads have separate ownership and explicit refresh/retry. Starting a package
+mutation retires an older pending initial list. An unknown list is not presented
+as an empty catalogue. After accepted install or lifecycle change, a fresh list
+must contain the acknowledged target with the same package/version/digest and
+an equal or newer revision. An equal revision must retain the acknowledged
+status. An inconsistent or failed refresh retains the accepted local result and
+asks for explicit list retry. A genuinely newer server revision remains valid.
+Thrown failures use static notification text and release only current controls.
+
+The finite package browser tests include native file/buttons, capability consent,
+installation and separate activation/disable/actual-target rollback, malformed
+summaries, safe failures, stale results and identity denials alongside the starter
+download test. Their fixed clients do not qualify real parsing/trust decisions,
+transports, storage, apps, providers, native recovery or code execution.

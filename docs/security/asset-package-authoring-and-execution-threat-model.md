@@ -279,3 +279,30 @@ Read admission checks ownership before client dispatch. The saved editor stays
 disabled until a matching saved view is accepted, including explicit retry; no
 new-draft write can originate from its unread placeholder. This interface fence
 does not replace transport authorization or cancel an earlier server request.
+
+## Package interface ownership and consistent acknowledgements
+
+The package renderer confines list reads and inspect/admit/lifecycle results to
+the mounted workspace/client session. A synchronous token denies duplicate
+actions. Retired asynchronous file reads cannot dispatch inspection. Typed
+rendering checks reject malformed review summaries before they reach JSX and
+require identity for eligible admission while preserving ineligible diagnostics.
+These checks supplement the existing inspector, immutable artifact, provenance,
+capability, signature, authorization and admission transactions.
+
+Installation retains per-capability consent and separate explicit activation.
+Accepted records must match the inspected identity or requested lifecycle target;
+rollback matches the previous active record, not the current input record.
+Unavailable lifecycle states cannot activate through the renderer. The server
+remains authoritative for idempotence, revisions, trust and execution policy.
+
+Retiring an old initial list prevents it from erasing a newer install. The fresh
+post-action list must preserve the acknowledged target identity and revision;
+missing/stale/inconsistent targets keep the last accepted result visible with
+a safe notification and explicit list retry. A later legitimate server revision
+is accepted. A failed unknown initial catalogue is never called empty.
+Thrown exceptions and obsolete replies cannot strand or alter the current view;
+static error copy excludes raw adapter detail. This is interface recovery, not
+server cancellation or physical cleanup. Fixed-client positive, failure,
+malformed, duplicate, identity, stale-list and retired-session tests do not pass
+real transport/storage, app/native/provider/runtime or final qualification.
