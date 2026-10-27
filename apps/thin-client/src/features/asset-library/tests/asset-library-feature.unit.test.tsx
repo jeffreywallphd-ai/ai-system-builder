@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
+import type { Root } from "react-dom/client";
 
 import {
   afterEach,
+  before,
   describe,
   expect,
   it,
@@ -28,6 +29,10 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
 (globalThis as any).HTMLSelectElement = dom.window.HTMLSelectElement;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+// Install the DOM before loading the browser renderer, as in the Studio tests.
+let createRoot: typeof import("react-dom/client")["createRoot"];
+before(async () => { createRoot = (await import("react-dom/client")).createRoot; });
 
 const TEST_WORKSPACE_ID = "workspace.asset-library-tests";
 
@@ -526,6 +531,54 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain(
       "No assets match the current filters.",
     );
+  });
+
+  it("keeps Search assets stable while help and native search operate independently", async () => {
+    const client = createClient();
+    const { container } = await render(client);
+    const inputs = container.querySelectorAll<HTMLInputElement>("input[type='search']");
+    assert.equal(inputs.length, 1);
+    const input = inputs[0]!;
+    assert.equal(input.getAttribute("aria-label"), "Search assets");
+    assert.equal(input.labels?.length, 1);
+    const label = input.labels![0]!;
+    assert.ok(label.textContent?.includes("Search assets"));
+    assert.equal(label.control, input);
+    assert.equal(label.htmlFor, input.id);
+    const group = input.parentElement!;
+    const help = group.querySelector<HTMLButtonElement>(".ui-glossary-hint__button")!;
+    assert.ok(help);
+    assert.equal(help.getAttribute("aria-label"), "What does Search assets mean?");
+    const tooltip = document.getElementById(help.getAttribute("aria-describedby")!);
+    assert.equal(tooltip?.getAttribute("role"), "tooltip");
+    assert.ok(tooltip?.textContent?.includes("Search assets"));
+    const before = (client.listAssetDefinitions as any).mock.calls.length;
+    await act(async () => { input.focus(); });
+    assert.equal(document.activeElement, input);
+    await act(async () => { help.click(); });
+    assert.equal(help.getAttribute("aria-expanded"), "true");
+    assert.ok(help.closest(".ui-glossary-hint")?.classList.contains("ui-glossary-hint--open"));
+    await act(async () => { help.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    assert.equal(help.getAttribute("aria-expanded"), "false");
+    await act(async () => { help.focus(); help.click(); });
+    assert.equal(help.getAttribute("aria-expanded"), "true");
+    await act(async () => { input.focus(); });
+    assert.equal(help.getAttribute("aria-expanded"), "false");
+    assert.equal(input.value, "");
+    assert.equal((client.listAssetDefinitions as any).mock.calls.length, before);
+    await setInputValue(input, " doc ");
+    await flush();
+    assert.equal(input.value, " doc ");
+    let calls = (client.listAssetDefinitions as any).mock.calls;
+    assert.equal(calls.length, before + 1);
+    assert.deepEqual(calls[calls.length - 1][0], { limit: 50, searchText: "doc", workspaceId: TEST_WORKSPACE_ID });
+    await setInputValue(input, "");
+    await flush();
+    calls = (client.listAssetDefinitions as any).mock.calls;
+    assert.equal(calls.length, before + 2);
+    assert.deepEqual(calls[calls.length - 1][0], { limit: 50, workspaceId: TEST_WORKSPACE_ID });
+    assert.equal(input.getAttribute("aria-label"), "Search assets");
+    assert.equal(input.value, "");
   });
 
   it("sends filter changes through supported query fields", async () => {

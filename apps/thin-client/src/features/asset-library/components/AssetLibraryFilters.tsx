@@ -1,4 +1,5 @@
-import { TermWithHint } from "../../../../../../modules/ui/shared/glossary/GlossaryHint";
+import { useId } from "react";
+import { GlossaryHint, TermWithHint } from "../../../../../../modules/ui/shared/glossary/GlossaryHint";
 import type { AssetLibraryBuiltInFilter } from "../../../../../../modules/ui/shared/asset-library";
 import type {
   AssetLibraryFilterValue,
@@ -96,23 +97,27 @@ export function AssetLibraryFilters({
   onRefresh,
   isRefreshing,
 }: AssetLibraryFiltersProps) {
+  const searchId = useId();
   return (
     <form
       className="asset-library-toolbar"
       onSubmit={(event) => event.preventDefault()}
     >
-      <label className="ui-stack ui-stack--sm">
-        <span className="ui-label">
-          <TermWithHint termId="assetSearchFilter">Search assets</TermWithHint>
+      <div className="ui-stack ui-stack--sm">
+        <span className="ui-label ui-glossary-term">
+          <label htmlFor={searchId}>Search assets</label>
+          <GlossaryHint termId="assetSearchFilter" />
         </span>
         <input
+          id={searchId}
           className="ui-input asset-library-toolbar__search"
           type="search"
+          aria-label="Search assets"
           value={filters.searchText}
           placeholder="Search by name or summary"
           onInput={(event) => onSearchTextChange(event.currentTarget.value)}
         />
-      </label>
+      </div>
 
       <label className="ui-stack ui-stack--sm">
         <span className="ui-label">

@@ -1568,7 +1568,9 @@
         "modules/adapters/transport/ipc-electron/tests/guarded-ipc-main-handle-port.unit.test.ts",
         "modules/hosts/desktop/composition/tests/assets-ipc-trust-wiring.unit.test.ts",
         "modules/adapters/transport/api-express/asset-package/tests/asset-package-transport-parity.unit.test.ts",
-        "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts"
+        "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts",
+        "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+        "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1588,7 +1590,9 @@
         "modules/adapters/transport/ipc-electron/asset-package/registerAssetPackageIpc.ts",
         "modules/adapters/transport/ipc-electron/asset-studio/registerAssetStudioIpc.ts",
         "modules/hosts/desktop/composition/composeDesktopHost.ts",
-        "modules/adapters/transport/README.md"
+        "modules/adapters/transport/README.md",
+        "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFilters.tsx",
+        "apps/thin-client/src/features/asset-library/components/AssetLibraryFilters.tsx"
       ]
     },
     "desktop-startup-ui": {

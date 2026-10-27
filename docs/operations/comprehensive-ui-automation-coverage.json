@@ -2724,7 +2724,8 @@
       "required_behavior": [
         "Browse packs/definitions with search/type/family/filter/paging and exact details, safe backing-resource descriptors, provenance and supported preview.",
         "Large/sparse results preserve all matches and page scope; failed detail/search and workspace change cannot overwrite current authorized selection.",
-        "Readonly system-owned assets cannot be edited in place; Customize hands off exact base/version."
+        "Readonly system-owned assets cannot be edited in place; Customize hands off exact base/version.",
+        "On each host, Search assets has one explicit label association and a stable accessible name. Adjacent help opens and closes independently without issuing a search or changing the typed value."
       ],
       "source_refs": [
         "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",
@@ -2733,14 +2734,29 @@
       ],
       "existing_test_candidates": [
         "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
+        "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+        "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx"
       ],
       "required_layers": [
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+          "name": "keeps Search assets stable while help and native search operate independently",
+          "tier": "real-host-renderer-component-node-dom-with-finite-library-client",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+          "name": "keeps Search assets stable while help and native search operate independently",
+          "tier": "real-host-renderer-component-node-dom-with-finite-library-client",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": []
     },

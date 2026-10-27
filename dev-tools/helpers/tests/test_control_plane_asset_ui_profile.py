@@ -47,6 +47,8 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/hosts/desktop/composition/tests/assets-ipc-trust-wiring.unit.test.ts",
             "modules/adapters/transport/api-express/asset-package/tests/asset-package-transport-parity.unit.test.ts",
             "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts",
+            "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
         ]
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
@@ -68,6 +70,8 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/adapters/transport/ipc-electron/asset-studio/registerAssetStudioIpc.ts",
             "modules/hosts/desktop/composition/composeDesktopHost.ts",
             "modules/adapters/transport/README.md",
+            "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFilters.tsx",
+            "apps/thin-client/src/features/asset-library/components/AssetLibraryFilters.tsx",
         ])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
@@ -140,6 +144,15 @@ class AssetUiProfileTests(unittest.TestCase):
         self.configure(self.profile)
         selected = catalog.plan(self.root, self.profile["source_paths"] + self.profile["test_paths"], ["asset-authoring-ui"], "candidate")["selected"]
         self.assertNotIn("focused-tests", {check["id"] for check in selected})
+
+
+    def test_library_search_ui_stays_in_the_fixed_node_profile(self):
+        expected = ['apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx', 'apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx']
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        for path in expected:
+            command = next(command for command in commands if path in command)
+            self.assertEqual(command[:4], ["node", "--import", "tsx", "--test"])
+        self.assertFalse(any("playwright" in part or ".e2e.spec." in part for command in commands for part in command))
 
 
 if __name__ == "__main__":
