@@ -301,3 +301,18 @@ type/size bounds and restores the React test flag. Existing native-file refusal
 and typed record-delete checks remain intact. These checks supply no physical
 Electron/sender-authority, SQLite, native process or final/parent qualification.
 Accepted model accuracy and OCR stay closed.
+
+### Joined image generation tests
+
+`desktop-image-ipc-storage.ui.test.tsx` mounts the Desktop Image feature with its
+default client, actual preload API, registered IPC and application finalizer.
+Fresh synthetic PNG files, catalog, bindings and JSON image registry are real.
+The tests check exact settings, pixels/digest, reopened ownership, retry without
+duplicate persistence, refused cancellation and foreign task denial. Preview
+requests now carry the active workspace, as their media reader requires.
+
+Invoke events, task generation, workspace access and passive inventory/settings/
+media facilities are finite fixtures. The tests drain requests, restore bridge/
+React/session/URL state and check owned file identities/links/counts/bytes before
+cleanup. No model, physical Electron/sender boundary, native effect or final
+roadmap qualification follows; accepted model accuracy/OCR stay closed.

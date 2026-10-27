@@ -509,7 +509,7 @@ export function useImageGenerationFeature(
           try {
             const viewUrl = await artifacts.createArtifactMediaViewUrl({
               storageKey: a.storageKey ?? a.artifactId,
-            });
+            }, { workspaceId });
             if (!session.active) { URL.revokeObjectURL?.(viewUrl); return { ...a, previewStatus: "failed" as const, previewError: "Preview request is no longer active." }; }
             previewUrlsRef.current.push(viewUrl);
             return {

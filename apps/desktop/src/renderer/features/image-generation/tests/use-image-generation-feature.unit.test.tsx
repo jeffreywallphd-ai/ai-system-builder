@@ -274,6 +274,7 @@ describe("useImageGenerationFeature", () => {
     let hook!: ReturnType<typeof useImageGenerationFeature>;
     const c = document.createElement("div");
     const root = createRoot(c);
+    try {
     await act(async () => root.render(<Harness client={client} artifactClient={artifactClient} onReady={(h) => { hook = h; }} />));
     await act(async () => {
       hook.setForm({ ...hook.form, prompt: "cat" });
@@ -285,8 +286,8 @@ describe("useImageGenerationFeature", () => {
     expect(hook.finalizedAssets[0]?.artifactId).toBe("artifact-1");
     expect(hook.finalizedAssets[0]?.storageKey).toBe("generated/images/asset-1/out.png");
     expect(hook.finalizedAssets[0]?.previewUrl).toBe("blob:preview-1");
-    expect(artifactClient.createArtifactMediaViewUrl).toHaveBeenCalledWith({ storageKey: "generated/images/asset-1/out.png" });
-    await act(async () => root.unmount());
+    expect(artifactClient.createArtifactMediaViewUrl).toHaveBeenCalledWith({ storageKey: "generated/images/asset-1/out.png" }, { workspaceId: "workspace-a" });
+    } finally { await act(async () => root.unmount()); }
   });
 
   it("keeps the previous finalized preview visible until a later generation is ready", async () => {

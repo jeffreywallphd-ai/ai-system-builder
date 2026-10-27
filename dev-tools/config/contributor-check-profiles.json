@@ -453,7 +453,8 @@
         "dev-tools/scripts/qualification/tests/test_dataset_row_review_fixture_codec.py",
         "modules/ui/shared/dataset-review/tests/DatasetReviewWorkspace.interaction.ui.test.tsx",
         "modules/application/use-cases/dataset-review/tests/dataset-review.use-cases.unit.test.ts",
-        "modules/adapters/runtime/python/tests/createPythonParquetDatasetReviewAdapter.unit.test.ts"
+        "modules/adapters/runtime/python/tests/createPythonParquetDatasetReviewAdapter.unit.test.ts",
+        "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",

@@ -846,3 +846,19 @@ fixtures. Drained requests and identity/containment/link/type/byte-checked roots
 plus restored test globals bound cleanup. No physical app/sender authorization,
 SQLite, actual provider/model/OCR, native restart or final/parent proof follows.
 Accepted model accuracy/OCR results remain closed.
+
+### Desktop image preview workspace and composed regression
+
+Desktop generated-image preview requests include the active workspace in the
+existing artifact-client context. A valid saved image must not lose its preview
+because presentation omitted the scope required by the media reader. This does
+not change media authorization or infer authority from the renderer value.
+
+Three joined Desktop cases use the actual feature/client/preload/registered IPC/
+application finalizer and fresh PNG/catalog/bindings/JSON registry. They verify
+exact generation settings, persisted dimensions/pixels/digest, registry reopen,
+workspace isolation, finalization retry without duplicate copy, and continued
+observation after refused cancellation. In-process invoke, finite runtime/access
+and passive inventory/settings/media fixtures do not qualify physical host,
+production sender/authentication/SQLite, actual ComfyUI/model or native effects.
+Existing browser joined evidence and accepted model/OCR results remain intact.

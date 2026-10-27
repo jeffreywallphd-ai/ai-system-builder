@@ -2535,13 +2535,19 @@
           ],
           "tier": "real-browser-feature-http-and-filesystem-with-offline-worker-and-passive-provider-fixtures",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+          "name": "mounted Desktop image controls through actual client/preload/registered IPC/application and fresh PNG/catalog/bindings/JSON registration; exact settings/pixels/digest/reopen, finalization retry and cancellation/foreign-workspace refusal",
+          "tier": "real-desktop-feature-preload-ipc-and-filesystem-with-finite-invoke-worker-and-passive-reads",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "qualified ComfyUI/checkpoint for physical generation; new FaceID assets/setup need separate authority"
       ],
-      "scope_limit": "Focused hook fixtures and actual notification consumers. No physical image/model quality, actual host transport/storage, native or final combined qualification.",
+      "scope_limit": "Browser HTTP and Desktop preload/registered IPC journeys use real application finalization and fresh synthetic PNG/filesystem/catalog/bindings/JSON storage. Runtime, access, invoke and passive inventory/settings/media facilities are finite fixtures. Physical Electron/browser shells, production sender/authentication/SQLite, actual ComfyUI/model image quality, native effects and final combined qualification remain pending.",
       "reviewed_feature_checkpoint": {
         "work_id": "image-ui-complete-presentation-boundaries",
         "commit": "5a5200e00b13829c41149da30024360c527262e7",
@@ -2594,11 +2600,17 @@
           ],
           "tier": "real-browser-feature-http-and-filesystem-with-offline-worker-and-passive-provider-fixtures",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+          "name": "mounted Desktop image controls through actual client/preload/registered IPC/application and fresh PNG/catalog/bindings/JSON registration; exact settings/pixels/digest/reopen, finalization retry and cancellation/foreign-workspace refusal",
+          "tier": "real-desktop-feature-preload-ipc-and-filesystem-with-finite-invoke-worker-and-passive-reads",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "scope_limit": "Focused hook fixtures and actual notification consumers. No physical image/model quality, actual host transport/storage, native or final combined qualification.",
+      "scope_limit": "Browser HTTP and Desktop preload/registered IPC journeys use real application finalization and fresh synthetic PNG/filesystem/catalog/bindings/JSON storage. Runtime, access, invoke and passive inventory/settings/media facilities are finite fixtures. Physical Electron/browser shells, production sender/authentication/SQLite, actual ComfyUI/model image quality, native effects and final combined qualification remain pending.",
       "reviewed_feature_checkpoint": {
         "work_id": "image-ui-complete-presentation-boundaries",
         "commit": "5a5200e00b13829c41149da30024360c527262e7",
