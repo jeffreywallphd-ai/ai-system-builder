@@ -4615,6 +4615,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "dataset-approval-ui-real-transports-and-storage",
+      "work_criteria": [
+        "dataset-composed-review-approval-and-version",
+        "dataset-fault-isolation-and-safe-retry",
+        "dataset-bounded-owned-resources"
+      ],
+      "receipt_digest": "c45bd4aa8f77e65140d6103c65acc991e8b52028fa37a9fcdff9e693e60dfcd8",
+      "review_digest": "2db9982f82120862a7776e9eb981cfec90b8e6337c88175acb47cf847181f931",
+      "scope": "25 composed Dataset cases use mounted forms, actual clients/transports/application/SQLite/filesystem and finite worker/quality/access fixtures. Fixed desktop duplicate/mixed/retired review actions and approval error disclosure. Checked exact review rows, explicit Save/Discard, saved bytes/digests/lineage/reopen, identity denials, damaged data and storage retry. No real worker/model/OCR/provider/physical/native/process restart/final/parent qualification.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

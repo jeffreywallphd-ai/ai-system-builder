@@ -11926,6 +11926,24 @@
           "Real workers, archive reading, models, OCR, providers, installed app windows, recovery after an app or worker stops, and errors after task acceptance need separate checks. Final combined testing stays pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "51b7b6b22cbae56309de671c8413beda65569896c5717101597ad86b35eb101b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed 25 Dataset preparation and approval cases across both app connections.",
+          "The tests check each ready example and its label, the set-aside example, and explicit Save or Discard.",
+          "Saved data and all three splits match the expected bytes. Saved versions retain the expected digests, row counts and source history. A same-process database reopen retains them.",
+          "Repeated or mixed desktop Save and Discard clicks send one action. Leaving the page or replacing its client prevents late UI success and protects a new pending action. Accepted backend writes keep their existing authority.",
+          "Wrong task, report and workspace identities are refused. Damaged review reads and malformed output are refused. The same review can save after the fault is corrected.",
+          "A failed partial save retains the review, removes its compensated output bytes and permits retry. The tested approval error response hides internal storage text.",
+          "The test supplies fixed worker outputs and computed quality reports. Account access and availability are controlled fixtures.",
+          "Accepted model accuracy and OCR checks stay closed. This fixture work supplies no new model accuracy or OCR qualification.",
+          "Any remaining worker/runtime, provider, installed app, process restart, native file-safeguard and final combined checks stay pending. This work does not pass the whole criterion or complete the increment."
+        ]
+      }
     }
   ]
 }
