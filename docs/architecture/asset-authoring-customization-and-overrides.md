@@ -439,3 +439,25 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 ## Relationship to asset composition planning
 
 Authoring/customization records remain source-of-truth for edits. asset composition planning consumes effective projection summaries and must route users back to authoring/customization surfaces when source edits are needed.
+
+## Studio renderer session ownership
+
+The from-scratch Studio renderer scopes its mutable editor to workspace, client
+and selected saved-draft identity. A context change creates a fresh inner
+session. Old reads and writes cannot install records, notices or busy state
+into the new editor. This supplements application authorization; retiring an
+interface does not cancel or undo an already authorized server request.
+
+A synchronous action token serializes save/review/publication/abandon. Replies
+are admitted only for the expected identity, lifecycle state and revision.
+A save keeps edits made after its captured input visibly dirty. Public review
+and publication remain separate explicit actions on the exact saved revision.
+Thrown failures release owned state with static safe copy; failed saved reads
+have an explicit retry action. No new repository, transport, publication or
+execution authority follows. Client-fixture interface evidence is distinct from
+actual host, storage, provider and native qualification.
+
+Saved-draft admission disables the native editor fieldset until the exact read
+is accepted; retry remains outside the fieldset. Deferred reads check session
+ownership before calling the client. This avoids dispatch after retirement and
+prevents input into a placeholder that a pending saved read could overwrite.

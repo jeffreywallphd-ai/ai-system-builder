@@ -2798,10 +2798,54 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio draft session ownership and retry",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio resource-backed lifecycle controls",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio mutation admission, acknowledgement and failure matrix",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio delayed mutation ownership",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio saved-read rejection and identity",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio delayed saved-read ownership",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Studio saved-read admission",
+          "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "studio_session_scope": "Meaningful semantic/resource create/save/reopen/update/review/publish and explicit abandon/denial/retry, duplicate admission, exact acknowledgement identity/state/revision, newer edits and delayed workspace/client/draft/unmount replies are tested with fixed clients. This does not prove actual transport/storage, apps, source execution, provider/native or parent completion. Other Assets work remains pending. Saved editor admission and retired-before-dispatch cases are covered; no input into unread placeholders."
     },
     {
       "id": "asset-derived-customization",

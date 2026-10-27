@@ -41,3 +41,27 @@ Use focused tests while iterating:
 - Asset Studio transport parity and workflow tests for actor, workspace, revision, artifact, review, and publication boundaries.
 
 Run the applicable repository gates after the complete increment, as required by `AGENTS.md`.
+
+## Draft session and retry behavior
+
+Studio owns one editor session per workspace, client and selected saved draft.
+Changing that context retires old interface updates; it does not claim to cancel
+a server write. Save, review, publish and abandon admit one request before React
+renders busy state. Successful replies must name the expected workspace, draft,
+definition, lifecycle state and next revision before the editor accepts them.
+Thrown adapter failures use safe notifications, release current controls and
+permit explicit retry. A failed saved read exposes Retry opening saved asset;
+opening does not save or publish. Newer text/resource edits made while saving
+remain dirty and need another save before review/publication. Identity fields
+are locked while saving.
+
+Focused Node DOM tests initialize the browser renderer after DOM setup and use
+native input events for meaningful semantic/resource editing, save/reopen/review/
+publish, invalidated reviews, duplicates, foreign replies, rejection/retry and
+workspace/client/draft/unmount races. They use fixed clients and do not qualify
+actual transports, storage, apps, providers, native retirement or execution.
+
+A saved editor stays disabled until its initial read or explicit retry succeeds.
+The retry button stays available after failure. A retired session is checked
+before dispatch as well as before accepting a reply. These controls prevent
+editing a placeholder that would be replaced by a later saved-draft read.

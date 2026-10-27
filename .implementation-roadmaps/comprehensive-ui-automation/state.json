@@ -141,7 +141,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-10-23T13:55:23Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "asset-to-published-system-journeys",
   "decisions": [
     {
       "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
@@ -473,6 +473,24 @@
       "recordedAt": "2026-10-27T05:51:02Z",
       "sequence": 21,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "858069f90fc8c72580d1f4474241d0fd8526bb1274d20cb572d1464f49b9781a",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 22,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "35b3d2794839df65f49e9211a06548b7e02cb3fac57c4d8781411ffb9bc21c74",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 23,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "929da5f64663fb273522f2c714c936142861f482d9649128b3c9aea7ec1dcef5",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 24,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -732,11 +750,121 @@
       "id": "asset-to-published-system-journeys",
       "number": 2,
       "objective": "Protect the complete supported asset-authoring and system-building user journey on both hosts. Build meaningful multi-component systems through the actual current modal/click editor, preserve configuration and immutable versions, build/publish exact revisions and exercise the currently mounted controlled-conversation runtime. Execute tests and repair identified defects.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "Existing approved product/architecture contracts govern; no new dependency, provider, capability or resource-policy choice is inferred.",
+          "All mutations use supported UI or existing authorized application test paths. Foundation/imported originals stay immutable; authoring does not activate code.",
+          "User requires feature-level testing during implementation and one later full testing effort. Controlled qualification can remain pending under the original approved policy; original acceptance requirements remain."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "asset-authoring-lifecycle",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "asset-ui-import-studio-customization",
+            "outcome": "Reconcile and reuse supported package inspection/install, resource-backed Studio save/reopen/review/publication and exact Foundation/imported customization. Fill meaningful local UI/transport/storage and negative gaps, repairing only reproduced scoped defects.",
+            "title": "Import, Studio, Saved and customized copies"
+          },
+          {
+            "criteriaIds": [
+              "meaningful-scratch-compositions",
+              "system-management-build-and-approval",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "meaningful-systems-and-management",
+            "outcome": "Reuse request-intake, operations-dashboard and conversation-interface builds with useful heterogeneous definitions, properties/styles/hierarchy, native behavior, Add/Move/reparent/remove/undo/redo, save/reopen/switch and Manage lifecycle. Add missing local and app-driver assertions with exact immutable revision oracles.",
+            "title": "Useful scratch systems and Manage"
+          },
+          {
+            "criteriaIds": [
+              "system-management-build-and-approval",
+              "published-runtime-ui-integration",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "exact-build-publication-runtime",
+            "outcome": "Cover dirty/archived/stale/denied builds and exact saved revision publication approval. Verify only projected supported lifecycle actions, desktop transcript/input/restart isolation and browser server-owned lifecycle, with explicit finite inference and owned cleanup limits.",
+            "title": "Exact build, approval and supported runtime"
+          },
+          {
+            "criteriaIds": [
+              "asset-authoring-lifecycle",
+              "meaningful-scratch-compositions",
+              "system-management-build-and-approval",
+              "published-runtime-ui-integration",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "authoring-ui-feature-reconciliation",
+            "outcome": "Run applicable increment-level feature checks, repair reproduced failures with owning regressions, reconcile source-linked coverage and exact completed support, and independently review all criteria. Preserve controlled app/runtime/native/managed/final qualification rather than converting fixtures into a pass.",
+            "title": "Repair defects and reconcile current feature evidence"
+          }
+        ],
+        "completionTests": [
+          "After all four implementation chunks, execute only increment-relevant registered feature profiles and related documentation/architecture checks, plus independent current-candidate review.",
+          "Actual packaged/managed/local-browser runtime/zoom/native and final combined all-suite checks remain separate for the planned later qualification effort. Accepted model accuracy and actual OCR are not rerun."
+        ],
+        "documentation": [
+          "docs/operations/comprehensive-ui-automation-coverage.json",
+          "docs/operations/roadmap-supporting-work.json",
+          "docs/operations/roadmap-user-descriptions.json",
+          "Affected nearest README, architecture/threat-model and test-operator guidance"
+        ],
+        "fingerprint": "ac7af0e7e300ef747e16b9d6210bec0fb2c15d728f79906b1002d2a31c32ad68",
+        "focusedTests": [
+          "Exact touched shared UI/client/transport/application/storage unit and interaction files, with meaningful exact-output and refusal/retry/stale/workspace assertions.",
+          "Exact existing browser/Desktop journey oracle tests, focused types and Playwright collection; collection is not actual host execution.",
+          "Relevant source-owned functionality-browse/functionality-outcomes/security-authority profiles only where triggered; documentation/architecture and agent/dependency gates only for actual impact."
+        ],
+        "recordedAt": "2026-10-27T05:54:03Z",
+        "rollback": "Revert only the exact scoped test/implementation delta using reviewed boundaries. Preserve original published/source artifacts, secure admission, immutable approvals and failed evidence; retain fail-closed refusal if a secure implementation cannot be kept.",
+        "steps": [
+          "Audit exact current capability/test/owned-change provenance and security boundaries.",
+          "Implement one meaningful existing work-package chunk at a time; repair reproduced owning-layer defects without broadening product scope.",
+          "Run exact feature and related boundary/type/doc checks, review independently and checkpoint only coherent owned changes.",
+          "Reconcile current increment evidence and advance implementation while preserving actual controlled qualification and final full testing."
+        ],
+        "summary": "Implement and verify the approved Assets/System authoring UI journeys using existing contracts, bounded fixtures and public controls; commit independently reviewed feature chunks and defer full testing until the roadmap catch-up is implemented."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-27T05:54:03Z",
+          "risks": [
+            "Security-relevant workspace/publication/source/revision/digest/revocation/resource and runtime boundaries need actual positive and denial checks. Inert package/resource authoring grants no activation or execution authority.",
+            "Current branch contains other Assets/security/native work. Newly committed tests must not silently depend on uncommitted unrelated behavior; adopt only exact justified owned changes with fresh checks and independent review.",
+            "Collected app tests do not qualify actual app selectors, process restart, managed authorization, runtime windows or native retirement. Finite inference does not qualify models. Preserve unavailable technical proof."
+          ],
+          "sources": [
+            {
+              "title": "Current Asset authoring constraints",
+              "url": "docs/context/packs/asset-authoring.pack.md"
+            },
+            {
+              "title": "Shared Studio lifecycle and qualification",
+              "url": "modules/ui/shared/asset-studio/README.md"
+            },
+            {
+              "title": "Existing meaningful multi-component systems",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts"
+            },
+            {
+              "title": "Existing exact build/publication/runtime workflow",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+            },
+            {
+              "title": "Layered derived customization",
+              "url": "docs/adr/ADR-0035-layered-derived-asset-customization.md"
+            }
+          ],
+          "summary": "Reuse the existing Assets and three meaningful scratch-system UI drivers, current shared renderer interactions, and real host boundary fixtures. Preserve supported immutable source/publication/runtime contracts. Before adopting dirty Assets helpers or dependencies, reconcile their exact prior Work and commit provenance; no unrelated source is staged implicitly. Feature checks and test implementation run now; actual host and combined qualification remains a later effort."
+        }
+      ],
       "rollback": "Revert the scoped tested authoring/lifecycle corrections and harness extension without mutating historical definitions/revisions/releases, erasing user data, restoring obsolete insecure paths or weakening sandbox/approval denial. Stop only exact test-owned runtimes with confirmed authority and retain unconfirmed ownership for recovery.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-10-27T05:54:03Z",
+      "status": "implementing",
       "title": "Assets to useful compositions and published runtimes",
       "verification": [
         "Run exact shared Assets/System UI tests and changed contract/use-case/client/host boundary tests, preserving immutable source/release and denied imported/authored execution oracles.",
@@ -893,6 +1021,6 @@
   },
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "ready",
-  "updatedAt": "2026-10-27T05:51:02Z"
+  "status": "executing",
+  "updatedAt": "2026-10-27T05:54:03Z"
 }

@@ -253,3 +253,29 @@ uses supervisor ownership rather than network failures; late replies and old
 generations cannot resurrect accepted unfinished tasks. Retained failures and
 actual host regression evidence remain distinct from inference qualification.
 
+
+## Studio interface ownership and failure recovery
+
+Late read/save/review/publish/abandon replies are confined to the mounted
+workspace/client/selected-draft session. Synchronous operation admission denies
+duplicate dispatch before the busy render. Acknowledgements must match exact
+workspace, draft and definition identity, expected lifecycle state and sequential
+revision. A malformed/foreign acknowledgement leaves the editor unsuccessful.
+These interface checks supplement the existing authoritative application,
+transport, immutable-source and publication transaction controls.
+
+Thrown adapter errors use static notification text, release only current
+controls and allow explicit retry. Public contract failures retain their safe
+messages. Read retry grants no write, install, activation or execution. Text and
+resource edits made during saving remain dirty; another explicit save/review is
+required before publication. Retired interface state is not proof of server
+cancellation or physical cleanup. Focused positive, duplicate, foreign, delayed,
+rejection and retry cases use fixed client results with inert resource text;
+actual transport/storage, app restart, provider/native and complete security
+qualification remain separate. Unrelated Saved-list and accessible-label work
+is preserved outside this scoped checkpoint.
+
+Read admission checks ownership before client dispatch. The saved editor stays
+disabled until a matching saved view is accepted, including explicit retry; no
+new-draft write can originate from its unread placeholder. This interface fence
+does not replace transport authorization or cancel an earlier server request.
