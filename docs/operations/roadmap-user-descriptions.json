@@ -12322,6 +12322,19 @@
           "The tests use in-memory saved data and request test controls. The agent still needs actual app, durable storage and the separate Studio, package and publication checks. These results do not complete the whole requirement. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f9c17daef76b47cf674aa7519a49c719ef164e84275414e82abf6424f5c7469f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed package requests so a request keeps the same workspace, upload and permissions while it waits. Denied requests do not load package features.",
+          "Package uploads keep the 32 MiB limit. The checks reject a changed limit or an import from the wrong module.",
+          "Forty-one focused tests, type checks and ten test-selection checks passed. Both desktop and server fixtures allow valid package inspection and refuse missing or suspended access. Inspection does not install or run a package.",
+          "The agent reviewed and committed this change. These tests use local test data and request controls. Actual app, saved-data, Studio and publication checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

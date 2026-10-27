@@ -5008,6 +5008,25 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "package-workspace-authority-and-stable-inputs",
+      "work_criteria": [
+        "package-authority-before-effects",
+        "owned-bounded-request-values",
+        "positive-callers-and-coherent-checkpoint",
+        "shared-upload-budget-fitness"
+      ],
+      "receipt_digest": "8607f87912e853af627ebef2a700da0cbcc7cfeb71f4997e01b6958e38d476e5",
+      "review_digest": "39aca4ebbec36a71603be02c02b1bfdeb4e85d84fb6525a59dcbb32a376edaf0",
+      "scope": "Package access binds six operations to the checked workspace and owns request values before waits. Thirty-five package cases and six architecture cases pass; fourteen-root types and ten profile guards pass. A frozen 2802-file fitness map preserves the 32MiB default, exact contract import and inspector binding. Both finite host compositions cover valid inspect/list and denied missing, archived, foreign or suspended access. Physical hosts, durability, Studio/derived and atomic checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
