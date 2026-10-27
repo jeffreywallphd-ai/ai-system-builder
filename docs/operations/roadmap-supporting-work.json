@@ -4651,6 +4651,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "dataset-row-review-real-transports-and-immutable-storage",
+      "work_criteria": [
+        "row-review-composed-pages-edits-and-versions",
+        "row-review-denial-scope-and-safe-retry",
+        "row-review-bounded-owned-evidence"
+      ],
+      "receipt_digest": "8d0708fa4e51a83ca4c9e58d03f21430a3263f1ce951deafc5d6d9b7e766f085",
+      "review_digest": "63fe12e64d68aa62ccdff343c82b03e6497703d321ae1f0aff5cc2aff2f19023",
+      "scope": "44 new saved-row UI cases use actual clients/transports/application/SQLite/files and production staging with a finite golden codec registry. Four separate tests execute the real model-free codec. Check typed pages, immutable edit/reject/reopen, exact bytes, refusals, draft retry and retired replies. Fix duplicate actions, blank numbers, stale-view replies and private storage errors. Source is setup, not upload UI. No sidecar/physical/native/provider/final/parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

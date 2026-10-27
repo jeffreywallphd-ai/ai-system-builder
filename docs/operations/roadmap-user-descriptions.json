@@ -11963,6 +11963,26 @@
           "Any remaining actual worker/runtime, provider, installed app, process restart, native file-safeguard and final combined checks stay pending. This work does not pass the whole criterion or complete the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c42e8c223908000e28b38fe59663997b44174ac773374dcfe88efdcd698fd18f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed 44 saved-row review cases across both app connections, plus four separate tests of the real Parquet reader and editor.",
+          "The UI cases use the actual client, app connection, application services, SQLite database and stored files. The runtime replies use fixed test data through the existing staging adapter.",
+          "The source file is test setup saved through the storage interface. These checks do not prove file upload through the UI.",
+          "Tests inspect every typed row on both pages. Editing or rejecting a row saves a new version and preserves the exact original bytes. Reopening can show the saved edit and its unchanged parent.",
+          "Repeated edit or reject clicks start one action. Empty numeric input is refused, and invalid JSON can be corrected without changing saved data.",
+          "While an edit is accepted, its fields and local selection are disabled. The accepted write can finish after the view changes, but cannot change or notify a retired view.",
+          "Old list or page replies cannot replace the current workspace, client or selected page. These are component changes, not full app navigation tests.",
+          "Wrong workspace, missing version and malformed row identity requests fail before the codec or storage changes. Separate real codec tests also refuse stale rows, incompatible column types and deletion of the last row.",
+          "A failed save keeps the draft and original file. Correcting the storage failure permits retry. Internal storage error text is replaced with a safe retry message. The injected failures happen before a write and do not prove recovery from an unknown partial write.",
+          "The real codec tests call the model-free Python function separately. The UI cases use a fixed codec registry and do not start an actual sidecar. Access and availability also use fixed test inputs.",
+          "Accepted model accuracy and OCR checks stay closed and were not rerun. Physical app, sidecar, provider, native file/process safeguards and final combined checks remain separate. This work does not pass the whole criterion or complete the increment."
+        ]
+      }
     }
   ]
 }
