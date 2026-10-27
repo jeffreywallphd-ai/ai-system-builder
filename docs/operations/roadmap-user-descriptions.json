@@ -12383,6 +12383,30 @@
           "All ten focused cases and scoped type and repository checks passed. The agent reviewed and committed the change. Actual app speed, database and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9af5a8f2c42b11b8de675c5cee87e445f90a7e02d7f7596b67f69864595d9dcd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The workspace library can find published Studio assets and customized copies after its components reopen.",
+          "Only the owning workspace and organization can see these published versions. Unpublished drafts, global entries and metadata do not grant access.",
+          "All 32 focused cases, four type checks and 14 test-selection checks passed. The agent reviewed and committed this change. Actual app restart, native storage and final combined checks still need agent work. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4a5ad58ebbbcd388dd4e5b3bd9327ac28d49738aab6c5382f42c8d8592afb1a0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Manage systems can recover after failed loads, previews, copies, archive and restore requests. Messages appear in the notification center.",
+          "Late replies cannot change the current workspace or search. A pending save keeps its confirmation locked and accepts one submission. An unfinished replacement view cannot discard the current work.",
+          "All 34 focused UI cases, type checks for both changed files and four test-selection checks passed. The agent reviewed and committed this change. Actual app, native and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

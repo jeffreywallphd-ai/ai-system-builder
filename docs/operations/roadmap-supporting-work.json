@@ -5099,6 +5099,42 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "workspace-published-asset-visibility",
+      "work_criteria": [
+        "exact-owner-published-membership",
+        "bounded-static-publication-denial",
+        "selected-local-visibility-checkpoint"
+      ],
+      "receipt_digest": "e7474d30f0209fca2ea66c19e10f64ed5d503d41725fd243b52f17d0a4392941",
+      "review_digest": "aaa44a4d0cdc8022b4c0f684004964fc41ecc1063db764586580fbbca0c5d378",
+      "scope": "Workspace library list/detail can rediscover exact published Studio and derived versions through two existing private owning repositories. Unpublished/global metadata, foreign workspace or organization, wrong version/kind and malformed/unavailable/oversized ownership grant no visibility. 32 focused cases, four type roots and 14 profile guards pass with five scoped checks. No definition creates a runtime release or authority. Actual host, native and final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "system-management-build-and-approval",
+      "work_id": "system-management-request-recovery",
+      "work_criteria": [
+        "management-exception-retry-and-notifications",
+        "management-current-session-and-single-dispatch",
+        "management-focused-profile-and-checkpoint"
+      ],
+      "receipt_digest": "5916c9459e62c26713eaa0d87150e99a32e770138040783e73c1c61db081f576",
+      "review_digest": "efac1ff6bb7804ae236a754a8807d70acdf9de189183eaca6c7edbecb6bae38a",
+      "scope": "Manage systems recovers from rejected list, page, preview and mutation requests with fixed notifications and retry. Committed layout owners reject obsolete workspace/client/query results; abandoned replacement renders retain current work. Synchronous admission locks confirmations and prevents duplicate commands. 34 rendered cases, two type roots, four profile guards and five scoped checks pass. Exact revisions and accepted writes remain. Actual host/native/final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
