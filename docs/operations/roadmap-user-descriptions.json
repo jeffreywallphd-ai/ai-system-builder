@@ -12221,6 +12221,54 @@
           "The agent still needs to test the connected apps, communication paths, saved data, providers and native features where required. Final combined testing is deferred. Completed model accuracy and OCR tests will not run again. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c0fa8734a6cdd640cdf116a0f9aacda9373948ece89cae50f8b1c1f34b36cda6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The focused Assets check now includes the desktop client and IPC test files. All eight earlier interface test files remain.",
+          "Five profile tests check the exact selection, runner choice, unsafe-input refusal, required checks for unknown changes and the recorded verification policy.",
+          "The fixed Assets, documentation, agent-support and control-plane checks passed. The helper change is reviewed and committed.",
+          "This helper does not prove the app feature or complete a roadmap requirement. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0b464ad79960acf0464ab764f0fd44b034f8dd5f0598611da1e240246716e019",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed desktop Saved reads to use the requested workspace. An extra workspace value cannot redirect the list.",
+          "The connected tests use the real Saved page, desktop client, preload and registered handler. They show different useful cards in two workspaces and preserve the original records. The repository and sender use fixed test fixtures.",
+          "A failed read gives a safe notification. Search can retry the read. Private adapter details do not appear in the page or notification.",
+          "The exact committed change passed 11 client/interface tests, 8 IPC tests and type checks for three changed source/test files.",
+          "Using the old committed handler makes three connected tests fail. The failed results remain recorded. The corrected change is independently reviewed and committed.",
+          "These component results do not prove actual Electron identity, authorization, storage or restart behavior. Those checks still need agent work. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4c97483458b6a2bb540d4896ea1ae1aa5af7252b0df0f77bea704febe81c84a4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This local work is tested, reviewed and committed. It does not complete the whole requirement, work package or increment, and it does not prove later source changes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1bed393d4117d64c9a2b5aa90034e5447fbb20e4ff6b04b90a8edea5d5de4cd3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to check actual app startup and restart, access to resources, saved data, providers and native features where required. Final combined testing is deferred. Completed model accuracy and OCR will not run again. No action needed from you."
+        ]
+      }
     }
   ]
 }

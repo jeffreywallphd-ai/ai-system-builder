@@ -4902,6 +4902,41 @@
         "These are reviewed local interface results at their recorded source snapshots. They do not complete the whole criterion, work package or increment.",
         "Connected app, transport, storage, provider and native checks remain separate. Final combined tests are deferred. Accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "asset-authoring-ui-desktop-read-check-coverage",
+      "work_criteria": [
+        "exact-assets-desktop-read-profile",
+        "reviewed-feature-check-support"
+      ],
+      "receipt_digest": "a7cfd4cb1c0389fe8c2db375466aec84f581586b9e0e505530dcbc2b9c85bdb1",
+      "review_digest": "3c5f3df9e9e31e6d0f66216fa91beb76aeb497c3e9a8dbfe14af9e362c19e238",
+      "scope": "Completed exact Assets profile extension retains all eight prior interface files and adds two desktop client/IPC files with exact source coverage. Five profile safety tests, fixed Assets, documentation, agent-support and control-plane checks pass. Earlier safety tests and unrelated profile changes are preserved. This is verification support, not feature or parent qualification.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "desktop-saved-legacy-query-and-notification-recovery",
+      "work_criteria": [
+        "exact-public-legacy-target-and-failure",
+        "joined-saved-ui-and-explicit-recovery",
+        "owned-source-reviewed-checkpoint"
+      ],
+      "receipt_digest": "8204e6cacd69094749d68a737f283b8323c5ceb618ebe9472cb32a124bb4edde",
+      "review_digest": "c7fb9dda6649c9a394e42532f50df725f7480c7c835e3dc77c01823f4c99d26c",
+      "scope": "Completed Saved mapper captures targetWorkspaceId once and maps only supported query fields. Real Saved/client/preload/handler tests with finite repository/sender cover exact cards, workspace changes, original records, safe notification/Search retry, context and invalid/unavailable reads. Selected UI11/11, IPC8/8 and three-root types0 pass; old handler reproduces3 failures. Separate guards excluded; actual host, authorization, persistence and parent checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
