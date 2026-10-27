@@ -5027,6 +5027,24 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "studio-workspace-authority-and-stable-inputs",
+      "work_criteria": [
+        "studio-authority-before-effects",
+        "studio-owned-request-values",
+        "studio-compatible-positive-callers"
+      ],
+      "receipt_digest": "e8401189b67b74154f79a8a48d9d914c8a23284f42d5cb38be78660e18e8891d",
+      "review_digest": "7e843c108e228c8d81c36644722afb309116705e13e5fa447c047588c7ee8f9f",
+      "scope": "Studio binds twelve operations to current workspace access and owns ten object requests before waits. Sixty-eight focused cases, fourteen-root types and eleven profile guards pass. Finite desktop/server fixtures cover create, read, edit, review, publish and start plus missing, archived, foreign and suspended access. Nested source, consent and resource mutation cases pass. Exact approval and sequential publication stay intact. Physical hosts, durability, derived and atomic checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }

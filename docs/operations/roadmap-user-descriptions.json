@@ -12335,6 +12335,18 @@
           "The agent reviewed and committed this change. These tests use local test data and request controls. Actual app, saved-data, Studio and publication checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1e0b84d94f1f4afaebf2754592187bb3a6e558c2c52d07043b1622b79d86b756",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed Studio requests so each request keeps its original workspace, source files, permissions and review choices while it waits. Denied requests do not load Studio features.",
+          "Sixty-eight focused tests, type checks and eleven test-selection checks passed. Local desktop and server fixtures create, read, edit, review and publish a draft, then start an implementation draft.",
+          "The agent reviewed and committed this change. These checks use local test data and request controls. Actual app, saved-data, derived-asset and atomic-publication checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }
