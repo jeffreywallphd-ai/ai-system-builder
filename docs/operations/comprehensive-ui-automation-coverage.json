@@ -3226,13 +3226,33 @@
           "receipt_digest": "3ef1ae074f93528302f3127d46c961554b561b1518eeec599088037a6692b1a4",
           "review_digest": "be593672215775e7f760d7bdb620106f74a2f8b03bb30e39e3711118938c59b4",
           "commit": "59c1cc055a59a9235d2ff7cde6c34b314ca7452c"
+        },
+        {
+          "file": "apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx",
+          "name": "24 rendered cases cover initial read retry, exact committed request ownership, keyboard/length/unavailable/inert-text behavior, read versus submit locks, queued edits, UUID and API failure recovery, explicit corrected Send, real-preload error mapping and restored crypto. No model or actual runtime window executes.",
+          "tier": "desktop-renderer-native-events-and-actual-React-with-one-finite-real-preload-IPC-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "published-conversation-request-recovery",
+          "receipt_digest": "1bdb02aeabed2f2369beaaf54651d6f8475b0959fdee5b515e3bdfd47c9effdf",
+          "review_digest": "5b47fb13f763c54869f64dbabaa891c2f3681dd9e81b945fdd558b10f3b9755f",
+          "commit": "3bd4542bb1dca1957dc12fca39c5f9a56049bd9e"
+        },
+        {
+          "file": "apps/desktop/src/system-runtime-preload/tests/systemRuntimePreloadApi.unit.test.ts",
+          "name": "Two unchanged dedicated-preload unit cases cover only allowed read/submit channels, exact input normalization and sanitized malformed IPC reply refusal.",
+          "tier": "dedicated-preload-contract-unit-with-finite-IPC-replies",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "published-conversation-request-recovery",
+          "receipt_digest": "1bdb02aeabed2f2369beaaf54651d6f8475b0959fdee5b515e3bdfd47c9effdf",
+          "review_digest": "5b47fb13f763c54869f64dbabaa891c2f3681dd9e81b945fdd558b10f3b9755f",
+          "commit": "3bd4542bb1dca1957dc12fca39c5f9a56049bd9e"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "actual installed qualified model for inference; native process/window observations; no imported/authored sandbox execution authority"
       ],
-      "scope_limit": "Reviewed and committed local UI support at the recorded source snapshot. Finite clients establish request ownership, visible outcomes and explicit retry only. Existing application authorization, immutable revisions and runtime policy remain. Actual hosts, transport/storage, durable restart, runtime/window/native/model/provider and final combined checks remain pending. These tests do not qualify the full scenario or parent criterion."
+      "scope_limit": "Reviewed and committed local UI support at the recorded source snapshot. Finite clients establish request ownership, visible outcomes and explicit retry only. Existing application authorization, immutable revisions and runtime policy remain. Actual hosts, transport/storage, durable restart, runtime/window/native/model/provider and final combined checks remain pending. These tests do not qualify the full scenario or parent criterion. The conversation additions cover only local connection/read/turn UI recovery and dedicated preload validation. A read retry never replays a message. Physical runtime windows, actual sender trust, inference, durable transcript restart and native cleanup remain separate."
     },
     {
       "id": "shared-accessibility-and-responsive-contract",

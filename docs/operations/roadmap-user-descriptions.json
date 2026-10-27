@@ -12431,6 +12431,19 @@
           "All 26 focused lifecycle UI cases and 38 related Build/Publish cases passed. Type checks for two files and four test-selection checks also passed. The agent reviewed and committed the work. Actual app, runtime, native and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5d5f63d2d015306759e23e4dc007ba5101dc245fc8c6f58ab7ef7dd587c92ecb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The conversation window keeps your message when sending fails. Retry connection reads the saved conversation without sending again.",
+          "Old replies cannot replace the current view. Repeated clicks send one message. Busy controls protect the accepted draft.",
+          "All 24 focused UI cases and two connection tests passed. Type checks for four files passed. Four checks of the test configuration passed.",
+          "The agent reviewed and committed this local work. Actual app, runtime, native, restart and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

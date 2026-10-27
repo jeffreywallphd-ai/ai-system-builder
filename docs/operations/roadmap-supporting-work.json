@@ -5173,6 +5173,24 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "published-runtime-ui-integration",
+      "work_id": "published-conversation-request-recovery",
+      "work_criteria": [
+        "connection-recovery-and-exact-owner",
+        "bounded-explicit-turn-and-safe-failures",
+        "bounded-runtime-lane-and-reviewed-source"
+      ],
+      "receipt_digest": "1bdb02aeabed2f2369beaaf54651d6f8475b0959fdee5b515e3bdfd47c9effdf",
+      "review_digest": "5b47fb13f763c54869f64dbabaa891c2f3681dd9e81b945fdd558b10f3b9755f",
+      "scope": "The published conversation window retries a failed connection read without resending a message. Committed API owners ignore obsolete replies; synchronous controls protect the accepted draft and prevent duplicate turns. Unexpected read, turn and ID failures recover with safe copy. All 24 rendered UI and two preload tests, four type roots and four profile guards pass with five scoped checks. Local UI support only; actual app/runtime/native/restart/final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
