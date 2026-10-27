@@ -12371,6 +12371,18 @@
           "All 133 focused cases, type checks and thirteen test-selection checks passed. The agent reviewed and committed the change. Actual app, native storage, live database and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ef85d3131fdfc1565fce91b1bad8ba243a3556ee7fa0614027a6a937dc647dfb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent reduced repeated definition reads in the customization picker. The 343-definition test uses two batches. Each new request gets fresh labels.",
+          "Labels already read stay stable while later batches or older single reads wait. Exact versions, access checks and eligibility rules remain in place.",
+          "All ten focused cases and scoped type and repository checks passed. The agent reviewed and committed the change. Actual app speed, database and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

@@ -5081,6 +5081,24 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "authoring-errors-and-repair-loop",
+      "work_id": "derived-catalog-batched-definition-reads",
+      "work_criteria": [
+        "catalog-bounded-batches-and-admission",
+        "catalog-fresh-owned-summary-values",
+        "catalog-selected-compatible-checkpoint"
+      ],
+      "receipt_digest": "e28af187cbc4f1c737d7fc399340f8167e469ba94ba3226fd44f7e9b4c9822cd",
+      "review_digest": "3eeb639a7d091095dac7af07cdb9c4c1a0a8e8147276d36b2d0be1b1d5c5035f",
+      "scope": "Customization target lists read 343 unique exact definitions in two ordered batches, deduplicate each request and retain fresh labels. Compatibility ports use one single read at a time. Earlier returned summary values stay fixed while later reads wait. Ten focused lifecycle, eligibility, malformed/admission and summary cases pass with two selected type roots and three scoped checks. Actual app cold-load, live database pool, native and final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
