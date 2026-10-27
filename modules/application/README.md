@@ -94,3 +94,5 @@ Read-policy and repository failures settle as fixed unavailable API/IPC response
 Missing required fields retain validation failures. Focused tests cover every
 public read, query capture and current persisted membership. No request may
 fall back to raw repositories after access is denied.
+
+Package lifecycle entry points require current workspace asset access: read for lists and write for inspection, admission and activation changes. Fixed commands and consent are owned before authorization waits; bounded upload copies use the existing production32MiB default. Direct inspector configured limits remain independent. Inspection remains inert and does not authorize admission, activation or execution.

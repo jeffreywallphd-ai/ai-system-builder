@@ -1,3 +1,4 @@
+import { ASSET_PACKAGE_DEFAULT_MAX_BYTES } from "../../../contracts/asset-package";
 import { createHash } from "node:crypto";
 
 import type { AssetPackageInspectorPort } from "../../../application/ports/asset-package";
@@ -48,7 +49,7 @@ export interface AisbPackageInspectionLimits {
 }
 
 const DEFAULT_LIMITS: AisbPackageInspectionLimits = {
-  maxPackageBytes: 32 * 1024 * 1024,
+  maxPackageBytes: ASSET_PACKAGE_DEFAULT_MAX_BYTES,
   maxEntries: 128,
   maxEntryBytes: 8 * 1024 * 1024,
   maxExpandedBytes: 64 * 1024 * 1024,

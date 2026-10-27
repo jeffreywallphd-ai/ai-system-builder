@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { randomUUID } from "node:crypto";
 import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { join } from "node:path";
@@ -24,6 +25,7 @@ import { composeAssetStudioWorkflow } from "../../shared/composition/composeAsse
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 
 export interface ComposeDesktopAssetFeatureOptions {
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
   storageRootDirectory: string;
   now: () => string;
   readSharedModelStorageDirectory?: () => Promise<string | undefined>;
@@ -99,6 +101,7 @@ export async function composeDesktopAssetFeature(
   const assetPackages =
     options.documents && assetImplementation
       ? composeAssetPackageLifecycle({
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,

@@ -1,3 +1,5 @@
+// Synthetic package lifecycle callers explicitly admit their finite test workspace.
+const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "../../../../testing/node-test";
@@ -33,13 +35,13 @@ describe("asset package lifecycle", () => {
     const definitions = memoryDefinitions();
     let clock = 0;
     const now = () => `2026-07-17T12:00:0${clock++}.000Z`;
-    const inspect = new InspectAssetPackageUseCase({ inspector, repository: packages, artifacts, nextInspectionId: () => "inspection-1", now });
+    const inspect = new InspectAssetPackageUseCase({ workspaceAccess, inspector, repository: packages, artifacts, nextInspectionId: () => "inspection-1", now });
     const fixture = await createPackageFixture(inspector);
     const inspected = await inspect.execute({ workspaceId: createWorkspaceId("workspace-a"), bytes: fixture.bytes, actorId: "user-a" });
     expect(inspected.ok).toBe(true);
     if (!inspected.ok) return;
 
-    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions, implementations, backingResources, now });
+    const admit = new AdmitAssetPackageUseCase({ workspaceAccess, inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions, implementations, backingResources, now });
     const admitted = await admit.execute({
       workspaceId: createWorkspaceId("workspace-a"),
       inspectionId: inspected.value.inspectionId,
@@ -73,7 +75,7 @@ describe("asset package lifecycle", () => {
     } as const;
     expect((await resolver.execute(resolutionRequest)).status).toBe("unimplemented");
 
-    const activate = new ActivateAssetPackageUseCase(packages, implementations, now);
+    const activate = new ActivateAssetPackageUseCase(packages, implementations, now, workspaceAccess);
     const firstActive = await activate.execute({ workspaceId: createWorkspaceId("workspace-a"), recordId: admitted.value.recordId, actorId: "user-a" });
     expect(firstActive.ok && firstActive.value.status).toBe("active");
     expect((await implementations.listBindings(createWorkspaceId("workspace-a")))[0]?.status).toBe("active");
@@ -81,10 +83,10 @@ describe("asset package lifecycle", () => {
     const second = await packages.savePackage({ ...admitted.value, recordId: `${admitted.value.recordId}.upgrade`, version: "1.1.0", status: "installed", revision: 1, createdAt: now(), updatedAt: now() });
     const secondActive = await activate.execute({ workspaceId: createWorkspaceId("workspace-a"), recordId: second.recordId, actorId: "user-a" });
     expect(secondActive.ok && secondActive.value.previousActiveRecordId).toBe(admitted.value.recordId);
-    const rollback = new RollbackAssetPackageUseCase(packages, activate);
+    const rollback = new RollbackAssetPackageUseCase(packages, activate, workspaceAccess);
     const rolledBack = await rollback.execute({ workspaceId: createWorkspaceId("workspace-a"), recordId: second.recordId, actorId: "user-a" });
     expect(rolledBack.ok && rolledBack.value.recordId).toBe(admitted.value.recordId);
-    const disable = new DisableAssetPackageUseCase(packages, implementations, now);
+    const disable = new DisableAssetPackageUseCase(packages, implementations, now, workspaceAccess);
     const disabled = await disable.execute({ workspaceId: createWorkspaceId("workspace-a"), recordId: admitted.value.recordId, actorId: "user-a" });
     expect(disabled.ok && disabled.value.status).toBe("disabled");
     expect((await implementations.listBindings(createWorkspaceId("workspace-a")))[0]?.status).toBe("disabled");
@@ -99,10 +101,10 @@ describe("asset package lifecycle", () => {
     const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
     const inspector = createAisbPackageInspector();
     const fixture = await createPackageFixture(inspector);
-    const inspect = new InspectAssetPackageUseCase({ inspector, repository: packages, artifacts, nextInspectionId: () => "inspection-2", now: () => "2026-07-17T12:00:00.000Z" });
+    const inspect = new InspectAssetPackageUseCase({ workspaceAccess, inspector, repository: packages, artifacts, nextInspectionId: () => "inspection-2", now: () => "2026-07-17T12:00:00.000Z" });
     const inspected = await inspect.execute({ workspaceId: createWorkspaceId("workspace-a"), bytes: fixture.bytes, actorId: "user-a" });
     if (!inspected.ok) throw new Error(inspected.error.message);
-    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions: memoryDefinitions(), implementations, backingResources, now: () => "2026-07-17T12:00:01.000Z" });
+    const admit = new AdmitAssetPackageUseCase({ workspaceAccess, inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions: memoryDefinitions(), implementations, backingResources, now: () => "2026-07-17T12:00:01.000Z" });
     const result = await admit.execute({ workspaceId: createWorkspaceId("workspace-a"), inspectionId: inspected.value.inspectionId, packageDigest: inspected.value.packageDigest, approvalScope: "organization", approvedCapabilities: [], actorId: "admin-a" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("package-signature-required");

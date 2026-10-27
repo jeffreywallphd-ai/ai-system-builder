@@ -415,3 +415,5 @@ read failures use the same unavailable classification. Empty required context
 still fails validation before admission. Finite production-composition tests
 exercise persisted membership suspension and prove retained draft bytes, without
 claiming a live HTTP/Electron process or storage transaction qualification.
+
+Package authority/capture correction: current persisted workspace and organization membership gate six package operations. Owned command, byte and consent snapshots prevent a caller changing the target or data across policy/readiness/repository awaits. Capture checks the existing32MiB production budget using typed-array internal byte length, then copies typed-array slots without invoking a caller iterator. Desktop denies resource access before deferred feature construction; application admission is repeated afterward. Existing trust, signature, consent, integrity and transport failure classifications remain. Actual hosts, durable/native storage, Studio/derived authority and atomic publication require separate evidence.

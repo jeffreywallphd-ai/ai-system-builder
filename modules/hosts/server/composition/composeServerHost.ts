@@ -1014,6 +1014,7 @@ export function composeServerHost(
               authorizer: options.organizationAuthorizer,
             })
           : undefined;
+      const assetWorkspaceAccess = new WorkspaceAssetAccessService({ workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization });
       const storeArtifactUploadUseCase = new StoreArtifactUploadUseCase({
         storage,
         logging: loggingPort,
@@ -1581,6 +1582,7 @@ export function composeServerHost(
       const assetPackages =
         organizationDocuments && assetImplementation
           ? composeAssetPackageLifecycle({
+              workspaceAccess: assetWorkspaceAccess,
               documents: organizationDocuments,
               definitions:
                 internalAssetRegistry.assetKernel.repositories

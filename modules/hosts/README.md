@@ -51,3 +51,5 @@ Read-policy and repository failures settle as fixed unavailable API/IPC response
 Missing required fields retain validation failures. Focused tests cover every
 public read, query capture and current persisted membership. No request may
 fall back to raw repositories after access is denied.
+
+Package composition passes the existing persisted workspace/current membership policy from an early host guard, before eager server package construction. Desktop package wrappers capture commands and admit resource access before deferred feature loading, then application entries reauthorize. Upload copies at both boundaries remain bounded by the existing32MiB production default. This does not qualify Studio/derived authority, atomic publication or physical hosts.

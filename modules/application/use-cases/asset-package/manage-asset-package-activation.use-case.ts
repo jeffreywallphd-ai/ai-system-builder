@@ -1,3 +1,6 @@
+import { capturePackageActivation } from "../../services/asset-package/capture-package-commands";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetPackageRepositoryPort } from "../../ports/asset-package";
 import type { AssetImplementationRepositoryPort } from "../../ports/asset-implementation";
 import type {
@@ -16,9 +19,12 @@ export class ActivateAssetPackageUseCase {
     private readonly packages: AssetPackageRepositoryPort,
     private readonly implementations: AssetImplementationRepositoryPort,
     private readonly now: () => string,
+    private readonly workspaceAccess: WorkspaceAssetAccessPort,
   ) {}
 
   public async execute(command: SetAssetPackageActivationCommand): Promise<AssetPackageResult<AssetPackageRecord>> {
+    try { command = capturePackageActivation(command); await requireWorkspaceAssetAccess(this.workspaceAccess, command.workspaceId, "asset-package.activate", "asset:write"); }
+    catch { return packageFailure("package-workspace-forbidden", "Workspace asset access is unavailable or forbidden."); }
     const target = await this.packages.readPackage(command.workspaceId, command.recordId);
     if (!target || !["installed", "disabled", "active"].includes(target.status)) {
       return packageFailure("package-not-activatable", "Package is not available for activation.");
@@ -60,8 +66,11 @@ export class DisableAssetPackageUseCase {
     private readonly packages: AssetPackageRepositoryPort,
     private readonly implementations: AssetImplementationRepositoryPort,
     private readonly now: () => string,
+    private readonly workspaceAccess: WorkspaceAssetAccessPort,
   ) {}
   public async execute(command: SetAssetPackageActivationCommand): Promise<AssetPackageResult<AssetPackageRecord>> {
+    try { command = capturePackageActivation(command); await requireWorkspaceAssetAccess(this.workspaceAccess, command.workspaceId, "asset-package.disable", "asset:write"); }
+    catch { return packageFailure("package-workspace-forbidden", "Workspace asset access is unavailable or forbidden."); }
     const target = await this.packages.readPackage(command.workspaceId, command.recordId);
     if (!target) return packageFailure("package-not-found", "Package was not found.");
     if (target.status === "disabled") {
@@ -76,8 +85,10 @@ export class DisableAssetPackageUseCase {
 }
 
 export class RollbackAssetPackageUseCase {
-  public constructor(private readonly packages: AssetPackageRepositoryPort, private readonly activate: ActivateAssetPackageUseCase) {}
+  public constructor(private readonly packages: AssetPackageRepositoryPort, private readonly activate: ActivateAssetPackageUseCase, private readonly workspaceAccess: WorkspaceAssetAccessPort) {}
   public async execute(command: SetAssetPackageActivationCommand): Promise<AssetPackageResult<AssetPackageRecord>> {
+    try { command = capturePackageActivation(command); await requireWorkspaceAssetAccess(this.workspaceAccess, command.workspaceId, "asset-package.rollback", "asset:write"); }
+    catch { return packageFailure("package-workspace-forbidden", "Workspace asset access is unavailable or forbidden."); }
     const current = await this.packages.readPackage(command.workspaceId, command.recordId);
     if (!current?.previousActiveRecordId) return packageFailure("package-rollback-unavailable", "No previous active package is available.");
     return this.activate.execute({ ...command, recordId: current.previousActiveRecordId });
@@ -85,8 +96,9 @@ export class RollbackAssetPackageUseCase {
 }
 
 export class ListAssetPackagesUseCase {
-  public constructor(private readonly packages: AssetPackageRepositoryPort) {}
-  public execute(workspaceId: SetAssetPackageActivationCommand["workspaceId"]) {
+  public constructor(private readonly packages: AssetPackageRepositoryPort, private readonly workspaceAccess: WorkspaceAssetAccessPort) {}
+  public async execute(workspaceId: SetAssetPackageActivationCommand["workspaceId"]) {
+    await requireWorkspaceAssetAccess(this.workspaceAccess, workspaceId, "asset-package.list", "asset:read");
     return this.packages.listPackages(workspaceId);
   }
 }

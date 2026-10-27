@@ -291,3 +291,5 @@ remain selected. Host fixtures use in-memory documents and owned temporary
 roots; they do not open apps, listen on ports, run models or qualify physical
 Electron, native storage, provider or parent outcomes. Publication transactions
 and Studio/package/derived policy changes remain separate.
+
+The asset-authoring-ui profile also selects finite package workspace-authority, input snapshot/default-limit, lifecycle and two-host composition fixtures. These tests preserve the previous profile, avoid model/OCR/provider or app-process runs, and keep configured direct-inspector limits distinct from the existing32MiB production upload snapshot budget.

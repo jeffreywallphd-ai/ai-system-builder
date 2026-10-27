@@ -56,6 +56,11 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/application/services/asset/tests/workspace-asset-authoring-readers.unit.test.ts",
             "modules/adapters/transport/api-express/tests/register-asset-authoring-api-routes.unit.test.ts",
             "modules/hosts/desktop/composition/tests/legacy-authoring-workspace-authority.integration.test.ts",
+                    'modules/application/use-cases/asset-package/tests/asset-package-lifecycle.unit.test.ts',
+            'modules/application/use-cases/asset-package/tests/asset-package-workspace-authorization.unit.test.ts',
+            'modules/hosts/desktop/composition/tests/assets-package-workspace-authorization.integration.test.ts',
+            'modules/application/use-cases/asset-package/tests/package-command-snapshots.unit.test.ts',
+                    'dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs',
         ]
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
@@ -92,6 +97,15 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/hosts/server/composition/composeServerHost.ts",
             "modules/application/README.md",
             "modules/hosts/README.md",
+                    'modules/application/use-cases/asset-package/inspect-asset-package.use-case.ts',
+            'modules/application/use-cases/asset-package/admit-asset-package.use-case.ts',
+            'modules/application/use-cases/asset-package/manage-asset-package-activation.use-case.ts',
+            'modules/hosts/shared/composition/composeAssetPackageLifecycle.ts',
+            'modules/hosts/desktop/composition/composeDesktopAssetFeature.ts',
+            'modules/contracts/asset-package/asset-package-contracts.ts',
+            'modules/adapters/package/aisb/createAisbPackageInspector.ts',
+            'modules/application/services/asset-package/capture-package-commands.ts',
+                    'dev-tools/scripts/architecture/check-asset-system-fitness.mjs',
         ])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
@@ -185,6 +199,15 @@ class AssetUiProfileTests(unittest.TestCase):
         self.configure(self.profile)
         selected = catalog.plan(self.root, self.profile["source_paths"] + self.profile["test_paths"], ["asset-authoring-ui"], "candidate")["selected"]
         self.assertNotIn("focused-tests", {check["id"] for check in selected})
+
+
+    def test_package_authority_and_snapshots_use_only_fixed_finite_node_tests(self):
+        expected = ['modules/application/use-cases/asset-package/tests/asset-package-lifecycle.unit.test.ts', 'modules/application/use-cases/asset-package/tests/asset-package-workspace-authorization.unit.test.ts', 'modules/hosts/desktop/composition/tests/assets-package-workspace-authorization.integration.test.ts', 'modules/application/use-cases/asset-package/tests/package-command-snapshots.unit.test.ts', 'dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs']
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        for path in expected:
+            command = next(command for command in commands if path in command)
+            self.assertEqual(command[:4], ["node", "--import", "tsx", "--test"])
+        self.assertFalse(any("playwright" in part or ".ai." in part or "security-authority" in part for command in commands for part in command))
 
 
 if __name__ == "__main__":

@@ -1,3 +1,6 @@
+// Existing production upload budget, shared by inspection and owned request capture.
+export const ASSET_PACKAGE_DEFAULT_MAX_BYTES = 32 * 1024 * 1024;
+
 import type { AssetPackManifest, AssetReference } from "../asset";
 import type {
   AssetImplementationCompatibility,

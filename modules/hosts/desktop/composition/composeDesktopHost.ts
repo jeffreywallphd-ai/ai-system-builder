@@ -1,3 +1,5 @@
+import { capturePackageInspection, capturePackageAdmission, capturePackageActivation } from "../../../application/services/asset-package/capture-package-commands";
+import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
 import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
@@ -794,6 +796,7 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const assetWorkspaceAccess = new WorkspaceAssetAccessService({ workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization });
       const imageTaskAuthority = new ImageGenerationTaskAuthorityService({ workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization, organizationContextProvider: options.localIdentity ? { getCurrentOrganizationContext: () => ({ organizationId: options.localIdentity!.organizationId, principalId: options.localIdentity!.principalId }) } : undefined });
       const runtimeReadiness = createDesktopRuntimeReadinessService({
         readPythonSupervisorState: () => {
@@ -852,6 +855,7 @@ export function composeDesktopHost(
           const module = await import("./composeDesktopAssetFeature");
           return async () =>
             module.composeDesktopAssetFeature({
+              workspaceAccess: assetWorkspaceAccess,
               storageRootDirectory: registerOptions.storageRootDirectory,
               now,
               readSharedModelStorageDirectory,
@@ -1840,6 +1844,9 @@ export function composeDesktopHost(
           senderTrust: registerOptions.senderTrust,
           inspect: {
             async execute(command) {
+              try { command = capturePackageInspection(command); }
+              catch { return {ok: false as const, error: {code: "package-inspection-rejected", message: "Package could not be safely quarantined."}}; }
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.inspect", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1848,6 +1855,8 @@ export function composeDesktopHost(
           },
           admit: {
             async execute(command) {
+              command = capturePackageAdmission(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.admit", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1856,6 +1865,7 @@ export function composeDesktopHost(
           },
           list: {
             async execute(workspaceId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-package.list", "asset:read");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1864,6 +1874,8 @@ export function composeDesktopHost(
           },
           activate: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.activate", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1872,6 +1884,8 @@ export function composeDesktopHost(
           },
           disable: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.disable", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1880,6 +1894,8 @@ export function composeDesktopHost(
           },
           rollback: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.rollback", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");

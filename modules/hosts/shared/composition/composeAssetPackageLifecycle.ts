@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
 import type {
   AssetImplementationArtifactPort,
@@ -21,6 +22,7 @@ import { createStructuredAssetPackageRepository } from "../../../adapters/persis
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 
 export function composeAssetPackageLifecycle(options: {
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionRepositoryPort;
   readonly implementations: AssetImplementationRepositoryPort;
@@ -40,11 +42,13 @@ export function composeAssetPackageLifecycle(options: {
     repository,
     options.implementations,
     options.now,
+    options.workspaceAccess,
   );
   return {
     repository,
     useCases: {
       inspect: new InspectAssetPackageUseCase({
+        workspaceAccess: options.workspaceAccess,
         inspector,
         repository,
         artifacts: options.artifacts,
@@ -52,6 +56,7 @@ export function composeAssetPackageLifecycle(options: {
         now: options.now,
       }),
       admit: new AdmitAssetPackageUseCase({
+        workspaceAccess: options.workspaceAccess,
         inspector,
         packages: repository,
         artifacts: options.artifacts,
@@ -61,14 +66,15 @@ export function composeAssetPackageLifecycle(options: {
         backingResources: options.backingResources,
         now: options.now,
       }),
-      list: new ListAssetPackagesUseCase(repository),
+      list: new ListAssetPackagesUseCase(repository, options.workspaceAccess),
       activate,
       disable: new DisableAssetPackageUseCase(
         repository,
         options.implementations,
         options.now,
+        options.workspaceAccess,
       ),
-      rollback: new RollbackAssetPackageUseCase(repository, activate),
+      rollback: new RollbackAssetPackageUseCase(repository, activate, options.workspaceAccess),
     },
   };
 }

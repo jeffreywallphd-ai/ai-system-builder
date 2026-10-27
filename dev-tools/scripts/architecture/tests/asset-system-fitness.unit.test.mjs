@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
@@ -81,4 +82,28 @@ test("fitness rules detect missing route policy and admission-limit drift", () =
     findAdmissionDriftViolations(changed)[0]?.rule,
     "admission-drift",
   );
+});
+
+const packageContractPath = "modules/contracts/asset-package/asset-package-contracts.ts";
+const packageInspectorPath = "modules/adapters/package/aisb/createAisbPackageInspector.ts";
+const packageAnchors = files => findRequiredAnchorViolations(files).filter(item => [packageContractPath, packageInspectorPath].includes(item.path));
+const packageSources = () => new Map([packageContractPath, packageInspectorPath].map(name => [name, readFileSync(path.resolve(repoRoot, name), "utf8")]));
+
+test("package upload fitness pins the shared 32 MiB value and rejects declaration drift", () => {
+  const files = packageSources();
+  assert.deepEqual(packageAnchors(files), []);
+  files.set(packageContractPath, files.get(packageContractPath).replace("ASSET_PACKAGE_DEFAULT_MAX_BYTES = 32 * 1024 * 1024", "ASSET_PACKAGE_DEFAULT_MAX_BYTES = 64 * 1024 * 1024"));
+  assert.ok(packageAnchors(files).some(item => item.path === packageContractPath && item.rule === "admission-source-drift"));
+  files.delete(packageContractPath);
+  assert.ok(packageAnchors(files).some(item => item.path === packageContractPath));
+});
+
+test("package upload fitness rejects a different inspector default binding", () => {
+  const binding = "maxPackageBytes: ASSET_PACKAGE_DEFAULT_MAX_BYTES";
+  const contractImport = 'import { ASSET_PACKAGE_DEFAULT_MAX_BYTES } from "../../../contracts/asset-package";';
+  for (const [original, replacement] of [[binding, "maxPackageBytes: 64 * 1024 * 1024"], [binding, "maxPackageBytes: OTHER_UPLOAD_BUDGET"], [contractImport, contractImport.replace("/asset-package", "/asset")], [contractImport, ""]]) {
+    const files = packageSources();
+    files.set(packageInspectorPath, files.get(packageInspectorPath).replace(original, replacement));
+    assert.ok(packageAnchors(files).some(item => item.path === packageInspectorPath && item.rule === "admission-source-drift"));
+  }
 });

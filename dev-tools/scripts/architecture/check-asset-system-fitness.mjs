@@ -29,6 +29,11 @@ const forbiddenMetadataProperty =
 
 const requiredAnchors = [
   {
+    rule: "admission-source-drift",
+    path: "modules/contracts/asset-package/asset-package-contracts.ts",
+    tokens: ["export const ASSET_PACKAGE_DEFAULT_MAX_BYTES = 32 * 1024 * 1024;"],
+  },
+  {
     rule: "operational-scope",
     path: "modules/contracts/system-deployment/system-deployment-models.ts",
     tokens: ["readonly organizationId:", "readonly workspaceId:"],
@@ -61,7 +66,8 @@ const requiredAnchors = [
     rule: "admission-source-drift",
     path: "modules/adapters/package/aisb/createAisbPackageInspector.ts",
     tokens: [
-      "maxPackageBytes: 32 * 1024 * 1024",
+      "maxPackageBytes: ASSET_PACKAGE_DEFAULT_MAX_BYTES",
+      'import { ASSET_PACKAGE_DEFAULT_MAX_BYTES } from "../../../contracts/asset-package";',
       "maxEntries: 128",
       "maxEntryBytes: 8 * 1024 * 1024",
       "maxExpandedBytes: 64 * 1024 * 1024",

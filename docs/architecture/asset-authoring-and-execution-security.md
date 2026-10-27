@@ -176,3 +176,5 @@ Read-policy and repository failures settle as fixed unavailable API/IPC response
 Missing required fields retain validation failures. Focused tests cover every
 public read, query capture and current persisted membership. No request may
 fall back to raw repositories after access is denied.
+
+Package authority is checked against the same captured workspace and request values used for all later effects. Inspection owns a bounded byte copy; admission owns capability consent; activation changes own workspace, record and actor fields. Desktop also checks before lazy feature initialization. The shared32MiB production upload default is checked before copying, without importing adapter policy into application. Independently configured inspector overrides are preserved; ordinary application uploads keep their existing production budget.
