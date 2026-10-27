@@ -13,7 +13,7 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
+    "review-site", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
 )
 
 
@@ -68,6 +68,7 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts"],
+    "system-runtime-conversation-ui": ['apps/desktop/src/system-runtime/SystemRuntimeApp.tsx', 'apps/desktop/src/system-runtime-preload/systemRuntimePreloadApi.ts', 'apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx', 'apps/desktop/src/system-runtime-preload/tests/systemRuntimePreloadApi.unit.test.ts'],
 }
 
 

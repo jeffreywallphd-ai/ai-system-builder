@@ -1698,6 +1698,17 @@
         "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",
         "modules/ui/shared/README.md"
       ]
+    },
+    "system-runtime-conversation-ui": {
+      "test_paths": [
+        "apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx",
+        "apps/desktop/src/system-runtime-preload/tests/systemRuntimePreloadApi.unit.test.ts"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx",
+        "apps/desktop/src/system-runtime-preload/systemRuntimePreloadApi.ts"
+      ]
     }
   }
 }
