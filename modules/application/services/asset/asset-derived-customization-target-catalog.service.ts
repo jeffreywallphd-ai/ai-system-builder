@@ -3,6 +3,7 @@ import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset
 import { requireWorkspaceAssetAccess } from "./workspace-asset-access.service";
 import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import type { AuthoredAssetRepositoryPort } from "../../ports/asset-authoring";
+import type { AssetDefinition } from "../../../contracts/asset";
 import type {
   AssetImplementationArtifactPort,
   AssetImplementationBackingResourceRepositoryPort,
@@ -37,6 +38,8 @@ const EMPTY_COUNTS: AssetDerivedCustomizationResourceCounts = {
   other: 0,
 };
 
+type CatalogDefinitionSummary = Pick<AssetDefinition, "displayName" | "description" | "assetType" | "assetFamily">;
+
 export class AssetDerivedCustomizationTargetCatalogService {
   public constructor(
     private readonly dependencies: {
@@ -70,15 +73,15 @@ export class AssetDerivedCustomizationTargetCatalogService {
     const backingByRelease = new Map(
       backingRecords.map((record) => [String(record.releaseId), record]),
     );
-    const releaseTargets = await Promise.all(
-      releases.map(async (release) =>
+    const definitions = await this.readDefinitionSnapshot(releases);
+    const releaseTargets = releases.map((release) =>
         this.summaryForRelease(
           query.workspaceId,
           release,
           backingByRelease.get(String(release.releaseId)),
           revokedReleaseIds,
+          definitions.get(exactDefinitionKey(release.definitionRef)),
         ),
-      ),
     );
     const authoredTargets: AssetDerivedCustomizationTargetSummary[] =
       authored.records.map((record) => ({
@@ -149,14 +152,15 @@ export class AssetDerivedCustomizationTargetCatalogService {
       query.workspaceId,
     );
     const revokedReleaseIds = await this.readRevokedReleaseIds([release]);
-    const summary = await this.summaryForRelease(
+    const definition =
+      await this.dependencies.definitions.getDefinition(definitionRef);
+    const summary = this.summaryForRelease(
       query.workspaceId,
       release,
       backing,
       revokedReleaseIds,
+      definition,
     );
-    const definition =
-      await this.dependencies.definitions.getDefinition(definitionRef);
     if (!definition || !backing) {
       return {
         ...summary,
@@ -211,15 +215,48 @@ export class AssetDerivedCustomizationTargetCatalogService {
     }
   }
 
-  private async summaryForRelease(
+  private async readDefinitionSnapshot(releases: readonly AssetImplementationRelease[]) {
+    // Per-operation exact identities only. Hundreds of single reads each load
+    // the whole collection and can exhaust a managed persistence connection pool.
+    const references = [...new Map(releases.map(release => {
+      const reference = normalizeExactAssetDefinitionReference(release.definitionRef);
+      return [exactDefinitionKey(reference), reference] as const;
+    })).values()];
+    const snapshot = new Map<string, CatalogDefinitionSummary | undefined>();
+    const capture = (reference: AssetImplementationRelease["definitionRef"], definition: AssetDefinition | undefined) => {
+      if (definition !== undefined && (!definition || definition.definitionId !== reference.id || definition.version !== reference.version)) throw new Error("Customization definition snapshot is invalid.");
+      // Own the consumed primitive fields before the next repository wait.
+      snapshot.set(exactDefinitionKey(reference), definition === undefined ? undefined : {
+        displayName: definition.displayName, description: definition.description,
+        assetType: definition.assetType, assetFamily: definition.assetFamily,
+      });
+    };
+    for (let offset = 0; offset < references.length; offset += 250) {
+      const batch = references.slice(offset, offset + 250);
+      if (!this.dependencies.definitions.getDefinitions) {
+        // Compatibility ports retain one in-flight read, and capture each result
+        // before another read can change a borrowed definition object.
+        for (const reference of batch) capture(reference, await this.dependencies.definitions.getDefinition(reference));
+        continue;
+      }
+      const values = await this.dependencies.definitions.getDefinitions(batch);
+      if (!Array.isArray(values) || values.length !== batch.length) throw new Error("Customization definition snapshot is invalid.");
+      batch.forEach((reference, index) => {
+        const slot = Object.getOwnPropertyDescriptor(values, String(index));
+        if (!slot || !("value" in slot)) throw new Error("Customization definition snapshot is invalid.");
+        capture(reference, slot.value as AssetDefinition | undefined);
+      });
+    }
+    return snapshot;
+  }
+
+  private summaryForRelease(
     workspaceId: ListAssetDerivedCustomizationTargetsQuery["workspaceId"],
     release: AssetImplementationRelease,
     backing: AssetImplementationBackingResourceRecord | undefined,
     revokedReleaseIds: ReadonlySet<string> | undefined,
-  ): Promise<AssetDerivedCustomizationTargetSummary> {
-    const definition = await this.dependencies.definitions.getDefinition(
-      release.definitionRef,
-    );
+    definition: CatalogDefinitionSummary | undefined,
+  ): AssetDerivedCustomizationTargetSummary {
     const eligibility = !definition
       ? ineligible(
           "definition-unavailable",
@@ -283,6 +320,10 @@ export class AssetDerivedCustomizationTargetCatalogService {
       return undefined;
     }
   }
+}
+
+function exactDefinitionKey(reference: AssetImplementationRelease["definitionRef"]): string {
+  return JSON.stringify([reference.kind, reference.id, reference.version ?? null]);
 }
 
 function sourceKind(

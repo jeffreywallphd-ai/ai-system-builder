@@ -28,6 +28,173 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { AssetDerivedCustomizationWorkflowUseCase } from "..";
 
 describe("derived asset customization workflow", () => {
+  it("lists 343 exact definitions through bounded fresh batches without queue fan-out", async () => {
+    const fixture = await createFixture();
+    const base = await fixture.definitions.getDefinition(fixture.baseRef);
+    const original = await fixture.implementations.readRelease(fixture.releaseId, fixture.workspaceA);
+    if (!base || !original) throw new Error("Missing synthetic base.");
+    const releases = Array.from({length: 343}, (_, index) => ({...original,
+      releaseId: `implementation-release.bulk.${index}` as never,
+      definitionRef: {...fixture.baseRef, version: `1.0.${index}` as never},
+    }));
+    releases.push({...releases[0]!, releaseId: "implementation-release.bulk.duplicate" as never});
+    const batches: number[] = []; let prefix = "Before";
+    const targets = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess,
+      definitions: {...fixture.definitions,
+        async getDefinition() {throw new Error("Single collection reads must not amplify the queue.");},
+        async getDefinitions(references) {
+          batches.push(references.length);
+          expect(references.length <= 250).toBe(true);
+          return references.map(reference => ({...base, version: reference.version!, displayName: `${prefix} ${reference.version}`}));
+        },
+      },
+      implementations: {...fixture.implementations, async listReleases() {return releases;}},
+      backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+    });
+    const first = await targets.list({workspaceId: fixture.workspaceA, limit: 100, eligibility: "all"});
+    expect(batches).toEqual([250, 93]);
+    expect(first.targets.length).toBe(100); expect(first.nextCursor).toBe("100");
+    expect(first.targets[0]?.displayName).toContain("Before");
+    expect(first.targets.every(target => target.eligibility.code === "backing-resources-unavailable")).toBe(true);
+    prefix = "After";
+    const fresh = await targets.list({workspaceId: fixture.workspaceA, text: "After 1.0.342", eligibility: "all"});
+    expect(fresh.targets.length).toBe(1); expect(fresh.targets[0]?.definitionRef.version).toBe("1.0.342");
+    expect(batches).toEqual([250, 93, 250, 93]);
+    const eligible = await targets.list({workspaceId: fixture.workspaceA, eligibility: "eligible"});
+    expect(eligible.targets).toEqual([]);
+  });
+
+  it("keeps single-read compatibility sequential and retains missing exact definitions", async () => {
+    const fixture = await createFixture();
+    const original = await fixture.implementations.readRelease(fixture.releaseId, fixture.workspaceA);
+    if (!original) throw new Error("Missing synthetic release.");
+    let active = 0, maximum = 0, reads = 0;
+    const targets = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess,
+      definitions: {...fixture.definitions, getDefinitions: undefined,
+        async getDefinition(reference) {
+          active++; reads++; maximum = Math.max(maximum, active);
+          try {await new Promise(resolve => setImmediate(resolve)); return await fixture.definitions.getDefinition(reference);}
+          finally {active--;}
+        },
+      },
+      implementations: {...fixture.implementations, async listReleases() {return [original, ...[1, 2].map(index => ({...original,
+        releaseId: `implementation-release.missing.${index}` as never, definitionRef: {...fixture.baseRef, version: `2.0.${index}` as never},
+      }))];}},
+      backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+    });
+    const result = await targets.list({workspaceId: fixture.workspaceA, eligibility: "all"});
+    expect(reads).toBe(3); expect(maximum).toBe(1);
+    expect(result.targets.filter(target => target.eligibility.code === "definition-unavailable").length).toBe(2);
+    expect(result.targets.filter(target => target.eligibility.eligible).length).toBe(1);
+  });
+
+  it("denies malformed exact-definition batches and authorizes before any batch read", async () => {
+    const fixture = await createFixture();
+    const base = await fixture.definitions.getDefinition(fixture.baseRef);
+    if (!base) throw new Error("Missing synthetic definition.");
+    let accessorReads = 0;
+    const accessor = new Array(1); Object.defineProperty(accessor, "0", {get() {accessorReads++; return base;}});
+    for (const invalid of [[], new Array(1), accessor, [{...base, version: "9.0.0"}], [{...base, definitionId: "asset.foreign"}]]) {
+      const targets = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess,
+        definitions: {...fixture.definitions, async getDefinitions() {return invalid;}},
+        implementations: fixture.implementations, backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+      });
+      await expect(targets.list({workspaceId: fixture.workspaceA})).rejects.toThrow("Customization definition snapshot is invalid.");
+    }
+    expect(accessorReads).toBe(0);
+    let reads = 0;
+    const denied = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess: {async authorize() {throw new Error("Denied synthetic workspace.");}},
+      definitions: {...fixture.definitions, async getDefinitions() {reads++; return [base];}},
+      implementations: fixture.implementations, backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+    });
+    await expect(denied.list({workspaceId: fixture.workspaceB})).rejects.toThrow(); expect(reads).toBe(0);
+  });
+
+  it("owns earlier summary values while a later definition batch waits", {timeout: 5_000}, async () => {
+    const fixture = await createFixture();
+    const base = await fixture.definitions.getDefinition(fixture.baseRef);
+    const original = await fixture.implementations.readRelease(fixture.releaseId, fixture.workspaceA);
+    if (!base || !original) throw new Error("Missing synthetic base.");
+    let entered!: () => void, release!: () => void;
+    const secondBatch = new Promise<void>(done => {entered = done;});
+    const resume = new Promise<void>(done => {release = done;});
+    const releases = Array.from({length: 251}, (_, index) => ({...original,
+      releaseId: `implementation-release.snapshot.${index}` as never,
+      definitionRef: {...fixture.baseRef, version: `1.0.${index}` as never},
+    }));
+    let calls = 0, borrowed: any;
+    const targets = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess,
+      definitions: {...fixture.definitions,
+        async getDefinition() {throw new Error("Collection lookup must use the batch seam.");},
+        async getDefinitions(references) {
+          calls++;
+          if (calls === 2) {entered(); await resume;}
+          const values = references.map(reference => ({...base, version: reference.version!,
+            displayName: reference.version === "1.0.0" ? "Original batch label" : "Other batch label",
+          }));
+          if (calls === 1) borrowed = values[0];
+          return values;
+        },
+      },
+      implementations: {...fixture.implementations, async listReleases() {return releases;}},
+      backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+    });
+    const pending = targets.list({workspaceId: fixture.workspaceA, text: "Original batch label", eligibility: "all"});
+    try {
+      await secondBatch;
+      borrowed.displayName = "Changed batch label"; borrowed.description = "Changed description";
+      borrowed.assetType = "model"; borrowed.assetFamily = "resource";
+      release(); const result = await pending;
+      expect(calls).toBe(2); expect(result.targets.length).toBe(1);
+      expect(result.targets[0]?.displayName).toBe("Original batch label");
+      expect(result.targets[0]?.description).toBe(base.description);
+      expect(result.targets[0]?.assetType).toBe(base.assetType);
+      expect(result.targets[0]?.assetFamily).toBe(base.assetFamily);
+    } finally {release(); await pending;}
+  });
+
+  it("owns earlier summary values while a later compatibility single read waits", {timeout: 5_000}, async () => {
+    const fixture = await createFixture();
+    const base = await fixture.definitions.getDefinition(fixture.baseRef);
+    const original = await fixture.implementations.readRelease(fixture.releaseId, fixture.workspaceA);
+    if (!base || !original) throw new Error("Missing synthetic base.");
+    let entered!: () => void, release!: () => void;
+    const secondBatch = new Promise<void>(done => {entered = done;});
+    const resume = new Promise<void>(done => {release = done;});
+    const releases = Array.from({length: 2}, (_, index) => ({...original,
+      releaseId: `implementation-release.single.snapshot.${index}` as never,
+      definitionRef: {...fixture.baseRef, version: `1.0.${index}` as never},
+    }));
+    let calls = 0, borrowed: any;
+    const targets = new AssetDerivedCustomizationTargetCatalogService({workspaceAccess,
+      definitions: {...fixture.definitions,
+        getDefinitions: undefined,
+        async getDefinition(reference) {
+          calls++;
+          if (calls === 2) {entered(); await resume;}
+          const value = {...base, version: reference.version!,
+            displayName: reference.version === "1.0.0" ? "Original single label" : "Other single label"};
+          if (calls === 1) borrowed = value;
+          return value;
+        },
+      },
+      implementations: {...fixture.implementations, async listReleases() {return releases;}},
+      backingResources: fixture.backingResources, artifacts: fixture.artifacts,
+    });
+    const pending = targets.list({workspaceId: fixture.workspaceA, text: "Original single label", eligibility: "all"});
+    try {
+      await secondBatch;
+      borrowed.displayName = "Changed single label"; borrowed.description = "Changed description";
+      borrowed.assetType = "model"; borrowed.assetFamily = "resource";
+      release(); const result = await pending;
+      expect(calls).toBe(2); expect(result.targets.length).toBe(1);
+      expect(result.targets[0]?.displayName).toBe("Original single label");
+      expect(result.targets[0]?.description).toBe(base.description);
+      expect(result.targets[0]?.assetType).toBe(base.assetType);
+      expect(result.targets[0]?.assetFamily).toBe(base.assetFamily);
+    } finally {release(); await pending;}
+  });
+
   it("searches exact targets and publishes a distinct restart-safe copy with materialized resources", async () => {
     const fixture = await createFixture();
     const listed = await fixture.targets.list({
