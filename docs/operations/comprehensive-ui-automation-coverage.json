@@ -2763,7 +2763,10 @@
       ],
       "existing_test_candidates": [
         "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
       ],
       "required_layers": [
         "behavioral UI interaction",
@@ -2806,11 +2809,18 @@
           "name": "Package acknowledgement identity denials",
           "tier": "vitest-jsdom-native-file-buttons-with-fixed-package-clients",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+          "name": "Exact authoring observations and two-host driver construction",
+          "tier": "model-free-node-oracle-and-source-wiring",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "package_session_scope": "Shared rendered fixtures cover exact inert file forwarding, summary shape/identity, capability consent, separate install/activate/disable/previous-record rollback, explicit retry, safe action/list failures, synchronous ownership, old scope and stale catalogue results. Actual inspector/trust/transport/storage/host/runtime/native/provider and parent qualification remain separate. The first authoring work package is still partial."
+      "package_session_scope": "Shared rendered fixtures cover exact inert file forwarding, summary shape/identity, capability consent, separate install/activate/disable/previous-record rollback, explicit retry, safe action/list failures, synchronous ownership, old scope and stale catalogue results. Actual inspector/trust/transport/storage/host/runtime/native/provider and parent qualification remain separate. The first authoring work package is still partial.",
+      "host_driver_scope": "Shared functional core is wired into the two ordinary browse drivers. It covers inert install, distinct Foundation/imported copies, exact three-resource Studio Saved reopen and review/publication, published rediscovery and unchanged original-base observations after four document reloads. Customization history is inspected, not hydrated into a new editor operation. Pure oracle/construction checks, types and collection do not execute apps or qualify actual process/server restart, durable storage, authorization/native or the parent. Existing controlled restart driver work and execution remain pending. A separate existing exact-version public definition read verifies returned publication identity and semantic metadata in the captured workspace. It does not assert a hidden Browse selection, source bytes, an implementation release or a new customization target. Finite test environments exercise paired read, timeout, size and safe-error handling; actual host calls remain pending."
     },
     {
       "id": "asset-studio-saved-lifecycle",
@@ -2832,7 +2842,10 @@
       ],
       "existing_test_candidates": [
         "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
-        "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx"
+        "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
       ],
       "required_layers": [
         "behavioral UI interaction",
@@ -2929,13 +2942,20 @@
           "name": "legacy Saved target mapping, failure and single capture",
           "tier": "registered-handler-with-finite-repository-and-sender",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+          "name": "Exact authoring observations and two-host driver construction",
+          "tier": "model-free-node-oracle-and-source-wiring",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
       "studio_session_scope": "Meaningful semantic/resource create/save/reopen/update/review/publish and explicit abandon/denial/retry, duplicate admission, exact acknowledgement identity/state/revision, newer edits and delayed workspace/client/draft/unmount replies are tested with fixed clients. This does not prove actual transport/storage, apps, source execution, provider/native or parent completion. Other Assets work remains pending. Saved editor admission and retired-before-dispatch cases are covered; no input into unread placeholders.",
       "saved_session_scope": "Saved read/legacy-open ownership, duplicate admission, partial-source failure, safe retry, canonical converted provenance/identity and workspace/client/unmount retirement are tested with fixed clients. Existing idempotent record reuse is retained. This is partial local interface support; actual transport/storage, app/native and final combined qualification remain separate. No parent work package is completed.",
-      "saved_desktop_read_scope": "Saved cards and safe notification/Search recovery are joined through the actual desktop client, preload and registered IPC handler. Tests retain exact legacy records and cross-workspace card replacement with a finite repository and trusted sender seam. The public target is captured once and mapped to repository workspaceId; extra workspace substitution, invalid targets and unavailable reads are tested. This remains partial component support, not actual Electron sender/resource authorization, persistence, app restart, native or parent qualification."
+      "saved_desktop_read_scope": "Saved cards and safe notification/Search recovery are joined through the actual desktop client, preload and registered IPC handler. Tests retain exact legacy records and cross-workspace card replacement with a finite repository and trusted sender seam. The public target is captured once and mapped to repository workspaceId; extra workspace substitution, invalid targets and unavailable reads are tested. This remains partial component support, not actual Electron sender/resource authorization, persistence, app restart, native or parent qualification.",
+      "host_driver_scope": "Shared functional core is wired into the two ordinary browse drivers. It covers inert install, distinct Foundation/imported copies, exact three-resource Studio Saved reopen and review/publication, published rediscovery and unchanged original-base observations after four document reloads. Customization history is inspected, not hydrated into a new editor operation. Pure oracle/construction checks, types and collection do not execute apps or qualify actual process/server restart, durable storage, authorization/native or the parent. Existing controlled restart driver work and execution remain pending. A separate existing exact-version public definition read verifies returned publication identity and semantic metadata in the captured workspace. It does not assert a hidden Browse selection, source bytes, an implementation release or a new customization target. Finite test environments exercise paired read, timeout, size and safe-error handling; actual host calls remain pending."
     },
     {
       "id": "asset-derived-customization",
@@ -2955,7 +2975,10 @@
       ],
       "existing_test_candidates": [
         "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
-        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
       ],
       "required_layers": [
         "behavioral UI interaction",
@@ -2986,11 +3009,18 @@
           "name": "customization committed lease and acknowledgement",
           "tier": "shared-renderer-native-events-with-synthetic-customization-clients",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+          "name": "Exact authoring observations and two-host driver construction",
+          "tier": "model-free-node-oracle-and-source-wiring",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "customization_saved_edit_scope": "Meaningful semantic/source copy, exact create/update/review/publication commands, retained base bytes, saved edit generation, immutable derived identity, terminal edit locks, committed owner replacement, canonical returned identity and explicit denial/retry are covered with synthetic clients. This is partial shared UI support. Actual app/transport/storage/source execution and final combined qualification remain pending. No parent work package is completed."
+      "customization_saved_edit_scope": "Meaningful semantic/source copy, exact create/update/review/publication commands, retained base bytes, saved edit generation, immutable derived identity, terminal edit locks, committed owner replacement, canonical returned identity and explicit denial/retry are covered with synthetic clients. This is partial shared UI support. Actual app/transport/storage/source execution and final combined qualification remain pending. No parent work package is completed.",
+      "host_driver_scope": "Shared functional core is wired into the two ordinary browse drivers. It covers inert install, distinct Foundation/imported copies, exact three-resource Studio Saved reopen and review/publication, published rediscovery and unchanged original-base observations after four document reloads. Customization history is inspected, not hydrated into a new editor operation. Pure oracle/construction checks, types and collection do not execute apps or qualify actual process/server restart, durable storage, authorization/native or the parent. Existing controlled restart driver work and execution remain pending. A separate existing exact-version public definition read verifies returned publication identity and semantic metadata in the captured workspace. It does not assert a hidden Browse selection, source bytes, an implementation release or a new customization target. Finite test environments exercise paired read, timeout, size and safe-error handling; actual host calls remain pending."
     },
     {
       "id": "systems-manage-lifecycle",

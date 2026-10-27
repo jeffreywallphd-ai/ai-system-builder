@@ -42,6 +42,7 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
             "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
             "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
         ]
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
@@ -54,6 +55,10 @@ class AssetUiProfileTests(unittest.TestCase):
             "modules/ui/shared/notifications/TransientNotificationPublisher.tsx",
             "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
             "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/asset-authoring-oracles.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
         ])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
@@ -105,6 +110,15 @@ class AssetUiProfileTests(unittest.TestCase):
         changed["test_paths"].remove("modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts")
         self.configure(changed)
         self.assertNotEqual(before, catalog.policy_digest(self.root, catalog.definitions(self.root)))
+
+    def test_authoring_oracles_run_in_node_without_collecting_host_specs(self):
+        oracle = "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        node = next(command for command in commands if oracle in command)
+        self.assertEqual(node[:4], ["node", "--import", "tsx", "--test"])
+        self.assertFalse(any(".e2e.spec." in part or "playwright" in part for command in commands for part in command))
+        self.assertIn("dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts", self.profile["source_paths"])
+        self.assertIn("dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts", self.profile["source_paths"])
 
 
 if __name__ == "__main__":

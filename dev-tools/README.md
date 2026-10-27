@@ -252,3 +252,31 @@ adds only those two production files. Run it through the documented
 [control-plane feature checks](../docs/diagnostics/ai-development-control-plane.md#assets-interface-feature-checks).
 Unknown changed paths still need their own checks. Component fixtures do not prove
 actual app, authorization, storage, native or whole-roadmap qualification.
+
+
+### Shared Assets authoring journey
+
+The two ordinary browse Playwright drivers also call the shared
+`asset-authoring-journey.ts` core after their existing Systems journey. It uses
+only public controls and inert synthetic package/resources. It checks imported
+and Foundation copies, a three-resource Studio asset reopened through Saved,
+explicit review/publication, published rediscovery and unchanged original bases.
+The model-free `asset-authoring-journey-oracles.unit.test.ts` checks exact
+observations and counterexamples through the fixed `asset-authoring-ui` profile,
+which now contains eleven test files. Run the focused file while iterating;
+collection and types do not run an app.
+
+Each Assets phase has a 60-second ceiling; the five phases add at most 300 seconds
+to the existing browse case budget. Desktop and browser remain serial. Four
+replays are explicitly document reloads. They do not prove desktop/server
+process restart, durable storage or authorization/native controls. The controlled
+restart wiring and execution, and final combined qualification, remain pending.
+No model accuracy, OCR, provider or full-suite execution is part of this slice.
+
+Published rediscovery includes a separate existing exact-version public definition
+read for exact identity and semantic metadata in the captured workspace. It uses
+the public desktop bridge or paired same-origin browser GET. The probes have a
+10-second deadline, a 256 KiB response bound and fixed safe errors. Node tests
+exercise finite preload/fetch environments without real network or app reads.
+This does not prove hidden Browse selection, persisted overlay bytes, a released
+implementation or a new customization target. Those checks remain separate.

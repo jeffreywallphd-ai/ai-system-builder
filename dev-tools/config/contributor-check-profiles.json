@@ -1563,7 +1563,8 @@
         "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
         "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
-        "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts"
+        "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1574,7 +1575,11 @@
         "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
         "modules/ui/shared/notifications/TransientNotificationPublisher.tsx",
         "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
-        "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts"
+        "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/asset-authoring-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
       ]
     },
     "desktop-startup-ui": {
