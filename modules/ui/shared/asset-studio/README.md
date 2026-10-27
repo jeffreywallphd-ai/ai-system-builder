@@ -65,3 +65,28 @@ A saved editor stays disabled until its initial read or explicit retry succeeds.
 The retry button stays available after failure. A retired session is checked
 before dispatch as well as before accepting a reply. These controls prevent
 editing a placeholder that would be replaced by a later saved-draft read.
+
+## Saved view ownership and recovery
+
+Saved owns a view per workspace, Studio client and legacy client. Replacing any
+of them retires its old reads, conversion results and navigation callbacks.
+One read or legacy open is admitted before React renders busy state. Search
+cannot release or overlap an in-flight conversion. Search text stays fixed
+while reading and resets when the view changes. No server write is cancelled.
+
+Studio and legacy lists settle separately. Valid data from one source remains
+available if the other fails. Rendering fields and duplicate row identities are
+checked; legacy rows must name the requested workspace. A failed source does
+not prove an empty workspace. Failures use the notification center and explicit
+Search or Open retry. Thrown details are never displayed.
+
+An accepted legacy open must return a canonical Studio record for this workspace
+with the same legacy provenance. The existing application may return an already
+converted record with a later revision, another exact definition or any canonical
+lifecycle state. The UI does not force a new seed or revision 1. Conversion
+preserves the legacy record and grants no publication or execution authority.
+
+Focused UI cases cover meaningful open/retry behavior, one in-flight action,
+malformed and foreign replies, partial lists, retired results and dispatch, and
+idempotent record reuse. They use fixed clients. Actual application, transport,
+storage, host and native qualification remain separate and pending.

@@ -2879,11 +2879,48 @@
           "name": "Studio saved-read admission",
           "tier": "node-dom-shared-renderer-native-input-with-fixed-studio-clients",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved session regression",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved legacy recovery and canonical replies",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved source validation and list ownership",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved keeps available drafts and recovers after a rejected studio listing",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved keeps available drafts and recovers after a rejected legacy listing",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Saved clears the former workspace and ignores its late explicit-search result",
+          "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "studio_session_scope": "Meaningful semantic/resource create/save/reopen/update/review/publish and explicit abandon/denial/retry, duplicate admission, exact acknowledgement identity/state/revision, newer edits and delayed workspace/client/draft/unmount replies are tested with fixed clients. This does not prove actual transport/storage, apps, source execution, provider/native or parent completion. Other Assets work remains pending. Saved editor admission and retired-before-dispatch cases are covered; no input into unread placeholders."
+      "studio_session_scope": "Meaningful semantic/resource create/save/reopen/update/review/publish and explicit abandon/denial/retry, duplicate admission, exact acknowledgement identity/state/revision, newer edits and delayed workspace/client/draft/unmount replies are tested with fixed clients. This does not prove actual transport/storage, apps, source execution, provider/native or parent completion. Other Assets work remains pending. Saved editor admission and retired-before-dispatch cases are covered; no input into unread placeholders.",
+      "saved_session_scope": "Saved read/legacy-open ownership, duplicate admission, partial-source failure, safe retry, canonical converted provenance/identity and workspace/client/unmount retirement are tested with fixed clients. Existing idempotent record reuse is retained. This is partial local interface support; actual transport/storage, app/native and final combined qualification remain separate. No parent work package is completed."
     },
     {
       "id": "asset-derived-customization",

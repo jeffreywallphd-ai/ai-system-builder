@@ -246,7 +246,7 @@ describe("Unified Asset Studio", () => {
     }));
     const createAssetDraft = testDouble.fn(async () => ({
       ok: true as const,
-      value: { draftId: "studio-draft.upgraded-1" },
+      value: { ...savedView.record, draftId: "studio-draft.upgraded-1", provenance: { kind: "studio-from-scratch", sourceLegacyDraftId: "asset-draft.legacy-1" } },
     }));
     const legacyClient = {
       listDrafts: testDouble.fn(async () => ({
@@ -331,6 +331,57 @@ describe("Unified Asset Studio", () => {
         ?.getAttribute("aria-busy"),
     ).toBe("false");
   });
+});
+
+for (const rejected of ["studio", "legacy"] as const) it(`Saved keeps available drafts and recovers after a rejected ${rejected} listing`, async () => {
+  let failing = true;
+  const summary = {draftId: "studio.saved-recovery", definitionRef: savedView.record.definitionRef, displayName: "Available Studio draft", assetType: "ui-component", status: "draft", revision: 1, resourceCount: 3};
+  const listAssetDrafts = testDouble.fn(async () => {
+    if (failing && rejected === "studio") throw new Error("private rejected payload path");
+    return {ok: true as const, value: {drafts: [summary]}};
+  });
+  const legacyClient = {listDrafts: testDouble.fn(async () => {
+    if (failing && rejected === "legacy") throw new Error("private rejected payload path");
+    return {ok: true as const, value: {items: []}};
+  })};
+  const container = document.createElement("div"); document.body.append(container);
+  const root = createRoot(container); roots.push(root);
+  await act(async () => {root.render(<NotificationTestHarness><SavedAssetDrafts workspaceId="workspace-a" client={createClient({listAssetDrafts: listAssetDrafts as any})} legacyClient={legacyClient} onOpenDraft={() => undefined}/></NotificationTestHarness>);});
+  const panel = container.querySelector(".asset-studio--saved")!;
+  expect(panel.getAttribute("aria-busy")).toBe("false");
+  expect(readNotificationMessages(container).join(" ")).toContain("unavailable. Retry the search.");
+  expect(readNotificationMessages(container).join(" ")).not.toContain("private rejected payload path");
+  if (rejected === "legacy") expect(container.textContent).toContain("Available Studio draft");
+  // Explicit search is also rejection-safe, and subsequent retry restores data.
+  await act(async () => {container.querySelector("form")!.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));});
+  expect(panel.getAttribute("aria-busy")).toBe("false");
+  failing = false;
+  await act(async () => {container.querySelector("form")!.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));});
+  expect(panel.getAttribute("aria-busy")).toBe("false");
+  expect(container.textContent).toContain("Available Studio draft");
+  expect(listAssetDrafts.mock.calls.length).toBe(3); expect(legacyClient.listDrafts.mock.calls.length).toBe(3);
+});
+
+it("Saved clears the former workspace and ignores its late explicit-search result", async () => {
+  const summary = (name: string) => ({draftId: `draft.${name.replaceAll(" ", "-")}`, definitionRef: savedView.record.definitionRef, displayName: name, assetType: "ui-component", status: "draft", revision: 1, resourceCount: 3});
+  let finishOldSearch!: (value: any) => void; let finishNewWorkspace!: (value: any) => void; let oldCalls = 0;
+  const listAssetDrafts = testDouble.fn((request: any) => {
+    if (request.workspaceId === "workspace-b") return new Promise(done => {finishNewWorkspace = done;});
+    if (++oldCalls === 1) return Promise.resolve({ok: true, value: {drafts: [summary("Former workspace draft")]}});
+    return new Promise(done => {finishOldSearch = done;});
+  });
+  const client = createClient({listAssetDrafts: listAssetDrafts as any});
+  const container = document.createElement("div"); document.body.append(container); const root = createRoot(container); roots.push(root);
+  await act(async () => {root.render(<SavedAssetDrafts workspaceId="workspace-a" client={client} onOpenDraft={() => undefined}/>);});
+  expect(container.textContent).toContain("Former workspace draft");
+  await act(async () => {container.querySelector("form")!.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));});
+  await act(async () => {root.render(<SavedAssetDrafts workspaceId="workspace-b" client={client} onOpenDraft={() => undefined}/>);});
+  expect(container.textContent).not.toContain("Former workspace draft");
+  expect(container.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("true");
+  await act(async () => {finishNewWorkspace({ok: true, value: {drafts: [summary("Current workspace draft")]}});});
+  await act(async () => {finishOldSearch({ok: true, value: {drafts: [summary("Former workspace draft")]}});});
+  expect(container.textContent).toContain("Current workspace draft"); expect(container.textContent).not.toContain("Former workspace draft");
+  expect(container.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
 });
 
 
@@ -630,5 +681,243 @@ describe("Studio saved-read admission", () => {
       root.unmount(); roots.splice(roots.indexOf(root), 1);
     });
     expect(calls).toBe(0); expect(panel.textContent).toBe("");
+  });
+});
+
+function savedLegacyFixture(workspaceId = "workspace-a", draftId = "asset-draft.legacy-session") {
+  return { draftId, targetWorkspaceId: workspaceId,
+    draftEditableValues: { "display-name": "Legacy session card", summary: "Saved card summary", classification: "component-asset" },
+    status: "draft", provenance: { kind: "authored-from-scratch", operationAt: "2026-10-27T00:00:00Z" },
+    createdAt: "2026-10-27T00:00:00Z", updatedAt: "2026-10-27T00:00:00Z" } as any;
+}
+function savedConvertedFixture(workspaceId = "workspace-a", legacyId = "asset-draft.legacy-session", draftId = "studio.legacy-session") {
+  const record = studioFixtureView(workspaceId, draftId).record;
+  record.provenance = { kind: "studio-from-scratch", sourceLegacyDraftId: legacyId, createdAt: "2026-10-27T00:00:00Z", createdBy: "fixture-agent" };
+  return record;
+}
+async function mountSavedSession(client: AssetStudioClient, legacyClient = { listDrafts: async (_workspaceId: string) => ({ ok: true as const, value: { items: [savedLegacyFixture()] } }) }) {
+  const panel = document.createElement("div"); document.body.append(panel);
+  const root = createRoot(panel); roots.push(root); const opened: string[] = [];
+  const onOpenDraft = (draftId: string) => { opened.push(draftId); };
+  async function render(workspaceId = "workspace-a", nextClient = client, nextLegacyClient = legacyClient) {
+    await act(async () => { root.render(<NotificationTestHarness><SavedAssetDrafts workspaceId={workspaceId} client={nextClient} legacyClient={nextLegacyClient} onOpenDraft={onOpenDraft}/></NotificationTestHarness>); });
+  }
+  await render(); return { panel, root, opened, render, client, legacyClient };
+}
+function savedOpenButton(panel: HTMLElement) {
+  const button = [...panel.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.trim() === "Open in Studio");
+  expect(button).toBeDefined(); return button!;
+}
+
+describe("Saved session regression", () => {
+  it("admits one legacy open before busy state renders", async () => {
+    const pending = studioDeferred(); let calls = 0;
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: () => { calls++; return pending.promise; } }));
+    await act(async () => { const button = savedOpenButton(mounted.panel); button.click(); button.click(); });
+    expect(calls).toBe(1);
+    await act(async () => pending.resolve({ ok: true, value: savedConvertedFixture() }));
+    expect(mounted.opened).toEqual(["studio.legacy-session"]);
+  });
+
+  for (const replacement of ["workspace", "client", "legacy-client", "unmount"] as const) it(`retires a legacy open after ${replacement} replacement`, async () => {
+    const pending = studioDeferred();
+    const client = createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: () => pending.promise });
+    const mounted = await mountSavedSession(client);
+    await act(async () => savedOpenButton(mounted.panel).click());
+    if (replacement === "unmount") { await act(async () => mounted.root.unmount()); roots.splice(roots.indexOf(mounted.root), 1); }
+    else {
+      const currentClient = replacement === "client" ? createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }) }) : client;
+      const currentLegacy = replacement === "legacy-client" || replacement === "workspace" ? { listDrafts: async () => ({ ok: true as const, value: { items: [] as any[] } }) } : mounted.legacyClient;
+      await mounted.render(replacement === "workspace" ? "workspace-b" : "workspace-a", currentClient, currentLegacy);
+    }
+    await act(async () => pending.resolve({ ok: true, value: savedConvertedFixture() }));
+    expect(mounted.opened).toEqual([]);
+    expect(readNotificationMessages(mounted.panel)).toEqual([]);
+    if (replacement !== "unmount") expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
+  });
+
+  it("refuses a converted draft from a different workspace", async () => {
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: async () => ({ ok: true, value: savedConvertedFixture("workspace.foreign") }) }));
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(mounted.opened).toEqual([]);
+    expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
+  });
+});
+
+describe("Saved legacy recovery and canonical replies", () => {
+  it("validates converted provenance against the captured dispatched legacy identity", async () => {
+    const pending = studioDeferred(); const legacy = savedLegacyFixture(); let dispatched: string | undefined;
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: input => {
+      dispatched = input.sourceLegacyDraftId; return pending.promise;
+    } }), { listDrafts: async () => ({ ok: true as const, value: { items: [legacy] } }) });
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(dispatched).toBe("asset-draft.legacy-session");
+    // The client retains its returned row. Its later mutation must not rewrite
+    // the command identity to which the pending acknowledgement is bound.
+    legacy.draftId = "asset-draft.changed-after-dispatch";
+    await act(async () => pending.resolve({ ok: true, value: savedConvertedFixture("workspace-a", legacy.draftId, "studio.other-legacy-source") }));
+    expect(mounted.opened).toEqual([]);
+    expect(readNotificationMessages(mounted.panel).join(" ")).toContain("could not be opened");
+    expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
+  });
+
+  for (const fault of ["throw", "reject", "typed", "draft", "draft-path", "draft-length", "definition", "definition-path", "definition-padding", "version-blank", "version-padding", "revision", "state", "provenance", "missing"] as const) it(`recovers from ${fault} conversion output and retries explicitly`, async () => {
+    let calls = 0;
+    const client = createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: () => {
+      calls++;
+      if (calls > 1) return Promise.resolve({ ok: true, value: savedConvertedFixture() });
+      if (fault === "throw") throw new Error("synthetic-private-legacy-error");
+      if (fault === "reject") return Promise.reject(new Error("synthetic-private-legacy-error"));
+      if (fault === "typed") return Promise.resolve({ ok: false, error: { code: "asset-studio.asset-draft.conflict", message: "The draft cannot be opened yet." } });
+      const value = savedConvertedFixture();
+      if (fault === "draft") value.draftId = "";
+      if (fault === "draft-path") value.draftId = "../other";
+      if (fault === "draft-length") value.draftId = "s".repeat(201);
+      if (fault === "definition") value.definitionRef.kind = "artifact";
+      if (fault === "definition-path") value.definitionRef.id = "../other";
+      if (fault === "definition-padding") value.definitionRef.id = " workspace.definition ";
+      if (fault === "version-blank") value.definitionRef.version = " ";
+      if (fault === "version-padding") value.definitionRef.version = " 2.0.0 ";
+      if (fault === "revision") value.revision = 0;
+      if (fault === "state") value.status = "unknown";
+      if (fault === "provenance") value.provenance.sourceLegacyDraftId = "asset-draft.other";
+      return Promise.resolve({ ok: true, value: fault === "missing" ? undefined : value } as any);
+    } });
+    const mounted = await mountSavedSession(client);
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(mounted.opened).toEqual([]);
+    expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
+    const messages = readNotificationMessages(mounted.panel).join(" ");
+    expect(messages).toContain(fault === "typed" ? "cannot be opened yet" : "could not be opened");
+    expect(messages).not.toContain("synthetic-private-legacy-error");
+    expect(mounted.panel.textContent).not.toContain("synthetic-private-legacy-error");
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(calls).toBe(2); expect(mounted.opened).toEqual(["studio.legacy-session"]);
+  });
+
+  for (const status of ["draft", "reviewed", "published", "abandoned"] as const) it(`accepts an idempotently converted ${status} record without inventing revision1 or a new seed identity`, async () => {
+    const value = savedConvertedFixture(); value.status = status; value.revision = 9;
+    value.definitionRef.id = "workspace.already-converted"; value.definitionRef.version = "2.0.0";
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: async () => ({ ok: true, value }) }));
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(mounted.opened).toEqual(["studio.legacy-session"]);
+    expect(readNotificationMessages(mounted.panel)).toEqual([]);
+  });
+
+  it("keeps a converted legacy row as one Studio card without another create", async () => {
+    let creates = 0;
+    const summary = { draftId: "studio.existing-conversion", definitionRef: savedView.record.definitionRef, displayName: "Already converted", assetType: "ui-component", status: "reviewed", revision: 8, resourceCount: 3, sourceLegacyDraftId: "asset-draft.legacy-session" } as any;
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [summary] } }), createAssetDraft: () => { creates++; return pending; } }));
+    expect(mounted.panel.querySelectorAll(".asset-studio__saved-card").length).toBe(1);
+    expect(mounted.panel.textContent).not.toContain("Legacy session card");
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(creates).toBe(0); expect(mounted.opened).toEqual(["studio.existing-conversion"]);
+  });
+
+  it("does not let a search release or overlap a pending conversion", async () => {
+    let lists = 0; const conversion = studioDeferred();
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => { lists++; return { ok: true, value: { drafts: [] } }; }, createAssetDraft: () => conversion.promise }));
+    await act(async () => savedOpenButton(mounted.panel).click());
+    await act(async () => mounted.panel.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(lists).toBe(1); expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("true");
+    await act(async () => conversion.resolve({ ok: true, value: savedConvertedFixture() }));
+    expect(mounted.opened).toEqual(["studio.legacy-session"]);
+  });
+
+  it("does not dispatch conversion after retirement before the first promise turn", async () => {
+    let creates = 0;
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: () => { creates++; return pending; } }));
+    await act(async () => {
+      savedOpenButton(mounted.panel).click(); mounted.root.unmount(); roots.splice(roots.indexOf(mounted.root), 1);
+    });
+    expect(creates).toBe(0); expect(mounted.opened).toEqual([]);
+  });
+
+  for (const replacement of ["workspace", "client", "legacy-client", "unmount"] as const) it(`ignores a rejected conversion after ${replacement} replacement`, async () => {
+    const conversion = studioDeferred();
+    const client = createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: () => conversion.promise });
+    const mounted = await mountSavedSession(client); await act(async () => savedOpenButton(mounted.panel).click());
+    if (replacement === "unmount") { await act(async () => mounted.root.unmount()); roots.splice(roots.indexOf(mounted.root), 1); }
+    else await mounted.render(replacement === "workspace" ? "workspace-b" : "workspace-a",
+      replacement === "client" ? createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }) }) : client,
+      replacement === "workspace" || replacement === "legacy-client" ? { listDrafts: async () => ({ ok: true as const, value: { items: [] as any[] } }) } : mounted.legacyClient);
+    await act(async () => conversion.reject(new Error("synthetic-retired-legacy-error")));
+    expect(mounted.opened).toEqual([]); expect(readNotificationMessages(mounted.panel)).toEqual([]);
+    expect(mounted.panel.textContent).not.toContain("synthetic-retired-legacy-error");
+  });
+});
+
+describe("Saved source validation and list ownership", () => {
+  it("keeps a canonical legacy label fallback and a non-SemVer definition version", async () => {
+    const legacy = savedLegacyFixture(); legacy.draftEditableValues = {};
+    legacy.baseAssetReference = { label: "Older named asset" };
+    const record = savedConvertedFixture(); record.definitionRef.version = "preview-2";
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: async () => ({ ok: true, value: { drafts: [] } }), createAssetDraft: async () => ({ ok: true, value: record }) }),
+      { listDrafts: async () => ({ ok: true as const, value: { items: [legacy] } }) });
+    expect(mounted.panel.textContent).toContain("Older named asset");
+    await act(async () => savedOpenButton(mounted.panel).click());
+    expect(mounted.opened).toEqual(["studio.legacy-session"]);
+    expect(readNotificationMessages(mounted.panel)).toEqual([]);
+  });
+
+  for (const fault of ["studio-array", "studio-key", "studio-definition", "studio-draft-path", "studio-draft-length", "studio-definition-path", "studio-definition-padding", "studio-version-blank", "studio-version-padding", "studio-legacy-source", "legacy-workspace", "legacy-array", "legacy-draft-path", "legacy-draft-length", "legacy-state", "legacy-label"] as const) it(`refuses ${fault} without claiming the workspace is empty`, async () => {
+    let failing = true;
+    const summary = { draftId: "studio.valid-list", definitionRef: savedView.record.definitionRef, displayName: "Safe Studio list", assetType: "ui-component", status: "draft", revision: 1, resourceCount: 3 } as any;
+    const client = createClient({ listAssetDrafts: async () => {
+      const invalid = { ...summary, ...(fault === "studio-definition" ? { definitionRef: { ...summary.definitionRef, kind: "artifact" } } : {}) };
+      invalid.definitionRef = { ...invalid.definitionRef };
+      if (fault === "studio-draft-path") invalid.draftId = "../other";
+      if (fault === "studio-draft-length") invalid.draftId = "s".repeat(201);
+      if (fault === "studio-definition-path") invalid.definitionRef.id = "../other";
+      if (fault === "studio-definition-padding") invalid.definitionRef.id = " workspace.definition ";
+      if (fault === "studio-version-blank") invalid.definitionRef.version = " ";
+      if (fault === "studio-version-padding") invalid.definitionRef.version = " 2.0.0 ";
+      if (fault === "studio-legacy-source") invalid.sourceLegacyDraftId = "../other";
+      return { ok: true, value: { drafts: !failing ? [] : fault === "studio-array" ? undefined : fault === "studio-key" ? [invalid, invalid] : [invalid] } } as any;
+    } });
+    const legacyClient = { listDrafts: async () => {
+      const invalid = savedLegacyFixture(fault === "legacy-workspace" ? "workspace.foreign" : "workspace-a");
+      if (fault === "legacy-draft-path") invalid.draftId = "../other";
+      if (fault === "legacy-draft-length") invalid.draftId = "s".repeat(97);
+      if (fault === "legacy-state") invalid.status = "unknown";
+      if (fault === "legacy-label") { invalid.draftEditableValues = {}; invalid.baseAssetReference = { label: {} }; }
+      return { ok: true as const, value: { items: !failing ? [] : fault === "legacy-array" ? undefined : [invalid] } } as any;
+    } };
+    const mounted = await mountSavedSession(client, legacyClient);
+    expect(readNotificationMessages(mounted.panel).join(" ")).toContain("unavailable. Retry the search.");
+    expect(mounted.panel.textContent).not.toContain("No saved assets");
+    if (fault.startsWith("studio")) expect(mounted.panel.textContent).toContain("Legacy session card");
+    else expect(mounted.panel.textContent).toContain("Safe Studio list");
+    failing = false;
+    await act(async () => mounted.panel.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(mounted.panel.textContent).toContain("No saved assets");
+    expect(mounted.panel.querySelector(".asset-studio--saved")!.getAttribute("aria-busy")).toBe("false");
+  });
+
+  it("admits one search and preserves its captured query until it settles", async () => {
+    let calls = 0; const search = studioDeferred(); const requests: any[] = [];
+    const mounted = await mountSavedSession(createClient({ listAssetDrafts: request => { requests.push(request); return ++calls === 1 ? Promise.resolve({ ok: true, value: { drafts: [] } }) : search.promise; } }));
+    const input = mounted.panel.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => studioInput(input, "  card query  "));
+    await act(async () => {
+      const form = mounted.panel.querySelector("form")!;
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(calls).toBe(2); expect(requests[1].text).toBe("card query"); expect(input.disabled).toBe(true);
+    await act(async () => search.resolve({ ok: true, value: { drafts: [] } }));
+    expect(input.disabled).toBe(false);
+  });
+
+  it("does not dispatch initial listings after retirement before the first promise turn", async () => {
+    const { flushSync } = await import("react-dom"); let studioCalls = 0; let legacyCalls = 0;
+    const client = createClient({ listAssetDrafts: async () => { studioCalls++; return { ok: true, value: { drafts: [] } }; } });
+    const legacyClient = { listDrafts: async () => { legacyCalls++; return { ok: true as const, value: { items: [] } }; } };
+    const panel = document.createElement("div"); document.body.append(panel); const root = createRoot(panel); roots.push(root);
+    await act(async () => {
+      flushSync(() => root.render(<NotificationTestHarness><SavedAssetDrafts workspaceId="workspace-a" client={client} legacyClient={legacyClient} onOpenDraft={() => undefined}/></NotificationTestHarness>));
+      root.unmount(); roots.splice(roots.indexOf(root), 1);
+    });
+    expect(studioCalls).toBe(0); expect(legacyCalls).toBe(0);
   });
 });

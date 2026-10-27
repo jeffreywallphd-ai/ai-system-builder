@@ -256,3 +256,19 @@ installation and separate activation/disable/actual-target rollback, malformed
 summaries, safe failures, stale results and identity denials alongside the starter
 download test. Their fixed clients do not qualify real parsing/trust decisions,
 transports, storage, apps, providers, native recovery or code execution.
+
+### Saved asset view sessions
+
+The shared Saved view is scoped by workspace and both client instances. A
+replacement remounts the view, clears former search/list state and retires old
+callbacks. A synchronous owner reserves each list or legacy conversion before
+busy rendering. Only that current owner can accept a response or release busy
+state. Checks run before dispatch as well as before accepting a reply.
+
+The UI preserves separate valid Studio/legacy listings after a source fails and
+does not describe an unknown list as empty. Returned conversion identity and
+legacy provenance are checked before navigation. Existing application reuse can
+return any canonical lifecycle/revision/definition for that same legacy source;
+the UI does not invent a revision-1 or new-definition requirement. Server
+authorization and persistence remain the owning boundaries. Retiring a view is
+not cancellation, rollback or proof of exact-once writes across clients.

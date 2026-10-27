@@ -306,3 +306,26 @@ static error copy excludes raw adapter detail. This is interface recovery, not
 server cancellation or physical cleanup. Fixed-client positive, failure,
 malformed, duplicate, identity, stale-list and retired-session tests do not pass
 real transport/storage, app/native/provider/runtime or final qualification.
+
+### Saved-view response and legacy-open ownership
+
+Protected data is workspace-owned Saved metadata and current navigation state.
+A delayed list or accepted legacy conversion must not update a replaced workspace
+or client view. Synchronous read/action ownership prevents duplicate opens and a
+search from releasing another request. A retired owner is checked before a call,
+before a reply and before releasing controls. This UI fence is not authorization;
+the existing application must still authorize each operation and own persistence.
+
+Validate list rendering fields and row identities before display. Legacy list
+records must match the requested workspace. An accepted conversion must have a
+canonical Studio identity and the expected workspace and legacy provenance.
+Existing canonical idempotent replies remain valid; no assumed initial revision
+or newly seeded definition substitutes for the authoritative returned record.
+Thrown errors use fixed notification text; only established public typed errors
+are displayed. Partial legal lists remain usable and unknown lists are not
+reported as empty. Explicit retry does not imply cancellation or rollback.
+
+Focused synthetic UI tests cover duplicate, throw/reject, malformed/foreign
+identity, partial-source failure, retry and workspace/client/unmount races.
+They do not qualify actual transports, persistence, applications, native workers,
+source execution or the parent roadmap. Those qualification obligations remain.
