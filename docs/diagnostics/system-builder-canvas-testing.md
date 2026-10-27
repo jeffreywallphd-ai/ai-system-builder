@@ -272,3 +272,27 @@ local test implementation; actual app execution, process restart and final
 combined qualification remain separate. Run the bounded
 `system-canvas-authoring-ui` profile for the oracle/protocol/draft unit files and
 four related rendered Canvas files. Profile tests do not launch a host or model.
+
+## Desktop authoring restart definitions
+
+The packaged browse/Assets and meaningful-system cases keep the same isolated
+application profile across two app sessions. Each session has a separate worker
+record folder. The first session must pass the existing owned quit, native exit
+and worker-exit checks before the second session can start. Both failures are
+retained if the journey and cleanup fail. Old worker records are preserved.
+
+The replacement must have a different process and page. Assets are checked
+against the original workspace, published definitions, immutable base fields and
+resource bytes, and customization history. Public metadata reads use the new
+page. The three useful systems are checked against their original exact saved
+observations. The original four asset document reloads and useful system actions
+remain. A document reload is still not a process restart.
+
+The replacement asset check allows one explicit attempt. It rejects the retired
+page and duplicate attempts during or after verification, including a failed
+attempt. These finite oracle tests and test discovery qualify the test
+implementation only. Actual app/native restart, browser-server restart and final
+combined qualification remain pending until separately executed. No accepted
+model/OCR accuracy check runs as part of this work. The browse case has an extra
+150-second total budget for its additional restart and verification steps;
+existing action, launch, shutdown, output and resource limits are unchanged.

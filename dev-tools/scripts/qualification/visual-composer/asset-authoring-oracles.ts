@@ -104,3 +104,22 @@ export function assertPublishedDefinition(expected: PublishedDefinitionObservati
 export function assertDocumentReplay(plan: AuthoringExpectations, observed: {kind: string; count: number; workspaceIds: string[]}) {
   assert(observed.kind === "document-reload" && observed.count === plan.replayCount && observed.workspaceIds.length === plan.replayCount && observed.workspaceIds.every(id => id === plan.workspaceId), "Replay scope, count or workspace is incorrect; document reload is not process restart.");
 }
+
+/** One explicit replacement observation. The caller separately proves process exit/restart. */
+export function createSingleRestartCheck<T extends object>(original: T, verify: (replacement: T) => Promise<void>) {
+  let admitted = false;
+  return async (replacement: T): Promise<void> => {
+    assert(replacement !== original, "The retired page cannot verify a replacement.");
+    assert(!admitted, "The replacement verification was already attempted.");
+    admitted = true;
+    await verify(replacement);
+  };
+}
+
+/** Always qualify owned shutdown; any caught failure prevents the next phase. */
+export async function runOwnedRestartPhase(journey: () => Promise<void>, shutdown: () => Promise<unknown>) {
+  const failures: unknown[] = [];
+  try {await journey();} catch (error) {failures.push(error);}
+  try {await shutdown();} catch (error) {failures.push(error);}
+  if (failures.length) throw new AggregateError(failures, "Desktop authoring journey or owned shutdown failed.");
+}

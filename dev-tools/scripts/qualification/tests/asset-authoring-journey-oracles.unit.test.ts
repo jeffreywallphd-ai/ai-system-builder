@@ -8,7 +8,7 @@ import { readDesktopPublishedDefinition, readBrowserPublishedDefinition } from "
 import {
   AUTHORING_PHASE_BUDGET_MS, AUTHORING_STEP_BUDGET_MS, BASE_FIELD_LABELS,
   createAuthoringExpectations, assertPackageObservation, assertStudioObservation,
-  validateBaseObservation, assertBaseUnchanged, assertPublishedHistory, assertPublishedDefinition, assertDocumentReplay,
+  validateBaseObservation, assertBaseUnchanged, assertPublishedHistory, assertPublishedDefinition, assertDocumentReplay, createSingleRestartCheck, runOwnedRestartPhase,
   type BaseObservation,
 } from "../visual-composer/asset-authoring-oracles";
 
@@ -145,6 +145,50 @@ test("replay checks refuse a process-restart claim, incomplete counts and worksp
   for (const changed of [{...exact, kind: "process-restart"}, {...exact, count: 3}, {...exact, count: 5}, {...exact, workspaceIds: exact.workspaceIds.slice(1)}, {...exact, workspaceIds: ["workspace.other", ...exact.workspaceIds.slice(1)]}]) assert.throws(() => assertDocumentReplay(plan, changed));
 });
 
+test("replacement check refuses the retired page without consuming the fresh-page attempt", async () => {
+  const retired = {}, fresh = {}, calls: object[] = [];
+  const verify = createSingleRestartCheck(retired, async replacement => {calls.push(replacement);});
+  await assert.rejects(verify(retired), /retired page/);
+  assert.equal(calls.length, 0);
+  await verify(fresh); assert.equal(calls.length, 1); assert.equal(calls[0], fresh);
+  await assert.rejects(verify({}), /already attempted/); assert.equal(calls.length, 1);
+});
+
+test("replacement check admits one same-turn attempt while verification is pending", async () => {
+  const fresh = {}; let finish!: () => void; const calls: object[] = [];
+  const verify = createSingleRestartCheck({}, async replacement => {calls.push(replacement); await new Promise<void>(resolve => {finish = resolve;});});
+  const pending = verify(fresh);
+  await assert.rejects(verify(fresh), /already attempted/);
+  await assert.rejects(verify({}), /already attempted/);
+  assert.equal(calls.length, 1); assert.equal(calls[0], fresh);
+  finish(); await pending; await assert.rejects(verify({}), /already attempted/);
+});
+
+test("replacement observation failure stays failed and cannot be retried with another page", async () => {
+  const failure = new Error("Synthetic missing publication."); let calls = 0;
+  const verify = createSingleRestartCheck({}, async () => {calls++; throw failure;});
+  await assert.rejects(verify({}), error => error === failure);
+  await assert.rejects(verify({}), /already attempted/); assert.equal(calls, 1);
+});
+
+test("restart phase settles the journey before owned shutdown and resolves only after both", async () => {
+  const events: string[] = []; let finish!: () => void;
+  const phase = runOwnedRestartPhase(async () => {events.push("journey"); await new Promise<void>(resolve => {finish = resolve;}); events.push("saved");}, async () => {events.push("shutdown");});
+  assert.deepEqual(events, ["journey"]); finish(); await phase;
+  assert.deepEqual(events, ["journey", "saved", "shutdown"]);
+});
+
+for (const reason of [undefined, null, false, 0, "", new Error("Synthetic refusal.")]) test(`restart phase preserves ${String(reason)} refusal and prevents replacement`, async () => {
+  for (const target of ["journey", "shutdown", "both"]) {
+    const events: string[] = []; const secondary = new Error("Synthetic cleanup refusal.");
+    await assert.rejects(runOwnedRestartPhase(async () => {events.push("journey"); if (target !== "shutdown") throw reason;}, async () => {events.push("shutdown"); if (target !== "journey") throw target === "both" ? secondary : reason;}).then(() => {events.push("replacement");}), error => {
+      assert(error instanceof AggregateError);
+      assert.deepEqual(error.errors, target === "both" ? [reason, secondary] : [reason]); return true;
+    });
+    assert.deepEqual(events, ["journey", "shutdown"]);
+  }
+});
+
 test("both ordinary host specs await the same Assets core after their existing browse journey", () => {
   const folder = path.resolve("dev-tools/scripts/qualification/visual-composer/e2e");
   for (const [file, host, previousBudget] of [["packaged-desktop-browse.e2e.spec.ts", "packaged-desktop", 150_000], ["thin-client-browse.e2e.spec.ts", "thin-chrome", 120_000]] as const) {
@@ -156,7 +200,7 @@ test("both ordinary host specs await the same Assets core after their existing b
     assert(ts.isAwaitExpression(assets[0]!.parent)); assert.equal((assets[0]!.arguments[1] as ts.StringLiteral).text, host);
     assert.equal(assets[0]!.arguments.length, 5);
     const reader = assets[0]!.arguments[3]!; assert(ts.isArrowFunction(reader));
-    assert(reader.getText(source).includes(host === "thin-chrome" ? "page.evaluate(readBrowserPublishedDefinition, input)" : "page.evaluate(readDesktopPublishedDefinition, input)"));
+    assert(reader.getText(source).includes(host === "thin-chrome" ? "currentPage.evaluate(readBrowserPublishedDefinition, input)" : "currentPage.evaluate(readDesktopPublishedDefinition, input)"));
     const replay = assets[0]!.arguments[2]!; assert(ts.isObjectLiteralExpression(replay));
     assert.equal(replay.properties.length, 2);
     const kind = replay.properties.find(prop => prop.name?.getText(source) === "kind")!;
@@ -167,7 +211,7 @@ test("both ordinary host specs await the same Assets core after their existing b
     assert.equal(replayCalls.filter(call => call.expression.getText(source) === "page.reload").length, 1);
     assert.equal(replayCalls.filter(call => /launch|close|evaluate|route|request/.test(call.expression.getText(source))).length, 0);
     const budget = named("test.setTimeout"); assert.equal(budget.length, 1);
-    assert.equal(budget[0]!.arguments[0]!.getText(source), `${previousBudget.toLocaleString("en-US").replaceAll(",", "_")} + AUTHORING_PHASE_BUDGET_MS`);
+    assert.equal(budget[0]!.arguments[0]!.getText(source), `${previousBudget.toLocaleString("en-US").replaceAll(",", "_")} + AUTHORING_PHASE_BUDGET_MS${host === "packaged-desktop" ? " + 150_000" : ""}`);
   }
 });
 

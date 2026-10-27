@@ -84,3 +84,18 @@ one workspace. The browser creates them within one self-contained journey.
 Existing protocol redaction and action/output bounds remain intact. These
 comparisons add no application authority and prove no physical host, model,
 process restart, native-resource or security qualification by themselves.
+
+### Owned desktop authoring restart checks
+
+The two synthetic authoring tests reuse the existing owned quit/native-exit and
+worker-exit proof before starting a replacement app. Each session retains its own
+worker records beneath the same isolated application data root; no old record is
+deleted or accepted for a new process. A failed journey or shutdown prevents the
+replacement. Distinct process/page checks supplement the unchanged native proof.
+The asset verifier admits one replacement-page observation attempt, reuses the
+original base/publication/workspace expectations and reads public metadata on
+the current page. Failed or pending verification cannot be replayed. Three saved
+systems reuse their captured exact synthetic observations after restart. These
+checks add no production authority and change no security, model or resource
+guard. Finite tests, types and collection are local implementation evidence;
+actual native/host/server restart and parent qualification remain separate.

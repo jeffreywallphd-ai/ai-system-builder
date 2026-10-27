@@ -5,7 +5,7 @@ import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "../../../../../modules/applicat
 import {
   AUTHORING_STEP_BUDGET_MS, BASE_FIELD_LABELS, createAuthoringExpectations,
   assertPackageObservation, assertStudioObservation, assertBaseUnchanged,
-  assertPublishedHistory, assertPublishedDefinition, assertDocumentReplay, validateBaseObservation,
+  assertPublishedHistory, assertPublishedDefinition, assertDocumentReplay, validateBaseObservation, createSingleRestartCheck,
   type AuthoringHost, type BaseObservation, type StudioObservation, type PublishedDefinitionObservation,
 } from "../asset-authoring-oracles";
 
@@ -48,7 +48,7 @@ export async function readBrowserPublishedDefinition(query: PublishedReadQuery, 
 export async function completeAssetAuthoringJourney(
   page: Page, host: AuthoringHost,
   replay: {kind: "document-reload"; reload: () => Promise<void>},
-  readPublished: (input: {definitionId: string; version: string; workspaceId: string}) => Promise<unknown>,
+  readPublished: (input: PublishedReadQuery, currentPage: Page) => Promise<unknown>,
   info: TestInfo,
 ) {
   page.setDefaultTimeout(10_000); page.setDefaultNavigationTimeout(30_000);
@@ -193,7 +193,7 @@ export async function completeAssetAuthoringJourney(
     await reload();
   }, {timeout: AUTHORING_STEP_BUDGET_MS});
 
-  await test.step("Rediscover exact published copies and unchanged originals", async () => {
+  async function verifyPublishedState() {
     for (const asset of [...plan.copies, plan.studio]) {
       await select("Browse"); await page.getByLabel("Search assets", {exact: true}).fill(asset.id);
       const search = page.getByRole("button", {name: "Search", exact: true});
@@ -209,7 +209,7 @@ export async function completeAssetAuthoringJourney(
       // Cards hide IDs. A separate existing public exact-version read verifies
       // publication metadata, not a hidden UI selection or source artifact.
       expect(await workspace()).toBe(plan.workspaceId);
-      const envelope = await readPublished({definitionId: asset.id, version: "1.0.0", workspaceId: plan.workspaceId});
+      const envelope = await readPublished({definitionId: asset.id, version: "1.0.0", workspaceId: plan.workspaceId}, page);
       assertPublishedDefinition(publishedDefinitions.get(asset.id)!, envelope);
       expect(await workspace()).toBe(plan.workspaceId);
       // Publication creates an implementation draft, not an eligible new target.
@@ -221,7 +221,22 @@ export async function completeAssetAuthoringJourney(
       const rows = page.locator(".asset-customizer__history li").filter({hasText: copy.id});
       await expect(rows).toHaveCount(1); assertPublishedHistory(copy, await rows.allTextContents());
     }
+  }
+  await test.step("Rediscover exact published copies and unchanged originals", async () => {
+    await verifyPublishedState();
     assertDocumentReplay(plan, {kind: replay.kind, count: replayWorkspaces.length, workspaceIds: replayWorkspaces});
   }, {timeout: AUTHORING_STEP_BUDGET_MS});
   await info.attach("asset-authoring-document-reload", {body: JSON.stringify({host, replayKind: replay.kind, replayCount: replayWorkspaces.length, syntheticAssets: 3, status: "passed", scope: "Public local fixture UI only. Process/server restart, durable storage, authorization/native and final qualification remain separate."}), contentType: "application/json"});
+  return createSingleRestartCheck(page, async replacement => {
+    // This callback does not close or start a process. The desktop caller must
+    // first qualify owned shutdown, then supply its distinct replacement page.
+    page = replacement;
+    page.setDefaultTimeout(10_000); page.setDefaultNavigationTimeout(30_000);
+    await test.step("Verify original publications and base bytes on the replacement page", async () => {
+      await expect(page.getByRole("heading", {name: "Assets", exact: true})).toBeVisible();
+      expect(await workspace()).toBe(plan.workspaceId);
+      await verifyPublishedState();
+    }, {timeout: AUTHORING_STEP_BUDGET_MS});
+    await info.attach("asset-authoring-replacement-observations", {body: JSON.stringify({host, syntheticAssets: 3, status: "passed", scope: "Exact original workspace, public definitions, base fields/resources and copy history on one replacement page. Caller-owned process exit/restart evidence is separate; no server or security qualification."}), contentType: "application/json"});
+  });
 }

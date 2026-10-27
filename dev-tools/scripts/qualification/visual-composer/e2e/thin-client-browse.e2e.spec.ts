@@ -22,5 +22,5 @@ test("thin client preserves the complete browse authoring journey", async ({page
   await expect(page.getByRole("heading", {name: "Assets", exact: true})).toBeVisible();
   await completeAssetAuthoringJourney(page, "thin-chrome", {kind: "document-reload", reload: async () => {
     await page.reload();
-  }}, async input => page.evaluate(readBrowserPublishedDefinition, input), test.info());
+  }}, async (input, currentPage) => currentPage.evaluate(readBrowserPublishedDefinition, input), test.info());
 });

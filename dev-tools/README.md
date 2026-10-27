@@ -314,3 +314,10 @@ The `system-canvas-authoring-ui` check profile runs the exact saved-system
 comparison, existing protocol/draft unit files and four related rendered Canvas
 files. It collects no whole-host or model cases. See
 `docs/diagnostics/system-builder-canvas-testing.md` for observation scope.
+
+The packaged Assets and three-useful-systems UI cases now define a complete
+owned app restart. They retain one application profile, use separate bounded
+worker-record folders per session, and require the existing owned shutdown proof
+before replacement. Original saved observations are compared on the new page;
+asset metadata readers use that page. Local oracle tests and discovery do not
+prove physical restart, native cleanup, server restart or final qualification.
