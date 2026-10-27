@@ -4973,6 +4973,41 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "assets-search-accessible-name-and-help-interactions",
+      "work_criteria": [
+        "stable-search-and-independent-help",
+        "bounded-profile-and-owned-checkpoint"
+      ],
+      "receipt_digest": "cb8780b8f5ff4eb1506fabb7847842365c2622447266625cc87225f570c6b78f",
+      "review_digest": "5bf0cd65557521358b527854afaff4390fd833a3dcf7c5c9a7c6957f4e4ea5e2",
+      "scope": "Completed search controls in both host views associate each visible label with its input and keep the help control separate. Thirty-two mounted feature tests, two implementation-root type checks and eight profile guards pass. Existing test-only JSDOM declaration diagnostics match HEAD. Actual browser accessibility and broader roadmap checks remain pending.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "legacy-assets-workspace-authorization-and-safe-read-envelopes",
+      "work_criteria": [
+        "legacy-authority-before-effects",
+        "safe-transport-and-both-host-wiring",
+        "reviewed-legacy-only-checkpoint"
+      ],
+      "receipt_digest": "eb75b6daa19ce21769f276e2c13417e59d4efd43b279b050c8aa2d66730bbdf1",
+      "review_digest": "1c6d4749d3bcad8460dcdf1a8f08259797600922451d30013d585d54ac36d084",
+      "scope": "Completed seven legacy Assets mutation gates and eight public reads use current workspace access. Finite desktop/server compositions verify valid create/read/update, then denied suspended, missing, archived or foreign access without changing the draft. Eighty-five focused tests, twenty-one-root type checks and nine profile guards pass. In-memory data and handler seams do not qualify physical hosts, durable storage, modern authoring authority or atomic publication.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }

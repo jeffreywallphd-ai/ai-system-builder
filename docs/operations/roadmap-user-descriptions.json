@@ -12296,6 +12296,32 @@
           "The change is independently reviewed and committed. Actual Electron identity, workspace access and saved-data checks still need agent work. These local checks do not complete the whole roadmap requirement. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8444c3c0e7c12d828ae824db45e523d3e00c47e5bbafc27cdf98b133676e4c65",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed the Assets search labels in both app views. The help button has a separate label.",
+          "Thirty-two focused interface tests passed. The tests cover the label, help button, typing and existing search behavior.",
+          "Checks for the two changed controls and test selection passed. Existing test-only type warnings are recorded. The change is reviewed and committed.",
+          "The agent still needs the actual app and broader roadmap checks. These local results do not complete the whole requirement. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e958590c59fb3af849cc5694ac30871763f4755d5c99e187e28f8025327de686",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added current workspace access checks to legacy Assets reads and changes. Missing or suspended access is refused before protected data is used.",
+          "Both desktop and server composition tests create, read and update a valid draft. They then confirm that suspended membership or a missing, archived or different workspace prevents access and leaves the draft unchanged.",
+          "Denied reads return a safe response. Eighty-five focused tests, type checks and nine test-selection checks passed. The change is reviewed and committed.",
+          "The tests use in-memory saved data and request test controls. The agent still needs actual app, durable storage and the separate Studio, package and publication checks. These results do not complete the whole requirement. No action needed from you."
+        ]
+      }
     }
   ]
 }
