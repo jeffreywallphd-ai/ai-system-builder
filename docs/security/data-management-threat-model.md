@@ -1491,3 +1491,14 @@ restores its React flag and API descriptor. No physical sender authentication,
 SQLite, actual download/model/OCR/provider/native process or parent/final pass is
 claimed. Accepted model/OCR checks stay closed; no security or resource guard is
 weakened.
+
+The private saved-row host fixture permits one additional provided CSV-to-Parquet
+case only. Fixed name/closed fixture shape, exact bounded bytes, regular contained
+source identity and single-link witnesses prevent arbitrary input admission.
+Generation, OCR, downloads, extra sources, advanced preparation and unsupported
+tasks stay denied. Production processors and public UI mutation authority remain.
+Read-only evidence is bounded and scoped; malformed/wrong-version pages, changed
+parent/source/recipe/digests/counts and private read failures fail fixed oracles.
+Existing serial host/worker ownership, offline settings and native resource limits
+are unchanged. Source/helper tests do not prove physical file identity, Electron
+sender authority, process restart, native shutdown or final qualification.

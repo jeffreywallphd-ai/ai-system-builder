@@ -205,3 +205,11 @@ The provided-data app cases now include one fixed manual Context pack across
 complete restart. Local admission/oracle/module-collection checks are separate
 from actual app execution. See the private provided-data qualification guide;
 no model, native quota or parent qualification follows from those local checks.
+
+The provided-data two-host tests also create a separate workspace for fixed
+Parquet row review. They upload/prepare/approve through visible controls, edit
+and reject into immutable successors, and compare exact saved data and history
+after restart. The `dataset-version-browser` profile includes focused fixture
+and oracle checks. Those checks do not execute the app cases or qualify native
+shutdown; use the existing reviewed source-bound operator for that later step.
+Accepted model accuracy and OCR results remain separate.

@@ -1453,7 +1453,8 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
         "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
         "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
-        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx"
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts"
       ],
       "source_paths": [
         "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
@@ -1520,7 +1521,10 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts",
         "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
-        "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json"
+        "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json",
+        "dev-tools/scripts/qualification/visual-composer/daily-row-review-fixture.json",
+        "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
+        "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts"
       ]
     },
     "dataset-semantic-curation": {

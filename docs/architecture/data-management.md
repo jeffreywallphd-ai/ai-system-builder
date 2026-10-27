@@ -1288,3 +1288,12 @@ source key/digest. Checks include recipe bytes/digest/operation/row fingerprint,
 quality report binding and complete dataset role size/count/media metadata.
 After UI remount and parent selection, an actual SQLite close/reopen preserves
 the same complete records. This is local database reopen, not process restart.
+
+Saved Parquet row-review host coverage extends the existing provided-data
+qualification cases. A second UI-created workspace isolates the three-version
+edit/reject chain from the original JSONL and manual Context counts. All writes
+use mounted controls; bounded public API/IPC reads compare complete immutable
+records, stored bytes, ordered values and exact source/parent/recipe/report
+lineage before and after the existing restart. The private fixed CSV admission
+delegates to production preparation/review. Focused fixture/oracle/collection
+passes do not establish real-window, worker, native retirement or parent closure.

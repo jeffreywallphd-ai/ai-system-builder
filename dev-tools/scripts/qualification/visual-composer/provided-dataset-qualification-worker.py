@@ -34,6 +34,63 @@ def manual_fixture():
     return value
 
 
+def validate_row_review_fixture(value):
+    if (type(value) is not dict or set(value) != {"schema_version", "source_name", "dataset_name", "edit_suffix", "rows"}
+            or value["schema_version"] != "fixed-saved-row-review-v1"
+            or value["source_name"] != "synthetic-provided-row-review.csv"
+            or value["dataset_name"] != "saved-row-review-qualification"
+            or value["edit_suffix"] != " Please confirm."
+            or type(value["rows"]) is not list or len(value["rows"]) != 8):
+        raise ValueError("The fixed row-review fixture is invalid.")
+    for row in value["rows"]:
+        if (type(row) is not dict or set(row) != {"text", "label"}
+                or type(row["text"]) is not str or not 1 <= len(row["text"]) <= 256
+                or any(character in row["text"] for character in ("\r", "\n", ",", '"', "\0"))
+                or row["label"] not in ("invoice", "receipt", "order", "report")):
+            raise ValueError("The fixed row-review rows are invalid.")
+    if len({row["text"] for row in value["rows"]}) != 8:
+        raise ValueError("The fixed row-review rows are invalid.")
+    return value
+
+
+def row_review_fixture():
+    source = Path(__file__).parent / "daily-row-review-fixture.json"
+    info = source.lstat()
+    if (not stat.S_ISREG(info.st_mode) or source.resolve() != source
+            or getattr(info, "st_file_attributes", 0) & 0x400 or not 0 < info.st_size <= 4096):
+        raise ValueError("The fixed row-review fixture is unavailable.")
+    with source.open("rb") as stream:
+        raw = stream.read(4097)
+    if len(raw) > 4096:
+        raise ValueError("The fixed row-review fixture exceeded its limit.")
+    return validate_row_review_fixture(json.loads(raw))
+
+
+def row_review_csv(fixed):
+    value = validate_row_review_fixture(fixed)
+    return ("text,label\n" + "".join(row["text"] + "," + row["label"] + "\n" for row in value["rows"])).encode("utf-8")
+
+
+def validate_fixed_row_review_source(source):
+    fixed = row_review_fixture()
+    if source.originalName != fixed["source_name"]:
+        raise ValueError("Only the fixed row-review source is permitted.")
+    candidate = Path(source.localPath)
+    before = candidate.lstat()
+    if before.st_nlink != 1:
+        raise ValueError("A single current row-review source is required.")
+    with candidate.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        raw = stream.read(16_385)
+        after = os.fstat(stream.fileno())
+    current = candidate.lstat()
+    witness = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_nlink)
+    if (not stat.S_ISREG(opened.st_mode) or witness(before) != witness(opened)
+            or witness(opened) != witness(after) or witness(after) != witness(current)
+            or len(raw) > 16_384 or raw != row_review_csv(fixed)):
+        raise ValueError("Only the exact fixed row-review bytes are permitted.")
+
+
 def context_temp_root(repo_root):
     root = Path(repo_root)
     run = Path(os.getenv("AISB_LOCAL_DESKTOP_UI_RUN", ""))
@@ -106,12 +163,16 @@ def validate_provided(payload, root):
             or recipe.task is None or recipe.task.get("taskType") != "llm-classification"
             or recipe.task.get("textInputMode") != "provided"
             or any(value is not None for value in (recipe.generation, recipe.normalization, recipe.chunking, payload.advanced))
-            or len(payload.sourceInputs) != 1 or payload.output.format != "jsonl"):
+            or len(payload.sourceInputs) != 1 or payload.output.format not in ("jsonl", "parquet")):
         raise ValueError("Only the declared provided-data preparation is permitted.")
     source = payload.sourceInputs[0]
-    if source.mediaType != "text/csv" or source.originalName != "synthetic-provided.csv":
+    if source.mediaType != "text/csv":
         raise ValueError("Only the declared synthetic source is permitted.")
     require_regular_source(root, source)
+    if payload.output.format == "parquet":
+        validate_fixed_row_review_source(source)
+    elif source.originalName != "synthetic-provided.csv":
+        raise ValueError("Only the declared synthetic source is permitted.")
 
 
 def dispatch_allowed(request):

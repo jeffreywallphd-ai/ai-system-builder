@@ -92,3 +92,25 @@ must leave exactly the original catalog minus the selected artifact. Immutable
 scalar snapshots prevent caller mutation from hiding an extra publication, a
 changed unrelated entry or unrelated deletion. Retaining the original pack alone
 cannot establish no publication.
+
+The same two cases now contain a saved Parquet row-review journey in a second
+workspace created through Home. Its fixed `daily-row-review-fixture.json` is
+uploaded through Add data. Provided classification prepares Parquet; explicit
+approval saves the original. Dataset Review edits the first row and rejects the
+second into two immutable successors. Public reads verify all stored artifact
+bytes/digests/sizes, exact ordered rows, source identity, parent chain, recipe
+operations/fingerprints and inherited quality policy. A restart must preserve
+all three complete records and byte sets; visible version selection checks each
+row again. Source bytes and earlier versions must remain unchanged. The test
+returns to the original workspace before existing JSONL/manual Context checks.
+
+The private worker admits Parquet only for the one named regular single-link
+CSV with the exact bounded fixture bytes. It delegates to production preparation
+and review code. The original JSONL, manual Context, task, offline, generation,
+OCR, source containment, native job and cleanup controls remain unchanged.
+Focused fixture tests call actual model-free Parquet preparation. Separate
+oracle tests use synthetic marked bytes and inert public-read facades; they do
+not run an app, process restart or actual IPC/network. Module collection keeps
+the same two host cases and skips them without the explicit scenario. Actual
+source-bound host execution, native retirement and parent/final qualification
+remain pending. Do not rerun accepted model accuracy or OCR for this extension.

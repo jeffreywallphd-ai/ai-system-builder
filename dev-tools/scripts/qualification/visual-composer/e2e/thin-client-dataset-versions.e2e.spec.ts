@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart, resolveProvidedServerRestartMarker } from "./provided-dataset-version-journey";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { prepareManualContext, verifyManualContextAfterRestart } from "./manual-context-host-journey";
+import { prepareSavedRowReview, verifySavedRowReviewAfterRestart } from "./saved-row-review-host-journey";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
@@ -17,6 +18,7 @@ test("browser saves dataset versions and manual Context across full service rest
   await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
   const saved = await prepareProvidedVersions(page, "thin");
+  const savedRows = await prepareSavedRowReview(page, "thin");
   const savedContext = await prepareManualContext(page, "thin");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
@@ -40,4 +42,5 @@ test("browser saves dataset versions and manual Context across full service rest
   await page.reload();
   await verifyProvidedVersionsAfterRestart(page, "thin", saved, test.info());
   await verifyManualContextAfterRestart(page, "thin", savedContext, test.info());
+  await verifySavedRowReviewAfterRestart(page, "thin", savedRows, test.info());
 });

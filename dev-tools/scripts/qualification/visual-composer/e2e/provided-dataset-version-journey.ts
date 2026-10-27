@@ -20,7 +20,7 @@ const ROWS = [
 ];
 const MAX_BYTES = 65_536;
 const INPUT = Buffer.from("text,label\n" + ROWS.map(row => row.join(",")).join("\n") + "\n");
-type SourceIdentity = { artifactId: string; storageKey: string; digest: string };
+export type SourceIdentity = { artifactId: string; storageKey: string; digest: string };
 
 // Playwright loads these TypeScript tests through CommonJS after its ESM
 // global setup. A native URL import keeps the shared MJS resolver in ESM.
@@ -32,7 +32,10 @@ export async function resolveProvidedServerRestartMarker(runId: string, repoRoot
   return path.join(roots.thinRuntimeRoot, "provided-server-session-2.json");
 }
 
-async function readImportedSource(page: Page, host: Host, workspace: string): Promise<SourceIdentity> {
+export async function readImportedSource(page: Page, host: Host, workspace: string,
+  expected = { name: FILE, content: INPUT }): Promise<SourceIdentity> {
+  if (![FILE, "synthetic-provided-row-review.csv"].includes(expected.name) || !Buffer.isBuffer(expected.content)
+      || expected.content.length === 0 || expected.content.length > 16_384) throw new Error("The fixed imported source is invalid.");
   const item = await page.evaluate(async ({ host, workspace, name, limit }) => {
     let envelope;
     if (host === "desktop") envelope = await (window as any).desktopApi.browseArtifacts({ workspaceId: workspace });
@@ -58,13 +61,13 @@ async function readImportedSource(page: Page, host: Host, workspace: string): Pr
     if (found.length !== 1 || typeof found[0].artifactId !== "string" || typeof found[0].storageKey !== "string" ||
         !found[0].artifactId || !found[0].storageKey || found[0].artifactId.length > 1024 || found[0].storageKey.length > 4096) throw new Error("Imported source identity is unavailable.");
     return { artifactId: found[0].artifactId, storageKey: found[0].storageKey };
-  }, { host, workspace, name: FILE, limit: MAX_BYTES });
+  }, { host, workspace, name: expected.name, limit: MAX_BYTES });
   const actual = await readArtifact(page, host, workspace, item.storageKey);
-  expect(actual.equals(INPUT)).toBe(true);
-  return { ...item, digest: `sha256:${createHash("sha256").update(INPUT).digest("hex")}` };
+  expect(actual.equals(expected.content)).toBe(true);
+  return { ...item, digest: `sha256:${createHash("sha256").update(expected.content).digest("hex")}` };
 }
 
-async function readVersions(page: Page, host: Host, workspace: string): Promise<DatasetVersionRecord[]> {
+export async function readVersions(page: Page, host: Host, workspace: string): Promise<DatasetVersionRecord[]> {
   const value = await page.evaluate(async ({ host, workspace, limit }) => {
     let envelope;
     if (host === "desktop") envelope = await (window as any).desktopApi.listDatasetVersions({ workspaceId: workspace });
@@ -94,7 +97,7 @@ async function readVersions(page: Page, host: Host, workspace: string): Promise<
   return versions;
 }
 
-async function readArtifact(page: Page, host: Host, workspace: string, key: string): Promise<Buffer> {
+export async function readArtifact(page: Page, host: Host, workspace: string, key: string): Promise<Buffer> {
   const result = await page.evaluate(async ({ host, workspace, key, limit }) => {
     if (host === "desktop") {
       const response = await (window as any).desktopApi.readArtifactViewerMedia({ storageKey: key }, { workspaceId: workspace, maximumBytes: limit });
@@ -188,16 +191,7 @@ export async function prepareProvidedVersions(page: Page, host: Host) {
   if (await method.count()) await method.selectOption("validate-and-split");
   const run = () => page.getByRole("button", { name: "Run checks and prepare", exact: true });
   const approve = () => page.getByRole("button", { name: "Approve and save dataset", exact: true });
-  const output = page.getByLabel(host === "desktop" ? "Output format" : "Saved file format", { exact: host === "desktop" });
-  if (!await output.isVisible()) {
-    if (host === "desktop") {
-      const outputPanel = page.getByRole("button", { name: /Output file/ });
-      if (!await outputPanel.isVisible()) await page.getByRole("button", { name: "Advanced settings", exact: true }).click();
-      await outputPanel.click();
-    }
-    else await output.locator("xpath=ancestor::details[1]").locator("summary").click();
-  }
-  await output.selectOption("jsonl");
+  await selectProvidedOutput(page, host, "jsonl");
   await run().click(); await expect(approve()).toBeVisible({ timeout: 90_000 });
   await page.getByLabel("Dataset save name (optional)", { exact: false }).fill(NAME);
   await approve().click();
@@ -232,6 +226,19 @@ export async function prepareProvidedVersions(page: Page, host: Host) {
   await panel.getByRole("combobox", { name: "Version", exact: true }).selectOption(original.versionId);
   if (host === "desktop") await page.getByRole("button", { name: "Close detail and preview", exact: true }).click();
   return { workspace, original, originalHashes, versions, sourceIdentity };
+}
+
+export async function selectProvidedOutput(page: Page, host: Host, format: "jsonl" | "parquet") {
+  const output = page.getByLabel(host === "desktop" ? "Output format" : "Saved file format", { exact: host === "desktop" });
+  if (!await output.isVisible()) {
+    if (host === "desktop") {
+      const outputPanel = page.getByRole("button", { name: /Output file/ });
+      if (!await outputPanel.isVisible()) await page.getByRole("button", { name: "Advanced settings", exact: true }).click();
+      await outputPanel.click();
+    }
+    else await output.locator("xpath=ancestor::details[1]").locator("summary").click();
+  }
+  await output.selectOption(format);
 }
 
 export async function verifyProvidedVersionsAfterRestart(page: Page, host: Host,
