@@ -2,8 +2,8 @@
 
 # Comprehensive Functional UI Automation Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-10-26T17:48:26Z`
+- Status: `ready`
+- Updated: `2026-10-27T05:51:02Z`
 
 ## Objective
 
@@ -94,14 +94,14 @@ Both options cover the current mounted functionality and require tests, executio
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Data, Context and AI preparation journeys | Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects. | None | `implementing` |
+| 1: Data, Context and AI preparation journeys | Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects. | None | `implemented-pending-qualification` |
 | 2: Assets to useful compositions and published runtimes | Protect the complete supported asset-authoring and system-building user journey on both hosts. Build meaningful multi-component systems through the actual current modal/click editor, preserve configuration and immutable versions, build/publish exact revisions and exercise the currently mounted controlled-conversation runtime. Execute tests and repair identified defects. | daily-data-and-ai-journeys | `pending` |
 | 3: Operational recovery and complete UI coverage qualification | Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure. | daily-data-and-ai-journeys, asset-to-published-system-journeys | `pending` |
 
 ## Increment 1: Data, Context and AI preparation journeys
 
 - Id: `daily-data-and-ai-journeys`
-- Status: `implementing`
+- Status: `implemented-pending-qualification`
 - Dependencies: None
 
 Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects.
@@ -124,11 +124,11 @@ Deliver a source-linked UI coverage ledger with its first full daily-workflow co
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `daily-capability-and-variation-map`: Every currently supported Data/Context/Models/Image capability and desktop Train Model action has a source-linked scenario and host applicability record. All registry-supported nine-goal task/input/method/output variants have meaningful UI assertions, including early unsupported-format, invalid-field and inactive-setting behavior. No hidden API-only or absent thin-client training UI is invented. | local | not recorded |
-| `daily-real-host-roundtrips`: Current packaged Windows desktop and local Chrome journeys use public mounted UI for workspace creation/selection and fresh source acquisition, preparation/review/approval/save, row edit/reject/version selection, manual Context creation and supported Context/browser actions. Assert exact persisted artifact identity, nonempty bounded bytes/schema/counts/lineage or a verified supported denial; reload/reopen preserves the result. A seeded response or visible success string alone cannot pass. Finite runtime/provider doubles are declared and do not qualify their external/physical semantics. | controlled-environment | not recorded |
-| `ai-controls-and-owned-task-states`: Both mounted hosts preserve exact supported model/device/dtype, constrained-output/adaptive override and optional memory-mode choices, including reopen and clear unavailable states. Model/training/image starts, progress, review/save/discard/finalize/retry and supported cancellation are exercised with bounded deterministic workers and real host transport/storage. Refused cancellation or insufficient RAM/VRAM remains visibly non-successful; no implicit fallback, download, publication or release of an unconfirmed owned worker is allowed. | local | not recorded |
-| `daily-errors-and-repair-loop`: Execute each applicable new or reused daily-workflow UI test on the candidate. Every in-scope failure is diagnosed against its current expected contract, repaired and covered by a passing regression; duplicate submissions, stale/foreign workspace responses, unavailable dependencies, malformed output and save/finalize failure retain safe correction/retry. Unexpected missing capability is an explicit scoped finding or decision, never a fabricated implementation or hidden skip. | local | not recorded |
-| `security-impact-reviewed`: Refresh the security-relevant threat/control review for the actual changed paths. Prove scoped identity/authority, inert untrusted content, bounds, redaction, failure and cleanup behavior with positive and denial evidence. Never weaken security, native ownership or resource guards to satisfy a UI test; preserve explicitly excluded native/provider/security owner gaps and a rollback at least as secure as the forward change. | local | not recorded |
+| `daily-capability-and-variation-map`: Every currently supported Data/Context/Models/Image capability and desktop Train Model action has a source-linked scenario and host applicability record. All registry-supported nine-goal task/input/method/output variants have meaningful UI assertions, including early unsupported-format, invalid-field and inactive-setting behavior. No hidden API-only or absent thin-client training UI is invented. | local | passed (test) |
+| `daily-real-host-roundtrips`: Current packaged Windows desktop and local Chrome journeys use public mounted UI for workspace creation/selection and fresh source acquisition, preparation/review/approval/save, row edit/reject/version selection, manual Context creation and supported Context/browser actions. Assert exact persisted artifact identity, nonempty bounded bytes/schema/counts/lineage or a verified supported denial; reload/reopen preserves the result. A seeded response or visible success string alone cannot pass. Finite runtime/provider doubles are declared and do not qualify their external/physical semantics. | controlled-environment | pending (external) |
+| `ai-controls-and-owned-task-states`: Both mounted hosts preserve exact supported model/device/dtype, constrained-output/adaptive override and optional memory-mode choices, including reopen and clear unavailable states. Model/training/image starts, progress, review/save/discard/finalize/retry and supported cancellation are exercised with bounded deterministic workers and real host transport/storage. Refused cancellation or insufficient RAM/VRAM remains visibly non-successful; no implicit fallback, download, publication or release of an unconfirmed owned worker is allowed. | local | passed (test) |
+| `daily-errors-and-repair-loop`: Execute each applicable new or reused daily-workflow UI test on the candidate. Every in-scope failure is diagnosed against its current expected contract, repaired and covered by a passing regression; duplicate submissions, stale/foreign workspace responses, unavailable dependencies, malformed output and save/finalize failure retain safe correction/retry. Unexpected missing capability is an explicit scoped finding or decision, never a fabricated implementation or hidden skip. | local | passed (test) |
+| `security-impact-reviewed`: Refresh the security-relevant threat/control review for the actual changed paths. Prove scoped identity/authority, inert untrusted content, bounds, redaction, failure and cleanup behavior with positive and denial evidence. Never weaken security, native ownership or resource guards to satisfy a UI test; preserve explicitly excluded native/provider/security owner gaps and a rollback at least as secure as the forward change. | local | passed (test) |
 
 ### Verification
 

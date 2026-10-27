@@ -2318,7 +2318,7 @@
       "external_dependencies": [
         "installed reviewed embedding model and managed dependency; no new download authority"
       ],
-      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. Runtime tasks, archive inspection, embedding/query semantics, access and invoke events are finite fixtures; the RAG ZIP fixture is not a LanceDB engine. Source-pack/RAG whole-app helper wiring remains separate implementation work. Physical host/native/actual model/index/restart/scale and final combined qualification stay pending.",
+      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. That joined fixture keeps task/archive/embedding/query/access/invoke semantics finite. Separate fixed-worker tests use actual production source-pack/RAG processors and LanceDB with finite embeddings. Both existing app restart cases have source/RAG helper code; collection did not execute apps. Actual hosts/native/model/index/restart/scale and final combined qualification stay pending.",
       "source_context_host_wiring": {
         "helper": "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
         "consumers": [
@@ -2326,7 +2326,7 @@
           "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
         ],
         "actual_host_qualification": "pending",
-        "scope": "Existing two app cases call real source-pack/RAG UI workflows and public byte/manifest/catalog oracles. Local checks/collection do not run apps or qualify selectors/restart/native cleanup. Fresh-session source-pack rebuild display needs a separate product regression/fix."
+        "scope": "Both existing app cases contain source-pack/RAG public UI workflows and exact byte/manifest/catalog oracles. Fresh-session source-pack mode repair passes local joined regressions. Actual apps/selectors/process restart/native cleanup remain pending."
       }
     },
     {
@@ -3143,5 +3143,72 @@
       "actual_host_qualification": "pending",
       "external_dependencies": []
     }
-  ]
+  ],
+  "daily_implementation_reconciliation": {
+    "increment_id": "daily-data-and-ai-journeys",
+    "planned_chunks": [
+      "scoped-ingestion-and-coverage-ledger",
+      "dataset-context-roundtrips",
+      "model-training-image-controls",
+      "daily-journey-host-wiring"
+    ],
+    "historical_completed_support_count": 44,
+    "historical_support_work_ids": [
+      "daily-ingestion-races",
+      "context-ui-scope-and-roundtrips",
+      "dataset-ui-goals-and-session-ownership",
+      "model-ui-complete-boundaries",
+      "training-ui-current-boundaries",
+      "image-ui-complete-presentation-boundaries",
+      "daily-host-task-diagnostics",
+      "manual-context-pack-byte-integrity",
+      "daily-manual-context-host-journey",
+      "training-notification-current-boundaries",
+      "dataset-notification-safe-outcomes",
+      "model-download-notification-boundaries",
+      "context-task-notification-boundaries",
+      "download-worker-stop-safe-copy",
+      "owned-task-public-copy-compatibility",
+      "manual-context-lifecycle-boundaries",
+      "model-reference-http-ui-roundtrips",
+      "desktop-model-view-and-action-boundaries",
+      "desktop-model-preload-ui-roundtrips",
+      "image-request-context-and-durable-ui-roundtrips",
+      "training-public-progress-and-report-status",
+      "training-default-model-availability",
+      "desktop-training-bridge-contract-and-durable-review",
+      "desktop-model-download-preload-notification-journeys",
+      "browser-model-download-http-notification-journeys",
+      "workspace-first-run-transport-persistence-journeys",
+      "website-cancelled-catalog-compensation",
+      "artifact-browser-http-preview-and-delete",
+      "desktop-artifact-preload-preview-and-delete",
+      "provider-ingestion-ui-transport-and-revision",
+      "dataset-capability-ui-variants",
+      "context-ui-real-transports-and-storage",
+      "context-preparation-public-error-boundary",
+      "dataset-approval-ui-real-transports-and-storage",
+      "dataset-version-history-and-reuse-real-transports",
+      "dataset-row-review-real-transports-and-immutable-storage",
+      "desktop-model-reference-single-action-admission",
+      "saved-row-real-host-journey-wiring",
+      "control-plane-journal-and-current-profile-recovery",
+      "desktop-image-preload-finalization-and-preview-regression",
+      "context-rag-query-rebuild-real-transports-storage",
+      "source-context-host-fixture-real-processors",
+      "source-context-real-host-journey-wiring",
+      "context-fresh-source-pack-review-and-safe-manual-denial"
+    ],
+    "previous_unqualified_work_id": "comprehensive-daily-feature-reconciliation-current-host-wiring",
+    "previous_recorded_support_count": 39,
+    "local_feature_profiles": [
+      "functionality-tasks",
+      "functionality-context",
+      "dataset-version-browser",
+      "ingestion-publication"
+    ],
+    "scope": "44 completed historical support records now include the reviewed Desktop Image join, Context query/rebuild join, actual source/RAG processor tests, app-helper implementation and fresh-session pack repair. Historical receipts do not qualify current source. All four chunks are already recorded; no duplicate chunk. Current local criteria require fresh six-profile checks and independent all-criterion review. Actual packaged Windows/Chrome/provider/native/restart and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun.",
+    "actual_host_qualification": "pending",
+    "final_combined_testing": "deferred-by-user"
+  }
 }

@@ -106,12 +106,42 @@
         "Retained real red regressions and earlier failures. No full suite, actual model accuracy/OCR or native/provider qualification run."
       ],
       "title": "Test model, training and image controls"
+    },
+    {
+      "areas": [
+        "Daily Data/Context/model/training/image UI and real transport/storage test wiring",
+        "Exact scenario census and historical completed support reconciliation"
+      ],
+      "chunkId": "daily-journey-host-wiring",
+      "completedAt": "2026-10-27T03:39:07Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-real-host-roundtrips",
+        "ai-controls-and-owned-task-states",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json",
+        "Affected feature README/architecture/threat models already checkpointed"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-daily-journey-host-wiring",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Connected the existing source-bound daily app cases, including the missing saved Parquet approval/edit/reject/restart journey. Reconciled39completed historical support records with exact receipt/review identities. Physical app execution and final combined qualification remain pending.",
+      "tests": [
+        "Saved-row fixed worker17pass, history/read oracle48pass; two real app cases collect without execution.",
+        "Current source-bound dataset profile/docs/architecture and separate reviewed contributor recovery checks passed at their recorded feature checkpoints.",
+        "Fresh combined increment-relevant feature checks and all-criterion review follow before implementation completion; no physical/final pass."
+      ],
+      "title": "Connect and check daily app journeys"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-10-23T13:55:23Z",
-  "currentIncrementId": "daily-data-and-ai-journeys",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
@@ -257,7 +287,63 @@
     ],
     "summary": "Researched all current product route groups and nested workflows. Existing UI coverage is substantial but concentrated in Composer, Assets and lifecycle; Data, Context, Models/training, Image, Settings and rendered auth/recovery need an explicit cross-host scenario census. The proposed source-linked matrix covers 39 scenario families and calls for writing tests, running them, diagnosing failures and fixing in-scope defects. No tests or product fixes are implemented or qualified by preparation."
   },
-  "evidence": [],
+  "evidence": [
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "daily-capability-and-variation-map",
+      "id": "evidence-1",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:18Z",
+      "summary": "Current increment-relevant profiles passed against the source-linked census of 39 scenario families and explicit host/task/input/output variation mappings. 44 completed support references were checked exactly; their earlier receipts remain historical. No absent UI or physical pass is invented."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": null,
+      "criterionId": "daily-real-host-roundtrips",
+      "id": "evidence-2",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Pending actual packaged Windows/Chrome execution. Fixed public-UI preparation/version/manual/source Context, RAG and saved-row edit/reject/restart cases exist and collect, but were not run. The actual source/RAG worker is tested with finite embeddings and the local UI transport/storage joins include Desktop Image and fresh source-pack rebuild. Fixture/oracle/composed checks do not qualify actual windows, sidecars, full process restart, native retirement or providers. Final combined testing remains deferred by user."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "ai-controls-and-owned-task-states",
+      "id": "evidence-3",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Current functionality-tasks/context profiles passed the scoped mounted model/training/image controls and owned task review/save/discard/retry/cancel checks with declared finite workers/providers and real transport/storage joins. No actual model execution, native ownership release or implicit fallback is qualified."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "daily-errors-and-repair-loop",
+      "id": "evidence-4",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "All four current daily feature profiles passed. Their component/transport/storage denial and correction cases cover duplicate, retired or foreign scope, unavailable dependencies, malformed output and save/finalize faults. App collection is explicit; actual whole-host execution stays with its controlled pending criterion."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-5",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Current scoped positive/denial checks and documentation/architecture gates passed. The exact historical completed threat/control reviews are linked and verified, including the reviewed Image/source Context/pack-format/fresh-session repairs. Native/provider/physical/final gaps remain pending; guards, authority and resource limits are retained. Separate current-candidate all-criterion review is required before implementation completion."
+    }
+  ],
   "evidencePolicy": "control-plane-v1",
   "feedback": [],
   "finalApproval": null,
@@ -345,6 +431,48 @@
       "recordedAt": "2026-10-26T17:48:26Z",
       "sequence": 14,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "499b7b9dc9158e05980f8127704f91e80e0a1616a5f369726102ec38f65be157",
+      "recordedAt": "2026-10-27T03:39:07Z",
+      "sequence": 15,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0b60e10e2d42f8baa47978ad1727f28ddd2cc1ac7e847c7530d7a159a18a54f0",
+      "recordedAt": "2026-10-27T05:46:18Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bccadfcf1d24fbdfbb8a144c91def9e9853178e64a3a098852d8eb8fece5bb97",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "af0035bb41e931f6d4505573321c65da785a4a16f64bbbc57e6a71eeeeb62dd8",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "18efb2b2f53e871404c114e4462c2a59782b3d974f9f284bbe37e114c62c90ba",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8b6d3f4ff44dca11a3b87089bcd69c263b330dac6b5c2c72965a82c94155ced9",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7b1ab5feb6118893093d641092c396b07f62c8e362cd8a3917d6bb4c28ae300d",
+      "recordedAt": "2026-10-27T05:51:02Z",
+      "sequence": 21,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -377,12 +505,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
+      "completedAt": "2026-10-27T05:51:02Z",
       "completedChunks": [
         "scoped-ingestion-and-coverage-ledger",
         "dataset-context-roundtrips",
-        "model-training-image-controls"
+        "model-training-image-controls",
+        "daily-journey-host-wiring"
       ],
+      "completionSummary": "Daily UI implementation and four local criteria are complete on current source. Six related profiles passed with independent review. Actual packaged Windows/Chrome roundtrips remain pending for later qualification. All four original chunks and technical requirements are preserved. Full testing is deferred by user direction; the roadmap remains open.",
       "deliverables": [
         "Versioned machine-readable mapping from current supported route/tab/action/task capability to stable scenario IDs, host applicability, expected contract/oracle, exact test file and fixture/host/runtime evidence tier.",
         "Parameterized focused UI variants for all nine task types and every registry-supported material/format combination, including inactive/invalid controls, source association, output-shape assignment and review decisions.",
@@ -402,6 +532,9 @@
       "id": "daily-data-and-ai-journeys",
       "number": 1,
       "objective": "Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects.",
+      "pendingCriteria": [
+        "daily-real-host-roundtrips"
+      ],
       "plan": {
         "assumptions": [
           "No new product capability, architecture decision, download or dependency is authorized by UI tests.",
@@ -508,7 +641,7 @@
       ],
       "rollback": "Revert the coherent tested harness/feature correction at its owning layer while preserving committed user artifacts, immutable dataset/source history, current public contracts and security guards. Retain failed evidence. Remove only current test-owned disposable profiles/resources after confirmed ownership/exit; unknown files or stages remain untouched.",
       "startedAt": "2026-10-26T12:45:52Z",
-      "status": "implementing",
+      "status": "implemented-pending-qualification",
       "title": "Data, Context and AI preparation journeys",
       "verification": [
         "Run exact changed component/client and owning application/adapter test files through existing focused Node/Vitest helpers; test harness admission, empty discovery, safe diagnostics, failure and teardown with bounded negative fixtures.",
@@ -760,6 +893,6 @@
   },
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "executing",
-  "updatedAt": "2026-10-26T17:48:26Z"
+  "status": "ready",
+  "updatedAt": "2026-10-27T05:51:02Z"
 }
