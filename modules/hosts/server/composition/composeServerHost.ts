@@ -2521,6 +2521,7 @@ export function composeServerHost(
           const derivedCustomizations =
             organizationDocuments && assetImplementation
               ? composeAssetDerivedCustomization({
+              workspaceAccess: assetWorkspaceAccess,
                   documents: organizationDocuments,
                   definitions:
                     internalAssetRegistry!.assetKernel.repositories

@@ -1,3 +1,6 @@
+import { captureDerivedCreate, captureDerivedUpdate, captureDerivedTransition, captureDerivedList } from "../../services/asset/capture-derived-customization-requests";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import type { AssetDerivedCustomizationRepositoryPort } from "../../ports/asset-authoring";
 import type {
@@ -64,6 +67,7 @@ export class AssetDerivedCustomizationWorkflowUseCase {
 
   public constructor(
     private readonly dependencies: {
+      readonly workspaceAccess: WorkspaceAssetAccessPort;
       readonly customizations: AssetDerivedCustomizationRepositoryPort;
       readonly targets: AssetDerivedCustomizationTargetCatalogService;
       readonly definitions: AssetDefinitionRepositoryPort;
@@ -90,6 +94,8 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     command: CreateAssetDerivedCustomizationCommand,
   ): Promise<CreateAssetDerivedCustomizationResult> {
     try {
+      command = captureDerivedCreate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-authoring.customization.create", "asset:write");
       const target = await this.dependencies.targets.read({
         workspaceId: command.workspaceId,
         definitionRef: command.baseDefinitionRef,
@@ -168,6 +174,8 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     command: UpdateAssetDerivedCustomizationCommand,
   ): Promise<UpdateAssetDerivedCustomizationResult> {
     try {
+      command = captureDerivedUpdate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-authoring.customization.update", "asset:write");
       if (command.clearSourceOverlay && command.sourceChanges) {
         return fail(
           "validation",
@@ -229,6 +237,8 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     command: ReviewAssetDerivedCustomizationCommand,
   ): Promise<ReviewAssetDerivedCustomizationResult> {
     try {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-authoring.customization.review", "asset:write");
       const current = await this.dependencies.customizations.read(
         command.workspaceId,
         normalizeAssetCustomizationId(command.customizationId),
@@ -316,6 +326,8 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     command: PublishAssetDerivedCustomizationCommand,
   ): Promise<PublishAssetDerivedCustomizationResult> {
     try {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-authoring.customization.publish", "asset:write");
       const current = await this.dependencies.customizations.read(
         command.workspaceId,
         normalizeAssetCustomizationId(command.customizationId),
@@ -388,6 +400,8 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     command: AbandonAssetDerivedCustomizationCommand,
   ): Promise<AbandonAssetDerivedCustomizationResult> {
     try {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-authoring.customization.abandon", "asset:write");
       const current = await this.dependencies.customizations.read(
         command.workspaceId,
         normalizeAssetCustomizationId(command.customizationId),
@@ -420,17 +434,20 @@ export class AssetDerivedCustomizationWorkflowUseCase {
     }
   }
 
-  public read(
+  public async read(
     workspaceId: ListAssetDerivedCustomizationsQuery["workspaceId"],
     customizationId: string,
   ) {
+    await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, workspaceId, "asset-authoring.customization.read", "asset:read");
     return this.dependencies.customizations.read(
       workspaceId,
       normalizeAssetCustomizationId(customizationId),
     );
   }
 
-  public list(query: ListAssetDerivedCustomizationsQuery) {
+  public async list(query: ListAssetDerivedCustomizationsQuery) {
+    query = captureDerivedList(query);
+    await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-authoring.customization.list", "asset:read");
     return this.dependencies.customizations.list(query);
   }
 

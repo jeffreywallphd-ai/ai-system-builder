@@ -295,3 +295,5 @@ and Studio/package/derived policy changes remain separate.
 The asset-authoring-ui profile also selects finite package workspace-authority, input snapshot/default-limit, lifecycle and two-host composition fixtures. These tests preserve the previous profile, avoid model/OCR/provider or app-process runs, and keep configured direct-inspector limits distinct from the existing32MiB production upload snapshot budget.
 
 The asset-authoring-ui profile includes fixed finite Studio lifecycle, workspace admission, request-capture and two-host composition tests. It does not launch Electron, contact a model/provider or qualify durable restart. Unknown source impact and explicit focused checks retain the generic gate.
+
+The asset-authoring-ui profile includes fixed finite derived lifecycle, direct workflow/catalog/service authority and request-capture tests, both host compositions and all-nine IPC resolver compatibility cases. It starts no app or provider/model. Unknown paths and explicit generic focused requirements retain fallback coverage.

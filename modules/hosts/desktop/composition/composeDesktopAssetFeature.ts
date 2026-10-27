@@ -128,6 +128,7 @@ export async function composeDesktopAssetFeature(
   const derivedCustomizations =
     options.documents && assetImplementation
       ? composeAssetDerivedCustomization({
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,

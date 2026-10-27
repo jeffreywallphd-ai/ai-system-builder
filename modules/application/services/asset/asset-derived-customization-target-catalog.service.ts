@@ -1,3 +1,6 @@
+import { captureDerivedTargetList, captureDerivedTargetRead } from "./capture-derived-customization-requests";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "./workspace-asset-access.service";
 import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import type { AuthoredAssetRepositoryPort } from "../../ports/asset-authoring";
 import type {
@@ -37,6 +40,7 @@ const EMPTY_COUNTS: AssetDerivedCustomizationResourceCounts = {
 export class AssetDerivedCustomizationTargetCatalogService {
   public constructor(
     private readonly dependencies: {
+      readonly workspaceAccess: WorkspaceAssetAccessPort;
       readonly definitions: AssetDefinitionRepositoryPort;
       readonly implementations: AssetImplementationRepositoryPort;
       readonly backingResources: AssetImplementationBackingResourceRepositoryPort;
@@ -48,6 +52,8 @@ export class AssetDerivedCustomizationTargetCatalogService {
   public async list(
     query: ListAssetDerivedCustomizationTargetsQuery,
   ): Promise<ListAssetDerivedCustomizationTargetsResult> {
+    query = captureDerivedTargetList(query);
+    await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-authoring.customization-target.list", "asset:read");
     const limit = normalizeLimit(query.limit);
     const offset = normalizeCursor(query.cursor);
     const [releases, backingRecords, authored] = await Promise.all([
@@ -123,6 +129,8 @@ export class AssetDerivedCustomizationTargetCatalogService {
   public async read(
     query: ReadAssetDerivedCustomizationTargetQuery,
   ): Promise<AssetDerivedCustomizationTargetDetail | undefined> {
+    query = captureDerivedTargetRead(query);
+    await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-authoring.customization-target.read", "asset:read");
     const definitionRef = normalizeExactAssetDefinitionReference(
       query.definitionRef,
     );

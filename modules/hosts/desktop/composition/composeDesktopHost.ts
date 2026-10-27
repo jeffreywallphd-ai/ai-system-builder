@@ -1696,8 +1696,14 @@ export function composeDesktopHost(
           senderTrust: registerOptions.senderTrust,
           ...assetAuthoringUseCases,
           ...createWorkspaceAssetAuthoringReaders({workspaceAccess: assetCompositionWorkspaceAccess, authoredAssetRepository, assetDraftRepository, assetRevisionRepository, assetOverrideRepository}),
-          getDerivedCustomizations: async () =>
-            (await getAssetFeatures()).derivedCustomizations?.service,
+          getDerivedCustomizations: async (context) => {
+            const {operation, workspaceId} = context;
+            const reads = ["listTargets", "readTarget", "list", "read"];
+            const writes = ["create", "update", "review", "publish", "abandon"];
+            if (!reads.includes(operation) && !writes.includes(operation)) throw new Error("Derived customization is unavailable.");
+            await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, `asset-authoring.customization.${operation}`, reads.includes(operation) ? "asset:read" : "asset:write");
+            return (await getAssetFeatures()).derivedCustomizations?.service;
+          },
         },
         userLibrary: {
           ipcMain: registerOptions.ipcMain,

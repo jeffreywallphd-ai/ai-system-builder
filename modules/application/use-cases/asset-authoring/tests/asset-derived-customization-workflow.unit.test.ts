@@ -1,3 +1,5 @@
+// Synthetic derived lifecycle callers explicitly admit their finite workspace.
+const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "../../../../testing/node-test";
@@ -15,6 +17,7 @@ import {
   describeAssetImplementationBackingResourceFiles,
   normalizeAssetImplementationRelease,
   normalizeAssetImplementationRevocation,
+  normalizeAssetImplementationRevocationId,
   normalizeSha256Digest,
   type AssetImplementationBackingResourceBundleV1,
 } from "../../../../contracts/asset-implementation";
@@ -289,7 +292,7 @@ describe("derived asset customization workflow", () => {
     const revokedFixture = await createFixture();
     await revokedFixture.implementations.saveRevocation(
       normalizeAssetImplementationRevocation({
-        revocationId: "implementation-revocation.base-tool.1",
+        revocationId: normalizeAssetImplementationRevocationId("implementation-revocation.base-tool.1"),
         releaseId: revokedFixture.releaseId,
         reasonCode: "qualification-revoked",
         message: "Revoked by the qualification fixture.",
@@ -316,7 +319,7 @@ describe("derived asset customization workflow", () => {
 
     const unavailableFixture = await createFixture();
     const unavailableTargets =
-      new AssetDerivedCustomizationTargetCatalogService({
+      new AssetDerivedCustomizationTargetCatalogService({ workspaceAccess,
         definitions: unavailableFixture.definitions,
         implementations: {
           ...unavailableFixture.implementations,
@@ -507,14 +510,14 @@ async function createFixture(
         ? "system-foundation-installer"
         : "package-admission",
   });
-  const targets = new AssetDerivedCustomizationTargetCatalogService({
+  const targets = new AssetDerivedCustomizationTargetCatalogService({ workspaceAccess,
     definitions,
     implementations,
     backingResources,
     artifacts,
   });
   let tick = 0;
-  const workflow = new AssetDerivedCustomizationWorkflowUseCase({
+  const workflow = new AssetDerivedCustomizationWorkflowUseCase({ workspaceAccess,
     customizations,
     targets,
     definitions,

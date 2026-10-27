@@ -63,6 +63,7 @@ class AssetUiProfileTests(unittest.TestCase):
                     'dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs',
         ]
         expected.extend(['modules/application/use-cases/asset-studio/tests/asset-studio-workflow.unit.test.ts', 'modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts', 'modules/application/use-cases/asset-studio/tests/studio-workspace-authorization-and-capture.unit.test.ts', 'modules/hosts/desktop/composition/tests/studio-workspace-authority.integration.test.ts'])
+        expected.extend(['modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/derived-workspace-authorization-and-capture.unit.test.ts', 'modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts'])
         self.assertEqual(self.profile["test_paths"], expected)
         self.assertEqual(self.profile["source_paths"], [
             "dev-tools/config/contributor-check-profiles.json",
@@ -107,7 +108,7 @@ class AssetUiProfileTests(unittest.TestCase):
             'modules/adapters/package/aisb/createAisbPackageInspector.ts',
             'modules/application/services/asset-package/capture-package-commands.ts',
                     'dev-tools/scripts/architecture/check-asset-system-fitness.mjs',
-        ] + ['modules/application/use-cases/asset-studio/start-asset-studio.use-case.ts', 'modules/application/use-cases/asset-studio/propose-asset-studio-change.use-case.ts', 'modules/application/use-cases/asset-studio/review-asset-studio-proposal.use-case.ts', 'modules/application/use-cases/asset-studio/read-asset-studio-workflows.use-case.ts', 'modules/application/use-cases/asset-studio/asset-studio-asset-draft-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetStudioWorkflow.ts', 'modules/application/services/asset-studio/capture-studio-requests.ts'])
+        ] + ['modules/application/use-cases/asset-studio/start-asset-studio.use-case.ts', 'modules/application/use-cases/asset-studio/propose-asset-studio-change.use-case.ts', 'modules/application/use-cases/asset-studio/review-asset-studio-proposal.use-case.ts', 'modules/application/use-cases/asset-studio/read-asset-studio-workflows.use-case.ts', 'modules/application/use-cases/asset-studio/asset-studio-asset-draft-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetStudioWorkflow.ts', 'modules/application/services/asset-studio/capture-studio-requests.ts'] + ['modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetDerivedCustomization.ts', 'modules/application/services/asset/capture-derived-customization-requests.ts', 'modules/application/services/asset/asset-derived-customization-target-catalog.service.ts'])
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
         self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] or command[:3] == ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--"] for command in commands))
@@ -214,6 +215,15 @@ class AssetUiProfileTests(unittest.TestCase):
 
     def test_studio_authority_uses_fixed_finite_node_tests(self):
         expected = ['modules/application/use-cases/asset-studio/tests/asset-studio-workflow.unit.test.ts', 'modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts', 'modules/application/use-cases/asset-studio/tests/studio-workspace-authorization-and-capture.unit.test.ts', 'modules/hosts/desktop/composition/tests/studio-workspace-authority.integration.test.ts']
+        commands = profile_commands(self.actual, "asset-authoring-ui")
+        for path in expected:
+            command = next(command for command in commands if path in command)
+            self.assertEqual(command[:4], ["node", "--import", "tsx", "--test"])
+        self.assertFalse(any("playwright" in part or ".ai." in part for command in commands for part in command))
+
+
+    def test_derived_authority_and_resolver_use_fixed_finite_node_tests(self):
+        expected = ['modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/derived-workspace-authorization-and-capture.unit.test.ts', 'modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts', 'modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts']
         commands = profile_commands(self.actual, "asset-authoring-ui")
         for path in expected:
             command = next(command for command in commands if path in command)
