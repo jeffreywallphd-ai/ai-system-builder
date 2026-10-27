@@ -826,3 +826,23 @@ completion is refused before worker reads. Access middleware and task/completion
 records are finite fixtures. This is not production authentication, a real model
 download, a physical browser shell, native file effects or production SQLite
 qualification. No production client/controller change was needed for these cases.
+
+### Desktop reference-save admission and retirement
+
+Desktop reference Save now uses a synchronous ticket in the existing committed
+model-client/workspace scope. A repeated click cannot dispatch another IPC save
+before busy rendering. The visible Save control is disabled while pending. Only
+that ticket is released after settlement; failed saves permit explicit retry.
+Lease retirement suppresses completion notification and inventory follow-up while
+an accepted save retains its original backend workspace/model input. Other model
+actions, provider policy, registry identity and native file guards are unchanged.
+
+Five added composed cases reuse the existing mounted desktop Models/client/
+preload/registered-handler/use-case/JSON-registry journey. They assert one IPC
+admission, exact durable reference metadata, safe pre-delegate failure/retry and
+late completion after changed workspace/client or unmount. The actual registry
+is separate from finite provider, in-process invoke and held/failing delegate
+fixtures. Drained requests and identity/containment/link/type/byte-checked roots
+plus restored test globals bound cleanup. No physical app/sender authorization,
+SQLite, actual provider/model/OCR, native restart or final/parent proof follows.
+Accepted model accuracy/OCR results remain closed.

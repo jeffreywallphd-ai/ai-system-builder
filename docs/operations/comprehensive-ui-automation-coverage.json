@@ -2283,6 +2283,36 @@
           "name": "mounted feature with real client, preload, registered handlers, use cases and reopened JSON registry; pagination, exact reference lifecycle, workspace separation, safe provider retry and preserved native-file denial",
           "tier": "real-desktop-model-feature-and-preload-handlers-registry-with-in-process-invoke-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "admits one real reference save before busy rendering and preserves the exact stored reference",
+          "tier": "real-desktop-ui-client-preload-registered-handlers-usecase-and-json-registry-with-finite-provider-and-held-predelegate-save",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "releases a refused reference save for an explicit safe retry",
+          "tier": "real-desktop-ui-client-preload-registered-handlers-usecase-and-json-registry-with-finite-provider-and-held-predelegate-save",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "finishes the original reference save without updating the retired workspace view",
+          "tier": "real-desktop-ui-client-preload-registered-handlers-usecase-and-json-registry-with-finite-provider-and-held-predelegate-save",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "finishes the original reference save without updating the retired client view",
+          "tier": "real-desktop-ui-client-preload-registered-handlers-usecase-and-json-registry-with-finite-provider-and-held-predelegate-save",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+          "name": "finishes the original reference save without updating the retired unmount view",
+          "tier": "real-desktop-ui-client-preload-registered-handlers-usecase-and-json-registry-with-finite-provider-and-held-predelegate-save",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -2297,7 +2327,8 @@
         "tier": "finite-renderer-and-client-fixtures",
         "actual_host_qualification": "pending",
         "parent_qualification": false
-      }
+      },
+      "additional_reference_save_scope": "Five added variations reuse the existing three joined desktop reference journeys. A real two-click Save regression sent two IPC requests; synchronous scoped admission now sends one and disables Save while pending. A declared failure before the actual save delegate creates no record and allows explicit safe retry. Held accepted saves keep exact original workspace/model fields and persist one reference; workspace/client replacement or unmount prevents stale notification or inventory refresh. The finite provider/in-process invoke and declared held/failing delegate remain distinct from actual UI/client/preload/registered IPC/use cases/JSON registry. New fixture request draining, root identity/link/type/byte checks and React flag restoration preserve owned cleanup. Existing native-file refusal remains non-successful. No real provider/download/model/OCR, physical Electron/sender auth, SQLite, native/process/restart/final/parent pass; accepted model/OCR stay closed."
     },
     {
       "id": "models-download-inventory-validation",

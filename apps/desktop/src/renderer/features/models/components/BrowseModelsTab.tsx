@@ -113,7 +113,7 @@ export function BrowseModelsTab(props: { state: ModelsState }) {
               <small>Downloads: {item.downloads ?? "n/a"} | Likes: {item.likes ?? "n/a"} | License: {item.license ?? "n/a"}</small>
               <small>Inference: {item.inferenceMode ?? "unknown"} | Gated: {item.gated ? "yes" : "no"} | Private: {item.private ? "yes" : "no"}</small>
               <div className="ui-cluster models-feature__card-actions">
-                <button className="ui-button" type="button" onClick={() => void s.saveModelReference(item)}>Save</button>
+                <button className="ui-button" type="button" disabled={s.saveState.status === "loading"} onClick={() => void s.saveModelReference(item)}>Save</button>
                 <button className="ui-button" type="button" disabled={s.downloadState.status === "loading"} onClick={() => void s.downloadModel(item)}>Download</button>
               </div>
             </article>

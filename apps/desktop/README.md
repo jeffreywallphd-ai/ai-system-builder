@@ -284,3 +284,20 @@ list callback. Changing type or storage filters while deletion is pending cannot
 leave the removed item in the displayed list. The callback is updated in layout,
 never during an uncommitted render; the existing workspace/client lease check
 still prevents refreshing another view.
+
+### Model reference save admission
+
+Desktop Models admits one reference save synchronously before busy rendering and
+disables Save until that attempt settles. Failure releases the action for an
+explicit retry. A save accepted before workspace/client replacement or unmount
+retains its original backend input, but cannot refresh or notify the retired view.
+
+Five variations extend the existing real client/preload/registered-handler/JSON
+registry UI fixture. Provider results, in-process invoke and a held or failing
+pre-delegate save remain explicit fixtures. Tests verify exact persisted reference
+fields, safe correction and retirement without actual provider/model execution.
+Cleanup drains accepted fixture requests, verifies the new root identity/link/
+type/size bounds and restores the React test flag. Existing native-file refusal
+and typed record-delete checks remain intact. These checks supply no physical
+Electron/sender-authority, SQLite, native process or final/parent qualification.
+Accepted model accuracy and OCR stay closed.

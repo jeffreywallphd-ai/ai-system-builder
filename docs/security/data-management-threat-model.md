@@ -1470,3 +1470,24 @@ It binds the actual recipe bytes and operation/fingerprint, quality report hash
 and dataset role metadata to the expected mutation. Complete persisted records
 remain equal after UI remount and local SQLite close/reopen. No child is accepted
 merely because it has a parent pointer. This adds no native restart proof.
+
+## Desktop model reference-save admission
+
+The existing desktop model view lease now holds one synchronous reference-save
+ticket. Repeated clicks cannot send a second request while the first is pending.
+A failed attempt releases only its own ticket for explicit retry. Retired
+workspace/client/unmounted views cannot publish old success or refresh inventory;
+an already accepted write keeps its original workspace and model identity.
+
+Five variations join actual UI/client/preload/registered handlers/application/
+JSON registry with a finite provider, in-process invoke and explicit held or
+failing pre-delegate save. A pre-delegate error creates no record and reaches
+fixed public notification copy; it is not a partial-write recovery proof. Exact
+workspace/provider/model/task/inference/lifecycle fields and non-registration in
+a foreign workspace are asserted. Existing typed deletion and native file denial
+are preserved. New fixture requests are drained before exact new-root cleanup,
+which checks identity, containment, links, types and count/byte limits. The test
+restores its React flag and API descriptor. No physical sender authentication,
+SQLite, actual download/model/OCR/provider/native process or parent/final pass is
+claimed. Accepted model/OCR checks stay closed; no security or resource guard is
+weakened.

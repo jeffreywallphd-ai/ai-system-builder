@@ -26,6 +26,7 @@ interface ModelViewScope {
   browse?: object;
   details?: object;
   inventory?: object;
+  saving?: object;
   downloading?: object;
   deleting?: object;
   confirmation?: ModelDeleteConfirmation;
@@ -123,7 +124,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     return () => {
       if (scope.lease === lease) {
         scope.lease = undefined; scope.browse = undefined; scope.details = undefined;
-        scope.inventory = undefined; scope.downloading = undefined; scope.deleting = undefined; scope.refresh = undefined;
+        scope.inventory = undefined; scope.saving = undefined; scope.downloading = undefined; scope.deleting = undefined; scope.refresh = undefined;
         scope.confirmation = undefined;
       }
     };
@@ -241,11 +242,12 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }, [modelClient, scope]);
 
   const saveModelReference = useCallback(async (model?: DesktopModelBrowseItem) => {
-    const lease = scope.lease; if (!lease) return;
+    const lease = scope.lease; if (!lease || scope.saving) return;
     const modelToSave = model ?? selectedBrowseModel;
     if (!modelToSave) {
       return;
     }
+    const ticket = {}; scope.saving = ticket;
     setSaveState({ status: "loading", message: "Saving model reference..." });
     try {
       if (!workspaceId) { setSaveState({ status: "error", message: "Select a workspace before saving model references." }); return; }
@@ -270,6 +272,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     } catch (error) {
       if (!ownsView(scope, lease)) return;
       setSaveState({ status: "error", message: "Failed to save model reference. Try again." });
+    } finally {
+      if (scope.saving === ticket) scope.saving = undefined;
     }
   }, [modelClient, selectedBrowseModel, workspaceId, scope]);
 
