@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   SystemPublicationBuildSummary,
   SystemPublicationWorkspace,
@@ -11,43 +11,94 @@ import type { SystemBuildClient } from "./SystemBuildReleaseWorkflow";
 import { SystemPublishedLifecycleCard } from "./SystemPublishedLifecycleCard";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
 
-export function SystemPublishWorkspace({
-  workspaceId,
-  buildClient,
-  lifecycleClient,
-  visualStartNotice,
-}: {
+interface SystemPublishWorkspaceProps {
   readonly workspaceId: string;
   readonly buildClient: SystemBuildClient;
   readonly lifecycleClient: SystemPublishedLifecycleClient;
   readonly visualStartNotice?: string;
-}) {
+}
+interface PublicationSelection { readonly systemId: string; readonly buildId: string; }
+interface PublicationConfirmation extends PublicationSelection {
+  readonly systemRevisionId: string;
+  readonly name: string;
+  readonly versionNumber: number;
+  readonly expectedLockDigest: string;
+}
+
+export function SystemPublishWorkspace(props: SystemPublishWorkspaceProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.buildClient, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.buildClient) {
+    setScope({ workspaceId: props.workspaceId, client: props.buildClient, key: scope.key + 1 });
+    return null;
+  }
+  return <SystemPublishSession key={scope.key} {...props} />;
+}
+
+function SystemPublishSession({
+  workspaceId,
+  buildClient,
+  lifecycleClient,
+  visualStartNotice,
+}: SystemPublishWorkspaceProps) {
   const [workspace, setWorkspace] = useState<SystemPublicationWorkspace>();
-  const [systemId, setSystemId] = useState("");
-  const [buildId, setBuildId] = useState("");
+  const [selection, setSelection] = useState<PublicationSelection>({ systemId: "", buildId: "" });
+  const { systemId, buildId } = selection;
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<PublicationConfirmation>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const mounted = useRef(false);
+  const readOwner = useRef<object | undefined>(undefined);
+  const publicationOwner = useRef<object | undefined>(undefined);
+  const confirmationOwner = useRef<PublicationConfirmation | undefined>(undefined);
+  const currentWorkspace = useRef<SystemPublicationWorkspace | undefined>(undefined);
+  const selectionIntent = useRef(selection);
 
-  async function refresh(preferredSystemId?: string) {
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      readOwner.current = undefined;
+      publicationOwner.current = undefined;
+      confirmationOwner.current = undefined;
+      currentWorkspace.current = undefined;
+    };
+  }, []);
+  useLayoutEffect(() => { selectionIntent.current = selection; }, [selection]);
+
+  async function refresh(preferredSystemId?: string, afterPublication = false) {
+    if (!mounted.current || readOwner.current || confirmationOwner.current || (publicationOwner.current && !afterPublication)) return;
+    const owner = {};
+    readOwner.current = owner;
+    const current = () => mounted.current && readOwner.current === owner;
     setLoading(true);
     setError(undefined);
-    const result = await buildClient.publicationWorkspace({ workspaceId });
-    if (result.ok) {
-      setWorkspace(result.value);
-      setSystemId(
-        (current) =>
-          preferredSystemId ??
-          current ??
-          String(result.value.systems[0]?.systemId ?? ""),
-      );
-      if (!systemId && !preferredSystemId) {
-        setSystemId(String(result.value.systems[0]?.systemId ?? ""));
+    try {
+      const result = await Promise.resolve().then(() => current() ? buildClient.publicationWorkspace({ workspaceId }) : undefined);
+      if (!current() || !result) return;
+      if (result.ok) {
+        currentWorkspace.current = result.value;
+        setWorkspace(result.value);
+        setSelection(previous => choosePublication(result.value, preferredSystemId ?? previous.systemId, previous.buildId));
+      } else {
+        currentWorkspace.current = undefined;
+        setWorkspace(undefined);
+        setSelection({ systemId: "", buildId: "" });
+        setError(result.error.message);
       }
-    } else setError(result.error.message);
-    setLoading(false);
+    } catch {
+      if (current()) {
+        currentWorkspace.current = undefined;
+        setWorkspace(undefined);
+        setSelection({ systemId: "", buildId: "" });
+        setError(afterPublication
+          ? "The build was published. Could not reload builds. Select Refresh."
+          : "Could not load builds. Select Refresh to try again.");
+      }
+    } finally {
+      if (current()) { readOwner.current = undefined; setLoading(false); }
+    }
   }
 
   useEffect(() => {
@@ -60,46 +111,59 @@ export function SystemPublishWorkspace({
   const selectedBuild = selectedSystem?.builds.find(
     (build) => String(build.buildId) === buildId,
   );
-  const defaultBuildId = useMemo(
-    () =>
-      String(
-        selectedSystem?.builds.find(
-          (build) => build.publicationStatus === "ready",
-        )?.buildId ??
-          selectedSystem?.builds[0]?.buildId ??
-          "",
-      ),
-    [selectedSystem],
-  );
-
-  useEffect(() => {
-    setBuildId(defaultBuildId);
-  }, [defaultBuildId, systemId]);
+  function selectSystem(next: string) {
+    if (!mounted.current || readOwner.current || publicationOwner.current || confirmationOwner.current || !workspace || currentWorkspace.current !== workspace) return;
+    const value = choosePublication(workspace, next);
+    selectionIntent.current = value;
+    setSelection(value);
+  }
+  function selectBuild(next: string) {
+    if (!mounted.current || readOwner.current || publicationOwner.current || confirmationOwner.current || !selectedSystem?.builds.some(build => String(build.buildId) === next)) return;
+    const value = { systemId, buildId: next };
+    selectionIntent.current = value;
+    setSelection(value);
+  }
+  function openConfirmation() {
+    if (!mounted.current || readOwner.current || publicationOwner.current || confirmationOwner.current || selectionIntent.current !== selection || currentWorkspace.current !== workspace ||
+      !selectedSystem || !selectedBuild || selectedBuild.publicationStatus !== "ready" || !selectedBuild.expectedLockDigest) return;
+    const exact = { systemId: String(selectedSystem.systemId), systemRevisionId: String(selectedBuild.systemRevisionId), buildId: String(selectedBuild.buildId), name: selectedSystem.name,
+      versionNumber: selectedBuild.versionNumber, expectedLockDigest: selectedBuild.expectedLockDigest };
+    confirmationOwner.current = exact;
+    setConfirmation(exact);
+  }
+  function closeConfirmation() {
+    if (!mounted.current || publicationOwner.current) return;
+    confirmationOwner.current = undefined;
+    setConfirmation(undefined);
+  }
 
   async function publish() {
-    if (
-      !selectedSystem ||
-      !selectedBuild ||
-      selectedBuild.publicationStatus !== "ready" ||
-      !selectedBuild.expectedLockDigest
-    )
-      return;
+    const exact = confirmationOwner.current;
+    if (!mounted.current || readOwner.current || publicationOwner.current || !exact || exact !== confirmation) return;
+    const owner = {};
+    publicationOwner.current = owner;
+    const current = () => mounted.current && publicationOwner.current === owner;
     setPublishing(true);
     setError(undefined);
     setNotice(undefined);
-    const result = await buildClient.approve({
-      workspaceId,
-      buildId: String(selectedBuild.buildId),
-      expectedLockDigest: selectedBuild.expectedLockDigest,
-    });
-    if (result.ok) {
-      setConfirmOpen(false);
-      setNotice(
-        `${selectedSystem.name}, build ${selectedBuild.versionNumber}, was published.`,
-      );
-      await refresh(String(selectedSystem.systemId));
-    } else setError(result.error.message);
-    setPublishing(false);
+    try {
+      const result = await buildClient.approve({ workspaceId, buildId: exact.buildId, expectedLockDigest: exact.expectedLockDigest });
+      if (!current()) return;
+      if (!result.ok) { setError(result.error.message); return; }
+      if (String(result.value.targetWorkspaceId) !== workspaceId || String(result.value.sourceBuildId) !== exact.buildId ||
+        String(result.value.systemId) !== exact.systemId || String(result.value.systemRevisionId) !== exact.systemRevisionId || result.value.lockDigest !== exact.expectedLockDigest) {
+        setError("The publication result did not match this build. Close this confirmation and select Refresh.");
+        return;
+      }
+      confirmationOwner.current = undefined;
+      setConfirmation(undefined);
+      setNotice(`${exact.name}, build ${exact.versionNumber}, was published.`);
+      await refresh(exact.systemId, true);
+    } catch {
+      if (current()) setError("Could not publish this build. Review the selection and try again.");
+    } finally {
+      if (current()) { publicationOwner.current = undefined; setPublishing(false); }
+    }
   }
 
   return (
@@ -127,6 +191,9 @@ export function SystemPublishWorkspace({
         <TransientNotificationPublisher message={error} title="Publishing needs attention" tone="error" source="System Publishing" workspaceId={workspaceId} />
         <TransientNotificationPublisher message={notice} title="Publishing updated" tone="success" source="System Publishing" workspaceId={workspaceId} />
         {loading ? <p role="status">Loading systems and builds...</p> : null}
+        <div className="ui-workflow__actions">
+          <button type="button" className="ui-button ui-button--outline" onClick={() => void refresh(selectionIntent.current.systemId)} disabled={publishing || loading || Boolean(confirmation)}>Refresh</button>
+        </div>
         {!loading && !workspace?.systems.length ? (
           <EmptyState
             compact
@@ -142,8 +209,8 @@ export function SystemPublishWorkspace({
                 System
                 <select
                   value={systemId}
-                  onChange={(event) => setSystemId(event.currentTarget.value)}
-                  disabled={publishing}
+                  onChange={(event) => selectSystem(event.currentTarget.value)}
+                  disabled={publishing || loading || Boolean(confirmation)}
                 >
                   {workspace.systems.map((system) => (
                     <option
@@ -159,8 +226,8 @@ export function SystemPublishWorkspace({
                 Build version
                 <select
                   value={buildId}
-                  onChange={(event) => setBuildId(event.currentTarget.value)}
-                  disabled={publishing || !selectedSystem?.builds.length}
+                  onChange={(event) => selectBuild(event.currentTarget.value)}
+                  disabled={publishing || loading || Boolean(confirmation) || !selectedSystem?.builds.length}
                 >
                   {!selectedSystem?.builds.length ? (
                     <option value="">No builds yet</option>
@@ -189,21 +256,13 @@ export function SystemPublishWorkspace({
             <div className="ui-workflow__actions">
               <button
                 type="button"
-                onClick={() => setConfirmOpen(true)}
+                onClick={openConfirmation}
                 disabled={
-                  publishing || selectedBuild?.publicationStatus !== "ready"
+                  publishing || loading || Boolean(confirmation) || selectedBuild?.publicationStatus !== "ready" || !selectedBuild.expectedLockDigest
                 }
               >
                 <ApplicationIcon name="security" />
                 <span>Publish build</span>
-              </button>
-              <button
-                type="button"
-                className="ui-button ui-button--outline"
-                onClick={() => void refresh(systemId)}
-                disabled={publishing || loading}
-              >
-                Refresh
               </button>
             </div>
             {selectedSystem?.builds.some(
@@ -240,16 +299,16 @@ export function SystemPublishWorkspace({
         ) : null}
       </div>
       <ModalDialog
-        open={confirmOpen}
+        open={Boolean(confirmation)}
         title="Publish this build?"
-        onClose={() => setConfirmOpen(false)}
+        onClose={closeConfirmation}
         closeDisabled={publishing}
         descriptionId="publish-confirmation-description"
         stacked
       >
         <p id="publish-confirmation-description">
-          Publish <strong>{selectedSystem?.name}</strong>, build{" "}
-          <strong>{selectedBuild?.versionNumber}</strong>? Published versions
+          Publish <strong>{confirmation?.name}</strong>, build{" "}
+          <strong>{confirmation?.versionNumber}</strong>? Published versions
           cannot be changed.
         </p>
         <p className="ui-text-muted">
@@ -268,7 +327,7 @@ export function SystemPublishWorkspace({
           <button
             type="button"
             className="ui-button ui-button--outline"
-            onClick={() => setConfirmOpen(false)}
+            onClick={closeConfirmation}
             disabled={publishing}
           >
             Cancel
@@ -277,6 +336,12 @@ export function SystemPublishWorkspace({
       </ModalDialog>
     </section>
   );
+}
+
+function choosePublication(workspace: SystemPublicationWorkspace, systemId = "", buildId = ""): PublicationSelection {
+  const system = workspace.systems.find(item => String(item.systemId) === systemId) ?? workspace.systems[0];
+  const build = system?.builds.find(item => String(item.buildId) === buildId) ?? system?.builds.find(item => item.publicationStatus === "ready") ?? system?.builds[0];
+  return { systemId: String(system?.systemId ?? ""), buildId: String(build?.buildId ?? "") };
 }
 
 function PublicationBuildSummary({

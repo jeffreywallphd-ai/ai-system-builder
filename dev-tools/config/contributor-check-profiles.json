@@ -1685,6 +1685,17 @@
         "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
         "modules/ui/shared/README.md"
       ]
+    },
+    "system-build-publication-ui": {
+      "test_paths": [
+        "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx",
+        "modules/ui/shared/README.md"
+      ]
     }
   }
 }

@@ -235,3 +235,11 @@ Imported or authored UI/logic, independently qualified rebuilds, arbitrary
 provider execution, and a qualified container/WASI sandbox are not implied and
 remain unavailable until their explicit adapters and environment evidence
 exist.
+
+## Guided build and publication request ownership
+
+The shared Build & test modal owns one open workspace/client/system/revision session. Publish owns one workspace/build-client session. Conditional local state keys replacements; layout cleanup retires responses at commit without changing ownership during an abandoned render. Preparation, list and action tokens admit one request before React renders busy state and only the accepting owner releases it. Retired queued reads never dispatch.
+
+Caught transport exceptions use fixed actionable notification-center messages. Readiness and application denials retain their typed diagnostics and never grant build or publication. Failed checks have Retry checks; Publish always offers Refresh, including after an initial read failure. A requested build acknowledges its exact caller-issued build ID and saved target; cancellation acknowledges the current build and target. Retry creates another explicitly requested build attempt under the existing application contract.
+
+Publication confirmation captures the exact system name, saved revision, build version, build ID and expected lock. Selection, refresh and close controls remain synchronously locked while approval owns them. A returned release must match that workspace, system, revision, source build and lock before the UI reports saved success. The backend remains authoritative for authorization, lock verification, artifacts, immutable release creation and runtime eligibility. A failed list refresh after saved publication reports the separate read failure, clears stale choices and permits a read retry; it does not report publication failure or repeat approval. Local rendered fixtures and exact types do not qualify physical apps, native storage, runtime or final roadmap checks.

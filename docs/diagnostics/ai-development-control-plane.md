@@ -706,3 +706,5 @@ unsafe/missing/controlled-AI tests retain denial. Existing profiles and their
 failures are unchanged. The profile is verification support, not a startup pass.
 
 The system-management-ui profile provides bounded rendered Manage tests for request failures, retries, stale context and duplicate dispatch. It runs only its exact declared source-owned Vitest file through the fixed adapter. Its current receipts and independent review describe local fixtures, not whole-host, native, model or final roadmap qualification.
+
+The system-build-publication-ui profile runs only the exact Build/Publish interaction file through the fixed Vitest adapter. Source-owned routing covers the two shared surfaces and preserves generic coverage for other impact. Cases cover exact saved target and acknowledgement identity, explicit named lock approval, failed request retry, one-command admission, committed retirement and abandoned renders. Its local fixture receipts do not qualify actual hosts, runtime/native, models, providers or final roadmaps.

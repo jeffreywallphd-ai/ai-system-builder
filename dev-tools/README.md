@@ -305,3 +305,5 @@ The existing asset-authoring-ui profile covers the 343-definition target-catalog
 The asset-authoring-ui profile includes the fixed workspace publication facade and shared-composition tests. These finite Node cases cover exact published ownership, recomposition and static denial without launching an app, provider or model. Physical-host and final combined qualification remain separate.
 
 The system-management-ui profile owns the single exact Manage systems rendered test file through the existing fixed single-worker Vitest adapter. Catalog selection covers only its declared UI/config/README sources. Unknown impact, an explicit generic requirement and unsafe/missing/AI-controlled tests retain the existing rejection or fallback. It starts no app, provider, model or native process.
+
+The system-build-publication-ui profile runs the exact shared Build/Publish interaction file with the fixed one-worker Vitest adapter. Its selection guards retain unknown and explicit generic coverage, unsafe-path and controlled-test refusal. It starts no host, provider, model or native worker and grants no parent qualification.

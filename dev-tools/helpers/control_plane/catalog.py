@@ -13,7 +13,7 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "asset-authoring-ui", "system-management-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
+    "review-site", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
 )
 
 
@@ -40,6 +40,7 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/ui/shared/dataset-version/index.ts",
     ],
     "system-management-ui": ['modules/ui/shared/system-builder/SystemManagementWorkspace.tsx', 'modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx'],
+    "system-build-publication-ui": ['modules/ui/shared/system-builder/SystemBuildTestModal.tsx', 'modules/ui/shared/system-builder/SystemPublishWorkspace.tsx', 'modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx'],
     "review-site": ["dev-tools/review-site/index.html", "dev-tools/review-site/app.js", "dev-tools/review-site/style.css", "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"],
     "ocr-provider-contract": ["modules/adapters/runtime/python/worker/ocr/*", "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py", "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py", "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py", "modules/adapters/runtime/python/worker/tests/test_ocr_process.py", "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py", "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py",
 "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py",
