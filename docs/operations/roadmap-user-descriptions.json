@@ -11944,6 +11944,25 @@
           "Any remaining worker/runtime, provider, installed app, process restart, native file-safeguard and final combined checks stay pending. This work does not pass the whole criterion or complete the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f5ce0f10f882a954bd5e5c304bc5a3dbdf1131b05c3db5d7e828d4019552a729",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed 18 saved-version cases across both app connections. The composed Dataset file now has 43 cases.",
+          "Two versions are created through the existing preparation and approval controls. The tests check exact stored recipe digests and the visible change summary.",
+          "Changing only preparation settings no longer reports that dataset files changed.",
+          "Reusing a selected version sends its exact saved recipe and source history to the panel callback. The test callback does not prove that a receiving page applied the setup.",
+          "Missing or damaged recipe reads refuse reuse. A corrected read allows retry without another preparation task.",
+          "A late completed read cannot call a retired panel after it closes or its workspace, client or selected file changes. These tests change component inputs; full page navigation needs separate checks.",
+          "A wrong workspace or current-version identity does not enable reuse.",
+          "Worker outputs, quality calculations, access and availability use fixed test inputs. Missing/damaged reads and delayed replies are explicit test conditions.",
+          "Accepted model accuracy and OCR checks stay closed. This fixture work supplies no new model accuracy or OCR qualification.",
+          "Any remaining actual worker/runtime, provider, installed app, process restart, native file-safeguard and final combined checks stay pending. This work does not pass the whole criterion or complete the increment."
+        ]
+      }
     }
   ]
 }

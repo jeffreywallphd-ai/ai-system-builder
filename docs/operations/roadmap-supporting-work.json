@@ -4633,6 +4633,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "dataset-version-history-and-reuse-real-transports",
+      "work_criteria": [
+        "version-panel-real-comparison-and-reproduction",
+        "version-faults-scope-and-corrective-retry",
+        "version-bounded-owned-evidence"
+      ],
+      "receipt_digest": "8efc1bfb2934e83f5528971ffb7f7704c804e15131f7ef51ff1d6865373d82b0",
+      "review_digest": "04ce3864721a048e95652dbcad90c4aa055523b38cdc5652d70e877e8473e545",
+      "scope": "18 added saved-version cases (43 composed Dataset cases total) use mounted forms/panel, real clients/transports/application/SQLite/bytes and finite worker/quality/access/read-delay fixtures. Check two saved versions, exact recipe/source callback, missing/corrupt reads, retirement and association refusal. Fix recipe-only summary that falsely claimed changed data files. Callback is not receiver-page replay. No worker/model/OCR/provider/physical/native/restart/final/parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
