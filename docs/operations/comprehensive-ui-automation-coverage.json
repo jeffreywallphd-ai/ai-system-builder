@@ -2946,10 +2946,36 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+          "name": "customization asynchronous reads",
+          "tier": "shared-renderer-native-events-with-synthetic-customization-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+          "name": "customization owner and mutation recovery",
+          "tier": "shared-renderer-native-events-with-synthetic-customization-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+          "name": "customization saved edit admission",
+          "tier": "shared-renderer-native-events-with-synthetic-customization-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+          "name": "customization committed lease and acknowledgement",
+          "tier": "shared-renderer-native-events-with-synthetic-customization-clients",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "customization_saved_edit_scope": "Meaningful semantic/source copy, exact create/update/review/publication commands, retained base bytes, saved edit generation, immutable derived identity, terminal edit locks, committed owner replacement, canonical returned identity and explicit denial/retry are covered with synthetic clients. This is partial shared UI support. Actual app/transport/storage/source execution and final combined qualification remain pending. No parent work package is completed."
     },
     {
       "id": "systems-manage-lifecycle",

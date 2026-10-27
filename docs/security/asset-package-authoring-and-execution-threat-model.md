@@ -329,3 +329,31 @@ Focused synthetic UI tests cover duplicate, throw/reject, malformed/foreign
 identity, partial-source failure, retry and workspace/client/unmount races.
 They do not qualify actual transports, persistence, applications, native workers,
 source execution or the parent roadmap. Those qualification obligations remain.
+
+### Customization editor intent and acknowledgement checks
+
+Protected data is workspace-owned editing content and the user's intent to save,
+review, publish or abandon an exact customization revision. A future render is
+not the current owner until it commits. Workspace/client views retire in layout
+cleanup; sequence and current-owner checks guard response acceptance and control
+release. A later acknowledgement cannot redirect a following operation to another
+workspace, customization, definition or base. Use the existing canonical record
+validator and the captured command identity, state and revision. Nested resource
+content must be renderable, with canonical paths, roles and media types, explicit
+editable flags and numeric sizes. Reuse existing file/count/aggregate bounds;
+keep read-only HTML as text. Copy the accepted detail to retain its original base.
+Valid fresh
+creation IDs are allowed; closed/idempotent server behavior is not redefined.
+
+Unsaved semantic or source changes prevent review/publication dispatch, including
+in the same event turn. Saving only clears the edit generation it captured. The
+immutable derived identity cannot change through update. Publication and abandon
+lock input before dispatch so newer content is not stranded under terminal
+success. Failed requests release only their own controls and permit explicit
+retry. Unexpected transport and preparation exceptions use fixed notification
+copy. These UI checks grant no workspace, source or publication authority.
+
+Local synthetic UI tests cover held writes, stale/uncommitted owners, malformed
+and foreign acknowledgements, exact command/revision identity, denied dispatch
+and corrective retry. Actual application, provider, storage, native, source
+execution and final combined qualification remain separate.

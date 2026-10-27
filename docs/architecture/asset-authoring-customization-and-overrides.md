@@ -461,3 +461,32 @@ Saved-draft admission disables the native editor fieldset until the exact read
 is accepted; retry remains outside the fieldset. Deferred reads check session
 ownership before calling the client. This avoids dispatch after retirement and
 prevents input into a placeholder that a pending saved read could overwrite.
+
+### Customization editor save and response ownership
+
+The shared editor owns a committed view per workspace and client. An uncommitted
+replacement does not retire a visible view. Layout retirement closes the old
+view before its later reads, mutation replies or control releases can apply.
+Target detail must match the requested workspace, exact definition and release.
+Present backing files pass the established path, role, content, per-file, count
+and aggregate limits before rendering. Descriptor flags and sizes are checked.
+The accepted detail is copied so a later client mutation cannot change its base.
+History and mutation records pass the existing canonical record normalizer;
+mutation acknowledgements also match the captured operation, identity, base,
+known source identity, lifecycle and expected revision before changing the view.
+Creation can return a fresh canonical customization ID. UI admission does not
+replace application authorization or persistence concurrency.
+
+Semantic and resource edits have a synchronous edit generation. Only an accepted
+save for that same generation clears unsaved state. Newer edits stay visible
+after an older save or review completes. Review and publication require an
+explicit save of current edits. The distinct derived ID/version are fixed after
+creation, matching the update contract. Publication and abandon lock editing
+before dispatch; failure restores editing only for the current operation owner.
+Published and abandoned forms are read only. Changing the base retains the
+existing explicit keep/change confirmation. No server write is cancelled.
+
+Focused shared-renderer journeys use synthetic typed clients and verify command
+identity, semantic/source payloads, unchanged base bytes, denial, retry, pending
+edits and owner replacement. They do not qualify actual app transports, storage,
+source execution, native resources or the final combined roadmap suite.
