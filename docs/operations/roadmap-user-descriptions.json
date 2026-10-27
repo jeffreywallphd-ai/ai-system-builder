@@ -11983,6 +11983,24 @@
           "Accepted model accuracy and OCR checks stay closed and were not rerun. Physical app, sidecar, provider, native file/process safeguards and final combined checks remain separate. This work does not pass the whole criterion or complete the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2a5f1ab53b9006f4066df4e36956ce1de593156c63b0888b6e790f47743b9505",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed five reference-save variations. The existing joined desktop Models file now has eight cases.",
+          "The tests use the actual desktop controls, client, preload, registered handlers, application services and stored JSON model records. Provider results and held or failing save calls use fixed test inputs.",
+          "Two quick Save clicks previously sent two requests. Save now starts one request immediately and stays disabled until that attempt ends.",
+          "A failed save before the application delegate creates no record and shows a safe retry message. A corrected explicit retry saves the expected reference. This test does not prove recovery from a partial write.",
+          "A save accepted before changing workspace or client, or closing the view, retains its original workspace and model. Its late result cannot notify or refresh the retired view.",
+          "Tests check the exact model, provider, workspace, task, inference and lifecycle fields, and confirm that no record appears in another workspace.",
+          "Pending test requests are drained before temporary files are removed. Cleanup checks the new folder identity, links, file types and size limits, and restores test globals.",
+          "Existing search, reopen, typed record deletion and refused native-file actions remain tested. No actual file action or model download is authorized.",
+          "Accepted model accuracy and OCR stay closed and were not rerun. Physical desktop and sender authentication, provider/model execution, native process and final combined checks remain separate. This work does not pass the whole criterion or complete the increment."
+        ]
+      }
     }
   ]
 }

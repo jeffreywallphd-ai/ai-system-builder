@@ -4669,6 +4669,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "desktop-model-reference-single-action-admission",
+      "work_criteria": [
+        "reference-save-single-admission-and-corrective-retry",
+        "reference-save-retired-view-and-owned-resources",
+        "reference-save-current-reviewed-scope"
+      ],
+      "receipt_digest": "5e710a0abf942b4eb4c6e7e92c45b5c2f50c571c4060556b6d11b7380486228c",
+      "review_digest": "f25e38a3602fe0527063b10a23e0cd250c3823fea0b113855a3c7bff94fde081",
+      "scope": "Five added cases (8 desktop joined cases total) check one Save IPC admission, exact durable reference fields, pre-delegate failure/retry and retired workspace/client/unmount replies. Fix duplicate saves and disable pending Save. Actual UI/client/preload/handlers/use cases/JSON registry; finite provider/in-process invoke and held/failing delegate. Drain owned requests, verify root identity/link/byte bounds and restore globals. No physical/sender/native/provider/model/final/parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
