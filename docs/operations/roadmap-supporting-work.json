@@ -4741,6 +4741,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "context-rag-query-rebuild-real-transports-storage",
+      "work_criteria": [
+        "context-rag-query-exact-visible-and-durable-results",
+        "context-rebuild-and-safe-corrective-retry",
+        "context-joined-owned-scope-and-review"
+      ],
+      "receipt_digest": "11634e1f5597981d62dab23c134ccd32d981598615a4449f20aca3ff2be8b6e5",
+      "review_digest": "cf4e72cd56a9f901c2c140e77d4daca19de7016111fa56fbdf9a5f928091b420",
+      "scope": "18 added two-host cases join real Context UI/transports/application/staging/catalog/bindings/files. Exact citations/device/lineage, explicit save, preserved originals, rebuild/source/device correction and unsafe-reply denial pass. Fix covered rebuild dialog and malformed-score crash; retire stale answers. Worker/archive/query/access/invoke are finite, not LanceDB/model proof. Whole-app source/RAG helper code and physical/native/final/parent checks stay pending. No accuracy/OCR rerun.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

@@ -12049,6 +12049,26 @@
           "Physical host, native and final combined qualification remain separate. This work does not pass the whole criterion or finish the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fdd5ff139547961699200e1fc78c9ee3ea87a139be3437eccf996a9534748aa4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added and committed 18 Context cases across the desktop and browser test paths. The complete joined file has 60 cases.",
+          "The tests connect the visible controls to actual clients, preload and handlers or local HTTP, application services, staging and saved files, catalog and storage links.",
+          "A fixed transit source produces a reviewed test package. Saving is explicit. Checks compare source and chunk history, stored bytes and hashes, and the exact visible answer and citation returned for the selected artifact.",
+          "Generation and query commands retain the chosen device. An unavailable CUDA device does not silently switch to CPU. The test selects CPU explicitly before retrying.",
+          "RAG and source-pack rebuilds preserve the source and original saved artifact. An unavailable source prevents rebuilding until it is restored and the rebuild is requested again.",
+          "The tests found and fixed two interface defects. An accepted rebuild now closes the old details dialog. Invalid query scores no longer crash the results view.",
+          "The interface checks query identity, result count, excerpt size, scores and the existing citation rules before rendering. Starting a new query clears the prior answer. Foreign, malformed, oversized or excessive replies remain unsuccessful and permit explicit retry.",
+          "Runtime failure tests check safe wire and page messages without diagnostic text or temporary paths. Separate deliberately corrupted reply fixtures test only interface admission; they do not prove transport redaction.",
+          "Task generation, package inspection, embedding, query results, access and in-process invocation use fixed test inputs. The package fixture is not an actual LanceDB engine or model qualification.",
+          "Owned requests, stages, listeners and files retain bounded cleanup. Accepted model accuracy and OCR were not rerun. Full testing remains deferred.",
+          "Whole-app source-pack and RAG helper code is still separate implementation work. Physical host, native, model and final combined checks remain pending. These results do not pass the whole criterion or finish the increment."
+        ]
+      }
     }
   ]
 }
