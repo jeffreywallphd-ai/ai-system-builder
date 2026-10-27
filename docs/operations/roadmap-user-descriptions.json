@@ -12444,6 +12444,42 @@
           "The agent reviewed and committed this local work. Actual app, runtime, native, restart and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "53739ba770af910709b3519c2204fdb74c1cd46c87208056c4b237a9594cb22e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests now compare the exact saved system, components, layout and configured fields when switching among three useful examples. The browser builds them in one new workspace.",
+          "All 50 comparison tests, 15 other unit tests and 42 Canvas interaction tests passed. Type checks for five changed files and four checks of the test configuration passed.",
+          "The browser and desktop test definitions are ready. Collecting a test definition does not run the app.",
+          "The agent reviewed and committed this local work. Actual app, restart, native and final combined checks remain agent work. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6bff4882a38abc1e6409a1984d89f22b1677c5b560f7d5bff7a5a70a60e430d3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are committed local test results. They do not complete a whole requirement, an implementation work package or the roadmap.",
+          "The agent must finish the remaining work and checks before those items can close."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "35f1ba79c49a0edfd2a22df1361f4fab66ece3ecbfdd9cbabd04596cbbe0eeb5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The comparison covers visible layout order and the configured test fields. It does not check every stored field or prove behavior after an app restart.",
+          "Actual app, restart and final combined checks remain agent work. Provider and native checks stay separate.",
+          "Completed model accuracy and OCR checks will not run again."
+        ]
+      }
     }
   ]
 }

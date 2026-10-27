@@ -5191,6 +5191,42 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "meaningful-scratch-compositions",
+      "work_id": "meaningful-system-exact-persistence",
+      "work_criteria": [
+        "bounded-exact-observations",
+        "self-contained-useful-system-journeys",
+        "safe-fixed-lane-and-owned-checkpoint"
+      ],
+      "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+      "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+      "scope": "Three useful-system drivers compare captured workspace/system IDs, exact definitions/versions, visible hierarchy and configured test fields after save/reopen and later switching. The browser builds all three in one new workspace. Fifty oracle, 15 other unit and 42 rendered cases pass on selected+HEAD sources; five type roots and four profile guards pass. Two host test definitions collect. Local support only; actual app/restart/native/final checks remain.",
+      "limitations": [
+        "Completed and committed local test support at this recorded source snapshot. No whole criterion, planned work package, increment or current-candidate pass follows.",
+        "Visible relative sibling order and configured synthetic fields only. No complete hidden configuration, raw placement IDs, durable storage, actual host/restart/provider/native or final combined qualification. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "system-management-build-and-approval",
+      "work_id": "meaningful-system-exact-persistence",
+      "work_criteria": [
+        "bounded-exact-observations",
+        "self-contained-useful-system-journeys",
+        "safe-fixed-lane-and-owned-checkpoint"
+      ],
+      "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+      "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+      "scope": "Three useful-system drivers compare captured workspace/system IDs, exact definitions/versions, visible hierarchy and configured test fields after save/reopen and later switching. The browser builds all three in one new workspace. Fifty oracle, 15 other unit and 42 rendered cases pass on selected+HEAD sources; five type roots and four profile guards pass. Two host test definitions collect. Local support only; actual app/restart/native/final checks remain.",
+      "limitations": [
+        "Completed and committed local test support at this recorded source snapshot. No whole criterion, planned work package, increment or current-candidate pass follows.",
+        "Visible relative sibling order and configured synthetic fields only. No complete hidden configuration, raw placement IDs, durable storage, actual host/restart/provider/native or final combined qualification. Accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

@@ -3106,10 +3106,92 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
+          "name": "Defines request-intake, dashboard and conversation construction through actual UI controls; preserves native purpose/edit/build-limit assertions and compares captured workspace/system, definitions, visible hierarchy and configured fields. Driver code collected only.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
+          "name": "One collected isolated desktop case builds all three useful systems, retains their original observations and revisits exact saved IDs. No physical app execution or process restart in this Work.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-meaningful-systems.e2e.spec.ts",
+          "name": "One collected self-contained browser case creates through Home, waits form closure/new ID/active heading, enters Systems with the same ID, builds all three and compares later saved observations. No browser/server execution in this Work.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
+          "name": "50 executed pure cases cover exact identity/content preservation, order-independent observations, malformed trees/fields, count/byte bounds and nonexecuting array/proxy refusal; input arrays are preserved.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx",
+          "name": "Executed as one of four shared Canvas files totaling 42 rendered cases. Covers draft/checkpoint/save ownership, failure/retry, optional read latency, required definitions and pending layout/model behavior.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+          "name": "Executed shared creation, layout, revision and explicit Foundation-upgrade UI fixtures; one of the four files totaling 42 cases. Finite clients do not prove actual durable storage.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+          "name": "Executed semantic Canvas/tree/actions, nested regions, predefined layouts, scoped modal and late Load-more fixtures; part of the same 42 rendered cases.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
+          "name": "Executed unchanged draft tree/order/subtree/undo/redo units among the 15 related Node cases, alongside unchanged bounded protocol-evidence units.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Observed partial local test implementation at this committed snapshot. The selected-source run passed 65 Node and 42 rendered cases across seven files, including 50 new oracle cases; these counts are aggregate, not per row. Driver collection does not execute a host. Comparisons cover visible relative sibling order and configured synthetic fields, not complete hidden configuration or raw placement identity. Actual app/server/process restart, managed/provider/native behavior and final combined tests remain pending."
     },
     {
       "id": "systems-layout-properties-and-migration",
@@ -3136,10 +3218,32 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial-component-coverage",
+      "feature_tests": [
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx",
+          "name": "Executed schema/default/advanced fields, authorized model picker, typed bindings, bounded layout geometry and root styling fixtures; part of the same 42 rendered cases.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+          "name": "Executed predefined layout/change/undo and explicit legacy/v2 Foundation upgrade preview/confirmation fixtures. UI clients are finite; actual stored old/new revisions and host styles remain separate qualification.",
+          "tier": "exact-selected-and-committed-dependency-local-unit-or-rendered-fixture",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "meaningful-system-exact-persistence",
+          "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
+          "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
+          "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        }
+      ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "scope_limit": "Observed partial local test implementation at this committed snapshot. The selected-source run passed 65 Node and 42 rendered cases across seven files, including 50 new oracle cases; these counts are aggregate, not per row. Driver collection does not execute a host. Comparisons cover visible relative sibling order and configured synthetic fields, not complete hidden configuration or raw placement identity. Actual app/server/process restart, managed/provider/native behavior and final combined tests remain pending."
     },
     {
       "id": "systems-build-approve-publish",
