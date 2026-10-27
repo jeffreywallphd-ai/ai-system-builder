@@ -12359,6 +12359,18 @@
           "The agent reviewed and committed this change. Actual app, saved-data and atomic-publication checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e4b209fdee433cec73eb64bb6901bed3d1866a2b577b404e6569e769d1400158",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed publishing so the definition and its reviewed asset record save together. A failed save leaves both unchanged.",
+          "Trying again after a lost response checks the existing saved result. It keeps the original publication author and time. Missing or foreign results are refused.",
+          "All 133 focused cases, type checks and thirteen test-selection checks passed. The agent reviewed and committed the change. Actual app, native storage, live database and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

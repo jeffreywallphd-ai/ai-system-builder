@@ -5063,6 +5063,24 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "asset-reviewed-definition-atomic-publication",
+      "work_criteria": [
+        "exact-review-atomic-publication",
+        "safe-owned-reconciliation-and-compatibility",
+        "selected-tested-reviewed-publication-checkpoint"
+      ],
+      "receipt_digest": "c7ecbc1b895d7e87743d9d88b17e295269161a18a4a742a0616c74afea3ebe2a",
+      "review_digest": "38267544e94298f5e8fda0bfbb7d65ef5ad850e426a3b465689c11fa6d9749be",
+      "scope": "Studio and derived publication now commits the exact owning review, absent definition and private receipt in one transaction. Failed writes roll back; original-command retries after a lost response only verify the unchanged existing commit. 133 cases, seventeen type roots and thirteen profile guards pass with finite desktop/server fixtures. Owner, review and base changes, caller mutation and foreign/missing receipts deny. Actual apps, native storage, live database and final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
