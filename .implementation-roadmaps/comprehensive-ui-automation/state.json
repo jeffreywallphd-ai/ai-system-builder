@@ -136,12 +136,123 @@
         "Fresh combined increment-relevant feature checks and all-criterion review follow before implementation completion; no physical/final pass."
       ],
       "title": "Connect and check daily app journeys"
+    },
+    {
+      "areas": [
+        "Shared Assets and Studio UI",
+        "Controlled Assets authoring journey and exact restart oracles"
+      ],
+      "chunkId": "asset-ui-import-studio-customization",
+      "completedAt": "2026-10-27T21:59:17Z",
+      "criteriaIds": [
+        "asset-authoring-lifecycle",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-asset-ui-import-studio-customization",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed Assets import, Studio, publication, base-preserving customization and owned desktop restart test definitions. Historical source receipts and independent readiness preflight support implementation only; actual host and restart qualification remains pending.",
+      "tests": [
+        "Completed source Works referenced by the 27-link support audit; independent-source-preflight-01.json and addendum02 verify source readiness.",
+        "Current parent verification01: Assets profile passed; overall receipt failed in separate browser test setup and is not qualification."
+      ],
+      "title": "Import, Studio, Saved and customized copies"
+    },
+    {
+      "areas": [
+        "Systems Manage and Canvas",
+        "Three meaningful system authoring journeys"
+      ],
+      "chunkId": "meaningful-systems-and-management",
+      "completedAt": "2026-10-27T21:59:17Z",
+      "criteriaIds": [
+        "meaningful-scratch-compositions",
+        "system-management-build-and-approval",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-meaningful-systems-and-management",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed three useful multi-component system construction journeys, exact saved hierarchy/definition/configuration observations, management and edit ownership regressions, and owned desktop restart definitions. Actual controlled host qualification remains pending.",
+      "tests": [
+        "Completed source Works referenced by the exact support audit; independent readiness preflight confirms original implementation scope.",
+        "Current parent verification01: Canvas and management profiles passed; no parent all-check or host pass asserted."
+      ],
+      "title": "Useful scratch systems and Manage"
+    },
+    {
+      "areas": [
+        "Shared Build, Publish and projected lifecycle controls",
+        "Published desktop conversation and scoped preload",
+        "Controlled desktop/browser runtime drivers and exact store verifier"
+      ],
+      "chunkId": "exact-build-publication-runtime",
+      "completedAt": "2026-10-27T22:22:51Z",
+      "criteriaIds": [
+        "system-management-build-and-approval",
+        "published-runtime-ui-integration",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/system-builder-canvas-testing.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-exact-build-publication-runtime",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed exact saved-build publication, projected lifecycle and conversation recovery source, plus the repaired controlled runtime test definitions. The desktop definition now verifies the intended Compose/modal build, captured-window Stop, A/B/A conversation separation and two exact release/runtime/database/session stores. Historical local receipts and test collection support implementation only. Actual packaged/browser/native/runtime/server qualification remains pending.",
+      "tests": [
+        "Thirty linked historical supporting references resolve to26 actually completed, separately reviewed Works; two latest source checkpoints are committed and ancestry/blob checked.",
+        "Latest runtime source support passed18 finite positive/denial/order cases, five type roots, two collected host definitions and five related checks. These are not actual host or current parent qualification."
+      ],
+      "title": "Exact build, approval and supported runtime"
+    },
+    {
+      "areas": [
+        "Assets/System UI definitions, regressions and current evidence reconciliation"
+      ],
+      "chunkId": "authoring-ui-feature-reconciliation",
+      "completedAt": "2026-10-27T22:41:25Z",
+      "criteriaIds": [
+        "asset-authoring-lifecycle",
+        "meaningful-scratch-compositions",
+        "system-management-build-and-approval",
+        "published-runtime-ui-integration",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json",
+        "docs/operations/roadmap-user-descriptions.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-authoring-ui-feature-reconciliation",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Audited32 historical support links to27 completed Works, preserved all39 original scenarios, and completed current nine-profile verification plus genuine all-six independent review. Workspace runner, exact runtime Stop/two-store definitions and rendered activation/denial/retry construction repairs are committed. Three actual-host controlled criteria remain pending.",
+      "tests": [
+        "Current six feature profiles plus documentation, architecture and roadmap checks passed.",
+        "Separate review covers all six original criteria; actual desktop/browser/native/restart execution is pending."
+      ],
+      "title": "Repair defects and reconcile current feature evidence"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-10-23T13:55:23Z",
-  "currentIncrementId": "asset-to-published-system-journeys",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
@@ -342,6 +453,72 @@
       "outcome": "passed",
       "recordedAt": "2026-10-27T05:46:19Z",
       "summary": "Current scoped positive/denial checks and documentation/architecture gates passed. The exact historical completed threat/control reviews are linked and verified, including the reviewed Image/source Context/pack-format/fresh-session repairs. Native/provider/physical/final gaps remain pending; guards, authority and resource limits are retained. Separate current-candidate all-criterion review is required before implementation completion."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "asset-authoring-lifecycle",
+      "id": "evidence-6",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Source-defined actual-host Assets import, Studio save/reopen/review/publish and base-preserving customization/restart cases exist, with committed local recovery, stable names and exact comparison tests. Current related profiles pass. Actual packaged desktop/Chrome and owned process/server restart have not run in this feature-only phase. Finite tests and collection cannot qualify that controlled requirement."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "meaningful-scratch-compositions",
+      "id": "evidence-7",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Three meaningful multi-component scratch-system journeys and exact persisted hierarchy/definition/configuration/system-switch and owned desktop restart checks are implemented and locally tested. Current Canvas, browse and related profiles pass. Actual host/native/server restart and measured execution remain pending; no preview-only business submission or inference success is claimed."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "system-management-build-and-approval",
+      "id": "evidence-8",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Current management, Build/Publish and related profiles pass against this working source. Reviewed committed controls and regression fixtures cover exact saved revision/build publication, supported manage/edit flows, stale or foreign owner replies, failed/duplicate actions and explicit projected lifecycle commands. Actual whole-host qualification remains with its controlled criteria."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "published-runtime-ui-integration",
+      "id": "evidence-9",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Committed controlled desktop definitions select the exact Compose/modal build and public release context; check captured Page close before A/B/A replacement, input limit/Shift+Enter and separate conversations; verify two exact stored release/runtime/database/session contexts and no control-store leakage. Local 18-case oracles and 29-case lifecycle UI coverage pass, including Activate/Deactivate denial/retry. Browser keeps its server-owned lifecycle flow. Actual windows/native revocation/workers/server restart remain pending."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "authoring-errors-and-repair-loop",
+      "id": "evidence-10",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "summary": "All six current feature profiles pass. The earlier Node import-time failure was repaired without product import changes. Separate source review found and repaired missing exact runtime Stop/two-store construction and rendered Activate/Deactivate dispatch/revision recovery. Original cases and failed diagnostics remain. Local stale/foreign scope, duplicate admission, unavailable/failed operations, validation/save/build/publication and conversation recovery fixtures pass; actual-host requirements remain pending."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-11",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "summary": "Current feature positive/denial checks plus docs/architecture/roadmap gates pass. Exact completed security and source reviews are linked and audited, including bounded public contexts, exact workspace/release/revision actions, fail-closed page retirement and store separation. Original criteria, approval, all39 scenario requirements, failures and unowned work remain. No authority, isolation, resource/native control or accepted model/OCR threshold is changed. Actual native/provider/physical/final qualification remains pending; separate current all-criterion review is required."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -491,6 +668,72 @@
       "recordedAt": "2026-10-27T05:54:03Z",
       "sequence": 24,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "47f0922830e4ab03a5d5fea27ef9f6e489425ad87a9b6fc96359cac3662bfd96",
+      "recordedAt": "2026-10-27T21:59:17Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ba111858de46c8eba65c3fbb82600f52996f77f0d4be20b21ac12cd68b650995",
+      "recordedAt": "2026-10-27T21:59:17Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "64e6b42f0b92571b2ee8e129a854a18e0d0d885eee5343849bf19ac1d3ca8a5e",
+      "recordedAt": "2026-10-27T22:22:51Z",
+      "sequence": 27,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "cdeb7a44938ff855ee27b21c8589a27ad1e9329021ca0005b5423433d6eec758",
+      "recordedAt": "2026-10-27T22:41:25Z",
+      "sequence": 28,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0d1b4013836e8ece310fed140e89dbb158f08bf55e553d458cf21114d0503bae",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "57f8ba91feb5247d2f28ef2049b1524a876fc7ba09b39bb08768f08e9ebe8119",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "576d4967a2bc08a468f77af1d87c94e7e6ecad5eab75fda52a64e3fc786be7ff",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f731ecfb142b8e69ee9a0acefa15d727abf9747b923b68c05944e6de493b51c0",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "68ae8802b91a8dc039624e28117cb61a6707b9b2425301383d29c6cb25e90c99",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "335c50e0581d0998d9f113361998e17706cf365c05701e6a0921175dc7209b24",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8eabd0dd2e3dda0d506f56e2c833913669f9e5efb1d350a7fe7a800ee25281bc",
+      "recordedAt": "2026-10-27T22:41:35Z",
+      "sequence": 35,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -726,8 +969,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-10-27T22:41:35Z",
+      "completedChunks": [
+        "asset-ui-import-studio-customization",
+        "meaningful-systems-and-management",
+        "exact-build-publication-runtime",
+        "authoring-ui-feature-reconciliation"
+      ],
+      "completionSummary": "All four original Assets/System implementation chunks and three local criteria are complete on current source with nine related checks and independent review. Three actual-host/native/restart controlled criteria remain pending under the approved implementation-only policy. Original approval, technical requirements and failures are retained; full testing is deferred by user direction and the roadmap remains open.",
       "deliverables": [
         "Expanded existing whole-host Assets/System journey drivers and focused boundary regressions, avoiding cloned suites and prebuilt-composition injection into scratch-building cases.",
         "Three concurrently retained useful systems, each built through UI with at least six distinct component definitions beyond the required Foundation shell, with meaningful input/validation/table/status/disclosure/transcript-region outcomes and exact persisted composition oracles.",
@@ -750,6 +999,11 @@
       "id": "asset-to-published-system-journeys",
       "number": 2,
       "objective": "Protect the complete supported asset-authoring and system-building user journey on both hosts. Build meaningful multi-component systems through the actual current modal/click editor, preserve configuration and immutable versions, build/publish exact revisions and exercise the currently mounted controlled-conversation runtime. Execute tests and repair identified defects.",
+      "pendingCriteria": [
+        "asset-authoring-lifecycle",
+        "meaningful-scratch-compositions",
+        "published-runtime-ui-integration"
+      ],
       "plan": {
         "assumptions": [
           "Existing approved product/architecture contracts govern; no new dependency, provider, capability or resource-policy choice is inferred.",
@@ -864,7 +1118,7 @@
       ],
       "rollback": "Revert the scoped tested authoring/lifecycle corrections and harness extension without mutating historical definitions/revisions/releases, erasing user data, restoring obsolete insecure paths or weakening sandbox/approval denial. Stop only exact test-owned runtimes with confirmed authority and retain unconfirmed ownership for recovery.",
       "startedAt": "2026-10-27T05:54:03Z",
-      "status": "implementing",
+      "status": "implemented-pending-qualification",
       "title": "Assets to useful compositions and published runtimes",
       "verification": [
         "Run exact shared Assets/System UI tests and changed contract/use-case/client/host boundary tests, preserving immutable source/release and denied imported/authored execution oracles.",
@@ -1021,6 +1275,6 @@
   },
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "executing",
-  "updatedAt": "2026-10-27T05:54:03Z"
+  "status": "ready",
+  "updatedAt": "2026-10-27T22:41:35Z"
 }

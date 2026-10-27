@@ -12480,6 +12480,77 @@
           "Completed model accuracy and OCR checks will not run again."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6e07de19eb4d0c25c5c342f8747493948e2559d72bdc9c975e1793830e5fca73",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent committed the desktop restart checks for saved assets and three useful systems. The checks keep the original saved details and use a new app page.",
+          "All 43 focused comparison and cleanup tests passed. Type checks for six files passed. Three app test definitions were collected.",
+          "The actual app and restart checks will run later. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "75e21dd50423ab2db3d7aef2880d6331066cebc3e2ff932463923bb57a688f60",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent reviewed and committed five clearer field names in Studio. Both app versions use the shared editor.",
+          "All 161 existing editor and manager tests passed on the selected source. Type, Assets, documentation and architecture checks passed.",
+          "The agent will run the actual app and final accessibility checks later. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "077423c03ea332188a2144622e5809a98c243ccca1b1d7ca746953ae6b49f6e1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover local tests and test definitions. The agent still needs to run the app, restart, runtime and final checks.",
+          "The accepted model accuracy and OCR checks stay closed. The agent will not run them again for this work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "45c132351950d97919eddbea2f32118f89c507e1117c9658b9ea9dcf05baa194",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Workspace recovery tests now use the existing browser test runner. They keep the same checks for refused selection, failed refresh and safe recovery.",
+          "The focused test, type check and related browse, documentation and architecture checks passed. The reviewed change is committed.",
+          "The agent will run actual app checks later. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "dc75470e207650ce4916ae4929a6dd0643521253dcd017fd6e7dbc8aedc56d30",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks that Stop closes the exact runtime window before another system starts. Two published systems must keep separate conversations.",
+          "All 18 local comparison and failure tests passed. Type checks and the related feature checks passed. Both app test definitions were collected. The reviewed work is committed.",
+          "These results cover the test implementation. Actual app and native checks will run later. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "33c9694ea010692cd8749d4fd9adc4c9beaf1640bcb92f49593e88f77d3e9020",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added tests for both Activate and Deactivate. They check the selected release, current version, repeated clicks and retry after a refused action.",
+          "All 29 lifecycle tests passed, including the 26 original cases. Type, related UI, documentation and architecture checks passed. The reviewed work is committed.",
+          "The app behavior is unchanged. The agent will run the actual app checks later. No action needed from you."
+        ]
+      }
     }
   ]
 }

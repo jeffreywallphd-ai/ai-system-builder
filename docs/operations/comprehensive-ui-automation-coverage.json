@@ -113,6 +113,16 @@
           "name": "Both real workspace forms/switchers/gates/default clients with preload/HTTP/use case/new JSON stores: two Foundation choices, exact selection/remount, required name, duplicate admission, refused-create retry and failed-selection gating/recovery",
           "tier": "two-host-workspace-components-real-default-clients-transport-and-json-with-in-process-access-url-fixtures",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/thin-client/src/features/workspace/tests/workspace-readiness-recovery.unit.test.tsx",
+          "name": "Existing refused selection/clear, failed refresh and empty-list recovery assertions pass under the existing rendered UI runner. Exact executed import graph matches selected+HEAD; teardown and fixture typing are reviewed.",
+          "tier": "exact-selected-and-committed-dependency-local-unit",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "workspace-recovery-test-runner-repair",
+          "commit": "d8baa6398eecf79e05f23d6d749be109b3fb8594",
+          "receipt_digest": "1f64ae318686391d41455e0dd48d77e41cffaca02dbf357793fa7d60a1c09603",
+          "review_digest": "fa8d46b625ef2048da3d7ee6659a4ecbc126d320d810f2625d035db34557327b"
         }
       ],
       "actual_host_qualification": "pending",
@@ -2964,6 +2974,16 @@
           "name": "Exact authoring observations and two-host driver construction",
           "tier": "model-free-node-oracle-and-source-wiring",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+          "name": "Existing editor and manager cases pass161inaggregate on exact selected+HEAD imports after adopting five stable accessible field-name attributes. No new mirror tests; behavior and values retained.",
+          "tier": "exact-selected-and-committed-dependency-local-unit",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "studio-stable-accessible-labels",
+          "commit": "4ad2f98980cb962cbd8d4bc50440feb4f578e219",
+          "receipt_digest": "f8e68fd9667faa8b4366556096c634c395848be75372735b276e0b5e2ae383de",
+          "review_digest": "396c2020d7dc8b054d05ad962d44028d64de7b1b9218c49683f675f3fb34c850"
         }
       ],
       "actual_host_qualification": "pending",
@@ -3031,6 +3051,16 @@
           "name": "Exact authoring observations and two-host driver construction",
           "tier": "model-free-node-oracle-and-source-wiring",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+          "name": "Defines owned before/after shutdown and distinct app/page with the same saved profile. Reuses exact original assets/base/history or three saved-system observations. Collected only; no app/native/restart execution.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "desktop-authoring-restart-definition",
+          "commit": "edb08e4d58ff21f2d2473696ebdef470f90e3d6a",
+          "receipt_digest": "c8ce2988761278dbd8aa4772ecfbf42d47f1285011fe67940012234280772430",
+          "review_digest": "63ed06d40b07c08b51bbd48e54baf4aad857eaba17465494c4d11ff4cb0e2176"
         }
       ],
       "actual_host_qualification": "pending",
@@ -3187,6 +3217,16 @@
           "receipt_digest": "f61ed6e089f655566ef10eb1f11845be41efc3ffcc43afe2f2d1b6c6628081ea",
           "review_digest": "2d980013aa572b2226bf53610cbabc2318a71d6bb8f3ac3dca7a83161ce8b2a1",
           "commit": "219f35619b008a64ac27b52347262862cbcd615a"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
+          "name": "Defines owned before/after shutdown and distinct app/page with the same saved profile. Reuses exact original assets/base/history or three saved-system observations. Collected only; no app/native/restart execution.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "desktop-authoring-restart-definition",
+          "commit": "edb08e4d58ff21f2d2473696ebdef470f90e3d6a",
+          "receipt_digest": "c8ce2988761278dbd8aa4772ecfbf42d47f1285011fe67940012234280772430",
+          "review_digest": "63ed06d40b07c08b51bbd48e54baf4aad857eaba17465494c4d11ff4cb0e2176"
         }
       ],
       "actual_host_qualification": "pending",
@@ -3350,6 +3390,36 @@
           "receipt_digest": "1bdb02aeabed2f2369beaaf54651d6f8475b0959fdee5b515e3bdfd47c9effdf",
           "review_digest": "5b47fb13f763c54869f64dbabaa891c2f3681dd9e81b945fdd558b10f3b9755f",
           "commit": "3bd4542bb1dca1957dc12fca39c5f9a56049bd9e"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
+          "name": "Eighteen finite cases verify exact identities, captured-window retirement, awaited/rejected Stop, two-context stores and exact isolated transcripts/counts. Five changed type roots and related feature checks pass.",
+          "tier": "exact-selected-and-committed-dependency-local-unit",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "published-runtime-stop-and-isolation-definitions",
+          "commit": "eb2c913e1b75c09d736ed2c62ac59d7384e24ee7",
+          "receipt_digest": "61e9ba238b330bedcbfbf0905f8654008e66563ebdaa2b34d4e3cf996d22f642",
+          "review_digest": "fdbe493f2fc6b93473268e093b25e8f8cffb16c9ae90b46d2f599e394b4e6b58"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+          "name": "Defines checked Compose/modal build selection, exact public release tuple, captured Page close and A/B/A isolation. Existing data verifier checks two distinct release/runtime/database/session contexts. Desktop and unchanged-wrapper browser definitions collected only; actual hosts/native/server restart remain pending.",
+          "tier": "source-defined-real-host-driver-collected-only",
+          "qualification": "collected-not-executed",
+          "work_id": "published-runtime-stop-and-isolation-definitions",
+          "commit": "eb2c913e1b75c09d736ed2c62ac59d7384e24ee7",
+          "receipt_digest": "61e9ba238b330bedcbfbf0905f8654008e66563ebdaa2b34d4e3cf996d22f642",
+          "review_digest": "fdbe493f2fc6b93473268e093b25e8f8cffb16c9ae90b46d2f599e394b4e6b58"
+        },
+        {
+          "file": "modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx",
+          "name": "All 29 rendered lifecycle cases pass, including three new Activate/Deactivate positive and denied/stale retry cases. Exact target/revisions, authoritative controls, duplicate admission, no automatic replay and post-refresh error preservation are checked. Original 26 cases and production source are unchanged.",
+          "tier": "exact-selected-and-committed-dependency-local-unit",
+          "qualification": "reviewed-local-snapshot-only",
+          "work_id": "published-lifecycle-activation-ui-coverage",
+          "commit": "405d490db78d16e9d88852a2867ba531d42bc1a1",
+          "receipt_digest": "a2f378f61e6595908c03ee0f7e451e9a7306e922407a098dc40ec3bc254002c8",
+          "review_digest": "0cac0af2b59a151373e9860f7a6e38e213cf36be3ba426a7c0e62e6f0e0add04"
         }
       ],
       "actual_host_qualification": "pending",
@@ -3576,5 +3646,61 @@
     "scope": "44 completed historical support records now include the reviewed Desktop Image join, Context query/rebuild join, actual source/RAG processor tests, app-helper implementation and fresh-session pack repair. Historical receipts do not qualify current source. All four chunks are already recorded; no duplicate chunk. Current local criteria require fresh six-profile checks and independent all-criterion review. Actual packaged Windows/Chrome/provider/native/restart and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun.",
     "actual_host_qualification": "pending",
     "final_combined_testing": "deferred-by-user"
+  },
+  "authoring_implementation_reconciliation": {
+    "increment_id": "asset-to-published-system-journeys",
+    "planned_chunks": [
+      "asset-ui-import-studio-customization",
+      "meaningful-systems-and-management",
+      "exact-build-publication-runtime",
+      "authoring-ui-feature-reconciliation"
+    ],
+    "historical_completed_support_links": 32,
+    "historical_support_work_ids": [
+      "asset-authoring-two-host-core-and-exact-oracles",
+      "asset-authoring-ui-desktop-read-check-coverage",
+      "asset-package-owned-ui-lifecycle-and-retry",
+      "asset-reviewed-definition-atomic-publication",
+      "asset-ui-exact-feature-verification-profile",
+      "assets-ipc-sender-admission-and-lazy-host-wiring",
+      "assets-search-accessible-name-and-help-interactions",
+      "customization-saved-edit-review-and-recovery",
+      "derived-catalog-batched-definition-reads",
+      "derived-workspace-authority-and-stable-inputs",
+      "desktop-authoring-restart-definition",
+      "desktop-saved-legacy-query-and-notification-recovery",
+      "legacy-assets-workspace-authorization-and-safe-read-envelopes",
+      "meaningful-system-exact-persistence",
+      "package-workspace-authority-and-stable-inputs",
+      "published-conversation-request-recovery",
+      "published-lifecycle-activation-ui-coverage",
+      "published-runtime-stop-and-isolation-definitions",
+      "saved-assets-owned-read-and-legacy-open-recovery",
+      "studio-draft-session-owned-actions-and-read-recovery",
+      "studio-stable-accessible-labels",
+      "studio-workspace-authority-and-stable-inputs",
+      "system-build-publication-request-recovery",
+      "system-management-request-recovery",
+      "system-published-lifecycle-request-recovery",
+      "workspace-published-asset-visibility",
+      "workspace-recovery-test-runner-repair"
+    ],
+    "local_feature_profiles": [
+      "asset-authoring-ui",
+      "system-canvas-authoring-ui",
+      "system-management-ui",
+      "system-build-publication-ui",
+      "system-runtime-conversation-ui",
+      "functionality-browse"
+    ],
+    "current_evidence_work_id": "comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+    "controlled_criteria_pending": [
+      "asset-authoring-lifecycle",
+      "meaningful-scratch-compositions",
+      "published-runtime-ui-integration"
+    ],
+    "scope": "Current feature checks and separate all-criterion review govern local outcomes. Historical results cannot qualify a newer source. Actual packaged desktop/local Chrome, process/server restart, native/runtime/managed/provider and final combined qualification remain pending. No accepted accuracy or OCR rerun.",
+    "actual_host_qualification": "pending",
+    "full_cross_roadmap_testing": "deferred-by-user"
   }
 }

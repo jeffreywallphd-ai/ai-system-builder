@@ -5227,6 +5227,154 @@
         "Completed and committed local test support at this recorded source snapshot. No whole criterion, planned work package, increment or current-candidate pass follows.",
         "Visible relative sibling order and configured synthetic fields only. No complete hidden configuration, raw placement IDs, durable storage, actual host/restart/provider/native or final combined qualification. Accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "desktop-authoring-restart-definition",
+      "work_criteria": [
+        "one-fresh-page-verification",
+        "owned-desktop-replacement-defined",
+        "focused-source-and-pending-qualification"
+      ],
+      "receipt_digest": "c8ce2988761278dbd8aa4772ecfbf42d47f1285011fe67940012234280772430",
+      "review_digest": "63ed06d40b07c08b51bbd48e54baf4aad857eaba17465494c4d11ff4cb0e2176",
+      "scope": "The desktop Assets and three-useful-systems cases now define owned shutdown, a distinct replacement and exact saved observations. Original four document reloads remain. Forty-three local oracle/cleanup tests and six type roots pass; three host definitions collect. Before/after worker records are separate. Actual app/native/server/restart qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "meaningful-scratch-compositions",
+      "work_id": "desktop-authoring-restart-definition",
+      "work_criteria": [
+        "one-fresh-page-verification",
+        "owned-desktop-replacement-defined",
+        "focused-source-and-pending-qualification"
+      ],
+      "receipt_digest": "c8ce2988761278dbd8aa4772ecfbf42d47f1285011fe67940012234280772430",
+      "review_digest": "63ed06d40b07c08b51bbd48e54baf4aad857eaba17465494c4d11ff4cb0e2176",
+      "scope": "The desktop Assets and three-useful-systems cases now define owned shutdown, a distinct replacement and exact saved observations. Original four document reloads remain. Forty-three local oracle/cleanup tests and six type roots pass; three host definitions collect. Before/after worker records are separate. Actual app/native/server/restart qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "studio-stable-accessible-labels",
+      "work_criteria": [
+        "stable-field-names",
+        "owned-tested-checkpoint"
+      ],
+      "receipt_digest": "f8e68fd9667faa8b4366556096c634c395848be75372735b276e0b5e2ae383de",
+      "review_digest": "396c2020d7dc8b054d05ad962d44028d64de7b1b9218c49683f675f3fb34c850",
+      "scope": "Five existing explicit accessible-name attributes are committed for shared Studio type/family, definition, JSON and resource fields. Visible labels, values and editing/publication behavior remain. The exact selected editor/manager run passed 161 existing cases; one changed root has no type errors. Assets/docs/architecture checks and separate source review passed. Actual app/accessibility/native/final checks remain pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "authoring-errors-and-repair-loop",
+      "work_id": "studio-stable-accessible-labels",
+      "work_criteria": [
+        "stable-field-names",
+        "owned-tested-checkpoint"
+      ],
+      "receipt_digest": "f8e68fd9667faa8b4366556096c634c395848be75372735b276e0b5e2ae383de",
+      "review_digest": "396c2020d7dc8b054d05ad962d44028d64de7b1b9218c49683f675f3fb34c850",
+      "scope": "Five existing explicit accessible-name attributes are committed for shared Studio type/family, definition, JSON and resource fields. Visible labels, values and editing/publication behavior remain. The exact selected editor/manager run passed 161 existing cases; one changed root has no type errors. Assets/docs/architecture checks and separate source review passed. Actual app/accessibility/native/final checks remain pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "authoring-errors-and-repair-loop",
+      "work_id": "workspace-recovery-test-runner-repair",
+      "work_criteria": [
+        "recovery-assertions-execute",
+        "owned-regression-checkpoint"
+      ],
+      "receipt_digest": "1f64ae318686391d41455e0dd48d77e41cffaca02dbf357793fa7d60a1c09603",
+      "review_digest": "fa8d46b625ef2048da3d7ee6659a4ecbc126d320d810f2625d035db34557327b",
+      "scope": "The existing thin-client workspace recovery test runs under the unchanged Vitest/jsdom adapter. Original assertions remain; guaranteed teardown and typed fixtures pass. Exact selected runtime imports and types, the related browse/docs/architecture checks and separate review passed. Only the test and documentation were committed; actual host qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "published-runtime-ui-integration",
+      "work_id": "published-runtime-stop-and-isolation-definitions",
+      "work_criteria": [
+        "awaited-exact-window-stop",
+        "two-system-ui-and-store-isolation",
+        "security-and-owned-checkpoint"
+      ],
+      "receipt_digest": "61e9ba238b330bedcbfbf0905f8654008e66563ebdaa2b34d4e3cf996d22f642",
+      "review_digest": "fdbe493f2fc6b93473268e093b25e8f8cffb16c9ae90b46d2f599e394b4e6b58",
+      "scope": "Defines exact checked-build publication, captured-page Stop proof and A/B/A conversation isolation in the controlled desktop journey. Two exact stored release/runtime/database/session contexts and no control-store leakage are checked. Eighteen finite oracle cases, five type roots and five related checks pass; two host definitions collect. Separate source review and scoped commit passed. Actual app/native/runtime qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "authoring-errors-and-repair-loop",
+      "work_id": "published-runtime-stop-and-isolation-definitions",
+      "work_criteria": [
+        "awaited-exact-window-stop",
+        "two-system-ui-and-store-isolation",
+        "security-and-owned-checkpoint"
+      ],
+      "receipt_digest": "61e9ba238b330bedcbfbf0905f8654008e66563ebdaa2b34d4e3cf996d22f642",
+      "review_digest": "fdbe493f2fc6b93473268e093b25e8f8cffb16c9ae90b46d2f599e394b4e6b58",
+      "scope": "Defines exact checked-build publication, captured-page Stop proof and A/B/A conversation isolation in the controlled desktop journey. Two exact stored release/runtime/database/session contexts and no control-store leakage are checked. Eighteen finite oracle cases, five type roots and five related checks pass; two host definitions collect. Separate source review and scoped commit passed. Actual app/native/runtime qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "published-runtime-ui-integration",
+      "work_id": "published-lifecycle-activation-ui-coverage",
+      "work_criteria": [
+        "activate-deactivate-command-and-projection",
+        "denied-stale-action-recovery"
+      ],
+      "receipt_digest": "a2f378f61e6595908c03ee0f7e451e9a7306e922407a098dc40ec3bc254002c8",
+      "review_digest": "0cac0af2b59a151373e9860f7a6e38e213cf36be3ba426a7c0e62e6f0e0add04",
+      "scope": "Adds three rendered Activate/Deactivate transition and denial/retry cases. Both buttons send the exact workspace/release/current revision; duplicate clicks admit one command. Denied actions hide controls during refresh, show no false success or replay, retain the error afterward and retry only on the refreshed revision. All 29 lifecycle cases, types, owning UI/docs/architecture checks and separate source review pass. Production behavior is unchanged; actual host qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "authoring-errors-and-repair-loop",
+      "work_id": "published-lifecycle-activation-ui-coverage",
+      "work_criteria": [
+        "activate-deactivate-command-and-projection",
+        "denied-stale-action-recovery"
+      ],
+      "receipt_digest": "a2f378f61e6595908c03ee0f7e451e9a7306e922407a098dc40ec3bc254002c8",
+      "review_digest": "0cac0af2b59a151373e9860f7a6e38e213cf36be3ba426a7c0e62e6f0e0add04",
+      "scope": "Adds three rendered Activate/Deactivate transition and denial/retry cases. Both buttons send the exact workspace/release/current revision; duplicate clicks admit one command. Denied actions hide controls during refresh, show no false success or replay, retain the error afterward and retry only on the refreshed revision. All 29 lifecycle cases, types, owning UI/docs/architecture checks and separate source review pass. Production behavior is unchanged; actual host qualification remains pending.",
+      "limitations": [
+        "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }
