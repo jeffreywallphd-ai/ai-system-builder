@@ -1687,6 +1687,7 @@ export function composeDesktopHost(
         },
         assetAuthoring: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           ...assetAuthoringUseCases,
           authoredAssetRepository,
           assetDraftRepository,
@@ -1838,6 +1839,7 @@ export function composeDesktopHost(
         },
         assetPackages: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           inspect: {
             async execute(command) {
               const feature = (await getAssetFeatures()).assetPackages;
@@ -1889,6 +1891,7 @@ export function composeDesktopHost(
         },
         assetStudio: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           start: {
             async execute(command) {
               const feature = (await getAssetFeatures()).assetStudio;

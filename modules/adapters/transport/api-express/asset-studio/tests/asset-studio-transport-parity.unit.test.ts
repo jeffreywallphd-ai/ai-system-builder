@@ -118,6 +118,7 @@ describe("Asset Studio transport parity", () => {
     const handlers = new Map<string, any>();
     const ipc = services();
     registerAssetStudioIpc({
+      senderTrust: { isTrustedSender: () => true },
       ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
       ...ipc,
     });

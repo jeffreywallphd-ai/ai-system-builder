@@ -2,11 +2,13 @@ import type { RegisterAssetPackageApiRoutesDependencies } from "../../api-expres
 import { DESKTOP_ASSET_PACKAGE_CHANNELS, createIpcError, createIpcFailureResponse, createIpcSuccessResponse } from "../../../../contracts/ipc";
 import { normalizeSha256Digest } from "../../../../contracts/asset-implementation";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import type { IpcMainHandlePort } from "../ipcMainHandlePort";
+import type { IpcMainHandlePort, IpcSenderTrustPolicy } from "../ipcMainHandlePort";
+import { guardedIpcMainHandlePort } from "../guardedIpcMainHandlePort";
 
-export interface RegisterAssetPackageIpcDependencies extends Omit<RegisterAssetPackageApiRoutesDependencies, "app"> { ipcMain: IpcMainHandlePort }
+export interface RegisterAssetPackageIpcDependencies extends Omit<RegisterAssetPackageApiRoutesDependencies, "app"> { ipcMain: IpcMainHandlePort; readonly senderTrust: IpcSenderTrustPolicy }
 
-export function registerAssetPackageIpc(d: RegisterAssetPackageIpcDependencies): void {
+export function registerAssetPackageIpc(dependencies: RegisterAssetPackageIpcDependencies): void {
+  const d = { ...dependencies, ipcMain: guardedIpcMainHandlePort(dependencies.ipcMain, dependencies.senderTrust, Object.values(DESKTOP_ASSET_PACKAGE_CHANNELS)) };
   handle(d, "list", async (payload) => d.list.execute(createWorkspaceId(required(payload.workspaceId))));
   handle(d, "inspect", async (payload) => d.inspect.execute({ workspaceId: createWorkspaceId(required(payload.workspaceId)), bytes: toBytes(payload.bytes), actorId: "local-user" }));
   handle(d, "admit", async (payload) => d.admit.execute({ workspaceId: createWorkspaceId(required(payload.workspaceId)), inspectionId: required(payload.inspectionId), packageDigest: normalizeSha256Digest(required(payload.packageDigest)), approvalScope: payload.approvalScope === "organization" ? "organization" : "workspace", approvedCapabilities: strings(payload.approvedCapabilities), actorId: "local-user" }));

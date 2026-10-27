@@ -376,3 +376,23 @@ in-process handler seam; it does not represent an Electron wire getter. Routing
 context and fixture sender admission are not resource authorization. Actual host
 identity, application authorization, persistence, native and final qualification
 remain separate. This repair neither weakens nor qualifies the other guards.
+
+### Assets IPC sender admission delta
+
+Protected assets are workspace records, package and Studio operations, and
+deferred feature effects. A foreign window, subframe or destroyed owner must
+not reach them. The desktop host supplies its existing live owned-window
+main-frame policy to all three Assets registrations. Each fixed-channel wrapper
+requires the literal synchronous result `true` before it reads request context
+or payload or resolves a deferred service. Missing policy, exceptions and
+nonboolean results deny with the common fixed forbidden response; no request
+IDs or private exception details are read into that response. Descriptor setup
+rejects duplicate request channels, mismatched operations and unknown channels.
+
+Finite tests exercise every registered channel, trusted argument/result identity,
+malformed trusted requests, parity and real host composition without opening an
+app. Denied calls leave deferred features unloaded. Existing actor injection,
+validation and workspace/use-case controls remain authoritative after admission.
+This local proof does not qualify real Electron events, resource authorization,
+publication transactions, persistence, native or parent roadmap outcomes. Repair
+forward; rollback must retain sender admission rather than restore open handlers.

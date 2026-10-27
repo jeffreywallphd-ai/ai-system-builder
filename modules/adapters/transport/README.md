@@ -13,3 +13,19 @@ workspace substitution, malformed commands and complete local-file publication.
 They use synthetic token verification; the real host UI journey separately uses
 the normal generated device credential. Neither substitutes for native or provider
 qualification. Rollback denies the route rather than skipping authorization.
+
+### Assets desktop sender admission
+
+All package, Studio and authoring IPC handlers use the existing synchronous
+main-frame policy supplied by the desktop host. Admission runs before request
+metadata, payload validation or deferred feature resolution. Missing, throwing
+or nonboolean policy results fail closed with fixed forbidden text. Fixed request
+and response descriptors preserve operation identity; trusted requests continue
+through their existing validation and resource controls. Sender trust does not
+grant workspace, publication or execution authority.
+
+The `asset-authoring-ui` profile includes finite all-channel denial, trusted
+pass-through, actual host composition and API/IPC parity tests. These tests use
+synthetic events and do not start Electron, models or provider requests. Real
+host identity, resource authorization, persistence and overall qualification
+remain separate.
