@@ -12407,6 +12407,18 @@
           "All 34 focused UI cases, type checks for both changed files and four test-selection checks passed. The agent reviewed and committed this change. Actual app, native and final combined checks still need agent work. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "53d2dc3341056d0bc3780d559d60da926b861d1c5c7a2596d034e56d88363449",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Build & test and Publish recover after failed checks, loads and commands. Repeated clicks send one request.",
+          "Confirmation keeps the same system, saved version, build and integrity check. The app refuses a reply for a different target. A successful publication stays successful if its later list refresh fails.",
+          "All 38 focused UI cases, five related lifecycle cases, type checks for three files and four test-selection checks passed. The agent reviewed and committed the work. Actual app, runtime, native and final combined checks still need agent work. No action needed from you."
+        ]
+      }
     }
   ]
 }

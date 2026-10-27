@@ -5135,6 +5135,25 @@
         "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
         "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "system-management-build-and-approval",
+      "work_id": "system-build-publication-request-recovery",
+      "work_criteria": [
+        "exact-build-target-and-retry",
+        "explicit-publication-and-saved-outcome",
+        "committed-context-and-single-admission",
+        "focused-build-publication-profile-checkpoint"
+      ],
+      "receipt_digest": "04d9a317f4323e341ca2f2446487546f4ea8be9a0509e46b509c1e5e5cd56623",
+      "review_digest": "ec9f96fe30371ebd9a8e7555e034133f384dea07750a1e868edef867c179362d",
+      "scope": "Build & test and Publish recover after failed checks, reads and commands. Committed exact-target owners prevent obsolete replies and duplicate actions. Confirmation retains the named saved revision, build and lock; mismatched build/release replies cannot report success. A saved publication stays saved if its later refresh fails. 38 rendered cases, five related lifecycle cases, three type roots and four profile guards pass with five scoped checks. Actual app/runtime/native/final checks remain.",
+      "limitations": [
+        "These are completed and committed local support results at recorded source snapshots. No whole criterion, work package, increment or current-candidate pass follows.",
+        "Actual desktop/browser startup and restart, resource authorization, persistence, provider/native and final combined checks remain separately owned. No accepted model accuracy or OCR rerun."
+      ]
     }
   ]
 }
