@@ -296,3 +296,16 @@ combined qualification remain pending until separately executed. No accepted
 model/OCR accuracy check runs as part of this work. The browse case has an extra
 150-second total budget for its additional restart and verification steps;
 existing action, launch, shutdown, output and resource limits are unchanged.
+
+## Rendered workspace recovery tests
+
+The thin-client workspace recovery test uses the existing Vitest/jsdom adapter,
+as do the adjacent WorkspaceGate tests. Its assertions still cover refused
+selection and clearing, a failed refresh and an empty workspace result. Teardown
+always unmounts the owned root, removes its container and restores the prior
+React act flag, including after a failed assertion.
+
+Use `functionality-browse` for the related feature tests. The fixed helper
+classifies the Vitest import automatically; no runner or dependency change is
+needed. The earlier Node import-time failure remains failed harness evidence.
+Passing these local tests does not qualify an actual host or process restart.
