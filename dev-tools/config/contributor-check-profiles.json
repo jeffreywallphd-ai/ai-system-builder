@@ -1551,6 +1551,27 @@
         "dev-tools/helpers/control_plane/catalog.py",
         "docs/diagnostics/ai-development-control-plane.md"
       ]
+    },
+    "asset-authoring-ui": {
+      "test_paths": [
+        "modules/ui/shared/asset-studio/tests/UnifiedAssetStudio.unit.test.tsx",
+        "modules/ui/shared/asset-studio/tests/AssetStudioManager.unit.test.tsx",
+        "modules/ui/shared/asset-studio/tests/asset-area-tab-consolidation.unit.test.ts",
+        "modules/ui/shared/asset-package/tests/AssetPackageManager.unit.test.tsx",
+        "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+        "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.unit.test.tsx",
+        "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
+        "modules/ui/shared/asset-studio/AssetStudioManager.tsx",
+        "modules/ui/shared/asset-studio/README.md",
+        "modules/ui/shared/asset-package/AssetPackageManager.tsx",
+        "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",
+        "modules/ui/shared/notifications/TransientNotificationPublisher.tsx"
+      ]
     }
   }
 }

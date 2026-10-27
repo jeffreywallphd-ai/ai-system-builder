@@ -669,3 +669,18 @@ Readable older indented journals remain supported. A genuinely full state or
 journal is refused before publication; formatting is not permission to remove
 history or enlarge the limit. Preserve any unreadable retained journal and its
 state/index for reviewed recovery. Never delete it to make a command proceed.
+
+### Assets interface feature checks
+
+`asset-authoring-ui` runs the declared Studio, package import, derived
+customization and notification-publisher interface tests through the existing
+fixed Node/Vitest runners. Use it for feature-level Assets work. It uses fixed
+clients and does not qualify actual transports, storage, desktop/browser apps,
+providers, native workers or model accuracy. Those checks remain separate.
+
+The profile replaces generic focused ownership only for its exact declared
+source/test paths. Uncovered impact and an explicitly required `focused-tests`
+check retain the ordinary gate. Existing path confinement, controlled-AI
+exclusion, fixed argv, exact Vitest collection and policy digest rules apply.
+Selecting this profile does not erase failed broader receipts or close parent
+roadmap qualification. Adding an unrelated path requires its own coverage.
