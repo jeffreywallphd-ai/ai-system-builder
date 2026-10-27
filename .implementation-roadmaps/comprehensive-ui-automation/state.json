@@ -247,12 +247,39 @@
         "Separate review covers all six original criteria; actual desktop/browser/native/restart execution is pending."
       ],
       "title": "Repair defects and reconcile current feature evidence"
+    },
+    {
+      "areas": [
+        "Desktop Settings renderer/client consumption",
+        "Finite Settings check profile and routing denials"
+      ],
+      "chunkId": "settings-save-and-query-recovery",
+      "completedAt": "2026-10-27T23:03:45Z",
+      "criteriaIds": [
+        "operational-and-task-ui",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "apps/desktop/src/renderer/features/settings/README.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-settings-save-and-query-recovery",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Implemented and feature-tested committed Settings query/mutation ownership, duplicate admission, fixed notification errors, explicit Refresh and truthful readback. Failed secrets and newer queued edits survive old results; malformed rows fail inside the read boundary. Corrected related test fixtures without changing assertions or dependencies. Six current checks passed with zero diagnostics on nine selected source/test roots; exact source preflight found no further issue. Actual host/final testing and other operational chunks remain pending.",
+      "tests": [
+        "42 synthetic Settings cases in4fixedfiles passed through current settings-ui receipt.",
+        "Five profile-routing denial tests; current documentation, architecture, agent-support, control-plane and roadmap checks passed.",
+        "Nine exact selected/HEAD module builds and nine selected source/test type roots with0diagnostics; raw input applicability verified."
+      ],
+      "title": "Reliable settings and secret-safe recovery"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-10-23T13:55:23Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "operational-ui-and-coverage-qualification",
   "decisions": [
     {
       "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
@@ -734,6 +761,30 @@
       "recordedAt": "2026-10-27T22:41:35Z",
       "sequence": 35,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "f27c19f8e869f833b2f0dba110595bd00edb185f4b36921fe6c731d2945974c8",
+      "recordedAt": "2026-10-27T22:46:18Z",
+      "sequence": 36,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "b6e5640450858ee7a2626a75161d28a44ab101207b0a03d17949a085e1242c00",
+      "recordedAt": "2026-10-27T22:46:18Z",
+      "sequence": 37,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "186feab84d06ab44a3dcc0dfd35e746e8b4b10d989a748f76e173a4902141719",
+      "recordedAt": "2026-10-27T22:46:19Z",
+      "sequence": 38,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "2f1abdc6c4d44226749f12791c69a9284d28af09afd790610fe9ac768fc95383",
+      "recordedAt": "2026-10-27T23:03:45Z",
+      "sequence": 39,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1191,7 +1242,9 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "settings-save-and-query-recovery"
+      ],
       "deliverables": [
         "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
         "Automated semantic/keyboard/focus/status/contrast/reflow coverage for every critical workflow, safe capture policy and current named host/environment observations.",
@@ -1215,11 +1268,151 @@
       "id": "operational-ui-and-coverage-qualification",
       "number": 3,
       "objective": "Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The existing renderer, client, public contract and profile architecture is retained with no new dependency or provider.",
+          "The user approved this roadmap and ordered feature-level catch-up before combined testing.",
+          "UI guard fixes do not establish physical host or secret-store qualification; actual final checks remain pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "operational-and-task-ui",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "settings-save-and-query-recovery",
+            "outcome": "Current Settings reads/writes, retry and drafts preserve exact committed ownership, no duplicate mutation, truthful refresh outcome and fixed public errors. Finite synthetic tests and bounded routing support a reviewed source checkpoint.",
+            "title": "Reliable settings and secret-safe recovery"
+          },
+          {
+            "criteriaIds": [
+              "operational-and-task-ui",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "operational-task-and-shell-coverage",
+            "outcome": "Cover supported Security, runtime/readiness, workspace/shell and task-family actions through owning component/transport fixtures and exact host definitions; repair discovered supported defects with related regressions.",
+            "title": "Operational controls, task notifications and shell recovery"
+          },
+          {
+            "criteriaIds": [
+              "automated-accessibility-and-local-host-observation",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "accessible-host-observation-definitions",
+            "outcome": "Meaningful reusable accessibility and responsiveness assertions, bounded exact host setup and declared observation workloads exist with local oracle tests. Actual packaged/Chrome native observations remain pending until executed.",
+            "title": "Accessible UI and startup observations"
+          },
+          {
+            "criteriaIds": [
+              "review-site-ui-regressions",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "review-site-and-run-evidence-recovery",
+            "outcome": "Read-only review/status/order/work-item/theme/refresh regressions and finite run collection, safe error/cleanup/interruption and missing-evidence selection are exercised at their owned layer. No local support becomes parent qualification.",
+            "title": "Read-only review UI and reliable test reporting"
+          },
+          {
+            "criteriaIds": [
+              "coverage-complete-and-honest",
+              "final-current-ui-and-repository-gates",
+              "security-impact-reviewed"
+            ],
+            "id": "coverage-census-and-qualification-readiness",
+            "outcome": "All39 supported families and current mounted actions are mapped to exact meaningful tests and appropriate hosts with retained missing/failed/not-run evidence. Scoped feature defects are repaired and documentation supports final named host/all-suite qualification; controlled final checks remain pending until actually executed.",
+            "title": "Complete coverage map and final qualification readiness"
+          }
+        ],
+        "completionTests": [
+          "Only increment-relevant operational, accessibility-definition, review-site and evidence/census profiles plus documentation/architecture and triggered agent-support/control-plane gates after all implementation chunks.",
+          "Actual packaged Windows/local Chrome and exact managed-reference subset remain controlled pending until executed.",
+          "Combined standard/end-to-end/AI and affected package/build gates stay at the final cross-roadmap testing boundary requested by the user; accepted model accuracy and OCR are not rerun merely for a checkpoint."
+        ],
+        "documentation": [
+          "Settings feature README and control-plane bounded-profile guidance",
+          "Current coverage and support/user descriptions with exact evidence tiers",
+          "Generated roadmap/state and concise temporary report"
+        ],
+        "fingerprint": "3d4fcbb895121ac826b509db99f15122b95825ce58c0fa414b3e161fa6886537",
+        "focusedTests": [
+          "Settings synthetic rendered/hook/API and fixed catalog denial tests for chunk1.",
+          "Exact owning thin Security, runtime/readiness, shell and task notification tests for chunk2.",
+          "Existing technical-accessibility/startup/native-observation definition and bounded lifecycle oracle tests for chunk3; no actual model run.",
+          "Exact review-site DOM/controller, finite report and owned interruption/cleanup tests for chunk4.",
+          "Changed census/admission/schema and exact collection/meaningful assertion checks for chunk5."
+        ],
+        "recordedAt": "2026-10-27T22:46:19Z",
+        "rollback": "Revert only selected owned changes; preserve user/foreign changes, fixed diagnostics, security/host/resource guards, original failures and immutable evidence. Unknown native ownership and retained offload staging remain untouched.",
+        "steps": [
+          "Add synthetic Settings regressions for failed secret save, refresh truthfulness, query/client retirement, duplicate admission and safe errors. Repair the owning renderer and exact bounded Settings check routing; commit tested/reviewed work.",
+          "Inspect and test mounted thin Security, readiness/runtime controls, shell/workspace summaries and each task notification family; repair supported behavior and keep actual host authority separate.",
+          "Extend current keyboard/focus/name/state/reflow and startup observation definitions plus their deterministic oracles. Use current budgets and user-supported native behavior.",
+          "Verify read-only review statuses/order/theme/refresh, safe finite run reporting and restart/interruption admission; fix only reproduced in-scope defects.",
+          "Regenerate the current capability/scenario census; map every39family to meaningful current test and host/evidence tier. Prepare exact remaining actual-host/final checks; do not substitute collection or local fixtures for their outcomes."
+        ],
+        "summary": "Complete operational UI definitions and focused regression repairs, then reconcile current coverage and preserve later combined/actual-host qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-27T22:46:18Z",
+          "risks": [
+            "Unknown exception text may contain protected content; use fixed public diagnostics and synthetic secret fixtures only.",
+            "UI retirement must not claim host-side cancellation, authorization or physical cleanup.",
+            "Profile/catalog amendments must be exact finite tests and preserve generic coverage for unknown/explicitly required impact.",
+            "No accepted accuracy/OCR rerun, model/provider/dependency authority, native/offload data action or guard relaxation follows from this work.",
+            "Actual named host/accessibility/restart/final suites remain pending until executed; no human acceptance is introduced."
+          ],
+          "sources": [
+            {
+              "title": "Approved operational increment",
+              "url": ".implementation-roadmaps/comprehensive-ui-automation/state.json"
+            },
+            {
+              "title": "Mounted surface census",
+              "url": "docs/operations/comprehensive-ui-automation-coverage.json"
+            },
+            {
+              "title": "Settings hook",
+              "url": "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts"
+            },
+            {
+              "title": "Secret field",
+              "url": "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx"
+            },
+            {
+              "title": "Settings panel regressions",
+              "url": "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx"
+            },
+            {
+              "title": "Thin Security",
+              "url": "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx"
+            },
+            {
+              "title": "Owned task host journey",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts"
+            },
+            {
+              "title": "Technical accessibility assertions",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"
+            },
+            {
+              "title": "Read-only review projection",
+              "url": "docs/diagnostics/ai-development-control-plane.md"
+            },
+            {
+              "title": "Security boundary rules",
+              "url": "docs/standards/security-by-design-standards.md"
+            }
+          ],
+          "summary": "Security-relevant operational UI work follows current renderer/client and host authority boundaries. Existing Settings hook accepts retired reads, lacks synchronous mutation ownership, exposes unknown error.message, and resolves failed saves so SecretSettingField can erase a failed draft. Reproduce with synthetic local fixtures before repair. Inspect and extend current thin Security, task/readiness, shell, accessibility, review-site and bounded host evidence paths; retain39 scenario families and controlled final-host gaps. Current user direction defers combined testing until all roadmap implementation is caught up."
+        }
+      ],
       "rollback": "Revert scoped operational UI and harness corrections while retaining secure settings defaults, exact current guards, read-only review semantics and immutable evidence. Never erase failed runs, downgrade policy, clear unknown native ownership or delete retained staging as a recovery shortcut. Preserve user data and use explicit retry/blocked state when proof is unavailable.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-10-27T22:46:18Z",
+      "status": "implementing",
       "title": "Operational recovery and complete UI coverage qualification",
       "verification": [
         "Run exact settings/security/client, notification/task-observation, runtime/readiness, memory-shortfall, shell/dashboard and shared accessibility tests; retain a rendered denied/failure path for each changed trust boundary.",
@@ -1275,6 +1468,6 @@
   },
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
-  "status": "ready",
-  "updatedAt": "2026-10-27T22:41:35Z"
+  "status": "executing",
+  "updatedAt": "2026-10-27T23:03:45Z"
 }

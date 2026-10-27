@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   ApplicationSettingDefinition,
@@ -15,13 +15,14 @@ export interface SettingFieldProps {
   value?: ApplicationSettingValue;
   disabled?: boolean;
   compact?: boolean;
-  onSave: (value: ApplicationSettingPrimitiveValue) => Promise<void>;
-  onClear: () => Promise<void>;
+  onSave: (value: ApplicationSettingPrimitiveValue) => Promise<boolean>;
+  onClear: () => Promise<boolean>;
   onSelectFolder?: (request?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
 }
 
 export function SettingField(props: SettingFieldProps) {
   const [draft, setDraft] = useState<string>(() => (props.value?.value === undefined ? "" : String(props.value.value)));
+  useEffect(() => { setDraft(props.value?.value === undefined ? "" : String(props.value.value)); }, [props.value?.value]);
 
   const configured = Boolean(props.value?.configured);
 
@@ -46,7 +47,7 @@ export function SettingField(props: SettingFieldProps) {
         <ModelDefaultSettingField
           value={objectValue}
           disabled={props.disabled}
-          onSave={async (input: ModelDefaultConfig) => props.onSave(input)}
+          onSave={async (input: ModelDefaultConfig) => { await props.onSave(input); }}
         />
       );
     }

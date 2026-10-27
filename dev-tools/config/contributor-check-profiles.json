@@ -1732,6 +1732,31 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-meaningful-systems.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/meaningful-system-oracles.ts"
       ]
+    },
+    "settings-ui": {
+      "test_paths": [
+        "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
+        "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      ],
+      "source_paths": [
+        "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts",
+        "apps/desktop/src/renderer/features/settings/components/SettingsPanel.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingsStatusMessage.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/ModelDefaultSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/api/desktopApplicationSettingsClient.ts",
+        "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
+        "apps/desktop/src/renderer/features/settings/README.md",
+        "apps/desktop/src/renderer/lib/applicationSettingsApi.ts",
+        "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+        "dev-tools/config/contributor-check-profiles.json",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }

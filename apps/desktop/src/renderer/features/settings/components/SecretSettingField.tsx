@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { TermWithHint } from "../../../../../../../modules/ui/shared";
 
@@ -7,13 +7,18 @@ export interface SecretSettingFieldProps {
   configured: boolean;
   maskedValue?: string;
   disabled?: boolean;
-  onSave: (value: string) => Promise<void>;
-  onClear: () => Promise<void>;
+  onSave: (value: string) => Promise<boolean>;
+  onClear: () => Promise<boolean>;
   compact?: boolean;
 }
 
 export function SecretSettingField(props: SecretSettingFieldProps) {
   const [draft, setDraft] = useState("");
+  const draftRevision = useRef(0);
+  useLayoutEffect(() => () => { draftRevision.current++; }, []);
+  const clearSubmittedDraft = (revision: number) => {
+    if (draftRevision.current === revision) { draftRevision.current++; setDraft(""); }
+  };
 
   return (
     <div className={`settings-secret ${props.compact ? "settings-secret--compact" : ""}`.trim()}>
@@ -28,7 +33,7 @@ export function SecretSettingField(props: SecretSettingFieldProps) {
             className="ui-input"
             type="password"
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => { draftRevision.current++; setDraft(event.target.value); }}
             placeholder="Enter new secret"
             disabled={props.disabled}
           />
@@ -38,7 +43,10 @@ export function SecretSettingField(props: SecretSettingFieldProps) {
           className="ui-button"
           type="button"
           disabled={props.disabled || draft.trim().length === 0}
-          onClick={() => void props.onSave(draft).then(() => setDraft(""))}
+          onClick={() => {
+            const revision = draftRevision.current;
+            void props.onSave(draft).then(saved => { if (saved) clearSubmittedDraft(revision); });
+          }}
         >
           Save secret
         </button>
@@ -47,7 +55,10 @@ export function SecretSettingField(props: SecretSettingFieldProps) {
           className="ui-button ui-button--destructive"
           type="button"
           disabled={props.disabled || !props.configured}
-          onClick={() => void props.onClear()}
+          onClick={() => {
+            const revision = draftRevision.current;
+            void props.onClear().then(cleared => { if (cleared) clearSubmittedDraft(revision); });
+          }}
         >
           Clear
         </button>

@@ -13,11 +13,26 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
+    "review-site", "settings-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "settings-ui": [
+        "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts",
+        "apps/desktop/src/renderer/features/settings/components/SettingsPanel.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingsStatusMessage.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/components/ModelDefaultSettingField.tsx",
+        "apps/desktop/src/renderer/features/settings/api/desktopApplicationSettingsClient.ts",
+        "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
+        "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
+        "apps/desktop/src/renderer/features/settings/README.md",
+        "apps/desktop/src/renderer/lib/applicationSettingsApi.ts",
+        "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+    ],
     "host-setup-policy": [
         "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs",
         "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",

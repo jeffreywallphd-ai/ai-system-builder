@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ModelDefaultConfig, ModelDefaultInferenceMode } from "../../../../../../../modules/contracts/settings";
 import { TermWithHint } from "../../../../../../../modules/ui/shared";
@@ -25,6 +25,7 @@ function toInitialDraft(value?: unknown): ModelDefaultConfig {
 
 export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
   const [draft, setDraft] = useState<ModelDefaultConfig>(toInitialDraft(props.value));
+  useEffect(() => { setDraft(toInitialDraft(props.value)); }, [props.value]);
 
   return (
     <div className="settings-model-default ui-grid ui-grid--two">

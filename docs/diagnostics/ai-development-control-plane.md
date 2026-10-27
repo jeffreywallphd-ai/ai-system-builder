@@ -101,6 +101,14 @@ It substitutes coarse focused ownership only when all focused impact is explicit
 covered; uncovered paths and an explicit `focused-tests` requirement keep the
 generic gate. The receipt must show actual execution. This UI qualification does
 not claim a desktop closure, model result or native security pass.
+
+The `settings-ui` profile owns the exact Settings renderer, client and API paths.
+It runs four fixed synthetic panel, page, request-ownership and API test files.
+It covers failed secret save/clear, explicit refresh, late responses, duplicate
+admission and fixed public errors. Unknown impact and an explicitly required
+generic test gate retain their coverage. It starts no app or model and uses no
+real credential store or provider. Actual host restart and final combined
+qualification remain separate.
 Focused Node/Vitest routing follows actual test imports, rather than words in
 test descriptions or fixture strings; controlled AI tests remain opt-in.
 

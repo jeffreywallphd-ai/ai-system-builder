@@ -1,25 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type {
-  ApplicationSettingCategory,
-  ApplicationSettingDefinition,
-  ApplicationSettingKey,
-  ApplicationSettingPrimitiveValue,
-  ApplicationSettingValue,
-  ResolveModelDefaultRequest,
-  ResolvedModelDefault,
+  ApplicationSettingCategory, ApplicationSettingDefinition, ApplicationSettingKey,
+  ApplicationSettingPrimitiveValue, ApplicationSettingValue, ResolveModelDefaultRequest, ResolvedModelDefault,
 } from "../../../../../../../modules/contracts/settings";
-import {
-  createDesktopApplicationSettingsClient,
-  type DesktopApplicationSettingsClient,
-} from "../api/desktopApplicationSettingsClient";
+import { createDesktopApplicationSettingsClient, type DesktopApplicationSettingsClient } from "../api/desktopApplicationSettingsClient";
+import { APPLICATION_SETTING_VALUE_KINDS, isApplicationSettingCategory } from "../../../../../../../modules/contracts/settings";
 
 interface UseApplicationSettingsOptions {
   client?: DesktopApplicationSettingsClient;
   category?: ApplicationSettingCategory;
   keys?: ApplicationSettingKey[];
 }
-
 export interface UseApplicationSettingsResult {
   definitions: ApplicationSettingDefinition[];
   valuesByKey: Map<ApplicationSettingKey, ApplicationSettingValue>;
@@ -29,151 +20,180 @@ export interface UseApplicationSettingsResult {
   errorMessage?: string;
   successMessage?: string;
   refresh: () => Promise<void>;
-  updateSetting: (key: ApplicationSettingKey, value: ApplicationSettingPrimitiveValue) => Promise<void>;
-  clearSetting: (key: ApplicationSettingKey) => Promise<void>;
+  updateSetting: (key: ApplicationSettingKey, value: ApplicationSettingPrimitiveValue) => Promise<boolean>;
+  clearSetting: (key: ApplicationSettingKey) => Promise<boolean>;
   selectFolder: (request?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   resolveModelDefault: (request: ResolveModelDefaultRequest) => Promise<ResolvedModelDefault>;
 }
-
+interface SettingsScope {
+  client?: DesktopApplicationSettingsClient;
+  query: { category?: ApplicationSettingCategory; keys?: ApplicationSettingKey[] };
+  lease?: object;
+  readOwner?: object;
+  mutationOwner?: object;
+  folderOwner?: object;
+  ready: boolean;
+}
+interface SettingsView {
+  scope: SettingsScope;
+  definitions: ApplicationSettingDefinition[];
+  valuesByKey: Map<ApplicationSettingKey, ApplicationSettingValue>;
+  loading: boolean;
+  saving: boolean;
+  status: "idle" | "success" | "error";
+  errorMessage?: string;
+  successMessage?: string;
+}
+function initialView(scope: SettingsScope): SettingsView {
+  return { scope, definitions: [], valuesByKey: new Map(), loading: true, saving: false, status: "idle" };
+}
 export function useApplicationSettings(options: UseApplicationSettingsOptions = {}): UseApplicationSettingsResult {
   const client = useMemo(() => {
-    if (options.client) {
-      return options.client;
-    }
-    try {
-      return createDesktopApplicationSettingsClient();
-    } catch {
-      return undefined;
-    }
+    if (options.client) return options.client;
+    try { return createDesktopApplicationSettingsClient(); } catch { return undefined; }
   }, [options.client]);
-  const [definitions, setDefinitions] = useState<ApplicationSettingDefinition[]>([]);
-  const [valuesByKey, setValuesByKey] = useState<Map<ApplicationSettingKey, ApplicationSettingValue>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
-
   const keysSignature = options.keys === undefined ? undefined : JSON.stringify(options.keys);
-  const stableKeysRef = useRef<{
-    signature: string | undefined;
-    keys: ApplicationSettingKey[] | undefined;
-  }>({ signature: undefined, keys: undefined });
-  if (stableKeysRef.current.signature !== keysSignature) {
-    stableKeysRef.current = {
-      signature: keysSignature,
-      keys: options.keys === undefined ? undefined : [...options.keys],
+  const scope = useMemo<SettingsScope>(() => ({
+    client,
+    query: { category: options.category, keys: keysSignature === undefined ? undefined : JSON.parse(keysSignature) },
+    ready: false,
+  }), [client, options.category, keysSignature]);
+  const [view, setView] = useState(() => initialView(scope));
+
+  // Only a committed view owns work. An abandoned render must not retire it.
+  useLayoutEffect(() => {
+    const lease = {};
+    scope.lease = lease;
+    scope.readOwner = scope.mutationOwner = scope.folderOwner = undefined;
+    scope.ready = false;
+    setView(initialView(scope));
+    return () => {
+      if (scope.lease === lease) {
+        scope.lease = undefined;
+        scope.readOwner = scope.mutationOwner = scope.folderOwner = undefined;
+        scope.ready = false;
+      }
     };
-  }
-  const stableKeys = stableKeysRef.current.keys;
-  const query = useMemo(() => ({ category: options.category, keys: stableKeys }), [options.category, stableKeys]);
+  }, [scope]);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(undefined);
-    if (!client) {
-      setDefinitions([]);
-      setValuesByKey(new Map());
-      setStatus("error");
-      setErrorMessage("Application settings API is unavailable.");
-      setLoading(false);
-      return;
-    }
+  const load = useCallback(async (lease: object, afterChange = false): Promise<boolean> => {
+    const owner = {};
+    const current = () => scope.lease === lease && scope.readOwner === owner;
+    if (scope.lease !== lease) return false;
+    scope.readOwner = owner;
+    scope.ready = false;
+    setView(previous => ({ ...previous, loading: true, status: "idle", errorMessage: undefined, successMessage: undefined }));
     try {
-      const [definitionsResult, valuesResult] = await Promise.all([
-        client.listDefinitions(query),
-        client.readSettings(query),
+      if (!scope.client) throw new Error("unavailable");
+      const query = () => ({ category: scope.query.category, keys: scope.query.keys && [...scope.query.keys] });
+      const [definitions, values] = await Promise.all([
+        scope.client.listDefinitions(query()), scope.client.readSettings(query()),
       ]);
-
-      setDefinitions(definitionsResult.definitions);
-      setValuesByKey(new Map(valuesResult.values.map((value) => [value.key, value])));
-      setStatus("idle");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load application settings.");
+      if (!current()) return false;
+      // Prepare consumed data inside this error boundary, never in a React updater.
+      if (!Array.isArray(definitions.definitions) || !Array.isArray(values.values)) throw new Error("invalid readback");
+      const preparedDefinitions = definitions.definitions.map(definition => {
+        if (!definition || typeof definition.key !== "string" || typeof definition.label !== "string"
+          || !isApplicationSettingCategory(definition.category) || !APPLICATION_SETTING_VALUE_KINDS.includes(definition.valueKind)
+          || [definition.description, definition.placeholder, definition.instructions].some(text => text !== undefined && typeof text !== "string")
+          || definition.options !== undefined && (!Array.isArray(definition.options)
+            || definition.options.some(option => !option || typeof option.value !== "string" || option.label !== undefined && typeof option.label !== "string"))) {
+          throw new Error("invalid definition");
+        }
+        return definition;
+      });
+      const preparedValues = new Map(values.values.map(value => {
+        if (!value || typeof value.key !== "string" || typeof value.configured !== "boolean"
+          || value.maskedValue !== undefined && typeof value.maskedValue !== "string") throw new Error("invalid setting");
+        return [value.key, value] as const;
+      }));
+      if (!current()) return false;
+      scope.ready = true;
+      setView(previous => ({ ...previous, definitions: preparedDefinitions, valuesByKey: preparedValues, status: "idle" }));
+      return true;
+    } catch {
+      if (current()) setView(previous => ({ ...previous, status: "error", errorMessage: !scope.client
+        ? "Application settings API is unavailable."
+        : afterChange ? "Could not reload settings after the change. Refresh settings before trying again."
+          : "Could not load settings. Refresh settings to try again." }));
+      return false;
     } finally {
-      setLoading(false);
+      if (current()) {
+        scope.readOwner = undefined;
+        setView(previous => ({ ...previous, loading: false }));
+      }
     }
-  }, [client, query]);
+  }, [scope]);
+  const refresh = useCallback(async () => {
+    const lease = scope.lease;
+    if (lease && !scope.mutationOwner) await load(lease);
+  }, [scope, load]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const updateSetting = useCallback(async (key: ApplicationSettingKey, value: ApplicationSettingPrimitiveValue) => {
-    setSaving(true);
-    setErrorMessage(undefined);
-    setSuccessMessage(undefined);
-    if (!client) {
-      setStatus("error");
-      setErrorMessage("Application settings API is unavailable.");
-      setSaving(false);
-      return;
-    }
+  const mutate = useCallback(async (kind: "save" | "clear", key: ApplicationSettingKey, value?: ApplicationSettingPrimitiveValue) => {
+    const lease = scope.lease, client = scope.client;
+    if (!lease || !client || !scope.ready || scope.readOwner || scope.mutationOwner || scope.folderOwner) return false;
+    const owner = {};
+    scope.mutationOwner = owner;
+    scope.ready = false;
+    const current = () => scope.lease === lease && scope.mutationOwner === owner;
+    setView(previous => ({ ...previous, saving: true, status: "idle", errorMessage: undefined, successMessage: undefined }));
     try {
-      await client.updateSetting({ key, value });
-      await refresh();
-      setStatus("success");
-      setSuccessMessage("Setting saved.");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to update setting.");
+      if (kind === "save") await client.updateSetting({ key, value: value! });
+      else await client.clearSetting({ key });
+      if (!current() || !await load(lease, true) || !current()) return false;
+      setView(previous => ({ ...previous, status: "success", successMessage: kind === "save" ? "Setting saved." : "Setting cleared." }));
+      return true;
+    } catch {
+      if (current()) {
+        // A refused write leaves the last read available for an explicit retry.
+        scope.ready = true;
+        setView(previous => ({ ...previous, status: "error", errorMessage: kind === "save"
+          ? "Could not save setting. Try again." : "Could not clear setting. Try again." }));
+      }
+      return false;
     } finally {
-      setSaving(false);
+      if (current()) {
+        scope.mutationOwner = undefined;
+        setView(previous => ({ ...previous, saving: false }));
+      }
     }
-  }, [client, refresh]);
-
-  const clearSetting = useCallback(async (key: ApplicationSettingKey) => {
-    setSaving(true);
-    setErrorMessage(undefined);
-    setSuccessMessage(undefined);
-    if (!client) {
-      setStatus("error");
-      setErrorMessage("Application settings API is unavailable.");
-      setSaving(false);
-      return;
-    }
-    try {
-      await client.clearSetting({ key });
-      await refresh();
-      setStatus("success");
-      setSuccessMessage("Setting cleared.");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to clear setting.");
-    } finally {
-      setSaving(false);
-    }
-  }, [client, refresh]);
-
-  const resolveModelDefault = useCallback(async (request: ResolveModelDefaultRequest) => {
-    if (!client) {
-      throw new Error("Application settings API is unavailable.");
-    }
-    const result = await client.resolveModelDefault(request);
-    return result.resolved;
-  }, [client]);
-
+  }, [scope, load]);
+  const updateSetting = useCallback((key: ApplicationSettingKey, value: ApplicationSettingPrimitiveValue) => mutate("save", key, value), [mutate]);
+  const clearSetting = useCallback((key: ApplicationSettingKey) => mutate("clear", key), [mutate]);
   const selectFolder = useCallback(async (request: { title?: string; defaultPath?: string } = {}) => {
-    if (!client?.selectFolder) {
-      throw new Error("Folder selection is unavailable.");
+    const lease = scope.lease;
+    if (!lease || !scope.ready || scope.mutationOwner || scope.folderOwner) return undefined;
+    const owner = {};
+    scope.folderOwner = owner;
+    const current = () => scope.lease === lease && scope.folderOwner === owner;
+    setView(previous => ({ ...previous, status: "idle", errorMessage: undefined, successMessage: undefined }));
+    try {
+      if (!scope.client?.selectFolder) throw new Error("unavailable");
+      const result = await scope.client.selectFolder({ ...request });
+      return current() && !result.canceled ? result.path : undefined;
+    } catch {
+      if (current()) setView(previous => ({ ...previous, status: "error", successMessage: undefined,
+        errorMessage: "Could not choose a folder. Try again." }));
+      return undefined;
+    } finally {
+      if (current()) scope.folderOwner = undefined;
     }
-    const result = await client.selectFolder(request);
-    return result.canceled ? undefined : result.path;
-  }, [client]);
+  }, [scope]);
+  const resolveModelDefault = useCallback(async (request: ResolveModelDefaultRequest) => {
+    const lease = scope.lease;
+    if (!lease || !scope.client) throw new Error("Application settings API is unavailable.");
+    try {
+      const result = await scope.client.resolveModelDefault({ ...request });
+      if (scope.lease !== lease) throw new Error("retired");
+      return result.resolved;
+    } catch { throw new Error("Could not resolve the model setting. Try again."); }
+  }, [scope]);
 
+  const shown = view.scope === scope ? view : initialView(scope);
   return {
-    definitions,
-    valuesByKey,
-    loading,
-    saving,
-    status,
-    errorMessage,
-    successMessage,
-    refresh,
-    updateSetting,
-    clearSetting,
-    selectFolder,
-    resolveModelDefault,
+    definitions: shown.definitions, valuesByKey: shown.valuesByKey, loading: shown.loading, saving: shown.saving,
+    status: shown.status, errorMessage: shown.errorMessage, successMessage: shown.successMessage,
+    refresh, updateSetting, clearSetting, selectFolder, resolveModelDefault,
   };
 }
