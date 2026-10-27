@@ -4759,6 +4759,60 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "source-context-host-fixture-real-processors",
+      "work_criteria": [
+        "closed-source-context-worker-admission",
+        "real-model-free-package-inspect-query-roundtrips",
+        "source-fixture-reviewed-support-and-scope"
+      ],
+      "receipt_digest": "f9381bc13e4a09dd53cc41832a15247450a372d2e3d5ef6d18aba3ec4f8bceae",
+      "review_digest": "0a17cd40b3360436a2f9476f1e58e4721403b4cff440b09ac10111db622e723a",
+      "scope": "Fixed-source worker uses real source-pack/RAG generation, inspection and cited LanceDB retrieval with finite embeddings.24 worker and24 production Context tests pass. Versioned length-framed topics preserve nested Markdown; malformed frames and unsafe source/package/settings are refused. Original manual/version fixtures remain. No actual model/native/app or parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "source-context-real-host-journey-wiring",
+      "work_criteria": [
+        "source-context-two-host-public-workflows",
+        "source-context-exact-oracles-and-safe-readiness",
+        "source-context-routing-review-and-checkpoint"
+      ],
+      "receipt_digest": "7cb04651a7ca6baed639e64ce044668ff9ff86cc6b036de4ac9b157eba5ce554",
+      "review_digest": "ddd6ed026f0c379987faa1f79370c132ccc56ee1cce7c9d89b3dd0743d3ae1cc",
+      "scope": "Both existing app restart cases now include source-pack/RAG upload, Data handoff, exact review/save, reopen/query/source return, original-preserving rebuild/discard/delete and Desktop download.64 oracle and24 worker cases, five-root types and two-case collection pass. Cases were collected, not run. App/native/restart/parent qualification remains pending; following reviewed repair covers fresh-pack mode.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "ai-controls-and-owned-task-states",
+      "work_id": "context-fresh-source-pack-review-and-safe-manual-denial",
+      "work_criteria": [
+        "fresh-pack-review-and-original-preservation",
+        "rebuild-current-owner-only",
+        "focused-proof-reviewed-checkpoint"
+      ],
+      "receipt_digest": "4dfcb7900b9a7c19fa74188f6a8fb42091d2950b64e5aebc5be11332d6733e82",
+      "review_digest": "77c6a4c7f405c4db5e5637fde2a83902c16366a3e64bb994745f9b9e2ae80d11",
+      "scope": "Fresh-session source/legacy-source Rebuild restores review mode after accepted owned acknowledgement.104 focused shared/two-transport cases pass; real app clients/application/catalog/bindings/files retain original/source bytes and explicit successor save. Manual rebuild remains denied. Existing stale-session isolation is retained. Actual apps/native/models/full/parent qualification stays pending.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

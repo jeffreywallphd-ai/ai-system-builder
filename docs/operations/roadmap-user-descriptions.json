@@ -12069,6 +12069,50 @@
           "Whole-app source-pack and RAG helper code is still separate implementation work. Physical host, native, model and final combined checks remain pending. These results do not pass the whole criterion or finish the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af84e34291ed8180369ae347c04161dc089621af7e60439677535a537d342134",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The fixed test worker now builds and reads source packs and RAG packages with the actual production processors. A local LanceDB query returns the expected transit answer and source citation.",
+          "The focused run passed 24 worker checks and 24 production Context checks. Embedding values use a fixed callback; these results do not test a real model.",
+          "Testing found a pack-format defect: nested headings and citation-like text could make a saved source pack unreadable. The repaired format preserves the original Markdown, identifies exact summary lengths, and rejects damaged or oversized sections.",
+          "Existing supported manual and legacy packs retain their readers. Source files, package members, names, hashes and settings remain bounded and checked. Invalid input does not gain new execution authority.",
+          "This work is reviewed and committed. Actual app restart, real model, native cleanup and final combined tests remain separate. No action needed from you. These local results do not close the whole roadmap criterion."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c47296da4d9726e5d726651f3227ae74014f3c4fce4a76a5cc7e5e2610c600eb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The two existing desktop and browser app cases now include a separate workspace, a fixed transit document, source-pack creation and RAG creation through visible controls.",
+          "The journeys review exact content and citations, save, restart, reopen saved bytes, run a query and return to the source. Rebuild, discard and deletion checks preserve unrelated records and original bytes. The desktop journey also checks its supported download.",
+          "Local checks passed 64 exact oracle cases, 24 worker cases and focused type checks. Playwright collected the two existing app cases. It did not launch either app, so this is test implementation evidence, not an app-restart pass.",
+          "The later saved-pack repair addresses the fresh-session mode issue identified during this work. It does not replace the still-pending actual app tests.",
+          "This work is reviewed and committed. Full testing remains deferred as requested. No action needed from you. Actual app, native and final roadmap qualification remains pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cb73a8271e9db780ac56296973c61a80b2e4da2cd8c6ccb0cee8c7b1c629b585",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A saved source pack can now show its prepared review and Save controls after Rebuild in a fresh session. Older supported source packs use the existing source-materials default.",
+          "A refused rebuild leaves its details open. Saving the rebuilt source pack is a separate action and creates a new artifact. The source and original saved artifact remain unchanged.",
+          "Manual packs still require re-entry. Automatic rebuild remains unavailable for them, which prevents loss of manual content.",
+          "The focused run passed 104 checks: 40 interface checks with test clients and 64 connected cases.",
+          "In the 64 connected cases, the interface uses each app's actual communication code, application services and saved files, catalog and storage links. Model generation and package reading use fixed test results.",
+          "Delayed results after a workspace change, client change or closed view remain unable to install an old task or change current mode. These isolation checks already passed before the mode repair and were preserved.",
+          "This work is reviewed and committed. These are local feature results, not actual app, model, native or whole-roadmap qualification. Full testing remains deferred. No action needed from you."
+        ]
+      }
     }
   ]
 }
