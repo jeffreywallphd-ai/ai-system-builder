@@ -1200,3 +1200,22 @@ registered transports/use cases/new JSON persistence and task/source identity,
 with finite provider/sender/access fixtures and an in-memory task repository.
 Physical hosts, real provider access/download, file parsing, database restart,
 native recovery and final combined qualification remain separate.
+
+## Configuration coverage and host applicability
+
+The comprehensive UI matrix covers the explicit current registry of 65 supported
+goal/source-format pairs per app component. Its additional cases cover all eight
+methods where applicable, two-dataset merge, task fields, safe incompatible-source
+refusal, invalid-setting correction and inactive-field omission. Desktop exposes
+Parquet, JSONL, JSON and CSV output choices; thin-client exposes Parquet and JSONL.
+A browser goal change intentionally clears source selection before a new choice.
+These host differences do not add contract or runtime capabilities.
+
+The matrix opens real UI panels and uses finite synthetic source metadata,
+settings/inventory and task clients. Each outgoing command is refused before
+admission; no real transport, decoder, artifact write, model, OCR, provider,
+native or physical-host result follows. Existing composed application/storage
+and actual host journeys remain separately qualified. The UI ledger uses the
+current user-approved model-quality floors and preserves accepted historical
+results without running model accuracy again. Full combined tests remain deferred
+under the current catch-up instruction.

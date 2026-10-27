@@ -305,3 +305,22 @@ and binding files, and an in-memory task repository. Provider metadata/existence
 sender/access and unavailable credential operations are finite offline fixtures.
 No real credential, provider network/publication/download, Parquet-byte parsing,
 physical host, database restart, native recovery or model qualification follows.
+
+## Dataset configuration variation coverage
+
+The focused Dataset UI matrix mounts both current app components and checks all
+65 registry-supported training-goal/source-format pairs in each. It also checks
+merging, all eight method choices across their applicable workflows, task fields,
+incompatible source refusal, corrected split settings and omission of inactive
+model or division settings. Open the actual panels before using their controls.
+Desktop exposes Parquet, JSONL, JSON and CSV; the browser currently exposes
+Parquet and JSONL. Changing the browser training goal intentionally clears source
+selection and requires a new selection. Do not invent missing host controls.
+
+These are configuration checks with finite metadata/settings/inventory/client
+fixtures. A fixed refusal captures the command without accepting a task. They do
+not decode input, generate or save data, run model accuracy or OCR, use provider
+credentials, or qualify installed apps, native ownership or final combined tests.
+See `dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx`
+and the comprehensive UI coverage ledger. Existing accepted model accuracy remains
+with its owning roadmap and must not be rerun for these interface checks.

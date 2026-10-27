@@ -796,10 +796,103 @@
           "name": "does not observe a delayed start through a replaced preparation client",
           "tier": "thin-feature-renderer-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "keeps the explicit UI inventory aligned with all 65 registry-supported goal and format pairs",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop preserves llm-instruction choices for markdown source material",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser preserves llm-instruction choices for markdown source material",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop combines two vision-detection datasets without source conversion or generation",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser combines two vision-detection datasets without source conversion or generation",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop refuses incompatible llm-instruction with image before task dispatch",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser refuses incompatible llm-instruction with image before task dispatch",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop applies structure-aware to llm-extraction with only active division controls",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser applies structure-aware to llm-extraction with only active division controls",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "preserves an ambient act descriptor when a case never mounted the UI",
+          "tier": "test-harness-global-ownership-regression",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
-      "external_dependencies": []
+      "external_dependencies": [],
+      "configuration_variation_matrix": {
+        "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+        "hosts": [
+          "desktop",
+          "thin-client"
+        ],
+        "registry_supported_goal_format_pairs_per_host": 65,
+        "task_types": 9,
+        "total_cases": 240,
+        "methods": [
+          "validate-and-split",
+          "combine-and-split",
+          "fixed-length",
+          "topic-aware",
+          "structure-aware",
+          "use-source-metadata",
+          "model-assisted-metadata",
+          "use-existing-annotations"
+        ],
+        "output_formats_by_host": {
+          "desktop": [
+            "parquet",
+            "jsonl",
+            "json",
+            "csv"
+          ],
+          "thin-client": [
+            "parquet",
+            "jsonl"
+          ]
+        },
+        "scope": "Mounted components with finite synthetic source, settings, model-inventory, unavailable runtime and refusal-only task clients. Visible panels are opened. Captured commands are assertions, never accepted tasks or saved output. No real transport, decoding, model, OCR, provider, offload, physical-host or final qualification."
+      }
     },
     {
       "id": "dataset-advanced-output-and-memory",
@@ -828,12 +921,68 @@
         "behavioral UI interaction",
         "real host UI journey"
       ],
-      "feature_implementation": "pending-reconciliation",
-      "feature_tests": [],
+      "feature_implementation": "partial",
+      "feature_tests": [
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "keeps the explicit UI inventory aligned with all 65 registry-supported goal and format pairs",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop keeps explicit model choices only while diffusion-lora uses model-assisted metadata",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser keeps explicit model choices only while diffusion-lora uses model-assisted metadata",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop excludes invalid fixed-length values after switching to topic-aware preparation",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser excludes invalid fixed-length values after switching to topic-aware preparation",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop refuses invalid split shares and accepts the corrected configuration",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser refuses invalid split shares and accepts the corrected configuration",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "desktop retains its supported jsonl output format",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
+          "name": "browser retains its supported jsonl output format",
+          "tier": "both-app-components-with-finite-client-and-metadata-fixtures",
+          "qualification": "focused-execution-and-independent-review-required"
+        }
+      ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "already authorized installed pinned model and sufficient measured resources; native offload owner must qualify before real offload"
-      ]
+      ],
+      "current_quality_scope": "The original discovery description is preserved verbatim as history. Its 22/24 reference is superseded for model quality by the user-approved 30% floor for the 0.5B class and 80% floor for the 1.5B class on successful tests. Preserve accepted model evidence; these configuration tests do not rerun or qualify accuracy."
     },
     {
       "id": "dataset-review-curate-approve",

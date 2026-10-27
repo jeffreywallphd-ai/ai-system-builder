@@ -93,3 +93,19 @@ Committed workspace/client retirement and exact shared-listener cleanup reject
 late updates. A bounded terminal identity cache refuses duplicate start replay.
 Focused rendered/client tests preserve review, cancellation, overflow warnings and
 measured memory guidance; actual hosts and final combined testing stay separate.
+
+## Goal, material and method test matrix
+
+The focused cross-app Dataset matrix drives the mounted desktop form through
+visible panel toggles and its labeled controls. It checks every currently
+supported goal/source-format pair, compatible dataset merging, task-specific
+labels and annotations, fixed/topic/structure division and explicit model choices
+for assisted image metadata. Invalid active settings require correction; inactive
+settings must not enter the outgoing recipe. Desktop output choices remain
+Parquet, JSONL, JSON and CSV. The browser has its own smaller exposed format set.
+
+Finite source/settings/inventory and unavailable-runtime fixtures keep this test
+local. The preparation client captures a command then refuses it before task
+admission. No decoding, inference, accuracy test, OCR, provider action or durable
+save occurs. Actual transport/runtime, installed-host and final qualification
+remain separate. No product behavior is changed by adding this matrix.

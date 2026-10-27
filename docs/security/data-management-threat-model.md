@@ -1379,3 +1379,20 @@ are synthetic boundaries; provider writes/downloads are disabled. Only fresh roo
 identity/containment/type/entry/byte checked files are removed after finite owned
 work drains and globals are restored. No real provider, model, native, physical
 host or parent security/roadmap qualification is claimed.
+
+## Dataset configuration matrix boundary
+
+The focused both-app configuration matrix admits only finite synthetic source
+metadata and captured commands. Task clients refuse before acceptance, unused
+model/download/runtime/provider mutations are unavailable fixtures, and no real
+credential, network provider, source decoding, OCR or inference is used. It checks
+incompatible source refusal, exact source IDs and task choices, invalid active
+limits and omission of inactive task/model/division fields. Actual visible parent
+controls are opened before interaction; hidden controls cannot be a test shortcut.
+
+Each case owns a unique workspace and at most two captured commands. Unmount
+retires component timers and finite continuations. Only exact owned workspace
+storage keys are restored; unrelated storage and globals retain their original
+values. These tests do not establish transport authorization, native cleanup,
+file-parser safety, model semantics, offload ownership or production security.
+No product authority, policy, guard or implementation changes in this chunk.

@@ -445,7 +445,8 @@
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-delete-confirmation.unit.test.tsx",
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-delete-flow.unit.test.tsx",
         "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
-        "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx"
+        "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -605,7 +606,8 @@
         "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
         "apps/desktop/README.md",
         "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
-        "modules/ui/shared/data-management/README.md"
+        "modules/ui/shared/data-management/README.md",
+        "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx"
       ]
     },
     "functionality-context": {
