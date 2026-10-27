@@ -339,3 +339,17 @@ and its four owning source paths are added to that existing profile. These tests
 and test discovery qualify the definitions. Actual host execution, native
 revocation and worker cleanup, browser-server restart and combined qualification
 still need separate evidence. No model accuracy or OCR check is repeated here.
+
+## Activate and Deactivate UI coverage
+
+The rendered published-build tests now click both Activate and Deactivate. They
+check the exact workspace, release and current revision sent by each button,
+updated eligible controls and success notifications. Two clicks in one turn
+must send one command. The tests also refuse a stale Activate and a denied
+Deactivate, hold the status refresh open and require an explicit retry with the
+new revision. Refused actions must not show success or replay automatically.
+
+Run `system-build-publication-ui` for these cases and the related Build/Publish
+tests. This is focused rendered coverage using the real shared component and
+finite client replies. Product behavior and guards are unchanged. Actual host,
+native and combined qualification remain separate.

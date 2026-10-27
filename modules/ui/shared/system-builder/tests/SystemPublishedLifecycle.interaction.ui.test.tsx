@@ -140,6 +140,107 @@ describe("published build lifecycle controls", () => {
     expect(button("Uninstall")).toBeDefined();
   });
 
+  it("binds Activate and Deactivate to the exact release and current revision without duplicate commands", async () => {
+    const initial = projection("inactive-stopped", "inactive-r1", ["activate", "uninstall"], "visual");
+    const active = projection("active-stopped", "active-r2", ["start", "deactivate", "uninstall"], "visual");
+    const inactive = projection("inactive-stopped", "inactive-r3", ["activate", "uninstall"], "visual");
+    const activation = deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();
+    const deactivation = deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();
+    const client = {
+      read: vi.fn(async () => deploymentSuccess(initial)),
+      invoke: vi.fn<SystemPublishedLifecycleClient["invoke"]>(async input => {
+        if (input.action === "activate") return activation.promise;
+        if (input.action === "deactivate") return deactivation.promise;
+        throw new Error("Unexpected synthetic action.");
+      }),
+    } satisfies SystemPublishedLifecycleClient;
+    await mount(lifecycleView(client));
+    try {
+      await vi.waitFor(() => expect(button("Activate")).toBeDefined());
+      expect(findButton("Start")).toBeUndefined();
+      expect(findButton("Deactivate")).toBeUndefined();
+      const activate = button("Activate");
+      await act(async () => { activate.click(); activate.click(); });
+      expect(client.invoke).toHaveBeenCalledTimes(1);
+      expect(client.invoke).toHaveBeenNthCalledWith(1, {
+        workspaceId: "workspace-a", releaseId: "release-2", action: "activate", expectedRevision: "inactive-r1",
+      });
+      expect(button("Activate...").disabled).toBe(true);
+      expect(button("Uninstall").disabled).toBe(true);
+      await act(async () => activation.resolve(deploymentSuccess(active)));
+      expect(document.body.textContent).toContain("Active and stopped");
+      expect(readNotificationMessages(document.body)).toContain("Activated.");
+      expect(button("Start").disabled).toBe(false);
+      expect(findButton("Activate")).toBeUndefined();
+      const deactivate = button("Deactivate");
+      await act(async () => { deactivate.click(); deactivate.click(); });
+      expect(client.invoke).toHaveBeenCalledTimes(2);
+      expect(client.invoke).toHaveBeenNthCalledWith(2, {
+        workspaceId: "workspace-a", releaseId: "release-2", action: "deactivate", expectedRevision: "active-r2",
+      });
+      expect(button("Deactivate...").disabled).toBe(true);
+      expect(button("Start").disabled).toBe(true);
+      await act(async () => deactivation.resolve(deploymentSuccess(inactive)));
+      expect(document.body.textContent).toContain("Inactive and stopped");
+      expect(readNotificationMessages(document.body)).toContain("Deactivated.");
+      expect(button("Activate").disabled).toBe(false);
+      expect(button("Uninstall").disabled).toBe(false);
+      expect(findButton("Start")).toBeUndefined();
+      expect(findButton("Stop")).toBeUndefined();
+      expect(findButton("Deactivate")).toBeUndefined();
+      expect(client.read).toHaveBeenCalledTimes(1);
+    } finally {
+      await act(async () => {
+        activation.resolve(deploymentSuccess(active));
+        deactivation.resolve(deploymentSuccess(inactive));
+      });
+    }
+  });
+
+  it.each([
+    { action: "activate", label: "Activate", code: "deployment.revision-conflict" },
+    { action: "deactivate", label: "Deactivate", code: "permission.denied" },
+  ] as const)("refreshes a refused $action and retries only with the authoritative revision", async ({ action, label, code }) => {
+    const initial = action === "activate"
+      ? projection("inactive-stopped", "old-r1", ["activate", "uninstall"], "visual")
+      : projection("active-stopped", "old-r1", ["start", "deactivate", "uninstall"], "visual");
+    const authoritative = projection(initial.state, "fresh-r7", initial.eligibleActions, "visual");
+    const next = action === "activate"
+      ? projection("active-stopped", "next-r8", ["start", "deactivate", "uninstall"], "visual")
+      : projection("inactive-stopped", "next-r8", ["activate", "uninstall"], "visual");
+    const message = "The action was refused. Review the current status before retrying.";
+    const refresh = deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();
+    const client = lifecycleClient(initial);
+    vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(initial)).mockReturnValueOnce(refresh.promise);
+    vi.mocked(client.invoke).mockResolvedValueOnce({ ok: false, error: { code, message } }).mockResolvedValueOnce(deploymentSuccess(next));
+    await mount(lifecycleView(client));
+    try {
+      await vi.waitFor(() => expect(button(label)).toBeDefined());
+      await act(async () => button(label).click());
+      expect(client.invoke).toHaveBeenCalledTimes(1);
+      expect(client.invoke).toHaveBeenLastCalledWith({ workspaceId: "workspace-a", releaseId: "release-2", action, expectedRevision: "old-r1" });
+      expect(client.read).toHaveBeenCalledTimes(2);
+      expect(client.read).toHaveBeenLastCalledWith({ workspaceId: "workspace-a", releaseId: "release-2" });
+      expect(document.body.textContent).toContain("Loading controls...");
+      for (const control of ["Install", "Activate", "Deactivate", "Start", "Stop", "Uninstall"]) expect(findButton(control)).toBeUndefined();
+      expect(readNotificationMessages(document.body)).toEqual([]);
+      await act(async () => refresh.resolve(deploymentSuccess(authoritative)));
+      expect(button(label).disabled).toBe(false);
+      expect(document.body.textContent).toContain(message);
+      expect(document.body.textContent).toContain(action === "activate" ? "Inactive and stopped" : "Active and stopped");
+      expect(client.invoke).toHaveBeenCalledTimes(1);
+      expect(readNotificationMessages(document.body)).toEqual([]);
+      await act(async () => button(label).click());
+      expect(client.invoke).toHaveBeenCalledTimes(2);
+      expect(client.invoke).toHaveBeenLastCalledWith({ workspaceId: "workspace-a", releaseId: "release-2", action, expectedRevision: "fresh-r7" });
+      expect(client.read).toHaveBeenCalledTimes(2);
+      expect(document.body.textContent).not.toContain(message);
+      expect(readNotificationMessages(document.body)).toContain(action === "activate" ? "Activated." : "Deactivated.");
+    } finally {
+      await act(async () => refresh.resolve(deploymentSuccess(authoritative)));
+    }
+  });
+
   it("shows no controls when the lifecycle projection cannot be read", async () => {
     const client = {
       read: vi.fn(async () => ({
