@@ -4579,6 +4579,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "context-ui-real-transports-and-storage",
+      "work_criteria": [
+        "context-composed-review-save-reopen",
+        "context-consent-isolation-and-retry",
+        "context-bounded-owned-resources"
+      ],
+      "receipt_digest": "49637759dd725e34af0108a7fb5e130fe8696c7259d931a292d82c86c695ac42",
+      "review_digest": "da0077f1eb0d7c90f451b9463ab5dca5c8a4eac6ce55de6974bef353834b1c30",
+      "scope": "Tested and committed32 composed Context cases: mounted UI, real preload/IPC or HTTP, application/runtime adapter and new JSON catalog/bindings/bytes. Private review, explicit save/discard, exact reopen/lineage/delete and safe failure/retry are checked. Repaired late catalog cleanup and private error disclosure; exact failed keys reopen absent. Worker/inspection/actor/model fixtures are declared. No actual parser/model/OCR/provider, physical/native/restart, parent or full qualification.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

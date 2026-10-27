@@ -11896,6 +11896,21 @@
           "These checks do not read source files, generate or save datasets, run model accuracy or OCR, or qualify installed apps, providers, low-memory execution or native recovery. Final combined testing stays pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0db9ad4d616afe9e6d47c4ede9e0b772c7d5008161e9c15ea38f4961673cdf21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed 32 Context workflow cases across both app connections.",
+          "The tests cover private review, explicit Save and Discard, exact saved data, reopening, source history and confirmed deletion.",
+          "Fixed cleanup after a failed save. Tests reopen the exact failed file key and confirm that the old file is absent.",
+          "Fixed private error disclosure. The tested Save failures hide local paths and internal error text in both app connections. Users can retry the same review.",
+          "The tests use real app connections, application logic and new local storage files. Model output, archive inspection and access checks use controlled test inputs.",
+          "These results do not qualify real model execution, archive parsing, OCR, providers, installed app windows, native recovery or process restart. Final combined testing stays pending."
+        ]
+      }
     }
   ]
 }
