@@ -354,28 +354,33 @@ async function reviseDatasetReviewRow(
     if (!present.ok)
       throw new Error("Revised dataset storage could not be checked.");
     if (!present.value.exists) {
-      const stored = await dependencies.artifacts.storeArtifact(
-        createStoreArtifactRequest(reviewed.content, {
-          descriptor: {
-            key: reviewedKey,
-            mediaType: "application/vnd.apache.parquet",
-            sizeBytes: reviewed.content.byteLength,
-            checksum: {
-              algorithm: "sha256",
-              value: digest.slice("sha256:".length),
+      let stored: Awaited<ReturnType<typeof dependencies.artifacts.storeArtifact>>;
+      try {
+        stored = await dependencies.artifacts.storeArtifact(
+          createStoreArtifactRequest(reviewed.content, {
+            descriptor: {
+              key: reviewedKey,
+              mediaType: "application/vnd.apache.parquet",
+              sizeBytes: reviewed.content.byteLength,
+              checksum: {
+                algorithm: "sha256",
+                value: digest.slice("sha256:".length),
+              },
+              metadata: {
+                workspaceId: input.workspaceId,
+                artifactRole:
+                  mutation.kind === "edit"
+                    ? "edited-dataset"
+                    : "reviewed-dataset",
+              },
             },
-            metadata: {
-              workspaceId: input.workspaceId,
-              artifactRole:
-                mutation.kind === "edit"
-                  ? "edited-dataset"
-                  : "reviewed-dataset",
-            },
-          },
-          overwrite: false,
-        }),
-        context,
-      );
+            overwrite: false,
+          }),
+          context,
+        );
+      } catch {
+        throw new Error("Revised dataset could not be stored.");
+      }
       if (!stored.ok) throw new Error("Revised dataset could not be stored.");
       createdArtifact = true;
     }

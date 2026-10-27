@@ -1232,7 +1232,8 @@
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
-      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate."
+      "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate.",
+      "additional_saved_row_review_scope": "The separate dataset-immutable-versioning family owns 44 saved Parquet row-review cases and four real model-free Python codec tests. This extends saved-row review only; it does not replace the historical preparation approval scope or qualify upload UI, real worker/sidecar, installed hosts, provider, native/process/recovery or parent closure. Accepted model/OCR checks stay closed."
     },
     {
       "id": "dataset-immutable-versioning",
@@ -1404,12 +1405,277 @@
           "name": "browser: refuses a current-version mismatch in the saved-version panel without a reuse callback",
           "tier": "mounted-version-panel-real-transports-application-sqlite-filesystem-with-finite-worker-and-declared-port-delay-faults",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: pages every typed record through real transports without changing source bytes",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: edits typed row fields into an immutable successor and keeps the original exact bytes",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: rejects the reviewed row into a new version without changing its original",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one edit-twice action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one reject-twice action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one reject-two-rows action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: corrects blank-number locally without changing the saved dataset",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: corrects broken-json locally without changing the saved dataset",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: ignores a completed old dataset list after workspace",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: ignores a completed old dataset list after client",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: ignores a completed old dataset list after unmount",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: finishes an accepted edit without changing the retired workspace view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: finishes an accepted edit without changing the retired client view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: finishes an accepted edit without changing the retired unmount view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: ignores a delayed next page after the user returns to the first page",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: disables typed fields and local selection while an edit is accepted",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retains the exact draft after a contract storage failure and retries without private text",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retains the exact draft after a exception storage failure and retries without private text",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: denies foreign-workspace at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: denies missing-version at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: denies invalid-fingerprint at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: reopens the immutable edited version and can inspect its unchanged parent",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: pages every typed record through real transports without changing source bytes",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: edits typed row fields into an immutable successor and keeps the original exact bytes",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: rejects the reviewed row into a new version without changing its original",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one edit-twice action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one reject-twice action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one reject-two-rows action before busy rendering",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: corrects blank-number locally without changing the saved dataset",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: corrects broken-json locally without changing the saved dataset",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: ignores a completed old dataset list after workspace",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: ignores a completed old dataset list after client",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: ignores a completed old dataset list after unmount",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: finishes an accepted edit without changing the retired workspace view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: finishes an accepted edit without changing the retired client view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: finishes an accepted edit without changing the retired unmount view",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: ignores a delayed next page after the user returns to the first page",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: disables typed fields and local selection while an edit is accepted",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retains the exact draft after a contract storage failure and retries without private text",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retains the exact draft after a exception storage failure and retries without private text",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: denies foreign-workspace at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: denies missing-version at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: denies invalid-fingerprint at the real transport/application boundary before codec or storage mutation",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+          "name": "browser: reopens the immutable edited version and can inspect its unchanged parent",
+          "tier": "mounted-saved-row-workspace-real-client-transports-application-sqlite-filesystem-and-parquet-adapter-with-finite-golden-codec-registry",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
       "composed_local_scope": "25 total composed cases: both mounted preparation forms use real typed clients/preload/registered IPC or owned HTTP, actual host/application quality-review/materialization/versioning, SQLite and object bytes. A bounded supplied CSV classification fixture yields declared JSONL worker outputs; worker/quality computation, actor/access and readiness are finite fixtures. Approval checks exact ready/set-aside rows, explicit consent, aggregate/split bytes, mandatory version digests/counts/source lineage and same-process store reopen. Duplicate/mixed Save/Discard and retired desktop actions are fenced. Mismatched task/report/workspace commands, corrupt review reads, malformed staged output and partial-write failure/correction are checked. No model/accuracy/OCR/provider/real worker/physical/native/process restart/final or parent pass. Row editing, successor versions, compare/reproduction/publication and controlled hosts remain separate.",
-      "additional_version_panel_scope": "18 added cases,43 composed Dataset cases total. Both connections prepare/save two versions with different supported split settings, inspect the real comparison and exact visible change list, compare mandatory saved digests, and send exact persisted recipe/source lineage to the selected-version reuse callback. Missing/corrupt recipe read faults refuse callback and permit correction. Late real reads are retired by unmount or changed workspace/client/artifact props; mismatched workspace/current version is denied. Fixed recipe-only comparison text that falsely claimed changed data files. Finite worker/quality/access/readiness and explicit read/delay fixtures remain. A successful test callback does not prove the receiving page applied replay. Parquet row editing/rejection, physical hosts, real workers/provider/native/restart/final/parent qualification remain separate. Accepted model accuracy/OCR checks stay closed."
+      "additional_version_panel_scope": "18 added cases,43 composed Dataset cases total. Both connections prepare/save two versions with different supported split settings, inspect the real comparison and exact visible change list, compare mandatory saved digests, and send exact persisted recipe/source lineage to the selected-version reuse callback. Missing/corrupt recipe read faults refuse callback and permit correction. Late real reads are retired by unmount or changed workspace/client/artifact props; mismatched workspace/current version is denied. Fixed recipe-only comparison text that falsely claimed changed data files. Finite worker/quality/access/readiness and explicit read/delay fixtures remain. A successful test callback does not prove the receiving page applied replay. Parquet row editing/rejection, physical hosts, real workers/provider/native/restart/final/parent qualification remain separate. Accepted model accuracy/OCR checks stay closed.",
+      "additional_saved_row_review_scope": "44 new composed cases mount the shared saved-row workspace with actual desktop/preload/registered IPC or API/owned HTTP, application, SQLite and filesystem. A setup artifact is valid synthetic Parquet stored through the real port; this is not upload-UI evidence. The production staging adapter uses a finite golden codec registry. Tests inspect every typed row/page, edit/reject into an immutable successor, reopen/select its parent, preserve exact original/result bytes/digests/counts, deny foreign workspace/missing version/invalid fingerprint before codec writes, and correct invalid input/storage failures. Synchronous action ownership prevents duplicate visible actions; old list/page/edit results cannot change retired workspace/client/unmounted views. Accepted backend writes continue. Four separate model-free Python tests use the actual codec for golden rows/schema/fingerprints, edits/rejection, stale/schema-invalid refusal and last-row refusal. Finite auth/readiness/runtime and declared delays/faults, fixture clock and setup source remain explicit. No upload, actual sidecar, installed-window, provider, native/process/recovery/final/parent pass. Accepted model/OCR remain closed. Exact persisted root/child workspace/dataset/parent/source/recipe/report/dataset-role metadata and complete records are checked across UI remount and actual local SQLite close/reopen; this is not process restart."
     },
     {
       "id": "context-manual-pack",

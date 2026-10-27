@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   DatasetReviewDatasetGroup,
   DatasetReviewRowEditResult,
@@ -49,14 +49,14 @@ export function DatasetReviewWorkspace({
   readonly workspaceId: string;
   readonly service: DatasetReviewWorkspaceService;
 }) {
-  const [groups, setGroups] = useState<readonly DatasetReviewDatasetGroup[]>(
-    [],
-  );
+  const [groupState, setGroupState] = useState<{ workspaceId: string; service: DatasetReviewWorkspaceService; value: readonly DatasetReviewDatasetGroup[] }>({ workspaceId, service, value: [] });
+  const groups = groupState.workspaceId === workspaceId && groupState.service === service ? groupState.value : [];
+  const setGroups = useCallback((value: readonly DatasetReviewDatasetGroup[]) => setGroupState({ workspaceId, service, value }), [service, workspaceId]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState("");
   const [pageNumber, setPageNumber] = useState(0);
   const pageSize: DatasetReviewPageSize = 10;
-  const [page, setPage] = useState<DatasetReviewPage>();
+  const [pageState, setPageState] = useState<{ workspaceId: string; service: DatasetReviewWorkspaceService; value: DatasetReviewPage }>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>(
     {},
@@ -65,9 +65,18 @@ export function DatasetReviewWorkspace({
   const [editingItemId, setEditingItemId] = useState<string>();
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
   const modalPageEntry = useRef<"first" | "last">("first");
-  const [busy, setBusy] = useState<"groups" | "page" | "save">();
-  const [notice, setNotice] = useState<string>();
-  const [error, setError] = useState<string>();
+  const [activity, setBusy] = useState<"groups" | "page" | "save">();
+  const [mutationPending, setMutationPending] = useState(false);
+  const busy = mutationPending ? "save" : activity;
+  const [noticeState, setNoticeState] = useState<{ workspaceId: string; service: DatasetReviewWorkspaceService; value?: string }>();
+  const [errorState, setErrorState] = useState<typeof noticeState>();
+  const notice = noticeState?.workspaceId === workspaceId && noticeState.service === service ? noticeState.value : undefined;
+  const error = errorState?.workspaceId === workspaceId && errorState.service === service ? errorState.value : undefined;
+  const setNotice = useCallback((value: string | undefined) => setNoticeState({ workspaceId, service, value }), [service, workspaceId]);
+  const setError = useCallback((value: string | undefined) => setErrorState({ workspaceId, service, value }), [service, workspaceId]);
+  const mutationOwner = useRef<object | undefined>(undefined);
+  const committedScope = useRef<{ workspaceId: string; service: DatasetReviewWorkspaceService } | undefined>(undefined);
+  const groupRequest = useRef<object | undefined>(undefined);
 
   const selectedGroup = groups.find(
     (group) => group.groupId === selectedGroupId,
@@ -78,12 +87,39 @@ export function DatasetReviewWorkspace({
         ? String(version.versionId ?? version.artifactKey) === selectedVersionId
         : version.latest,
     ) ?? selectedGroup?.versions.find((version) => version.latest);
+  const page = pageState?.workspaceId === workspaceId && pageState.service === service &&
+    pageState.value.artifactKey === selectedVersion?.artifactKey &&
+    pageState.value.versionId === selectedVersion?.versionId && pageState.value.page === pageNumber
+      ? pageState.value : undefined;
+
+  useLayoutEffect(() => {
+    const scope = { workspaceId, service };
+    committedScope.current = scope;
+    mutationOwner.current = undefined;
+    groupRequest.current = undefined;
+    setGroups([]); setPageState(undefined); setSelectedGroupId(""); setSelectedVersionId("");
+    setPageNumber(0); setCurrentIndex(0); setDecisions({}); setModalOpen(false);
+    setEditingItemId(undefined); setEditDraft({}); setMutationPending(false);
+    setBusy(undefined); setNotice(undefined); setError(undefined);
+    return () => {
+      if (committedScope.current === scope) {
+        committedScope.current = undefined;
+        mutationOwner.current = undefined;
+        groupRequest.current = undefined;
+      }
+    };
+  }, [service, workspaceId, setGroups, setNotice, setError]);
 
   const loadGroups = useCallback(async () => {
+    const scope = committedScope.current;
+    if (!scope || scope.service !== service || scope.workspaceId !== workspaceId) return;
+    const request = {}; groupRequest.current = request;
+    const current = () => committedScope.current === scope && groupRequest.current === request;
     setBusy("groups");
     setError(undefined);
     try {
       const next = await service.listTargets(workspaceId);
+      if (!current()) return;
       setGroups(next);
       setSelectedGroupId((current) =>
         next.some((group) => group.groupId === current)
@@ -91,15 +127,16 @@ export function DatasetReviewWorkspace({
           : (next[0]?.groupId ?? ""),
       );
     } catch (reason) {
+      if (!current()) return;
       setError(
         reason instanceof Error
           ? reason.message
           : "Workspace datasets could not be loaded.",
       );
     } finally {
-      setBusy(undefined);
+      if (current()) setBusy(undefined);
     }
-  }, [service, workspaceId]);
+  }, [service, workspaceId, setGroups, setError]);
 
   useEffect(() => {
     void loadGroups();
@@ -107,10 +144,13 @@ export function DatasetReviewWorkspace({
 
   useEffect(() => {
     if (!selectedVersion) {
-      setPage(undefined);
+      setPageState(undefined);
       return;
     }
+    const scope = committedScope.current;
+    if (!scope || scope.workspaceId !== workspaceId || scope.service !== service) return;
     let active = true;
+    const current = () => active && committedScope.current === scope;
     setBusy("page");
     setError(undefined);
     void service
@@ -124,8 +164,9 @@ export function DatasetReviewWorkspace({
         pageSize,
       })
       .then((next) => {
-        if (!active) return;
-        setPage(next);
+        if (!current()) return;
+        if (next.artifactKey !== selectedVersion.artifactKey || next.versionId !== selectedVersion.versionId || next.page !== pageNumber || next.pageSize !== pageSize) throw new Error("The dataset page did not match the selected version.");
+        setPageState({ workspaceId, service, value: next });
         setCurrentIndex(
           modalPageEntry.current === "last"
             ? Math.max(0, next.rows.length - 1)
@@ -134,7 +175,7 @@ export function DatasetReviewWorkspace({
         modalPageEntry.current = "first";
       })
       .catch((reason) => {
-        if (active)
+        if (current())
           setError(
             reason instanceof Error
               ? reason.message
@@ -142,7 +183,7 @@ export function DatasetReviewWorkspace({
           );
       })
       .finally(() => {
-        if (active) setBusy(undefined);
+        if (current()) setBusy(value => value === "save" ? value : undefined);
       });
     return () => {
       active = false;
@@ -154,6 +195,7 @@ export function DatasetReviewWorkspace({
     selectedVersion?.versionId,
     service,
     workspaceId,
+    setError,
   ]);
 
   const items = useMemo<readonly ReviewNavigatorItem[]>(
@@ -176,8 +218,9 @@ export function DatasetReviewWorkspace({
               <DatasetRowEditor
                 values={row.values}
                 draft={editDraft}
+                disabled={mutationPending}
                 onChange={(name, value) =>
-                  setEditDraft((current) => ({ ...current, [name]: value }))
+                  { if (!mutationOwner.current) setEditDraft((current) => ({ ...current, [name]: value })); }
                 }
               />
             ) : (
@@ -194,7 +237,7 @@ export function DatasetReviewWorkspace({
             ),
         };
       }),
-    [editDraft, editingItemId, page],
+    [editDraft, editingItemId, page, mutationPending],
   );
 
   const advance = (
@@ -211,15 +254,22 @@ export function DatasetReviewWorkspace({
   };
 
   const approve = async (item: ReviewNavigatorItem) => {
+    if (mutationOwner.current) return;
     advance(item, "approved");
   };
 
   const reject = async (item: ReviewNavigatorItem) => {
+    const scope = committedScope.current;
+    if (mutationOwner.current || !scope || scope.workspaceId !== workspaceId || scope.service !== service) return;
     const row = page?.rows.find(
       (candidate) =>
         item.id === `${page.artifactKey}:${candidate.rowFingerprint}`,
     );
     if (!row || !selectedVersion) return;
+    const owner = {};
+    mutationOwner.current = owner;
+    const current = () => mutationOwner.current === owner && committedScope.current === scope;
+    setMutationPending(true);
     setBusy("save");
     setError(undefined);
     try {
@@ -232,6 +282,7 @@ export function DatasetReviewWorkspace({
         rowIndex: row.rowIndex,
         rowFingerprint: row.rowFingerprint,
       });
+      if (!current()) return;
       setDecisions((current) => ({ ...current, [item.id]: "rejected" }));
       setEditingItemId(undefined);
       setEditDraft({});
@@ -239,6 +290,7 @@ export function DatasetReviewWorkspace({
         `Row rejected. Dataset version ${result.versionLabel} was created.`,
       );
       const nextGroups = await service.listTargets(workspaceId);
+      if (!current()) return;
       setGroups(nextGroups);
       const nextGroup = nextGroups.find((group) =>
         group.versions.some(
@@ -253,17 +305,22 @@ export function DatasetReviewWorkspace({
       setPageNumber(0);
       setCurrentIndex(0);
     } catch (reason) {
+      if (!current()) return;
       setError(
         reason instanceof Error
           ? reason.message
           : "The selected row could not be rejected.",
       );
     } finally {
-      setBusy(undefined);
+      if (mutationOwner.current === owner) {
+        mutationOwner.current = undefined;
+        if (committedScope.current === scope) { setMutationPending(false); setBusy(value => value === "save" ? undefined : value); }
+      }
     }
   };
 
   const beginEdit = (item: ReviewNavigatorItem) => {
+    if (mutationOwner.current) return;
     const row = page?.rows.find(
       (candidate) =>
         item.id === `${page.artifactKey}:${candidate.rowFingerprint}`,
@@ -287,12 +344,15 @@ export function DatasetReviewWorkspace({
   };
 
   const cancelEdit = () => {
+    if (mutationOwner.current) return;
     setEditingItemId(undefined);
     setEditDraft({});
     setError(undefined);
   };
 
   const approveChanges = async (item: ReviewNavigatorItem) => {
+    const scope = committedScope.current;
+    if (mutationOwner.current || !scope || scope.workspaceId !== workspaceId || scope.service !== service) return;
     const row = page?.rows.find(
       (candidate) =>
         item.id === `${page.artifactKey}:${candidate.rowFingerprint}`,
@@ -314,6 +374,10 @@ export function DatasetReviewWorkspace({
       );
       return;
     }
+    const owner = {};
+    mutationOwner.current = owner;
+    const current = () => mutationOwner.current === owner && committedScope.current === scope;
+    setMutationPending(true);
     setBusy("save");
     setError(undefined);
     try {
@@ -327,6 +391,7 @@ export function DatasetReviewWorkspace({
         rowFingerprint: row.rowFingerprint,
         values,
       });
+      if (!current()) return;
       setDecisions((current) => ({ ...current, [item.id]: "approved" }));
       setEditingItemId(undefined);
       setEditDraft({});
@@ -334,6 +399,7 @@ export function DatasetReviewWorkspace({
         `Changes approved. Dataset version ${result.versionLabel} was created.`,
       );
       const nextGroups = await service.listTargets(workspaceId);
+      if (!current()) return;
       setGroups(nextGroups);
       const nextGroup = nextGroups.find((group) =>
         group.versions.some(
@@ -346,13 +412,17 @@ export function DatasetReviewWorkspace({
       }
       setPageNumber(0);
     } catch (reason) {
+      if (!current()) return;
       setError(
         reason instanceof Error
           ? reason.message
           : "The selected row could not be edited.",
       );
     } finally {
-      setBusy(undefined);
+      if (mutationOwner.current === owner) {
+        mutationOwner.current = undefined;
+        if (committedScope.current === scope) { setMutationPending(false); setBusy(value => value === "save" ? undefined : value); }
+      }
     }
   };
 
@@ -375,13 +445,14 @@ export function DatasetReviewWorkspace({
     previousDisabled: !page || page.page * page.pageSize + currentIndex === 0,
     nextDisabled:
       !page || page.page * page.pageSize + currentIndex >= page.totalRows - 1,
-    onCurrentIndexChange: setCurrentIndex,
+    onCurrentIndexChange: (index: number) => { if (!mutationOwner.current) setCurrentIndex(index); },
     onApprove: approve,
     onReject: reject,
     onEdit: beginEdit,
     onApproveChanges: approveChanges,
     onCancelEdit: cancelEdit,
     onPrevious: () => {
+      if (mutationOwner.current) return;
       if (currentIndex > 0) {
         setCurrentIndex((value) => value - 1);
       } else if (pageNumber > 0) {
@@ -390,6 +461,7 @@ export function DatasetReviewWorkspace({
       }
     },
     onNext: () => {
+      if (mutationOwner.current) return;
       if (currentIndex < items.length - 1) {
         setCurrentIndex((value) => value + 1);
       } else if (page && (pageNumber + 1) * pageSize < page.totalRows) {
@@ -442,6 +514,7 @@ export function DatasetReviewWorkspace({
                   Version
                   <select
                     className="ui-input"
+                    disabled={mutationPending}
                     value={
                       active
                         ? selectedVersionId ||
@@ -453,6 +526,7 @@ export function DatasetReviewWorkspace({
                           )
                     }
                     onChange={(event) => {
+                      if (mutationOwner.current) return;
                       setSelectedGroupId(group.groupId);
                       setSelectedVersionId(event.target.value);
                       setEditingItemId(undefined);
@@ -481,7 +555,9 @@ export function DatasetReviewWorkspace({
                   <button
                     className="ui-button"
                     type="button"
+                    disabled={mutationPending}
                     onClick={() => {
+                      if (mutationOwner.current) return;
                       setSelectedGroupId(group.groupId);
                       setSelectedVersionId(
                         String(
@@ -501,7 +577,9 @@ export function DatasetReviewWorkspace({
                   <button
                     className="ui-button ui-button--outline"
                     type="button"
+                    disabled={mutationPending}
                     onClick={() => {
+                      if (mutationOwner.current) return;
                       setSelectedGroupId(group.groupId);
                       setSelectedVersionId(
                         String(
@@ -541,7 +619,7 @@ export function DatasetReviewWorkspace({
             <button
               className="ui-button ui-button--outline"
               type="button"
-              disabled={!items.length}
+              disabled={!items.length || mutationPending}
               onClick={() => setModalOpen(true)}
             >
               Review rows
@@ -553,6 +631,7 @@ export function DatasetReviewWorkspace({
               type="button"
               disabled={pageNumber === 0 || Boolean(busy)}
               onClick={() => {
+                if (mutationOwner.current) return;
                 modalPageEntry.current = "first";
                 setPageNumber((value) => value - 1);
               }}
@@ -568,6 +647,7 @@ export function DatasetReviewWorkspace({
                 Boolean(busy)
               }
               onClick={() => {
+                if (mutationOwner.current) return;
                 modalPageEntry.current = "first";
                 setPageNumber((value) => value + 1);
               }}
@@ -702,10 +782,12 @@ function formatValue(value: unknown): string {
 function DatasetRowEditor({
   values,
   draft,
+  disabled,
   onChange,
 }: {
   readonly values: Readonly<Record<string, unknown>>;
   readonly draft: Readonly<Record<string, string>>;
+  readonly disabled: boolean;
   readonly onChange: (name: string, value: string) => void;
 }) {
   return (
@@ -716,6 +798,7 @@ function DatasetRowEditor({
           {typeof original === "boolean" ? (
             <select
               className="ui-input"
+              disabled={disabled}
               value={draft[name] ?? String(original)}
               onChange={(event) => onChange(name, event.target.value)}
             >
@@ -725,6 +808,7 @@ function DatasetRowEditor({
           ) : typeof original === "number" ? (
             <input
               className="ui-input"
+              disabled={disabled}
               type="number"
               step="any"
               value={draft[name] ?? String(original)}
@@ -733,6 +817,7 @@ function DatasetRowEditor({
           ) : (
             <textarea
               className="ui-input"
+              disabled={disabled}
               rows={typeof original === "string" ? 4 : 8}
               value={draft[name] ?? editableValue(original)}
               onChange={(event) => onChange(name, event.target.value)}
@@ -758,6 +843,7 @@ function editableValue(value: unknown): string {
 function parseEditableValue(raw: string, original: unknown): unknown {
   if (typeof original === "string") return raw;
   if (typeof original === "number") {
+    if (!raw.trim()) throw new Error("Enter a valid number before approving changes.");
     const value = Number(raw);
     if (!Number.isFinite(value)) {
       throw new Error("Enter a valid number before approving changes.");

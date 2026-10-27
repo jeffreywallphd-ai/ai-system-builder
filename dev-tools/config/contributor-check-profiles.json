@@ -448,7 +448,12 @@
         "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
-        "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx"
+        "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/test_dataset_row_review_fixture_codec.py",
+        "modules/ui/shared/dataset-review/tests/DatasetReviewWorkspace.interaction.ui.test.tsx",
+        "modules/application/use-cases/dataset-review/tests/dataset-review.use-cases.unit.test.ts",
+        "modules/adapters/runtime/python/tests/createPythonParquetDatasetReviewAdapter.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/main/index.ts",
@@ -615,7 +620,13 @@
         "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
         "docs/architecture/data-management.md",
         "docs/security/data-management-threat-model.md",
-        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx"
+        "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+        "dev-tools/scripts/qualification/tests/dataset-row-review-ui-transports-storage.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/test_dataset_row_review_fixture_codec.py",
+        "dev-tools/scripts/qualification/tests/fixtures/dataset-row-review.parquet.json",
+        "modules/ui/shared/dataset-review/DatasetReviewWorkspace.tsx",
+        "modules/application/use-cases/dataset-review/dataset-review.use-cases.ts",
+        "modules/ui/shared/dataset-review/README.md"
       ]
     },
     "functionality-context": {

@@ -1434,3 +1434,39 @@ globals use the prior bounded teardown; store-call admission is prospectively40
 per case to allow two versions. Other resource bounds are unchanged. No actual
 model/accuracy/OCR/provider, physical/native/process restart or final/parent
 qualification is granted, and accepted model/OCR checks remain closed.
+
+## Saved-row mutation and response ownership checks
+
+The composed saved-row tests keep workspace/version checks, source digests,
+row fingerprints and immutable storage guards in the actual application. Foreign
+workspace, missing version and malformed fingerprint requests refuse before
+codec/storage mutation. Real model-free Python codec tests separately prove
+stale fingerprint, incompatible schema and last-row rejection denial. A finite
+TypeScript registry is not claimed as real hash/codec enforcement.
+
+A synchronous shared UI owner admits one visible edit/reject action before a busy
+render. Pending fields/selection are disabled. Empty numbers fail locally. Old
+list/page/edit replies cannot update a retired workspace/service or unmounted
+view. Accepted backend effects continue and remain in their original workspace.
+Storage exceptions at the revised-dataset save call return a fixed public error;
+contract failures do the same. Exact drafts/original bytes survive pre-write
+failures and corrected retry. This does not prove unknown partial-write atomicity
+or authorize deletion/adoption of effects after a failed storage acknowledgment.
+
+Tests use fixed synthetic typed Parquet and principals, exact new checked roots,
+SQLite and an owned loopback listener. Registry task/status/UI/application/store
+counts and fixture file sizes are bounded. The actual staging adapter cleans
+new stages; teardown verifies root identity, containment, types and byte/count
+bounds before removal and restores globals/storage. The Python codec creates and
+removes only its exact checked two-file staging roots. No unknown retained data,
+model/OCR/provider/native process or current security policy is changed. Four
+codec-function tests are separate from44composed UI tests; physical sidecar,
+installed-host, process/restart and parent qualification remain unproved. Accepted
+model/OCR checks stay closed.
+
+The composed lineage oracle requires exactly one imported root and one child
+in the same workspace/dataset, with an exact parent pointer and source key/hash.
+It binds the actual recipe bytes and operation/fingerprint, quality report hash
+and dataset role metadata to the expected mutation. Complete persisted records
+remain equal after UI remount and local SQLite close/reopen. No child is accepted
+merely because it has a parent pointer. This adds no native restart proof.

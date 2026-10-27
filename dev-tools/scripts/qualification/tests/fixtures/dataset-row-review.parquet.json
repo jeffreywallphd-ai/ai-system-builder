@@ -1,0 +1,1251 @@
+{
+  "schema_version": "dataset-row-review-fixture-v1",
+  "scope": "Synthetic valid Parquet golden data. Finite TypeScript registry outcomes are distinct from the separately tested real model-free codec; no sidecar/model/OCR/native/parent proof.",
+  "producer": {
+    "pyarrow": "25.0.0",
+    "pydantic_request": "ReviewDatasetRequest",
+    "function": "modules.adapters.runtime.python.worker.tasks.review_dataset.review_dataset"
+  },
+  "editedRow": {
+    "text": "Edited transfer request: explain a delayed connection.",
+    "label": "technical",
+    "priority": 99,
+    "active": false,
+    "tags": [
+      "reviewed",
+      "transit"
+    ]
+  },
+  "variants": {
+    "source": {
+      "sha256": "6ae5545a6010b03c1729d16af6d778cc79ad30844f7f2abfeeff64a923a1a3e7",
+      "sizeBytes": 4197,
+      "base64": "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AgAVABUQFQIAPBZwGSYICBlGAAAAEAAAABaSChYIJpwUFpIKABkcGAxBUlJPVzpzY2hlbWEY4AMvLy8vLzJBQkFBQVFBQUFBQUFBS0FBd0FCZ0FGQUFnQUNnQUFBQUFCQkFBTUFBQUFDQUFJQUFBQUJBQUlBQUFBQkFBQUFBVUFBQUFFQVFBQXlBQUFBSWdBQUFCY0FBQUFCQUFBQUNELy8vOEFBQUVNRkFBQUFCd0FBQUFFQUFBQUFRQUFBQlFBQUFBRUFBQUFkR0ZuY3dBQUFBQVUvLy8vVFAvLy93QUFBUVVRQUFBQUdBQUFBQVFBQUFBQUFBQUFCQUFBQUdsMFpXMEFBQUFBUFAvLy8zVC8vLzhBQUFFR0VBQUFBQmdBQUFBRUFBQUFBQUFBQUFZQUFBQmhZM1JwZG1VQUFHVC8vLytjLy8vL0FBQUJBaEFBQUFBa0FBQUFCQUFBQUFBQUFBQUlBQUFBY0hKcGIzSnBkSGtBQUFBQUNBQU1BQWdBQndBSUFBQUFBQUFBQVVBQUFBRFkvLy8vQUFBQkJSQUFBQUFZQUFBQUJBQUFBQUFBQUFBRkFBQUFiR0ZpWld3QUFBREkvLy8vRUFBVUFBZ0FCZ0FIQUF3QUFBQVFBQkFBQUFBQUFBRUZFQUFBQUJ3QUFBQUVBQUFBQUFBQUFBUUFBQUIwWlhoMEFBQUFBQVFBQkFBRUFBQUEAGCBwYXJxdWV0LWNwcC1hcnJvdyB2ZXJzaW9uIDI1LjAuMBlcHAAAHAAAHAAAHAAAHAAAAMYIAABQQVIx",
+      "rows": [
+        {
+          "text": "Transit request 1: explain route A.",
+          "label": "billing",
+          "priority": 1,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 2: explain route B.",
+          "label": "technical",
+          "priority": 2,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 3: explain route C.",
+          "label": "billing",
+          "priority": 3,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 4: explain route D.",
+          "label": "technical",
+          "priority": 4,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 5: explain route A.",
+          "label": "billing",
+          "priority": 5,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 6: explain route B.",
+          "label": "technical",
+          "priority": 6,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 7: explain route C.",
+          "label": "billing",
+          "priority": 7,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 8: explain route D.",
+          "label": "technical",
+          "priority": 8,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 9: explain route A.",
+          "label": "billing",
+          "priority": 9,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 10: explain route B.",
+          "label": "technical",
+          "priority": 10,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 11: explain route C.",
+          "label": "billing",
+          "priority": 11,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 12: explain route D.",
+          "label": "technical",
+          "priority": 12,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        }
+      ],
+      "pages": [
+        {
+          "totalRows": 12,
+          "rows": [
+            {
+              "rowIndex": 0,
+              "rowFingerprint": "sha256:82e93f11a20ca4703e62fd5f1a3b1d8e871c93b4cc6dfa5ddffae375b8fa8899",
+              "values": {
+                "text": "Transit request 1: explain route A.",
+                "label": "billing",
+                "priority": 1,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 1,
+              "rowFingerprint": "sha256:97f580478a89dedbf7049abf354c78f306b66b14c4d01c58995963828bf442d3",
+              "values": {
+                "text": "Transit request 2: explain route B.",
+                "label": "technical",
+                "priority": 2,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 2,
+              "rowFingerprint": "sha256:1fdd9f71f2a4e258f6b6b81dc6b8a33c52fd7000f41d6d7816dc911412bb2cb0",
+              "values": {
+                "text": "Transit request 3: explain route C.",
+                "label": "billing",
+                "priority": 3,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 3,
+              "rowFingerprint": "sha256:ca4d5bb721864553566138f1ad52aa51db1d32af074dec8b5a55e4436b16d8e4",
+              "values": {
+                "text": "Transit request 4: explain route D.",
+                "label": "technical",
+                "priority": 4,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 4,
+              "rowFingerprint": "sha256:8c8329992623c178c802aad5c37a2060722856bd1bd1544563de20745afbca83",
+              "values": {
+                "text": "Transit request 5: explain route A.",
+                "label": "billing",
+                "priority": 5,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 5,
+              "rowFingerprint": "sha256:907a0f1bebe858c6979bcfc5cee0381940411844396667e500e8844f83ec00e2",
+              "values": {
+                "text": "Transit request 6: explain route B.",
+                "label": "technical",
+                "priority": 6,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 6,
+              "rowFingerprint": "sha256:5c311666a2badadc9b685e5773976b393f60e87912accb82e5570fe4da69ebb5",
+              "values": {
+                "text": "Transit request 7: explain route C.",
+                "label": "billing",
+                "priority": 7,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 7,
+              "rowFingerprint": "sha256:5f62e1f41552c5367f06c3d5637bb467c571368220d552783b9ae4e16c2de08f",
+              "values": {
+                "text": "Transit request 8: explain route D.",
+                "label": "technical",
+                "priority": 8,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 8,
+              "rowFingerprint": "sha256:f1746ff64abaae98f0574db2b90d6d8bb945e1f2040772e62c6964de75de20e8",
+              "values": {
+                "text": "Transit request 9: explain route A.",
+                "label": "billing",
+                "priority": 9,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 9,
+              "rowFingerprint": "sha256:179fd8aaa70fbfe3c9fc26c2c91a524c5b39f6f022623b527096519e58b5a2a5",
+              "values": {
+                "text": "Transit request 10: explain route B.",
+                "label": "technical",
+                "priority": 10,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        },
+        {
+          "totalRows": 12,
+          "rows": [
+            {
+              "rowIndex": 10,
+              "rowFingerprint": "sha256:f1bd38a950d231601ba596e2364c92c35e8088281eed9a301297c42cdb4e14d3",
+              "values": {
+                "text": "Transit request 11: explain route C.",
+                "label": "billing",
+                "priority": 11,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 11,
+              "rowFingerprint": "sha256:e79f4b8f87c642843ace0774c948808896c2e55aa9293a9968db5e91e40518c5",
+              "values": {
+                "text": "Transit request 12: explain route D.",
+                "label": "technical",
+                "priority": 12,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        }
+      ],
+      "schema": "text: string\nlabel: string\npriority: int64\nactive: bool\ntags: list<element: string>\n  child 0, element: string"
+    },
+    "edited": {
+      "sha256": "d7774dce5b48d1d3d77006719000fb20de8325157af4605cb11d5196b06ba9b7",
+      "sizeBytes": 1999,
+      "base64": "UEFSMRUEFdQHFe4CTBUYFQASAADqA/A+NgAAAEVkaXRlZCB0cmFuc2ZlciByZXF1ZXN0OiBleHBsYWluIGEgZGVsYXllZCBjb25uZWN0aW9uLiMAAABUATMEaXQRMgQgMhk0GHJvdXRlIEJSJwAAMz4nAABDUicAADQ+JwAARFInAAA1PicAAEFSJwAANj4nAFacAAA3PicAVpwAADg+JwBWnAAAOT4nAAhBLiRKOAEIMTA6NW0xOVIoAAAxPigAAENWKABCiQEERC4VABUgFSQsFRgVEBUGFQYcNgAoI1RyYW5zaXQgcmVxdWVzdCA5OiBleHBsYWluIHJvdXRlIEEuGDZFZGl0ZWQgdHJhbnNmZXIgcmVxdWVzdDogZXhwbGFpbiBhIGRlbGF5ZWQgY29ubmVjdGlvbi4REQAAABA8AgAAABgBBAUQMlR2mLoAABUEFTAVNEwVBBUAEgAAGFwJAAAAdGVjaG5pY2FsBwAAAGJpbGxpbmcVABUUFRgsFRgVEBUGFQYcNgAoCXRlY2huaWNhbBgHYmlsbGluZxERAAAACiQCAAAAGAEBBVQFFQQVwAEVeEwVGBUAEgAAYARjAAkBAAIJBwQAAw0IAAQNCAAFDQgABg0IAAcNCAAIDQgACQ0IAAoNCDwLAAAAAAAAAAwAAAAAAAAAFQAVIBUkLBUYFRAVBhUGHBgIYwAAAAAAAAAYCAIAAAAAAAAAFgAoCGMAAAAAAAAAGAgCAAAAAAAAABERAAAAEDwCAAAAGAEEBRAyVHaYugAAFQAVEBUULBUYFQAVBhUGHBgBARgBABYAKAEBGAEAEREAAAAIHAIAAAAYAVQFFQQVcBVkTBUKFQASAAA4WAgAAAByZXZpZXdlZAcAAAB0cmFuc2l0AQsYcm91dGUtMRkLLDIHAAAAcm91dGUtMBUAFTIVNiwVMBUQFQYVBhw2ACgHdHJhbnNpdBgIcmV2aWV3ZWQREQAAABlgBAAAAAeqqqoCAAAAMAMDB0iUhVEWRlkYZRUEGYw1ABgGc2NoZW1hFQoAFQwlAhgEdGV4dCUATBwAAAAVDCUCGAVsYWJlbCUATBwAAAAVBCUCGAhwcmlvcml0eQAVACUCGAZhY3RpdmUANQIYBHRhZ3MVAhUGTDwAAAA1BBgEbGlzdBUCABUMJQIYB2VsZW1lbnQlAEwcAAAAFhgZHBlcJgAcFQwZNQAGEBkYBHRleHQVAhYYFvwJFpoFJpYDJggcNgAoI1RyYW5zaXQgcmVxdWVzdCA5OiBleHBsYWluIHJvdXRlIEEuGDZFZGl0ZWQgdHJhbnNmZXIgcmVxdWVzdDogZXhwbGFpbiBhIGRlbGF5ZWQgY29ubmVjdGlvbi4REQAZLBUEFQAVAgAVABUQFQIAPBb0BhkGGSYAGAAAACYAHBUMGTUABhAZGAVsYWJlbBUCFhgWtgEWvgEm8gUmogUcNgAoCXRlY2huaWNhbBgHYmlsbGluZxERABksFQQVABUCABUAFRAVAgA8FsQBGQYZJgAYAAAAJgAcFQQZNQAGEBkYCHByaW9yaXR5FQIWGBb8Aha4Aib2BybgBhwYCGMAAAAAAAAAGAgCAAAAAAAAABYAKAhjAAAAAAAAABgIAgAAAAAAAAAREQAZLBUEFQAVAgAVABUQFQIAPCkGGSYAGAAAACYAHBUAGSUGABkYBmFjdGl2ZRUCFhgWVhZaJpgJPBgBARgBABYAKAEBGAEAEREAGRwVABUAFQIAPCkGGSYAGAAAACYAHBUMGTUABhAZOAR0YWdzBGxpc3QHZWxlbWVudBUCFjAWkgIWigIm8gom8gkcNgAoB3RyYW5zaXQYCHJldmlld2VkEREAGSwVBBUAFQIAFQAVEBUCADwW0gIZJhgYGUYAAAAwAAAAFpYRFhgmCBb0CwAZHBgMQVJST1c6c2NoZW1hGOADLy8vLy8yQUJBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQVVBQUFBRUFRQUF5QUFBQUlnQUFBQmNBQUFBQkFBQUFDRC8vLzhBQUFFTUZBQUFBQndBQUFBRUFBQUFBUUFBQUJRQUFBQUVBQUFBZEdGbmN3QUFBQUFVLy8vL1RQLy8vd0FBQVFVUUFBQUFHQUFBQUFRQUFBQUFBQUFBQndBQUFHVnNaVzFsYm5RQVBQLy8vM1QvLy84QUFBRUdFQUFBQUJnQUFBQUVBQUFBQUFBQUFBWUFBQUJoWTNScGRtVUFBR1QvLy8rYy8vLy9BQUFCQWhBQUFBQWtBQUFBQkFBQUFBQUFBQUFJQUFBQWNISnBiM0pwZEhrQUFBQUFDQUFNQUFnQUJ3QUlBQUFBQUFBQUFVQUFBQURZLy8vL0FBQUJCUkFBQUFBWUFBQUFCQUFBQUFBQUFBQUZBQUFBYkdGaVpXd0FBQURJLy8vL0VBQVVBQWdBQmdBSEFBd0FBQUFRQUJBQUFBQUFBQUVGRUFBQUFCd0FBQUFFQUFBQUFBQUFBQVFBQUFCMFpYaDBBQUFBQUFRQUJBQUVBQUFBABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNS4wLjAZXBwAABwAABwAABwAABwAAADJBAAAUEFSMQ==",
+      "rows": [
+        {
+          "text": "Edited transfer request: explain a delayed connection.",
+          "label": "technical",
+          "priority": 99,
+          "active": false,
+          "tags": [
+            "reviewed",
+            "transit"
+          ]
+        },
+        {
+          "text": "Transit request 2: explain route B.",
+          "label": "technical",
+          "priority": 2,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 3: explain route C.",
+          "label": "billing",
+          "priority": 3,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 4: explain route D.",
+          "label": "technical",
+          "priority": 4,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 5: explain route A.",
+          "label": "billing",
+          "priority": 5,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 6: explain route B.",
+          "label": "technical",
+          "priority": 6,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 7: explain route C.",
+          "label": "billing",
+          "priority": 7,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 8: explain route D.",
+          "label": "technical",
+          "priority": 8,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 9: explain route A.",
+          "label": "billing",
+          "priority": 9,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 10: explain route B.",
+          "label": "technical",
+          "priority": 10,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 11: explain route C.",
+          "label": "billing",
+          "priority": 11,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 12: explain route D.",
+          "label": "technical",
+          "priority": 12,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        }
+      ],
+      "pages": [
+        {
+          "totalRows": 12,
+          "rows": [
+            {
+              "rowIndex": 0,
+              "rowFingerprint": "sha256:2723b70ad941a84296451b632476f2e003bb7b2e645c88631d67618c3f1e7c4c",
+              "values": {
+                "text": "Edited transfer request: explain a delayed connection.",
+                "label": "technical",
+                "priority": 99,
+                "active": false,
+                "tags": [
+                  "reviewed",
+                  "transit"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 1,
+              "rowFingerprint": "sha256:97f580478a89dedbf7049abf354c78f306b66b14c4d01c58995963828bf442d3",
+              "values": {
+                "text": "Transit request 2: explain route B.",
+                "label": "technical",
+                "priority": 2,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 2,
+              "rowFingerprint": "sha256:1fdd9f71f2a4e258f6b6b81dc6b8a33c52fd7000f41d6d7816dc911412bb2cb0",
+              "values": {
+                "text": "Transit request 3: explain route C.",
+                "label": "billing",
+                "priority": 3,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 3,
+              "rowFingerprint": "sha256:ca4d5bb721864553566138f1ad52aa51db1d32af074dec8b5a55e4436b16d8e4",
+              "values": {
+                "text": "Transit request 4: explain route D.",
+                "label": "technical",
+                "priority": 4,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 4,
+              "rowFingerprint": "sha256:8c8329992623c178c802aad5c37a2060722856bd1bd1544563de20745afbca83",
+              "values": {
+                "text": "Transit request 5: explain route A.",
+                "label": "billing",
+                "priority": 5,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 5,
+              "rowFingerprint": "sha256:907a0f1bebe858c6979bcfc5cee0381940411844396667e500e8844f83ec00e2",
+              "values": {
+                "text": "Transit request 6: explain route B.",
+                "label": "technical",
+                "priority": 6,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 6,
+              "rowFingerprint": "sha256:5c311666a2badadc9b685e5773976b393f60e87912accb82e5570fe4da69ebb5",
+              "values": {
+                "text": "Transit request 7: explain route C.",
+                "label": "billing",
+                "priority": 7,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 7,
+              "rowFingerprint": "sha256:5f62e1f41552c5367f06c3d5637bb467c571368220d552783b9ae4e16c2de08f",
+              "values": {
+                "text": "Transit request 8: explain route D.",
+                "label": "technical",
+                "priority": 8,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 8,
+              "rowFingerprint": "sha256:f1746ff64abaae98f0574db2b90d6d8bb945e1f2040772e62c6964de75de20e8",
+              "values": {
+                "text": "Transit request 9: explain route A.",
+                "label": "billing",
+                "priority": 9,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 9,
+              "rowFingerprint": "sha256:179fd8aaa70fbfe3c9fc26c2c91a524c5b39f6f022623b527096519e58b5a2a5",
+              "values": {
+                "text": "Transit request 10: explain route B.",
+                "label": "technical",
+                "priority": 10,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        },
+        {
+          "totalRows": 12,
+          "rows": [
+            {
+              "rowIndex": 10,
+              "rowFingerprint": "sha256:f1bd38a950d231601ba596e2364c92c35e8088281eed9a301297c42cdb4e14d3",
+              "values": {
+                "text": "Transit request 11: explain route C.",
+                "label": "billing",
+                "priority": 11,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 11,
+              "rowFingerprint": "sha256:e79f4b8f87c642843ace0774c948808896c2e55aa9293a9968db5e91e40518c5",
+              "values": {
+                "text": "Transit request 12: explain route D.",
+                "label": "technical",
+                "priority": 12,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        }
+      ],
+      "schema": "text: string\nlabel: string\npriority: int64\nactive: bool\ntags: list<element: string>\n  child 0, element: string"
+    },
+    "rejected": {
+      "sha256": "4f2083f13c3cd46f87278f4c78a0cbc4c9ac3cfdaf77cf07b3a7fd8a210386d4",
+      "sizeBytes": 1897,
+      "base64": "UEFSMRUEFeAGFZQCTBUWFQASAACwA5gjAAAAVHJhbnNpdCByZXF1ZXN0IDI6IGV4cGxhaW4gcm91dGUgQi5OJwAAMz4nAARDLk4nAAA0PicAAERSJwAANT4nAABBUicAADY+JwBWnAAANz4nAFacAAA4PicAVpwAADk+JwAIQS4kSjgBCDEwOkI5AVIoAAAxPigAAENWKABCiQEERC4VABUgFSQsFRYVEBUGFQYcNgAoI1RyYW5zaXQgcmVxdWVzdCA5OiBleHBsYWluIHJvdXRlIEEuGCRUcmFuc2l0IHJlcXVlc3QgMTA6IGV4cGxhaW4gcm91dGUgQi4REQAAABA8AgAAABYBBAUQMlR2mAoAABUEFTAVNEwVBBUAEgAAGFwJAAAAdGVjaG5pY2FsBwAAAGJpbGxpbmcVABUUFRgsFRYVEBUGFQYcNgAoCXRlY2huaWNhbBgHYmlsbGluZxERAAAACiQCAAAAFgEBBaoCFQQVsAEVcEwVFhUAEgAAWAQCAAkBAAMJBwQABA0IAAUNCAAGDQgABw0IAAgNCAAJDQgACg0IPAsAAAAAAAAADAAAAAAAAAAVABUgFSQsFRYVEBUGFQYcGAgMAAAAAAAAABgIAgAAAAAAAAAWACgIDAAAAAAAAAAYCAIAAAAAAAAAEREAAAAQPAIAAAAWAQQFEDJUdpgKAAAVABUQFRQsFRYVABUGFQYcGAEBGAEAFgAoAQEYAQAREQAAAAgcAgAAABYBqgIVBBVYFUxMFQgVABIAACwoBwAAAHRyYW5zaXQBCxhyb3V0ZS0xGQssMgcAAAByb3V0ZS0wFQAVLBUwLBUsFRAVBhUGHDYAKAd0cmFuc2l0GAdyb3V0ZS0wEREAAAAWVAQAAAAHqqoqAgAAACwDAgeETMiETAgVBBmMNQAYBnNjaGVtYRUKABUMJQIYBHRleHQlAEwcAAAAFQwlAhgFbGFiZWwlAEwcAAAAFQQlAhgIcHJpb3JpdHkAFQAlAhgGYWN0aXZlADUCGAR0YWdzFQIVBkw8AAAANQQYBGxpc3QVAgAVDCUCGAdlbGVtZW50JQBMHAAAABYWGRwZXCYAHBUMGTUABhAZGAR0ZXh0FQIWFhbkCBacBCa8AiYIHDYAKCNUcmFuc2l0IHJlcXVlc3QgOTogZXhwbGFpbiByb3V0ZSBBLhgkVHJhbnNpdCByZXF1ZXN0IDEwOiBleHBsYWluIHJvdXRlIEIuEREAGSwVBBUAFQIAFQAVEBUCADwWiAYZBhkmABYAAAAmABwVDBk1AAYQGRgFbGFiZWwVAhYWFrYBFr4BJvQEJqQEHDYAKAl0ZWNobmljYWwYB2JpbGxpbmcREQAZLBUEFQAVAgAVABUQFQIAPBayARkGGSYAFgAAACYAHBUEGTUABhAZGAhwcmlvcml0eRUCFhYW7AIWsAIm8AYm4gUcGAgMAAAAAAAAABgIAgAAAAAAAAAWACgIDAAAAAAAAAAYCAIAAAAAAAAAEREAGSwVBBUAFQIAFQAVEBUCADwpBhkmABYAAAAmABwVABklBgAZGAZhY3RpdmUVAhYWFlYWWiaSCDwYAQEYAQAWACgBARgBABERABkcFQAVABUCADwpBhkmABYAAAAmABwVDBk1AAYQGTgEdGFncwRsaXN0B2VsZW1lbnQVAhYsFvIBFuoBJtQJJuwIHDYAKAd0cmFuc2l0GAdyb3V0ZS0wEREAGSwVBBUAFQIAFQAVEBUCADwWtAIZJhYWGUYAAAAsAAAAFs4PFhYmCBbOCgAZHBgMQVJST1c6c2NoZW1hGOADLy8vLy8yQUJBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQVVBQUFBRUFRQUF5QUFBQUlnQUFBQmNBQUFBQkFBQUFDRC8vLzhBQUFFTUZBQUFBQndBQUFBRUFBQUFBUUFBQUJRQUFBQUVBQUFBZEdGbmN3QUFBQUFVLy8vL1RQLy8vd0FBQVFVUUFBQUFHQUFBQUFRQUFBQUFBQUFBQndBQUFHVnNaVzFsYm5RQVBQLy8vM1QvLy84QUFBRUdFQUFBQUJnQUFBQUVBQUFBQUFBQUFBWUFBQUJoWTNScGRtVUFBR1QvLy8rYy8vLy9BQUFCQWhBQUFBQWtBQUFBQkFBQUFBQUFBQUFJQUFBQWNISnBiM0pwZEhrQUFBQUFDQUFNQUFnQUJ3QUlBQUFBQUFBQUFVQUFBQURZLy8vL0FBQUJCUkFBQUFBWUFBQUFCQUFBQUFBQUFBQUZBQUFBYkdGaVpXd0FBQURJLy8vL0VBQVVBQWdBQmdBSEFBd0FBQUFRQUJBQUFBQUFBQUVGRUFBQUFCd0FBQUFFQUFBQUFBQUFBQVFBQUFCMFpYaDBBQUFBQUFRQUJBQUVBQUFBABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNS4wLjAZXBwAABwAABwAABwAABwAAAC2BAAAUEFSMQ==",
+      "rows": [
+        {
+          "text": "Transit request 2: explain route B.",
+          "label": "technical",
+          "priority": 2,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 3: explain route C.",
+          "label": "billing",
+          "priority": 3,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 4: explain route D.",
+          "label": "technical",
+          "priority": 4,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 5: explain route A.",
+          "label": "billing",
+          "priority": 5,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 6: explain route B.",
+          "label": "technical",
+          "priority": 6,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 7: explain route C.",
+          "label": "billing",
+          "priority": 7,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 8: explain route D.",
+          "label": "technical",
+          "priority": 8,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 9: explain route A.",
+          "label": "billing",
+          "priority": 9,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 10: explain route B.",
+          "label": "technical",
+          "priority": 10,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 11: explain route C.",
+          "label": "billing",
+          "priority": 11,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 12: explain route D.",
+          "label": "technical",
+          "priority": 12,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        }
+      ],
+      "pages": [
+        {
+          "totalRows": 11,
+          "rows": [
+            {
+              "rowIndex": 0,
+              "rowFingerprint": "sha256:97f580478a89dedbf7049abf354c78f306b66b14c4d01c58995963828bf442d3",
+              "values": {
+                "text": "Transit request 2: explain route B.",
+                "label": "technical",
+                "priority": 2,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 1,
+              "rowFingerprint": "sha256:1fdd9f71f2a4e258f6b6b81dc6b8a33c52fd7000f41d6d7816dc911412bb2cb0",
+              "values": {
+                "text": "Transit request 3: explain route C.",
+                "label": "billing",
+                "priority": 3,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 2,
+              "rowFingerprint": "sha256:ca4d5bb721864553566138f1ad52aa51db1d32af074dec8b5a55e4436b16d8e4",
+              "values": {
+                "text": "Transit request 4: explain route D.",
+                "label": "technical",
+                "priority": 4,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 3,
+              "rowFingerprint": "sha256:8c8329992623c178c802aad5c37a2060722856bd1bd1544563de20745afbca83",
+              "values": {
+                "text": "Transit request 5: explain route A.",
+                "label": "billing",
+                "priority": 5,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 4,
+              "rowFingerprint": "sha256:907a0f1bebe858c6979bcfc5cee0381940411844396667e500e8844f83ec00e2",
+              "values": {
+                "text": "Transit request 6: explain route B.",
+                "label": "technical",
+                "priority": 6,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 5,
+              "rowFingerprint": "sha256:5c311666a2badadc9b685e5773976b393f60e87912accb82e5570fe4da69ebb5",
+              "values": {
+                "text": "Transit request 7: explain route C.",
+                "label": "billing",
+                "priority": 7,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 6,
+              "rowFingerprint": "sha256:5f62e1f41552c5367f06c3d5637bb467c571368220d552783b9ae4e16c2de08f",
+              "values": {
+                "text": "Transit request 8: explain route D.",
+                "label": "technical",
+                "priority": 8,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 7,
+              "rowFingerprint": "sha256:f1746ff64abaae98f0574db2b90d6d8bb945e1f2040772e62c6964de75de20e8",
+              "values": {
+                "text": "Transit request 9: explain route A.",
+                "label": "billing",
+                "priority": 9,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 8,
+              "rowFingerprint": "sha256:179fd8aaa70fbfe3c9fc26c2c91a524c5b39f6f022623b527096519e58b5a2a5",
+              "values": {
+                "text": "Transit request 10: explain route B.",
+                "label": "technical",
+                "priority": 10,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 9,
+              "rowFingerprint": "sha256:f1bd38a950d231601ba596e2364c92c35e8088281eed9a301297c42cdb4e14d3",
+              "values": {
+                "text": "Transit request 11: explain route C.",
+                "label": "billing",
+                "priority": 11,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        },
+        {
+          "totalRows": 11,
+          "rows": [
+            {
+              "rowIndex": 10,
+              "rowFingerprint": "sha256:e79f4b8f87c642843ace0774c948808896c2e55aa9293a9968db5e91e40518c5",
+              "values": {
+                "text": "Transit request 12: explain route D.",
+                "label": "technical",
+                "priority": 12,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        }
+      ],
+      "schema": "text: string\nlabel: string\npriority: int64\nactive: bool\ntags: list<element: string>\n  child 0, element: string"
+    },
+    "edited-rejected": {
+      "sha256": "4f2083f13c3cd46f87278f4c78a0cbc4c9ac3cfdaf77cf07b3a7fd8a210386d4",
+      "sizeBytes": 1897,
+      "base64": "UEFSMRUEFeAGFZQCTBUWFQASAACwA5gjAAAAVHJhbnNpdCByZXF1ZXN0IDI6IGV4cGxhaW4gcm91dGUgQi5OJwAAMz4nAARDLk4nAAA0PicAAERSJwAANT4nAABBUicAADY+JwBWnAAANz4nAFacAAA4PicAVpwAADk+JwAIQS4kSjgBCDEwOkI5AVIoAAAxPigAAENWKABCiQEERC4VABUgFSQsFRYVEBUGFQYcNgAoI1RyYW5zaXQgcmVxdWVzdCA5OiBleHBsYWluIHJvdXRlIEEuGCRUcmFuc2l0IHJlcXVlc3QgMTA6IGV4cGxhaW4gcm91dGUgQi4REQAAABA8AgAAABYBBAUQMlR2mAoAABUEFTAVNEwVBBUAEgAAGFwJAAAAdGVjaG5pY2FsBwAAAGJpbGxpbmcVABUUFRgsFRYVEBUGFQYcNgAoCXRlY2huaWNhbBgHYmlsbGluZxERAAAACiQCAAAAFgEBBaoCFQQVsAEVcEwVFhUAEgAAWAQCAAkBAAMJBwQABA0IAAUNCAAGDQgABw0IAAgNCAAJDQgACg0IPAsAAAAAAAAADAAAAAAAAAAVABUgFSQsFRYVEBUGFQYcGAgMAAAAAAAAABgIAgAAAAAAAAAWACgIDAAAAAAAAAAYCAIAAAAAAAAAEREAAAAQPAIAAAAWAQQFEDJUdpgKAAAVABUQFRQsFRYVABUGFQYcGAEBGAEAFgAoAQEYAQAREQAAAAgcAgAAABYBqgIVBBVYFUxMFQgVABIAACwoBwAAAHRyYW5zaXQBCxhyb3V0ZS0xGQssMgcAAAByb3V0ZS0wFQAVLBUwLBUsFRAVBhUGHDYAKAd0cmFuc2l0GAdyb3V0ZS0wEREAAAAWVAQAAAAHqqoqAgAAACwDAgeETMiETAgVBBmMNQAYBnNjaGVtYRUKABUMJQIYBHRleHQlAEwcAAAAFQwlAhgFbGFiZWwlAEwcAAAAFQQlAhgIcHJpb3JpdHkAFQAlAhgGYWN0aXZlADUCGAR0YWdzFQIVBkw8AAAANQQYBGxpc3QVAgAVDCUCGAdlbGVtZW50JQBMHAAAABYWGRwZXCYAHBUMGTUABhAZGAR0ZXh0FQIWFhbkCBacBCa8AiYIHDYAKCNUcmFuc2l0IHJlcXVlc3QgOTogZXhwbGFpbiByb3V0ZSBBLhgkVHJhbnNpdCByZXF1ZXN0IDEwOiBleHBsYWluIHJvdXRlIEIuEREAGSwVBBUAFQIAFQAVEBUCADwWiAYZBhkmABYAAAAmABwVDBk1AAYQGRgFbGFiZWwVAhYWFrYBFr4BJvQEJqQEHDYAKAl0ZWNobmljYWwYB2JpbGxpbmcREQAZLBUEFQAVAgAVABUQFQIAPBayARkGGSYAFgAAACYAHBUEGTUABhAZGAhwcmlvcml0eRUCFhYW7AIWsAIm8AYm4gUcGAgMAAAAAAAAABgIAgAAAAAAAAAWACgIDAAAAAAAAAAYCAIAAAAAAAAAEREAGSwVBBUAFQIAFQAVEBUCADwpBhkmABYAAAAmABwVABklBgAZGAZhY3RpdmUVAhYWFlYWWiaSCDwYAQEYAQAWACgBARgBABERABkcFQAVABUCADwpBhkmABYAAAAmABwVDBk1AAYQGTgEdGFncwRsaXN0B2VsZW1lbnQVAhYsFvIBFuoBJtQJJuwIHDYAKAd0cmFuc2l0GAdyb3V0ZS0wEREAGSwVBBUAFQIAFQAVEBUCADwWtAIZJhYWGUYAAAAsAAAAFs4PFhYmCBbOCgAZHBgMQVJST1c6c2NoZW1hGOADLy8vLy8yQUJBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQVVBQUFBRUFRQUF5QUFBQUlnQUFBQmNBQUFBQkFBQUFDRC8vLzhBQUFFTUZBQUFBQndBQUFBRUFBQUFBUUFBQUJRQUFBQUVBQUFBZEdGbmN3QUFBQUFVLy8vL1RQLy8vd0FBQVFVUUFBQUFHQUFBQUFRQUFBQUFBQUFBQndBQUFHVnNaVzFsYm5RQVBQLy8vM1QvLy84QUFBRUdFQUFBQUJnQUFBQUVBQUFBQUFBQUFBWUFBQUJoWTNScGRtVUFBR1QvLy8rYy8vLy9BQUFCQWhBQUFBQWtBQUFBQkFBQUFBQUFBQUFJQUFBQWNISnBiM0pwZEhrQUFBQUFDQUFNQUFnQUJ3QUlBQUFBQUFBQUFVQUFBQURZLy8vL0FBQUJCUkFBQUFBWUFBQUFCQUFBQUFBQUFBQUZBQUFBYkdGaVpXd0FBQURJLy8vL0VBQVVBQWdBQmdBSEFBd0FBQUFRQUJBQUFBQUFBQUVGRUFBQUFCd0FBQUFFQUFBQUFBQUFBQVFBQUFCMFpYaDBBQUFBQUFRQUJBQUVBQUFBABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNS4wLjAZXBwAABwAABwAABwAABwAAAC2BAAAUEFSMQ==",
+      "rows": [
+        {
+          "text": "Transit request 2: explain route B.",
+          "label": "technical",
+          "priority": 2,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 3: explain route C.",
+          "label": "billing",
+          "priority": 3,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 4: explain route D.",
+          "label": "technical",
+          "priority": 4,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 5: explain route A.",
+          "label": "billing",
+          "priority": 5,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 6: explain route B.",
+          "label": "technical",
+          "priority": 6,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 7: explain route C.",
+          "label": "billing",
+          "priority": 7,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 8: explain route D.",
+          "label": "technical",
+          "priority": 8,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 9: explain route A.",
+          "label": "billing",
+          "priority": 9,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        },
+        {
+          "text": "Transit request 10: explain route B.",
+          "label": "technical",
+          "priority": 10,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-0"
+          ]
+        },
+        {
+          "text": "Transit request 11: explain route C.",
+          "label": "billing",
+          "priority": 11,
+          "active": true,
+          "tags": [
+            "transit",
+            "route-1"
+          ]
+        },
+        {
+          "text": "Transit request 12: explain route D.",
+          "label": "technical",
+          "priority": 12,
+          "active": false,
+          "tags": [
+            "transit",
+            "route-2"
+          ]
+        }
+      ],
+      "pages": [
+        {
+          "totalRows": 11,
+          "rows": [
+            {
+              "rowIndex": 0,
+              "rowFingerprint": "sha256:97f580478a89dedbf7049abf354c78f306b66b14c4d01c58995963828bf442d3",
+              "values": {
+                "text": "Transit request 2: explain route B.",
+                "label": "technical",
+                "priority": 2,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 1,
+              "rowFingerprint": "sha256:1fdd9f71f2a4e258f6b6b81dc6b8a33c52fd7000f41d6d7816dc911412bb2cb0",
+              "values": {
+                "text": "Transit request 3: explain route C.",
+                "label": "billing",
+                "priority": 3,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 2,
+              "rowFingerprint": "sha256:ca4d5bb721864553566138f1ad52aa51db1d32af074dec8b5a55e4436b16d8e4",
+              "values": {
+                "text": "Transit request 4: explain route D.",
+                "label": "technical",
+                "priority": 4,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 3,
+              "rowFingerprint": "sha256:8c8329992623c178c802aad5c37a2060722856bd1bd1544563de20745afbca83",
+              "values": {
+                "text": "Transit request 5: explain route A.",
+                "label": "billing",
+                "priority": 5,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 4,
+              "rowFingerprint": "sha256:907a0f1bebe858c6979bcfc5cee0381940411844396667e500e8844f83ec00e2",
+              "values": {
+                "text": "Transit request 6: explain route B.",
+                "label": "technical",
+                "priority": 6,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 5,
+              "rowFingerprint": "sha256:5c311666a2badadc9b685e5773976b393f60e87912accb82e5570fe4da69ebb5",
+              "values": {
+                "text": "Transit request 7: explain route C.",
+                "label": "billing",
+                "priority": 7,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 6,
+              "rowFingerprint": "sha256:5f62e1f41552c5367f06c3d5637bb467c571368220d552783b9ae4e16c2de08f",
+              "values": {
+                "text": "Transit request 8: explain route D.",
+                "label": "technical",
+                "priority": 8,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 7,
+              "rowFingerprint": "sha256:f1746ff64abaae98f0574db2b90d6d8bb945e1f2040772e62c6964de75de20e8",
+              "values": {
+                "text": "Transit request 9: explain route A.",
+                "label": "billing",
+                "priority": 9,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 8,
+              "rowFingerprint": "sha256:179fd8aaa70fbfe3c9fc26c2c91a524c5b39f6f022623b527096519e58b5a2a5",
+              "values": {
+                "text": "Transit request 10: explain route B.",
+                "label": "technical",
+                "priority": 10,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-0"
+                ]
+              },
+              "editable": true
+            },
+            {
+              "rowIndex": 9,
+              "rowFingerprint": "sha256:f1bd38a950d231601ba596e2364c92c35e8088281eed9a301297c42cdb4e14d3",
+              "values": {
+                "text": "Transit request 11: explain route C.",
+                "label": "billing",
+                "priority": 11,
+                "active": true,
+                "tags": [
+                  "transit",
+                  "route-1"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        },
+        {
+          "totalRows": 11,
+          "rows": [
+            {
+              "rowIndex": 10,
+              "rowFingerprint": "sha256:e79f4b8f87c642843ace0774c948808896c2e55aa9293a9968db5e91e40518c5",
+              "values": {
+                "text": "Transit request 12: explain route D.",
+                "label": "technical",
+                "priority": 12,
+                "active": false,
+                "tags": [
+                  "transit",
+                  "route-2"
+                ]
+              },
+              "editable": true
+            }
+          ]
+        }
+      ],
+      "schema": "text: string\nlabel: string\npriority: int64\nactive: bool\ntags: list<element: string>\n  child 0, element: string"
+    }
+  }
+}

@@ -1256,3 +1256,35 @@ seams are finite. Existing25approval cases remain covered, with18added version
 cases. No Parquet edit, physical host, actual inference/OCR/provider/native process,
 restart, final or parent qualification follows. Accepted model/OCR results remain
 closed and are not rerun.
+
+## Saved-row review isolation and composed local evidence
+
+Saved dataset row review holds one synchronous mutation owner before rendering
+busy. Edits keep typed drafts, reject blank numbers and disable selection while
+saving. Source-bound list/page/notice/error state and a committed workspace/service
+scope retire old replies. Changing scope or unmounting does not cancel a write
+already accepted by the application. It prevents that write from changing or
+notifying the replacement view. Returned pages must match the selected identity.
+
+Forty-four composed local cases use actual clients, registered IPC or owned HTTP,
+application/version services, SQLite and object storage. A bounded synthetic
+Parquet source is setup through the real storage port, not upload admission. The
+production Parquet staging adapter uses a finite checked golden codec registry.
+Tests inspect all typed rows/pages, create immutable edited/rejected successors,
+reopen and select the preserved parent, and verify exact bytes/digests/counts.
+They test pre-codec identity refusals, corrected input, storage errors, duplicate
+actions and late results. An increasing fixture clock keeps versions distinct.
+
+Four separate Python tests execute the actual model-free codec for golden
+rows/schema/page fingerprints, replacement/rejection, stale/schema-invalid edits
+and last-row refusal. This proves the codec function separately; it does not
+compose a real sidecar into the UI journey. Auth/readiness/runtime results and
+declared fault/delay seams remain finite fixtures. Physical apps, providers,
+native process/recovery and final/parent qualification remain separate. Accepted
+model accuracy/OCR stay closed; no full suite or accuracy rerun is implied.
+
+The saved records also bind the child to the exact imported parent and original
+source key/digest. Checks include recipe bytes/digest/operation/row fingerprint,
+quality report binding and complete dataset role size/count/media metadata.
+After UI remount and parent selection, an actual SQLite close/reopen preserves
+the same complete records. This is local database reopen, not process restart.
