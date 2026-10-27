@@ -305,3 +305,23 @@ JSON without getters, retires stale scope/navigation/edits and resolves success
 only after the consumer's applied-state commit. Desktop uses this with its
 complete validated settings hook. The coordinator grants no authorization,
 source-byte proof, runtime readiness, provider action or parent qualification.
+
+### Composed Context workflow checks
+
+The focused Context journeys connect the mounted shared Studio to real desktop
+preload/IPC or local HTTP, existing host composition, application lifecycle,
+runtime-adapter staging and new JSON catalog/binding files and stored bytes.
+They check private review, explicit Save/Discard, exact saved bytes and digest,
+reopen, manual rebuild refusal, source lineage, confirmed deletion and scoped
+recovery. Save failures keep reviewed output available for correction.
+
+Worker output and archive inspection are finite synthetic fixtures. Browser
+source selection uses the actual Artifact Browser client and capability rules;
+its test composition supplies no installed models. Actor/sender admission is a
+fixture. These tests do not qualify Python, real archive parsing, model accuracy,
+OCR, providers, installed app windows, process restart, native cleanup or final
+combined testing. See the comprehensive UI coverage ledger for exact cases.
+
+Registered HTTP and IPC failure envelopes are checked before client rendering.
+A missing owned staged file, thrown storage error or refused storage result must
+not disclose paths or private error text. Reviewed output remains retryable.

@@ -111,6 +111,10 @@ export interface StartContextGenerationValue {
 const OUTPUT_HANDLE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$/;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
+// Only code-owned Save messages may cross the transport boundary. Port and
+// filesystem exceptions can contain private staged content or local paths.
+class ContextSaveFailure extends Error {}
+
 function sha256(bytes: Uint8Array): string {
   return "sha256:" + createHash("sha256").update(bytes).digest("hex");
 }
@@ -366,6 +370,7 @@ export class ContextGenerationUseCase {
   private readonly now: () => string;
   private readonly createId: () => string;
   private readonly runtimeDirectories = new Map<string, string>();
+  private readonly saveCleanup = new Map<string, { storageKey: string; workspaceId: WorkspaceId }>();
   private readonly commands = new Map<string, StartContextGenerationCommand>();
   private readonly sourceInputs = new Map<
     string,
@@ -722,6 +727,28 @@ export class ContextGenerationUseCase {
     requestId: string, context?: ApplicationRequestContext,
   ): Promise<ContractResult<ContextGenerationStatus>> { return this.reviewAction(requestId, context, "save"); }
 
+  private async finishSaveCleanup(requestId: string, context?: ApplicationRequestContext): Promise<boolean> {
+    const owned = this.saveCleanup.get(requestId);
+    if (!owned) return true;
+    try {
+      const removed = await this.catalog.deleteArtifactCatalogRecord(
+        { workspaceId: owned.workspaceId, storageKey: owned.storageKey }, context,
+      );
+      if (!removed.ok && removed.error.code !== "not-found") return false;
+      const deleted = await this.storage.deleteArtifact(createDeleteArtifactRequest(owned.storageKey), context);
+      if (!deleted.ok && deleted.error.code !== "not-found") return false;
+      this.saveCleanup.delete(requestId);
+      return true;
+    } catch { return false; }
+  }
+
+  private saveCleanupUnavailable(context?: ApplicationRequestContext): ContractResult<ContextGenerationStatus> {
+    return createFailureResult(
+      createContractError("unavailable", "Context could not be saved and cleanup is incomplete. The reviewed output is retained; retry after storage is available."),
+      context,
+    );
+  }
+
   private async performSave(
     requestId: string,
     context?: ApplicationRequestContext,
@@ -744,8 +771,8 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    if (!await this.finishSaveCleanup(requestId, context)) return this.saveCleanupUnavailable(context);
     let storageKey: string | undefined;
-    let catalogAppended = false;
     try {
       const outputBytes = new Uint8Array(await readFile(pending.outputPath));
       const output = pending.runtimeResult.output;
@@ -753,22 +780,29 @@ export class ContextGenerationUseCase {
         outputBytes.byteLength !== output.sizeBytes ||
         sha256(outputBytes) !== output.digest
       ) {
-        throw new Error("Context artifact changed after review.");
+        throw new ContextSaveFailure("Context artifact changed after review.");
       }
       const generatedId = this.createId().replace(/[^A-Za-z0-9._-]+/g, "-");
       if (!generatedId) {
-        throw new Error("Context artifact identifier could not be created.");
+        throw new ContextSaveFailure("Context artifact identifier could not be created.");
       }
-      storageKey = join(
+      const candidateKey = join(
         "generated",
         "context",
         generatedId,
         output.name,
       ).replace(/\\/g, "/");
+      const existing = await this.catalog.readArtifactCatalogRecord(
+        { workspaceId: workspace.value.workspaceId, storageKey: candidateKey },
+        context,
+      );
+      if (existing.ok || existing.error.code !== "not-found") {
+        throw new ContextSaveFailure("Context artifact identity is unavailable. Retry saving with a new identity.");
+      }
       const stored = await this.storage.storeArtifact(
         createStoreArtifactRequest(outputBytes, {
           descriptor: {
-            key: storageKey,
+            key: candidateKey,
             mediaType: output.mediaType,
             checksum: {
               algorithm: "sha256",
@@ -790,9 +824,15 @@ export class ContextGenerationUseCase {
         context,
       );
       if (!stored.ok) {
-        throw new Error(stored.error.message);
+        throw new ContextSaveFailure("Context artifact could not be stored.");
       }
-      storageKey = String(stored.value.key);
+      if (stored.value.key !== candidateKey) {
+        throw new ContextSaveFailure("Context artifact storage did not confirm the requested identity.");
+      }
+      // Only an acknowledged exact write supplies compensation authority. The
+      // storage adapter may already have registered its bytes in the catalog.
+      storageKey = candidateKey;
+      this.saveCleanup.set(requestId, { storageKey, workspaceId: workspace.value.workspaceId });
       const catalogResult = await this.catalog.appendArtifactCatalogRecord(
         {
           record: {
@@ -813,9 +853,8 @@ export class ContextGenerationUseCase {
         context,
       );
       if (!catalogResult.ok) {
-        throw new Error(catalogResult.error.message);
+        throw new ContextSaveFailure("catalog unavailable");
       }
-      catalogAppended = true;
       const binding = await this.bindings.upsertArtifactStorageBinding(
         {
           binding: {
@@ -833,7 +872,7 @@ export class ContextGenerationUseCase {
         context,
       );
       if (!binding.ok) {
-        throw new Error(binding.error.message);
+        throw new ContextSaveFailure("binding unavailable");
       }
       const savedArtifact: ContextSavedArtifactReference = {
         artifactId: storageKey,
@@ -856,25 +895,15 @@ export class ContextGenerationUseCase {
         savedArtifact,
       };
       await this.cleanup(requestId);
+      this.saveCleanup.delete(requestId);
       this.completed.set(requestId, completed);
       return createSuccessResult(completed, context);
     } catch (error) {
-      if (storageKey) {
-        if (catalogAppended) {
-          await this.catalog.deleteArtifactCatalogRecord(
-            { workspaceId: workspace.value.workspaceId, storageKey },
-            context,
-          );
-        }
-        await this.storage.deleteArtifact(
-          createDeleteArtifactRequest(storageKey),
-          context,
-        );
-      }
+      if (!await this.finishSaveCleanup(requestId, context)) return this.saveCleanupUnavailable(context);
       return createFailureResult(
         createContractError(
           "internal",
-          error instanceof Error
+          error instanceof ContextSaveFailure
             ? error.message
             : "Context artifact could not be saved.",
         ),
@@ -909,6 +938,7 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    if (!await this.finishSaveCleanup(requestId, context)) return this.saveCleanupUnavailable(context);
     await this.cleanup(requestId);
     const discarded: ContextGenerationStatus = {
       requestId,
@@ -944,6 +974,7 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    if (!await this.finishSaveCleanup(requestId, context)) return this.saveCleanupUnavailable(context);
     const result = await this.runtime.cancelTask(requestId);
     if (result.status === "cancelled") {
       await this.taskPower.completeTask(requestId, "cancelled");

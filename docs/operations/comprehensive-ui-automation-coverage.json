@@ -1233,6 +1233,186 @@
           "name": "requires exact confirmation, preserves cancelled deletion and removes only the confirmed artifact",
           "tier": "shared-renderer-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: reviews manual context privately then saves exact bytes and reopens durable records",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: discards private reviewed context without publishing a catalog record",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: rejects mismatched runtime output before save and permits a fresh corrected preparation",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: admits one explicit save before the busy render",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses bytes changed after review and saves only after exact correction",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: cancel and exact confirmation delete only the saved context artifact",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: compensates a late catalog refusal and retries without an orphan",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses an occupied catalog identity before storing or removing any bytes",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: does not delete an object after storage refuses to acknowledge its write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: refuses foreign-workspace recovery before reading the private runtime result",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retains exact failed-save cleanup across catalog outage and retries before a new write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: retains exact failed-save cleanup across object outage and retries before a new write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: reviews manual context privately then saves exact bytes and reopens durable records",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: discards private reviewed context without publishing a catalog record",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: rejects mismatched runtime output before save and permits a fresh corrected preparation",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: admits one explicit save before the busy render",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses bytes changed after review and saves only after exact correction",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: cancel and exact confirmation delete only the saved context artifact",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: compensates a late catalog refusal and retries without an orphan",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses an occupied catalog identity before storing or removing any bytes",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: does not delete an object after storage refuses to acknowledge its write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: refuses foreign-workspace recovery before reading the private runtime result",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retains exact failed-save cleanup across catalog outage and retries before a new write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: retains exact failed-save cleanup across object outage and retries before a new write",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: keeps an actual staged read failure private in the transport and permits correction",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: redacts private exception storage errors before the registered transport responds",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: redacts private contract storage errors before the registered transport responds",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: keeps an actual staged read failure private in the transport and permits correction",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: redacts private exception storage errors before the registered transport responds",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: redacts private contract storage errors before the registered transport responds",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -1252,7 +1432,8 @@
         ],
         "actual_host_qualification": "pending",
         "scope": "Real app consumers are wired; local fixture/oracle/collection checks do not prove app selectors or host execution."
-      }
+      },
+      "composed_local_scope": "Actual shared UI and desktop client/preload/registered IPC or browser typed HTTP client, existing host composition, application generation/browser/deletion, runtime-adapter private staging and new JSON catalog/bindings/bytes. Worker output/inspection, sender/access/model availability and scheduling are finite fixtures. Thirty-two cases total across both consumers. No Python/model/OCR/provider/process, actual archive parser, physical host, SQLite/process restart, native ownership or final/parent pass."
     },
     {
       "id": "context-source-packs",
@@ -1297,12 +1478,25 @@
           "name": "automatically prepares semantic source materials and discovers context-pack topics",
           "tier": "shared-renderer-with-bounded-client-fixture",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "desktop: saves a no-summary source pack with exact staged source lineage",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/context-ui-transports-storage.ui.test.tsx",
+          "name": "browser: saves a no-summary source pack with exact staged source lineage",
+          "tier": "shared-ui-real-client-preload-or-owned-http-host-composition-runtime-adapter-new-json-filesystem-with-synthetic-worker",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "already installed approved local model for real summarization"
-      ]
+      ],
+      "composed_local_scope": "Actual shared UI and desktop client/preload/registered IPC or browser typed HTTP client, existing host composition, application generation/browser/deletion, runtime-adapter private staging and new JSON catalog/bindings/bytes. Worker output/inspection, sender/access/model availability and scheduling are finite fixtures. Thirty-two cases total across both consumers. No Python/model/OCR/provider/process, actual archive parser, physical host, SQLite/process restart, native ownership or final/parent pass."
     },
     {
       "id": "context-rag-create-query-rebuild",

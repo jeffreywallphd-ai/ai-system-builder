@@ -45,3 +45,30 @@ runtime paths remain outside public application state.
 
 See `docs/architecture/context-management.md`, ADR-0041, and
 `docs/security/context-management-threat-model.md`.
+
+## Acknowledged save compensation
+
+Saving first requires an unused catalog identity. A refused or mismatched storage
+acknowledgement does not grant deletion authority. An exact successful write owns
+its new key for compensation, including any record already appended by the
+filesystem adapter. A later Context catalog failure removes that record before
+removing the acknowledged bytes, so ordinary retry does not leave a dead entry.
+
+If catalog or object cleanup is unavailable, retain the exact current-owner key
+and reviewed output. Save, Discard and Cancel retry that cleanup before any new
+write or terminal release. They report an unavailable result until it succeeds.
+This recovery record is transient application state. It does not adopt old files,
+recover after process restart, establish native atomic ownership or qualify
+unknown retained offload data. Existing binding/storage and native qualification
+limits remain separate.
+
+Composed both-client UI tests cover late catalog refusal, storage refusal, catalog
+identity denial, exact-byte correction and cleanup outage/retry in new local
+fixtures. Worker and inspection results are synthetic; actual model/runtime,
+physical host and final combined qualification remain pending.
+
+Save returns only fixed application-owned public messages. Arbitrary filesystem
+and port exceptions use a generic failure. Refused storage, catalog and binding
+results use fixed step messages without port text or details. Existing public
+catalog/binding messages remain compatible. Cleanup still runs before failure;
+a retry retains the same private review until its save succeeds.

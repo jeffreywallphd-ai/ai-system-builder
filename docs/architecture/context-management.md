@@ -278,3 +278,37 @@ The existing catalog digest protects the outer package; the member check protect
 its internal content/lineage consistency. It does not authenticate an author.
 Legacy/source-derived package handling, RAG validation and review/save controls
 remain unchanged. Focused byte fixtures do not qualify either mounted host.
+
+## Current-owner save failure and retry
+
+Context save checks that its generated catalog identity is unused before writing.
+Only an exact acknowledged object write becomes a compensation target. The local
+object adapter can append catalog metadata during storage; Context therefore
+removes that target's catalog entry on a later save failure even when its own
+explicit catalog update failed. It removes the known bytes after catalog cleanup.
+A refused write or an unconfirmed returned key never becomes a deletion target.
+
+A temporary catalog/object cleanup outage retains the current request's exact key
+and private reviewed output. Serialized Save, Discard and Cancel finish that
+cleanup before another object write or terminal release. This is cooperative
+current-owner recovery in the live application, not an atomic metadata
+transaction, crash journal, native file-identity proof or adoption of old state.
+The existing process-restart/native qualification remains separate.
+
+The focused Context test composes the actual shared UI, desktop preload/IPC or
+browser HTTP client, artifact/Context host helpers, application facade, runtime
+adapter, JSON catalog/bindings and filesystem bytes. Manual review/save/discard,
+source-derived no-summary lineage, exact-byte reopen/deletion, duplicate save,
+wrong-workspace recovery and safe persistence correction have exact assertions.
+Finite worker output and inspection fixtures exercise the application boundary;
+they do not qualify the production archive parser, Python/model/OCR, provider
+access, physical app windows, SQLite/process restart, native shutdown or final
+combined testing. No accepted model accuracy is rerun.
+
+Save error copy is owned by the application. Unknown filesystem/port exceptions
+use a fixed generic message; refused port results use fixed step messages.
+Private staged paths and port error text/details never become Save transport
+failures. Both registered HTTP and IPC envelopes are checked directly, including
+an actual missing staged file. Failed-save cleanup checks reopen the exact old
+object key to prove absence, and the positive case verifies the exact durable
+primary binding, not only catalog counts or a successful response.

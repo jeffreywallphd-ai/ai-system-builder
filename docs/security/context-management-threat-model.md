@@ -220,3 +220,36 @@ exercise malformed/duplicate/oversized/family-invalid pages, safe copy, numeric
 progress and shared snapshots. Existing installation/embedding UI regressions
 remain unchanged. These fixtures grant no actual RAG/model, host, native recovery
 or parent-roadmap qualification, and full testing stays deferred by user direction.
+
+## Acknowledged Context save cleanup
+
+A save preflight refuses an occupied or unreadable generated catalog identity.
+Only the exact key acknowledged by a successful object write is retained for
+compensation. Refused writes and unconfirmed returned keys are not deletion
+authority. The storage adapter's implicit catalog record is included when later
+Context persistence fails. Catalog cleanup precedes byte removal.
+
+Unavailable cleanup retains the exact current request/key and private review.
+Scope authorization and serialized review actions run before cleanup retry. Save,
+Discard and Cancel do not start a new write or declare terminal success until
+that known cleanup completes. The transient record grants no adoption, restart
+recovery, hostile native-race, unknown historical file or offload authority.
+
+Both-client composed UI evidence uses only new regular fixture files, bounded
+ZIP fixture members and byte counts, finite task/transport calls and declared
+synthetic worker/inspection and actor/sender boundaries. It checks late catalog
+refusal, unavailable cleanup, unacknowledged writes, occupied identities, changed
+review bytes, exact confirmation and wrong-workspace task recovery. Teardown
+unmounts, drains owned work, discards only owned generation tasks, closes its
+listener, verifies staging removal, restores exact globals/storage keys and
+removes only its identity/containment/type/count/byte-checked new root. No model,
+OCR, provider, production authorization, real archive parser, physical process
+shutdown, native ownership or parent/final qualification follows.
+
+A Save exception can contain a private staging path or port-controlled text. Only
+fixed application-owned messages may cross HTTP/IPC. A module-private Save error
+type carries literal messages for known refusals; arbitrary thrown errors use
+a fixed fallback. Returned port messages and details are not reflected. Both
+clients exercise an actual missing owned staged file, a private thrown error and
+a private refused-result message; exact transport and rendered-output assertions
+prove redaction while retaining safe retry and the existing cleanup guard.
