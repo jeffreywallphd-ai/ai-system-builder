@@ -4561,6 +4561,24 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-capability-and-variation-map",
+      "work_id": "dataset-capability-ui-variants",
+      "work_criteria": [
+        "registry-goal-format-ui-variants",
+        "active-settings-and-correction",
+        "bounded-source-linked-evidence"
+      ],
+      "receipt_digest": "b339f0244b0621a339695a47f87f68a6f022756ad5aeebcde4b3263975f9c427",
+      "review_digest": "9334ea74e0c32566d0bac8f4bb0576b9519b9abf979b405630d4b5604d4c4419",
+      "scope": "Tested and committed 240 cases in both app components: all 65 supported goal/format pairs per host, merge, applicable methods, task/model choices, correction, inactive-field omission and exposed outputs. Real panels are opened. Metadata, settings, inventory and unavailable runtime/task clients are finite offline fixtures; task starts refuse after capture. No decoding, generation/save, actual transport/host, model, OCR, provider, offload, native or full qualification.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

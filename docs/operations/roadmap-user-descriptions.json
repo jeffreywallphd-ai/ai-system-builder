@@ -11882,6 +11882,20 @@
           "The app registers file references in this workflow. These tests do not download or read remote file contents. Live provider access, installed app windows, database restart, native recovery and final combined testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6549ff8304f7ce69019d22aaba139ba4e14548424b489e02f19ad219fad1f7d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tested and committed 240 dataset configuration cases in both app components.",
+          "The cases cover every supported training-goal and file-type pair, dataset merging, preparation methods, task choices and each app's output formats.",
+          "They check correction of invalid values and omission of settings that do not apply. They also check that tests preserve an existing global setting.",
+          "The tests open real interface panels. Source metadata and app connections are controlled test inputs. Each preparation request stops before a task starts.",
+          "These checks do not read source files, generate or save datasets, run model accuracy or OCR, or qualify installed apps, providers, low-memory execution or native recovery. Final combined testing stays pending."
+        ]
+      }
     }
   ]
 }
