@@ -4687,6 +4687,42 @@
         "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
         "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "saved-row-real-host-journey-wiring",
+      "work_criteria": [
+        "fixed-provided-parquet-admission",
+        "saved-row-host-public-actions-and-oracles",
+        "saved-row-host-owned-limits-and-scope"
+      ],
+      "receipt_digest": "ecd5db3e67b3675c08cd75afdf9c2efa9463a2646d80c0e7d49b838d22da3736",
+      "review_digest": "94d08db99200d3d86368ec6fafb0dd0a7d81f6b701adb26b6c10457e2b9f74a9",
+      "scope": "Two existing app tests wire fixed CSV/Parquet approval, row edit/reject and restart inspection in a second workspace.48oracle/17worker cases and dataset/docs/architecture checks pass. Public controls own writes; bounded reads bind exact rows, bytes and source/parent/recipe/report history. Fixed admission/offline/task/native limits stay. App cases collected only; actual windows/sidecar/restart/native/provider/final/parent qualification remains pending. No model/OCR rerun.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "control-plane-journal-and-current-profile-recovery",
+      "work_criteria": [
+        "bounded-journal-roundtrip",
+        "capacity-and-integrity-fail-closed",
+        "documented-scoped-repair"
+      ],
+      "receipt_digest": "56ac244b090b7fb1d863d62e1174a4690805c79827b02c9ebeaed9c8fbf09e1e",
+      "review_digest": "e64e904bbb6182af75a279781f904b8c45c4cce367087624ee19c84ea3ea792f",
+      "scope": "Eight recovery/capacity tests and the exact32-test dataset profile contract pass. Compact the same journal object and preflight both exact encodings under unchanged8MiB; retain canonical state/digests, locks and revision checks. Related control-plane/docs/agent-support checks pass with permitted loopback. Prior failed scope/receipts and original recovery bytes are preserved. No workflow/approval/qualification policy change, native/model/OCR/final or parent pass.",
+      "limitations": [
+        "These are reviewed local feature results at their recorded source snapshots. They do not pass the whole criterion or complete a roadmap increment.",
+        "Real host, runtime, provider and native checks remain separate. Full testing is deferred by user direction; accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

@@ -12001,6 +12001,36 @@
           "Accepted model accuracy and OCR stay closed and were not rerun. Physical desktop and sender authentication, provider/model execution, native process and final combined checks remain separate. This work does not pass the whole criterion or complete the increment."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "961b360095243fcde6acaf412ba96498a4ec6cc2955e70f5863e54eaa25ba846",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Added the saved-row journey to the two existing desktop and browser app tests. The journey code is committed. Actual app execution remains pending.",
+          "The test creates a separate workspace, uploads the fixed CSV, prepares Parquet and explicitly approves the dataset. It then edits one row and rejects another through the visible controls.",
+          "Checks compare all three versions, stored bytes, row values, original source and parent history. Recipe and quality-report fingerprints must match. The earlier versions must remain unchanged after restart.",
+          "The 48 history/read-boundary checks and 17 fixed-worker checks pass. The worker check uses real model-free Parquet preparation. Separate test inputs check malformed data, incorrect identities and safe read failures.",
+          "App-test collection passed without opening either app. It does not prove selectors, worker startup, actual restart or native shutdown. Existing resource, offline and task limits remain unchanged.",
+          "Accepted model accuracy and OCR were not rerun. Physical host, provider, native and final combined checks remain separate. This work does not pass the whole criterion or finish the increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c364932fd73d22f1940ee53515d502ba6f3d977ad6a55c037bf4fbf1258b1526",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed a local record-saving error found while recording the saved-row results. Extra indentation made the recovery file exceed its read limit even though the state file still fit.",
+          "The writer now saves the same recovery data with compact JSON spacing. It checks the exact state and recovery-file sizes before publication. The 8 MiB limit, recorded content, digests, lock and recovery rules remain unchanged.",
+          "Eight new tests cover near-limit records, interrupted saves, repeat recovery, capacity refusal, older formatting, Unicode and damaged records. The related control-plane, documentation and agent-support checks pass.",
+          "Updated the explicit dataset-profile test list to include the current Context and saved-row cases. Unknown changes still require focused coverage. The unrelated test relocation in the working folder was preserved outside this commit.",
+          "Original failed results and recovery files remain available. The first narrower work record remains unqualified; its failed check was not turned into a pass.",
+          "This is a contributor-tool repair. It does not change approvals or technical acceptance, run model accuracy or OCR, or grant a roadmap or native pass."
+        ]
+      }
     }
   ]
 }
