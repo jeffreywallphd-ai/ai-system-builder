@@ -253,3 +253,19 @@ a fixed fallback. Returned port messages and details are not reflected. Both
 clients exercise an actual missing owned staged file, a private thrown error and
 a private refused-result message; exact transport and rendered-output assertions
 prove redaction while retaining safe retry and the existing cleanup guard.
+
+## Preparation failure disclosure
+
+Generation-start exceptions and source-staging binding/retrieval failures can
+contain private paths or port-controlled text. These branches now expose fixed
+application-owned messages. A refused result keeps its contract error code but
+not its message or details. Settings validation remains contract-owned.
+
+Ten added both-client cases reproduce thrown start errors and thrown/refused
+binding or byte reads through mounted UI and registered HTTP/IPC. They assert
+fixed envelopes and absence of private markers, no generation after staging
+refusal, source/manual preservation and corrected retry. Only finite faults
+before worker acceptance are used. The existing cleanup/lease behavior is not
+changed, and no running-worker/native/host, terminal-runtime or parent/final
+qualification follows. Prior Save redaction and exact byte-cleanup evidence remain
+separate completed support at their recorded snapshots.

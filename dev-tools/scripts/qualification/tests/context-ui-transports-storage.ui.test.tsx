@@ -44,6 +44,8 @@ let directory: string | undefined, identity: { dev: bigint; ino: bigint } | unde
 let client: ContextManagementClient, artifacts: ReturnType<typeof composeDesktopArtifactFeature>, feature: ReturnType<typeof composeDesktopContextManagementFeature>;
 let environment: { act?: PropertyDescriptor; api?: PropertyDescriptor; token: string | null; sessions: Map<string, string | null> } | undefined;
 let calls = 0, runtimeCalls = 0, runtimeReads = 0, outputMismatch = false, gate: Promise<void> | undefined, release: (() => void) | undefined;
+let generationStartFault: (() => void) | undefined, runtimeStartFault = false;
+const privateStartMarker = "synthetic-private-context-start-marker";
 const flights = new Set<Promise<unknown>>(), commands: ContextManagementTransportCommand[] = [];
 const wireResponses: any[] = [];
 const scopes: { action: string; workspaceId: string }[] = [];
@@ -85,6 +87,7 @@ async function compose(host: Host) {
     async startTask(request) {
       expect(++runtimeCalls).toBeLessThanOrEqual(20); const requestId = request.requestId ?? randomUUID(); expect(typeof requestId === "string" && requestId.length > 0).toBe(true);
       const payload = request.payload as any; await rememberStage(payload.runtime.runtimeWorkingDirectory);
+      if (request.taskType === TaskType.CONTEXT_GENERATION && runtimeStartFault) throw new Error(`${privateStartMarker} ${payload.runtime.runtimeWorkingDirectory}`);
       let data: any;
       if (request.taskType === TaskType.CONTEXT_GENERATION) {
         const value = payload as ContextGenerationTaskRequest; expect(value.kind).toBe("markdown-context-pack"); requestIds.push(requestId); expect(requestIds.length).toBeLessThanOrEqual(3);
@@ -112,7 +115,7 @@ async function compose(host: Host) {
     async listTasks() { return { tasks: [] }; },
   };
   feature = composeDesktopContextManagementFeature({ artifacts, runtime: { runtimeTaskRegistry: registry, taskPowerLifecycle: { startTask: async (id: string) => { powerStarts.push(id); }, completeTask: async (id: string) => { powerEnds.push(id); } } }, now: () => now });
-  const facade = { executeCommand: (command: ContextManagementTransportCommand, requestContext: any) => track((async () => { expect(++calls).toBeLessThanOrEqual(100); commands.push(command); scopes.push({ action: command.action, workspaceId: requestContext.workspaceId }); if (command.action === "generation-save") await gate; return feature.contextManagement.executeCommand(command, requestContext); })()) };
+  const facade = { executeCommand: (command: ContextManagementTransportCommand, requestContext: any) => track((async () => { expect(++calls).toBeLessThanOrEqual(100); commands.push(command); scopes.push({ action: command.action, workspaceId: requestContext.workspaceId }); if (command.action === "generation-save") await gate; if (command.action === "generation-start") generationStartFault?.(); return feature.contextManagement.executeCommand(command, requestContext); })()) };
   if (host === "desktop") {
     const handlers = new Map<string, IpcMainHandleListener>(); const ipcMain: IpcMainHandlePort = { handle: (channel, handler) => { handlers.set(channel, handler as IpcMainHandleListener); } };
     registerContextManagementIpc({ ipcMain, senderTrust: { isTrustedSender: () => true }, contextManagement: facade, getAuthoritativeRequestContext: () => ({ principalId: context.principalId }) });
@@ -135,12 +138,13 @@ const hasButton = (label: string) => [...document.querySelectorAll("button")].so
 async function wait(predicate: () => boolean) { for (let i = 0; i < 400 && !predicate(); i++) await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); }); expect(predicate(), JSON.stringify({ calls, runtimeCalls, actions: commands.map(value => value.action) })).toBe(true); }
 async function mount(scope: string = workspaceId) { await act(async () => root!.render(<NotificationTestHarness><ContextStudio workspaceId={scope} client={client} /></NotificationTestHarness>)); await wait(() => commands.some(value => value.action === "browser-list")); }
 function setValue(node: HTMLInputElement | HTMLTextAreaElement, value: string) { const prototype = node instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(node, value); node.dispatchEvent(new Event("input", { bubbles: true })); }
+const preparationSettled = () => hasButton("Save context pack") || Boolean(container?.querySelector('[role="alert"]')) || (wireResponses.some(value => value?.ok === false) && Boolean(container?.querySelector(".context-studio__message")?.textContent) && hasButton("Prepare context pack") && !button("Prepare context pack").disabled);
 async function prepareManual() {
   await mount(); await act(async () => button("Context Packs").click()); const mode = [...document.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.includes("Manual entry"))!; expect(Boolean(mode)).toBe(true); await act(async () => mode.click());
   const panel = container!.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")!;
   await act(async () => { setValue(panel.querySelector<HTMLInputElement>('input[placeholder="product-support-context"]')!, "Harbor Transit"); setValue(panel.querySelector<HTMLTextAreaElement>("textarea")!, manual); });
   await act(async () => button("Prepare context pack").click());
-  await wait(() => hasButton("Save context pack") || Boolean(container!.querySelector('[role="alert"]')));
+  await wait(preparationSettled);
 }
 async function records(scope = workspaceId) { const reopened = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: directory! }); const result = await reopened.browseArtifactCatalogRecords({ workspaceId: scope }, { ...context, workspaceId: scope }); expect(result.ok).toBe(true); if (!result.ok) throw new Error("Synthetic catalog read failed."); return result.value.records; }
 async function saved() { const rows = (await records()).filter((row: any) => row.mediaType === CONTEXT_MARKDOWN_PACK_MEDIA_TYPE); expect(rows.length).toBe(1); return rows[0]!; }
@@ -154,6 +158,18 @@ async function seedSource() {
   const result = await artifacts.storage.storeArtifact(createStoreArtifactRequest(new Uint8Array(Buffer.from(sourceText)), { descriptor: { key, mediaType: "text/markdown", metadata: { originalFileName: "harbor-transit.md", sourceKind: "upload" } } }), context);
   expect(result.ok).toBe(true); return key;
 }
+async function prepareSourcePack() {
+  const source = await seedSource(); await mount(); await act(async () => button("Context Packs").click());
+  const mode = [...document.querySelectorAll<HTMLButtonElement>("button")].find(value => value.textContent?.includes("From source materials"))!; expect(Boolean(mode)).toBe(true); await act(async () => mode.click());
+  await wait(() => [...container!.querySelectorAll("label")].some(value => value.textContent?.includes("harbor-transit.md")));
+  const choose = [...container!.querySelectorAll("label")].find(value => value.textContent?.includes("harbor-transit.md"))!.querySelector<HTMLInputElement>("input")!;
+  await act(async () => choose.click());
+  const panel = container!.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")!;
+  await act(async () => setValue(panel.querySelector<HTMLInputElement>('input[placeholder="product-support-context"]')!, "Harbor Transit"));
+  await act(async () => button("Prepare context pack").click());
+  await wait(preparationSettled);
+  return source;
+}
 async function replaceOwnedOutput(output: { bytes: Uint8Array; stage: string }, bytes: Uint8Array) {
   const stage = await realpath(output.stage), info = await lstat(stage, { bigint: true }); expect({ dev: info.dev, ino: info.ino }).toEqual(stages.get(stage));
   const file = path.join(stage, "harbor-transit.zip"), stat = await lstat(file); expect(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 && path.dirname(await realpath(file)) === stage).toBe(true); expect(bytes.length).toBeLessThanOrEqual(128 * 1024);
@@ -163,10 +179,10 @@ async function expectObjectAbsent(key: string) {
   const reopened = createFilesystemArtifactObjectStorageAdapter({ rootDirectory: directory! });
   expect(await reopened.retrieveArtifact(createRetrieveArtifactRequest(key), context)).toMatchObject({ ok: false, error: { code: "not-found" } });
 }
-function expectSafeSaveFailure(message: string, privateValues: string[]) {
+function expectSafeFailure(message: string, privateValues: string[], code = "internal") {
   const failures = wireResponses.filter(value => value?.ok === false);
   expect(failures.length).toBeGreaterThan(0);
-  expect(failures[failures.length - 1]).toMatchObject({ ok: false, error: { code: "internal", message } });
+  expect(failures[failures.length - 1]).toMatchObject({ ok: false, error: { code, message } });
   for (const value of privateValues) { expect(JSON.stringify(wireResponses)).not.toContain(value); expect(document.body.textContent).not.toContain(value); }
 }
 function restoreEnvironment() { if (!environment) return; for (const [object, key, descriptor] of [[globalThis, "IS_REACT_ACT_ENVIRONMENT", environment.act], [window, "desktopApi", environment.api]] as const) { if (descriptor) Object.defineProperty(object, key, descriptor); else Reflect.deleteProperty(object, key); } if (environment.token === null) localStorage.removeItem(tokenKey); else localStorage.setItem(tokenKey, environment.token); for (const [key, value] of environment.sessions) if (value === null) sessionStorage.removeItem(key); else sessionStorage.setItem(key, value); }
@@ -179,7 +195,7 @@ afterEach(async () => {
     restoreEnvironment();
     for (const owned of stages.keys()) { let present = false; try { await lstat(owned); present = true; } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } expect(present).toBe(false); }
     if (directory) { const owned = directory, info = await lstat(owned, { bigint: true }); expect({ dev: info.dev, ino: info.ino }).toEqual(identity); expect(info.isDirectory() && !info.isSymbolicLink() && await realpath(owned) === owned && path.dirname(owned) === await realpath(tmpdir())).toBe(true); let entries = 0, bytes = 0; async function inspect(parent: string) { for (const name of await readdir(parent)) { const file = path.join(parent, name), value = await lstat(file); expect(++entries).toBeLessThanOrEqual(256); expect(value.isSymbolicLink()).toBe(false); if (value.isDirectory()) await inspect(file); else { expect(value.isFile() && value.nlink === 1).toBe(true); bytes += value.size; expect(bytes).toBeLessThanOrEqual(1024 * 1024); } } } await inspect(owned); await rm(owned, { recursive: true }); }
-  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; gate = undefined; release = undefined; calls = runtimeCalls = runtimeReads = 0; outputMismatch = false; commands.length = scopes.length = requestIds.length = powerStarts.length = powerEnds.length = wireResponses.length = 0; tasks.clear(); results.clear(); stages.clear(); flights.clear(); }
+  } finally { restoreEnvironment(); environment = undefined; directory = undefined; identity = undefined; gate = undefined; release = undefined; generationStartFault = undefined; runtimeStartFault = false; calls = runtimeCalls = runtimeReads = 0; outputMismatch = false; commands.length = scopes.length = requestIds.length = powerStarts.length = powerEnds.length = wireResponses.length = 0; tasks.clear(); results.clear(); stages.clear(); flights.clear(); }
 });
 for (const host of ["desktop", "browser"] as const) {
   it(`${host}: reviews manual context privately then saves exact bytes and reopens durable records`, async () => {
@@ -273,7 +289,7 @@ for (const host of ["desktop", "browser"] as const) {
     await rm(file);
     try {
       await act(async () => button("Save context pack").click()); await wait(() => hasButton("Save context pack") && !button("Save context pack").disabled);
-      expectSafeSaveFailure("Context artifact could not be saved.", [stage, file, "ENOENT"]); expect((await records()).length).toBe(0); expect(hasButton("Delete")).toBe(false);
+      expectSafeFailure("Context artifact could not be saved.", [stage, file, "ENOENT"]); expect((await records()).length).toBe(0); expect(hasButton("Delete")).toBe(false);
     } finally { await writeFile(file, output.bytes, { flag: "wx" }); }
     const row = await saveAndOpenDetail(); expect(row.checksum?.value).toBe(digest(output.bytes).slice(7));
   }, 15_000);
@@ -282,9 +298,38 @@ for (const host of ["desktop", "browser"] as const) {
     artifacts.storage.storeArtifact = async () => { const message = `${marker} ${stage}`; if (fault === "exception") throw new Error(message); return { ok: false, error: { code: "internal", message } }; };
     try {
       await act(async () => button("Save context pack").click()); await wait(() => hasButton("Save context pack") && !button("Save context pack").disabled);
-      expectSafeSaveFailure(fault === "exception" ? "Context artifact could not be saved." : "Context artifact could not be stored.", [marker, stage]); expect((await records()).length).toBe(0); expect(hasButton("Delete")).toBe(false);
+      expectSafeFailure(fault === "exception" ? "Context artifact could not be saved." : "Context artifact could not be stored.", [marker, stage]); expect((await records()).length).toBe(0); expect(hasButton("Delete")).toBe(false);
     } finally { artifacts.storage.storeArtifact = store; }
     await saveAndOpenDetail(); expect((await records()).length).toBe(1);
+  }, 15_000);
+  it(`${host}: redacts refused runtime start details and retries the same manual input`, async () => {
+    await compose(host); runtimeStartFault = true;
+    try {
+      await prepareManual(); await wait(() => container!.querySelector(".context-studio__message")?.textContent === "Context generation could not start."); expectSafeFailure("Context generation could not be started.", [privateStartMarker, ...stages.keys()]);
+      expect(requestIds.length).toBe(0); expect(powerStarts.length).toBe(0); expect((await records()).length).toBe(0); expect(hasButton("Save context pack")).toBe(false);
+      expect(container!.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(manual);
+    } finally { runtimeStartFault = false; }
+    await act(async () => button("Prepare context pack").click()); await wait(() => hasButton("Save context pack")); expect(requestIds.length).toBe(1);
+    await act(async () => button("Discard context pack").click()); await wait(() => hasButton("Prepare context pack")); expect((await records()).length).toBe(0);
+  }, 15_000);
+  for (const port of ["binding", "storage"] as const) for (const fault of ["exception", "contract"] as const) it(`${host}: redacts ${port} ${fault} staging details and retains source retry`, async () => {
+    await compose(host); const readBinding = artifacts.artifactBindings.readArtifactStorageBindings.bind(artifacts.artifactBindings), retrieve = artifacts.storage.retrieveArtifact.bind(artifacts.storage), marker = "synthetic-private-context-staging-marker";
+    generationStartFault = () => {
+      const refusal = async () => { const message = `${marker} ${directory}`; if (fault === "exception") throw new Error(message); return { ok: false, error: { code: "unavailable", message } }; };
+      if (port === "binding") artifacts.artifactBindings.readArtifactStorageBindings = refusal;
+      else artifacts.storage.retrieveArtifact = refusal;
+    };
+    let source = "";
+    try {
+      source = await prepareSourcePack();
+      await wait(() => container!.querySelector(".context-studio__message")?.textContent === "Context generation could not start.");
+      const message = fault === "exception" ? "Context sources could not be staged." : port === "binding" ? "Context source bindings could not be read. Retry when storage is available." : "Context source bytes could not be read. Check that the selected source is available.";
+      expectSafeFailure(message, [marker, directory!], fault === "contract" ? "unavailable" : "internal");
+      expect(requestIds.length).toBe(0); expect(powerStarts.length).toBe(0); expect(hasButton("Save context pack")).toBe(false); expect((await records()).map(value => value.storageKey)).toEqual([source]);
+    } finally { generationStartFault = undefined; artifacts.artifactBindings.readArtifactStorageBindings = readBinding; artifacts.storage.retrieveArtifact = retrieve; }
+    const retained = await artifacts.storage.retrieveArtifact(createRetrieveArtifactRequest(source), context); expect(retained.ok).toBe(true); if (retained.ok) expect(Buffer.from(retained.value.content).equals(Buffer.from(sourceText))).toBe(true);
+    await act(async () => button("Prepare context pack").click()); await wait(() => hasButton("Save context pack")); expect(requestIds.length).toBe(1);
+    const row = await saveAndOpenDetail(); expect(row.checksum?.value).toBe(digest(results.get(requestIds[0]!)!.bytes).slice(7));
   }, 15_000);
   it(`${host}: refuses an occupied catalog identity before storing or removing any bytes`, async () => {
     await compose(host); await prepareManual(); let writes = 0, deletes = 0;

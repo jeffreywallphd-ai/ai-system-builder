@@ -518,7 +518,7 @@ export class ContextGenerationUseCase {
         },
         context,
       );
-    } catch (error) {
+    } catch {
       lease?.release();
       await rm(staged.value.runtimeDirectory, {
         recursive: true,
@@ -527,9 +527,7 @@ export class ContextGenerationUseCase {
       return createFailureResult(
         createContractError(
           "internal",
-          error instanceof Error
-            ? error.message
-            : "Context generation could not be started.",
+          "Context generation could not be started.",
         ),
         context,
       );
@@ -1033,7 +1031,7 @@ export class ContextGenerationUseCase {
           context,
         );
         if (!bindingResult.ok && bindingResult.error.code !== "not-found") {
-          return fail(bindingResult.error.code, bindingResult.error.message);
+          return fail(bindingResult.error.code, "Context source bindings could not be read. Retry when storage is available.");
         }
         const storageKey = preferredLocalStorageKey(
           source.artifactId,
@@ -1046,7 +1044,7 @@ export class ContextGenerationUseCase {
           context,
         );
         if (!retrieved.ok) {
-          return fail(retrieved.error.code, retrieved.error.message);
+          return fail(retrieved.error.code, "Context source bytes could not be read. Check that the selected source is available.");
         }
         if (!(retrieved.value.content instanceof Uint8Array)) {
           return fail("internal", "Context source bytes are unavailable.");
@@ -1113,12 +1111,10 @@ export class ContextGenerationUseCase {
         });
       }
       return createSuccessResult({ runtimeDirectory, sources }, context);
-    } catch (error) {
+    } catch {
       return fail(
         "internal",
-        error instanceof Error
-          ? error.message
-          : "Context sources could not be staged.",
+        "Context sources could not be staged.",
       );
     }
   }

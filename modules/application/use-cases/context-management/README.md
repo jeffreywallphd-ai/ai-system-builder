@@ -72,3 +72,16 @@ and port exceptions use a generic failure. Refused storage, catalog and binding
 results use fixed step messages without port text or details. Existing public
 catalog/binding messages remain compatible. Cleanup still runs before failure;
 a retry retains the same private review until its save succeeds.
+
+## Preparation error boundary
+
+Generation-start exceptions and source-staging exceptions use fixed public
+messages. Refused binding and source-byte results retain their contract error
+codes but use application-owned corrective text. Port messages, paths and
+details are not reflected through these branches. Input validation, workspace
+checks, staging limits, cancellation and existing cleanup ownership are unchanged.
+
+Both-client composed regressions inject finite failures before worker acceptance,
+check the registered response and UI, preserve input/source bytes and retry.
+These cases do not prove real worker exit, native cleanup or terminal-runtime
+error sanitization. Those qualifications remain separate.

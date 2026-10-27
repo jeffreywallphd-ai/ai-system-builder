@@ -312,3 +312,17 @@ failures. Both registered HTTP and IPC envelopes are checked directly, including
 an actual missing staged file. Failed-save cleanup checks reopen the exact old
 object key to prove absence, and the positive case verifies the exact durable
 primary binding, not only catalog counts or a successful response.
+
+## Preparation start and staging diagnostics
+
+The application owns public failure copy for generation-start exceptions and
+source-staging exceptions/refused binding or byte reads. Preserve the refused
+contract code while replacing its message with fixed corrective text. Unknown
+exceptions use a fixed step fallback. Raw adapter/runtime text and details do
+not cross these error branches into registered HTTP or IPC envelopes.
+
+Composed both-client tests capture the actual envelopes, preserve manual input
+or exact source bytes, refuse generation when staging fails and permit correction
+and retry. The finite registry refuses before worker acceptance; this correction
+does not change or qualify existing worker ownership, cancellation, native cleanup,
+process restart, terminal-runtime diagnostics or final combined testing.

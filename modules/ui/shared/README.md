@@ -325,3 +325,12 @@ combined testing. See the comprehensive UI coverage ledger for exact cases.
 Registered HTTP and IPC failure envelopes are checked before client rendering.
 A missing owned staged file, thrown storage error or refused storage result must
 not disclose paths or private error text. Reviewed output remains retryable.
+
+### Context preparation failure checks
+
+The composed Context tests also check generation-start and source-staging
+failures through both registered app connections. A refused dependency must
+show fixed public text, keep source bytes or manual input available, and permit
+a corrected preparation. Exact public envelopes are checked before rendering.
+The faults occur before worker acceptance. They do not qualify running-worker
+shutdown, terminal runtime errors, installed hosts or final combined testing.
