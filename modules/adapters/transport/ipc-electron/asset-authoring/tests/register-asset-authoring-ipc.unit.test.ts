@@ -1,5 +1,5 @@
 import { describe, expect, it, testDouble } from "../../../../../testing/node-test";
-import { DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_CREATE_OVERRIDE_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_PUBLISH_DRAFT_REQUEST_CHANNEL, DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS } from "../../../../../contracts/ipc";
+import { DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_CREATE_OVERRIDE_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL, DESKTOP_ASSET_AUTHORING_PUBLISH_DRAFT_REQUEST_CHANNEL, DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS } from "../../../../../contracts/ipc";
 import { registerAssetAuthoringIpc } from "../registerAssetAuthoringIpc";
 const mk=()=>{const handlers=new Map<string,any>(); return {handlers, ipcMain:{handle:testDouble.fn((c:string,h:any)=>handlers.set(c,h))}};};
 describe("registerAssetAuthoringIpc",()=>{
@@ -14,4 +14,32 @@ it("returns explicit unavailable for the deferred list instead of calling a sing
  registerAssetAuthoringIpc({ipcMain:ipcMain as any,effectiveSummaryReader:{readEffectiveSourceSummary} as any});
  const result=await handlers.get(DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL.value)(undefined,{payload:{targetWorkspaceId:"workspace.a"}});
  expect(result.ok).toBe(false); expect(result.error.code).toBe("unavailable"); expect(readEffectiveSourceSummary).not.toHaveBeenCalled();
+});
+it("maps the exact public legacy list target and preserves filters without a renderer workspace override", async () => {
+  const {handlers, ipcMain} = mk();
+  const list = testDouble.fn(async (_query: unknown) => ({records: [{draftId: "draft.synthetic"}], nextCursor: "next"}));
+  registerAssetAuthoringIpc({ipcMain, ...{senderTrust: {isTrustedSender: () => true}}, assetDraftRepository: {listAssetDraftRecords: list} as any});
+  const result = await handlers.get(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL.value)({}, {payload: {targetWorkspaceId: "workspace.owned", workspaceId: "workspace.other", status: "draft", authoredAssetId: "asset.synthetic", limit: 10, cursor: "cursor"}});
+  expect(list.mock.calls[0][0]).toEqual({workspaceId: "workspace.owned", status: "draft", authoredAssetId: "asset.synthetic", limit: 10, cursor: "cursor"});
+  expect(result.ok).toBe(true); expect(result.value).toEqual({drafts: [{draftId: "draft.synthetic"}], nextCursor: "next"});
+});
+it("settles rejected legacy Saved reads with a safe failure and refuses absent targets before reading", async () => {
+  const {handlers, ipcMain} = mk(); const list = testDouble.fn(async () => {throw new Error("private adapter payload path");});
+  registerAssetAuthoringIpc({ipcMain, ...{senderTrust: {isTrustedSender: () => true}}, assetDraftRepository: {listAssetDraftRecords: list} as any});
+  const read = handlers.get(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL.value);
+  const absent = await read({}, {payload: {workspaceId: "workspace.other"}});
+  expect(absent.ok).toBe(false); expect(list).not.toHaveBeenCalled();
+  const denied = await read({}, {payload: {targetWorkspaceId: "workspace.owned"}});
+  expect(denied.ok).toBe(false); expect(denied.error.code).toBe("unavailable"); expect(JSON.stringify(denied)).not.toContain("private adapter payload path");
+});
+
+it("captures the public legacy target once before mapping the repository query", async () => {
+  const {handlers, ipcMain} = mk();
+  const list = testDouble.fn(async (_query: unknown) => ({records: []}));
+  registerAssetAuthoringIpc({ipcMain, ...{senderTrust: {isTrustedSender: () => true}}, assetDraftRepository: {listAssetDraftRecords: list} as any});
+  let reads = 0;
+  const payload = {get targetWorkspaceId() { reads++; return reads === 1 ? "workspace.owned" : "workspace.other"; }};
+  const result = await handlers.get(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL.value)({}, {payload});
+  expect(result.ok).toBe(true); expect(reads).toBe(1);
+  expect(list.mock.calls[0][0]).toEqual({workspaceId: "workspace.owned"});
 });

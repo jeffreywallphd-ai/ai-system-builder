@@ -22,7 +22,28 @@ export function registerAssetAuthoringIpc(d:RegisterAssetAuthoringIpcDependencie
   cmd(DESKTOP_ASSET_AUTHORING_UPDATE_OVERRIDE_REQUEST_CHANNEL.value,DESKTOP_ASSET_AUTHORING_UPDATE_OVERRIDE_RESPONSE_CHANNEL,"asset-authoring.update-override",d.updateAssetOverrideUseCase,"targetWorkspaceId");
   cmd(DESKTOP_ASSET_AUTHORING_DISABLE_OVERRIDE_REQUEST_CHANNEL.value,DESKTOP_ASSET_AUTHORING_DISABLE_OVERRIDE_RESPONSE_CHANNEL,"asset-authoring.disable-override",d.disableAssetOverrideUseCase,"targetWorkspaceId");
   d.ipcMain.handle(DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_REQUEST_CHANNEL.value,async(_e,r:any)=>!d.authoredAssetRepository?fail(DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_RESPONSE_CHANNEL,"asset-authoring.list-authored-assets","unavailable","Read unavailable.",c(r)):!txt(r?.payload?.workspaceId)?fail(DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_RESPONSE_CHANNEL,"asset-authoring.list-authored-assets","validation","workspaceId is required.",c(r)):createDesktopAssetAuthoringOperationSuccessResponse(DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_RESPONSE_CHANNEL,s(await d.authoredAssetRepository.listAuthoredAssetRecords(r.payload).then(({records,nextCursor})=>({assets:records,nextCursor}))),c(r)));
-  d.ipcMain.handle(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL.value,async(_e,r:any)=>!d.assetDraftRepository?fail(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_RESPONSE_CHANNEL,"asset-authoring.list-drafts","unavailable","Read unavailable.",c(r)):!txt(r?.payload?.targetWorkspaceId)?fail(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_RESPONSE_CHANNEL,"asset-authoring.list-drafts","validation","targetWorkspaceId is required.",c(r)):createDesktopAssetAuthoringOperationSuccessResponse(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_RESPONSE_CHANNEL,s(await d.assetDraftRepository.listAssetDraftRecords(r.payload).then(({records,nextCursor})=>({drafts:records,nextCursor}))),c(r)));
+  d.ipcMain.handle(DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_REQUEST_CHANNEL.value, async (_event, request: any) => {
+    const response = DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_RESPONSE_CHANNEL;
+    const operation = "asset-authoring.list-drafts";
+    if (!d.assetDraftRepository) return fail(response, operation, "unavailable", "Read unavailable.", c(request));
+    const payload = request?.payload;
+    const targetWorkspaceId = payload?.targetWorkspaceId;
+    if (!txt(targetWorkspaceId)) return fail(response, operation, "validation", "targetWorkspaceId is required.", c(request));
+    try {
+      // The public legacy request names the target; the repository uses workspaceId.
+      // Never let an extra renderer-supplied workspaceId redirect that target.
+      const {records, nextCursor} = await d.assetDraftRepository.listAssetDraftRecords({
+        workspaceId: createWorkspaceId(targetWorkspaceId),
+        ...(payload.status === undefined ? {} : {status: payload.status}),
+        ...(payload.authoredAssetId === undefined ? {} : {authoredAssetId: payload.authoredAssetId}),
+        ...(payload.limit === undefined ? {} : {limit: payload.limit}),
+        ...(payload.cursor === undefined ? {} : {cursor: payload.cursor}),
+      });
+      return createDesktopAssetAuthoringOperationSuccessResponse(response, s({drafts: records, nextCursor}), c(request));
+    } catch {
+      return fail(response, operation, "unavailable", "Saved asset reads are unavailable or forbidden.", c(request));
+    }
+  });
   d.ipcMain.handle(DESKTOP_ASSET_AUTHORING_LIST_REVISIONS_REQUEST_CHANNEL.value,async(_e,r:any)=>!d.assetRevisionRepository?fail(DESKTOP_ASSET_AUTHORING_LIST_REVISIONS_RESPONSE_CHANNEL,"asset-authoring.list-revisions","unavailable","Read unavailable.",c(r)):!txt(r?.payload?.workspaceId)?fail(DESKTOP_ASSET_AUTHORING_LIST_REVISIONS_RESPONSE_CHANNEL,"asset-authoring.list-revisions","validation","workspaceId is required.",c(r)):createDesktopAssetAuthoringOperationSuccessResponse(DESKTOP_ASSET_AUTHORING_LIST_REVISIONS_RESPONSE_CHANNEL,s(await d.assetRevisionRepository.listAssetRevisionRecords(r.payload).then(({records,nextCursor})=>({revisions:records,nextCursor}))),c(r)));
   d.ipcMain.handle(DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_REQUEST_CHANNEL.value,async(_e,r:any)=>!d.assetOverrideRepository?fail(DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_RESPONSE_CHANNEL,"asset-authoring.list-overrides","unavailable","Read unavailable.",c(r)):!txt(r?.payload?.targetWorkspaceId)?fail(DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_RESPONSE_CHANNEL,"asset-authoring.list-overrides","validation","targetWorkspaceId is required.",c(r)):createDesktopAssetAuthoringOperationSuccessResponse(DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_RESPONSE_CHANNEL,s(await d.assetOverrideRepository.listAssetOverrideRecords(r.payload).then(({records,nextCursor})=>({overrides:records,nextCursor}))),c(r)));
   // The API exposes the same deferred operation. Never turn a list request

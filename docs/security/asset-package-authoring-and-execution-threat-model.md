@@ -357,3 +357,22 @@ Local synthetic UI tests cover held writes, stale/uncommitted owners, malformed
 and foreign acknowledgements, exact command/revision identity, denied dispatch
 and corrective retry. Actual application, provider, storage, native, source
 execution and final combined qualification remain separate.
+
+### Desktop legacy Saved query mapping
+
+The legacy list contract names its workspace `targetWorkspaceId`; the repository
+query names it `workspaceId`. Capture the public target once, normalize it with
+the existing workspace contract, and map only supported filters. Do not spread
+the renderer payload into the query or accept its extra `workspaceId` as an
+alternate target. A missing target prevents repository access. A failed read
+produces fixed unavailable text, without adapter exception details, and permits
+an explicit notification-guided Search retry. Returned request context is kept.
+
+The connected Saved tests use the real renderer/client/preload/registered handler
+and finite repository/sender fixtures. They check exact records, workspace
+replacement, original record preservation, filter/context mapping, invalid input,
+unavailable reads and safe retry. A single-capture counterexample exercises the
+in-process handler seam; it does not represent an Electron wire getter. Routing
+context and fixture sender admission are not resource authorization. Actual host
+identity, application authorization, persistence, native and final qualification
+remain separate. This repair neither weakens nor qualifies the other guards.

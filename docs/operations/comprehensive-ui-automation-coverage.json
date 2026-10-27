@@ -2826,7 +2826,9 @@
       ],
       "source_refs": [
         "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
-        "modules/ui/shared/asset-studio/README.md"
+        "modules/ui/shared/asset-studio/README.md",
+        "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
+        "apps/desktop/src/renderer/features/asset-authoring/api/desktopAssetAuthoringClient.ts"
       ],
       "existing_test_candidates": [
         "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
@@ -2915,12 +2917,25 @@
           "name": "Saved clears the former workspace and ignores its late explicit-search result",
           "tier": "node-dom-shared-saved-view-with-fixed-studio-and-legacy-clients",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "apps/desktop/src/renderer/features/asset-authoring/tests/desktop-asset-authoring-client.unit.test.ts",
+          "name": "desktop Saved read through client, preload and registered IPC",
+          "tier": "actual-shared-renderer-desktop-client-preload-handler-with-finite-repository-and-sender",
+          "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
+          "name": "legacy Saved target mapping, failure and single capture",
+          "tier": "registered-handler-with-finite-repository-and-sender",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [],
       "studio_session_scope": "Meaningful semantic/resource create/save/reopen/update/review/publish and explicit abandon/denial/retry, duplicate admission, exact acknowledgement identity/state/revision, newer edits and delayed workspace/client/draft/unmount replies are tested with fixed clients. This does not prove actual transport/storage, apps, source execution, provider/native or parent completion. Other Assets work remains pending. Saved editor admission and retired-before-dispatch cases are covered; no input into unread placeholders.",
-      "saved_session_scope": "Saved read/legacy-open ownership, duplicate admission, partial-source failure, safe retry, canonical converted provenance/identity and workspace/client/unmount retirement are tested with fixed clients. Existing idempotent record reuse is retained. This is partial local interface support; actual transport/storage, app/native and final combined qualification remain separate. No parent work package is completed."
+      "saved_session_scope": "Saved read/legacy-open ownership, duplicate admission, partial-source failure, safe retry, canonical converted provenance/identity and workspace/client/unmount retirement are tested with fixed clients. Existing idempotent record reuse is retained. This is partial local interface support; actual transport/storage, app/native and final combined qualification remain separate. No parent work package is completed.",
+      "saved_desktop_read_scope": "Saved cards and safe notification/Search recovery are joined through the actual desktop client, preload and registered IPC handler. Tests retain exact legacy records and cross-workspace card replacement with a finite repository and trusted sender seam. The public target is captured once and mapped to repository workspaceId; extra workspace substitution, invalid targets and unavailable reads are tested. This remains partial component support, not actual Electron sender/resource authorization, persistence, app restart, native or parent qualification."
     },
     {
       "id": "asset-derived-customization",
