@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, startTransition, StrictMode, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SystemPublicationBuildSummary } from "../../../../contracts/system-build";
@@ -15,6 +15,24 @@ import {
   readNotificationMessages,
 } from "../../notifications/tests/NotificationTestHarness";
 
+const passivePhase = vi.hoisted(() => ({paused: false, setups: [] as Array<() => void>, cleanups: [] as Array<() => void>}));
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return {...actual, useEffect(effect: () => void | (() => void), dependencies?: readonly unknown[]) {
+    actual.useEffect(() => {
+      let cleanup: void | (() => void), cancelled = false;
+      const setup = () => {if (!cancelled) cleanup = effect();};
+      if (passivePhase.paused) passivePhase.setups.push(setup); else setup();
+      return () => {
+        cancelled = true;
+        if (typeof cleanup === "function") {
+          if (passivePhase.paused) passivePhase.cleanups.push(cleanup); else cleanup();
+        }
+      };
+    }, dependencies);
+  }};
+});
+
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
@@ -22,8 +40,13 @@ import {
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 
-afterEach(() => {
-  act(() => root?.unmount());
+afterEach(async () => {
+  await act(async () => {
+    passivePhase.paused = false;
+    while (passivePhase.cleanups.length) passivePhase.cleanups.shift()!();
+    while (passivePhase.setups.length) passivePhase.setups.shift()!();
+    root?.unmount();
+  });
   container?.remove();
   document.body.innerHTML = "";
   root = undefined;
@@ -280,6 +303,156 @@ describe("published build lifecycle controls", () => {
     expect(button("Install")).toBeDefined();
   });
 });
+
+describe("published lifecycle target and polling recovery",()=>{
+  it("keeps replacement controls enabled while an old Start is still pending",async()=>{
+    const first=lifecycleClient(),next=lifecycleClient({...projection("not-installed","next-r1",["install"]),releaseId:"release-3"} as SystemPublishedLifecycleProjection),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();vi.mocked(first.invoke).mockReturnValue(held.promise);
+    await mount(lifecycleView(first));await act(async()=>button("Start").click());
+    try{
+      await replaceLifecycle(lifecycleView(next,"workspace-b",{...build,buildId:"build-3",releaseId:"release-3",versionNumber:3} as SystemPublicationBuildSummary));
+      await vi.waitFor(()=>expect(button("Install").disabled).toBe(false));
+      await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));
+      expect(button("Install").disabled).toBe(false);expect(readNotificationMessages(document.body)).toEqual([]);expect(next.invoke).not.toHaveBeenCalled();
+    }finally{await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));}
+  });
+
+  it("does not show controls from another release status reply",async()=>{
+    const client=lifecycleClient({...projection("not-installed","foreign-r1",["install"]),releaseId:"other-release"} as SystemPublishedLifecycleProjection);
+    await mount(lifecycleView(client));expect(findButton("Install")).toBeUndefined();expect(findButton("Start")).toBeUndefined();expect(client.invoke).not.toHaveBeenCalled();
+    expect(button("Retry status").disabled).toBe(false);
+  });
+
+  it("does not report Start success from another release action reply",async()=>{
+    const client=lifecycleClient();vi.mocked(client.invoke).mockResolvedValueOnce(deploymentSuccess({...projection("running","foreign-r2",["stop"],"visual"),releaseId:"other-release"} as SystemPublishedLifecycleProjection));
+    await mount(lifecycleView(client));await act(async()=>button("Start").click());
+    expect(findButton("Stop")).toBeUndefined();expect(readNotificationMessages(document.body)).not.toContain("The visual system started on its host.");expect(button("Retry status").disabled).toBe(false);
+  });
+
+  it("does not let an old background read roll back an accepted Stop",async()=>{
+    vi.useFakeTimers();const held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>(),running=projection("running","r1",["stop"],"visual"),stopped=projection("active-stopped","r2",["start"],"visual");const client=lifecycleClient(running);
+    vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(running)).mockReturnValue(held.promise);vi.mocked(client.invoke).mockResolvedValueOnce(deploymentSuccess(stopped));
+    try{
+      await mount(lifecycleView(client));await act(async()=>{await vi.advanceTimersByTimeAsync(1_000);});expect(client.read).toHaveBeenCalledTimes(2);
+      await act(async()=>button("Stop").click());expect(button("Start").disabled).toBe(false);
+      await act(async()=>held.resolve(deploymentSuccess(running)));expect(button("Start").disabled).toBe(false);expect(findButton("Stop")).toBeUndefined();
+    }finally{await act(async()=>{held.resolve(deploymentSuccess(stopped));root?.unmount();root=undefined;});vi.useRealTimers();}
+  });
+
+  it("does not accumulate slow background status reads",async()=>{
+    vi.useFakeTimers();const running=projection("running","r1",["stop"],"visual"),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>(),client=lifecycleClient(running);vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(running)).mockReturnValue(held.promise);
+    try{await mount(lifecycleView(client));await act(async()=>{await vi.advanceTimersByTimeAsync(3_000);});expect(client.read).toHaveBeenCalledTimes(2);}
+    finally{await act(async()=>{held.resolve(deploymentSuccess(projection("active-stopped","r2",["start"],"visual")));root?.unmount();root=undefined;});vi.useRealTimers();}
+  });
+
+  it("retires old status at layout commit before passive cleanup",async()=>{
+    const first=lifecycleClient(),next=lifecycleClient(projection("not-installed","next-r1",["install"])),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();vi.mocked(first.read).mockReturnValue(held.promise);
+    await mount(lifecycleView(first));
+    try{passivePhase.paused=true;await replaceLifecycle(lifecycleView(next,"workspace-b"));expect(passivePhase.setups.length).toBeGreaterThan(0);
+      await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));expect(findButton("Stop")).toBeUndefined();expect(next.read).not.toHaveBeenCalled();expect(readNotificationMessages(document.body)).toEqual([]);
+    }finally{held.resolve(deploymentSuccess(projection("active-stopped","r1",["start"],"visual")));await held.promise;}
+  });
+});
+
+describe("published lifecycle admission and failure paths",()=>{
+  for(const synchronous of [false,true]) it(`recovers a ${synchronous?"synchronous":"rejected"} status failure through one retry`,async()=>{
+    const client=lifecycleClient(),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();
+    if(synchronous)vi.mocked(client.read).mockImplementationOnce(()=>{throw new Error("private status trace");});else vi.mocked(client.read).mockRejectedValueOnce(new Error("private status trace"));
+    await mount(lifecycleView(client));expect(document.body.textContent).toContain("Unable to read the published build status.");expect(document.body.textContent).not.toContain("private status trace");expect(findButton("Start")).toBeUndefined();
+    vi.mocked(client.read).mockReturnValueOnce(held.promise);
+    try{const retry=button("Retry status");await act(async()=>{retry.click();retry.click();});expect(client.read).toHaveBeenCalledTimes(2);
+      await act(async()=>held.resolve(deploymentSuccess(projection("active-stopped","r2",["start"],"visual"))));expect(button("Start").disabled).toBe(false);
+      expect(client.read).toHaveBeenLastCalledWith({workspaceId:"workspace-a",releaseId:"release-2"});
+    }finally{held.resolve(deploymentSuccess(projection("not-installed","r2",["install"])));await held.promise;}
+  });
+
+  for(const synchronous of [false,true]) it(`recovers a ${synchronous?"synchronous":"rejected"} action failure with its exact revision`,async()=>{
+    const client=lifecycleClient();if(synchronous)vi.mocked(client.invoke).mockImplementationOnce(()=>{throw new Error("private action trace");});else vi.mocked(client.invoke).mockRejectedValueOnce(new Error("private action trace"));
+    await mount(lifecycleView(client));await act(async()=>button("Start").click());expect(document.body.textContent).toContain("Unable to update the published build status.");expect(document.body.textContent).not.toContain("private action trace");expect(button("Start").disabled).toBe(false);
+    await act(async()=>button("Start").click());expect(client.invoke).toHaveBeenCalledTimes(2);for(const [input] of vi.mocked(client.invoke).mock.calls)expect(input).toEqual({workspaceId:"workspace-a",releaseId:"release-2",action:"start",expectedRevision:"r1"});expect(button("Stop").disabled).toBe(false);
+  });
+
+  it("admits one same-turn Start command",async()=>{
+    const client=lifecycleClient(),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();vi.mocked(client.invoke).mockReturnValue(held.promise);await mount(lifecycleView(client));
+    try{const start=button("Start");await act(async()=>{start.click();start.click();});expect(client.invoke).toHaveBeenCalledTimes(1);expect(button("Start...").disabled).toBe(true);
+      await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));expect(button("Stop").disabled).toBe(false);
+    }finally{await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));}
+  });
+
+  it("keeps a new target action locked after an old target action settles",async()=>{
+    const old=lifecycleClient(),next=lifecycleClient(projection("not-installed","next-r1",["install"])),oldAction=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>(),newAction=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();vi.mocked(old.invoke).mockReturnValue(oldAction.promise);vi.mocked(next.invoke).mockReturnValue(newAction.promise);
+    await mount(lifecycleView(old));await act(async()=>button("Start").click());
+    try{await replaceLifecycle(lifecycleView(next,"workspace-b"));await act(async()=>button("Install").click());await act(async()=>oldAction.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));
+      expect(button("Install...").disabled).toBe(true);expect(next.invoke).toHaveBeenCalledTimes(1);expect(readNotificationMessages(document.body)).toEqual([]);
+      await act(async()=>newAction.resolve(deploymentSuccess(projection("active-stopped","next-r2",["start"],"visual"))));expect(button("Start").disabled).toBe(false);expect(next.invoke).toHaveBeenCalledWith({workspaceId:"workspace-b",releaseId:"release-2",action:"install",expectedRevision:"next-r1"});
+    }finally{await act(async()=>{oldAction.resolve(deploymentSuccess(projection("active-stopped","r2",["start"],"visual")));newAction.resolve(deploymentSuccess(projection("active-stopped","next-r2",["start"],"visual")));});}
+  });
+
+  it("does not clear a replacement status read when an old status settles",async()=>{
+    const old=lifecycleClient(),next=lifecycleClient(),oldRead=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>(),newRead=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();vi.mocked(old.read).mockReturnValue(oldRead.promise);vi.mocked(next.read).mockReturnValue(newRead.promise);await mount(lifecycleView(old));
+    try{await replaceLifecycle(lifecycleView(next,"workspace-b"));await act(async()=>oldRead.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));expect(document.body.textContent).toContain("Loading controls...");expect(findButton("Stop")).toBeUndefined();expect(findButton("Start")).toBeUndefined();
+      await act(async()=>newRead.resolve(deploymentSuccess(projection("not-installed","next-r1",["install"]))));expect(button("Install").disabled).toBe(false);expect(next.read).toHaveBeenCalledTimes(1);
+    }finally{await act(async()=>{oldRead.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual")));newRead.resolve(deploymentSuccess(projection("not-installed","next-r1",["install"])));});}
+  });
+
+  it("queues one authoritative read after a denied action and held poll settle",async()=>{
+    vi.useFakeTimers();const running=projection("running","r1",["stop"],"visual"),client=lifecycleClient(running),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(running)).mockReturnValueOnce(held.promise).mockResolvedValue(deploymentSuccess(projection("active-stopped","r3",[],"visual")));vi.mocked(client.invoke).mockResolvedValue({ok:false,error:{code:"forbidden",message:"This release is no longer active."}});
+    try{await mount(lifecycleView(client));await act(async()=>{await vi.advanceTimersByTimeAsync(1_000);});await act(async()=>button("Stop").click());
+      expect(client.read).toHaveBeenCalledTimes(2);expect(document.body.textContent).toContain("This release is no longer active.");expect(button("Retry status").disabled).toBe(true);expect(readNotificationMessages(document.body)).toEqual([]);
+      await act(async()=>held.resolve(deploymentSuccess(running)));expect(client.read).toHaveBeenCalledTimes(3);expect(button("Retry status").disabled).toBe(false);expect(document.body.textContent).toContain("This release is no longer active.");expect(findButton("Stop")).toBeUndefined();expect(findButton("Start")).toBeUndefined();expect(client.invoke).toHaveBeenCalledTimes(1);
+    }finally{await act(async()=>{held.resolve(deploymentSuccess(running));root?.unmount();root=undefined;});vi.useRealTimers();}
+  });
+
+  it("does not let completion of a retired poll unlock a pending Stop",async()=>{
+    vi.useFakeTimers();const running=projection("running","r1",["stop"],"visual"),client=lifecycleClient(running),read=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>(),action=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(running)).mockReturnValue(read.promise);vi.mocked(client.invoke).mockReturnValue(action.promise);
+    try{await mount(lifecycleView(client));await act(async()=>{await vi.advanceTimersByTimeAsync(1_000);});await act(async()=>button("Stop").click());await act(async()=>read.resolve(deploymentSuccess(running)));
+      expect(button("Stop...").disabled).toBe(true);expect(client.invoke).toHaveBeenCalledTimes(1);await act(async()=>action.resolve(deploymentSuccess(projection("active-stopped","r2",["start"],"visual"))));expect(button("Start").disabled).toBe(false);
+    }finally{await act(async()=>{read.resolve(deploymentSuccess(running));action.resolve(deploymentSuccess(projection("active-stopped","r2",["start"],"visual")));root?.unmount();root=undefined;});vi.useRealTimers();}
+  });
+
+  it("replays StrictMode without dispatching the retired initial read",async()=>{
+    const client=lifecycleClient();await mount(<StrictMode>{lifecycleView(client)}</StrictMode>);expect(client.read).toHaveBeenCalledTimes(1);await act(async()=>button("Start").click());expect(client.invoke).toHaveBeenCalledTimes(1);expect(button("Stop").disabled).toBe(false);
+  });
+
+  it("skips initial status dispatch when retired before the first promise turn",async()=>{
+    const {flushSync}=await import("react-dom"),client=lifecycleClient();container=document.createElement("div");document.body.append(container);root=createRoot(container);
+    await act(async()=>{flushSync(()=>root!.render(lifecycleView(client)));root!.unmount();root=undefined;});expect(client.read).not.toHaveBeenCalled();expect(client.invoke).not.toHaveBeenCalled();
+  });
+
+  it("preserves a pending Start when a client replacement render is abandoned",async()=>{
+    const client=lifecycleClient(),next=lifecycleClient(),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>(),gate=deferred<void>(),attempted=vi.fn();vi.mocked(client.invoke).mockReturnValue(held.promise);
+    const tree=(selected:SystemPublishedLifecycleClient,pause:boolean)=><NotificationTestHarness><Suspense fallback={<p>Replacing controls</p>}><SystemPublishedLifecycleCard workspaceId="workspace-a" build={build} client={selected}/><SuspendLifecycleReplacement pause={pause} gate={gate.promise} attempted={attempted}/></Suspense></NotificationTestHarness>;
+    await mount(tree(client,false));await act(async()=>button("Start").click());
+    try{await act(async()=>{startTransition(()=>root!.render(tree(next,true)));});expect(attempted).toHaveBeenCalled();await replaceLifecycle(tree(client,false));expect(next.read).not.toHaveBeenCalled();expect(button("Start...").disabled).toBe(true);
+      await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));expect(button("Stop").disabled).toBe(false);expect(client.invoke).toHaveBeenCalledTimes(1);expect(readNotificationMessages(document.body)).toContain("The visual system started on its host.");
+    }finally{await act(async()=>{held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual")));gate.resolve();});}
+  });
+
+  it("retires an old Start before passive cleanup can publish a notice",async()=>{
+    const client=lifecycleClient(),next=lifecycleClient(projection("not-installed","next-r1",["install"])),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>>();vi.mocked(client.invoke).mockReturnValue(held.promise);await mount(lifecycleView(client));await act(async()=>button("Start").click());
+    try{passivePhase.paused=true;await replaceLifecycle(lifecycleView(next,"workspace-b"));expect(passivePhase.setups.length).toBeGreaterThan(0);await act(async()=>held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual"))));expect(readNotificationMessages(document.body)).toEqual([]);expect(findButton("Stop")).toBeUndefined();expect(next.read).not.toHaveBeenCalled();}
+    finally{held.resolve(deploymentSuccess(projection("running","r2",["stop"],"visual")));await held.promise;}
+  });
+});
+
+describe("retired lifecycle reconciliation",()=>{
+  it("does not dispatch a denied action refresh after its owner retires",async()=>{
+    vi.useFakeTimers();const running=projection("running","r1",["stop"],"visual"),client=lifecycleClient(running),next=lifecycleClient(projection("not-installed","next-r1",["install"])),held=deferred<Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>>();vi.mocked(client.read).mockResolvedValueOnce(deploymentSuccess(running)).mockReturnValue(held.promise);vi.mocked(client.invoke).mockResolvedValue({ok:false,error:{code:"forbidden",message:"Old release denied."}});
+    try{await mount(lifecycleView(client));await act(async()=>{await vi.advanceTimersByTimeAsync(1_000);});await act(async()=>button("Stop").click());expect(client.read).toHaveBeenCalledTimes(2);
+      await replaceLifecycle(lifecycleView(next,"workspace-b"));await act(async()=>held.resolve(deploymentSuccess(running)));expect(client.read).toHaveBeenCalledTimes(2);expect(next.read).toHaveBeenCalledTimes(1);expect(button("Install").disabled).toBe(false);expect(document.body.textContent).not.toContain("Old release denied.");expect(readNotificationMessages(document.body)).toEqual([]);
+    }finally{await act(async()=>{held.resolve(deploymentSuccess(running));root?.unmount();root=undefined;});vi.useRealTimers();}
+  });
+  it("never reads or acts without an exact published release reference",async()=>{
+    const client=lifecycleClient();await mount(lifecycleView(client,"workspace-a",{...build,releaseId:undefined}));expect(client.read).not.toHaveBeenCalled();expect(client.invoke).not.toHaveBeenCalled();expect(document.body.textContent).toContain("does not have a release reference");expect(findButton("Install")).toBeUndefined();expect(findButton("Start")).toBeUndefined();
+  });
+});
+
+function SuspendLifecycleReplacement({pause,gate,attempted}:{pause:boolean;gate:Promise<void>;attempted:()=>void}){if(pause){attempted();throw gate;}return null;}
+
+function lifecycleClient(initial=projection("active-stopped","r1",["start"],"visual")):SystemPublishedLifecycleClient {
+  return {read:vi.fn(async()=>deploymentSuccess(initial)),invoke:vi.fn(async()=>deploymentSuccess(projection("running","r2",["stop"],"visual")))};
+}
+function lifecycleView(client:SystemPublishedLifecycleClient,workspaceId="workspace-a",record=build){return <NotificationTestHarness><SystemPublishedLifecycleCard workspaceId={workspaceId} build={record} client={client}/></NotificationTestHarness>;}
+async function replaceLifecycle(element:React.ReactElement){await act(async()=>root!.render(element));}
 
 const build = {
   buildId: "build-2",

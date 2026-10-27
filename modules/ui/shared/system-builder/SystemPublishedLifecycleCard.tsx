@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SystemPublicationBuildSummary } from "../../../contracts/system-build";
 import type {
   SystemPublishedLifecycleAction,
@@ -11,141 +11,166 @@ import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleC
 
 const RUNNING_STATUS_REFRESH_INTERVAL_MS = 1_000;
 
-export function SystemPublishedLifecycleCard({
-  workspaceId,
-  build,
-  client,
-  visualStartNotice = "The visual system started on its host.",
-}: {
+interface PublishedLifecycleCardProps {
   readonly workspaceId: string;
   readonly build: SystemPublicationBuildSummary;
   readonly client: SystemPublishedLifecycleClient;
   readonly visualStartNotice?: string;
-}) {
+}
+
+interface StatusReadOwner {
+  readonly background: boolean;
+  readonly settled: Promise<void>;
+  invalidated: boolean;
+}
+
+export function SystemPublishedLifecycleCard(props: PublishedLifecycleCardProps) {
+  const target = {
+    workspaceId: props.workspaceId,
+    client: props.client,
+    buildId: String(props.build.buildId),
+    revisionId: String(props.build.systemRevisionId),
+    releaseId: String(props.build.releaseId ?? ""),
+  };
+  const [scope, setScope] = useState({ ...target, key: 0 });
+  if (scope.workspaceId !== target.workspaceId || scope.client !== target.client ||
+    scope.buildId !== target.buildId || scope.revisionId !== target.revisionId ||
+    scope.releaseId !== target.releaseId) {
+    setScope({ ...target, key: scope.key + 1 });
+    return null;
+  }
+  return <PublishedLifecycleSession key={scope.key} {...props} />;
+}
+
+function PublishedLifecycleSession({
+  workspaceId,
+  build,
+  client,
+  visualStartNotice = "The visual system started on its host.",
+}: PublishedLifecycleCardProps) {
   const releaseId = String(build.releaseId ?? "");
-  const [projection, setProjection] =
-    useState<SystemPublishedLifecycleProjection>();
+  const [projection, setProjection] = useState<SystemPublishedLifecycleProjection>();
   const [loading, setLoading] = useState(true);
-  const [busyAction, setBusyAction] =
-    useState<SystemPublishedLifecycleAction>();
+  const [reading, setReading] = useState(false);
+  const [busyAction, setBusyAction] = useState<SystemPublishedLifecycleAction>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
-  const requestGeneration = useRef(0);
-  const actionInFlight = useRef(false);
+  const mounted = useRef(false);
+  const readOwner = useRef<StatusReadOwner | undefined>(undefined);
+  const actionOwner = useRef<object | undefined>(undefined);
 
-  async function refresh(
-    expectedGeneration = requestGeneration.current,
-    background = false,
-  ) {
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      readOwner.current = undefined;
+      actionOwner.current = undefined;
+    };
+  }, []);
+
+  async function refresh(background = false, afterDeniedAction = false) {
+    if (!mounted.current || readOwner.current || (actionOwner.current && !afterDeniedAction)) return;
     if (!releaseId) {
       setLoading(false);
       setProjection(undefined);
       setError("This published build does not have a release reference.");
       return;
     }
-    if (!background) setLoading(true);
-    setError(undefined);
-    let result: Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>;
+    let settle!: () => void;
+    const settled = new Promise<void>((resolve) => { settle = resolve; });
+    const owner: StatusReadOwner = { background, invalidated: false, settled };
+    readOwner.current = owner;
+    const ownsRead = () => mounted.current && readOwner.current === owner;
+    const mayAdopt = () => ownsRead() && !owner.invalidated;
+    setReading(true);
+    if (!background) {
+      setLoading(true);
+      setError(undefined);
+    }
     try {
-      result = await client.read({ workspaceId, releaseId });
+      const result = await Promise.resolve().then(() => mayAdopt()
+        ? client.read({ workspaceId, releaseId }) : undefined);
+      if (!mayAdopt() || !result) return;
+      if (!result.ok) {
+        setProjection(undefined);
+        setError(result.error.message);
+      } else if (String(result.value.releaseId) !== releaseId) {
+        setProjection(undefined);
+        setError("The status reply did not match this published build. Select Retry status.");
+      } else setProjection(result.value);
     } catch {
-      if (requestGeneration.current !== expectedGeneration) return;
-      setProjection(undefined);
-      setError("Unable to read the published build status.");
-      setLoading(false);
-      return;
+      if (mayAdopt()) {
+        setProjection(undefined);
+        setError("Unable to read the published build status.");
+      }
+    } finally {
+      if (ownsRead()) {
+        readOwner.current = undefined;
+        setReading(false);
+        if (!background) setLoading(false);
+      }
+      settle();
     }
-    if (requestGeneration.current !== expectedGeneration) return;
-    if (result.ok) setProjection(result.value);
-    else {
-      setProjection(undefined);
-      setError(result.error.message);
-    }
-    setLoading(false);
   }
 
-  useEffect(() => {
-    requestGeneration.current += 1;
-    const expectedGeneration = requestGeneration.current;
-    setProjection(undefined);
-    setNotice(undefined);
-    void refresh(expectedGeneration);
-    return () => {
-      requestGeneration.current += 1;
-    };
-  }, [client, releaseId, workspaceId]);
+  useEffect(() => { void refresh(); }, [client, releaseId, workspaceId]);
 
   useEffect(() => {
     if (projection?.state !== "running") return;
-    const expectedGeneration = requestGeneration.current;
     const interval = globalThis.setInterval(() => {
-      if (
-        actionInFlight.current ||
-        requestGeneration.current !== expectedGeneration
-      )
-        return;
-      void refresh(expectedGeneration, true);
+      if (mounted.current && !actionOwner.current) void refresh(true);
     }, RUNNING_STATUS_REFRESH_INTERVAL_MS);
     return () => globalThis.clearInterval(interval);
   }, [client, projection?.revision, projection?.state, releaseId, workspaceId]);
 
   async function invoke(action: SystemPublishedLifecycleAction) {
-    const current = projection;
-    if (
-      !current ||
-      !current.eligibleActions.includes(action) ||
-      busyAction ||
-      actionInFlight.current
-    )
-      return;
-    actionInFlight.current = true;
+    const currentProjection = projection;
+    if (!mounted.current || actionOwner.current || !currentProjection ||
+      String(currentProjection.releaseId) !== releaseId ||
+      !currentProjection.eligibleActions.includes(action) ||
+      (readOwner.current && !readOwner.current.background)) return;
+
+    // Keep the physical read slot until settlement. Ignore its stale result,
+    // but do not accumulate replacement polls or claim transport cancellation.
+    if (readOwner.current) readOwner.current.invalidated = true;
+    const owner = {};
+    actionOwner.current = owner;
+    const current = () => mounted.current && actionOwner.current === owner;
     setBusyAction(action);
     setError(undefined);
     setNotice(undefined);
-    const expectedGeneration = requestGeneration.current;
-    let result: Awaited<ReturnType<SystemPublishedLifecycleClient["invoke"]>>;
     try {
-      result = await client.invoke({
-        workspaceId,
-        releaseId,
-        action,
-        expectedRevision: current.revision,
-      });
-    } catch {
-      if (requestGeneration.current === expectedGeneration) {
-        setError("Unable to update the published build status.");
-        setBusyAction(undefined);
+      const result = await client.invoke({ workspaceId, releaseId, action, expectedRevision: currentProjection.revision });
+      if (!current()) return;
+      if (!result.ok) {
+        const actionError = result.error.message;
+        setError(actionError);
+        const pendingRead = readOwner.current;
+        if (pendingRead) await pendingRead.settled;
+        if (!current()) return;
+        await refresh(false, true);
+        if (current()) setError(actionError);
+        return;
       }
-      actionInFlight.current = false;
-      return;
-    }
-    if (requestGeneration.current !== expectedGeneration) {
-      actionInFlight.current = false;
-      return;
-    }
-    if (result.ok) {
+      if (String(result.value.releaseId) !== releaseId) {
+        setProjection(undefined);
+        setError("The action reply did not match this published build. Select Retry status.");
+        return;
+      }
       setProjection(result.value);
       if (action === "start") {
-        if (result.value.runtimeKind === "visual") {
-          setNotice(visualStartNotice);
-        } else if (result.value.runtimeKind === "service") {
-          setNotice("The service is running.");
-        } else {
-          setNotice(
-            "The system is running, but no trusted visual interface is available.",
-          );
-        }
-      } else {
-        setNotice(actionNotice(action));
+        if (result.value.runtimeKind === "visual") setNotice(visualStartNotice);
+        else if (result.value.runtimeKind === "service") setNotice("The service is running.");
+        else setNotice("The system is running, but no trusted visual interface is available.");
+      } else setNotice(actionNotice(action));
+    } catch {
+      if (current()) setError("Unable to update the published build status.");
+    } finally {
+      if (current()) {
+        actionOwner.current = undefined;
+        setBusyAction(undefined);
       }
-    } else {
-      const actionError = result.error.message;
-      await refresh(expectedGeneration);
-      if (requestGeneration.current === expectedGeneration)
-        setError(actionError);
     }
-    setBusyAction(undefined);
-    actionInFlight.current = false;
   }
 
   const stateLabel = projection
@@ -192,7 +217,7 @@ export function SystemPublishedLifecycleCard({
               type="button"
               className="ui-button ui-button--outline"
               onClick={() => void refresh()}
-              disabled={loading || Boolean(busyAction)}
+              disabled={reading || loading || Boolean(busyAction)}
             >
               <ApplicationIcon name="refresh" />
               <span>Retry status</span>

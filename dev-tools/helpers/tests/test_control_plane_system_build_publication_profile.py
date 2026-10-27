@@ -30,17 +30,17 @@ class SystemBuildPublicationProfileTests(unittest.TestCase):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"system-build-publication-ui": profile}}), encoding="utf8")
 
-    def test_exact_single_ui_test_uses_the_fixed_vitest_runner(self):
-        expected = ['modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx']
+    def test_exact_ui_tests_use_the_fixed_vitest_runner(self):
+        expected = ['modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx', 'modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx']
         self.assertEqual(self.profile["test_paths"], expected)
-        self.assertEqual(self.profile["source_paths"], ['dev-tools/config/contributor-check-profiles.json', 'modules/ui/shared/system-builder/SystemBuildTestModal.tsx', 'modules/ui/shared/system-builder/SystemPublishWorkspace.tsx', 'modules/ui/shared/README.md'])
+        self.assertEqual(self.profile["source_paths"], ['dev-tools/config/contributor-check-profiles.json', 'modules/ui/shared/system-builder/SystemBuildTestModal.tsx', 'modules/ui/shared/system-builder/SystemPublishWorkspace.tsx', 'modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx', 'modules/ui/shared/README.md'])
         commands = profile_commands(self.actual, "system-build-publication-ui")
         self.assertEqual(commands, [["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", *expected]])
         self.assertFalse(any("playwright" in p or ".e2e.spec." in p or ".ai." in p for command in commands for p in command))
 
     def test_ui_source_and_test_automatically_select_the_profile(self):
         self.configure(self.profile)
-        for path in ["modules/ui/shared/system-builder/SystemBuildTestModal.tsx", "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx", self.profile["test_paths"][0]]:
+        for path in ["modules/ui/shared/system-builder/SystemBuildTestModal.tsx", "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx", "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx", *self.profile["test_paths"]]:
             with self.subTest(path=path):
                 selected = catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]
                 self.assertIn("system-build-publication-ui", {check["id"] for check in selected})

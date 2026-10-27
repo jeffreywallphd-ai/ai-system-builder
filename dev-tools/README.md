@@ -306,4 +306,4 @@ The asset-authoring-ui profile includes the fixed workspace publication facade a
 
 The system-management-ui profile owns the single exact Manage systems rendered test file through the existing fixed single-worker Vitest adapter. Catalog selection covers only its declared UI/config/README sources. Unknown impact, an explicit generic requirement and unsafe/missing/AI-controlled tests retain the existing rejection or fallback. It starts no app, provider, model or native process.
 
-The system-build-publication-ui profile runs the exact shared Build/Publish interaction file with the fixed one-worker Vitest adapter. Its selection guards retain unknown and explicit generic coverage, unsafe-path and controlled-test refusal. It starts no host, provider, model or native worker and grants no parent qualification.
+The system-build-publication-ui profile runs two exact shared Build/Publish and published lifecycle interaction files with the fixed one-worker Vitest adapter. Its selection guards retain unknown and explicit generic coverage, unsafe-path and controlled-test refusal. It starts no host, provider, model or native worker and grants no parent qualification.
