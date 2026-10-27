@@ -4866,6 +4866,42 @@
         "These are reviewed local interface results at the recorded source snapshot. They do not pass the whole criterion or complete its work package or increment.",
         "Actual parsing/trust decisions, transports, storage, apps, native/runtime/providers and final combined tests remain separate. Accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "saved-assets-owned-read-and-legacy-open-recovery",
+      "work_criteria": [
+        "saved-read-session-and-retry",
+        "legacy-open-admission-and-identity",
+        "saved-owned-reviewed-checkpoint"
+      ],
+      "receipt_digest": "fdd9183fb7a08885b0be05fea4c7322637f5a91a19ab2d4cf399722fb2e913a8",
+      "review_digest": "c1c40f58b04156c8405c096c73b486c0a59843dc51c7000887bbe7ed8c77faa3",
+      "scope": "Completed and committed Saved-list and legacy-open recovery. Exact selected UI tests cover 160 cases with fixed clients: workspace/client ownership, duplicate admission, partial list failures, explicit retry, canonical returned identity and captured legacy provenance. Unrelated editor changes are excluded. The authoring work package remains partial.",
+      "limitations": [
+        "These are reviewed local interface results at their recorded source snapshots. They do not complete the whole criterion, work package or increment.",
+        "Connected app, transport, storage, provider and native checks remain separate. Final combined tests are deferred. Accepted model accuracy and OCR are not rerun."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "customization-saved-edit-review-and-recovery",
+      "work_criteria": [
+        "customization-existing-recovery",
+        "customization-saved-edit-review",
+        "customization-feature-checkpoint"
+      ],
+      "receipt_digest": "b544f315f3d5c198197fc46c2ccdb29b77cc4c6bc3c081d82ad6b03e80709d5f",
+      "review_digest": "c07ee223fd50dd32290646257468dafdb6dcb3aa183b4191634eec378b172d3e",
+      "scope": "Completed and committed customization saved-edit and resource-reply recovery. Exact selected UI tests cover 89 cases with fixed clients: meaningful semantic/source lifecycle, dirty-edit admission, delayed save preservation, committed workspace/client ownership, canonical operation acknowledgements, terminal edit locks and bounded renderable base resources. The authoring work package remains partial.",
+      "limitations": [
+        "These are reviewed local interface results at their recorded source snapshots. They do not complete the whole criterion, work package or increment.",
+        "Connected app, transport, storage, provider and native checks remain separate. Final combined tests are deferred. Accepted model accuracy and OCR are not rerun."
+      ]
     }
   ]
 }

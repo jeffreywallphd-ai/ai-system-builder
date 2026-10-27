@@ -12172,6 +12172,55 @@
           "Real package reading and trust checks, connections, storage, apps, native workers and providers need separate tests. Final combined tests are deferred. Completed model accuracy and OCR tests will not run again."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ffaa3f236bf02e1f8e0a80c473b17af3a52dab0c2a0f6c20fca1f5eeeb6fcb1d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fixed Saved searches and legacy opens that could accept replies from an old workspace or repeat a pending request.",
+          "If one source fails, other available results stay visible. A failed list is shown as unavailable rather than an empty list. The notification center gives a safe message and permits retry.",
+          "Opening an older asset checks its workspace, saved identity and source before changing the editor. A valid existing converted draft can still reopen.",
+          "The exact committed change passed 160 interface tests with fixed clients and an independent review. These are local interface results; connected app and storage tests still need agent work.",
+          "The first authoring work package remains partial. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d75f2fbedd6ac9667d62a74278bd322be0d8866a290e99aed06100ec7c35e899",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A customized copy must be saved before Review or Publish. If a slow Save finishes after a new edit, the new edit stays unsaved and visible.",
+          "The saved copy keeps its identity. Publish and Abandon prevent further edits while they run. A failed request permits an explicit retry.",
+          "Late replies from an old workspace cannot change the current editor. Invalid returned records or base files produce a safe notification instead of breaking the page.",
+          "Tests use a meaningful incident-intake copy with semantic and source edits. The exact committed change passed 89 interface tests with fixed clients and an independent review.",
+          "The original review finding and failed tests remain recorded. The corrected resource checks passed and the independent reviewer closed the finding.",
+          "Connected app, storage and execution checks still need agent work. The first authoring work package remains partial. No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b61ba24c85b4d24f2b1ecbf8b608a90300fb70b11da0640ceb5bf91ddb427920",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These local results were tested, reviewed and committed. The whole criterion, work package and increment still need other agent checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f6dfdd8417e389c3a2c80dfeee52a8dfb7212dc8a7f8e5ba0d0c196044ec8b7e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to test the connected apps, communication paths, saved data, providers and native features where required. Final combined testing is deferred. Completed model accuracy and OCR tests will not run again. No action needed from you."
+        ]
+      }
     }
   ]
 }
