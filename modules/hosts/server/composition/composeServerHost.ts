@@ -1,4 +1,5 @@
 import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
+import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
@@ -1595,9 +1596,13 @@ export function composeServerHost(
               now: options.now ?? (() => new Date().toISOString()),
             })
           : undefined;
+      const assetPublication = options.persistence && organizationDocuments ? createStructuredAssetDefinitionPublication({
+        artifacts: createAssetImplementationArtifactAdapter(storage), documents: options.persistence.documents, ownerDocuments: organizationDocuments, definitionScope: "platform",
+      }) : undefined;
       const assetStudio =
         organizationDocuments && assetImplementation
           ? composeAssetStudioWorkflow({
+              publication: assetPublication!,
               workspaceAccess: assetWorkspaceAccess,
               documents: organizationDocuments,
               implementations: assetImplementation,
@@ -2521,6 +2526,7 @@ export function composeServerHost(
           const derivedCustomizations =
             organizationDocuments && assetImplementation
               ? composeAssetDerivedCustomization({
+              publication: assetPublication!,
               workspaceAccess: assetWorkspaceAccess,
                   documents: organizationDocuments,
                   definitions:

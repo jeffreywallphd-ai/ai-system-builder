@@ -1,4 +1,7 @@
-// Synthetic Studio lifecycle fixtures explicitly admit their finite workspace.
+import { createOrganizationId } from "../../../../contracts/organization";
+import { createLocalAssetDefinitionRepositoryAdapter } from "../../../../adapters/persistence/asset";
+import { createStructuredAssetDefinitionPublication } from "../../../../adapters/persistence/asset-publication";
+// These lifecycle fixtures explicitly admit their synthetic workspaces; real policy denials have separate composed coverage.
 const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
@@ -166,7 +169,7 @@ describe("Studio asset draft workflow", () => {
     expect(unpublished.ok).toBe(true);
     if (unpublished.ok) expect(unpublished.value.drafts).toEqual([]);
 
-    const restartedWorkflow = new AssetStudioAssetDraftWorkflowUseCase({ workspaceAccess,
+    const restartedWorkflow = new AssetStudioAssetDraftWorkflowUseCase({ publication: createStructuredAssetDefinitionPublication({artifacts: fixture.artifacts, documents: fixture.documents, ownerDocuments: fixture.documents, definitionScope: "organization"}), workspaceAccess,
       drafts: restartedRepository,
       definitions: fixture.definitions,
       implementations: fixture.implementations,
@@ -292,12 +295,13 @@ describe("Studio asset draft workflow", () => {
 });
 
 function createFixture() {
-  const documents = createInMemoryStructuredDocumentStore();
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("asset-publication.fixture"));
   const implementations =
     createStructuredAssetImplementationRepository(documents);
   const drafts = createStructuredAssetStudioAssetDraftRepository(documents);
   const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
-  const definitions = memoryDefinitions();
+  const definitions = createLocalAssetDefinitionRepositoryAdapter({rootDir: ".", documents});
+  const publication = createStructuredAssetDefinitionPublication({artifacts, documents, ownerDocuments: documents, definitionScope: "organization"});
   const workspaceA = createWorkspaceId("workspace-a");
   const workspaceB = createWorkspaceId("workspace-b");
   const definitionRef = {
@@ -306,7 +310,7 @@ function createFixture() {
     version: "1.0.0" as never,
   };
   let tick = 0;
-  const workflow = new AssetStudioAssetDraftWorkflowUseCase({ workspaceAccess,
+  const workflow = new AssetStudioAssetDraftWorkflowUseCase({ publication, workspaceAccess,
     drafts,
     definitions,
     implementations,

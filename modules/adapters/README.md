@@ -40,3 +40,15 @@ transaction store; nested calls reuse that owner without creating a savepoint.
 Foreign, expired and captured-root calls deny. Queued writes capture nested
 values, revision conditions and timestamps before waiting, and returned records
 are detached from stored state.
+
+`persistence/asset-publication` binds an exact organization/workspace review to its
+definition and private commit receipt in one structured transaction. It verifies
+review bytes before opening the transaction, then rechecks the persisted record,
+snapshot and implementation draft; derived copies also recheck current base and
+revocation truth. UUIDs, clocks and artifact I/O stay outside retryable callbacks.
+Existing or foreign identities are never overwritten or adopted. Transaction
+failures roll back all three records; lost acknowledgements permit read-only
+reconciliation of the exact existing commit. The original reviewed revision or
+current published revision may request this read-only check; actor/time remain
+those of the committed record. This does not qualify filesystem
+publication, legacy authoring, live PostgreSQL or complete Assets security.

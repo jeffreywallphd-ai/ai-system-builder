@@ -1,3 +1,4 @@
+import type { AssetDefinitionPublicationPort } from "../../../application/ports/asset-publication";
 import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { createHash, randomUUID } from "node:crypto";
 
@@ -26,6 +27,7 @@ import {
 
 export function composeAssetStudioWorkflow(options: {
   readonly workspaceAccess: WorkspaceAssetAccessPort;
+  readonly publication: AssetDefinitionPublicationPort;
   readonly documents: StructuredDocumentStore;
   readonly implementations: AssetImplementationKernelComposition;
   readonly artifacts: AssetImplementationArtifactPort;
@@ -50,6 +52,7 @@ export function composeAssetStudioWorkflow(options: {
     assetDraftRepository: assetDrafts,
     useCases: {
       assetDrafts: new AssetStudioAssetDraftWorkflowUseCase({
+        publication: options.publication,
         workspaceAccess: options.workspaceAccess,
         drafts: assetDrafts,
         definitions: options.definitions,

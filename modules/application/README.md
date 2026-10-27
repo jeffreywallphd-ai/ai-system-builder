@@ -84,6 +84,16 @@ data-management architecture and threat model for tests and remaining provider,
 native publication and controlled-workflow qualification. No retry creates a missing storage
 binding or adopts legacy data.
 
+Studio and derived-customization publication use `AssetDefinitionPublicationPort`.
+The owning workflow verifies immutable review bytes, while the persistence adapter
+commits the exact current review, visible definition and private publication
+receipt together. Application code receives no document-store or SQL authority.
+A published retry only reconciles its exact existing commit; missing effects are
+not recreated and legacy metadata alone grants no publication ownership. The
+editor can retry its original reviewed revision after a lost response. Only a
+persisted published record one revision later may use that path, and exact receipt
+reconciliation still verifies every owning fact without changing actor or time.
+
 Legacy authoring mutations require `WorkspaceAssetAccessPort` before repository,
 target, clock or ID effects. Public legacy list/detail methods use the eight-method
 `createWorkspaceAssetAuthoringReaders` facade, which exposes no write or unscoped
@@ -97,6 +107,6 @@ fall back to raw repositories after access is denied.
 
 Package lifecycle entry points require current workspace asset access: read for lists and write for inspection, admission and activation changes. Fixed commands and consent are owned before authorization waits; bounded upload copies use the existing production32MiB default. Direct inspector configured limits remain independent. Inspection remains inert and does not authorize admission, activation or execution.
 
-Studio application entry points require the existing current-workspace read/write policy. Ten object requests own their consumed fields before asynchronous admission and protected effects. Canonical request, proposal, semantic and resource limits remain in force; metadata and semantic JSON serialization do not gain a new preallocation guarantee. Exact approval, revision and sequential publication semantics remain unchanged.
+Studio application entry points require the existing current-workspace read/write policy. Ten object requests own their consumed fields before asynchronous admission and protected effects. Canonical request, proposal, semantic and resource limits remain in force; metadata and semantic JSON serialization do not gain a new preallocation guarantee. Exact approval and revision checks remain; publication uses the transaction described above.
 
-Derived customization workflow and target-catalog entry points use current workspace authority and own their requests before awaits. Semantic patch validation alone retains some nested values; request capture deep-copies the validated result. Shared readiness wrappers and the direct workflow/catalog retain independent admission. Exact base, source, review, revision and sequential publication semantics remain.
+Derived customization workflow and target-catalog entry points use current workspace authority and own their requests before awaits. Semantic patch validation alone retains some nested values; request capture deep-copies the validated result. Shared readiness wrappers and the direct workflow/catalog retain independent admission. Exact base, source, review and revision checks remain; publication uses the transaction described above.

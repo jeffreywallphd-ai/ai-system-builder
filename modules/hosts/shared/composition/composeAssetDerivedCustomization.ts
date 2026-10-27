@@ -1,4 +1,5 @@
 import { captureDerivedCreate, captureDerivedUpdate, captureDerivedTransition, captureDerivedList, captureDerivedTargetList, captureDerivedTargetRead } from "../../../application/services/asset/capture-derived-customization-requests";
+import type { AssetDefinitionPublicationPort } from "../../../application/ports/asset-publication";
 import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
 import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { createHash, randomUUID } from "node:crypto";
@@ -23,6 +24,7 @@ import type { AssetImplementationKernelComposition } from "./composeAssetImpleme
 
 export function composeAssetDerivedCustomization(options: {
   readonly workspaceAccess: WorkspaceAssetAccessPort;
+  readonly publication: AssetDefinitionPublicationPort;
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionRepositoryPort;
   readonly implementations: AssetImplementationKernelComposition;
@@ -43,6 +45,7 @@ export function composeAssetDerivedCustomization(options: {
     ...(options.authoredAssets ? { authoredAssets: options.authoredAssets } : {}),
   });
   const workflow = new AssetDerivedCustomizationWorkflowUseCase({
+        publication: options.publication,
     workspaceAccess: options.workspaceAccess,
     customizations: repository,
     targets,

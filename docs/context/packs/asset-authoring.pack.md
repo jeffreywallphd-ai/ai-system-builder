@@ -62,6 +62,10 @@ Include this pack when prompts materially involve:
 - Saved assets are unpublished workspace Studio drafts. Opening one must restore
   the exact semantic values and verified resource content; it must not create a
   second editing surface or a lossy metadata-only copy.
+- Publication also atomically binds the exact owning review, absent definition
+  and private owner-bound commit receipt. Recheck base/revocation truth in the
+  transaction; verify immutable source outside it. Lost acknowledgements permit
+  exact existing read-only reconciliation, never adoption or recreation.
 - Review and publication use optimistic revisions. Saving changed reviewed
   content invalidates review, and publication does not activate or execute it.
 - No hidden propagation, live workspace-to-workspace links, collaboration permissions, pack import/export, marketplace behavior, hidden/default workspaces, startup seeding, or legacy/global auto-migration.

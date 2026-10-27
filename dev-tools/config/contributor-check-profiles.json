@@ -1589,7 +1589,8 @@
         "modules/hosts/desktop/composition/tests/studio-workspace-authority.integration.test.ts",
         "modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts",
         "modules/application/use-cases/asset-authoring/tests/derived-workspace-authorization-and-capture.unit.test.ts",
-        "modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts"
+        "modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts",
+        "modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1644,7 +1645,13 @@
         "modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts",
         "modules/hosts/shared/composition/composeAssetDerivedCustomization.ts",
         "modules/application/services/asset/capture-derived-customization-requests.ts",
-        "modules/application/services/asset/asset-derived-customization-target-catalog.service.ts"
+        "modules/application/services/asset/asset-derived-customization-target-catalog.service.ts",
+        "modules/application/ports/asset-publication/asset-definition-publication.port.ts",
+        "modules/application/ports/asset-publication/index.ts",
+        "modules/adapters/persistence/asset-publication/createStructuredAssetDefinitionPublication.ts",
+        "modules/adapters/persistence/asset-publication/index.ts",
+        "modules/adapters/persistence/asset-publication/tests/asset-publication.fixture.ts",
+        "modules/adapters/README.md"
       ]
     },
     "desktop-startup-ui": {

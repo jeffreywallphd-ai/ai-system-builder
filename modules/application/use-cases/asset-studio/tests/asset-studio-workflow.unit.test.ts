@@ -1,4 +1,4 @@
-// Synthetic Studio lifecycle fixtures explicitly admit their finite workspace.
+// These lifecycle fixtures explicitly admit their synthetic workspaces; real policy denials have separate composed coverage.
 const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
@@ -64,7 +64,7 @@ async function fixture(codingModel?: { propose(request: any): Promise<any> }, co
   const draftId = normalizeAssetImplementationDraftId("implementation-draft.studio.1");
   const created = await implementations.useCases.createDraft.execute({ draftId, workspaceId, definitionRef: definitionRef(), displayName: "Greeting", actorId: "user-1" });
   if (!created.ok) throw new Error(created.error.message);
-  const studio = composeAssetStudioWorkflow({ workspaceAccess, definitions, documents, implementations, artifacts, codingModel, codingModelTimeoutMs, now: () => "2026-07-17T12:00:01.000Z" });
+  const studio = composeAssetStudioWorkflow({ publication: {} as never, workspaceAccess, definitions, documents, implementations, artifacts, codingModel, codingModelTimeoutMs, now: () => "2026-07-17T12:00:01.000Z" });
   return { studio, workspaceId, draftId };
 }
 

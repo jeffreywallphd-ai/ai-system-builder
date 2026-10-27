@@ -1,4 +1,7 @@
-// Synthetic derived lifecycle callers explicitly admit their finite workspace.
+import { createOrganizationId } from "../../../../contracts/organization";
+import { createLocalAssetDefinitionRepositoryAdapter } from "../../../../adapters/persistence/asset";
+import { createStructuredAssetDefinitionPublication } from "../../../../adapters/persistence/asset-publication";
+// These lifecycle fixtures explicitly admit their synthetic workspaces; real policy denials have separate composed coverage.
 const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
@@ -144,6 +147,20 @@ describe("derived asset customization workflow", () => {
     );
     const history = await restarted.list({ workspaceId: fixture.workspaceA });
     expect(history.records[0]?.status).toBe("published");
+    const reopened = await restarted.read(fixture.workspaceA, published.value.customizationId);
+    expect(reopened?.base).toEqual(published.value.base);
+    expect(reopened?.semanticPatch).toEqual(published.value.semanticPatch);
+    expect(reopened?.sourceOverlay).toEqual(published.value.sourceOverlay);
+    expect(reopened?.publication).toEqual(published.value.publication);
+    const restartedImplementations = createStructuredAssetImplementationRepository(fixture.documents);
+    const restartedArtifacts = createAssetImplementationArtifactAdapter(fixture.artifactStorage);
+    const reopenedSnapshot = await restartedImplementations.readSourceSnapshot(fixture.workspaceA, reopened!.publication!.sourceSnapshotId);
+    expect(reopenedSnapshot?.artifact).toEqual(snapshot!.artifact);
+    const reopenedBytes = await restartedArtifacts.readVerified<Uint8Array>(fixture.workspaceA, reopenedSnapshot!.artifact);
+    expect(Array.from(reopenedBytes)).toEqual(Array.from(snapshotBytes));
+    expect(JSON.parse(new TextDecoder().decode(reopenedBytes))).toEqual(materialized);
+    expect((await restartedImplementations.listReleases(fixture.workspaceA)).length).toBe(1);
+    expect(await restartedImplementations.readSourceSnapshot(fixture.workspaceB, reopened!.publication!.sourceSnapshotId)).toBeUndefined();
     expect(
       (await restarted.list({ workspaceId: fixture.workspaceB })).records
         .length,
@@ -374,15 +391,17 @@ describe("derived asset customization workflow", () => {
 async function createFixture(
   origin: "admitted-package" | "system-foundation" = "admitted-package",
 ) {
-  const documents = createInMemoryStructuredDocumentStore();
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("asset-publication.fixture"));
   const implementations =
     createStructuredAssetImplementationRepository(documents);
   const backingResources =
     createStructuredAssetImplementationBackingResourceRepository(documents);
   const customizations =
     createStructuredAssetDerivedCustomizationRepository(documents);
-  const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
-  const definitions = memoryDefinitions();
+  const artifactStorage = memoryStorage();
+  const artifacts = createAssetImplementationArtifactAdapter(artifactStorage);
+  const definitions = createLocalAssetDefinitionRepositoryAdapter({rootDir: ".", documents});
+  const publication = createStructuredAssetDefinitionPublication({artifacts, documents, ownerDocuments: documents, definitionScope: "organization"});
   const workspaceA = createWorkspaceId("workspace-a");
   const workspaceB = createWorkspaceId("workspace-b");
   const baseRef = {
@@ -517,7 +536,7 @@ async function createFixture(
     artifacts,
   });
   let tick = 0;
-  const workflow = new AssetDerivedCustomizationWorkflowUseCase({ workspaceAccess,
+  const workflow = new AssetDerivedCustomizationWorkflowUseCase({ publication, workspaceAccess,
     customizations,
     targets,
     definitions,
@@ -534,6 +553,7 @@ async function createFixture(
     documents,
     implementations,
     artifacts,
+    artifactStorage,
     definitions,
     backingResources,
     targets,

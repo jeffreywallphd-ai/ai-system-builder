@@ -421,3 +421,26 @@ Package authority/capture correction: current persisted workspace and organizati
 Studio resource admission denies missing, unavailable or revoked workspace authority before repository, artifact, model, clock or identifier effects. Desktop also admits before lazy feature loading, followed by application reauthorization. Owned request data prevents caller mutation during awaits. Focused local tests cover denial, nested input changes and finite host compositions; physical-host durability, arbitrary JSON preallocation and atomic definition publication remain separate concerns.
 
 Derived workflow/catalog admission and owned requests prevent changed workspace, exact base/release, semantic/source, revision, actor or query fields from changing a request during awaits. The desktop resolver checks current workspace capability before lazy loading and receives a closed registered operation, not a caller-selected capability. Sender denial precedes capture and resolution. Focused fixtures retain unavailable loader failures and not-found record results without private error disclosure. Atomic publication, broad metadata allocation and physical host/native qualification remain separate.
+
+## Reviewed definition publication delta
+
+Protected assets are the current user-reviewed source/definition, immutable base,
+workspace ownership and publication visibility. A stale editor, competing draft,
+changed/revoked base, failed final record write or lost acknowledgement must not
+expose stale content or claim a foreign definition. Both hosts use the typed atomic
+publisher after their existing sender/resource controls. The adapter independently
+verifies reviewed bytes and binds current record/review/snapshot/base facts, absent
+definition and a private owner-bound commit receipt in one structured transaction.
+No callback performs external effects. Existing identities deny publication;
+rollback is atomic and recovery only reads an exact existing commit. Missing
+receipts or deleted/foreign effects remain denied. No source is executed.
+
+Focused memory and Node SQLite tests cover concurrent
+update/abandon/re-review, identical identity competition, intermediate-write
+rollback, lost acknowledgement, missing/foreign receipts and definitions, forged
+review bodies, snapshot loss, owner drift, caller mutation during verification
+and changed/revoked base. Original-command retries reconcile without rewriting
+publication actor/time; all other stale revisions deny. Actual Electron runtime
+qualification remains pending. Legacy record
+APIs, native filesystem publication, live PostgreSQL, complete Assets controlled
+security/UI and parent roadmap qualification remain outside this component.

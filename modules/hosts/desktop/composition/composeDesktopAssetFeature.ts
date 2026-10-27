@@ -1,3 +1,4 @@
+import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
 import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { randomUUID } from "node:crypto";
 import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
@@ -113,9 +114,13 @@ export async function composeDesktopAssetFeature(
           now: options.now,
         })
       : undefined;
+  const assetPublication = options.documents ? createStructuredAssetDefinitionPublication({
+    artifacts: implementationArtifacts, documents: options.documents, ownerDocuments: options.documents, definitionScope: "organization",
+  }) : undefined;
   const assetStudio =
     options.documents && assetImplementation
       ? composeAssetStudioWorkflow({
+          publication: assetPublication!,
           workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           implementations: assetImplementation,
@@ -128,6 +133,7 @@ export async function composeDesktopAssetFeature(
   const derivedCustomizations =
     options.documents && assetImplementation
       ? composeAssetDerivedCustomization({
+          publication: assetPublication!,
           workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           definitions:

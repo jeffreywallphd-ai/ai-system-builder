@@ -57,3 +57,10 @@ Package composition passes the existing persisted workspace/current membership p
 Desktop Studio requests capture their contract values and check persisted workspace access before deferred feature construction. Shared Studio composition supplies the same policy to application use cases, which recheck access after readiness. Finite composition fixtures do not qualify physical app startup, process restart or durable storage.
 
 Desktop derived-customization IPC validates and captures the request before awaiting its deferred service getter. The getter receives only the registered operation key and normalized captured workspace; it maps fixed read/write scope and admits before feature construction. Missing or rejected feature loaders retain fixed unavailable envelopes. Application and catalog admission repeat after readiness. Finite handler fixtures do not qualify physical app startup or durable restart.
+
+Both hosts compose the same typed atomic Studio/customization publisher. Desktop
+keeps definitions in the captured organization partition; server retains its
+existing platform definition partition and request-owned workflow records. The
+server transaction spans those existing partitions on one structured store. The
+placement is fixed by composition, never a request field. Workspace authorization
+and desktop sender admission remain separate required controls.
