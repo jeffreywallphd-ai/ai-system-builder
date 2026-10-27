@@ -2142,6 +2142,12 @@
           "name": "actual source-pack/RAG generation, inspection and exact cited LanceDB query with closed fixture admission and finite embeddings",
           "tier": "real-python-context-processors-package-and-lancedb-with-finite-embedding-callback",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
+          "name": "complete exact ordered review/citation/progress/approval sequence plus saved byte/manifest/source/settings/restart/catalog oracles and fixed source public-read admission",
+          "tier": "bounded-pure-oracles-with-explicitly-synthetic-marked-bytes",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
@@ -2150,7 +2156,16 @@
       ],
       "composed_local_scope": "Actual shared UI and desktop client/preload/registered IPC or browser typed HTTP client, existing host composition, application generation/browser/deletion, runtime-adapter private staging and new JSON catalog/bindings/bytes. Worker output/inspection, sender/access/model availability and scheduling are finite fixtures. Forty-two cases total across both consumers. No Python/model/OCR/provider/process, actual archive parser, physical host, SQLite/process restart, native ownership or final/parent pass.",
       "preparation_error_scope": "Generation-start exceptions and source-staging binding/retrieval exceptions or refused results use fixed public copy across registered HTTP/IPC. Tests preserve exact refused codes, manual/source correction and explicit publication consent. Registry faults are before worker acceptance; no change or proof of native/physical worker ownership, terminal runtime redaction or final/parent qualification.",
-      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. Runtime tasks, archive inspection, embedding/query semantics, access and invoke events are finite fixtures; the RAG ZIP fixture is not a LanceDB engine. Source-pack/RAG whole-app helper wiring remains separate implementation work. Physical host/native/actual model/index/restart/scale and final combined qualification stay pending."
+      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. Runtime tasks, archive inspection, embedding/query semantics, access and invoke events are finite fixtures; the RAG ZIP fixture is not a LanceDB engine. Source-pack/RAG whole-app helper wiring remains separate implementation work. Physical host/native/actual model/index/restart/scale and final combined qualification stay pending.",
+      "source_context_host_wiring": {
+        "helper": "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
+        "consumers": [
+          "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+          "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
+        ],
+        "actual_host_qualification": "pending",
+        "scope": "Existing two app cases call real source-pack/RAG UI workflows and public byte/manifest/catalog oracles. Local checks/collection do not run apps or qualify selectors/restart/native cleanup. Fresh-session source-pack rebuild display needs a separate product regression/fix."
+      }
     },
     {
       "id": "context-rag-create-query-rebuild",
@@ -2255,13 +2270,28 @@
           "name": "actual source-pack/RAG generation, inspection and exact cited LanceDB query with closed fixture admission and finite embeddings",
           "tier": "real-python-context-processors-package-and-lancedb-with-finite-embedding-callback",
           "qualification": "focused-execution-and-independent-review-required"
+        },
+        {
+          "file": "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
+          "name": "complete exact ordered review/citation/progress/approval sequence plus saved byte/manifest/source/settings/restart/catalog oracles and fixed source public-read admission",
+          "tier": "bounded-pure-oracles-with-explicitly-synthetic-marked-bytes",
+          "qualification": "focused-execution-and-independent-review-required"
         }
       ],
       "actual_host_qualification": "pending",
       "external_dependencies": [
         "installed reviewed embedding model and managed dependency; no new download authority"
       ],
-      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. Runtime tasks, archive inspection, embedding/query semantics, access and invoke events are finite fixtures; the RAG ZIP fixture is not a LanceDB engine. Source-pack/RAG whole-app helper wiring remains separate implementation work. Physical host/native/actual model/index/restart/scale and final combined qualification stay pending."
+      "scope_limit": "Actual shared UI/clients/preload/registered IPC or owned HTTP/application/staging/catalog/bindings/bytes are composed. Runtime tasks, archive inspection, embedding/query semantics, access and invoke events are finite fixtures; the RAG ZIP fixture is not a LanceDB engine. Source-pack/RAG whole-app helper wiring remains separate implementation work. Physical host/native/actual model/index/restart/scale and final combined qualification stay pending.",
+      "source_context_host_wiring": {
+        "helper": "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
+        "consumers": [
+          "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+          "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
+        ],
+        "actual_host_qualification": "pending",
+        "scope": "Existing two app cases call real source-pack/RAG UI workflows and public byte/manifest/catalog oracles. Local checks/collection do not run apps or qualify selectors/restart/native cleanup. Fresh-session source-pack rebuild display needs a separate product regression/fix."
+      }
     },
     {
       "id": "models-discover-and-reference",

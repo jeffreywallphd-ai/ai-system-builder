@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import sourceContextFixture from "../daily-source-context-fixture.json";
 import { normalizeDatasetVersionRecord, type DatasetVersionRecord } from "../../../../../modules/contracts/dataset";
 
 type Host = "desktop" | "thin";
@@ -34,8 +35,10 @@ export async function resolveProvidedServerRestartMarker(runId: string, repoRoot
 
 export async function readImportedSource(page: Page, host: Host, workspace: string,
   expected = { name: FILE, content: INPUT }): Promise<SourceIdentity> {
-  if (![FILE, "synthetic-provided-row-review.csv"].includes(expected.name) || !Buffer.isBuffer(expected.content)
+  if (![FILE, "synthetic-provided-row-review.csv", sourceContextFixture.source_name].includes(expected.name) || !Buffer.isBuffer(expected.content)
       || expected.content.length === 0 || expected.content.length > 16_384) throw new Error("The fixed imported source is invalid.");
+  if (expected.name === sourceContextFixture.source_name && !expected.content.equals(Buffer.from(sourceContextFixture.source_markdown, "utf8")))
+    throw new Error("The fixed imported source is invalid.");
   const item = await page.evaluate(async ({ host, workspace, name, limit }) => {
     let envelope;
     if (host === "desktop") envelope = await (window as any).desktopApi.browseArtifacts({ workspaceId: workspace });

@@ -234,7 +234,14 @@ def validate_source_context_operation(payload, temp_root):
         validate_fixed_context_source(payload, root, fixed, operation=True)
         if payload.chunking is None:
             raise ValueError("Fixed source inspection requires chunk settings.")
-        fixed_context_chunking(payload.chunking, payload.chunking.strategy == "fixed-length")
+        if payload.chunking.strategy == "structure-aware":
+            # The existing Data details readiness check is read-only. This does
+            # not admit structure-aware generation or change the fixed RAG plan.
+            if fixture_mapping(payload.chunking) != {"strategy": "structure-aware", "chunkCharacters": 1200,
+                    "overlapCharacters": 120, "maximumChunks": 10000} or payload.sourceChecks is not None:
+                raise ValueError("Only the existing fixed Data readiness preset is permitted.")
+        else:
+            fixed_context_chunking(payload.chunking, payload.chunking.strategy == "fixed-length")
         if payload.sourceChecks is not None:
             fixed_context_checks(payload.sourceChecks)
         return

@@ -3,12 +3,13 @@ import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart, resolvePro
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { prepareManualContext, verifyManualContextAfterRestart } from "./manual-context-host-journey";
 import { prepareSavedRowReview, verifySavedRowReviewAfterRestart } from "./saved-row-review-host-journey";
+import { prepareSourceContext, verifySourceContextAfterRestart } from "./source-context-host-journey";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
   process.env.PYTHON_RUNTIME_ARGS !== "-I -B ../../../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py",
   "Requires the separately reviewed real provided-data composition.");
-test("browser saves dataset versions and manual Context across full service restart", async ({ page }) => {
+test("browser saves dataset versions, source RAG and Context packs across full service restart", async ({ page }) => {
   test.setTimeout(300_000);
   await page.addInitScript(token => localStorage.setItem("ai-system-builder.paired-device-token", token), process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!);
   await page.goto(new URL("/", process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!).href);
@@ -19,6 +20,7 @@ test("browser saves dataset versions and manual Context across full service rest
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
   const saved = await prepareProvidedVersions(page, "thin");
   const savedRows = await prepareSavedRowReview(page, "thin");
+  const savedSourceContext = await prepareSourceContext(page, "thin");
   const savedContext = await prepareManualContext(page, "thin");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
@@ -43,4 +45,5 @@ test("browser saves dataset versions and manual Context across full service rest
   await verifyProvidedVersionsAfterRestart(page, "thin", saved, test.info());
   await verifyManualContextAfterRestart(page, "thin", savedContext, test.info());
   await verifySavedRowReviewAfterRestart(page, "thin", savedRows, test.info());
+  await verifySourceContextAfterRestart(page, "thin", savedSourceContext, test.info());
 });

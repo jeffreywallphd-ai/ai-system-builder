@@ -355,6 +355,16 @@ class ProvidedDatasetQualificationTests(unittest.TestCase):
             sourceChecks=typed.sourceChecks.model_dump())
         result = fixture.run_context_operation_fixture(request, self.root, operate_on_context_artifact)["inspection"]
         self.assertTrue(result["ready"]); self.assertGreater(result["chunkCount"], 1)
+        from modules.adapters.runtime.python.worker.models import ContextChunkingSettings
+        readiness = request.model_copy(update={"chunking": ContextChunkingSettings.model_validate({
+            "strategy": "structure-aware", "chunkCharacters": 1200, "overlapCharacters": 120, "maximumChunks": 10000}), "sourceChecks": None})
+        ready = fixture.run_context_operation_fixture(readiness, self.root, operate_on_context_artifact)["inspection"]
+        self.assertTrue(ready["ready"]); self.assertGreater(ready["chunkCount"], 0)
+        for changed in ({"chunkCharacters": 2400}, {"overlapCharacters": 0}, {"maximumChunks": 9999}):
+            altered = readiness.model_copy(update={"chunking": readiness.chunking.model_copy(update=changed)})
+            with self.assertRaises(ValueError): fixture.validate_source_context_operation(altered, self.root)
+        with self.assertRaises(ValueError):
+            fixture.validate_source_context(typed.model_copy(update={"chunking": readiness.chunking}), self.root)
         for changed in ({"query": fixed["query"]}, {"embeddingDevice": "cuda"}, {"originalName": "other.md"},
                         {"digest": "sha256:" + "0" * 64}, {"sizeBytes": 1}, {"localPath": typed.sources[0].localPath}):
             with self.subTest(changed=changed), self.assertRaises(ValueError):

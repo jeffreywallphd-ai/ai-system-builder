@@ -127,3 +127,27 @@ Production parsing still validates the actual table and citations. Source bytes,
 manual/JSONL/Parquet contracts, offline bindings and native limits remain intact.
 The worker extension is tested locally; source-pack/RAG app journey wiring and
 actual Windows/browser restart execution remain separate pending work.
+
+The same two app restart cases now call `source-context-host-journey.ts`. A third
+workspace receives the fixed Markdown through Add data. The Data details control
+hands its identifier to RAG preparation. Explicit chunk/Markdown review and save
+create a real source pack and LanceDB package. After the existing full restart,
+public reads compare exact bytes, digests, source lineage and complete catalogs.
+Visible controls run the fixed cited query, return to the source in Data, rebuild
+both artifacts without changing originals, discard a candidate and delete only
+an artifact created by this journey. The existing Desktop Artifact Browser
+download is checked through its download event/stream; no browser-only download
+control is invented. Both cases restore the original workspace for other flows.
+Only the existing read-only Data readiness preset is additionally admitted for
+the exact source. Generation settings and native/offline limits are unchanged.
+Pure oracle tests and module collection are local support only. App execution,
+selectors, restart, native retirement and parent/final checks remain pending.
+Source review identified a fresh-session source-pack rebuild display risk; its
+separate product regression/fix must precede actual journey qualification.
+
+Review checks use exact expectations captured from production generation of this
+fixture: two ordered cited RAG chunks and one complete source-pack topic. They
+check each title/content/citation, progress index/total, navigation boundaries and
+Not reviewed to Approved state, then revisit every approval. Mutations, extra or
+missing items and duplicate approvals cannot satisfy that oracle. Form/source
+selectors are scoped to the active named tab panel, including persistent tabs.

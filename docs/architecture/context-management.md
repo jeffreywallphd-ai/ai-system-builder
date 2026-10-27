@@ -368,3 +368,15 @@ The bounded reader uses that count to find the real citation footer. Existing
 unambiguous legacy topics and manual packs retain their existing reader paths.
 Malformed frames, oversized summaries and unsupported versions fail closed;
 archive, topic, summary, line and citation limits remain unchanged.
+
+### Source Context app-journey wiring
+
+Both existing app restart cases now reuse one fixed-source Context helper. Data
+details passes only the selected storage identifier into RAG preparation. Public
+read results provide byte/digest/manifest/source/citation evidence; all creation,
+review/save, query, source navigation, rebuild, discard and deletion actions use
+existing visible controls. Immutable original records are re-read after every
+successor. The original workspace is restored for existing dataset/manual cases.
+A source review identified that fresh-session source-pack rebuild may not restore
+the preparation mode. That separate product regression/fix remains agent work,
+not a human blocker or a qualification pass. Actual app execution is deferred.

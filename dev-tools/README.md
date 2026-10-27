@@ -233,3 +233,13 @@ exact stored source lineage and a relevant cited match without loading a model,
 running OCR, downloading dependencies or contacting a provider. Local processor
 tests do not qualify app restart, native cleanup, real embedding quality or the
 parent roadmap. Source-pack/RAG app helper wiring remains a following chunk.
+
+The existing Desktop/browser dataset restart cases now include source Context and
+RAG flows through a shared fixed-source helper. It checks visible preparation,
+review/save, cited retrieval/source navigation, immutable rebuilds, discard and
+selected deletion against actual public byte/manifest/catalog reads. Desktop
+uses its existing download control. New strict oracle tests preserve identity
+and reject substitutions or unsafe metadata. The source helper extends no native
+launcher or model/resource policy. Actual apps/restart/physical cleanup and the
+identified fresh-session pack-rebuild regression remain pending; local collection
+and oracle passes are not whole-app qualification. No accuracy or OCR rerun.

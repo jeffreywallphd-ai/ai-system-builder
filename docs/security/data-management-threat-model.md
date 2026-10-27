@@ -1579,3 +1579,28 @@ fixed entry/digest identity. Changed source-pack names, source lists and model
 methods are denied before processor invocation. Reserved framing metadata is
 recognized even if a header is prefixed or damaged; it cannot enter the legacy
 parser. Titles ending with any line separator are refused by writer and reader.
+
+### Fixed source Context app-journey controls
+
+The source-pack/RAG app helper uses a separate workspace and the exact synthetic
+Markdown. It checks the actual source storage identifier and digest, complete
+catalog, saved bytes and inspected manifest settings/lineage. Read-only Data
+readiness admits only its existing structure-aware1200/120 preset for this source;
+that preset does not authorize generation. The fixed generation/query settings
+and existing native/offline/owned-worker/resource limits remain unchanged.
+Mutations use UI controls. Rebuild/discard/cancelled deletion preserve complete
+records; confirmed deletion targets one created artifact and proves only public
+removal/refusal/reload behavior. Physical erasure/native retirement stay pending.
+Desktop download streams are bounded and compared with saved digest/size, and the
+owned Playwright download handle is deleted. Evidence is bounded/source-bound and
+contains no credential or private diagnostic. Local oracle/type/collection checks
+do not qualify actual app behavior, physical ownership, model quality or roadmap
+closure. The fresh-session pack-rebuild display risk remains separate agent work.
+
+The review oracle checks the complete exact ordered chunk/topic content and
+citation sequence with progress/count/navigation/decision boundaries before any
+approval. The expected fixture output was obtained from actual production
+processors with finite embeddings. Getter-bearing/extra arrays and unsafe nested
+metadata are refused before serialization. Retained artifact bytes are read again
+after cancelled deletion. These strengthen local test evidence without claiming
+physical app execution or curing the separate fresh-session pack-mode finding.

@@ -132,6 +132,7 @@ class CatalogTests(Fixture):
             "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
             "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
             "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
         ])
         self.assertEqual(profile["test_paths"], expected)
         commands = run_focused_checks.profile_commands(root, "dataset-version-browser")
@@ -156,6 +157,8 @@ class CatalogTests(Fixture):
             "dev-tools/scripts/qualification/visual-composer/daily-row-review-fixture.json",
             "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
             "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
+            "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
         ]
         for path in extra_sources:
             ids = {row["id"] for row in catalog.plan(self.root, [path], ["dataset-version-browser", "documentation"], "candidate")["selected"]}
