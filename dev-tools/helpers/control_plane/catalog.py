@@ -27,6 +27,12 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
         "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts",
         "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/operational-ui-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/operational-ui-oracles.ts",
+        "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",

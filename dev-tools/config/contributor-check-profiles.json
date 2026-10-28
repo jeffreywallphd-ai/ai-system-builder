@@ -1821,7 +1821,9 @@
         "apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts",
         "apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
         "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
-        "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts"
+        "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1866,7 +1868,15 @@
         "apps/desktop/src/renderer/README.md",
         "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts",
         "dev-tools/config/contributor-check-profiles.json",
-        "docs/diagnostics/ai-development-control-plane.md"
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/scripts/qualification/visual-composer/e2e/operational-ui-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/operational-ui-oracles.ts",
+        "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts",
+        "dev-tools/README.md"
       ]
     }
   }

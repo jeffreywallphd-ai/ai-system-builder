@@ -50,7 +50,9 @@ TESTS = [
     "apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts",
     "apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
     "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
-    "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts"
+    "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
 ]
 EXPECTED_COMMANDS = [
     [
@@ -103,6 +105,8 @@ EXPECTED_COMMANDS = [
         "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
         "apps/thin-client/src/tests/app-routing.ui.test.tsx",
         "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
         "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
         "modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
@@ -113,6 +117,8 @@ EXPECTED_COMMANDS = [
 class OperationalUiProfile(unittest.TestCase):
     def test_shared_borrowed_files_do_not_activate_operational_checks_in_other_profiles(self):
         for name, source, test in [
+            ("asset-authoring-ui", "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
+            ("asset-authoring-ui", "dev-tools/README.md", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
             ("asset-authoring-ui", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
             ("desktop-startup-ui", "apps/desktop/src/renderer/README.md", "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx"),
         ]:

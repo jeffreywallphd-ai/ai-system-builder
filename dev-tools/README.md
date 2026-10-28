@@ -321,3 +321,28 @@ worker-record folders per session, and require the existing owned shutdown proof
 before replacement. Original saved observations are compared on the new page;
 asset metadata readers use that page. Local oracle tests and discovery do not
 prove physical restart, native cleanup, server restart or final qualification.
+
+## Operational host UI definitions
+
+The `operational-ui` profile runs the fixed component/task/shell regressions and
+the new observation/desktop-slot unit tests. The named desktop and thin-client
+operational cases use current public navigation, deferred Settings runtime
+controls, Security refresh with an explicit synthetic read failure, and quiet
+notifications with keyboard focus return. They use a distinct fixed desktop
+slot and the existing setup/owned-cleanup path. It rejects an existing entry or
+a lookalike root outside this repository. It does not prove atomic filesystem
+ownership or hostile-filesystem safety. Captures are off; attachments
+contain only bounded source/run/host IDs and ordered fixed phase facts.
+
+These unit/definition checks do not launch an app, worker or model. Run the named
+Playwright cases only through the authorized qualification setup at the final
+combined-testing boundary. The browser fault is an injected read-only503, not a
+real authorization/TLS failure. Restart/readiness and Stop observations concern
+the UI projection; actual process/native/model/provider results remain separate.
+Completed model accuracy is not rerun for these definitions.
+Refresh observes the settled stopped display. Exact new read dispatch is covered
+by the focused footer tests, not inferred from an unchanged host status. Restart
+requires a new stopped/spawned log sequence; Clear log retains its canonical
+confirmation and removes preceding lifecycle entries. The observation oracle
+rejects sparse arrays, accessors and custom iteration before copying fixed facts.
+Proxy values are refused before reflection so their traps cannot execute.
