@@ -586,3 +586,31 @@ Actual host/native execution, desktop and other-surface native definitions, and
 final qualification remain pending. No models or OCR engines are run; accepted
 model-quality results remain closed. This checkpoint grants no parent criterion
 pass or original chunk completion.
+
+## Desktop operational native zoom definitions
+
+The separate desktop operational zoom case uses a fresh operational-native400
+slot. The standard case keeps its original assertions and default mode. Both
+use the existing isolated seed, runtime scenario, capture restrictions, launch
+and phase bounds, and owned app/worker retirement. Existing or dangling native
+slots are refused before seeding. This is cooperative test isolation, not
+protection against a hostile filesystem owner.
+
+The zoom helper obtains only app.browserWindow(page). It checks that window and
+its web contents, applies fixed 1440px by 1000px bounds and factor4, then reads
+the factor back. It disposes the obtained handle once. Setup and disposal errors
+use fixed messages, including combined failures and empty rejection reasons.
+The common native audit still checks actual frame, reflow, control fit and media;
+it never substitutes a Playwright viewport for browser zoom.
+
+The Operational profile retains all 41 test files and 22 automatic paths. The
+new helper is borrowed coverage only. Unknown, incomplete and explicit generic
+impact retains its checks. Foreign Assets slot additions and unrelated settings
+are preserved and excluded from this checkpoint.
+
+An isolated real Chrome fixture confirmed factor4 geometry and successful owned
+browser/profile/server retirement. That fixture loaded no app or model. Focused
+desktop port fixtures and source checks define the desktop case only. Actual
+desktop execution, other native consumers and parent/full qualification remain
+pending. Accepted model accuracy stays closed; retained offload files are not
+inspected, adopted, moved, removed or given a new lease.

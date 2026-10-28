@@ -5,14 +5,14 @@ import { lstatSync } from "node:fs";
 
 // Each case exercises a fresh installed profile; a preceding case's persisted
 // workspace selection must not hide startup or change another case's outcome.
-export function prepareIsolatedDesktopCase(caseId: "operational" | "browse" | "meaningful" | "lifecycle" | "pdf" | "dataset" | "ingestion" | "ocr" | "tasks" | "reference" | "worker-exit" | "worker-disconnect" | "cold", sampleIndex?: number) {
-  assert.ok(["operational", "browse", "meaningful", "lifecycle", "pdf", "dataset", "ingestion", "ocr", "tasks", "reference", "worker-exit", "worker-disconnect", "cold"].includes(caseId));
+export function prepareIsolatedDesktopCase(caseId: "operational" | "operational-native400" | "browse" | "meaningful" | "lifecycle" | "pdf" | "dataset" | "ingestion" | "ocr" | "tasks" | "reference" | "worker-exit" | "worker-disconnect" | "cold", sampleIndex?: number) {
+  assert.ok(["operational", "operational-native400", "browse", "meaningful", "lifecycle", "pdf", "dataset", "ingestion", "ocr", "tasks", "reference", "worker-exit", "worker-disconnect", "cold"].includes(caseId));
   assert.ok(caseId === "cold" ? Number.isInteger(sampleIndex) && sampleIndex! >= 0 && sampleIndex! < 35 : sampleIndex === undefined);
   const base = process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT!;
   assert.ok(base && path.isAbsolute(base));
   assert.ok(path.resolve(base).replaceAll("\\", "/").includes("/artifacts/qualification/visual-composer/d/"));
   const dataRoot = path.join(base, caseId === "cold" ? `cold-${sampleIndex}` : caseId);
-  if (caseId === "operational") {
+  if (caseId === "operational" || caseId === "operational-native400") {
     const fence = path.resolve("artifacts/qualification/visual-composer/d");
     const relativeRoot = path.relative(fence, path.resolve(base));
     assert.ok(relativeRoot && !path.isAbsolute(relativeRoot) && relativeRoot !== ".." && !relativeRoot.startsWith(`..${path.sep}`), "Operational qualification must remain under this repository's isolated run root.");

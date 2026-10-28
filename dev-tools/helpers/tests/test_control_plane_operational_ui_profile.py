@@ -122,6 +122,32 @@ EXPECTED_COMMANDS = [
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_native_desktop_helper_is_exact_borrowed_coverage(self):
+        helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
+        core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        self.assertEqual(len(self.profile()["test_paths"]), 41)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
+        self.assertIn(helper, self.profile()["source_paths"])
+        self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            for paths, required, operational, generic in [
+                ([core, helper, CONFIG], ["documentation"], True, False),
+                ([helper], ["documentation"], False, True),
+                ([core, helper], ["focused-tests"], True, True),
+                ([core, helper, "dev-tools/scripts/qualification/visual-composer/e2e/unreviewed.ts"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, operational)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(helper)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, helper], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"

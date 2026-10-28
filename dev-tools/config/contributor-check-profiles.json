@@ -1906,7 +1906,8 @@
         "apps/thin-client/src/components/layout/AppShell.tsx",
         "dev-tools/helpers/control_plane/catalog.py",
         "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
-        "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
+        "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
       ]
     }
   }
