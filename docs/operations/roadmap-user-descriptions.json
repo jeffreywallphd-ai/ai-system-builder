@@ -12717,6 +12717,54 @@
           "This record update does not show an actual app test pass."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e2af2b4e17f8b37406ce5b27a3b1dc738d075f4299a9dea4aa67f93fdb576594",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added cleanup tests for a browser created by the zoom test.",
+          "The test keeps the temporary files if it cannot confirm that the browser stopped and the folder is the same.",
+          "These tests use substitutes and do not prove native cleanup in a running app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c566ba56bcb157d0da324124ce181f05b9db5969132803eddb082c2dd4528c9a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent separated time to the first app window from time to an interactive app shell.",
+          "The existing Canvas timing stays separate.",
+          "Actual startup and Canvas speed measurements remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ca3a0b3bdef032fb82085245facda699dc634684b46fb38a290fa08656c18011",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added arrow-key navigation, menu selection, Escape, and focus return in both app shells.",
+          "Focused tests check the rendered menu and its accessibility test definitions.",
+          "Actual app and native zoom checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "faf94b6b55ad8164b7cf5b32b9737bceadbb8868102845035732e06d4c4ab873",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a separate test path for actual 400% browser zoom.",
+          "The checks cover visible controls, page width, reduced motion, and normal and high-contrast display.",
+          "Other screen definitions and actual app tests remain pending."
+        ]
+      }
     }
   ]
 }

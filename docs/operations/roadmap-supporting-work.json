@@ -5608,6 +5608,79 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "native-zoom-test-cleanup-recovery",
+      "work_criteria": [
+        "owned-setup-failure-retirement",
+        "bounded-identity-exit-and-once-only-cleanup",
+        "owned-source-provenance-and-separate-review"
+      ],
+      "receipt_digest": "db695b9d11b6fe24f9e8c27ad5be8ff1292c07dc6fdbf79583ffcebb0d20140c",
+      "review_digest": "719b771237bea62fee1e7ac296c0f4d675f7fd97f03485355bc79034df8550fa",
+      "scope": "Safe cleanup for test-owned zoom browsers",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "separate-desktop-startup-observations",
+      "work_criteria": [
+        "bounded-startup-observation",
+        "existing-cohort-and-boundaries-preserved",
+        "current-owned-source-review"
+      ],
+      "receipt_digest": "d7ed53b6e08f3ac59e8336819b8580671389ba0d47fd7d0079905e602894494d",
+      "review_digest": "ac61dc4617902b9d8420050c0b77b107e103a1f663499207949eddf10982518d",
+      "scope": "Separate startup and Canvas timing",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "navigation-menu-source-owned-qualification",
+      "work_criteria": [
+        "mounted-menu-keyboard-recovery",
+        "opened-menu-critical-host-definition",
+        "current-owned-source-and-separate-review",
+        "exact-source-owned-profile-mapping"
+      ],
+      "receipt_digest": "594419060a0a28195f642070161a8baeada52b6ea084207b92cf3e6f19a2e464",
+      "review_digest": "36346458dc374b2211af0a413bd423d5f4b0cd5960d76e376ca7fa468a357288",
+      "scope": "Keyboard access to the application menu",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "native-critical-audit-core-and-browser-consumer",
+      "work_criteria": [
+        "separate-native-data-and-standard-compatibility",
+        "fixed-native-browser-consumer-and-mode-admission",
+        "bounded-profile-and-owned-checkpoint"
+      ],
+      "receipt_digest": "496c74d8fafde03ba5d8b9d757fb4cac8f1e925d6f20f2f10e3c600254ae4d35",
+      "review_digest": "6fe69f7881253a0701d6a020939c9c2ad92ab05a16774635ba4352e0f6b3065c",
+      "scope": "Accessibility test definitions for browser zoom",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }
