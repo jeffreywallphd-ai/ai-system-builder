@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Page, TestInfo } from "@playwright/test";
 const probe = vi.hoisted(() => ({ exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
+  forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none",
   writes: [] as string[], flags: [] as string[], attachments: [] as string[], widths: [] as number[], motion: "no-preference" }));
 vi.mock("node:fs/promises", () => {
   const readFile = async (name: string) => {
@@ -18,7 +19,7 @@ vi.mock("node:fs/promises", () => {
   return { readFile, mkdir, writeFile, default: { readFile, mkdir, writeFile } };
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
-import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation } from "../visual-composer/technical-accessibility-observation";
+import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
 import { qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 
@@ -72,13 +73,35 @@ describe("closed critical accessibility qualification", () => {
   });
 });
 
+describe("bounded control access observations", () => {
+  it("copies finite facts and retains a legitimate inaccessible-control failure", () => {
+    const input = { width: 320, controls: 3, inaccessible: 1 };
+    const result = readControlAccessObservation(input); input.inaccessible = 0;
+    expect(result).toEqual({ width: 320, controls: 3, inaccessible: 1, status: "failed" }); expect(Object.isFrozen(result)).toBe(true);
+    expect(readControlAccessObservation({ width: 1440, controls: 1, inaccessible: 0 }).status).toBe("passed");
+  });
+  it.each([{ width: 0 }, { width: 400 }, { controls: 0 }, { controls: 10001 }, { controls: NaN }, { inaccessible: -1 },
+    { inaccessible: 4 }, { inaccessible: Infinity }, { inaccessible: 0.5 }, { label: "synthetic-private-control" }])("refuses malformed or private control facts %#", change => {
+    expect(() => readControlAccessObservation({ width: 320, controls: 3, inaccessible: 0, ...change })).toThrow("Invalid control access observation.");
+  });
+  it("refuses executable observation hooks without invoking them", () => {
+    let calls = 0; const input = { width: 320, controls: 1, inaccessible: 0 };
+    Object.defineProperty(input, "controls", { get() { calls++; return 1; } });
+    expect(() => readControlAccessObservation(input)).toThrow("Invalid control access observation.");
+    const proxy = new Proxy({}, { getPrototypeOf() { calls++; return Object.prototype; } });
+    expect(() => readControlAccessObservation(proxy)).toThrow("Invalid control access observation."); expect(calls).toBe(0);
+  });
+});
+
 describe("critical surface Page definition with inert IO and synthetic DOM", () => {
   let oldAxe: PropertyDescriptor | undefined;
+  let oldClientWidth: PropertyDescriptor | undefined, oldScrollWidth: PropertyDescriptor | undefined;
   const page = {
     evaluate: async (callback: ((value: unknown) => unknown) | string, value: unknown) => typeof callback === "string" ? undefined : callback(value),
-    emulateMedia: async (options: { reducedMotion: string }) => {
+    emulateMedia: async (options: { reducedMotion?: string; forcedColors?: string }) => {
       if (probe.restoreFails && options.reducedMotion === "no-preference") throw new Error("synthetic-private-browser-error");
-      probe.motion = options.reducedMotion;
+      if (options.reducedMotion) probe.motion = options.reducedMotion;
+      if (options.forcedColors) probe.forcedColors = options.forcedColors;
     },
     setViewportSize: async (value: { width: number }) => { probe.widths.push(value.width); },
   } as unknown as Page;
@@ -86,37 +109,46 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     if (probe.attachFails) throw new Error("synthetic-private-attachment"); probe.attachments.push(value.body);
   } } as unknown as TestInfo;
   beforeEach(() => {
-    Object.assign(probe, { exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference" });
+    Object.assign(probe, { exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none" });
     probe.writes.length = probe.flags.length = probe.attachments.length = probe.widths.length = 0;
     vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID", context().runId); vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", context().sourceRevision);
-    vi.stubGlobal("devicePixelRatio", 1); vi.stubGlobal("matchMedia", () => ({ matches: probe.motion === "reduce" }));
+    vi.stubGlobal("devicePixelRatio", 1); vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(forced-colors: active)" ? !probe.forcedMediaFails && probe.forcedColors === "active" : probe.motion === "reduce" }));
+    oldClientWidth = Object.getOwnPropertyDescriptor(document.documentElement, "clientWidth");
+    oldScrollWidth = Object.getOwnPropertyDescriptor(document.documentElement, "scrollWidth");
+    for (const key of ["clientWidth", "scrollWidth"]) Object.defineProperty(document.documentElement, key, { configurable: true, get: () => probe.widths[probe.widths.length - 1] ?? 1440 });
     oldAxe = Object.getOwnPropertyDescriptor(window, "axe");
     Object.defineProperty(window, "axe", { configurable: true, value: { run: async (root: string) => {
       expect(root).toBe("body"); probe.calls++;
-      return { violations: probe.auditFails ? [{ id: "button-name", nodes: [{}] }] : [], incomplete: [], passes: [{ id: "color-contrast", nodes: [{}] }] };
+      return { violations: probe.auditFails || (probe.forcedAuditFails && probe.forcedColors === "active") ? [{ id: "button-name", nodes: [{}] }] : [], incomplete: [], passes: [{ id: "color-contrast", nodes: [{}] }] };
     } } });
     document.body.innerHTML = '<main class="ui-shell" style="visibility:visible;transition-duration:0s;animation-name:none"><button style="visibility:visible;transition-duration:0s;animation-name:none">Synthetic private label</button></main>';
     for (const element of document.body.querySelectorAll("*")) {
       Object.defineProperty(element, "getClientRects", { value: () => [{ width: 1, height: 1 }] });
-      Object.defineProperty(element, "getBoundingClientRect", { value: () => ({ width: 1, height: 1 }) });
+      Object.defineProperty(element, "getBoundingClientRect", { configurable: true, value: () => ({ width: 1, height: 1, left: 0, right: 1 }) });
+      Object.defineProperty(element, "scrollIntoView", { configurable: true, value: vi.fn() });
     }
   });
   afterEach(() => {
     if (oldAxe) Object.defineProperty(window, "axe", oldAxe); else Reflect.deleteProperty(window, "axe");
+    for (const [key, old] of [["clientWidth", oldClientWidth], ["scrollWidth", oldScrollWidth]] as const) {
+      if (old) Object.defineProperty(document.documentElement, key, old); else Reflect.deleteProperty(document.documentElement, key);
+    }
     document.body.replaceChildren(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
   });
   it("audits both declared widths and finalizes only bounded context/rule/count facts", async () => {
     const report = await qualifyCriticalSurfaceAccessibility(page, info, "settings");
-    expect(report.status).toBe("passed"); expect(probe.calls).toBe(2); expect(probe.widths).toEqual([1440, 320, 1440]);
-    expect(probe.flags).toEqual(["wx", "w", "w", "w"]); expect(probe.motion).toBe("no-preference");
+    expect(report.status).toBe("passed"); expect(probe.calls).toBe(4); expect(probe.widths).toEqual([1440, 320, 1440, 320, 1440]);
+    expect(probe.flags).toEqual(["wx", "w", "w", "w", "w", "w"]); expect(probe.motion).toBe("no-preference"); expect(probe.forcedColors).toBe("none");
     const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved.status).toBe("passed"); expect(saved.audits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
+    expect(saved.forcedColorsAudits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
+    expect(saved["control-access-320"]).toEqual({ width: 320, controls: 1, inaccessible: 0, status: "passed" });
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
   });
   it("audits the actual standalone mount without requiring the builder shell", async () => {
     document.querySelector("main")!.className = "system-runtime-app";
     const runtimeInfo = { ...info, project: { name: "packaged-desktop" } } as TestInfo;
     const result = await qualifyCriticalSurfaceAccessibility(page, runtimeInfo, "runtime-conversation");
-    expect(result.status).toBe("passed"); expect(probe.calls).toBe(2); expect(probe.widths).toEqual([1440, 320, 1440]);
+    expect(result.status).toBe("passed"); expect(probe.calls).toBe(4); expect(probe.widths).toEqual([1440, 320, 1440, 320, 1440]);
     expect(probe.motion).toBe("no-preference"); expect(probe.attachments).toHaveLength(1);
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|message/);
   });
@@ -143,6 +175,51 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     const runtimeInfo = { ...info, project: { name: "packaged-desktop" } } as TestInfo;
     await expect(qualifyCriticalSurfaceAccessibility(changingPage, runtimeInfo, "runtime-conversation")).rejects.toThrow("Critical accessibility check failed at audit-1440.");
     expect(probe.calls).toBe(0); expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed");
+  });
+  it.each(["outside-left", "outside-right", "zero-width", "nonfinite"] as const)("refuses a visible %s control even without document overflow", async fault => {
+    Object.defineProperty(document.querySelector("button")!, "getBoundingClientRect", { configurable: true, value: () => ({
+      width: fault === "zero-width" ? 0 : fault === "nonfinite" ? NaN : 10, height: 10,
+      left: fault === "outside-left" ? -20 : 0, right: fault === "outside-right" ? 2000 : 10,
+    }) });
+    await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings")).rejects.toThrow("Critical accessibility check failed at control-access-1440.");
+    const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved.status).toBe("failed");
+    expect(saved["control-access-1440"].inaccessible).toBe(1); expect(probe.forcedColors).toBe("none");
+  });
+  it("scrolls visible controls before measurement and excludes hidden or inert controls", async () => {
+    const button = document.querySelector("button")!; let scrolled = false;
+    Object.defineProperty(button, "scrollIntoView", { configurable: true, value: () => { scrolled = true; } });
+    Object.defineProperty(button, "getBoundingClientRect", { configurable: true, value: () => ({ width: 1, height: 1, left: scrolled ? 0 : -20, right: 1 }) });
+    const hidden = document.createElement("button"); hidden.style.visibility = "hidden"; document.body.append(hidden);
+    const inert = document.createElement("div"); inert.setAttribute("inert", ""); inert.append(document.createElement("button")); document.body.append(inert);
+    for (const element of [hidden, inert.firstElementChild!]) {
+      Object.assign((element as HTMLElement).style, { transitionDuration: "0s", animationName: "none" });
+      if (element !== hidden) (element as HTMLElement).style.visibility = "visible";
+      Object.defineProperty(element, "getClientRects", { value: () => [{ width: 10, height: 10 }] });
+      Object.defineProperty(element, "getBoundingClientRect", { value: () => ({ width: 10, height: 10, left: -100, right: -90 }) });
+      Object.defineProperty(element, "scrollIntoView", { value: () => { throw new Error("Excluded controls must not be inspected."); } });
+    }
+    expect((await qualifyCriticalSurfaceAccessibility(page, info, "settings")).status).toBe("passed");
+    const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved["control-access-320"].controls).toBe(1); expect(scrolled).toBe(true);
+  });
+  it.each(["media", "contrast"] as const)("retains a failed forced-colors %s check after both baseline widths passed", async fault => {
+    probe.forcedMediaFails = fault === "media"; probe.forcedAuditFails = fault === "contrast";
+    await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings")).rejects.toThrow(`Critical accessibility check failed at ${fault === "media" ? "forced-colors-media" : "forced-colors-audit-1440"}.`);
+    const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved.status).toBe("failed"); expect(saved.audits).toHaveLength(2);
+    expect(probe.forcedColors).toBe("none"); expect(probe.motion).toBe("no-preference"); expect(probe.widths[probe.widths.length - 1]).toBe(1440);
+    expect(probe.writes.join("")).not.toContain("synthetic-private");
+  });
+  it("refuses a mounted document without any observable controls", async () => {
+    document.querySelector("button")!.remove();
+    await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings")).rejects.toThrow("Critical accessibility check failed at control-access-1440.");
+    expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed"); expect(probe.calls).toBe(0);
+  });
+  it("refuses an excessive control collection before inspecting its entries", async () => {
+    const query = document.body.querySelectorAll.bind(document.body);
+    const spy = vi.spyOn(document.body, "querySelectorAll").mockImplementation(((selector: string) => selector === "*" ? query(selector) : new Array(10001)) as typeof document.body.querySelectorAll);
+    try {
+      await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings")).rejects.toThrow("Critical accessibility check failed at control-access-1440.");
+      expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed"); expect(probe.calls).toBe(0);
+    } finally { spy.mockRestore(); }
   });
   it("denies an existing report without overwriting, inspecting or adopting its bytes", async () => {
     probe.exists = true;

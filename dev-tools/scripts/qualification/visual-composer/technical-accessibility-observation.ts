@@ -129,3 +129,13 @@ export function readReducedMotionObservation(value: unknown) {
     return Object.freeze({ elements, maximumTransitionMilliseconds: data.maximumTransitionMilliseconds as number, maximumAnimationMilliseconds: data.maximumAnimationMilliseconds as number });
   } catch { throw new Error("Invalid reduced motion observation."); }
 }
+
+/** Geometry is measured in the browser; only finite counts cross this boundary. */
+export function readControlAccessObservation(value: unknown) {
+  try {
+    const data = record(value, ["width", "controls", "inaccessible"]);
+    if (data.width !== 320 && data.width !== 1440) throw new Error();
+    const controls = count(data.controls, 10000, 1), inaccessible = count(data.inaccessible, controls);
+    return Object.freeze({ width: data.width, controls, inaccessible, status: inaccessible === 0 ? "passed" : "failed" });
+  } catch { throw new Error("Invalid control access observation."); }
+}

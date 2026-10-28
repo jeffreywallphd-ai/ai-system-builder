@@ -483,3 +483,25 @@ Focused synthetic tests check the definition and its refusal paths. They do not
 qualify the real desktop window. Actual host, native zoom, startup/paint, model,
 accessibility and full qualification remain pending. No accepted model accuracy
 check is rerun, and this source checkpoint does not complete the parent increment.
+
+## Critical display accessibility definitions
+
+The critical audit checks individual visible controls at 1440px and 320px. It
+scrolls each control into view before checking finite, positive horizontal
+geometry against the viewport. Hidden and inert controls are excluded. Empty or
+excessive collections cannot pass. The report contains counts and fixed statuses;
+control labels, selectors, text and raw errors stay outside the evidence.
+
+The same audit then enables forced-color mode and verifies that the browser
+reports it as active. Reduced motion remains enabled. Both declared widths repeat
+the unchanged computed contrast/semantic audit and control geometry check. The
+original baseline audit pair remains separate. Media and the base viewport are
+restored through the existing failure-aware finalizer; a failed high-contrast or
+restoration step cannot leave a passed report.
+
+These checks define bounded test behavior. They do not prove every clipping or
+visual layout case, native browser zoom, actual OS display behavior, model quality
+or successful execution on a real host. Those checks remain separate and pending
+until executed. This source work does not qualify a parent criterion or complete
+the original roadmap chunk. Operational profile membership and resource limits
+are unchanged; no actual apps, models, OCR engines or full suite are run here.

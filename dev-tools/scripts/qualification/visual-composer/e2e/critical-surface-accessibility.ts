@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
-import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit } from "../technical-accessibility-observation";
+import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit } from "../technical-accessibility-observation";
 import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
@@ -16,14 +16,37 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     testKey: createHash("sha256").update(info.title).digest("hex") });
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", context.runId, "critical-accessibility", context.host, context.testKey, context.surface);
   const audits: ReturnType<typeof rawAudit>[] = [];
+  const forcedColorsAudits: ReturnType<typeof rawAudit>[] = [];
   const report: Record<string, unknown> = { ...context, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: context.schemaVersion,
-    status: "running", scope: "ui-accessibility-observation-only", audits };
+    status: "running", scope: "ui-accessibility-observation-only", audits, forcedColorsAudits };
   let created = false, stage = "reference-profile";
   async function save() {
     const body = JSON.stringify(report, null, 2) + "\n";
     if (Buffer.byteLength(body) > 262144) throw new Error("Critical accessibility evidence exceeded its bound.");
     await writeFile(path.join(folder, "evidence.json"), body, { flag: created ? "w" : "wx" });
     created = true;
+  }
+  async function controlAccess(width: 320 | 1440, key: string) {
+    const observation = await page.evaluate(({ width }) => {
+      try {
+        const candidates = document.body.querySelectorAll('button,input:not([type="hidden"]),select,textarea,a[href],[role="button"],[tabindex]');
+        if (candidates.length > 10000) throw new Error();
+        const viewportWidth = document.documentElement.clientWidth;
+        if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) throw new Error();
+        let controls = 0, inaccessible = 0;
+        for (const element of candidates) {
+          if (!(element instanceof HTMLElement) || element.closest('[inert],[aria-hidden="true"]') ||
+            !element.getClientRects().length || getComputedStyle(element).visibility !== "visible") continue;
+          controls++;
+          element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+          const box = element.getBoundingClientRect();
+          if (![box.width, box.height, box.left, box.right].every(Number.isFinite) || box.width <= 0 || box.height <= 0 || box.left < -1 || box.right > viewportWidth + 1) inaccessible++;
+        }
+        return { width, controls, inaccessible };
+      } catch { throw new Error("Critical control access observation failed."); }
+    }, { width });
+    const result = readControlAccessObservation(observation); report[key] = result;
+    if (result.status !== "passed") throw new Error();
   }
   try {
     const reference = await loadTechnicalAccessibilityReference();
@@ -39,7 +62,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     if (mounted !== true) throw new Error();
     stage = "audit-engine";
     await page.evaluate(await readFile(path.resolve("node_modules/axe-core/axe.min.js"), "utf8"));
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "none" });
     if (await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches) !== true) throw new Error();
     for (const width of [1440, 320] as const) {
       stage = `reflow-${width}`; await page.setViewportSize({ width, height: 1000 });
@@ -62,8 +85,23 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
         } catch { throw new Error("Critical reduced motion observation failed."); }
       });
       report[`motion-${width}`] = readReducedMotionObservation(motion);
+      stage = `control-access-${width}`; await controlAccess(width, stage);
       stage = `audit-${width}`;
       const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width); audits.push(rawAudit(audit)); await save();
+      if (audit.status !== "passed") throw new Error();
+    }
+    stage = "forced-colors-media";
+    await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" });
+    if (await page.evaluate(() => matchMedia("(forced-colors: active)").matches) !== true) throw new Error();
+    if (await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches) !== true) throw new Error();
+    for (const width of [1440, 320] as const) {
+      stage = `forced-colors-reflow-${width}`; await page.setViewportSize({ width, height: 1000 });
+      const overflow: unknown = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      if (typeof overflow !== "number" || !Number.isFinite(overflow) || overflow < 0 || overflow > 1) throw new Error();
+      stage = `forced-colors-control-access-${width}`; await controlAccess(width, stage);
+      stage = `forced-colors-audit-${width}`;
+      const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width);
+      forcedColorsAudits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
     }
     const result = qualifyCriticalAccessibilityReport(context, audits);
@@ -75,7 +113,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     if (created) await finalizeTechnicalAccessibilityEvidence(report, save,
       () => info.attach(`critical-accessibility-${context.surface}`, { body: JSON.stringify(report), contentType: "application/json" }),
       async () => {
-        try { await page.emulateMedia({ reducedMotion: "no-preference" }); }
+        try { await page.emulateMedia({ reducedMotion: "no-preference", forcedColors: "none" }); }
         finally { await page.setViewportSize({ width: 1440, height: 1000 }); }
       });
   }
