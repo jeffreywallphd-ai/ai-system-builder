@@ -16,17 +16,20 @@ interface PreloadResponseEnvelope {
 }
 
 function isPreloadResponseEnvelope(value: unknown): value is PreloadResponseEnvelope {
-  return typeof value === "object" && value !== null && "ok" in value;
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    && typeof (value as PreloadResponseEnvelope).ok === "boolean";
 }
 
+const percentage = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
+
 function toStatusSnapshot(value: unknown): DesktopPythonRuntimeStatusSnapshot {
-  if (typeof value !== "object" || value === null) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("Python runtime status response payload is invalid.");
   }
 
   const payload = value as Partial<DesktopPythonRuntimeStatusSnapshot>;
   return {
-    supervisorStatus: payload.supervisorStatus ?? "failed",
+    supervisorStatus: payload.supervisorStatus && ["stopped", "starting", "ready", "failed"].includes(payload.supervisorStatus) ? payload.supervisorStatus : "failed",
     healthy: payload.healthy === true,
     runtimeStatus: typeof payload.runtimeStatus === "string" ? payload.runtimeStatus : "unknown",
     capabilities: Array.isArray(payload.capabilities) ? payload.capabilities.filter((value): value is string => typeof value === "string") : [],
@@ -36,12 +39,19 @@ function toStatusSnapshot(value: unknown): DesktopPythonRuntimeStatusSnapshot {
         && entry?.provider === "transformers"
         && (entry.memoryMode === undefined || entry.memoryMode === "standard" || entry.memoryMode === "offload-v1")
         && (entry?.inferenceMode === "text2text" || entry?.inferenceMode === "causal" || entry?.inferenceMode === "chat"))
+        .map(entry => ({
+          provider: entry.provider, modelId: entry.modelId, inferenceMode: entry.inferenceMode,
+          ...(entry.memoryMode === "standard" || entry.memoryMode === "offload-v1" ? { memoryMode: entry.memoryMode } : {}),
+          ...(entry.device === "cpu" || entry.device === "cuda" || entry.device === "auto" ? { device: entry.device } : {}),
+          ...(entry.torchDtype === "auto" || entry.torchDtype === "float16" || entry.torchDtype === "bfloat16" || entry.torchDtype === "float32" ? { torchDtype: entry.torchDtype } : {}),
+          ...(typeof entry.localPath === "string" ? { localPath: entry.localPath } : {}),
+        }))
       : [],
-    activeTaskCount: typeof payload.activeTaskCount === "number" ? payload.activeTaskCount : 0,
+    activeTaskCount: typeof payload.activeTaskCount === "number" && Number.isSafeInteger(payload.activeTaskCount) && payload.activeTaskCount >= 0 ? payload.activeTaskCount : 0,
     systemResources: {
-      memoryUsagePercent: Number.isFinite(Number(payload.systemResources?.memoryUsagePercent)) ? Number(payload.systemResources?.memoryUsagePercent) : 0,
-      cpuUsagePercent: Number.isFinite(Number(payload.systemResources?.cpuUsagePercent)) ? Number(payload.systemResources?.cpuUsagePercent) : 0,
-      gpuUsagePercent: Number.isFinite(Number(payload.systemResources?.gpuUsagePercent)) ? Number(payload.systemResources?.gpuUsagePercent) : 0,
+      memoryUsagePercent: percentage(payload.systemResources?.memoryUsagePercent),
+      cpuUsagePercent: percentage(payload.systemResources?.cpuUsagePercent),
+      gpuUsagePercent: percentage(payload.systemResources?.gpuUsagePercent),
     },
     generationCapacity:
       normalizeDatasetPreparationGenerationCapacitySnapshot(
@@ -52,6 +62,7 @@ function toStatusSnapshot(value: unknown): DesktopPythonRuntimeStatusSnapshot {
         typeof entry?.timestamp === "string"
         && (entry?.level === "info" || entry?.level === "warn" || entry?.level === "error")
         && typeof entry?.message === "string")
+        .map(entry => ({ timestamp: entry.timestamp, level: entry.level, message: entry.message }))
       : [],
   };
 }
@@ -62,7 +73,7 @@ function unwrap(response: unknown, fallbackMessage: string): unknown {
   }
 
   if (!response.ok) {
-    throw new Error(response.error?.message ?? fallbackMessage);
+    throw new Error(fallbackMessage);
   }
 
   return response.value;
@@ -82,24 +93,25 @@ export function createDesktopPythonRuntimeClient(): DesktopPythonRuntimeClient {
         throw new Error("Python runtime status API is unavailable.");
       }
 
-      return toStatusSnapshot(
-        unwrap(
-          await desktopApi.readPythonRuntimeStatus(),
-          "Failed to read Python runtime status.",
-        ),
-      );
+      try {
+        return toStatusSnapshot(unwrap(await desktopApi.readPythonRuntimeStatus(), "Failed to read Python runtime status."));
+      } catch {
+        throw new Error("Failed to read Python runtime status.");
+      }
     },
     async controlRuntime(action) {
+      if (!["start", "stop", "restart", "unload-model", "clear-logs"].includes(action)) {
+        throw new Error("The runtime action is not supported.");
+      }
       if (!desktopApi.controlPythonRuntime) {
         throw new Error("Python runtime control API is unavailable.");
       }
 
-      return toStatusSnapshot(
-        unwrap(
-          await desktopApi.controlPythonRuntime({ action }),
-          "Failed to control Python runtime.",
-        ),
-      );
+      try {
+        return toStatusSnapshot(unwrap(await desktopApi.controlPythonRuntime({ action }), "Failed to control Python runtime."));
+      } catch {
+        throw new Error("Failed to control Python runtime.");
+      }
     },
   };
 }

@@ -41,3 +41,36 @@ Focused controller and native-event tests are in
 `desktop-startup-ui` contributor profile. Synthetic DOM/native-event and bounded
 Vite checks qualify this feature; they do not qualify a complete real host,
 provider, model, OCR or the deferred combined roadmap suite.
+
+# Runtime status and notification checks
+
+Settings reads Python runtime status only when its runtime controls are open.
+Opening or closing the controls does not start or stop a worker. Status reads
+retain the ten-second log refresh and five-second resource refresh. These reads
+share one pending request within a committed client scope. Start, Stop, Restart
+and Clear log remain explicit actions; one action is admitted at a time. An
+explicit Refresh joins a pending background read and takes foreground ownership,
+including its log result. Its synchronous admission guard prevents controls from
+starting before the pending state renders. Background polling alone does not
+disable an explicit control.
+
+A committed view owns each read and action result. Replacing the client, disabling
+the view or unmounting it retires that ownership. An older read cannot overwrite
+a later control result. Its physical request still retires before a new status
+read begins in that view. An explicit Refresh can wait for that retirement and
+request fresh status. Retiring the renderer does not cancel or undo an action
+that the host already accepted.
+
+The controls show a pending response and fixed recovery text. Raw exceptions and
+host error messages are not displayed. The client copies known status, model and
+log fields. Resource percentages remain finite display values; they do not grant
+model admission or change memory limits. Existing generation-capacity validation
+and backend authorization remain in place. Activity log content still follows
+the host's diagnostic contract; these checks do not qualify arbitrary host logs
+as public data or prove native process cleanup.
+
+Run the fixed `operational-ui` contributor profile for the exact runtime,
+notification, task-family, shell, dashboard and readiness regressions. It selects
+Node or Vitest from the test imports. Its synthetic UI/client evidence does not
+start an actual app, worker or model and does not qualify physical runtime,
+provider, native offload, actual-host accessibility or the deferred full suite.

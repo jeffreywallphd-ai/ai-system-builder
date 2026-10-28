@@ -16,6 +16,24 @@ const classifiedPaths = new Set(NOTIFICATION_MESSAGE_INVENTORY.map((entry) => en
 const statusSitePattern = /role\s*=\s*(?:["'](?:alert|status)["']|\{[^}\n]*(?:alert|status)[^}\n]*\})|ui-(?:status|alert|feedback)/;
 
 describe("notification message migration inventory", () => {
+  it("excludes colocated tests and test directories while retaining real status and API sources", () => {
+    for (const path of [
+      "apps/thin-client/src/features/security/components/SecurityStatusPanel.unit.test.tsx",
+      "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
+      "modules/ui/shared/example.test.tsx",
+      "modules/ui/shared/example.spec.ts",
+      "modules/ui/shared/notifications/tests/NotificationTestHarness.tsx",
+      "modules/ui/shared/__tests__/fixture.tsx",
+    ]) expect(isProductionSource(path)).toBe(false);
+    for (const path of [
+      "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
+      "modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx",
+      "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+      "modules/ui/shared/TestResultsPanel.tsx",
+      "apps/thin-client/src/features/runtime-readiness/api/apiRuntimeReadinessClient.ts",
+    ]) expect(isProductionSource(path)).toBe(true);
+  });
+
   it("classifies every production alert/status source and requires migrated producers to use the shared publisher", () => {
     const unclassified = productionRoots.flatMap(productionFiles).filter((path) => {
       const source = readFileSync(path, "utf8");
@@ -114,11 +132,17 @@ describe("notification message migration inventory", () => {
 });
 
 function productionFiles(root: string): string[] {
-  return walk(root).filter((path) => path.endsWith(".tsx") && !normalize(path).includes("/tests/"));
+  return walk(root).filter((path) => path.endsWith(".tsx") && isProductionSource(path));
 }
 
 function productionSourceFiles(root: string): string[] {
-  return walk(root).filter((path) => /\.tsx?$/.test(path) && !normalize(path).includes("/tests/"));
+  return walk(root).filter(isProductionSource);
+}
+
+function isProductionSource(path: string): boolean {
+  const name = normalize(path);
+  return /\.tsx?$/.test(name) && !/(?:^|\/)(?:tests|__tests__)\//.test(name)
+    && !/\.(?:test|spec)\.tsx?$/.test(name);
 }
 
 function walk(directory: string): string[] {

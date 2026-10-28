@@ -33,7 +33,7 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
   });
 
   return (
-    <footer className="ui-python-runtime-footer ui-panel ui-stack ui-stack--sm" aria-label="Python runtime controls">
+    <footer className="ui-python-runtime-footer ui-panel ui-stack ui-stack--sm" aria-label="Python runtime controls" aria-busy={loading}>
       <div className="ui-python-runtime-footer__header">
         <h3 className="ui-panel__title">Python Runtime</h3>
         <div className="ui-python-runtime-footer__actions">
@@ -43,6 +43,7 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
           <button className="ui-button" type="button" onClick={() => void onRefresh()} disabled={loading}>Refresh</button>
         </div>
       </div>
+      {loading ? <p role="status">Waiting for the runtime response...</p> : null}
       <p>
         Status: <strong>{statusLabel}</strong> | Health: <strong>{healthLabel}</strong> | Capabilities: {capabilitiesLabel}
       </p>

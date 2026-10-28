@@ -118,6 +118,18 @@ Unknown or explicitly requested generic impact keeps its checks. It starts no
 server, browser, model or provider and grants no TLS, identity, native or parent
 qualification.
 
+The fixed `operational-ui` profile runs 36 literal runtime, notification,
+task-family, shell, dashboard and readiness files. Automatic selection uses its
+eight specific runtime and notification source/test paths. Shared README files
+and borrowed regressions do not activate it for another feature's profile.
+Node and Vitest files keep
+their actual imported test runner. Held replies cover current-view/action
+ownership and safe recovery. Rendered notification actions preserve active tasks
+and other workspaces. The production-message guard includes current contextual
+panels and excludes colocated tests with explicit counterexamples. Unknown or
+explicit generic impact keeps its checks. The profile starts no actual app,
+worker, model or provider and grants no native, offload, real-host or parent pass.
+
 The fixed `control-plane` unittest command has a ten-minute execution ceiling.
 Its growing filesystem and Node fixture matrix exceeded the earlier three-minute
 ceiling while making successful progress. The earlier timeout remains failed
