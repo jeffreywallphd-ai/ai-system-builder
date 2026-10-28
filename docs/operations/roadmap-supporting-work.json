@@ -2250,7 +2250,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2269,7 +2269,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -5515,6 +5515,95 @@
       "receipt_digest": "cecbb3c42b8caa22aac02cef3b12398a94e39198519e4b8de23fb573ff2e7085",
       "review_digest": "aaa1188efa17af211f00d23d47838adf547e60f5596fa2a2ee24006eff472ea1",
       "scope": "Accessibility test points for workspace creation and System publication",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "standalone-runtime-accessibility-definitions",
+      "work_criteria": [
+        "fixed-runtime-page-audit",
+        "runtime-mount-denials-and-evidence",
+        "owned-source-and-current-review"
+      ],
+      "receipt_digest": "21b3817680a26f8f1d8bda21ea96a5a9238437166dc2093b2989eb2ad40fba54",
+      "review_digest": "d46345b5ba8635fabcc998d10321233fc27c7581dcaee5d201a94f16128a5e06",
+      "scope": "Accessibility checks for the published conversation window",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "critical-display-accessibility-definitions",
+      "work_criteria": [
+        "bounded-control-access-observation",
+        "forced-colors-and-failure-finalization",
+        "focused-source-and-separate-review"
+      ],
+      "receipt_digest": "c0aa6b2486fdfb8aabb154199bbab25886a5971c9bf8fefd94b3cfb2d8525018",
+      "review_digest": "84de410c704a40a3dde17f6b73a204eb28171fd42accf517138d1f55d9971c54",
+      "scope": "Control fit and high-contrast test definitions",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "model-image-critical-accessibility-definitions",
+      "work_criteria": [
+        "supported-model-image-form-definitions",
+        "host-phase-denials-and-preserved-evidence",
+        "selected-source-and-separate-review"
+      ],
+      "receipt_digest": "010bf7b46bed31b57554bb8c4c9df9c3bd1c241ca9d90e99c8e995615ac17601",
+      "review_digest": "d645c384f74acdacbfe4ca263c63dc82092906f7fce43fe338da181d0ca68795",
+      "scope": "Accessibility checks for Models and Image forms",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "ocr-ui-and-discovery-reconciliation",
+      "work_criteria": [
+        "supported-ocr-audit-points",
+        "context-and-transport-denials",
+        "selected-source-and-separate-review",
+        "current-discovery-coverage-consistency"
+      ],
+      "receipt_digest": "3e9fbe275b95e62acdbd63f0d0dfd1178ad2763a68a75d8e1555ca01fd75dcef",
+      "review_digest": "4a8faf87a2bc2a010bff71d5c4c7b1b8af1f42a332ee597c79684b953f348721",
+      "scope": "Accessibility checks for scanned-document forms",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "ocr-ui-and-discovery-reconciliation",
+      "work_criteria": [
+        "current-discovery-coverage-consistency"
+      ],
+      "receipt_digest": "3e9fbe275b95e62acdbd63f0d0dfd1178ad2763a68a75d8e1555ca01fd75dcef",
+      "review_digest": "4a8faf87a2bc2a010bff71d5c4c7b1b8af1f42a332ee597c79684b953f348721",
+      "scope": "Coverage record synchronization for Assets search requirements",
       "limitations": [
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."

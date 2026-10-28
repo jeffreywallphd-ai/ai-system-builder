@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -11214,7 +11214,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -12654,6 +12654,67 @@
           "The remaining app, operating system, provider, performance and final tests stay with their current owners.",
           "Accepted model accuracy checks stay closed.",
           "No user action is needed for the remaining code."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5e6f7d98ca5172f7f3b0c8161d8f1266a3c89bf95bd38ed7f1c7e8be9a8a9bc5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for the published conversation window.",
+          "The tests reject an unsupported host or the wrong page.",
+          "The actual desktop check remains pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1ba44356aa9f6eee6a549a06b281cce59bfd2f5f61a2ffc8b1aa4f33e013b275",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for controls at narrow widths and in high-contrast mode.",
+          "Helper tests cover missing controls, invalid measurements and failed display checks.",
+          "The real app display checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "36ad1f3520919c69431fb8045ffb32a6d9d38872dbd0d9322f59829a9d2c655e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for model discovery, inventory and Image forms.",
+          "Desktop training configuration is included.",
+          "The thin client must not show a training tab.",
+          "These form checks do not start model training, generation or a download."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0a791f923096351938e0445ad4ff674866d4c8ea86b8d04a54c5d11b1f0b1297",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for scanned-document configuration and the first output-review form.",
+          "The tests retain language checks, row review, source links, saving and cancellation.",
+          "Actual app and OCR engine checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "126696d5e008e36203ec169d101baa41f319cd2db83c10b69e012f61fc7d5c57",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added the existing Assets search requirement to the matching discovery record.",
+          "The tests compare all 39 scenarios with the coverage record.",
+          "This record update does not show an actual app test pass."
         ]
       }
     }
