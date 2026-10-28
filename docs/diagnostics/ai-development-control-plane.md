@@ -811,3 +811,23 @@ borrowed consumers receive explicit coverage without becoming automatic triggers
 Focused checks and case collection cover source definitions only. Actual host,
 zoom, accessibility, startup/paint and full qualification remain pending. Other
 critical workflows still precede the original roadmap chunk's completion.
+
+## Workspace and System lifecycle accessibility definitions
+
+The primary lifecycle cases audit the workspace form, saved System row in Manage,
+checked build dialog, ready publication form and initial publish confirmation.
+They use the same closed context and fixed private-free document audit. Every
+lifecycle caller now declares an initial or repeat audit mode. Missing or invalid
+mode is refused before Page access. Primary callers supply the current TestInfo;
+the secondary desktop workspace repeats its original lifecycle without replacing
+initial audit records or using private System/workspace names in report paths.
+
+Existing checked revision/build/release identities, explicit Build/Publish actions,
+cancel/focus return, installation/runtime lifecycle and workspace isolation remain.
+The Operational profile keeps 40 literal tests and 19 automatic paths; three
+borrowed consumers receive coverage without becoming automatic triggers.
+
+These are source definitions with related feature evidence. Actual host,
+accessibility, native zoom, runtime/model, startup/paint and full qualification
+remain pending. Standalone runtime mounting, original host diagnostic capture and
+other critical consumers remain separate work before original chunk closure.

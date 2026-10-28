@@ -20,6 +20,7 @@ vi.mock("node:fs/promises", () => {
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation } from "../visual-composer/technical-accessibility-observation";
 import { qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
+import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
@@ -27,7 +28,8 @@ const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audi
 describe("closed critical accessibility qualification", () => {
   it.each(["settings", "security", "notifications", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
     "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser", "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
-    "system-element-picker", "system-preview", "system-properties", "system-layers"])("copies supported %s context and requires both exact ordered widths", surface => {
+    "system-element-picker", "system-preview", "system-properties", "system-layers", "workspace-create", "system-manage",
+    "system-build-dialog", "system-publish", "system-publication-confirm"])("copies supported %s context and requires both exact ordered widths", surface => {
     const value = { ...context(), surface }, result = qualifyCriticalAccessibilityReport(value, [audit(1440), audit(320)]);
     value.surface = "synthetic-private-context";
     expect(result.schemaVersion).toBe("critical-surface-accessibility-v1"); expect(result.contextSchemaVersion).toBe("critical-accessibility-context-v1");
@@ -127,5 +129,14 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     else expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed");
     expect(probe.writes.join("")).not.toContain("synthetic-private");
     if (fault === "scale") expect(JSON.parse(probe.writes[probe.writes.length - 1]!).browser).toBeUndefined();
+  });
+});
+
+
+describe("explicit lifecycle audit admission", () => {
+  it.each([undefined, null, {}, { mode: "unknown" }, { mode: "" }, { mode: "initial", info: undefined }])("rejects missing or invalid mode before Page access %#", async accessibility => {
+    const page = new Proxy({}, { get() { throw new Error("Page must not be accessed."); } });
+    await expect(prepareGuidedSystemLifecycle(page as Page, "Synthetic lifecycle", { modelDisplayName: "Synthetic model", accessibility } as never))
+      .rejects.toThrow("Unknown lifecycle accessibility mode.");
   });
 });

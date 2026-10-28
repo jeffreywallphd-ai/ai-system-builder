@@ -1894,7 +1894,10 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
       ]
     }
   }

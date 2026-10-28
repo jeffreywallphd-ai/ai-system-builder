@@ -1,8 +1,10 @@
-import { expect, type Page, type Locator } from "@playwright/test";
+import { expect, type Page, type Locator, type TestInfo } from "@playwright/test";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readRuntimeReleaseContext, runObservedRuntimeLifecycle, type RuntimeReleaseContext } from "../runtime-lifecycle-oracles";
 
 export interface GuidedSystemLifecycleOptions {
   readonly modelDisplayName: string;
+  readonly accessibility: { readonly mode: "initial"; readonly info: TestInfo } | { readonly mode: "repeat" };
   readonly exerciseStartedRuntime?: (attempt: 1 | 2) => Promise<void>;
   readonly restartRuntime?: boolean;
   readonly exerciseStoppedRuntime?: (attempt: 1 | 2) => Promise<void>;
@@ -13,6 +15,13 @@ export async function prepareGuidedSystemLifecycle(
   systemName: string,
   options: GuidedSystemLifecycleOptions,
 ): Promise<GuidedSystemRuntimeHandle> {
+  const accessibility = options.accessibility;
+  if (!accessibility || typeof accessibility !== "object" ||
+      (accessibility.mode !== "initial" && accessibility.mode !== "repeat") ||
+      (accessibility.mode === "initial" && (!accessibility.info || typeof accessibility.info !== "object"))) {
+    throw new Error("Unknown lifecycle accessibility mode.");
+  }
+  const auditInfo = accessibility.mode === "initial" ? accessibility.info : undefined;
   await page.getByRole("tab", { name: "Compose", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
     "aria-selected",
@@ -70,6 +79,7 @@ export async function prepareGuidedSystemLifecycle(
   await page.getByRole("tab", { name: "Manage" }).click();
   const systemRow = page.getByRole("row", { name: new RegExp(systemName) });
   await expect(systemRow).toBeVisible({ timeout: 30_000 });
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-manage");
   await systemRow.getByRole("button", { name: "Open in Compose" }).click();
   await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
     "aria-selected",
@@ -106,6 +116,7 @@ export async function prepareGuidedSystemLifecycle(
     exact: true,
   });
   await expect(modalBuildAction).toBeFocused();
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-build-dialog");
   await modalBuildAction.press("Enter");
   await expect(
     buildDialog.getByRole("heading", { name: "Build and checks completed" }),
@@ -146,6 +157,7 @@ export async function prepareGuidedSystemLifecycle(
   await expect(
     publishWorkspace.getByText("Ready to publish", { exact: true }).first(),
   ).toBeVisible();
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publish");
   const selectedSystem = await publishWorkspace.getByRole("combobox", { name: "System", exact: true }).inputValue();
   const selectedBuild = await publishWorkspace.getByRole("combobox", { name: "Build version", exact: true }).inputValue();
 
@@ -159,6 +171,7 @@ export async function prepareGuidedSystemLifecycle(
   await expect(
     publishDialog.getByRole("button", { name: "Publish", exact: true }),
   ).toBeFocused();
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publication-confirm");
   await page.keyboard.press("Escape");
   await expect(publishDialog).toBeHidden();
   await expect(publishBuild).toBeFocused();

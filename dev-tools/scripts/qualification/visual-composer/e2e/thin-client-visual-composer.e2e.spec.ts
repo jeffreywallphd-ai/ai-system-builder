@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { observeComposerProtocol } from "./meaningful-system-journeys";
 import {
   assertGuidedLifecycleReflow,
@@ -72,6 +73,8 @@ test("thin client completes the guided build and publication lifecycle", async (
     await page.getByRole("button", { name: "Home", exact: true }).click();
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
   }
+  await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
+  await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create");
   await page
     .locator('input[name="workspaceName"]')
     .fill("Browser lifecycle qualification");
@@ -125,6 +128,7 @@ test("thin client completes the guided build and publication lifecycle", async (
 
   await completeGuidedSystemLifecycle(page, "Browser portal", {
     modelDisplayName: QUALIFICATION_MODEL_NAME,
+    accessibility: { mode: "initial", info: test.info() },
   });
   const summary = page.getByRole("region", { name: "Page summary", exact: true });
   await expect(summary.getByText("Summary unavailable.", { exact: true })).toBeVisible();

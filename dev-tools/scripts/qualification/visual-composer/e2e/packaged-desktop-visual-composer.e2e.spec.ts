@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import {
@@ -87,6 +88,8 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Create a Workspace", level: 1 }),
     ).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Create new workspace" }).click();
+    await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
+    await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create");
     await page
       .locator('input[name="workspaceName"]')
       .fill("Desktop lifecycle qualification");
@@ -106,7 +109,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Systems", level: 1 }),
     ).toBeVisible();
 
-    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME });
+    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "initial", info: test.info() } });
     const runtimePages = () => electronApp.windows().filter(candidate => candidate !== page);
     const observer = createOwnedRuntimePageObserver(runtimePages);
     let secondary: GuidedSystemRuntimeHandle | undefined;
@@ -235,7 +238,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       afterStop: async attempt => {
         await observeStop(primary.context);
         if (attempt !== 1) return;
-        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME });
+        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "repeat" } });
         qualificationContexts = readRuntimeReleasePair([primary.context, secondary.context]);
         const isolatedRuntime = secondary;
         await runObservedRuntimeLifecycle({
