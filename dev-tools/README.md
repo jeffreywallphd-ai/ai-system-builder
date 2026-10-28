@@ -546,3 +546,14 @@ Portable mock/contract/UI checks and case collection check definitions only.
 Actual engine, native, host, zoom, performance and full qualification remain
 pending. Accepted model accuracy is not rerun. These audit definitions do not
 complete the parent roadmap criterion or original implementation chunk.
+
+
+The fixed native browser-zoom helper retires its returned browser even when
+post-launch inspection fails. Its focused tests cover failed setup, session
+detachment, concurrent or repeated cleanup, uncertain process exit and changed
+profile ownership. Only a verified fresh test profile can be removed. A failed
+launch or unproven exit retains the files; it never authorizes stopping an unknown
+process. Original setup and cleanup failures remain available for diagnosis.
+These synthetic fixtures start no browser and qualify no real native zoom,
+hostile filesystem protection, model offload or parent roadmap. The fixed Chrome
+launch options and three-second exit-observation limit remain unchanged.
