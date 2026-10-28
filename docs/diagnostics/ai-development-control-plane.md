@@ -118,9 +118,9 @@ Unknown or explicitly requested generic impact keeps its checks. It starts no
 server, browser, model or provider and grants no TLS, identity, native or parent
 qualification.
 
-The fixed `operational-ui` profile runs 39 literal runtime, notification,
+The fixed `operational-ui` profile runs 40 literal runtime, notification,
 task-family, shell, dashboard and readiness files. Automatic selection uses its
-seventeen specific runtime, notification and host-definition source/test paths.
+nineteen specific runtime, notification and host-definition source/test paths.
 Shared README files and borrowed regressions do not activate it for another
 feature's profile.
 Node and Vitest files keep
@@ -153,6 +153,16 @@ stages, and browser scale is validated before publication. Media restoration
 precedes passed publication; failed attachment/storage finalization writes failed
 evidence when storage permits. The actual failed test receipt always prevents a
 pass, including when evidence storage is unavailable.
+The critical-surface core adds closed Settings, thin Security and Notifications
+audit definitions at 1440 px and 320 px. Both widths, named profile/scale, motion,
+reflow and actual computed rule/count outcomes are required. The fixed document
+collector admits no caller selector. Current operational journeys call it only
+after their mounted-state assertions. Reports use a bounded hashed test context
+and exclusive initial creation; an existing entry is refused without overwrite.
+This is ordinary owned-run hygiene; hostile filesystem/native identity is still
+unqualified. The definition restores the declared 1440 px/no-preference base, not
+an unknown prior OS window state. Synthetic callback tests qualify no real host.
+Other critical consumers and startup/responsiveness definitions remain separate.
 
 The fixed `control-plane` unittest command has a ten-minute execution ceiling.
 Its growing filesystem and Node fixture matrix exceeded the earlier three-minute

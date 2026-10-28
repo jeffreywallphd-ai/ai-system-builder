@@ -6,9 +6,9 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS } from "../technical-accessibility-observation";
 
 /** Selectors/messages remain browser-local, including failed contrast retries. */
-export async function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) {
+async function collectAccessibilityAudit(page: Page, width: 320 | 1440, documentScope: boolean) {
   if (width !== 320 && width !== 1440) throw new Error("Invalid technical accessibility observation.");
-  const observation = await page.evaluate(async ({ width, ruleIds }) => {
+  const observation = await page.evaluate(async ({ width, ruleIds, documentScope }) => {
     try {
       type Item = { id: string; nodes: Array<{ target: string[] }> };
       type Result = { violations: Item[]; incomplete: Item[]; passes: Item[] };
@@ -23,7 +23,8 @@ export async function collectSystemBuilderAccessibilityAudit(page: Page, width: 
           return { rule: item.id, nodes: item.nodes.length };
         });
       }
-      const result = await axe.run(".system-builder", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
+      if (documentScope && document.querySelectorAll("main.ui-shell").length !== 1) throw new Error();
+      const result = await axe.run(documentScope ? "body" : ".system-builder", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
       const violations = groups(result.violations), incomplete = groups(result.incomplete), passes = groups(result.passes);
       let attempted = 0, passed = 0;
       for (const group of result.incomplete) {
@@ -49,8 +50,26 @@ export async function collectSystemBuilderAccessibilityAudit(page: Page, width: 
       return { schemaVersion: "technical-accessibility-audit-v1", width, violations, incomplete,
         contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
     } catch { throw new Error("Computed accessibility audit failed."); }
-  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS] });
+  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], documentScope });
   return readTechnicalAccessibilityAudit(observation);
+}
+export function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, false); }
+export function collectDocumentAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, true); }
+
+/** Same named host constraints for Canvas and other critical mounted surfaces. */
+export async function loadTechnicalAccessibilityReference() {
+  try {
+    const bytes = await readFile(path.resolve("dev-tools/config/technical-reference-profiles.json"));
+    const value = JSON.parse(bytes.toString("utf8"));
+    if (typeof value.environmentId !== "string" || !/^[a-z0-9-]{1,100}$/.test(value.environmentId)
+      || typeof value.deviceScaleFactor !== "number" || !Number.isFinite(value.deviceScaleFactor) || value.deviceScaleFactor <= 0) throw new Error();
+    expect(process.platform).toBe(value.platform); expect(process.arch).toBe(value.architecture);
+    const logicalProcessors = os.cpus().length, memoryBytes = os.totalmem();
+    expect(logicalProcessors).toBe(value.logicalProcessors);
+    expect(Math.abs(memoryBytes / (1024 ** 3) - value.installedMemoryGiB)).toBeLessThan(1);
+    return Object.freeze({ profile: Object.freeze({ environmentId: value.environmentId as string, deviceScaleFactor: value.deviceScaleFactor as number }),
+      profileSha256: createHash("sha256").update(bytes).digest("hex"), hardware: Object.freeze({ platform: process.platform, architecture: process.arch, logicalProcessors, memoryBytes }) });
+  } catch { throw new Error("Technical accessibility setup failed at reference-profile."); }
 }
 
 /** A failed finalization cannot leave the last writable report marked passed. */
@@ -75,27 +94,20 @@ export async function qualifyTechnicalAccessibility(page: Page, info: TestInfo) 
   const source = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION;
   if (!runId || !/^[a-z0-9-]{20,80}$/.test(runId) || !source || !/^source\.[a-f0-9]{64}$/.test(source) ||
       !["thin-chrome", "packaged-desktop", "managed-thin-chrome"].includes(info.project.name)) throw new Error("Invalid accessibility qualification identity.");
-  const { profileBytes, profile, folder } = await (async () => {
+  const { reference, folder } = await (async () => {
     let stage = "reference-profile";
     try {
-      const profileBytes = await readFile(path.resolve("dev-tools/config/technical-reference-profiles.json"));
-      const profile = JSON.parse(profileBytes.toString("utf8"));
-      if (typeof profile.environmentId !== "string" || !/^[a-z0-9-]{1,100}$/.test(profile.environmentId)
-        || typeof profile.deviceScaleFactor !== "number" || !Number.isFinite(profile.deviceScaleFactor) || profile.deviceScaleFactor <= 0) throw new Error();
-      expect(process.platform).toBe(profile.platform);
-      expect(process.arch).toBe(profile.architecture);
-      expect(os.cpus().length).toBe(profile.logicalProcessors);
-      expect(Math.abs(os.totalmem() / (1024 ** 3) - profile.installedMemoryGiB)).toBeLessThan(1);
+      const reference = await loadTechnicalAccessibilityReference();
       stage = "evidence-setup";
       const folder = path.resolve("artifacts/qualification/visual-composer/runs", runId, "technical-accessibility", info.project.name);
       await mkdir(folder, { recursive: true });
-      return { profileBytes, profile, folder };
+      return { reference, folder };
     } catch { throw new Error(`Technical accessibility setup failed at ${stage}.`); }
   })();
+  const profile = reference.profile;
   const report: Record<string, unknown> = { schemaVersion: "technical-accessibility-v2", sourceRevision: source,
-    profile: profile.environmentId, profileSha256: createHash("sha256").update(profileBytes).digest("hex"),
-    host: info.project.name, hardware: { platform: process.platform, architecture: process.arch,
-      logicalProcessors: os.cpus().length, memoryBytes: os.totalmem() }, status: "running", checks: [] as string[] };
+    profile: profile.environmentId, profileSha256: reference.profileSha256,
+    host: info.project.name, hardware: reference.hardware, status: "running", checks: [] as string[] };
   const checks = report.checks as string[];
   async function save() {
     const body = JSON.stringify(report, null, 2) + "\n";

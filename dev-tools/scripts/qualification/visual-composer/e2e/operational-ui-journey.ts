@@ -1,5 +1,6 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost, type OperationalUiReport } from "../operational-ui-oracles";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 /** Actual host UI assertions. Unit/oracle checks alone do not qualify this journey. */
 export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, host: OperationalHost): Promise<OperationalUiReport> {
@@ -25,6 +26,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
     await step("settings-opened", async () => {
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
+      await qualifyCriticalSurfaceAccessibility(page, info, "settings");
     });
     if (host === "packaged-desktop") {
       const footer = page.locator('footer[aria-label="Python runtime controls"]');
@@ -92,7 +94,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
         await expect(panel.locator("p").filter({ hasText: /^Server mode:/ })).toHaveText(/^Server mode: (?:disabled-dev|lan-https-token|oidc-bearer|external-tls|mtls|api-key)$/);
         await expect(panel.locator("p").filter({ hasText: /^Current listener:/ })).toHaveText(/^Current listener: (?:HTTP only|HTTPS enabled)$/);
       }
-      await step("security-known", async () => { await expect(refresh).toBeEnabled(); await refresh.click(); await knownStatus(); });
+      await step("security-known", async () => { await expect(refresh).toBeEnabled(); await refresh.click(); await knownStatus(); await qualifyCriticalSurfaceAccessibility(page, info, "security"); });
       const url = operationalStatusUrl(page.url());
       const fault: Parameters<Page["route"]>[1] = async route => {
         if (route.request().method() !== "GET") return route.continue();
@@ -111,6 +113,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
     await step("notifications-empty", async () => {
       await bell.click(); await expect(notifications.getByText("No notifications yet.", { exact: true })).toBeVisible();
       await expect(notifications.getByRole("button", { name: "Clear completed", exact: true })).toBeDisabled();
+      await qualifyCriticalSurfaceAccessibility(page, info, "notifications");
     });
     await step("notifications-focus-returned", async () => {
       await expect(notifications.getByRole("button", { name: "Close notifications", exact: true })).toBeFocused();

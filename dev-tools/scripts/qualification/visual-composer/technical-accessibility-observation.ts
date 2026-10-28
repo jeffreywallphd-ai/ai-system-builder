@@ -71,3 +71,56 @@ export function readTechnicalAccessibilityAudit(value: unknown): TechnicalAccess
       retries: Object.freeze({ attempted, passed }), status: failures.length ? "failed" : "passed", failures: Object.freeze(failures) });
   } catch { throw new Error(INVALID); }
 }
+
+export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "security", "notifications"] as const);
+export type CriticalAccessibilitySurface = typeof CRITICAL_ACCESSIBILITY_SURFACES[number];
+export interface CriticalAccessibilityContext {
+  readonly schemaVersion: "critical-accessibility-context-v1";
+  readonly runId: string;
+  readonly sourceRevision: string;
+  readonly host: "packaged-desktop" | "thin-chrome" | "managed-thin-chrome";
+  readonly surface: CriticalAccessibilitySurface;
+  readonly testKey: string;
+}
+export function readCriticalAccessibilityContext(value: unknown): CriticalAccessibilityContext {
+  try {
+    const data = record(value, ["schemaVersion", "runId", "sourceRevision", "host", "surface", "testKey"]);
+    if (data.schemaVersion !== "critical-accessibility-context-v1" || typeof data.runId !== "string" || !/^[a-z0-9-]{20,80}$/.test(data.runId)
+      || typeof data.sourceRevision !== "string" || !/^source\.[a-f0-9]{64}$/.test(data.sourceRevision)
+      || (data.host !== "packaged-desktop" && data.host !== "thin-chrome" && data.host !== "managed-thin-chrome")
+      || (data.surface !== "settings" && data.surface !== "security" && data.surface !== "notifications")
+      || (data.surface === "security" && data.host === "packaged-desktop")
+      || typeof data.testKey !== "string" || !/^[a-f0-9]{64}$/.test(data.testKey)) throw new Error();
+    return Object.freeze({ schemaVersion: "critical-accessibility-context-v1", runId: data.runId, sourceRevision: data.sourceRevision, host: data.host, surface: data.surface, testKey: data.testKey });
+  } catch { throw new Error("Invalid critical accessibility context."); }
+}
+/** Actual execution still needs its owning test receipt; fixtures qualify only this gate. */
+export function qualifyCriticalAccessibilityReport(context: unknown, value: unknown) {
+  try {
+    const identity = readCriticalAccessibilityContext(context);
+    if (types.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) throw new Error();
+    if (Object.getOwnPropertyDescriptor(value, "length")?.value !== 2) throw new Error();
+    const fields = Object.getOwnPropertyDescriptors(value);
+    if (Reflect.ownKeys(fields).length !== 3) throw new Error();
+    const audits: TechnicalAccessibilityAudit[] = [];
+    for (let index = 0; index < 2; index++) {
+      const field = fields[String(index)];
+      if (!field || !("value" in field)) throw new Error();
+      const audit = readTechnicalAccessibilityAudit(field.value);
+      if (audit.width !== [1440, 320][index] || audit.status !== "passed") throw new Error();
+      audits.push(audit);
+    }
+    return Object.freeze({ ...identity, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: identity.schemaVersion,
+      audits: Object.freeze(audits), status: "passed", scope: "ui-accessibility-observation-only" });
+  } catch { throw new Error("Invalid critical accessibility qualification."); }
+}
+export function readReducedMotionObservation(value: unknown) {
+  try {
+    const data = record(value, ["elements", "maximumTransitionMilliseconds", "maximumAnimationMilliseconds"]);
+    const elements = count(data.elements, 100000, 1);
+    for (const field of [data.maximumTransitionMilliseconds, data.maximumAnimationMilliseconds]) {
+      if (typeof field !== "number" || !Number.isFinite(field) || field < 0 || field > 0.01) throw new Error();
+    }
+    return Object.freeze({ elements, maximumTransitionMilliseconds: data.maximumTransitionMilliseconds as number, maximumAnimationMilliseconds: data.maximumAnimationMilliseconds as number });
+  } catch { throw new Error("Invalid reduced motion observation."); }
+}

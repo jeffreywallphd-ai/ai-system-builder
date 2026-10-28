@@ -367,3 +367,23 @@ authoritative when the evidence file cannot be updated.
 
 Run actual named host observations at the separately authorized combined-testing
 boundary. These local checks grant no host/native/provider/model or roadmap pass.
+
+## Critical operational accessibility definitions
+
+Settings, thin Security and Notifications use the fixed document audit after
+existing mounted-state assertions. Closed source/run/host/surface/test identities
+and both ordered 1440 px/320 px audits are required. Unknown desktop Security and
+arbitrary selectors are refused. Computed motion, reflow, contrast retries and
+private-free rule/count evidence reuse the Canvas controls. Canvas retains its
+original audit interface and behavior.
+
+The report path uses a bounded hashed test context. Initial creation is exclusive;
+an existing report is retained and the new attempt fails. Later writes belong to
+that invocation, with best-effort failed finalization. This does not qualify a
+hostile filesystem/native ownership race. Each audit returns to the declared
+1440 px/no-preference base; it does not restore an unknown prior OS window state.
+
+The fixed set of 40 Operational files includes synthetic callback, strict-context,
+width-order, collision and failure tests. Actual host/zoom/paint/full qualification
+remains pending. Other critical forms/dialogs and startup observations still need
+separate implementation before the original roadmap chunk can be recorded.

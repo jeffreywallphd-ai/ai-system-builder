@@ -36,6 +36,8 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts",
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts",
+        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",

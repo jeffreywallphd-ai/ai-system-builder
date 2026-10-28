@@ -53,7 +53,8 @@ TESTS = [
     "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
     "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
     "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
-    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"
+    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"
 ]
 EXPECTED_COMMANDS = [
     [
@@ -106,6 +107,7 @@ EXPECTED_COMMANDS = [
         "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
         "apps/thin-client/src/tests/app-routing.ui.test.tsx",
         "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
@@ -157,6 +159,8 @@ class OperationalUiProfile(unittest.TestCase):
                 (["dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts"], ["documentation"], False),
                 (["dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"], ["documentation"], False),
                 (["dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"], ["documentation"], False),
                 ([hook], ["focused-tests"], True),
                 ([hook, "modules/unknown/changed.ts"], ["documentation"], True),
             ]:
