@@ -1,5 +1,6 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { qualifyTechnicalAccessibility } from "./technical-accessibility";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 /** Shared real-host journey: no model registration, worker calls or provider traffic. */
 export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>, info: TestInfo) {
@@ -8,6 +9,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await page.getByRole("button", {name: "Create system", exact: true}).click();
   await expect(page.getByRole("heading", {name: "Canvas", exact: true})).toBeVisible({timeout: 30_000});
 
+  let pickerAudited = false;
   async function insert(search: string) {
     const trigger = page.getByRole("button", {name: /^Add an element inside /}).last();
     await expect(trigger).toBeEnabled({ timeout: 30_000 });
@@ -21,6 +23,10 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
     const label = await card.locator("strong").innerText();
     const version = (await card.innerText()).match(/\/ v([0-9.]+)/)?.[1];
     expect(version).toBeTruthy();
+    if (!pickerAudited) {
+      await qualifyCriticalSurfaceAccessibility(page, info, "system-element-picker");
+      pickerAudited = true;
+    }
     await card.focus(); await card.press("Enter");
     await expect(dialog).toBeHidden();
     const selected = page.locator('.system-composer__canvas-node[data-selected="true"]');
@@ -34,6 +40,10 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
 
   await insert("page");
   const added = await insert("card");
+  const details = page.getByRole("complementary", {name: "Composer details"});
+  const properties = details.getByRole("tab", {name: "Properties", exact: true});
+  await properties.click(); await expect(properties).toHaveAttribute("aria-selected", "true");
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-properties");
   const node = page.locator(`[data-instance-id="${added.id}"]`);
   await page.getByRole("button", {name: "Undo", exact: true}).press("Enter");
   await expect(node).toHaveCount(0);
@@ -44,6 +54,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   const previewDialog = page.getByRole("dialog", {name: `${name} UI preview`});
   await expect(previewDialog).toBeVisible();
   await expect(previewDialog.locator(`[data-preview-instance="${added.id}"]`)).toBeVisible();
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-preview");
   await previewDialog.press("Escape"); await expect(previewDialog).toBeHidden(); await expect(preview).toBeFocused();
   await page.getByRole("button", {name: "Save and validate revision"}).click();
   await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
@@ -70,6 +81,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await expect(firstItem).toHaveAccessibleName(ownLabel);
   await firstItem.press("ArrowDown");
   await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-layers");
 
   await page.setViewportSize({width: 320, height: 1000});
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);

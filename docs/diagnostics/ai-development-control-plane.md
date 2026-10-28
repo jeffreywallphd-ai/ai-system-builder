@@ -792,3 +792,22 @@ The `system-canvas-authoring-ui` profile covers bounded meaningful-system
 identity/tree/configuration oracles, protocol/draft units and four related Canvas
 rendered files. Its fixed runners exclude whole-host and controlled AI tests.
 Actual desktop/browser execution and restart remain separate qualification.
+
+## Assets and System authoring accessibility definitions
+
+The shared critical audit now has fixed points in Assets import, customization,
+Studio, Saved assets and asset details. The System browse journey also checks the
+compatible element picker, selected Properties, UI preview and Layers tree.
+Audits run after existing content assertions and before the original actions.
+First-only guards prevent duplicate records during loops and document reloads.
+
+The original package install, asset review/publication, exact base/history checks,
+Undo/Redo, save/reopen, keyboard focus, 320px control boxes and Canvas audit remain.
+The shared audit returns to the declared 1440px base before later explicit reflow
+checks. It adds no provider, dependency, runtime or approval authority.
+
+The Operational profile keeps its 40 literal tests and 19 automatic paths. Two
+borrowed consumers receive explicit coverage without becoming automatic triggers.
+Focused checks and case collection cover source definitions only. Actual host,
+zoom, accessibility, startup/paint and full qualification remain pending. Other
+critical workflows still precede the original roadmap chunk's completion.

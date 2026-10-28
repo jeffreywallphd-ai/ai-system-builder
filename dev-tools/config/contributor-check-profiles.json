@@ -1892,7 +1892,9 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/structured-output-controls-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts"
       ]
     }
   }

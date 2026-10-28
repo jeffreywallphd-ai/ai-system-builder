@@ -73,7 +73,9 @@ export function readTechnicalAccessibilityAudit(value: unknown): TechnicalAccess
 }
 
 export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "security", "notifications", "data-ingestion", "dataset-preparation",
-  "dataset-versions", "dataset-review", "dataset-row-edit", "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser"] as const);
+  "dataset-versions", "dataset-review", "dataset-row-edit", "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser",
+  "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
+  "system-element-picker", "system-preview", "system-properties", "system-layers"] as const);
 export type CriticalAccessibilitySurface = typeof CRITICAL_ACCESSIBILITY_SURFACES[number];
 export interface CriticalAccessibilityContext {
   readonly schemaVersion: "critical-accessibility-context-v1";
