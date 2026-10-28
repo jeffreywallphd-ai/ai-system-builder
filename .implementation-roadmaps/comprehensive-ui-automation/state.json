@@ -274,6 +274,37 @@
         "Nine exact selected/HEAD module builds and nine selected source/test type roots with0diagnostics; raw input applicability verified."
       ],
       "title": "Reliable settings and secret-safe recovery"
+    },
+    {
+      "areas": [
+        "Mounted thin Security status and canonical transport recovery",
+        "Desktop Python runtime controls and notification ownership",
+        "Existing workspace/shell/readiness/task-family regressions",
+        "Two named isolated real-host operational UI definitions; collected only"
+      ],
+      "chunkId": "operational-task-and-shell-coverage",
+      "completedAt": "2026-10-28T14:08:42Z",
+      "criteriaIds": [
+        "operational-and-task-ui",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Control-plane bounded Operational profile and dev-tools host-definition guidance updated with explicit evidence scope.",
+        "Original all7criteria,5planned chunks and approval remain. Actual-host/native/provider/final gates stay pending; main held."
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-operational-task-and-shell-coverage",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Implemented, feature-tested, independently reviewed and committed Security status recovery, runtime ownership/controls, task notification/shell inventory and exact operational desktop/thin UI definitions. Corrected observed-sequence validator and canonical runtime log expectations. Actual host/full/native qualification remains pending; no criterion or parent pass.",
+      "tests": [
+        "Completed source Work security-status-ui-owned-recovery: receipt faf0a73c65ccbc4ba9ea6a505290381ef688ae66733e8c2378c01377818fcdab; independent review 602511e749f9885d03e0aa3399520b3fcb3f5d8e8e2b281cdd6dd1ca17ad3668",
+        "Completed source Work operational-runtime-and-notification-inventory-recovery: receipt 620965e773ff15155bb794b9330db075cf2de8a570a8f1fd40b26813419ecdf7; independent review 1638fe7cd889e3b2de02e0025db7a7455bbf7af22e7ad59f1741ff410ff43352",
+        "Completed source Work operational-host-journey-definitions: receipt c6f6e571b9b2b8ffc036fe42d1656129bec93356b9696c6c331139da888a8ec6; independent review d6f8ca1007cfce10320fe6b10ee550195ce5c037ba562a90845f44f07923984c",
+        "Committed checkpoints fe0a0084e,18466038a,a8803c470. Latest fixed Operational38file checks and53oracle/slot cases passed;7selected type roots0diagnostics;2named host cases collected, not executed.",
+        "Earlier failures and exact selected/mixed-source applicability are retained. No accepted accuracy/OCR rerun or app/provider/native/full-suite execution."
+      ],
+      "title": "Operational controls, task notifications and shell recovery"
     }
   ],
   "completion": null,
@@ -785,6 +816,12 @@
       "recordedAt": "2026-10-27T23:03:45Z",
       "sequence": 39,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b72bd6996314f7d7e1e07232bfa50dc1ed352f9f0661307ec9fc6d4b4e1378f6",
+      "recordedAt": "2026-10-28T14:08:42Z",
+      "sequence": 40,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1243,7 +1280,8 @@
       "allowPendingQualification": true,
       "completedAt": null,
       "completedChunks": [
-        "settings-save-and-query-recovery"
+        "settings-save-and-query-recovery",
+        "operational-task-and-shell-coverage"
       ],
       "deliverables": [
         "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
@@ -1469,5 +1507,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-27T23:03:45Z"
+  "updatedAt": "2026-10-28T14:08:42Z"
 }
