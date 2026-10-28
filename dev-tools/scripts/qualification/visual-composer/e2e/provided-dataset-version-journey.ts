@@ -1,4 +1,5 @@
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
@@ -174,7 +175,9 @@ async function openDataset(page: Page, host: Host) {
   return panel;
 }
 
-export async function prepareProvidedVersions(page: Page, host: Host, info: TestInfo) {
+export async function prepareProvidedVersions(page: Page, host: Host, info: TestInfo, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   const workspace = await page.getByLabel("Select current workspace").inputValue();
   await page.getByRole("tab", { name: "Artifact Ingestion", exact: true }).click();
   const ingestion = page.getByRole("list", { name: "Add data workflow", exact: true });
@@ -196,7 +199,7 @@ export async function prepareProvidedVersions(page: Page, host: Host, info: Test
   const run = () => page.getByRole("button", { name: "Run checks and prepare", exact: true });
   const approve = () => page.getByRole("button", { name: "Approve and save dataset", exact: true });
   await selectProvidedOutput(page, host, "jsonl");
-  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-preparation");
+  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-preparation", mode);
   await run().click(); await expect(approve()).toBeVisible({ timeout: 90_000 });
   await page.getByLabel("Dataset save name (optional)", { exact: false }).fill(NAME);
   await approve().click();
@@ -228,7 +231,7 @@ export async function prepareProvidedVersions(page: Page, host: Host, info: Test
   const panel = page.getByRole("region", { name: "Saved versions", exact: true });
   await panel.getByRole("combobox", { name: "Version", exact: true }).selectOption(second.versionId);
   await expect(panel.getByRole("heading", { name: "What changed", exact: true })).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-versions");
+  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-versions", mode);
   await panel.getByRole("combobox", { name: "Version", exact: true }).selectOption(original.versionId);
   if (host === "desktop") await page.getByRole("button", { name: "Close detail and preview", exact: true }).click();
   return { workspace, original, originalHashes, versions, sourceIdentity };

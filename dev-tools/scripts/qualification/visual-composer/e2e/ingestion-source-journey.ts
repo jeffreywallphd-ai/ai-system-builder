@@ -2,11 +2,22 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { INGESTION_TASK_RECOMMENDED_CHUNK_BYTES } from "../../../../../modules/contracts/ingestion";
+
+/** Fixed result identity keeps standard and native cohorts separate. */
+export function ingestionSourceEvidenceName(host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard"): string {
+  readCriticalAccessibilityMode(mode);
+  if (host !== "desktop" && host !== "thin") throw new Error("Invalid ingestion evidence identity.");
+  return `${host}${mode === "native400" ? "-native400" : ""}.json`;
+}
 
 // Exercise mounted controls and real host publication. No upload/API success mock,
 // model, provider credential or synthetic worker result can satisfy this journey.
-export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, host: "desktop" | "thin") {
+export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
+  const evidenceName = ingestionSourceEvidenceName(host, mode);
   await page.getByRole("tab", { name: "Artifact Ingestion", exact: true }).click();
   const workflow = page.getByRole("list", { name: "Add data workflow", exact: true });
   const input = workflow.getByLabel("Choose one or more files", { exact: true });
@@ -60,7 +71,7 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
   expect(totalBytes).toBeLessThan(9 * 1024**2);
   await input.setInputFiles(files);
   await expect(workflow.getByRole("region", { name: "Selected files", exact: true }).getByText("3 files selected", { exact: true })).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, info, "data-ingestion");
+  await qualifyCriticalSurfaceAccessibility(page, info, "data-ingestion", mode);
   const started = performance.now();
   await add.click();
   const center = page.getByRole("dialog", { name: "Notifications", exact: true });
@@ -116,6 +127,6 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
   expect(await realpath(folder)).toBe(folder);
   const body = JSON.stringify(report, null, 2) + "\n";
   expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  await writeFile(path.join(folder, evidenceName), body, { flag: "wx" });
   await info.attach("real-ingestion-source-host-journey", { body, contentType: "application/json" });
 }

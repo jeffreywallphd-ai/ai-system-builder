@@ -1826,7 +1826,9 @@
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
         "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
-        "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
+        "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
+        "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1907,7 +1909,16 @@
         "dev-tools/helpers/control_plane/catalog.py",
         "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
         "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+        "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/asset-authoring-oracles.ts",
+        "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts",
+        "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
       ]
     }
   }

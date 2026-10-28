@@ -1,13 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { uploadLowMemorySource } from "./low-memory-dataset-journey";
 import { taskOperation } from "./owned-task-journey";
 import { qualifyStructuredOutputControls } from "./structured-output-controls-journey";
+import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
+import { operationalStatusUrl } from "../operational-ui-oracles";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
-test.use({ trace: "off", screenshot: "off" });
+test.use({ trace: "off", screenshot: "off", video: "off" });
 
-test("thin client reports available RAM and restores edited output shapes and explicit choices", async ({ page }) => {
-  test.setTimeout(180000);
+async function runBrowserOutputControls(page: Page, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
   expect(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO).toBe("structured-output-controls");
   try {
     await page.addInitScript(token => localStorage.setItem("ai-system-builder.paired-device-token", token), process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!);
@@ -38,8 +41,26 @@ test("thin client reports available RAM and restores edited output shapes and ex
       await page.reload();
       await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./, { timeout: 30000 });
       return page;
-    });
+    }, mode);
   } finally {
     await page.close();
   }
+}
+
+test("thin client reports available RAM and restores edited output shapes and explicit choices", async ({ page }) => {
+  test.setTimeout(180000);
+  await runBrowserOutputControls(page);
+});
+
+test("browser edits and reloads output shapes at native 400 percent zoom", async () => {
+  test.setTimeout(180000);
+  if (test.info().project.name !== "thin-chrome") throw new Error("Unsupported native Data host.");
+  operationalStatusUrl(process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN ?? "");
+  if (!process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN) throw new Error("The isolated thin-client test credential is unavailable.");
+  expect(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO).toBe("structured-output-controls");
+  const owned = await launchOwnedNativeZoomContext(4), failures: unknown[] = [];
+  try { await runBrowserOutputControls(owned.context.pages()[0] ?? await owned.context.newPage(), "native400"); }
+  catch (error) { failures.push(error); }
+  try { await owned.close(); } catch (error) { failures.push(error); }
+  if (failures.length) throw new AggregateError(failures, "Native output controls or browser retirement failed.");
 });

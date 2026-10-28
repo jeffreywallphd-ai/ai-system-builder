@@ -1,4 +1,5 @@
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
@@ -140,7 +141,9 @@ async function savedSnapshot(page: Page, host: Host, workspace: string, previous
   return validateManualContextSnapshot(workspace, item, detail.detail, Uint8Array.from(result), previous);
 }
 
-export async function prepareManualContext(page: Page, host: Host, info: TestInfo) {
+export async function prepareManualContext(page: Page, host: Host, info: TestInfo, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   const workspace = await page.getByLabel("Select current workspace").inputValue();
   await page.getByRole("button", { name: "Context", exact: true }).click();
   await page.getByRole("tab", { name: "Context Packs", exact: true }).click();
@@ -153,14 +156,14 @@ export async function prepareManualContext(page: Page, host: Host, info: TestInf
   const review = page.getByRole("dialog", { name: "Review context pack Markdown", exact: true });
   await expect(review.getByRole("heading", { name: "Local support policy", exact: true })).toBeVisible();
   await expect(review.locator("strong")).toContainText("each result");
-  await qualifyCriticalSurfaceAccessibility(page, info, "manual-context-review");
+  await qualifyCriticalSurfaceAccessibility(page, info, "manual-context-review", mode);
   await review.getByRole("button", { name: "Approve section", exact: true }).click();
   await review.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Save context pack", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Context Browser", exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 60_000 });
   const detail = page.getByRole("dialog", { name: "Detail & preview", exact: true });
   await expect(detail.getByRole("heading", { name: fixed.name, exact: true })).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, info, "context-browser");
+  await qualifyCriticalSurfaceAccessibility(page, info, "context-browser", mode);
   await detail.getByRole("button", { name: "Close context detail and preview", exact: true }).click();
   return savedSnapshot(page, host, workspace);
 }

@@ -5,11 +5,15 @@ import path from "node:path";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { qualifyIngestionSourceJourney } from "./ingestion-source-journey";
 import { observeOwnedNativeProcessExit } from "../owned-native-process-exit.mjs";
+import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { runOwnedRestartPhase } from "../asset-authoring-oracles";
 
 // File import does not start a model worker. Qualify the main process explicitly;
 // the enclosing native operator separately observes the complete job tree.
 // Model-task tests retain their stronger, positive worker-shutdown assertions.
-async function closeImportedFileDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: string) {
+async function closeImportedFileDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: string, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
   const errors: unknown[] = [];
   const started = performance.now();
   let mainPid: number | undefined, launchedPid: number | undefined, mainExitCode: number | undefined;
@@ -60,19 +64,19 @@ async function closeImportedFileDesktop(app: ElectronApplication, dataRoot: stri
   expect(await realpath(folder)).toBe(folder);
   const body = JSON.stringify(report, null, 2) + "\n";
   expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, "desktop-shutdown.json"), body, { flag: "wx" });
+  await writeFile(path.join(folder, mode === "native400" ? "desktop-shutdown-native400.json" : "desktop-shutdown.json"), body, { flag: "wx" });
   await info.attach("desktop-file-import-shutdown", { body, contentType: "application/json" });
   if (errors.length) throw new AggregateError(errors, "Owned file-import desktop shutdown failed.");
 }
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
-test("packaged desktop imports distinct multi-chunk files through Add data and retains their source records", async () => {
-  test.setTimeout(180_000);
-  const isolated = prepareIsolatedDesktopCase("ingestion");
+async function runDesktopImport(mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (test.info().project.name !== "packaged-desktop") throw new Error("Unsupported native Data host.");
+  const isolated = prepareIsolatedDesktopCase(mode === "native400" ? "ingestion-native400" : "ingestion");
   const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: isolated.env, timeout: 60_000 });
   let stage = "startup";
-  let journeyError: unknown, shutdownError: unknown;
-  try {
+  await runOwnedRestartPhase(async () => {
     const page = await app.firstWindow({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
     stage = "workspace";
@@ -80,15 +84,20 @@ test("packaged desktop imports distinct multi-chunk files through Add data and r
     await page.locator('input[name="workspaceName"]').fill("Synthetic desktop file import");
     await page.getByRole("button", { name: "Create workspace", exact: true }).click();
     await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
+    if (mode === "native400") await applyOwnedDesktopNativeZoom(app, page);
     await page.getByRole("button", { name: "Data", exact: true }).click();
     stage = "file-import";
-    await qualifyIngestionSourceJourney(page, test.info(), "desktop");
+    await qualifyIngestionSourceJourney(page, test.info(), "desktop", mode);
     stage = "complete";
-  } catch (error) { journeyError = error; }
-  try { await closeImportedFileDesktop(app, isolated.dataRoot, test.info(), stage); }
-  catch (error) { shutdownError = error; }
-  // A cleanup error must never replace the original product/journey failure.
-  if (journeyError && shutdownError) throw new AggregateError([journeyError, shutdownError], `Desktop file import failed at ${stage}, and shutdown also failed.`);
-  if (journeyError) throw journeyError;
-  if (shutdownError) throw shutdownError;
+  }, () => closeImportedFileDesktop(app, isolated.dataRoot, test.info(), stage, mode));
+}
+
+test("packaged desktop imports distinct multi-chunk files through Add data and retains their source records", async () => {
+  test.setTimeout(180_000);
+  await runDesktopImport();
+});
+
+test("packaged desktop imports files and reviews records at native 400 percent zoom", async () => {
+  test.setTimeout(180_000);
+  await runDesktopImport("native400");
 });

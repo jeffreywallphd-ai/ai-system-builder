@@ -1000,3 +1000,50 @@ desktop port fixtures and source checks define the desktop case only. Actual
 desktop execution, other native consumers and parent/full qualification remain
 pending. Accepted model accuracy stays closed; retained offload files are not
 inspected, adopted, moved, removed or given a new lease.
+
+## Data and Context native zoom definitions
+
+Six additional local browser/desktop variations reuse file ingestion, provided
+dataset versions and row review, source RAG/Context packs, manual Context and
+structured output controls. Six public helpers accept only explicit standard or
+native400 mode; standard is the unchanged default. Unknown modes and unsupported
+native transport/project pairs are refused before Page or file effects. All ten
+existing critical state IDs use the common native audit when selected.
+
+The six original host cases retain their assertions, scenarios and limits. Their
+full service/app restart checks remain standard qualification. The focused native
+provided-data variation completes creation/review in one session, so it cannot
+reuse a second-owner marker or restart the shared service twice. Structured
+output retains its renderer reload and explicit saved choices; desktop zoom is
+reapplied to the exact owned Page window after reload. Native browser cases use
+the fixed fresh Chrome profile and verified retirement, with capture disabled.
+
+Three closed desktop native slots inherit the existing fresh-run fence, refusal
+of existing/dangling entries and hidden 30-second seed limit. Native ingestion
+shutdown and output-control results have separate file names. Standard names and
+exclusive creation remain. The affected desktop import/provided-data wrappers
+reuse the existing owned-phase helper so empty primary or shutdown failures
+cannot disappear. Main/worker shutdown evidence retains its original scope.
+
+The Operational profile retains its previous 41 files and 22 automatic paths.
+It adds only the finite native admission file and existing phase-oracle file,
+for 43 exact files. Borrowed source coverage stays explicit. Unknown, incomplete
+and explicitly requested generic impact still keeps its checks. Foreign Assets
+aliases and unrelated configuration/README edits remain outside this checkpoint.
+
+Local fixtures, source builds/types and case collection define these tests.
+Actual app/native workflows, model/provider results, original chunk completion
+and full qualification remain pending. Accepted model accuracy is not rerun.
+Original chunk4 still owns broader report-finalization repairs; this source work
+does not assert every earlier result writer is fully qualified.
+
+The native process-exit observer now has an additive TypeScript declaration for
+its existing outcome fields and asynchronous close method. Its JavaScript,
+Python/native behavior, checks, deadlines and authority remain unchanged. This
+repairs the pre-existing missing-declaration diagnostic without suppressing it.
+
+The app-free provided-data collector checks the exact four standard/native cases
+that the existing wrong-profile guard skips, plus one real resolver pass. It
+retains its offline environment, 256MiB heap ceiling, fixed process/test deadlines,
+output cap and verified owned temporary-tree cleanup. It starts no app or model
+and grants no actual host qualification.

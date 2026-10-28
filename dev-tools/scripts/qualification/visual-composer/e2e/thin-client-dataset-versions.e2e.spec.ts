@@ -1,16 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart, resolveProvidedServerRestartMarker } from "./provided-dataset-version-journey";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { prepareManualContext, verifyManualContextAfterRestart } from "./manual-context-host-journey";
 import { prepareSavedRowReview, verifySavedRowReviewAfterRestart } from "./saved-row-review-host-journey";
 import { prepareSourceContext, verifySourceContextAfterRestart } from "./source-context-host-journey";
+import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
+import { operationalStatusUrl } from "../operational-ui-oracles";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
   process.env.PYTHON_RUNTIME_ARGS !== "-I -B ../../../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py",
   "Requires the separately reviewed real provided-data composition.");
-test("browser saves dataset versions, source RAG and Context packs across full service restart", async ({ page }) => {
-  test.setTimeout(300_000);
+async function runBrowserData(page: Page, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
   await page.addInitScript(token => localStorage.setItem("ai-system-builder.paired-device-token", token), process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!);
   await page.goto(new URL("/", process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!).href);
   await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
@@ -18,10 +21,13 @@ test("browser saves dataset versions, source RAG and Context packs across full s
   await page.getByRole("button", { name: "Create workspace", exact: true }).click();
   await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
-  const saved = await prepareProvidedVersions(page, "thin", test.info());
-  const savedRows = await prepareSavedRowReview(page, "thin", test.info());
-  const savedSourceContext = await prepareSourceContext(page, "thin", test.info());
-  const savedContext = await prepareManualContext(page, "thin", test.info());
+  const saved = await prepareProvidedVersions(page, "thin", test.info(), mode);
+  const savedRows = await prepareSavedRowReview(page, "thin", test.info(), mode);
+  const savedSourceContext = await prepareSourceContext(page, "thin", test.info(), mode);
+  const savedContext = await prepareManualContext(page, "thin", test.info(), mode);
+  // This variation checks the native creation/review forms. The standard case
+  // retains the complete service restart and exact second-owner marker proof.
+  if (mode === "native400") return;
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
   // Readiness alone could observe the old listener. Require the fresh second
@@ -46,4 +52,21 @@ test("browser saves dataset versions, source RAG and Context packs across full s
   await verifyManualContextAfterRestart(page, "thin", savedContext, test.info());
   await verifySavedRowReviewAfterRestart(page, "thin", savedRows, test.info());
   await verifySourceContextAfterRestart(page, "thin", savedSourceContext, test.info());
+}
+
+test("browser saves dataset versions, source RAG and Context packs across full service restart", async ({ page }) => {
+  test.setTimeout(300_000);
+  await runBrowserData(page);
+});
+
+test("browser completes Data and Context review forms at native 400 percent zoom", async () => {
+  test.setTimeout(300_000);
+  if (test.info().project.name !== "thin-chrome") throw new Error("Unsupported native Data host.");
+  operationalStatusUrl(process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN ?? "");
+  if (!process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN) throw new Error("The isolated thin-client test credential is unavailable.");
+  const owned = await launchOwnedNativeZoomContext(4), failures: unknown[] = [];
+  try { await runBrowserData(owned.context.pages()[0] ?? await owned.context.newPage(), "native400"); }
+  catch (error) { failures.push(error); }
+  try { await owned.close(); } catch (error) { failures.push(error); }
+  if (failures.length) throw new AggregateError(failures, "Native Data/Context forms or browser retirement failed.");
 });

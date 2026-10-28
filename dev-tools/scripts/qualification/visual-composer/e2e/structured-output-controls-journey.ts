@@ -2,6 +2,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 
 type Host = "desktop" | "thin";
 const checkedLabel = "Keep generated JSON well structured";
@@ -20,7 +21,10 @@ export async function openStructuredOutputControls(page: Page, host: Host) {
 
 export async function qualifyStructuredOutputControls(
   page: Page, info: TestInfo, host: Host, reopen: () => Promise<Page>,
+  mode: CriticalAccessibilityMode = "standard",
 ) {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   let stage = "open-controls";
   const completed: string[] = [];
   let current = page;
@@ -133,7 +137,7 @@ export async function qualifyStructuredOutputControls(
     }
     await assertShape();
     completed.push(host === "desktop" ? "renderer-reload-explicit-settings-load" : "renderer-reload-restored");
-    await qualifyCriticalSurfaceAccessibility(current, info, "dataset-output-shape");
+    await qualifyCriticalSurfaceAccessibility(current, info, "dataset-output-shape", mode);
     stage = "reset-fields-preserves-explicit-choice";
     await editor().getByRole("button", { name: "Reset fields", exact: true }).click();
     await expect(editor().getByRole("textbox", { name: "instruction field name", exact: true })).toBeVisible();
@@ -152,7 +156,7 @@ export async function qualifyStructuredOutputControls(
     await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
     const body = JSON.stringify(report, null, 2) + "\n";
     expect(Buffer.byteLength(body)).toBeLessThanOrEqual(4096);
-    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+    await writeFile(path.join(folder, `${host}${mode === "native400" ? "-native400" : ""}.json`), body, { flag: "wx" });
     await info.attach("structured-output-controls", { body, contentType: "application/json" });
   }
 }

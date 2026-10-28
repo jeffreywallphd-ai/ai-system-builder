@@ -91,18 +91,33 @@ test("canonical resolver executes after ESM preload", async () => {
     const recorded = JSON.parse(readFileSync(report, "utf8"));
     assert.equal(recorded.errors.length, 0);
     assert.deepEqual(Object.fromEntries(["expected", "skipped", "unexpected", "flaky"].map(key => [key, recorded.stats[key]])),
-      { expected: 1, skipped: 2, unexpected: 0, flaky: 0 });
+      { expected: 1, skipped: 4, unexpected: 0, flaky: 0 });
     const results = [];
     const collect = suites => { for (const suite of suites) {
       for (const spec of suite.specs ?? []) for (const item of spec.tests) results.push({ title: spec.title, project: item.projectName, results: item.results });
       collect(suite.suites ?? []);
     } };
     collect(recorded.suites);
-    assert.equal(results.length, 3);
-    assert.ok(results.some(item => item.project === "resolver-consumer" && item.results.length === 1 && item.results[0].status === "passed"));
-    for (const project of ["thin-collection", "desktop-collection"]) {
-      const item = results.find(result => result.project === project);
-      assert.ok(item && item.results.length === 1 && item.results[0].status === "skipped");
+    assert.equal(results.length, 5);
+    const resolver = results.filter(item => item.project === "resolver-consumer");
+    assert.equal(resolver.length, 1);
+    assert.equal(resolver[0].title, "canonical resolver executes after ESM preload");
+    assert.ok(resolver[0].results.length === 1 && resolver[0].results[0].status === "passed");
+    const guarded = {
+      "thin-collection": [
+        "browser saves dataset versions, source RAG and Context packs across full service restart",
+        "browser completes Data and Context review forms at native 400 percent zoom",
+      ],
+      "desktop-collection": [
+        "packaged desktop saves dataset versions, source RAG and Context packs across complete app restart",
+        "packaged desktop completes Data and Context review forms at native 400 percent zoom",
+      ],
+    };
+    for (const [project, titles] of Object.entries(guarded)) {
+      const items = results.filter(item => item.project === project);
+      assert.equal(items.length, 2);
+      assert.deepEqual(items.map(item => item.title).sort(), [...titles].sort());
+      assert.ok(items.every(item => item.results.length === 1 && item.results[0].status === "skipped"));
     }
   } finally {
     // A timeout or output overflow can leave ownership uncertain. Preserve that

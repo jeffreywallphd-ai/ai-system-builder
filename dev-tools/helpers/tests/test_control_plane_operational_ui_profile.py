@@ -57,6 +57,10 @@ TESTS = [
     "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
     "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
 ]
+TESTS += [
+    "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+]
 EXPECTED_COMMANDS = [
     [
         "node",
@@ -119,13 +123,57 @@ EXPECTED_COMMANDS = [
     ]
 ]
 
+# Keep the fixed 12-file Windows Node chunks. One existing Node oracle file
+# enters after the seven app files; the former twelfth file moves to chunk two.
+EXPECTED_COMMANDS[0].insert(12, "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts")
+EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
+EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts")
+
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_native_data_sources_retain_exact_coverage_and_unknown_fallback(self):
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts"
+        core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        admission = "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts"
+        oracle = "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
+        declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
+        collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
+        self.assertEqual(self.profile()["test_paths"][-2:], [admission, oracle])
+        self.assertEqual(len(self.profile()["test_paths"]), 43)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
+        self.assertIn(declaration, self.profile()["source_paths"])
+        self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertIn(collection, self.profile()["source_paths"])
+        self.assertNotIn(collection, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-data-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            # This source also activates the existing browser profile. Keep that
+            # independent group selected; the fixture must provide its schema.
+            configuration = {"schema_version":"contributor-check-profiles-v1","profiles":{
+                "operational-ui":self.profile(),
+                "dataset-version-browser":{"test_paths":["modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"],"source_paths":[source]},
+            }}
+            (root / CONFIG).write_text(json.dumps(configuration))
+            for paths, required, generic in [([core, source, admission, declaration, collection], ["documentation"], False),
+                ([core, source], ["focused-tests"], True), ([core, source, "modules/unknown/unreviewed.ts"], ["documentation"], True)]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {c["id"] for c in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertIn("dataset-version-browser", ids)
+                    self.assertEqual("focused-tests" in ids, generic)
+            for missing in [source, declaration, collection]:
+                profile = self.profile()
+                profile["source_paths"].remove(missing)
+                configuration["profiles"]["operational-ui"] = profile
+                (root / CONFIG).write_text(json.dumps(configuration))
+                self.assertIn("focused-tests", {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]})
+
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 41)
+        self.assertEqual(len(self.profile()["test_paths"]), 43)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -151,7 +199,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 41)
+        self.assertEqual(len(self.profile()["test_paths"]), 43)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
