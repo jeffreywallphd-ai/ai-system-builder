@@ -23,6 +23,19 @@ thirty measurements), preserves every attempt, and matches the original
 name-entry/Create-to-ready boundary. Exact rendered readiness is observed each
 animation frame so test-runner assertion backoff is not mistaken for product
 latency; unchanged explicit content assertions remain after measurement.
+Each attempt also records launch-to-first-window-handle and
+launch-to-interactive-shell times before workspace creation. The shell observation
+requires the styled loading screen to finish, the app root to accept input and
+the existing Create new workspace control to be visible and enabled. These times
+include test-driver observation overhead and the requested loading-screen minimum.
+A window handle is not proof of first paint. Profile seeding, workspace creation
+and inference are outside these startup intervals; OS and model caches remain
+uncontrolled. Startup values are ordered finite measurements bounded by the
+existing ten-minute cohort deadline, not a new speed target or pass. They do not
+change the original Canvas interval, its 15,542.8 ms budget, five warmups or thirty
+samples. Edit/input-to-two-frame, revisit and inference timing remain separate.
+Local oracle tests qualify only the recording rules. Actual startup, host and
+performance results stay pending until the named packaged test runs.
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown
 qualification retains a read-only Win32 process handle acquired while that main

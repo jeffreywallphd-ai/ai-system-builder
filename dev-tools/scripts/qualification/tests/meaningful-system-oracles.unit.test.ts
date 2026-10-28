@@ -2,8 +2,35 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canonicalMeaningfulSystem, assertMeaningfulSystemPreserved, assertMeaningfulSystemSet,
-  MEANINGFUL_SYSTEM_IDS, type MeaningfulSystemObservation,
+  MEANINGFUL_SYSTEM_IDS, readDesktopStartupObservation, type MeaningfulSystemObservation,
 } from "../visual-composer/meaningful-system-oracles";
+
+const startup = () => ({schemaVersion:"desktop-startup-observation-v1",firstWindowMilliseconds:220.5,interactiveShellMilliseconds:1900.25});
+test("startup observations are bounded copied measurements without a speed verdict",()=>{
+  const input=startup(),result=readDesktopStartupObservation(input);assert.deepEqual(result,input);assert.notEqual(result,input);assert.ok(Object.isFrozen(result));
+  input.interactiveShellMilliseconds=5000;assert.equal(result.interactiveShellMilliseconds,1900.25);assert.equal(Object.prototype.hasOwnProperty.call(result,"status"),false);
+  assert.equal(readDesktopStartupObservation({...startup(),firstWindowMilliseconds:0,interactiveShellMilliseconds:600000}).interactiveShellMilliseconds,600000);
+});
+for(const [name,change] of [
+  ["schema",(v:any)=>{v.schemaVersion="unknown";}],
+  ["extra private field",(v:any)=>{v.token="synthetic-not-a-credential";}],
+  ["missing phase",(v:any)=>{delete v.firstWindowMilliseconds;}],
+  ["negative",(v:any)=>{v.firstWindowMilliseconds=-1;}],
+  ["nonfinite",(v:any)=>{v.interactiveShellMilliseconds=Infinity;}],
+  ["NaN",(v:any)=>{v.firstWindowMilliseconds=NaN;}],
+  ["numeric string",(v:any)=>{v.firstWindowMilliseconds="220";}],
+  ["excessive",(v:any)=>{v.interactiveShellMilliseconds=600001;}],
+  ["unordered",(v:any)=>{v.firstWindowMilliseconds=1901;}],
+  ["prototype",(v:any)=>{Object.setPrototypeOf(v,{foreign:true});}],
+] as const)test(`invalid startup ${name} is refused`,()=>{
+  const input=startup();change(input);assert.throws(()=>readDesktopStartupObservation(input),error=>error instanceof Error && !error.message.includes("synthetic-not-a-credential"));
+});
+test("startup getters and proxies are refused without executing supplied code",()=>{
+  let calls=0;const input=startup();Object.defineProperty(input,"firstWindowMilliseconds",{enumerable:true,get(){calls++;return 220;}});
+  assert.throws(()=>readDesktopStartupObservation(input));assert.equal(calls,0);
+  const proxy=new Proxy(startup(),{get(){calls++;throw Error("unexpected trap");},getPrototypeOf(){calls++;throw Error("unexpected trap");},ownKeys(){calls++;throw Error("unexpected trap");}});
+  assert.throws(()=>readDesktopStartupObservation(proxy));assert.equal(calls,0);
+});
 
 function saved(): MeaningfulSystemObservation {
   return {schemaVersion: "meaningful-system-snapshot-v1", scenarioId: "request-intake",

@@ -115,3 +115,23 @@ export function assertMeaningfulSystemSet(values: readonly unknown[]): Meaningfu
     "Saved systems must have distinct scenario and system identities in one workspace.");
   return systems;
 }
+
+export interface DesktopStartupObservation {
+  readonly schemaVersion: "desktop-startup-observation-v1";
+  readonly firstWindowMilliseconds: number;
+  readonly interactiveShellMilliseconds: number;
+}
+
+/** Elapsed test-driver observations, not first paint or a new speed verdict. */
+export function readDesktopStartupObservation(value: unknown): DesktopStartupObservation {
+  record(value, ["schemaVersion", "firstWindowMilliseconds", "interactiveShellMilliseconds"]);
+  assert(value.schemaVersion === "desktop-startup-observation-v1", "Unknown startup observation.");
+  for (const field of ["firstWindowMilliseconds", "interactiveShellMilliseconds"] as const) {
+    // Output bound matches the existing cohort deadline; it is not a speed target.
+    assert(typeof value[field] === "number" && Number.isFinite(value[field]) && value[field] >= 0 && value[field] <= 600_000,
+      "Startup observation exceeds its collection bound.");
+  }
+  assert(Number(value.interactiveShellMilliseconds) >= Number(value.firstWindowMilliseconds), "Startup phases are out of order.");
+  return Object.freeze({ schemaVersion: "desktop-startup-observation-v1", firstWindowMilliseconds: value.firstWindowMilliseconds as number,
+    interactiveShellMilliseconds: value.interactiveShellMilliseconds as number });
+}
