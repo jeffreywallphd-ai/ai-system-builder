@@ -118,9 +118,9 @@ Unknown or explicitly requested generic impact keeps its checks. It starts no
 server, browser, model or provider and grants no TLS, identity, native or parent
 qualification.
 
-The fixed `operational-ui` profile runs 38 literal runtime, notification,
+The fixed `operational-ui` profile runs 39 literal runtime, notification,
 task-family, shell, dashboard and readiness files. Automatic selection uses its
-fourteen specific runtime, notification and host-definition source/test paths.
+seventeen specific runtime, notification and host-definition source/test paths.
 Shared README files and borrowed regressions do not activate it for another
 feature's profile.
 Node and Vitest files keep
@@ -143,6 +143,16 @@ Clear log keeps the canonical confirmation and removes prior lifecycle entries.
 The report oracle snapshots only dense own data fields and rejects custom
 iteration, accessors, sparse observations and extra fields. Proxy values are
 refused before reflection so their traps cannot execute.
+The added accessibility test checks strict rule/count/retry accounting and the
+browser-local contrast callback with synthetic DOM fixtures. The v2 accessibility
+report stores no selectors, raw audit messages or user agent. Its fixed failure
+stages preserve unresolved checks. Contrast scroll/retry stays in the browser;
+actual computed host accessibility, native zoom and timing remain pending.
+Retry targets retain positive finite bounding boxes. Setup failures have fixed
+stages, and browser scale is validated before publication. Media restoration
+precedes passed publication; failed attachment/storage finalization writes failed
+evidence when storage permits. The actual failed test receipt always prevents a
+pass, including when evidence storage is unavailable.
 
 The fixed `control-plane` unittest command has a ten-minute execution ceiling.
 Its growing filesystem and Node fixture matrix exceeded the earlier three-minute

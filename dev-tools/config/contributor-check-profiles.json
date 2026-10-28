@@ -1823,7 +1823,8 @@
         "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
         "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1876,7 +1877,10 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts",
-        "dev-tools/README.md"
+        "dev-tools/README.md",
+        "dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts",
+        "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"
       ]
     }
   }

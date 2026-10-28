@@ -52,7 +52,8 @@ TESTS = [
     "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
     "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
     "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
-    "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+    "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"
 ]
 EXPECTED_COMMANDS = [
     [
@@ -107,6 +108,7 @@ EXPECTED_COMMANDS = [
         "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
         "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
         "modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
@@ -152,6 +154,9 @@ class OperationalUiProfile(unittest.TestCase):
             for paths, required, generic in [
                 ([hook, CONFIG], ["documentation"], False),
                 (["modules/ui/shared/notifications/tests/notificationMigrationInventory.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"], ["documentation"], False),
                 ([hook], ["focused-tests"], True),
                 ([hook, "modules/unknown/changed.ts"], ["documentation"], True),
             ]:

@@ -346,3 +346,24 @@ requires a new stopped/spawned log sequence; Clear log retains its canonical
 confirmation and removes preceding lifecycle entries. The observation oracle
 rejects sparse arrays, accessors and custom iteration before copying fixed facts.
 Proxy values are refused before reflection so their traps cannot execute.
+
+## Safe accessibility observations
+
+The fixed Operational profile includes the accessibility observation and
+browser-callback unit tests. The callback uses synthetic DOM fixtures here; it
+does not qualify real contrast, native zoom, focus or paint performance.
+
+The actual System Builder helper retains the existing named host/profile,
+1440px/320px reflow, computed motion/contrast, status and keyboard/modal/focus
+checks. Its v2 report retains only fixed stages, trusted installed Axe rule IDs,
+finite counts and contrast retry outcomes. Selectors and audit messages stay in
+the browser during retry. Unknown, malformed, duplicate or unresolved evidence
+cannot become a pass. The report omits the arbitrary user-agent string.
+Retry targets require a positive finite bounding box. Setup and finalization
+errors use fixed stages. Browser scale is validated before report assignment.
+Media restoration precedes publication; failed attachment/storage finalization
+rewrites failed evidence when storage permits. A failed test receipt remains
+authoritative when the evidence file cannot be updated.
+
+Run actual named host observations at the separately authorized combined-testing
+boundary. These local checks grant no host/native/provider/model or roadmap pass.

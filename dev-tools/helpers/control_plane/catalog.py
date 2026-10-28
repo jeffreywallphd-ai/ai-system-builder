@@ -33,6 +33,9 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts",
+        "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",
