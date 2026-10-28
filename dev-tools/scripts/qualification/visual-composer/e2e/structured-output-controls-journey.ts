@@ -1,6 +1,7 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 type Host = "desktop" | "thin";
 const checkedLabel = "Keep generated JSON well structured";
@@ -36,7 +37,7 @@ export async function qualifyStructuredOutputControls(
           schema?.type === "object" && schema.properties.request_text?.type === "string" &&
           schema.properties.metadata?.type === "object" &&
           schema.properties.metadata.properties?.score?.type === "number" &&
-          !Object.hasOwn(schema.properties, "score") &&
+          !Object.prototype.hasOwnProperty.call(schema.properties, "score") &&
           schema.required?.includes("request_text") === true &&
           schema.required?.includes("metadata") === true;
       } catch { return false; }
@@ -132,6 +133,7 @@ export async function qualifyStructuredOutputControls(
     }
     await assertShape();
     completed.push(host === "desktop" ? "renderer-reload-explicit-settings-load" : "renderer-reload-restored");
+    await qualifyCriticalSurfaceAccessibility(current, info, "dataset-output-shape");
     stage = "reset-fields-preserves-explicit-choice";
     await editor().getByRole("button", { name: "Reset fields", exact: true }).click();
     await expect(editor().getByRole("textbox", { name: "instruction field name", exact: true })).toBeVisible();

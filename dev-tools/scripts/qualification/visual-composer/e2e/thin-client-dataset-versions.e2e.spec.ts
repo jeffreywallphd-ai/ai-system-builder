@@ -18,10 +18,10 @@ test("browser saves dataset versions, source RAG and Context packs across full s
   await page.getByRole("button", { name: "Create workspace", exact: true }).click();
   await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
-  const saved = await prepareProvidedVersions(page, "thin");
-  const savedRows = await prepareSavedRowReview(page, "thin");
-  const savedSourceContext = await prepareSourceContext(page, "thin");
-  const savedContext = await prepareManualContext(page, "thin");
+  const saved = await prepareProvidedVersions(page, "thin", test.info());
+  const savedRows = await prepareSavedRowReview(page, "thin", test.info());
+  const savedSourceContext = await prepareSourceContext(page, "thin", test.info());
+  const savedContext = await prepareManualContext(page, "thin", test.info());
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
   // Readiness alone could observe the old listener. Require the fresh second

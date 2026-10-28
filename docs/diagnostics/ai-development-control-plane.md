@@ -162,7 +162,14 @@ and exclusive initial creation; an existing entry is refused without overwrite.
 This is ordinary owned-run hygiene; hostile filesystem/native identity is still
 unqualified. The definition restores the declared 1440 px/no-preference base, not
 an unknown prior OS window state. Synthetic callback tests qualify no real host.
-Other critical consumers and startup/responsiveness definitions remain separate.
+Data and Context add ten closed surface IDs for file selection, preparation,
+version history, row review/editing, output structure, RAG/Context pack review
+and saved Context detail. Audits run at stable initial states outside timed
+imports and repeated rebuilds. Required TestInfo follows both initial host
+callers. Approval, exact bytes/lineage/workspace and restart checks remain.
+These borrowed consumers have explicit Operational coverage without becoming
+automatic Operational triggers. Other critical consumers, OCR-specific views
+and startup/responsiveness definitions remain separate.
 
 The fixed `control-plane` unittest command has a ten-minute execution ceiling.
 Its growing filesystem and Node fixture matrix exceeded the earlier three-minute

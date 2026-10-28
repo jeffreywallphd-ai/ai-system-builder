@@ -1883,7 +1883,16 @@
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts",
-        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/ingestion-source-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/structured-output-controls-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
       ]
     }
   }

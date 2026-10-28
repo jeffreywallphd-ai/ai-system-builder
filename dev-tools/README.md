@@ -387,3 +387,21 @@ The fixed set of 40 Operational files includes synthetic callback, strict-contex
 width-order, collision and failure tests. Actual host/zoom/paint/full qualification
 remains pending. Other critical forms/dialogs and startup observations still need
 separate implementation before the original roadmap chunk can be recorded.
+
+## Data and Context accessibility definitions
+
+The reviewed critical audit also covers file selection, dataset preparation,
+version comparison, row review/editing, output structure, source RAG/Context pack
+review and manual Context review/detail. Audits use existing stable assertions.
+They run before timed import or approved review actions and only once at each
+initial surface. Later rebuild/replay retains its existing behavior.
+
+Both initial dataset-version host callers provide the current test identity.
+No source bytes, workspace/version fences, approval actions, saved settings,
+restart guards or memory choices are changed. The same fixed 40-file Operational
+profile and 19 automatic paths remain; borrowed consumers have explicit coverage
+and do not activate Operational checks for unrelated feature work.
+
+These are definitions with ordinary focused evidence. Actual Data/Context host,
+model/OCR/native/zoom/paint/full qualification remains separate. Other critical
+views and response-time definitions still precede original roadmap chunk closure.

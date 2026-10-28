@@ -1,3 +1,4 @@
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
@@ -183,7 +184,7 @@ async function visibleRows(page: Page, rows: DatasetReviewPage) {
   }
 }
 
-export async function prepareSavedRowReview(page: Page, host: Host): Promise<SavedRowSnapshot> {
+export async function prepareSavedRowReview(page: Page, host: Host, info: TestInfo): Promise<SavedRowSnapshot> {
   const originalWorkspace = await page.getByLabel("Select current workspace").inputValue();
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
@@ -214,9 +215,11 @@ export async function prepareSavedRowReview(page: Page, host: Host): Promise<Sav
   await expect(page.getByRole("tab", { name: "Artifact Browser", exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
   const initial = await collect(page, host, workspace, source, 1), { region } = await openRows(page, host);
   await visibleRows(page, initial[0]!.rows);
+  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-review");
   await region.locator("tbody tr").first().getByRole("button", { name: "Edit", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: `Review ${fixed.dataset_name}`, exact: true });
   await dialog.getByLabel("text", { exact: true }).fill(String(initial[0]!.rows.rows[0]!.values.text) + fixed.edit_suffix);
+  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-row-edit");
   await dialog.getByRole("button", { name: "Approve changes", exact: true }).click();
   await expect(dialog.getByLabel("text", { exact: true })).not.toBeVisible();
   await dialog.getByRole("button", { name: "Close dialog", exact: true }).click();

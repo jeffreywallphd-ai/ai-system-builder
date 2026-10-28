@@ -121,6 +121,8 @@ EXPECTED_COMMANDS = [
 class OperationalUiProfile(unittest.TestCase):
     def test_shared_borrowed_files_do_not_activate_operational_checks_in_other_profiles(self):
         for name, source, test in [
+            ("dataset-version-browser", "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts", "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"),
+            ("dataset-version-browser", "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts", "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"),
             ("asset-authoring-ui", "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
             ("asset-authoring-ui", "dev-tools/README.md", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
             ("asset-authoring-ui", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),

@@ -25,7 +25,8 @@ const context = () => ({ schemaVersion: "critical-accessibility-context-v1", run
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
 
 describe("closed critical accessibility qualification", () => {
-  it.each(["settings", "security", "notifications"])("copies supported %s context and requires both exact ordered widths", surface => {
+  it.each(["settings", "security", "notifications", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
+    "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser"])("copies supported %s context and requires both exact ordered widths", surface => {
     const value = { ...context(), surface }, result = qualifyCriticalAccessibilityReport(value, [audit(1440), audit(320)]);
     value.surface = "synthetic-private-context";
     expect(result.schemaVersion).toBe("critical-surface-accessibility-v1"); expect(result.contextSchemaVersion).toBe("critical-accessibility-context-v1");

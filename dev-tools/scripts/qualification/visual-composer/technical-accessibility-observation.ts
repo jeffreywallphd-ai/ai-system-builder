@@ -72,7 +72,8 @@ export function readTechnicalAccessibilityAudit(value: unknown): TechnicalAccess
   } catch { throw new Error(INVALID); }
 }
 
-export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "security", "notifications"] as const);
+export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "security", "notifications", "data-ingestion", "dataset-preparation",
+  "dataset-versions", "dataset-review", "dataset-row-edit", "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser"] as const);
 export type CriticalAccessibilitySurface = typeof CRITICAL_ACCESSIBILITY_SURFACES[number];
 export interface CriticalAccessibilityContext {
   readonly schemaVersion: "critical-accessibility-context-v1";
@@ -88,10 +89,10 @@ export function readCriticalAccessibilityContext(value: unknown): CriticalAccess
     if (data.schemaVersion !== "critical-accessibility-context-v1" || typeof data.runId !== "string" || !/^[a-z0-9-]{20,80}$/.test(data.runId)
       || typeof data.sourceRevision !== "string" || !/^source\.[a-f0-9]{64}$/.test(data.sourceRevision)
       || (data.host !== "packaged-desktop" && data.host !== "thin-chrome" && data.host !== "managed-thin-chrome")
-      || (data.surface !== "settings" && data.surface !== "security" && data.surface !== "notifications")
+      || typeof data.surface !== "string" || !CRITICAL_ACCESSIBILITY_SURFACES.includes(data.surface as CriticalAccessibilitySurface)
       || (data.surface === "security" && data.host === "packaged-desktop")
       || typeof data.testKey !== "string" || !/^[a-f0-9]{64}$/.test(data.testKey)) throw new Error();
-    return Object.freeze({ schemaVersion: "critical-accessibility-context-v1", runId: data.runId, sourceRevision: data.sourceRevision, host: data.host, surface: data.surface, testKey: data.testKey });
+    return Object.freeze({ schemaVersion: "critical-accessibility-context-v1", runId: data.runId, sourceRevision: data.sourceRevision, host: data.host, surface: data.surface as CriticalAccessibilitySurface, testKey: data.testKey });
   } catch { throw new Error("Invalid critical accessibility context."); }
 }
 /** Actual execution still needs its owning test receipt; fixtures qualify only this gate. */

@@ -1,3 +1,4 @@
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
@@ -178,10 +179,14 @@ async function prepareCandidate(page: Page, kind: Kind, rebuild = false) {
   await expect(page.getByRole("button", { name: rag ? "Approve and save RAG database" : "Save context pack", exact: true })).toBeVisible({ timeout: 60_000 });
   await closeNotices(page);
 }
-async function reviewAndSave(page: Page, kind: Kind, source: SourceIdentity) {
+async function reviewAndSave(page: Page, kind: Kind, source: SourceIdentity, auditInfo?: TestInfo) {
   const rag = kind === "rag-database";
   await page.getByRole("button", { name: rag ? "Review preview chunks" : "Review prepared Markdown", exact: true }).click();
   const review = page.getByRole("dialog", { name: rag ? "Review RAG chunks" : "Review context pack Markdown", exact: true });
+  if (auditInfo) {
+    await expect(review).toBeVisible();
+    await qualifyCriticalSurfaceAccessibility(page, auditInfo, rag ? "context-rag" : "context-pack");
+  }
   const item = review.locator("article.dataset-review__item"), progress = review.locator(".dataset-review__progress");
   async function observe(index: number, decision: "Not reviewed" | "Approved") {
     await expect(progress.locator("strong")).toHaveText(`${index + 1} of ${REVIEW[kind].length}`);
@@ -227,7 +232,7 @@ async function verifyDesktopPackDownload(page: Page, saved: SourceContextRecord)
   await dialog.getByRole("button", { name: "Close detail and preview", exact: true }).click();
 }
 
-export async function prepareSourceContext(page: Page, host: Host): Promise<SourceContextSnapshot> {
+export async function prepareSourceContext(page: Page, host: Host, info: TestInfo): Promise<SourceContextSnapshot> {
   const originalWorkspace = await page.getByLabel("Select current workspace").inputValue();
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
@@ -252,7 +257,7 @@ export async function prepareSourceContext(page: Page, host: Host): Promise<Sour
   await expect(page.getByRole("tabpanel", { name: "RAG Databases", exact: true }).locator("label").filter({ has: page.getByText(fixed.source_name, { exact: true }) }).getByRole("checkbox")).toBeChecked();
   const records: SourceContextRecord[] = [];
   for (const kind of ["rag-database", "markdown-context-pack"] as const) {
-    await prepareCandidate(page, kind); await reviewAndSave(page, kind, source);
+    await prepareCandidate(page, kind); await reviewAndSave(page, kind, source, info);
     records.push(await collect(page, host, workspace, source, kind));
   }
   validateSourceContextCatalog(await readManualContextValue(page, host, workspace, { action: "browser-list" }), records);

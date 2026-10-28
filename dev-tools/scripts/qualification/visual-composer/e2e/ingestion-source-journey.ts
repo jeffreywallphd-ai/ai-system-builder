@@ -1,6 +1,7 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { INGESTION_TASK_RECOMMENDED_CHUNK_BYTES } from "../../../../../modules/contracts/ingestion";
 
 // Exercise mounted controls and real host publication. No upload/API success mock,
@@ -38,7 +39,7 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
     } });
     const observer = new MutationObserver(() => {
       const progress = document.querySelector<HTMLProgressElement>('progress[aria-label="Ingestion progress"]');
-      if (progress && facts.progress.at(-1) !== progress.value && facts.progress.length < 256) facts.progress.push(progress.value);
+      if (progress && facts.progress[facts.progress.length - 1] !== progress.value && facts.progress.length < 256) facts.progress.push(progress.value);
     });
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["value"] });
     (window as any).__ingestionReadFacts = facts;
@@ -59,6 +60,7 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
   expect(totalBytes).toBeLessThan(9 * 1024**2);
   await input.setInputFiles(files);
   await expect(workflow.getByRole("region", { name: "Selected files", exact: true }).getByText("3 files selected", { exact: true })).toBeVisible();
+  await qualifyCriticalSurfaceAccessibility(page, info, "data-ingestion");
   const started = performance.now();
   await add.click();
   const center = page.getByRole("dialog", { name: "Notifications", exact: true });

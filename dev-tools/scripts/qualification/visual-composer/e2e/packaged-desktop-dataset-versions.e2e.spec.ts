@@ -36,10 +36,10 @@ test("packaged desktop saves dataset versions, source RAG and Context packs acro
         await page.getByRole("button", { name: "Create workspace", exact: true }).click();
         await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
         await page.getByRole("button", { name: "Data", exact: true }).click();
-        saved = await prepareProvidedVersions(page, "desktop");
-        savedRows = await prepareSavedRowReview(page, "desktop");
-        savedSourceContext = await prepareSourceContext(page, "desktop");
-        savedContext = await prepareManualContext(page, "desktop");
+        saved = await prepareProvidedVersions(page, "desktop", test.info());
+        savedRows = await prepareSavedRowReview(page, "desktop", test.info());
+        savedSourceContext = await prepareSourceContext(page, "desktop", test.info());
+        savedContext = await prepareManualContext(page, "desktop", test.info());
       } else {
         if (!saved || !savedContext || !savedRows || !savedSourceContext) throw new Error("The first app session did not qualify.");
         await verifyProvidedVersionsAfterRestart(page, "desktop", saved, test.info());

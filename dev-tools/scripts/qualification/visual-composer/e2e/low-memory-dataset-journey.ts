@@ -1,6 +1,7 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 // Real UI, host transport, authorization, staging, review and persistence.
 // The finite worker produces synthetic rows; it cannot qualify model quality.
@@ -42,6 +43,7 @@ export async function qualifyLowMemoryDatasetJourney(page: Page, info: TestInfo,
   }
   };
   await configure();
+  await qualifyCriticalSurfaceAccessibility(page, info, "dataset-preparation");
   const model = page.getByRole("textbox", { name: host === "desktop" ? /^Model ID/ : /^Local generation model/ });
   const mode = page.getByLabel("Model memory mode", { exact: false });
   const run = page.getByRole("button", { name: "Run checks and prepare", exact: true });
