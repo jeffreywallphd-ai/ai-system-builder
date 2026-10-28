@@ -6,9 +6,9 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS } from "../technical-accessibility-observation";
 
 /** Selectors/messages remain browser-local, including failed contrast retries. */
-async function collectAccessibilityAudit(page: Page, width: 320 | 1440, documentScope: boolean) {
+async function collectAccessibilityAudit(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime") {
   if (width !== 320 && width !== 1440) throw new Error("Invalid technical accessibility observation.");
-  const observation = await page.evaluate(async ({ width, ruleIds, documentScope }) => {
+  const observation = await page.evaluate(async ({ width, ruleIds, scope }) => {
     try {
       type Item = { id: string; nodes: Array<{ target: string[] }> };
       type Result = { violations: Item[]; incomplete: Item[]; passes: Item[] };
@@ -23,8 +23,9 @@ async function collectAccessibilityAudit(page: Page, width: 320 | 1440, document
           return { rule: item.id, nodes: item.nodes.length };
         });
       }
-      if (documentScope && document.querySelectorAll("main.ui-shell").length !== 1) throw new Error();
-      const result = await axe.run(documentScope ? "body" : ".system-builder", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
+      if (scope === "shell" && document.querySelectorAll("main.ui-shell").length !== 1) throw new Error();
+      if (scope === "runtime" && document.querySelectorAll("main.system-runtime-app").length !== 1) throw new Error();
+      const result = await axe.run(scope === "canvas" ? ".system-builder" : "body", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
       const violations = groups(result.violations), incomplete = groups(result.incomplete), passes = groups(result.passes);
       let attempted = 0, passed = 0;
       for (const group of result.incomplete) {
@@ -50,11 +51,12 @@ async function collectAccessibilityAudit(page: Page, width: 320 | 1440, document
       return { schemaVersion: "technical-accessibility-audit-v1", width, violations, incomplete,
         contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
     } catch { throw new Error("Computed accessibility audit failed."); }
-  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], documentScope });
+  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope });
   return readTechnicalAccessibilityAudit(observation);
 }
-export function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, false); }
-export function collectDocumentAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, true); }
+export function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "canvas"); }
+export function collectDocumentAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "shell"); }
+export function collectRuntimeAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "runtime"); }
 
 /** Same named host constraints for Canvas and other critical mounted surfaces. */
 export async function loadTechnicalAccessibilityReference() {

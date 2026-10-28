@@ -36,8 +36,13 @@ describe("closed critical accessibility qualification", () => {
     expect(result.surface).toBe(surface); expect(result.status).toBe("passed"); expect(Object.isFrozen(result.audits)).toBe(true);
   });
   it.each([{ surface: "../outside" }, { surface: ".private-selector" }, { host: "unknown" }, { host: "packaged-desktop", surface: "security" },
+    { host: "thin-chrome", surface: "runtime-conversation" }, { host: "managed-thin-chrome", surface: "runtime-conversation" },
     { runId: "short" }, { sourceRevision: "worktree" }, { testKey: "private-test-name" }, { token: "synthetic-private-token" }])("rejects unsupported or private context %#", change => {
     expect(() => readCriticalAccessibilityContext({ ...context(), ...change })).toThrow("Invalid critical accessibility context.");
+  });
+  it("admits the standalone conversation only for the desktop host", () => {
+    const report = qualifyCriticalAccessibilityReport({ ...context(), host: "packaged-desktop", surface: "runtime-conversation" }, [audit(1440), audit(320)]);
+    expect(report.surface).toBe("runtime-conversation"); expect(report.host).toBe("packaged-desktop"); expect(report.status).toBe("passed");
   });
   it.each([[], [audit(1440)], [audit(320), audit(1440)], [audit(1440), audit(1440)], [audit(1440), { ...audit(320), contrastPassedNodes: 0 }],
     [audit(1440), { ...audit(320), violations: [{ rule: "button-name", nodes: 1 }] }], new Array(2)])("never qualifies missing, reordered, sparse or failed audits %#", values => {
@@ -106,6 +111,38 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(probe.flags).toEqual(["wx", "w", "w", "w"]); expect(probe.motion).toBe("no-preference");
     const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved.status).toBe("passed"); expect(saved.audits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
+  });
+  it("audits the actual standalone mount without requiring the builder shell", async () => {
+    document.querySelector("main")!.className = "system-runtime-app";
+    const runtimeInfo = { ...info, project: { name: "packaged-desktop" } } as TestInfo;
+    const result = await qualifyCriticalSurfaceAccessibility(page, runtimeInfo, "runtime-conversation");
+    expect(result.status).toBe("passed"); expect(probe.calls).toBe(2); expect(probe.widths).toEqual([1440, 320, 1440]);
+    expect(probe.motion).toBe("no-preference"); expect(probe.attachments).toHaveLength(1);
+    expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|message/);
+  });
+  it.each(["builder-only", "duplicate-runtime", "missing-runtime"] as const)("refuses %s instead of auditing a different page", async fault => {
+    const main = document.querySelector("main")!;
+    if (fault !== "builder-only") main.className = "system-runtime-app";
+    if (fault === "duplicate-runtime") document.body.append(main.cloneNode(true));
+    if (fault === "missing-runtime") main.remove();
+    const runtimeInfo = { ...info, project: { name: "packaged-desktop" } } as TestInfo;
+    await expect(qualifyCriticalSurfaceAccessibility(page, runtimeInfo, "runtime-conversation")).rejects.toThrow("Critical accessibility check failed at browser-profile.");
+    expect(probe.calls).toBe(0); expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed");
+  });
+  it("rejects a thin runtime before any file or Page effect", async () => {
+    const evaluate = vi.fn();
+    await expect(qualifyCriticalSurfaceAccessibility({ evaluate } as unknown as Page, info, "runtime-conversation")).rejects.toThrow("Invalid critical accessibility context.");
+    expect(evaluate).not.toHaveBeenCalled(); expect(probe.flags).toEqual([]);
+  });
+  it("rechecks runtime identity if the document changes after initial admission", async () => {
+    document.querySelector("main")!.className = "system-runtime-app";
+    const changingPage = { ...page, evaluate: async (callback: ((value: unknown) => unknown) | string, value: unknown) => {
+      if (value && typeof value === "object" && "scope" in value && value.scope === "runtime") document.querySelector("main")!.className = "ui-shell";
+      return typeof callback === "string" ? undefined : callback(value);
+    } } as unknown as Page;
+    const runtimeInfo = { ...info, project: { name: "packaged-desktop" } } as TestInfo;
+    await expect(qualifyCriticalSurfaceAccessibility(changingPage, runtimeInfo, "runtime-conversation")).rejects.toThrow("Critical accessibility check failed at audit-1440.");
+    expect(probe.calls).toBe(0); expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed");
   });
   it("denies an existing report without overwriting, inspecting or adopting its bytes", async () => {
     probe.exists = true;

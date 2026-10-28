@@ -156,6 +156,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             runtimePage.getByText("Start a conversation"),
           ).toBeVisible();
           await expect(transcript.locator("li")).toHaveCount(0);
+          await qualifyCriticalSurfaceAccessibility(runtimePage, test.info(), "runtime-conversation");
           const input = runtimePage.getByLabel("Message");
           await expect(input).toHaveAttribute("maxlength", String(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS));
           const fullInput = "x".repeat(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS);

@@ -851,3 +851,22 @@ limits, native controls and UI performance requirements retain their existing
 requirements. Source-bound support descriptions remain required for every new
 review-site evidence label; a description update never supplies parent approval
 or technical qualification.
+
+## Published conversation accessibility definitions
+
+The primary desktop lifecycle audits the published conversation window after
+ownership and empty-transcript checks. The closed runtime-conversation context
+admits only the desktop host. Both initial admission and browser collection require
+one fixed runtime main element. Builder checks still require their builder shell.
+Callers cannot supply a selector or turn this check into a generic browser audit.
+
+The audit checks the full document at 1440px and 320px. It retains the same reduced
+motion, reflow, contrast retry, count-only reporting and failure-aware finalization
+rules. It runs only on the first conversation, before input is entered. Existing
+input limits, conversation turns, release identity, restart, stop and workspace
+isolation assertions remain. Operational and runtime feature profiles are unchanged.
+
+Focused synthetic tests check the definition and its refusal paths. They do not
+qualify the real desktop window. Actual host, native zoom, startup/paint, model,
+accessibility and full qualification remain pending. No accepted model accuracy
+check is rerun, and this source checkpoint does not complete the parent increment.

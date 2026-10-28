@@ -14,7 +14,7 @@ vi.mock("node:fs/promises", () => {
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { readTechnicalAccessibilityAudit } from "../visual-composer/technical-accessibility-observation";
-import { collectSystemBuilderAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
+import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
 const base = () => ({ schemaVersion: "technical-accessibility-audit-v1", width: 320, violations: [] as Array<{ rule: string; nodes: number }>, incomplete: [] as Array<{ rule: string; nodes: number }>, contrastPassedNodes: 3, retries: { attempted: 0, passed: 0 } });
 const invalid = "Invalid technical accessibility observation.";
 
@@ -131,6 +131,33 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     const report = await collectSystemBuilderAccessibilityAudit(page, 320);
     expect(calls).toBe(2); expect(report.status).toBe("passed"); expect(report.retries).toEqual({ attempted: 1, passed: 1 });
     expect(JSON.stringify(report)).not.toMatch(/synthetic-private|Synthetic private|selector|message|target/);
+  });
+  it("uses the complete runtime document and retains browser-local contrast retries", async () => {
+    const main = document.createElement("main"); main.className = "system-runtime-app";
+    const content = document.body.firstElementChild!; content.replaceWith(main); main.append(content);
+    let calls = 0;
+    install(async context => {
+      if (++calls === 1) { expect(context).toBe("body"); return { ...result(), incomplete: [{ id: "color-contrast", nodes: [node()] }] }; }
+      expect(context).toEqual({ include: [["#synthetic-private-selector"]] }); return result();
+    });
+    const report = await collectRuntimeAccessibilityAudit(page, 320);
+    expect(calls).toBe(2); expect(report.status).toBe("passed"); expect(report.retries).toEqual({ attempted: 1, passed: 1 });
+    expect(JSON.stringify(report)).not.toContain("synthetic-private");
+  });
+  it.each(["missing", "wrong-shell", "duplicate"] as const)("refuses runtime %s at the actual browser collection boundary", async fault => {
+    if (fault !== "missing") {
+      const main = document.createElement("main"); main.className = fault === "wrong-shell" ? "ui-shell" : "system-runtime-app"; document.body.append(main);
+      if (fault === "duplicate") document.body.append(main.cloneNode(true));
+    }
+    const run = vi.fn(); install(run);
+    await expect(collectRuntimeAccessibilityAudit(page, 1440)).rejects.toThrow("Computed accessibility audit failed.");
+    expect(run).not.toHaveBeenCalled();
+  });
+  it("keeps builder-shell admission separate from the standalone runtime", async () => {
+    const main = document.createElement("main"); main.className = "system-runtime-app"; document.body.append(main);
+    const run = vi.fn(); install(run);
+    await expect(collectDocumentAccessibilityAudit(page, 320)).rejects.toThrow("Computed accessibility audit failed.");
+    expect(run).not.toHaveBeenCalled();
   });
   it("refuses an unsupported viewport before browser evaluation", async () => {
     const evaluate = vi.fn();

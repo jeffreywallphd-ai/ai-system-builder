@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit } from "../technical-accessibility-observation";
-import { collectDocumentAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference } from "./technical-accessibility";
+import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
@@ -34,7 +34,8 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     const scale: unknown = await page.evaluate(() => devicePixelRatio);
     if (typeof scale !== "number" || !Number.isFinite(scale) || scale !== reference.profile.deviceScaleFactor) throw new Error();
     report.browser = { deviceScaleFactor: scale };
-    const mounted = await page.evaluate(() => document.querySelectorAll("main.ui-shell").length === 1);
+    const runtime = context.surface === "runtime-conversation";
+    const mounted = await page.evaluate(runtime => document.querySelectorAll(runtime ? "main.system-runtime-app" : "main.ui-shell").length === 1, runtime);
     if (mounted !== true) throw new Error();
     stage = "audit-engine";
     await page.evaluate(await readFile(path.resolve("node_modules/axe-core/axe.min.js"), "utf8"));
@@ -62,7 +63,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       });
       report[`motion-${width}`] = readReducedMotionObservation(motion);
       stage = `audit-${width}`;
-      const audit = await collectDocumentAccessibilityAudit(page, width); audits.push(rawAudit(audit)); await save();
+      const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width); audits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
     }
     const result = qualifyCriticalAccessibilityReport(context, audits);

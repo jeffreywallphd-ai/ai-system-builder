@@ -76,7 +76,7 @@ export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "secur
   "dataset-versions", "dataset-review", "dataset-row-edit", "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser",
   "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
   "system-element-picker", "system-preview", "system-properties", "system-layers",
-  "workspace-create", "system-manage", "system-build-dialog", "system-publish", "system-publication-confirm"] as const);
+  "workspace-create", "system-manage", "system-build-dialog", "system-publish", "system-publication-confirm", "runtime-conversation"] as const);
 export type CriticalAccessibilitySurface = typeof CRITICAL_ACCESSIBILITY_SURFACES[number];
 export interface CriticalAccessibilityContext {
   readonly schemaVersion: "critical-accessibility-context-v1";
@@ -94,6 +94,7 @@ export function readCriticalAccessibilityContext(value: unknown): CriticalAccess
       || (data.host !== "packaged-desktop" && data.host !== "thin-chrome" && data.host !== "managed-thin-chrome")
       || typeof data.surface !== "string" || !CRITICAL_ACCESSIBILITY_SURFACES.includes(data.surface as CriticalAccessibilitySurface)
       || (data.surface === "security" && data.host === "packaged-desktop")
+       || (data.surface === "runtime-conversation" && data.host !== "packaged-desktop")
       || typeof data.testKey !== "string" || !/^[a-f0-9]{64}$/.test(data.testKey)) throw new Error();
     return Object.freeze({ schemaVersion: "critical-accessibility-context-v1", runId: data.runId, sourceRevision: data.sourceRevision, host: data.host, surface: data.surface as CriticalAccessibilitySurface, testKey: data.testKey });
   } catch { throw new Error("Invalid critical accessibility context."); }
