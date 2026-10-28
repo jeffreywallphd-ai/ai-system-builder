@@ -419,7 +419,7 @@ Undo/Redo, save/reopen, keyboard focus, 320px control boxes and Canvas audit rem
 The shared audit returns to the declared 1440px base before later explicit reflow
 checks. It adds no provider, dependency, runtime or approval authority.
 
-The Operational profile keeps its 40 literal tests and 19 automatic paths. Two
+The Operational profile keeps the original 40 component files plus one routing unittest and 22 automatic paths. Two
 borrowed consumers receive explicit coverage without becoming automatic triggers.
 Focused checks and case collection cover source definitions only. Actual host,
 zoom, accessibility, startup/paint and full qualification remain pending. Other
@@ -437,7 +437,7 @@ initial audit records or using private System/workspace names in report paths.
 
 Existing checked revision/build/release identities, explicit Build/Publish actions,
 cancel/focus return, installation/runtime lifecycle and workspace isolation remain.
-The Operational profile keeps 40 literal tests and 19 automatic paths; three
+The Operational profile keeps the original 40 component files plus one routing unittest and 22 automatic paths; three
 borrowed consumers receive coverage without becoming automatic triggers.
 
 These are source definitions with related feature evidence. Actual host,
@@ -557,3 +557,9 @@ process. Original setup and cleanup failures remain available for diagnosis.
 These synthetic fixtures start no browser and qualify no real native zoom,
 hostile filesystem protection, model offload or parent roadmap. The fixed Chrome
 launch options and three-second exit-observation limit remain unchanged.
+
+The operational profile now contains its original 40 Node/Vitest files and one
+existing routing unittest. Three exact menu hook/shell sources extend its
+automatic paths from 19 to 22. Borrowed barrel/README/controller coverage does
+not activate this profile by itself. Unknown, incomplete and explicit generic
+impact keeps its existing checks and bounds. No test-selection policy changes.

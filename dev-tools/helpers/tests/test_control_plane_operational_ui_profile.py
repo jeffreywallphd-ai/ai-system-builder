@@ -54,7 +54,8 @@ TESTS = [
     "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
     "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
     "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
-    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"
+    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
 ]
 EXPECTED_COMMANDS = [
     [
@@ -118,7 +119,30 @@ EXPECTED_COMMANDS = [
     ]
 ]
 
+EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
+
 class OperationalUiProfile(unittest.TestCase):
+    def test_exact_menu_sources_keep_unknown_incomplete_and_explicit_generic_guards(self):
+        menu = ["modules/ui/shared/hooks/useNavigationMenu.ts", "apps/desktop/src/renderer/components/layout/AppShell.tsx", "apps/thin-client/src/components/layout/AppShell.tsx"]
+        borrowed = ["modules/ui/shared/index.ts", "modules/ui/shared/hooks/README.md", CONFIG, "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"]
+        with tempfile.TemporaryDirectory(prefix="operational-menu-profile-") as directory:
+            root = Path(directory); self.fixture(root, self.profile())
+            for paths, required, generic in [(menu + borrowed, ["documentation"], False), (menu, ["focused-tests"], True), (menu + ["modules/ui/shared/hooks/unreviewed.ts"], ["documentation"], True)]:
+                with self.subTest(paths=paths, required=required):
+                    plan = catalog.plan(root, paths, required, "synthetic-candidate"); ids = {check["id"] for check in plan["selected"]}
+                    self.assertIn("operational-ui", ids); self.assertEqual("focused-tests" in ids, generic)
+            for missing in [menu[0], borrowed[0], borrowed[1]]:
+                profile = self.profile(); profile["source_paths"].remove(missing); (root / CONFIG).write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"operational-ui":profile}}))
+                self.assertIn("focused-tests", {check["id"] for check in catalog.plan(root, menu + borrowed, ["documentation"], "synthetic-candidate")["selected"]})
+
+    def test_menu_borrowed_files_alone_do_not_activate_operational_profile(self):
+        with tempfile.TemporaryDirectory(prefix="operational-menu-profile-") as directory:
+            root = Path(directory); self.fixture(root, self.profile())
+            for source in ["modules/ui/shared/index.ts", "modules/ui/shared/hooks/README.md", "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py", "dev-tools/README.md"]:
+                with self.subTest(source=source):
+                    ids = {check["id"] for check in catalog.plan(root, [source], ["documentation"], "synthetic-candidate")["selected"]}
+                    self.assertNotIn("operational-ui", ids)
+
     def test_shared_borrowed_files_do_not_activate_operational_checks_in_other_profiles(self):
         for name, source, test in [
             ("system-build-publication-ui", "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts", "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx"),

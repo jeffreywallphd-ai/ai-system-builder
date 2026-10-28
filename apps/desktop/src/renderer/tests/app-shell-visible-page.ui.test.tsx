@@ -59,6 +59,10 @@ describe("desktop AppShell visible workspace page state", () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain("ui-app-icon");
     expect(html).toContain("Collapse sidebar");
+    expect(html).toContain('aria-label="Open navigation menu"');
+    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-label="Application navigation"');
     expect(html).toContain('id="application-notification-bell"');
     expect(html.indexOf('id="application-notification-bell"') < html.indexOf('aria-label="Settings"')).toBe(true);
     expect(html).not.toContain('aria-current="page"');

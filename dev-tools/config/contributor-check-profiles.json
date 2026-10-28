@@ -1825,7 +1825,8 @@
         "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+        "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1897,7 +1898,14 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
-        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
+        "modules/ui/shared/hooks/useNavigationMenu.ts",
+        "modules/ui/shared/index.ts",
+        "modules/ui/shared/hooks/README.md",
+        "apps/desktop/src/renderer/components/layout/AppShell.tsx",
+        "apps/thin-client/src/components/layout/AppShell.tsx",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
       ]
     }
   }

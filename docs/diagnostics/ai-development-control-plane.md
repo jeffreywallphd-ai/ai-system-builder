@@ -118,9 +118,9 @@ Unknown or explicitly requested generic impact keeps its checks. It starts no
 server, browser, model or provider and grants no TLS, identity, native or parent
 qualification.
 
-The fixed `operational-ui` profile runs 40 literal runtime, notification,
+The fixed `operational-ui` profile runs 41 fixed runtime, notification,
 task-family, shell, dashboard and readiness files. Automatic selection uses its
-nineteen specific runtime, notification and host-definition source/test paths.
+twenty-two specific runtime, notification and host-definition source/test paths.
 Shared README files and borrowed regressions do not activate it for another
 feature's profile.
 Node and Vitest files keep
@@ -162,6 +162,15 @@ and exclusive initial creation; an existing entry is refused without overwrite.
 This is ordinary owned-run hygiene; hostile filesystem/native identity is still
 unqualified. The definition restores the declared 1440 px/no-preference base, not
 an unknown prior OS window state. Synthetic callback tests qualify no real host.
+The opened navigation menu adds one closed context and three required operational
+phases before the earlier sidebar/settings steps. Both local host definitions
+check named menu items and current page, keyboard movement and actual route
+selection, Tab exit, Escape and focus return. The common two-width, contrast and
+forced-color audit runs while the menu is open. Rendered thin-shell regressions
+exercise the shared keyboard/dismissal hook used by both shells; desktop static
+rendering retains its existing route-state checks. The prior phases, credentials,
+capture restrictions, runtime controls and host bounds stay unchanged. Actual
+desktop/browser/native400 and parent qualification remain pending.
 Data and Context add ten closed surface IDs for file selection, preparation,
 version history, row review/editing, output structure, RAG/Context pack review
 and saved Context detail. Audits run at stable initial states outside timed
@@ -806,7 +815,7 @@ Undo/Redo, save/reopen, keyboard focus, 320px control boxes and Canvas audit rem
 The shared audit returns to the declared 1440px base before later explicit reflow
 checks. It adds no provider, dependency, runtime or approval authority.
 
-The Operational profile keeps its 40 literal tests and 19 automatic paths. Two
+The Operational profile keeps the original 40 component files plus one routing unittest and 22 automatic paths. Two
 borrowed consumers receive explicit coverage without becoming automatic triggers.
 Focused checks and case collection cover source definitions only. Actual host,
 zoom, accessibility, startup/paint and full qualification remain pending. Other
@@ -824,7 +833,7 @@ initial audit records or using private System/workspace names in report paths.
 
 Existing checked revision/build/release identities, explicit Build/Publish actions,
 cancel/focus return, installation/runtime lifecycle and workspace isolation remain.
-The Operational profile keeps 40 literal tests and 19 automatic paths; three
+The Operational profile keeps the original 40 component files plus one routing unittest and 22 automatic paths; three
 borrowed consumers receive coverage without becoming automatic triggers.
 
 These are source definitions with related feature evidence. Actual host,
@@ -933,3 +942,10 @@ Portable mock/contract/UI checks and case collection check definitions only.
 Actual engine, native, host, zoom, performance and full qualification remain
 pending. Accepted model accuracy is not rerun. These audit definitions do not
 complete the parent roadmap criterion or original implementation chunk.
+
+The navigation-menu source mapping retains all original 40 Node/Vitest files
+and adds the existing operational-profile routing unittest. The 22 automatic
+paths include only the new hook and two exact shell consumers in addition to
+the earlier 19. Shared barrel/README/controller files are borrowed coverage,
+never automatic triggers. Unknown, incomplete and explicitly requested generic
+impact retains the existing fallback and limits.

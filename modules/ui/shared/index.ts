@@ -27,3 +27,4 @@ export * from "./components/TabbedPanel";
 export * from "./components/WorkspaceContextHint";
 export * from "./hooks/useSidebarCollapseState";
 export * from "./hooks/useNavigationGroupCollapseState";
+export * from "./hooks/useNavigationMenu";

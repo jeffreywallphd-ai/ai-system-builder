@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import {
   ApplicationIcon,
@@ -7,6 +7,7 @@ import {
   SidebarNavigationGroup,
   type ApplicationIconName,
   useNavigationGroupCollapseState,
+  useNavigationMenu,
   useSidebarCollapseState,
 } from "../../../../../modules/ui/shared";
 import type {
@@ -29,7 +30,7 @@ export function AppShell({
   pages,
   children,
 }: AppShellProps) {
-  const menuRef = useRef<HTMLDetailsElement | null>(null);
+  const { menuRef, expanded: isMenuExpanded } = useNavigationMenu();
   const { isSidebarCollapsed, toggleSidebar } = useSidebarCollapseState();
   const { isNavigationGroupExpanded, toggleNavigationGroup } =
     useNavigationGroupCollapseState();
@@ -74,31 +75,6 @@ export function AppShell({
     </button>
   );
 
-  useEffect(() => {
-    const closeMenuOnOutsideClick = (event: MouseEvent | TouchEvent) => {
-      const menu = menuRef.current;
-      const target = event.target;
-
-      if (
-        !menu?.open ||
-        !target ||
-        !(target as Node).nodeType ||
-        menu.contains(target as Node)
-      ) {
-        return;
-      }
-
-      menu.open = false;
-    };
-
-    document.addEventListener("mousedown", closeMenuOnOutsideClick);
-    document.addEventListener("touchstart", closeMenuOnOutsideClick);
-
-    return () => {
-      document.removeEventListener("mousedown", closeMenuOnOutsideClick);
-      document.removeEventListener("touchstart", closeMenuOnOutsideClick);
-    };
-  }, []);
 
   return (
     <main
@@ -135,19 +111,23 @@ export function AppShell({
               <details ref={menuRef} className="ui-shell__menu">
                 <summary
                   className="ui-shell__menu-trigger"
+                  aria-haspopup="menu"
+                  aria-expanded={isMenuExpanded}
+                  tabIndex={0}
                   aria-label="Open navigation menu"
                   title="Menu"
                 >
                   <ApplicationIcon name="menu" />
                   <span className="ui-visually-hidden">Menu</span>
                 </summary>
-                <div className="ui-shell__menu-panel" role="menu">
+                <div className="ui-shell__menu-panel" role="menu" aria-label="Application navigation">
                   {navigationPages.map((page) => (
                     <button
                       key={page.key}
                       className="ui-shell__menu-item"
                       type="button"
                       role="menuitem"
+                      tabIndex={-1}
                       aria-current={
                         activePage === page.key ? "page" : undefined
                       }

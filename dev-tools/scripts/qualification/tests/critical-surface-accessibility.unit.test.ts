@@ -29,7 +29,7 @@ const context = () => ({ schemaVersion: "critical-accessibility-context-v1", run
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
 
 describe("closed critical accessibility qualification", () => {
-  it.each(["settings", "security", "notifications", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
+  it.each(["settings", "security", "notifications", "navigation-menu", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
     "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser", "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
     "system-element-picker", "system-preview", "system-properties", "system-layers", "workspace-create", "system-manage",
     "system-build-dialog", "system-publish", "system-publication-confirm", "models-discovery", "models-inventory", "image-configuration",

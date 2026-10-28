@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_HOST_TIMEOUT_MS, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost } from "../visual-composer/operational-ui-oracles";
 const input = (host: OperationalHost = "thin-chrome") => ({ schemaVersion: "operational-ui-observation-v1", host, runId: "operational-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, phases: [...operationalPhases(host)] });
 describe("operational UI observation boundaries", () => {
+  it.each(["thin-chrome", "packaged-desktop"] as const)("requires opened menu, real navigation and focus return before existing %s phases",host=>{
+    const prefix=["navigation-menu-opened","navigation-menu-navigated","navigation-menu-focus-returned"];
+    expect(operationalPhases(host).slice(0,3)).toEqual(prefix);
+    for(const missing of prefix)expect(()=>qualifyOperationalObservation({...input(host),phases:operationalPhases(host).filter(phase=>phase!==missing)})).toThrow("Invalid operational UI observation.");
+    expect(operationalPhases(host).slice(3,6)).toEqual(["sidebar-collapsed","sidebar-restored","settings-opened"]);
+  });
   it.each(["thin-chrome", "packaged-desktop"] as const)("requires the supported Models and Image forms for %s without inventing thin training", host => {
     const tail = ["notifications-empty", "notifications-focus-returned", "models-discovery-opened", "models-inventory-opened",
       ...(host === "packaged-desktop" ? ["model-training-opened"] : []), "image-configuration-opened", "home-returned"];

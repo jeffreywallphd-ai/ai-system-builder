@@ -15,6 +15,31 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
   }
   let failed = false;
   try {
+    const navigationTrigger=page.getByLabel("Open navigation menu",{exact:true});
+    const navigationMenu=page.getByRole("menu",{name:"Application navigation",exact:true});
+    await step("navigation-menu-opened",async()=>{
+      await navigationTrigger.focus();await navigationTrigger.press("ArrowDown");
+      await expect(navigationTrigger).toHaveAttribute("aria-haspopup","menu");await expect(navigationTrigger).toHaveAttribute("aria-expanded","true");
+      await expect(navigationMenu).toBeVisible();const home=navigationMenu.getByRole("menuitem",{name:"Home",exact:true});
+      await expect(home).toBeFocused();await expect(navigationMenu.locator('[aria-current="page"]')).toHaveCount(1);
+      await home.press("ArrowDown");await expect(navigationMenu.getByRole("menuitem",{name:"Systems",exact:true})).toBeFocused();
+      await navigationMenu.getByRole("menuitem",{name:"Systems",exact:true}).press("ArrowUp");await expect(home).toBeFocused();
+      await home.press("End");await expect(navigationMenu.getByRole("menuitem").last()).toBeFocused();
+      await navigationMenu.getByRole("menuitem").last().press("Home");await expect(home).toBeFocused();
+      await qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu");
+    });
+    await step("navigation-menu-navigated",async()=>{
+      await navigationMenu.getByRole("menuitem",{name:"Models",exact:true}).press("Enter");
+      await expect(page.getByRole("heading",{name:"Model Management",level:1,exact:true})).toBeVisible();await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toBeFocused();
+      await navigationTrigger.press("Enter");await expect(navigationMenu.getByRole("menuitem",{name:"Models",exact:true})).toHaveAttribute("aria-current","page");
+      await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Enter");await expect(page.getByRole("heading",{name:"Home",level:1,exact:true})).toBeVisible();
+    });
+    await step("navigation-menu-focus-returned",async()=>{
+      await navigationTrigger.focus();await navigationTrigger.press("Enter");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Tab");
+      await expect(navigationMenu).toBeHidden();await expect(page.locator("#application-notification-bell")).toBeFocused();
+      await navigationTrigger.focus();await navigationTrigger.press("Space");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Escape");
+      await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toHaveAttribute("aria-expanded","false");await expect(navigationTrigger).toBeFocused();
+    });
     await step("sidebar-collapsed", async () => {
       await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
       await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
