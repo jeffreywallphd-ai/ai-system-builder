@@ -16,12 +16,14 @@ vi.mock("node:fs/promises", () => {
     if (options.flag === "wx" && probe.exists) throw new Error("synthetic-private-retained-path");
     probe.exists = true; probe.writes.push(body);
   };
-  return { readFile, mkdir, writeFile, default: { readFile, mkdir, writeFile } };
+  const unexpectedOcrIo = async () => { throw new Error("synthetic-private-unexpected-ocr-io"); };
+  return { readFile, mkdir, writeFile, lstat: unexpectedOcrIo, realpath: unexpectedOcrIo, default: { readFile, mkdir, writeFile } };
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
 import { qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
+import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
@@ -30,7 +32,8 @@ describe("closed critical accessibility qualification", () => {
   it.each(["settings", "security", "notifications", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
     "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser", "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
     "system-element-picker", "system-preview", "system-properties", "system-layers", "workspace-create", "system-manage",
-    "system-build-dialog", "system-publish", "system-publication-confirm", "models-discovery", "models-inventory", "image-configuration"])("copies supported %s context and requires both exact ordered widths", surface => {
+    "system-build-dialog", "system-publish", "system-publication-confirm", "models-discovery", "models-inventory", "image-configuration",
+    "ocr-configuration", "ocr-output-review"])("copies supported %s context and requires both exact ordered widths", surface => {
     const value = { ...context(), surface }, result = qualifyCriticalAccessibilityReport(value, [audit(1440), audit(320)]);
     value.surface = "synthetic-private-context";
     expect(result.schemaVersion).toBe("critical-surface-accessibility-v1"); expect(result.contextSchemaVersion).toBe("critical-accessibility-context-v1");
@@ -39,12 +42,16 @@ describe("closed critical accessibility qualification", () => {
   it.each([{ surface: "../outside" }, { surface: ".private-selector" }, { host: "unknown" }, { host: "packaged-desktop", surface: "security" },
     { host: "thin-chrome", surface: "runtime-conversation" }, { host: "managed-thin-chrome", surface: "runtime-conversation" },
     { host: "thin-chrome", surface: "model-training" }, { host: "managed-thin-chrome", surface: "model-training" },
+    { host: "managed-thin-chrome", surface: "ocr-configuration" }, { host: "managed-thin-chrome", surface: "ocr-output-review" },
     { runId: "short" }, { sourceRevision: "worktree" }, { testKey: "private-test-name" }, { token: "synthetic-private-token" }])("rejects unsupported or private context %#", change => {
     expect(() => readCriticalAccessibilityContext({ ...context(), ...change })).toThrow("Invalid critical accessibility context.");
   });
   it.each(["runtime-conversation", "model-training"])("admits %s only for the desktop host", surface => {
     const report = qualifyCriticalAccessibilityReport({ ...context(), host: "packaged-desktop", surface }, [audit(1440), audit(320)]);
     expect(report.surface).toBe(surface); expect(report.host).toBe("packaged-desktop"); expect(report.status).toBe("passed");
+  });
+  it.each(["ocr-configuration", "ocr-output-review"])("accepts the supported desktop %s observation", surface => {
+    expect(qualifyCriticalAccessibilityReport({ ...context(), host: "packaged-desktop", surface }, [audit(1440), audit(320)]).status).toBe("passed");
   });
   it.each([[], [audit(1440)], [audit(320), audit(1440)], [audit(1440), audit(1440)], [audit(1440), { ...audit(320), contrastPassedNodes: 0 }],
     [audit(1440), { ...audit(320), violations: [{ rule: "button-name", nodes: 1 }] }], new Array(2)])("never qualifies missing, reordered, sparse or failed audits %#", values => {
@@ -253,5 +260,17 @@ describe("explicit lifecycle audit admission", () => {
     const page = new Proxy({}, { get() { throw new Error("Page must not be accessed."); } });
     await expect(prepareGuidedSystemLifecycle(page as Page, "Synthetic lifecycle", { modelDisplayName: "Synthetic model", accessibility } as never))
       .rejects.toThrow("Unknown lifecycle accessibility mode.");
+  });
+});
+
+describe("explicit OCR host admission", () => {
+  it.each([
+    { host: "unknown", project: "packaged-desktop" }, { host: "desktop", project: "thin-chrome" },
+    { host: "thin", project: "packaged-desktop" }, { host: "thin", project: "managed-thin-chrome" },
+    { host: "desktop", project: undefined }, { host: "thin", project: undefined },
+  ])("refuses unsupported or mismatched transport/project before file or Page work %#", async ({ host, project }) => {
+    const page = new Proxy({}, { get() { throw new Error("Page must not be accessed."); } });
+    const info = project === undefined ? undefined : { project: { name: project } };
+    await expect(qualifyOcrDatasetJourney(page as Page, info as TestInfo, host as "desktop" | "thin")).rejects.toThrow("Unknown OCR host context.");
   });
 });

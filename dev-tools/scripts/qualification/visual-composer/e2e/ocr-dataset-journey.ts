@@ -2,6 +2,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 const LABELS = ["INVOICE 4826", "ORDER 7259", "TOTAL 3648", "RECEIPT 9152", "REPORT 8374"];
 const SCAN = "synthetic-scan.pdf";
@@ -103,6 +104,13 @@ async function readSavedDataset(page: Page, workspace: string, host: "desktop" |
 // Only generation is synthetic. Import, transports, task admission, native
 // capture/recognition, curation, review and approval persistence remain real.
 export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host: "desktop" | "thin") {
+  if ((host !== "desktop" && host !== "thin") || info?.project?.name !== (host === "desktop" ? "packaged-desktop" : "thin-chrome")) throw new Error("Unknown OCR host context.");
+  async function auditOcrSurface(surface: "ocr-configuration" | "ocr-output-review") {
+    await qualifyCriticalSurfaceAccessibility(page, info, surface);
+    // Keep the OCR journey's original profile after the shared audit restores its base.
+    await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "none" });
+    await page.setViewportSize({ width: 1280, height: 900 });
+  }
   const runId = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!;
   expect(runId).toMatch(/^[a-z0-9-]{20,80}$/);
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", runId, "ocr-dataset");
@@ -170,6 +178,7 @@ export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host:
   }
   const run = page.getByRole("button", { name: "Run checks and prepare", exact: true });
   const approve = page.getByRole("button", { name: "Approve and save dataset", exact: true });
+  await auditOcrSurface("ocr-configuration");
   await language.fill("zz-ZZ"); await run.click();
   await expect(page.getByText(/Text recognition is unavailable\. Choose an installed Windows recognition language/).first()).toBeVisible({ timeout: 90_000 });
   await expect(approve).toHaveCount(0); await expect(language).toBeEnabled();
@@ -185,6 +194,8 @@ export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host:
   const open = page.getByText("Open ready examples", { exact: true });
   await open.click();
   const review = page.getByRole("dialog", { name: /Review/ });
+  await expect(review).toBeVisible();
+  await auditOcrSurface("ocr-output-review");
   for (let i = 0; i < LABELS.length; i++) {
     await expect(review).toContainText(LABELS[i]!);
     if (i < LABELS.length - 1) await review.getByRole("button", { name: "Next", exact: true }).click();

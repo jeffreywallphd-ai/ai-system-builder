@@ -892,7 +892,8 @@
       "expectedBehavior": [
         "Browse packs/definitions with search/type/family/filter/paging and exact details, safe backing-resource descriptors, provenance and supported preview.",
         "Large/sparse results preserve all matches and page scope; failed detail/search and workspace change cannot overwrite current authorized selection.",
-        "Readonly system-owned assets cannot be edited in place; Customize hands off exact base/version."
+        "Readonly system-owned assets cannot be edited in place; Customize hands off exact base/version.",
+        "On each host, Search assets has one explicit label association and a stable accessible name. Adjacent help opens and closes independently without issuing a search or changing the typed value."
       ],
       "sourceRefs": [
         "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",

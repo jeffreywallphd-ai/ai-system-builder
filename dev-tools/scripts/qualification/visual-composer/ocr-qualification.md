@@ -105,3 +105,23 @@ cleanup succeeds. Unknown cleanup prevents a successor run.
 These checks support the Data roadmap. They do not close a parent criterion until
 the exact full criterion, current source, applicable checks and separate review
 are qualified. No human acceptance test is required.
+
+## OCR form accessibility definitions
+
+The existing local OCR journeys audit the initial configured form and the first
+ready output-review dialog. Closed context IDs admit the desktop and local thin
+client only. A mismatched transport and test project is refused before file or
+Page effects. The common audit checks normal and forced-color display at 1440px
+and 320px with private-free counts and failure-aware evidence.
+
+After each audit, the OCR journey returns to its original 1280px by 900px viewport
+and reduced-motion setting. The original 640px check, unavailable-language retry,
+five-row review, source/page lineage, explicit approval, reload, cancellation and
+workspace assertions remain. No engine, provider, native/resource guard, timeout
+or model-quality requirement changes. The existing end-to-end elapsed field now
+also includes these UI observations; it is not an isolated OCR speed measurement.
+
+Portable mock/contract/UI checks and case collection check definitions only.
+Actual engine, native, host, zoom, performance and full qualification remain
+pending. Accepted model accuracy is not rerun. These audit definitions do not
+complete the parent roadmap criterion or original implementation chunk.
