@@ -5375,6 +5375,150 @@
       "limitations": [
         "Local UI and test-definition evidence only. Actual app, process/server restart, native/runtime/provider and final combined qualification remain pending. Accepted model accuracy and OCR are not rerun."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "security-status-ui-owned-recovery",
+      "work_criteria": [
+        "rendered-status-and-safe-retry",
+        "owned-read-action-and-credential-recovery",
+        "bounded-feature-profile-and-checkpoint"
+      ],
+      "receipt_digest": "faf0a73c65ccbc4ba9ea6a505290381ef688ae66733e8c2378c01377818fcdab",
+      "review_digest": "602511e749f9885d03e0aa3399520b3fcb3f5d8e8e2b281cdd6dd1ca17ad3668",
+      "scope": "Security status, safe retry and request ownership",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "operational-runtime-and-notification-inventory-recovery",
+      "work_criteria": [
+        "owned-runtime-controls",
+        "rendered-notification-and-safe-status",
+        "bounded-operational-profile"
+      ],
+      "receipt_digest": "620965e773ff15155bb794b9330db075cf2de8a570a8f1fd40b26813419ecdf7",
+      "review_digest": "1638fe7cd889e3b2de02e0025db7a7455bbf7af22e7ad59f1741ff410ff43352",
+      "scope": "Runtime controls and task notification recovery",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "operational-host-journey-definitions",
+      "work_criteria": [
+        "meaningful-supported-host-definitions",
+        "bounded-safe-observation-oracles",
+        "source-checkpoint-with-genuine-gaps"
+      ],
+      "receipt_digest": "c6f6e571b9b2b8ffc036fe42d1656129bec93356b9696c6c331139da888a8ec6",
+      "review_digest": "d6f8ca1007cfce10320fe6b10ee550195ce5c037ba562a90845f44f07923984c",
+      "scope": "Desktop and browser operational test journeys",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "safe-technical-accessibility-observation",
+      "work_criteria": [
+        "preserve-real-accessibility-obligations",
+        "bounded-private-free-observation",
+        "exact-reviewed-source-component"
+      ],
+      "receipt_digest": "3807c3dce94c398bb8d9e4e992ad2df1c8cdcf7ab79176b3f05c3a139694e275",
+      "review_digest": "4d5f3ee5acd3db9e368a5ef1df682f7a540a904940dc9a9893a3e8cc75c2e335",
+      "scope": "Safe accessibility test observations",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "critical-accessibility-core-and-operational-integration",
+      "work_criteria": [
+        "closed-supported-surface-observations",
+        "real-operational-audit-definitions",
+        "scoped-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "563de241ca77dbafe19a4f772941f4fa46451e4929b1ac090913b1328309d78c",
+      "review_digest": "bd24c57d101ffc4ba768e04143a8b33decfd61d8c564ccb1f874eed6345c9d9d",
+      "scope": "Shared accessibility checks for Settings, Security and Notifications",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "data-context-critical-accessibility-definitions",
+      "work_criteria": [
+        "supported-data-context-audit-points",
+        "retained-safe-core-and-variations",
+        "bounded-related-checkpoint"
+      ],
+      "receipt_digest": "15e00671256e48164992867a713f660d924bdf7ab93ea64df01ed9f95e0464de",
+      "review_digest": "9ffeffd94bb42691446aef4f2045af7b0d1be0b8aafba64af90f8d3284c71e7d",
+      "scope": "Accessibility test points for Data and Context",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "asset-system-critical-accessibility-definitions",
+      "work_criteria": [
+        "critical-asset-system-audit-points",
+        "safe-core-and-related-regressions",
+        "bounded-owned-source-checkpoint"
+      ],
+      "receipt_digest": "d69f9506a743ef3d3967529daeadb14270bb0ef92781884949e56900aeb04573",
+      "review_digest": "906ce4102293cffa0b1d11b7a29dc5ad23eca9d9b4d452e25d1360761b900f68",
+      "scope": "Accessibility test points for Assets and System authoring",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "guided-lifecycle-critical-accessibility-definitions",
+      "work_criteria": [
+        "workspace-and-publication-audit-points",
+        "explicit-primary-repeat-mode-and-core",
+        "bounded-related-source-checkpoint"
+      ],
+      "receipt_digest": "cecbb3c42b8caa22aac02cef3b12398a94e39198519e4b8de23fb573ff2e7085",
+      "review_digest": "aaa1188efa17af211f00d23d47838adf547e60f5596fa2a2ee24006eff472ea1",
+      "scope": "Accessibility test points for workspace creation and System publication",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

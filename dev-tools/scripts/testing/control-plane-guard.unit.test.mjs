@@ -3,6 +3,8 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
 import { JSDOM } from "jsdom";
 
 test("contributor control plane passes focused behavioral qualification", () => {
@@ -10,7 +12,7 @@ test("contributor control plane passes focused behavioral qualification", () => 
   mkdirSync(temporary, { recursive: true });
   const python = process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
   const result = spawnSync(python, ["-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], {
-    encoding: "utf8", env: { ...process.env, TEMP: temporary, TMP: temporary }, timeout: 180000,
+    encoding: "utf8", env: { ...process.env, TEMP: temporary, TMP: temporary }, timeout: 600000,
   });
   assert.equal(result.status, 0, `Contributor qualification failed.\n${result.stdout}\n${result.stderr}`);
 });
@@ -644,4 +646,76 @@ test("review presents plain requirement bullets and actions without a technical 
     assert.equal(window.document.querySelectorAll("img,.criterion-blockers").length, 0);
     assert.equal(window.document.querySelector(".criteria > li > .status").textContent, "technical check pending");
   } finally { window.close(); }
+});
+
+
+test("nested review controller honors approved progress and preserves bounded refusal", () => {
+  const body = readFileSync(new URL(import.meta.url), "utf8");
+  assert(Buffer.byteLength(body) <= 512 * 1024);
+  const source = ts.createSourceFile("control-plane-guard.mjs", body, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const matches = source.statements.filter(statement => ts.isExpressionStatement(statement) &&
+    ts.isCallExpression(statement.expression) && statement.expression.expression.getText(source) === "test" &&
+    ts.isStringLiteral(statement.expression.arguments[0]) &&
+    statement.expression.arguments[0].text === "contributor control plane passes focused behavioral qualification");
+  assert.equal(matches.length, 1);
+  const callback = matches[0].expression.arguments[1]; assert(ts.isArrowFunction(callback));
+  const budgetSource = `
+import ast, json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / "dev-tools/helpers"))
+from control_plane import catalog
+import run_focused_checks
+plan = catalog.plan(Path.cwd(), ["dev-tools/review-site/app.js"], ["review-site", "control-plane"], "runner-budget-fixture")
+limits = {item["id"]: item["timeout"] for item in plan["selected"]}
+tree = ast.parse(Path("dev-tools/helpers/run_focused_checks.py").read_text())
+calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "subprocess" and node.func.attr == "run"]
+assert len(calls) == 1
+value = next(item.value for item in calls[0].keywords if item.arg == "timeout")
+if isinstance(value, ast.Constant):
+    intermediate = value.value
+    ordinary = [value.value] * 3
+else:
+    assert isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "profile_command_timeout"
+    assert len(value.args) == 1 and ast.unparse(value.args[0]) == "args.profile"
+    intermediate = run_focused_checks.profile_command_timeout("review-site")
+    ordinary = [run_focused_checks.profile_command_timeout(item) for item in [None, "asset-authoring-ui", "review-site-suffix"]]
+print(json.dumps({"controller": limits["control-plane"], "outer": limits["review-site"], "intermediate": intermediate, "ordinary": ordinary}))
+`;
+  const python = process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
+  const planned = spawnSync(python, ["-B", "-c", budgetSource], {
+    encoding: "utf8", timeout: 30_000, maxBuffer: 16 * 1024,
+  });
+  assert.equal(planned.status, 0, "The fixed controller budget plan must be readable.");
+  const budgets = JSON.parse(planned.stdout);
+  const expectedArgs = ["-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"];
+  function exercise(elapsedMilliseconds) {
+    const calls = [], folders = [];
+    const sandbox = {
+      assert, path, process: { env: { PYTHON: "fixed-python" }, platform: "win32" },
+      mkdirSync: (folder, options) => folders.push([folder, options.recursive]),
+      spawnSync: (command, args, options) => {
+        assert(Number.isSafeInteger(options.timeout) && options.timeout > 0);
+        calls.push({ command, args, timeout: options.timeout, temporary: options.env.TEMP, tmp: options.env.TMP });
+        return { status: elapsedMilliseconds <= options.timeout ? 0 : null, stdout: "", stderr: "synthetic bounded timeout" };
+      },
+    };
+    const invoke = () => new vm.Script(`(${callback.getText(source)})()`, { filename: "closed-controller-budget-callback" })
+      .runInNewContext(sandbox, { timeout: 1_000 });
+    return { calls, folders, invoke };
+  }
+  for (const elapsed of [203_424, 590_000]) {
+    const trial = exercise(elapsed); trial.invoke();
+    assert.equal(trial.calls.length, 1); assert.equal(trial.folders.length, 1);
+    assert.equal(trial.calls[0].command, "fixed-python");
+    assert.equal(JSON.stringify(trial.calls[0].args), JSON.stringify(expectedArgs));
+    assert.equal(trial.calls[0].timeout, budgets.controller * 1000);
+    assert.equal(trial.calls[0].temporary, path.resolve(".local-codex/t"));
+    assert.equal(trial.calls[0].tmp, trial.calls[0].temporary); assert.equal(trial.folders[0][1], true);
+  }
+  const refused = exercise(600_001);
+  assert.throws(refused.invoke, /Contributor qualification failed/);
+  assert.equal(budgets.controller, 600);
+  assert.equal(budgets.intermediate, budgets.controller + 30);
+  assert.equal(budgets.outer, budgets.intermediate + 30);
+  assert.deepEqual(budgets.ordinary, [270, 270, 270]);
 });

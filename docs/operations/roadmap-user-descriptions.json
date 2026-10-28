@@ -12551,6 +12551,111 @@
           "The app behavior is unchanged. The agent will run the actual app checks later. No action needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "13bac251979bd4bf5f13ac4d7e219b7fa9af981b226097564f07a3c603bce85b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Security status checks and retries stay tied to the current page and credentials."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "13b728c353c9e23f8e5c6971684808d34903054996c5c0140c9809f5a84cc84c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused tests cover runtime controls and task notifications after failures."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "19be83f01fa7fa00d62ab0896b4d24b7aee31322a32ed527e3bc5f15745d2827",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test definitions cover desktop runtime controls and browser Security checks.",
+          "They also cover Settings and Notifications."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7cbebf8cf7511d9e47f25614fbe7c4b3447e962df66dce91d4e085b3036e3c89",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The accessibility helper keeps page text and private error details out of its reports."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "37b00a750486259d4603b71629211880576ac90f5fb1192401a2f6544e6d9b6f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test definitions audit Settings and Notifications in both apps, plus Security in the browser."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d38ab12749b4119e7968e38b608b4c68627819c5b996e4d54bafc8d0cada4095",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test definitions audit file selection, datasets, saved versions, row edits and Context previews."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fe0bdfe5013f6390563af8ad8caab745d4403bd6c4cfcbde19b79ceaa5e9fe26",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test definitions audit asset import, customization, editing, saved items and details.",
+          "They also audit the System picker, properties, preview and Layers."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "870c4f12a61ac00bcbfe1df45b5656b7160624e446411e1132da9ec595fafd20",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test definitions audit workspace creation, Manage, the build dialog, the publication form and confirmation."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c65390ee85c0c45ed22b2a62a079a694ce1928c5c3268ecc14233deb8567577b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These records show reviewed source changes and helper tests.",
+          "They do not show a full app UI test pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b67403c5806d04da6798574237d631fda080bc2e51648d5ae65ed904a5849a1b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The remaining app, operating system, provider, performance and final tests stay with their current owners.",
+          "Accepted model accuracy checks stay closed.",
+          "No user action is needed for the remaining code."
+        ]
+      }
     }
   ]
 }

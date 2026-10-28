@@ -31,7 +31,7 @@ class SecurityStatusProfile(unittest.TestCase):
         self.assertEqual(checks["control-plane"]["argv"], [sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"])
         self.assertEqual(MAX_OUTPUT, 2 * 1024 * 1024)
         for name in catalog.QUALIFICATION_PROFILES:
-            self.assertEqual(checks[name]["timeout"], 300)
+            self.assertEqual(checks[name]["timeout"], 660 if name == "review-site" else 300)
         for name in ["documentation", "agent-support", "architecture"]:
             self.assertEqual(checks[name]["timeout"], 120)
         for name in ["completion-all", "completion-standardande2e"]:

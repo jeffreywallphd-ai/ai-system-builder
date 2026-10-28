@@ -137,6 +137,12 @@ def profile_commands(root, profile_id):
     return commands(root, paths, exact=True)
 
 
+def profile_command_timeout(profile):
+    # The review-site Node guard includes the existing600second controller.
+    # Leave bounded grace for its assertion/output before the outer660s ceiling.
+    return 630 if profile == "review-site" else 270
+
+
 def main():
     if sys.flags.optimize:
         print("Focused verification requires Python assertions. Run without -O or PYTHONOPTIMIZE.", file=sys.stderr)
@@ -159,7 +165,7 @@ def main():
                     print("Focused pytest tests require the exact developer tooling in dev-tools/helpers/requirements-tests.txt. Install it explicitly in the selected verification environment; the helper does not install packages.", file=sys.stderr)
                     return 1
                 env = pytest_environment(os.environ)
-            r = subprocess.run(argv, cwd=root, check=False, timeout=270, env=env)
+            r = subprocess.run(argv, cwd=root, check=False, timeout=profile_command_timeout(args.profile), env=env)
             if r.returncode:
                 return r.returncode
         return 0

@@ -444,3 +444,23 @@ These are source definitions with related feature evidence. Actual host,
 accessibility, native zoom, runtime/model, startup/paint and full qualification
 remain pending. Standalone runtime mounting, original host diagnostic capture and
 other critical consumers remain separate work before original chunk closure.
+
+## Review-site controller check budgets
+
+The existing full controller keeps its 600-second budget. The review-site Node
+wrapper now permits that same budget. Only the review-site focused profile uses
+630 seconds for each command, and its outer catalogue limit is 660 seconds. The
+extra time lets the nested check report failure and exit within its outer limit.
+Other focused commands keep their 270-second limit.
+
+The regression test evaluates the actual source callback with simulated elapsed
+time. It covers progress after 203 seconds, the full unchanged controller command,
+and refusal after 600 seconds. It reads the actual focused and catalogue limits
+to detect a shorter outer wrapper. Qualification runs every existing controller
+and review UI test. The simulation alone does not qualify that full run.
+
+These limits govern repository checks. Application timers, model and memory
+limits, native controls and UI performance requirements retain their existing
+requirements. Source-bound support descriptions remain required for every new
+review-site evidence label; a description update never supplies parent approval
+or technical qualification.
