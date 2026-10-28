@@ -1,9 +1,11 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost, type OperationalUiReport } from "../operational-ui-oracles";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 
 /** Actual host UI assertions. Unit/oracle checks alone do not qualify this journey. */
-export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, host: OperationalHost): Promise<OperationalUiReport> {
+export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, host: OperationalHost, mode: CriticalAccessibilityMode = "standard"): Promise<OperationalUiReport> {
+  readCriticalAccessibilityMode(mode);
   const phases: string[] = [];
   const input = () => ({ schemaVersion: "operational-ui-observation-v1", host, runId: process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, phases });
   failedOperationalObservation(input()); // Refuse invalid identity before any UI effect.
@@ -26,7 +28,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await navigationMenu.getByRole("menuitem",{name:"Systems",exact:true}).press("ArrowUp");await expect(home).toBeFocused();
       await home.press("End");await expect(navigationMenu.getByRole("menuitem").last()).toBeFocused();
       await navigationMenu.getByRole("menuitem").last().press("Home");await expect(home).toBeFocused();
-      await qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu");
+      await qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu",mode);
     });
     await step("navigation-menu-navigated",async()=>{
       await navigationMenu.getByRole("menuitem",{name:"Models",exact:true}).press("Enter");
@@ -51,7 +53,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
     await step("settings-opened", async () => {
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
-      await qualifyCriticalSurfaceAccessibility(page, info, "settings");
+      await qualifyCriticalSurfaceAccessibility(page, info, "settings", mode);
     });
     if (host === "packaged-desktop") {
       const footer = page.locator('footer[aria-label="Python runtime controls"]');
@@ -119,7 +121,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
         await expect(panel.locator("p").filter({ hasText: /^Server mode:/ })).toHaveText(/^Server mode: (?:disabled-dev|lan-https-token|oidc-bearer|external-tls|mtls|api-key)$/);
         await expect(panel.locator("p").filter({ hasText: /^Current listener:/ })).toHaveText(/^Current listener: (?:HTTP only|HTTPS enabled)$/);
       }
-      await step("security-known", async () => { await expect(refresh).toBeEnabled(); await refresh.click(); await knownStatus(); await qualifyCriticalSurfaceAccessibility(page, info, "security"); });
+      await step("security-known", async () => { await expect(refresh).toBeEnabled(); await refresh.click(); await knownStatus(); await qualifyCriticalSurfaceAccessibility(page, info, "security", mode); });
       const url = operationalStatusUrl(page.url());
       const fault: Parameters<Page["route"]>[1] = async route => {
         if (route.request().method() !== "GET") return route.continue();
@@ -138,7 +140,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
     await step("notifications-empty", async () => {
       await bell.click(); await expect(notifications.getByText("No notifications yet.", { exact: true })).toBeVisible();
       await expect(notifications.getByRole("button", { name: "Clear completed", exact: true })).toBeDisabled();
-      await qualifyCriticalSurfaceAccessibility(page, info, "notifications");
+      await qualifyCriticalSurfaceAccessibility(page, info, "notifications", mode);
     });
     await step("notifications-focus-returned", async () => {
       await expect(notifications.getByRole("button", { name: "Close notifications", exact: true })).toBeFocused();
@@ -157,7 +159,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
         await page.getByRole("textbox", { name: /^Search\b/ }).fill("qualification-config-only");
       }
       // Edit local form state only. Search, download and save remain explicit.
-      await qualifyCriticalSurfaceAccessibility(page, info, "models-discovery");
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-discovery", mode);
     });
     await step("models-inventory-opened", async () => {
       if (host === "packaged-desktop") {
@@ -168,7 +170,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
         await expect(page.getByRole("heading", { name: "Server model inventory", exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Refresh", exact: true })).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
       }
-      await qualifyCriticalSurfaceAccessibility(page, info, "models-inventory");
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-inventory", mode);
     });
     if (host === "packaged-desktop") await step("model-training-opened", async () => {
       await page.getByRole("tab", { name: "Train Model", exact: true }).press("Enter");
@@ -176,7 +178,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await expect(page.getByRole("combobox", { name: /^Base model\b/ })).toBeVisible();
       const method = page.getByRole("combobox", { name: /^Method\b/ });
       await method.selectOption("lora"); await expect(method).toHaveValue("lora");
-      await qualifyCriticalSurfaceAccessibility(page, info, "model-training");
+      await qualifyCriticalSurfaceAccessibility(page, info, "model-training", mode);
     });
     await step("image-configuration-opened", async () => {
       await page.getByRole("button", { name: "Image Generation", exact: true }).click();
@@ -185,7 +187,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       const prompt = page.getByRole("textbox", { name: /^Prompt\b/ });
       await prompt.fill("Local configuration check."); await expect(prompt).toHaveValue("Local configuration check.");
       // Do not submit generation, alter runtime settings or repair an install.
-      await qualifyCriticalSurfaceAccessibility(page, info, "image-configuration");
+      await qualifyCriticalSurfaceAccessibility(page, info, "image-configuration", mode);
     });
     await step("home-returned", async () => {
       await page.getByRole("button", { name: "Home", exact: true }).click();

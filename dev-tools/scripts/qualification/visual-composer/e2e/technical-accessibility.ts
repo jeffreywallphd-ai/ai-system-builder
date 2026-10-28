@@ -3,11 +3,54 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { readTechnicalAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS } from "../technical-accessibility-observation";
+import { readTechnicalAccessibilityAudit, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
+  type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type Native400Frame } from "../technical-accessibility-observation";
+
+/** Read-only frame/fit facts from a fixed native host case, never caller selectors. */
+export async function collectNative400Frame(page: Page, runtime = false): Promise<Native400Frame> {
+  if (typeof runtime !== "boolean") throw new Error("Invalid native accessibility observation.");
+  try {
+    const value = await page.evaluate(runtime => {
+      try {
+        if (document.querySelectorAll(runtime ? "main.system-runtime-app" : "main.ui-shell").length !== 1) throw new Error();
+        const dpr = devicePixelRatio, cssZoom = getComputedStyle(document.documentElement).zoom, visualScale = visualViewport?.scale;
+        const outer = outerWidth, inner = innerWidth, layoutWidth = document.documentElement.clientWidth;
+        // Refuse scale substitutes before scrolling controls or running an audit.
+        if (!Number.isFinite(dpr) || Math.abs(dpr - 4) >= 1e-8 || cssZoom !== "1" || visualScale !== 1 ||
+            !Number.isInteger(outer) || outer < 1400 || outer > 1460 || !Number.isInteger(inner) || inner < 320 || inner > 360 ||
+            !Number.isInteger(layoutWidth) || layoutWidth < 1 || layoutWidth > inner) throw new Error();
+        const candidates = document.body.querySelectorAll('button,input:not([type="hidden"]),select,textarea,a[href],[role="button"],[tabindex]');
+        if (candidates.length > 10000) throw new Error();
+        let controls = 0, inaccessible = 0;
+        for (const element of candidates) {
+          if (!(element instanceof HTMLElement) || element.closest('[inert],[aria-hidden="true"]') ||
+              !element.getClientRects().length || getComputedStyle(element).visibility !== "visible") continue;
+          controls++;
+          element.scrollIntoView({block:"nearest",inline:"nearest",behavior:"instant"});
+          const box = element.getBoundingClientRect();
+          if (![box.width,box.height,box.left,box.right].every(Number.isFinite) || box.width <= 0 || box.height <= 0 || box.left < -1 || box.right > layoutWidth + 1) inaccessible++;
+        }
+        return {dpr,cssZoom,visualScale,outerWidth:outer,innerWidth:inner,layoutWidth,
+          overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,controls,inaccessible};
+    } catch { throw new Error("Native frame collection failed."); }
+  }, runtime);
+  return readNative400Frame(value);
+  } catch { throw new Error("Native frame collection failed."); }
+}
+export const rawNativeFrame = (frame: Native400Frame) => ({dpr:frame.dpr,cssZoom:frame.cssZoom,visualScale:frame.visualScale,
+  outerWidth:frame.outerWidth,innerWidth:frame.innerWidth,layoutWidth:frame.layoutWidth,overflow:frame.overflow,controls:frame.controls,inaccessible:frame.inaccessible});
 
 /** Selectors/messages remain browser-local, including failed contrast retries. */
-async function collectAccessibilityAudit(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime") {
-  if (width !== 320 && width !== 1440) throw new Error("Invalid technical accessibility observation.");
+function collectAccessibilityAudit(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime"): Promise<TechnicalAccessibilityAudit>;
+function collectAccessibilityAudit(page: Page, width: "native400", scope: "shell" | "runtime", media: "normal" | "forced-colors"): Promise<NativeAccessibilityAudit>;
+async function collectAccessibilityAudit(page: Page, width: 320 | 1440 | "native400", scope: "canvas" | "shell" | "runtime", media: "normal" | "forced-colors" = "normal") {
+  if (width !== 320 && width !== 1440 && width !== "native400") throw new Error("Invalid technical accessibility observation.");
+  if (width === "native400") {
+    if (media !== "normal" && media !== "forced-colors") throw new Error("Invalid native accessibility observation.");
+    const frame = await collectNative400Frame(page, scope === "runtime");
+    if (frame.status !== "passed" || await page.evaluate(expected => matchMedia("(prefers-reduced-motion: reduce)").matches &&
+      matchMedia("(forced-colors: active)").matches === (expected === "forced-colors"), media) !== true) throw new Error("Native audit admission failed.");
+  }
   const observation = await page.evaluate(async ({ width, ruleIds, scope }) => {
     try {
       type Item = { id: string; nodes: Array<{ target: string[] }> };
@@ -48,15 +91,25 @@ async function collectAccessibilityAudit(page: Page, width: 320 | 1440, scope: "
           if (!bad.length && !unresolved.length && good.some(item => item.rule === "color-contrast" && item.nodes > 0)) passed++;
         }
       }
-      return { schemaVersion: "technical-accessibility-audit-v1", width, violations, incomplete,
-        contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
+      const facts = { violations, incomplete, contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
+      return width === "native400" ? facts : { schemaVersion: "technical-accessibility-audit-v1", width, ...facts };
     } catch { throw new Error("Computed accessibility audit failed."); }
   }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope });
+  if (width === "native400") {
+    const frame = await collectNative400Frame(page, scope === "runtime");
+    return readNativeAccessibilityAudit({schemaVersion:"native-technical-accessibility-audit-v1",media,frame:rawNativeFrame(frame),facts:observation});
+  }
   return readTechnicalAccessibilityAudit(observation);
 }
-export function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "canvas"); }
-export function collectDocumentAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "shell"); }
-export function collectRuntimeAccessibilityAudit(page: Page, width: 320 | 1440) { return collectAccessibilityAudit(page, width, "runtime"); }
+function collectStandardAudit(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime") {
+  if (width !== 320 && width !== 1440) return Promise.reject(new Error("Invalid technical accessibility observation."));
+  return collectAccessibilityAudit(page, width, scope);
+}
+export function collectSystemBuilderAccessibilityAudit(page: Page, width: 320 | 1440) { return collectStandardAudit(page, width, "canvas"); }
+export function collectDocumentAccessibilityAudit(page: Page, width: 320 | 1440) { return collectStandardAudit(page, width, "shell"); }
+export function collectRuntimeAccessibilityAudit(page: Page, width: 320 | 1440) { return collectStandardAudit(page, width, "runtime"); }
+export function collectNativeDocumentAccessibilityAudit(page: Page, media: "normal" | "forced-colors") { return collectAccessibilityAudit(page, "native400", "shell", media); }
+export function collectNativeRuntimeAccessibilityAudit(page: Page, media: "normal" | "forced-colors") { return collectAccessibilityAudit(page, "native400", "runtime", media); }
 
 /** Same named host constraints for Canvas and other critical mounted surfaces. */
 export async function loadTechnicalAccessibilityReference() {

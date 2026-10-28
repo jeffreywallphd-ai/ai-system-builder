@@ -13,10 +13,73 @@ vi.mock("node:fs/promises", () => {
   return { readFile, mkdir, writeFile, default: { readFile, mkdir, writeFile } };
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
-import { readTechnicalAccessibilityAudit } from "../visual-composer/technical-accessibility-observation";
+import { readTechnicalAccessibilityAudit, readNative400Frame, readNativeAccessibilityAudit, readCriticalAccessibilityMode,
+  qualifyNativeCriticalAccessibilityReport } from "../visual-composer/technical-accessibility-observation";
 import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
 const base = () => ({ schemaVersion: "technical-accessibility-audit-v1", width: 320, violations: [] as Array<{ rule: string; nodes: number }>, incomplete: [] as Array<{ rule: string; nodes: number }>, contrastPassedNodes: 3, retries: { attempted: 0, passed: 0 } });
 const invalid = "Invalid technical accessibility observation.";
+
+const nativeFrame = () => ({dpr:4,cssZoom:"1",visualScale:1,outerWidth:1440,innerWidth:356,layoutWidth:356,overflow:0,controls:2,inaccessible:0});
+const nativeAudit = (media = "normal") => ({schemaVersion:"native-technical-accessibility-audit-v1",media,frame:nativeFrame(),
+  facts:{violations:[],incomplete:[],contrastPassedNodes:3,retries:{attempted:0,passed:0}}});
+const nativeContext = () => ({schemaVersion:"critical-accessibility-context-v1",host:"thin-chrome",surface:"settings",
+  runId:"native-fixture-1234567890",sourceRevision:`source.${"a".repeat(64)}`,testKey:"b".repeat(64)});
+
+describe("separate inert native zoom evidence", () => {
+  it("retains the actual CSS width and both ordered media checks without inventing a standard width", () => {
+    const raw=nativeAudit(), frame=readNative400Frame(raw.frame), audit=readNativeAccessibilityAudit(raw);
+    raw.frame.innerWidth=320;
+    expect(frame.innerWidth).toBe(356);expect(audit.frame.innerWidth).toBe(356);expect(audit.status).toBe("passed");
+    expect(audit).not.toHaveProperty("width");expect(Object.isFrozen(audit.frame)).toBe(true);
+    const report=qualifyNativeCriticalAccessibilityReport(nativeContext(),[nativeAudit(),nativeAudit("forced-colors")]);
+    expect(report.schemaVersion).toBe("native-critical-surface-accessibility-v1");expect(report.scope).toBe("native-ui-observation-only");
+    expect(Object.isFrozen(report.audits)).toBe(true);expect(report.audits.map(item=>item.frame.innerWidth)).toEqual([356,356]);
+    expect(()=>readTechnicalAccessibilityAudit(nativeAudit())).toThrow(invalid);
+    expect(()=>readNativeAccessibilityAudit(base())).toThrow("Invalid native accessibility observation.");
+  });
+  it.each(["standard","native400"])("admits only the declared %s mode",mode=>expect(readCriticalAccessibilityMode(mode)).toBe(mode));
+  it.each([null,undefined,{},"",4,"native","STANDARD"])("rejects unknown mode %#",mode=>expect(()=>readCriticalAccessibilityMode(mode)).toThrow("Invalid critical accessibility mode."));
+  it.each([{dpr:1},{dpr:3.99},{dpr:NaN},{dpr:Infinity},{cssZoom:"4"},{visualScale:4},{outerWidth:1399},{outerWidth:1461},
+    {innerWidth:319},{innerWidth:361},{layoutWidth:357},{layoutWidth:0},{overflow:-1},{overflow:100001},{controls:0},{controls:10001},
+    {inaccessible:3},{controls:1.5},{selector:"synthetic-private"},{status:"passed"}])("rejects frame substitutes, malformed bounds and private extras %#",change=>{
+    expect(()=>readNative400Frame({...nativeFrame(),...change})).toThrow("Invalid native accessibility observation.");
+  });
+  it.each([{overflow:2},{inaccessible:1}])("retains valid failed frame facts %#",change=>{
+    const result=readNative400Frame({...nativeFrame(),...change});expect(result.status).toBe("failed");expect(result.failures).toHaveLength(1);
+    expect(readNativeAccessibilityAudit({...nativeAudit(),frame:{...nativeFrame(),...change}}).status).toBe("failed");
+  });
+  it.each([{media:"unknown"},{schemaVersion:"technical-accessibility-audit-v1"},{width:320},{facts:{...nativeAudit().facts,source:"synthetic-private"}},
+    {facts:{...nativeAudit().facts,retries:{attempted:1,passed:1}}}, {facts:{...nativeAudit().facts,violations:[{rule:"synthetic-private",nodes:1}]}}])("rejects unsupported audit fields %#",change=>{
+    expect(()=>readNativeAccessibilityAudit({...nativeAudit(),...change})).toThrow("Invalid native accessibility observation.");
+  });
+  it("retains rule, contrast and retry failures rather than treating a valid frame as a pass",()=>{
+    const raw=nativeAudit();const result=readNativeAccessibilityAudit({...raw,facts:{...raw.facts,contrastPassedNodes:0,violations:[{rule:"button-name",nodes:1}]}});
+    expect(result.failures).toEqual(["rule-violation","missing-contrast-sample"]);expect(result.status).toBe("failed");
+  });
+  it.each(["frame-getter","frame-proxy","facts-getter","audit-proxy","array-proxy","array-getter","array-symbol","revoked"] as const)("rejects %s without running hooks",kind=>{
+    let calls=0;const raw=nativeAudit();let value:unknown=raw;
+    if(kind==="frame-getter")Object.defineProperty(raw.frame,"innerWidth",{get(){calls++;return 356;}});
+    if(kind==="frame-proxy")raw.frame=new Proxy(raw.frame,{getPrototypeOf(target){calls++;return Reflect.getPrototypeOf(target);}});
+    if(kind==="facts-getter")Object.defineProperty(raw,"facts",{get(){calls++;return {};}});
+    if(kind==="audit-proxy")value=new Proxy(raw,{ownKeys(target){calls++;return Reflect.ownKeys(target);}});
+    if(kind==="revoked"){const p=Proxy.revocable(raw,{});p.revoke();value=p.proxy;}
+    if(kind.startsWith("array-")){
+      const values=[nativeAudit(),nativeAudit("forced-colors")];let array:unknown=values;
+      if(kind==="array-getter")Object.defineProperty(values,"0",{get(){calls++;return raw;}});
+      if(kind==="array-symbol")Object.defineProperty(values,Symbol.iterator,{value:function*(){calls++;yield raw;}});
+      if(kind==="array-proxy")array=new Proxy(values,{ownKeys(target){calls++;return Reflect.ownKeys(target);}});
+      expect(()=>qualifyNativeCriticalAccessibilityReport(nativeContext(),array)).toThrow("Invalid native critical accessibility qualification.");
+    }else expect(()=>readNativeAccessibilityAudit(value)).toThrow("Invalid native accessibility observation.");
+    expect(calls).toBe(0);
+  });
+  it.each([[],[nativeAudit()],[nativeAudit("forced-colors"),nativeAudit()],[nativeAudit(),nativeAudit()],new Array(2),
+    [nativeAudit(),{...nativeAudit("forced-colors"),frame:{...nativeFrame(),inaccessible:1}}]])("requires exactly two successful ordered media observations %#",value=>{
+    expect(()=>qualifyNativeCriticalAccessibilityReport(nativeContext(),value)).toThrow("Invalid native critical accessibility qualification.");
+  });
+  it("does not qualify the separate managed-host/native path",()=>{
+    expect(()=>qualifyNativeCriticalAccessibilityReport({...nativeContext(),host:"managed-thin-chrome"},[nativeAudit(),nativeAudit("forced-colors")])).toThrow("Invalid native critical accessibility qualification.");
+  });
+});
 
 describe("private-free computed accessibility observations", () => {
   it.each([320, 1440])("requires actual contrast samples at the declared %ipx width", width => {
@@ -162,6 +225,10 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
   it("refuses an unsupported viewport before browser evaluation", async () => {
     const evaluate = vi.fn();
     await expect(collectSystemBuilderAccessibilityAudit({ evaluate } as unknown as Page, 400 as never)).rejects.toThrow(invalid);
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+  it.each([collectSystemBuilderAccessibilityAudit,collectDocumentAccessibilityAudit,collectRuntimeAccessibilityAudit])("keeps native mode out of standard collector entry points %#",async collect=>{
+    const evaluate=vi.fn();await expect(collect({evaluate} as unknown as Page,"native400" as never)).rejects.toThrow(invalid);
     expect(evaluate).not.toHaveBeenCalled();
   });
   it.each(["violation", "incomplete", "no-passed-node"] as const)("retains failed retry evidence for %s", async kind => {

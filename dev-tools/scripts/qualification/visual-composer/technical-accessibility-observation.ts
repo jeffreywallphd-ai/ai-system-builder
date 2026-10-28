@@ -51,25 +51,71 @@ function rules(value: unknown): readonly RuleCount[] {
   }
   return Object.freeze(result);
 }
+function computedAuditFacts(data: Record<string, unknown>) {
+  const violations = rules(data.violations), incomplete = rules(data.incomplete);
+  const contrastPassedNodes = count(data.contrastPassedNodes, NODE_LIMIT);
+  const retry = record(data.retries, ["attempted", "passed"]);
+  const attempted = count(retry.attempted, ACCESSIBILITY_RETRY_NODE_LIMIT), passed = count(retry.passed, attempted);
+  const contrastIncomplete = incomplete.find(item => item.rule === "color-contrast")?.nodes ?? 0;
+  if (contrastIncomplete > ACCESSIBILITY_RETRY_NODE_LIMIT || attempted > contrastIncomplete) throw new Error(INVALID);
+  const failures: string[] = [];
+  if (violations.length) failures.push("rule-violation");
+  if (incomplete.some(item => item.rule !== "color-contrast")) failures.push("unresolved-rule");
+  if (attempted !== contrastIncomplete || passed !== attempted) failures.push("unresolved-contrast-retry");
+  if (contrastPassedNodes === 0) failures.push("missing-contrast-sample");
+  return Object.freeze({ violations, incomplete, contrastPassedNodes, retries: Object.freeze({ attempted, passed }),
+    status: failures.length ? "failed" as const : "passed" as const, failures: Object.freeze(failures) });
+}
 /** Structural/local evidence only. Actual browser execution supplies these facts. */
 export function readTechnicalAccessibilityAudit(value: unknown): TechnicalAccessibilityAudit {
   try {
     const data = record(value, ["schemaVersion", "width", "violations", "incomplete", "contrastPassedNodes", "retries"]);
     if (data.schemaVersion !== "technical-accessibility-audit-v1" || (data.width !== 320 && data.width !== 1440)) throw new Error(INVALID);
-    const violations = rules(data.violations), incomplete = rules(data.incomplete);
-    const contrastPassedNodes = count(data.contrastPassedNodes, NODE_LIMIT);
-    const retry = record(data.retries, ["attempted", "passed"]);
-    const attempted = count(retry.attempted, ACCESSIBILITY_RETRY_NODE_LIMIT), passed = count(retry.passed, attempted);
-    const contrastIncomplete = incomplete.find(item => item.rule === "color-contrast")?.nodes ?? 0;
-    if (contrastIncomplete > ACCESSIBILITY_RETRY_NODE_LIMIT || attempted > contrastIncomplete) throw new Error(INVALID);
-    const failures: string[] = [];
-    if (violations.length) failures.push("rule-violation");
-    if (incomplete.some(item => item.rule !== "color-contrast")) failures.push("unresolved-rule");
-    if (attempted !== contrastIncomplete || passed !== attempted) failures.push("unresolved-contrast-retry");
-    if (contrastPassedNodes === 0) failures.push("missing-contrast-sample");
-    return Object.freeze({ schemaVersion: "technical-accessibility-audit-v1", width: data.width, violations, incomplete, contrastPassedNodes,
-      retries: Object.freeze({ attempted, passed }), status: failures.length ? "failed" : "passed", failures: Object.freeze(failures) });
+    return Object.freeze({ schemaVersion: "technical-accessibility-audit-v1", width: data.width, ...computedAuditFacts(data) });
   } catch { throw new Error(INVALID); }
+}
+
+export type CriticalAccessibilityMode = "standard" | "native400";
+export function readCriticalAccessibilityMode(value: unknown): CriticalAccessibilityMode {
+  if (value !== "standard" && value !== "native400") throw new Error("Invalid critical accessibility mode.");
+  return value;
+}
+const NATIVE_INVALID = "Invalid native accessibility observation.";
+export interface Native400Frame {
+  readonly dpr: number; readonly cssZoom: "1"; readonly visualScale: 1;
+  readonly outerWidth: number; readonly innerWidth: number; readonly layoutWidth: number;
+  readonly overflow: number; readonly controls: number; readonly inaccessible: number;
+  readonly status: "passed" | "failed"; readonly failures: readonly string[];
+}
+/** Frame facts alone do not establish how zoom was applied; the fixed host case supplies that proof. */
+export function readNative400Frame(value: unknown): Native400Frame {
+  try {
+    const data = record(value, ["dpr", "cssZoom", "visualScale", "outerWidth", "innerWidth", "layoutWidth", "overflow", "controls", "inaccessible"]);
+    if (typeof data.dpr !== "number" || !Number.isFinite(data.dpr) || Math.abs(data.dpr - 4) >= 1e-8 || data.cssZoom !== "1" || data.visualScale !== 1) throw new Error(NATIVE_INVALID);
+    const outerWidth = count(data.outerWidth, 1460, 1400), innerWidth = count(data.innerWidth, 360, 320);
+    const layoutWidth = count(data.layoutWidth, innerWidth, 1), overflow = count(data.overflow, 100000);
+    const controls = count(data.controls, NODE_LIMIT, 1), inaccessible = count(data.inaccessible, controls);
+    const failures: string[] = [];
+    if (overflow > 1) failures.push("native-reflow-overflow");
+    if (inaccessible) failures.push("native-control-inaccessible");
+    return Object.freeze({ dpr: data.dpr, cssZoom: "1", visualScale: 1, outerWidth, innerWidth, layoutWidth, overflow, controls, inaccessible,
+      status: failures.length ? "failed" : "passed", failures: Object.freeze(failures) });
+  } catch { throw new Error(NATIVE_INVALID); }
+}
+export interface NativeAccessibilityAudit extends Omit<TechnicalAccessibilityAudit, "schemaVersion" | "width"> {
+  readonly schemaVersion: "native-technical-accessibility-audit-v1";
+  readonly media: "normal" | "forced-colors";
+  readonly frame: Native400Frame;
+}
+export function readNativeAccessibilityAudit(value: unknown): NativeAccessibilityAudit {
+  try {
+    const data = record(value, ["schemaVersion", "media", "frame", "facts"]);
+    if (data.schemaVersion !== "native-technical-accessibility-audit-v1" || (data.media !== "normal" && data.media !== "forced-colors")) throw new Error(NATIVE_INVALID);
+    const frame = readNative400Frame(data.frame), facts = computedAuditFacts(record(data.facts, ["violations", "incomplete", "contrastPassedNodes", "retries"]));
+    const failures = Object.freeze([...frame.failures, ...facts.failures]);
+    return Object.freeze({ schemaVersion: "native-technical-accessibility-audit-v1", media: data.media, frame, ...facts,
+      status: failures.length ? "failed" : "passed", failures });
+  } catch { throw new Error(NATIVE_INVALID); }
 }
 
 export const CRITICAL_ACCESSIBILITY_SURFACES = Object.freeze(["settings", "security", "notifications", "navigation-menu", "data-ingestion", "dataset-preparation",
@@ -121,6 +167,26 @@ export function qualifyCriticalAccessibilityReport(context: unknown, value: unkn
     return Object.freeze({ ...identity, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: identity.schemaVersion,
       audits: Object.freeze(audits), status: "passed", scope: "ui-accessibility-observation-only" });
   } catch { throw new Error("Invalid critical accessibility qualification."); }
+}
+/** Native viewport facts stay separate from the fixed-width standard report. */
+export function qualifyNativeCriticalAccessibilityReport(context: unknown, value: unknown) {
+  try {
+    const identity = readCriticalAccessibilityContext(context);
+    if (identity.host === "managed-thin-chrome" || types.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype
+      || Object.getOwnPropertyDescriptor(value, "length")?.value !== 2) throw new Error();
+    const fields = Object.getOwnPropertyDescriptors(value);
+    if (Reflect.ownKeys(fields).length !== 3) throw new Error();
+    const audits: NativeAccessibilityAudit[] = [];
+    for (let index = 0; index < 2; index++) {
+      const field = fields[String(index)];
+      if (!field || !("value" in field)) throw new Error();
+      const audit = readNativeAccessibilityAudit(field.value);
+      if (audit.media !== ["normal", "forced-colors"][index] || audit.status !== "passed") throw new Error();
+      audits.push(audit);
+    }
+    return Object.freeze({ ...identity, schemaVersion: "native-critical-surface-accessibility-v1", contextSchemaVersion: identity.schemaVersion,
+      audits: Object.freeze(audits), status: "passed", scope: "native-ui-observation-only" });
+  } catch { throw new Error("Invalid native critical accessibility qualification."); }
 }
 export function readReducedMotionObservation(value: unknown) {
   try {

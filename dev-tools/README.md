@@ -563,3 +563,26 @@ existing routing unittest. Three exact menu hook/shell sources extend its
 automatic paths from 19 to 22. Borrowed barrel/README/controller coverage does
 not activate this profile by itself. Unknown, incomplete and explicit generic
 impact keeps its existing checks and bounds. No test-selection policy changes.
+
+## Native critical accessibility test definitions
+
+The explicit native400 mode measures the actual CSS viewport after browser zoom.
+It checks control fit, horizontal reflow, reduced motion and computed accessibility
+under normal and forced-color display. Separate schemas retain the observed width;
+they never label it as a standard 320px audit. Standard mode keeps its original
+DPR1 admission and 1440px/320px checks. Unknown modes and unsupported hosts are
+refused before test effects.
+
+The first consumer is a separately named local Chrome operational journey. It uses
+the existing fixed fresh browser profile, factor4 preferences, capture-off settings
+and verified retirement. It does not resize the native viewport. The original
+operational phases, credentials, host checks, timeouts and resource limits remain.
+The type declaration is borrowed source coverage only; all 41 fixed test files
+and 22 automatic paths are unchanged. Unknown or explicitly requested generic
+impact still keeps its checks.
+
+Focused DOM/reader tests and case collection validate these definitions only.
+Actual host/native execution, desktop and other-surface native definitions, and
+final qualification remain pending. No models or OCR engines are run; accepted
+model-quality results remain closed. This checkpoint grants no parent criterion
+pass or original chunk completion.

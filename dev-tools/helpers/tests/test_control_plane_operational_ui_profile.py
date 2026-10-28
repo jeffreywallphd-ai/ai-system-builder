@@ -122,6 +122,32 @@ EXPECTED_COMMANDS = [
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
+        declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
+        core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        self.assertEqual(len(self.profile()["test_paths"]), 41)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
+        self.assertIn(declaration, self.profile()["source_paths"])
+        self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            for paths, required, operational, generic in [
+                ([core, declaration, CONFIG], ["documentation"], True, False),
+                ([declaration], ["documentation"], False, True),
+                ([core, declaration], ["focused-tests"], True, True),
+                ([core, declaration, "dev-tools/scripts/qualification/visual-composer/unreviewed.mts"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, operational)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(declaration)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, declaration], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
     def test_exact_menu_sources_keep_unknown_incomplete_and_explicit_generic_guards(self):
         menu = ["modules/ui/shared/hooks/useNavigationMenu.ts", "apps/desktop/src/renderer/components/layout/AppShell.tsx", "apps/thin-client/src/components/layout/AppShell.tsx"]
         borrowed = ["modules/ui/shared/index.ts", "modules/ui/shared/hooks/README.md", CONFIG, "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"]

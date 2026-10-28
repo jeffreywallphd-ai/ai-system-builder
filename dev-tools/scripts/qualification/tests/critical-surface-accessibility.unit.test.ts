@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Page, TestInfo } from "@playwright/test";
 const probe = vi.hoisted(() => ({ exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
-  forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none",
+  forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false,
   writes: [] as string[], flags: [] as string[], attachments: [] as string[], widths: [] as number[], motion: "no-preference" }));
 vi.mock("node:fs/promises", () => {
   const readFile = async (name: string) => {
@@ -13,6 +13,7 @@ vi.mock("node:fs/promises", () => {
   const mkdir = async () => undefined;
   const writeFile = async (_name: string, body: string, options: { flag: string }) => {
     probe.flags.push(options.flag);
+    if (probe.saveFails && options.flag === "w" && JSON.parse(body).status !== "failed") throw new Error("synthetic-private-write-path");
     if (options.flag === "wx" && probe.exists) throw new Error("synthetic-private-retained-path");
     probe.exists = true; probe.writes.push(body);
   };
@@ -24,6 +25,7 @@ import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, r
 import { qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
+import { qualifyOperationalUiJourney } from "../visual-composer/e2e/operational-ui-journey";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
@@ -117,7 +119,7 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     if (probe.attachFails) throw new Error("synthetic-private-attachment"); probe.attachments.push(value.body);
   } } as unknown as TestInfo;
   beforeEach(() => {
-    Object.assign(probe, { exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none" });
+    Object.assign(probe, { exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false });
     probe.writes.length = probe.flags.length = probe.attachments.length = probe.widths.length = 0;
     vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID", context().runId); vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", context().sourceRevision);
     vi.stubGlobal("devicePixelRatio", 1); vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(forced-colors: active)" ? !probe.forcedMediaFails && probe.forcedColors === "active" : probe.motion === "reduce" }));
@@ -141,7 +143,7 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     for (const [key, old] of [["clientWidth", oldClientWidth], ["scrollWidth", oldScrollWidth]] as const) {
       if (old) Object.defineProperty(document.documentElement, key, old); else Reflect.deleteProperty(document.documentElement, key);
     }
-    document.body.replaceChildren(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
+    document.documentElement.style.removeProperty("zoom");document.body.replaceChildren(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
   });
   it("audits both declared widths and finalizes only bounded context/rule/count facts", async () => {
     const report = await qualifyCriticalSurfaceAccessibility(page, info, "settings");
@@ -251,6 +253,81 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     else expect(JSON.parse(probe.writes[probe.writes.length - 1]!).status).toBe("failed");
     expect(probe.writes.join("")).not.toContain("synthetic-private");
     if (fault === "scale") expect(JSON.parse(probe.writes[probe.writes.length - 1]!).browser).toBeUndefined();
+  });
+  function installNativeFrame() {
+    vi.stubGlobal("devicePixelRatio",4);vi.stubGlobal("outerWidth",1440);vi.stubGlobal("innerWidth",356);vi.stubGlobal("visualViewport",{scale:1});
+    document.documentElement.style.zoom="1";
+    const computed = getComputedStyle;
+    // JSDOM does not implement native browser zoom or its computed CSS property.
+    vi.stubGlobal("getComputedStyle", (element: Element) => {
+      const style = computed(element);
+      if (element === document.documentElement) Object.defineProperty(style,"zoom",{value:document.documentElement.style.zoom});
+      return style;
+    });
+    for(const key of ["clientWidth","scrollWidth"])Object.defineProperty(document.documentElement,key,{configurable:true,get:()=>356});
+  }
+  it.each(["settings","navigation-menu"] as const)("audits native %s at its actual width without any viewport resize",async surface=>{
+    installNativeFrame();const result=await qualifyCriticalSurfaceAccessibility(page,info,surface,"native400");
+    expect(result.scope).toBe("native-ui-observation-only");expect(result.status).toBe("passed");expect(probe.calls).toBe(2);expect(probe.widths).toEqual([]);
+    expect(result.audits.map(item=>"frame" in item?item.frame.innerWidth:null)).toEqual([356,356]);
+    expect(probe.motion).toBe("no-preference");expect(probe.forcedColors).toBe("none");expect(probe.flags).toEqual(["wx","w","w","w"]);
+    expect(JSON.parse(probe.writes[probe.writes.length-1]!).status).toBe("passed");expect(probe.attachments).toHaveLength(1);
+    expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|message/);
+  });
+  it("supports only the standalone runtime mount for native runtime observations",async()=>{
+    installNativeFrame();document.querySelector("main")!.className="system-runtime-app";
+    const result=await qualifyCriticalSurfaceAccessibility(page,{...info,project:{name:"packaged-desktop"}} as TestInfo,"runtime-conversation","native400");
+    expect(result.status).toBe("passed");expect(probe.calls).toBe(2);expect(probe.widths).toEqual([]);
+  });
+  it.each(["scale","css","pinch","outer","inner","overflow","control","missing-control","unmounted"] as const)("denies invalid native %s before evidence writes or audits",async fault=>{
+    installNativeFrame();
+    if(fault==="scale")vi.stubGlobal("devicePixelRatio",1);
+    if(fault==="css")document.documentElement.style.zoom="4";
+    if(fault==="pinch")vi.stubGlobal("visualViewport",{scale:4});
+    if(fault==="outer")vi.stubGlobal("outerWidth",1500);
+    if(fault==="inner")vi.stubGlobal("innerWidth",1440);
+    if(fault==="overflow")Object.defineProperty(document.documentElement,"scrollWidth",{configurable:true,get:()=>400});
+    if(fault==="control")Object.defineProperty(document.querySelector("button")!,"getBoundingClientRect",{configurable:true,value:()=>({width:400,height:10,left:0,right:400})});
+    if(fault==="missing-control")document.querySelector("button")!.remove();
+    if(fault==="unmounted")document.body.replaceChildren();
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"settings","native400")).rejects.toThrow(/^(Native frame collection failed|Invalid native accessibility observation|Native accessibility frame admission failed)\.$/);
+    expect(probe.writes).toEqual([]);expect(probe.calls).toBe(0);expect(probe.widths).toEqual([]);expect(probe.motion).toBe("no-preference");
+  });
+  it("keeps the standard device-scale guard unchanged",async()=>{
+    installNativeFrame();await expect(qualifyCriticalSurfaceAccessibility(page,info,"settings")).rejects.toThrow("Critical accessibility check failed at browser-profile.");
+    expect(probe.calls).toBe(0);expect(JSON.parse(probe.writes[probe.writes.length-1]!).status).toBe("failed");
+  });
+  it.each(["profile","exists","motion","media","audit","forced-audit","save","attach","restore"] as const)("retains failed native %s results and restores media without resizing",async fault=>{
+    installNativeFrame();
+    if(fault==="profile")probe.readFails=true;if(fault==="exists")probe.exists=true;
+    if(fault==="motion")(document.querySelector("button") as HTMLElement).style.transitionDuration="1s";
+    if(fault==="media")probe.forcedMediaFails=true;if(fault==="audit")probe.auditFails=true;if(fault==="forced-audit")probe.forcedAuditFails=true;
+    if(fault==="save")probe.saveFails=true;if(fault==="attach")probe.attachFails=true;if(fault==="restore")probe.restoreFails=true;
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"settings","native400")).rejects.toThrow(/^(Native accessibility check|Technical accessibility finalization) failed at [a-z0-9-]+\.$/);
+    if(fault==="profile"||fault==="exists")expect(probe.writes).toEqual([]);
+    else expect(JSON.parse(probe.writes[probe.writes.length-1]!).status).toBe("failed");
+    expect(probe.widths).toEqual([]);expect(probe.writes.join("")).not.toContain("synthetic-private");
+  });
+  it("rejects unsupported native hosts and unknown modes before touching Page or files",async()=>{
+    const untouched=new Proxy({},{get(){throw new Error("Page must not be read.");}}) as Page;
+    await expect(qualifyCriticalSurfaceAccessibility(untouched,{...info,project:{name:"managed-thin-chrome"}} as TestInfo,"settings","native400")).rejects.toThrow("Unsupported native accessibility host.");
+    for(const mode of [null,{},"native",4]){
+      await expect(qualifyCriticalSurfaceAccessibility(untouched,untouched as unknown as TestInfo,"settings",mode as never)).rejects.toThrow("Invalid critical accessibility mode.");
+      await expect(qualifyOperationalUiJourney(untouched,untouched as unknown as TestInfo,"thin-chrome",mode as never)).rejects.toThrow("Invalid critical accessibility mode.");
+    }
+    expect(probe.writes).toEqual([]);expect(probe.calls).toBe(0);
+  });
+  it.each([undefined,null,false,0,"","synthetic-private-port",new Error("synthetic-private-port")].flatMap(reason=>[
+    {reason,synchronous:false},{reason,synchronous:true},
+  ]))("redacts an initial native Page failure %# before effects",async ({reason,synchronous})=>{
+      const evaluate=vi.fn(()=>{if(synchronous)throw reason;return Promise.reject(reason);});
+      const emulateMedia=vi.fn(),setViewportSize=vi.fn();
+      let rejected=false,caught:unknown;
+      try {await qualifyCriticalSurfaceAccessibility({evaluate,emulateMedia,setViewportSize} as unknown as Page,info,"settings","native400");}
+      catch(error){rejected=true;caught=error;}
+      expect(rejected).toBe(true);expect(caught).toBeInstanceOf(Error);expect((caught as Error).message).toBe("Native frame collection failed.");
+      expect(evaluate).toHaveBeenCalledTimes(1);expect(emulateMedia).not.toHaveBeenCalled();expect(setViewportSize).not.toHaveBeenCalled();
+      expect(probe.writes).toEqual([]);expect(probe.flags).toEqual([]);expect(probe.attachments).toEqual([]);expect(probe.calls).toBe(0);
   });
 });
 
