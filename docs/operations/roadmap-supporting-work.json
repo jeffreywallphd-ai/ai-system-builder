@@ -5681,6 +5681,61 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "desktop-native-operational-test-definitions",
+      "work_criteria": [
+        "owned-window-zoom-and-safe-retirement",
+        "fresh-native-slot-and-standard-compatibility",
+        "exact-source-coverage-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "99fff52ff36b02c8e5f23f88b64ee59c85dfee73a3ed473e5e4488598b9c24c3",
+      "review_digest": "eb2c42493585115ab92806e60056b0bd05ffd53f072302f8a29caefdfded8d85",
+      "scope": "Desktop operational zoom journey construction",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "data-context-native-integration-test-definitions",
+      "work_criteria": [
+        "closed-data-context-mode-and-host-admission",
+        "named-native-variants-and-result-isolation",
+        "owned-cleanup-and-failure-preservation",
+        "bounded-source-coverage-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "e620f7d5cd6aee9814b752f41aecca80365823a2867fd921fbfb33eb987a8418",
+      "review_digest": "a458e2437f0f2cca82134fd0a7d310437bc3d9080712372eaa446e0579179cf5",
+      "scope": "Data and Context native zoom journey construction",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "asset-system-native-integration-test-definitions",
+      "work_criteria": [
+        "closed-asset-system-mode-and-host-admission",
+        "named-native-journeys-and-standard-compatibility",
+        "owned-retirement-and-source-checkpoint"
+      ],
+      "receipt_digest": "5b7ea32f1269cc11ced589b3e7adbc7f2d114076dbcafe59067e76d3cec6d185",
+      "review_digest": "6a0f806d17c6ae15054695df13a32f7bb0faded40af8dfd807d872c957ed7f35",
+      "scope": "Assets and System editing native zoom journey construction",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

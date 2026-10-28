@@ -12765,6 +12765,43 @@
           "Other screen definitions and actual app tests remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2695ee85f6aaa26924e1a75f54d34cfdd8c47cbe0ea836e89a464e2f4473f9a5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a desktop test for 400% zoom.",
+          "It reuses the operational checks and closes only the test's own app.",
+          "Focused checks pass. Tests in the running app remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "566cbbefe4b8d75a514949d6a6a88fe4684336a0bdfc7f1bd0cc0c0acfe7abf0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added six browser and desktop test cases for Data and Context at 400% zoom.",
+          "They cover file import, saved dataset versions, row editing, output formats, Context packs and RAG databases.",
+          "Focused checks pass. Tests in the running apps remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c8d7071ecfdb274f2b090e745a58737694b859a75f8d0dfdfb739f8b27b834e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added browser and desktop tests for building a system and creating assets at 400% zoom.",
+          "They check package import, customization, Studio, saved assets, previews, properties and layers.",
+          "The tests create their own local workspaces and keep the existing standard tests.",
+          "Focused source tests pass. Tests in the running apps remain pending."
+        ]
+      }
     }
   ]
 }
