@@ -109,6 +109,22 @@ admission and fixed public errors. Unknown impact and an explicitly required
 generic test gate retain their coverage. It starts no app or model and uses no
 real credential store or provider. Actual host restart and final combined
 qualification remain separate.
+
+The `security-status-ui` profile runs six fixed thin-client status, rendered
+recovery, API, credential-comparison and error tests. It uses synthetic browser
+storage and fetch clients. It preserves public/authenticated routing, exact
+credential replacement, safe failure copy and intentionally unmounted controls.
+Unknown or explicitly requested generic impact keeps its checks. It starts no
+server, browser, model or provider and grants no TLS, identity, native or parent
+qualification.
+
+The fixed `control-plane` unittest command has a ten-minute execution ceiling.
+Its growing filesystem and Node fixture matrix exceeded the earlier three-minute
+ceiling while making successful progress. The earlier timeout remains failed
+evidence; the new ceiling is prospective and is not a passing result. The exact
+command, two-MiB output bound, test membership and all other check deadlines stay
+unchanged. This is an ordinary contributor-test ceiling. It changes no app,
+model, memory, native-job or retained-data guard, and provides no caller override.
 Focused Node/Vitest routing follows actual test imports, rather than words in
 test descriptions or fixture strings; controlled AI tests remain opt-in.
 

@@ -1,15 +1,18 @@
-import { LanPairingForm } from "./LanPairingForm";
 import { useThinClientSecurity } from "../hooks/useThinClientSecurity";
+import { STATUS_FAILURE } from "../../../security/securityErrors";
 
 export function SecurityStatusPanel() {
   const security = useThinClientSecurity();
   const status = security.status;
-  const listenerLabel = status?.httpsEnabled ? "HTTPS enabled" : "HTTP only";
+  const listenerLabel = status ? (status.httpsEnabled ? "HTTPS enabled" : "HTTP only") : "Not available";
   return <section className="ui-panel ui-stack"><h2>Security</h2>
-    <p>Server mode: {status?.mode ?? "loading"}</p>
+    {security.loading ? <p role="status">Checking security status…</p> : null}
+    {security.error ? <p role="alert">{security.guidance ?? STATUS_FAILURE}</p> : null}
+    <button className="ui-button" type="button" disabled={security.loading || security.pairingBusy} onClick={() => void security.refreshStatus()}>Refresh status</button>
+    <p>Server mode: {status?.mode ?? "Not available"}</p>
     <div className="ui-stack">
       <h3>Transport security</h3>
-      <p>Current listener: {listenerLabel}</p><p>HTTPS required: {status?.httpsRequired ? "Yes" : "No"}</p>
+      <p>Current listener: {listenerLabel}</p><p>HTTPS required: {status ? (status.httpsRequired ? "Yes" : "No") : "Not available"}</p>
       <p>TLS cert mode: {status?.tls?.mode ?? "n/a"}</p><p>Certificate source: {status?.tls?.source ?? "n/a"}</p>
       {status?.tls?.hosts?.length ? <p>Hosts/SANs: {status.tls.hosts.join(", ")}</p> : null}
       {status?.requiresRestartToChangeTransportSecurity ? <p>Changing HTTP/HTTPS listener mode requires restarting dev:server.</p> : null}

@@ -1757,6 +1757,32 @@
         "dev-tools/config/contributor-check-profiles.json",
         "docs/diagnostics/ai-development-control-plane.md"
       ]
+    },
+    "security-status-ui": {
+      "test_paths": [
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.unit.test.ts",
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.unit.test.tsx",
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.recovery.ui.test.tsx",
+        "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+        "apps/thin-client/src/security/tests/securityApiClient.unit.test.ts",
+        "apps/thin-client/src/security/tests/security-errors.unit.test.ts"
+      ],
+      "source_paths": [
+        "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.unit.test.ts",
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.unit.test.tsx",
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.recovery.ui.test.tsx",
+        "apps/thin-client/src/security/pairedDeviceTokenStore.ts",
+        "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+        "apps/thin-client/src/security/securityApiClient.ts",
+        "apps/thin-client/src/security/tests/securityApiClient.unit.test.ts",
+        "apps/thin-client/src/security/securityErrors.ts",
+        "apps/thin-client/src/security/tests/security-errors.unit.test.ts",
+        "apps/thin-client/README.md",
+        "dev-tools/config/contributor-check-profiles.json",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }

@@ -13,11 +13,25 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "settings-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
+    "review-site", "settings-ui", "security-status-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "security-status-ui": [
+        "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.unit.test.ts",
+        "apps/thin-client/src/features/security/components/SecurityStatusPanel.unit.test.tsx",
+        "apps/thin-client/src/features/security/hooks/tests/useThinClientSecurity.recovery.ui.test.tsx",
+        "apps/thin-client/src/security/pairedDeviceTokenStore.ts",
+        "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+        "apps/thin-client/src/security/securityApiClient.ts",
+        "apps/thin-client/src/security/tests/securityApiClient.unit.test.ts",
+        "apps/thin-client/src/security/securityErrors.ts",
+        "apps/thin-client/src/security/tests/security-errors.unit.test.ts",
+        "apps/thin-client/README.md",
+    ],
     "settings-ui": [
         "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts",
         "apps/desktop/src/renderer/features/settings/components/SettingsPanel.tsx",
@@ -97,7 +111,7 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": list(QUALIFICATION_PROFILE_PATTERNS.get(name, [])), "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--profile", name], "timeout": 300} for name in QUALIFICATION_PROFILES],
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
-        {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 180},
+        {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
         {"id": "roadmap", "patterns": ["skills/manage-implementation-roadmaps/*"], "argv": [py, "-B", "skills/manage-implementation-roadmaps/tests/test_roadmap.py"], "timeout": 120},
         {"id": "architecture", "patterns": ["modules/*", "apps/*", "dev-tools/scripts/architecture/*"], "argv": [node, "dev-tools/scripts/architecture/check-module-dependencies.mjs"], "timeout": 120},
         {"id": "focused-tests", "patterns": ["modules/*", "apps/*", "dev-tools/scripts/*", "dev-tools/config/*"], "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py"], "timeout": 300},

@@ -229,3 +229,38 @@ cleanup order and provider deletion policy remain unchanged.
 The focused HTTP UI fixture uses actual routes, use cases, local JSON catalog
 and filesystem bytes. Synthetic access and scheduling faults are test inputs.
 It does not qualify a physical browser, SQLite, provider access or native races.
+
+## Security status recovery
+
+The Security page distinguishes a pending read, an unavailable result and a known
+listener. Use **Refresh status** after a failed read. A denied or malformed reply
+shows fixed guidance. It does not reveal exception text or provider details.
+Authentication and authorization stay on the server; the page adds no pairing,
+login or administration controls. Existing pairing and development-mode helpers
+remain available behind their current client boundary.
+
+The committed view owns status and action replies. It rejects retired replies
+and checks the locally observed credential before automatic invalid-token removal.
+The private browser token store provides a comparison handle without returning
+its captured value. Unreadable storage cannot supply an empty-store ownership
+proof. Pairing requires readable storage and immediate write readback; failed
+readback never rolls back or deletes another writer's data. A successful action
+also needs a matching current status before it reports success. Retiring a view
+does not cancel or undo a request already accepted by the server.
+
+These checks operate in the current JavaScript view. Separate localStorage
+operations are not an atomic comparison or replacement across browser tabs.
+Immediate readback proves only the locally observed write. Browser/process
+durability and cross-tab coordination remain separate qualification and design
+concerns; this feature does not claim either property.
+
+The security client keeps public and authenticated requests distinct. Canonical
+server security operations retain their HTTP status and safe code. Public errors
+use fixed copy, and consumed status fields are checked and copied before display.
+Unknown payload fields are excluded. Certificate download links use the existing
+relative local-CA endpoint. This preserves the existing localStorage convenience
+policy; it does not provide hostile-browser credential protection.
+
+Use the six-file `security-status-ui` contributor profile for local feature
+regressions. The tests use synthetic storage and responses. Actual TLS, server
+identity, managed authorization and final host qualification remain separate.
