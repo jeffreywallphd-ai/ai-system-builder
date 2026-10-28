@@ -892,3 +892,24 @@ or successful execution on a real host. Those checks remain separate and pending
 until executed. This source work does not qualify a parent criterion or complete
 the original roadmap chunk. Operational profile membership and resource limits
 are unchanged; no actual apps, models, OCR engines or full suite are run here.
+
+## Models and Image configuration accessibility definitions
+
+The two local operational journeys now visit Model Management and Image
+Generation after the original notification focus-return check. Discovery and
+inventory use their current host-specific forms. The desktop also opens its
+training configuration; the thin client must not expose a training tab. Closed
+context IDs and ordered operational phases require each supported audit point.
+
+These visits edit local form fields only. They do not submit a provider search,
+save/download a model, train a model, start image generation, repair an install
+or change runtime settings. The existing Settings, Security, runtime controls,
+notifications and Home assertions retain their relative order. The fixed
+private-free critical audit covers normal and forced-color display at both
+declared widths. Phase limits, host timeouts and profile membership are unchanged.
+
+Source builds, focused fixtures and case collection check these definitions.
+They do not supply actual host, model output, native zoom, performance or full
+qualification. Model results and task outcomes retain their owning tests and
+qualification. Other missing critical workflows still precede completion of the
+original roadmap chunk; accepted model accuracy is not rerun for this work.

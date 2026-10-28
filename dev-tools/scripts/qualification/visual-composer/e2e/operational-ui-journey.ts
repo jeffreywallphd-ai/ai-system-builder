@@ -119,6 +119,49 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await expect(notifications.getByRole("button", { name: "Close notifications", exact: true })).toBeFocused();
       await notifications.press("Escape"); await expect(notifications).toBeHidden(); await expect(bell).toBeFocused();
     });
+    await step("models-discovery-opened", async () => {
+      await page.getByRole("button", { name: "Models", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Model Management", level: 1, exact: true })).toBeVisible();
+      if (host === "packaged-desktop") {
+        await page.getByRole("tab", { name: "Find Models", exact: true }).press("Enter");
+        await expect(page.getByRole("textbox", { name: /^Query\b/ })).toBeVisible();
+        await page.getByRole("combobox", { name: /^Task\b/ }).selectOption("other");
+        await page.getByRole("textbox", { name: "Other task tag", exact: true }).fill("qualification-config-only");
+      } else {
+        await expect(page.getByRole("tab", { name: "Train Model", exact: true })).toHaveCount(0);
+        await page.getByRole("textbox", { name: /^Search\b/ }).fill("qualification-config-only");
+      }
+      // Edit local form state only. Search, download and save remain explicit.
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-discovery");
+    });
+    await step("models-inventory-opened", async () => {
+      if (host === "packaged-desktop") {
+        await page.getByRole("tab", { name: "Manage Models", exact: true }).press("Enter");
+        await expect(page.getByRole("button", { name: "Refresh Models", exact: true })).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+        await expect(page.getByRole("combobox", { name: /^Lifecycle\b/ })).toBeVisible();
+      } else {
+        await expect(page.getByRole("heading", { name: "Server model inventory", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Refresh", exact: true })).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+      }
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-inventory");
+    });
+    if (host === "packaged-desktop") await step("model-training-opened", async () => {
+      await page.getByRole("tab", { name: "Train Model", exact: true }).press("Enter");
+      await expect(page.getByRole("list", { name: "Model training workflow", exact: true })).toBeVisible();
+      await expect(page.getByRole("combobox", { name: /^Base model\b/ })).toBeVisible();
+      const method = page.getByRole("combobox", { name: /^Method\b/ });
+      await method.selectOption("lora"); await expect(method).toHaveValue("lora");
+      await qualifyCriticalSurfaceAccessibility(page, info, "model-training");
+    });
+    await step("image-configuration-opened", async () => {
+      await page.getByRole("button", { name: "Image Generation", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Image Generation", level: 1, exact: true })).toBeVisible();
+      await expect(page.getByRole("list", { name: "Image generation workflow", exact: true })).toBeVisible();
+      const prompt = page.getByRole("textbox", { name: /^Prompt\b/ });
+      await prompt.fill("Local configuration check."); await expect(prompt).toHaveValue("Local configuration check.");
+      // Do not submit generation, alter runtime settings or repair an install.
+      await qualifyCriticalSurfaceAccessibility(page, info, "image-configuration");
+    });
     await step("home-returned", async () => {
       await page.getByRole("button", { name: "Home", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Home", level: 1, exact: true })).toBeVisible();

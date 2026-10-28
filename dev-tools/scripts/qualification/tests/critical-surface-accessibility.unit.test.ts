@@ -30,7 +30,7 @@ describe("closed critical accessibility qualification", () => {
   it.each(["settings", "security", "notifications", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",
     "dataset-output-shape", "context-rag", "context-pack", "manual-context-review", "context-browser", "asset-import", "asset-customization", "asset-studio", "asset-saved", "asset-detail",
     "system-element-picker", "system-preview", "system-properties", "system-layers", "workspace-create", "system-manage",
-    "system-build-dialog", "system-publish", "system-publication-confirm"])("copies supported %s context and requires both exact ordered widths", surface => {
+    "system-build-dialog", "system-publish", "system-publication-confirm", "models-discovery", "models-inventory", "image-configuration"])("copies supported %s context and requires both exact ordered widths", surface => {
     const value = { ...context(), surface }, result = qualifyCriticalAccessibilityReport(value, [audit(1440), audit(320)]);
     value.surface = "synthetic-private-context";
     expect(result.schemaVersion).toBe("critical-surface-accessibility-v1"); expect(result.contextSchemaVersion).toBe("critical-accessibility-context-v1");
@@ -38,12 +38,13 @@ describe("closed critical accessibility qualification", () => {
   });
   it.each([{ surface: "../outside" }, { surface: ".private-selector" }, { host: "unknown" }, { host: "packaged-desktop", surface: "security" },
     { host: "thin-chrome", surface: "runtime-conversation" }, { host: "managed-thin-chrome", surface: "runtime-conversation" },
+    { host: "thin-chrome", surface: "model-training" }, { host: "managed-thin-chrome", surface: "model-training" },
     { runId: "short" }, { sourceRevision: "worktree" }, { testKey: "private-test-name" }, { token: "synthetic-private-token" }])("rejects unsupported or private context %#", change => {
     expect(() => readCriticalAccessibilityContext({ ...context(), ...change })).toThrow("Invalid critical accessibility context.");
   });
-  it("admits the standalone conversation only for the desktop host", () => {
-    const report = qualifyCriticalAccessibilityReport({ ...context(), host: "packaged-desktop", surface: "runtime-conversation" }, [audit(1440), audit(320)]);
-    expect(report.surface).toBe("runtime-conversation"); expect(report.host).toBe("packaged-desktop"); expect(report.status).toBe("passed");
+  it.each(["runtime-conversation", "model-training"])("admits %s only for the desktop host", surface => {
+    const report = qualifyCriticalAccessibilityReport({ ...context(), host: "packaged-desktop", surface }, [audit(1440), audit(320)]);
+    expect(report.surface).toBe(surface); expect(report.host).toBe("packaged-desktop"); expect(report.status).toBe("passed");
   });
   it.each([[], [audit(1440)], [audit(320), audit(1440)], [audit(1440), audit(1440)], [audit(1440), { ...audit(320), contrastPassedNodes: 0 }],
     [audit(1440), { ...audit(320), violations: [{ rule: "button-name", nodes: 1 }] }], new Array(2)])("never qualifies missing, reordered, sparse or failed audits %#", values => {

@@ -4,10 +4,10 @@ export const OPERATIONAL_HOST_TIMEOUT_MS = 360_000;
 export const OPERATIONAL_PHASE_TIMEOUT_MS = 30_000;
 export type OperationalHost = "packaged-desktop" | "thin-chrome";
 const COMMON_START = ["sidebar-collapsed", "sidebar-restored", "settings-opened"] as const;
-const COMMON_END = ["notifications-empty", "notifications-focus-returned", "home-returned"] as const;
+const COMMON_END = ["notifications-empty", "notifications-focus-returned", "models-discovery-opened", "models-inventory-opened"] as const;
 const PHASES = Object.freeze({
-  "packaged-desktop": Object.freeze([...COMMON_START, "runtime-deferred", "runtime-initially-stopped", "runtime-refresh-display-stopped", "runtime-start-ready", "runtime-view-reopened-ready", "runtime-restart-ready", "runtime-log-cleared", "runtime-stop-reported", ...COMMON_END]),
-  "thin-chrome": Object.freeze([...COMMON_START, "security-known", "security-fault-visible", "security-fault-safe", "security-retry-known", "security-controls-restricted", ...COMMON_END]),
+  "packaged-desktop": Object.freeze([...COMMON_START, "runtime-deferred", "runtime-initially-stopped", "runtime-refresh-display-stopped", "runtime-start-ready", "runtime-view-reopened-ready", "runtime-restart-ready", "runtime-log-cleared", "runtime-stop-reported", ...COMMON_END, "model-training-opened", "image-configuration-opened", "home-returned"]),
+  "thin-chrome": Object.freeze([...COMMON_START, "security-known", "security-fault-visible", "security-fault-safe", "security-retry-known", "security-controls-restricted", ...COMMON_END, "image-configuration-opened", "home-returned"]),
 });
 const INVALID = "Invalid operational UI observation.";
 function hostValue(value: unknown): OperationalHost {

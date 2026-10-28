@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_HOST_TIMEOUT_MS, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost } from "../visual-composer/operational-ui-oracles";
 const input = (host: OperationalHost = "thin-chrome") => ({ schemaVersion: "operational-ui-observation-v1", host, runId: "operational-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, phases: [...operationalPhases(host)] });
 describe("operational UI observation boundaries", () => {
+  it.each(["thin-chrome", "packaged-desktop"] as const)("requires the supported Models and Image forms for %s without inventing thin training", host => {
+    const tail = ["notifications-empty", "notifications-focus-returned", "models-discovery-opened", "models-inventory-opened",
+      ...(host === "packaged-desktop" ? ["model-training-opened"] : []), "image-configuration-opened", "home-returned"];
+    expect(operationalPhases(host).slice(-tail.length)).toEqual(tail);
+    expect(operationalPhases(host).includes("model-training-opened")).toBe(host === "packaged-desktop");
+    for (const missing of ["models-discovery-opened", "models-inventory-opened", "image-configuration-opened"]) {
+      const value = { ...input(host), phases: operationalPhases(host).filter(phase => phase !== missing) };
+      expect(() => qualifyOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+      expect(() => failedOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    }
+  });
   it.each(["thin-chrome", "packaged-desktop"] as const)("requires every exact ordered %s phase and returns an immutable copy", host => {
     const value = input(host), report = qualifyOperationalObservation(value);
     value.phases.splice(0); expect(report.phases).toEqual(operationalPhases(host));
