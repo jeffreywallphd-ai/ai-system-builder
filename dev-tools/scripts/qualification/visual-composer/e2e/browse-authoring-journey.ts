@@ -1,10 +1,13 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { qualifyTechnicalAccessibility } from "./technical-accessibility";
+import { collectNative400Frame, qualifyTechnicalAccessibility } from "./technical-accessibility";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 /** Shared real-host journey: no model registration, worker calls or provider traffic. */
-export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>, info: TestInfo) {
-  await page.setViewportSize({width: 1440, height: 1000});
+export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>, info: TestInfo, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && (!info?.project || (info.project.name !== "thin-chrome" && info.project.name !== "packaged-desktop"))) throw new Error("Unsupported native Assets and System host.");
+  if (mode === "standard") await page.setViewportSize({width: 1440, height: 1000});
   await page.getByLabel("New system name").fill(name);
   await page.getByRole("button", {name: "Create system", exact: true}).click();
   await expect(page.getByRole("heading", {name: "Canvas", exact: true})).toBeVisible({timeout: 30_000});
@@ -24,7 +27,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
     const version = (await card.innerText()).match(/\/ v([0-9.]+)/)?.[1];
     expect(version).toBeTruthy();
     if (!pickerAudited) {
-      await qualifyCriticalSurfaceAccessibility(page, info, "system-element-picker");
+      await qualifyCriticalSurfaceAccessibility(page, info, "system-element-picker", mode);
       pickerAudited = true;
     }
     await card.focus(); await card.press("Enter");
@@ -43,7 +46,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   const details = page.getByRole("complementary", {name: "Composer details"});
   const properties = details.getByRole("tab", {name: "Properties", exact: true});
   await properties.click(); await expect(properties).toHaveAttribute("aria-selected", "true");
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-properties");
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-properties", mode);
   const node = page.locator(`[data-instance-id="${added.id}"]`);
   await page.getByRole("button", {name: "Undo", exact: true}).press("Enter");
   await expect(node).toHaveCount(0);
@@ -54,7 +57,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   const previewDialog = page.getByRole("dialog", {name: `${name} UI preview`});
   await expect(previewDialog).toBeVisible();
   await expect(previewDialog.locator(`[data-preview-instance="${added.id}"]`)).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-preview");
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-preview", mode);
   await previewDialog.press("Escape"); await expect(previewDialog).toBeHidden(); await expect(preview).toBeFocused();
   await page.getByRole("button", {name: "Save and validate revision"}).click();
   await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
@@ -81,21 +84,25 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await expect(firstItem).toHaveAccessibleName(ownLabel);
   await firstItem.press("ArrowDown");
   await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-layers");
+  await qualifyCriticalSurfaceAccessibility(page, info, "system-layers", mode);
 
-  await page.setViewportSize({width: 320, height: 1000});
+  if (mode === "standard") await page.setViewportSize({width: 320, height: 1000});
+  const nativeFrame = mode === "native400" ? await collectNative400Frame(page) : undefined;
+  if (nativeFrame) expect(nativeFrame.status).toBe("passed");
+  const fitWidth = nativeFrame?.layoutWidth ?? 320;
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   for (const label of ["Preview UI", "Undo", "Redo", "Save and validate revision"]) {
     const control = page.getByRole("button", {name: label, exact: true});
     await control.scrollIntoViewIfNeeded(); await expect(control).toBeVisible();
-    const box = await control.boundingBox(); expect(box).toBeTruthy(); expect(box!.x).toBeGreaterThanOrEqual(-1); expect(box!.x + box!.width).toBeLessThanOrEqual(321);
+    const box = await control.boundingBox(); expect(box).toBeTruthy(); expect(box!.x).toBeGreaterThanOrEqual(-1); expect(box!.x + box!.width).toBeLessThanOrEqual(fitWidth + 1);
   }
   const add = page.getByRole("button", {name: /^Add an element inside /}).last();
   await add.scrollIntoViewIfNeeded(); await add.focus(); await add.press("Enter");
   const dialog = page.getByRole("dialog", {name: /^Add an element to /});
   await expect(dialog.getByLabel("Search compatible elements")).toBeFocused();
-  const bounds = await dialog.boundingBox(); expect(bounds).toBeTruthy(); expect(bounds!.width).toBeLessThanOrEqual(320);
+  const bounds = await dialog.boundingBox(); expect(bounds).toBeTruthy(); expect(bounds!.width).toBeLessThanOrEqual(fitWidth);
   await dialog.press("Escape"); await expect(add).toBeFocused();
-  const accessibility = await qualifyTechnicalAccessibility(page, info);
-  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: 320, accessibility};
+  const accessibility = mode === "standard" ? await qualifyTechnicalAccessibility(page, info)
+    : {mode: "native400", frame: nativeFrame, scope: "Frame fit only; the separate critical-surface reports contain the actual accessibility audits."};
+  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: fitWidth, accessibility};
 }

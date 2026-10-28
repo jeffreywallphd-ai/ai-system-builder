@@ -1047,3 +1047,24 @@ that the existing wrong-profile guard skips, plus one real resolver pass. It
 retains its offline environment, 256MiB heap ceiling, fixed process/test deadlines,
 output cap and verified owned temporary-tree cleanup. It starts no app or model
 and grants no actual host qualification.
+
+
+The Assets and System editing definitions add two separately named local
+native-zoom cases. They reuse all nine critical form audits and the existing
+creation, preview, editing and document-reload assertions. The standard cases
+keep their viewport, reflow and full desktop replacement checks. Native cases
+use the fixed owned Chrome context or exact Electron Page window; they do not
+resize the viewport to claim zoom. Final native control/dialog checks use the
+measured layout width and require a passing frame. A fresh `browse-native400`
+slot keeps earlier profiles intact, and owned cleanup retains primary and
+retirement failures. The fixed operational profile gains one admission file
+for44files; its22automatic triggers stay unchanged. Borrowed Assets test sources
+do not activate another profile on their own. Focused fixtures, source checks and
+case collection do not qualify real hosts, restart, model quality or the parent
+roadmap. Broader report finalization remains the later reporting work chunk.
+
+The Assets wiring guard checks each exact standard/native case separately. It
+retains one awaited browse step before one awaited Assets core, the declared
+host, default or explicit native mode, bounded public reads, document reload
+restrictions and the original per-case deadline. Earlier failed guard evidence
+is retained; no actual host or parent pass follows from this source check.

@@ -189,16 +189,30 @@ for (const reason of [undefined, null, false, 0, "", new Error("Synthetic refusa
   }
 });
 
-test("both ordinary host specs await the same Assets core after their existing browse journey", () => {
+test("each standard and native host case awaits the Assets core after its browse journey", () => {
   const folder = path.resolve("dev-tools/scripts/qualification/visual-composer/e2e");
   for (const [file, host, previousBudget] of [["packaged-desktop-browse.e2e.spec.ts", "packaged-desktop", 150_000], ["thin-client-browse.e2e.spec.ts", "thin-chrome", 120_000]] as const) {
     const source = ts.createSourceFile(file, readFileSync(path.join(folder, file), "utf8"), ts.ScriptTarget.Latest, true);
     const calls: ts.CallExpression[] = []; const visit = (node: ts.Node) => {if (ts.isCallExpression(node)) calls.push(node); ts.forEachChild(node, visit);}; visit(source);
     const named = (name: string) => calls.filter(call => call.expression.getText(source) === name);
-    const browse = named("completeBrowseAuthoringJourney"), assets = named("completeAssetAuthoringJourney");
+    const titles = host === "thin-chrome" ? ["thin client preserves the complete browse authoring journey", "thin client completes Assets and System editing at native 400 percent zoom"]
+      : ["packaged desktop preserves the complete browse authoring journey", "packaged desktop completes Assets and System editing at native 400 percent zoom"];
+    const cases = named("test"); assert.equal(cases.length, 2);
+    assert.deepEqual(cases.map(call => {assert(ts.isStringLiteral(call.arguments[0]!)); return call.arguments[0].text;}), titles);
+    for (const [index, title] of titles.entries()) {
+    const entry = cases[index]!; assert.equal((entry.arguments[0] as ts.StringLiteral).text, title);
+    const callback = entry.arguments[1]!; assert(ts.isArrowFunction(callback));
+    const local = (name: string) => named(name).filter(call => call.pos >= callback.body.pos && call.end <= callback.body.end);
+    const browse = local("completeBrowseAuthoringJourney"), assets = local("completeAssetAuthoringJourney");
     assert.equal(browse.length, 1); assert.equal(assets.length, 1); assert(browse[0]!.pos < assets[0]!.pos);
+    assert(ts.isAwaitExpression(browse[0]!.parent));
     assert(ts.isAwaitExpression(assets[0]!.parent)); assert.equal((assets[0]!.arguments[1] as ts.StringLiteral).text, host);
-    assert.equal(assets[0]!.arguments.length, 5);
+    const native = index === 1;
+    assert.equal(assets[0]!.arguments.length, native ? 6 : 5);
+    assert.equal(browse[0]!.arguments.length, native ? 5 : 4);
+    if (native) {
+      for (const call of [browse[0]!, assets[0]!]) { const mode = call.arguments[call.arguments.length - 1]!; assert(ts.isStringLiteral(mode)); assert.equal(mode.text, "native400"); }
+    }
     const reader = assets[0]!.arguments[3]!; assert(ts.isArrowFunction(reader));
     assert(reader.getText(source).includes(host === "thin-chrome" ? "currentPage.evaluate(readBrowserPublishedDefinition, input)" : "currentPage.evaluate(readDesktopPublishedDefinition, input)"));
     const replay = assets[0]!.arguments[2]!; assert(ts.isObjectLiteralExpression(replay));
@@ -210,8 +224,10 @@ test("both ordinary host specs await the same Assets core after their existing b
     const replayCalls = calls.filter(call => call.pos >= reload.pos && call.end <= reload.end);
     assert.equal(replayCalls.filter(call => call.expression.getText(source) === "page.reload").length, 1);
     assert.equal(replayCalls.filter(call => /launch|close|evaluate|route|request/.test(call.expression.getText(source))).length, 0);
-    const budget = named("test.setTimeout"); assert.equal(budget.length, 1);
+    assert.equal(replayCalls.filter(call => call.expression.getText(source) === "applyOwnedDesktopNativeZoom").length, native && host === "packaged-desktop" ? 1 : 0);
+    const budget = local("test.setTimeout"); assert.equal(budget.length, 1);
     assert.equal(budget[0]!.arguments[0]!.getText(source), `${previousBudget.toLocaleString("en-US").replaceAll(",", "_")} + AUTHORING_PHASE_BUDGET_MS${host === "packaged-desktop" ? " + 150_000" : ""}`);
+    }
   }
 });
 

@@ -1,3 +1,4 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import assert from "node:assert/strict";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
@@ -50,8 +51,11 @@ export async function completeAssetAuthoringJourney(
   page: Page, host: AuthoringHost,
   replay: {kind: "document-reload"; reload: () => Promise<void>},
   readPublished: (input: PublishedReadQuery, currentPage: Page) => Promise<unknown>,
-  info: TestInfo,
+  info: TestInfo, mode: CriticalAccessibilityMode = "standard",
 ) {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && (!info?.project || (info.project.name !== "thin-chrome" && info.project.name !== "packaged-desktop"))) throw new Error("Unsupported native Assets and System host.");
+  if (mode === "native400" && host !== info.project.name) throw new Error("Unsupported native Assets and System host.");
   page.setDefaultTimeout(10_000); page.setDefaultNavigationTimeout(30_000);
   const workspace = () => page.getByLabel("Select current workspace").inputValue();
   const plan = createAuthoringExpectations(host, await workspace());
@@ -124,7 +128,7 @@ export async function completeAssetAuthoringJourney(
     await expect(editor.getByRole("button", {name: "Install package", exact: true})).toBeEnabled();
     const summary = await editor.locator(".asset-package-manager__summary dd").allTextContents();
     assertPackageObservation(plan, {label: summary[0]?.replace(/\s+/g, " ").trim(), contents: summary[1]?.replace(/\s+/g, " ").trim()});
-    await qualifyCriticalSurfaceAccessibility(page, info, "asset-import");
+    await qualifyCriticalSurfaceAccessibility(page, info, "asset-import", mode);
     await editor.getByRole("button", {name: "Install package", exact: true}).click();
     const installed = editor.locator(".asset-package-manager__installed li").filter({hasText: plan.package.id});
     await expect(installed).toHaveCount(1); await expect(installed).toContainText(`v${plan.package.version}`);
@@ -148,7 +152,7 @@ export async function completeAssetAuthoringJourney(
     await editor.getByLabel("Description", {exact: true}).fill(plan.copyDescription);
     await editor.getByLabel("Summary", {exact: true}).fill(plan.copyDescription);
     if (!customizationAudited) {
-      await qualifyCriticalSurfaceAccessibility(page, info, "asset-customization");
+      await qualifyCriticalSurfaceAccessibility(page, info, "asset-customization", mode);
       customizationAudited = true;
     }
     await editor.getByRole("button", {name: "Save changes", exact: true}).click();
@@ -176,14 +180,14 @@ export async function completeAssetAuthoringJourney(
       await row.getByLabel("Media type", {exact: true}).fill(resource.mediaType);
       await row.getByLabel("Resource content", {exact: true}).fill(resource.content);
     }
-    await qualifyCriticalSurfaceAccessibility(page, info, "asset-studio");
+    await qualifyCriticalSurfaceAccessibility(page, info, "asset-studio", mode);
     await editor.getByRole("button", {name: "Save new draft", exact: true}).click();
     await expect(editor.locator(".ui-badge").first()).toHaveText(expected.status);
     await reload(); await select("Saved");
     await expect(page.locator(".asset-studio--saved")).toHaveAttribute("aria-busy", "false");
     const saved = page.locator(".asset-studio__saved-card").filter({hasText: expected.id});
     await expect(saved).toHaveCount(1);
-    await qualifyCriticalSurfaceAccessibility(page, info, "asset-saved");
+    await qualifyCriticalSurfaceAccessibility(page, info, "asset-saved", mode);
     await saved.getByRole("button", {name: "Open in Studio", exact: true}).click();
     await expect(editor.getByLabel("Asset ID", {exact: true})).toHaveValue(expected.id);
     await expect(editor.locator(".ui-badge").first()).toHaveText(expected.status);
@@ -216,7 +220,7 @@ export async function completeAssetAuthoringJourney(
       await expect(detail).toContainText("v1.0.0"); await expect(detail.getByText("Published", {exact: true})).toBeVisible();
       await expect(detail).toContainText(asset === plan.studio ? plan.studio.definition : plan.copyDescription);
       if (!detailAudited) {
-        await qualifyCriticalSurfaceAccessibility(page, info, "asset-detail");
+        await qualifyCriticalSurfaceAccessibility(page, info, "asset-detail", mode);
         detailAudited = true;
       }
       await detail.getByRole("button", {name: "Close asset details", exact: true}).click();

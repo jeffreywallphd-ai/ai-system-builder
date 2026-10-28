@@ -1,3 +1,4 @@
+import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { expect, test } from "@playwright/test";
 import { _electron as electron } from "playwright";
 import { mkdir, realpath } from "node:fs/promises";
@@ -7,6 +8,8 @@ import { completeBrowseAuthoringJourney } from "./browse-authoring-journey";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { completeAssetAuthoringJourney, readDesktopPublishedDefinition } from "./asset-authoring-journey";
 import { AUTHORING_PHASE_BUDGET_MS, runOwnedRestartPhase } from "../asset-authoring-oracles";
+
+test.use({trace: "off", screenshot: "off", video: "off"});
 
 test("packaged desktop preserves the complete browse authoring journey", async () => {
   // Existing browse/Assets budget plus150s for the additional owned restart/checks.
@@ -53,4 +56,36 @@ test("packaged desktop preserves the complete browse authoring journey", async (
       }
     }, () => closeDesktopAndQualifyOwnedWorkers(app, cache, test.info(), phase));
   }
+});
+
+
+test("packaged desktop completes Assets and System editing at native 400 percent zoom", async () => {
+  test.setTimeout(150_000 + AUTHORING_PHASE_BUDGET_MS + 150_000);
+  if (test.info().project.name !== "packaged-desktop") throw new Error("Unsupported native Assets and System host.");
+  const isolated = prepareIsolatedDesktopCase("browse-native400");
+  const cache = path.join(isolated.dataRoot, "authoring-cache-native400");
+  await mkdir(cache, {recursive: false}); expect(await realpath(cache)).toBe(cache);
+  const app = await electron.launch({executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: {...isolated.env, HF_HUB_CACHE: cache}, timeout: 60_000});
+  await runOwnedRestartPhase(async () => {
+    const page = await app.firstWindow({timeout: 60_000});
+    await applyOwnedDesktopNativeZoom(app, page);
+    await expect(page.getByRole("heading", {name: "Create a Workspace", exact: true})).toBeVisible({timeout: 60_000});
+    await page.getByRole("button", {name: "Create new workspace"}).click();
+    await page.locator('input[name="workspaceName"]').fill("Native desktop browse fixture");
+    await page.getByRole("button", {name: "Create workspace", exact: true}).click();
+    await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./, {timeout: 30_000});
+    await page.getByRole("button", {name: "Systems", exact: true}).click();
+    const result = await completeBrowseAuthoringJourney(page, "Native desktop browse fixture", async () => {
+      await page.reload(); await applyOwnedDesktopNativeZoom(app, page);
+      await page.getByRole("button", {name: "Systems", exact: true}).click();
+      await expect(page.getByRole("heading", {name: "Systems", exact: true})).toBeVisible();
+    }, test.info(), "native400");
+    await test.info().attach("browse-journey-native400", {body: JSON.stringify({...result, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, qualification: "local-packaged-fixture-native400"}), contentType: "application/json"});
+    await page.getByRole("button", {name: "Assets", exact: true}).click();
+    await expect(page.getByRole("heading", {name: "Assets", exact: true})).toBeVisible();
+    await completeAssetAuthoringJourney(page, "packaged-desktop", {kind: "document-reload", reload: async () => {
+      await page.reload(); await applyOwnedDesktopNativeZoom(app, page);
+      await page.getByRole("button", {name: "Assets", exact: true}).click();
+    }}, async (input, currentPage) => currentPage.evaluate(readDesktopPublishedDefinition, input), test.info(), "native400");
+  }, () => closeDesktopAndQualifyOwnedWorkers(app, cache, test.info()));
 });
