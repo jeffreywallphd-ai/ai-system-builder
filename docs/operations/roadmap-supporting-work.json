@@ -5999,6 +5999,80 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "desktop-image-navigation-draft-and-ownership",
+      "work_criteria": [
+        "focused-remount-regression-and-fix",
+        "bounded-private-owner-workspace-state",
+        "source-docs-and-current-census",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "3994764f1afdb6d08e849d9bf543bc0a8ab857d0c71d980c12159c1a112d50bf",
+      "review_digest": "b4891032e7f8f30a19fdb529857892bb3458c2519a8d53ed606042953d3f2c84",
+      "scope": "Desktop keeps an unsent image form when you leave the page and return in the same workspace and client context. Six cache checks and 64 mounted interface tests passed. Drafts stay only in memory. Unsent drafts do not survive a full page reload. Real generation, task recovery after reload, shutdown and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "desktop-image-navigation-draft-and-ownership",
+      "work_criteria": [
+        "focused-remount-regression-and-fix",
+        "bounded-private-owner-workspace-state",
+        "source-docs-and-current-census",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "3994764f1afdb6d08e849d9bf543bc0a8ab857d0c71d980c12159c1a112d50bf",
+      "review_digest": "b4891032e7f8f30a19fdb529857892bb3458c2519a8d53ed606042953d3f2c84",
+      "scope": "Desktop keeps an unsent image form when you leave the page and return in the same workspace and client context. Six cache checks and 64 mounted interface tests passed. Drafts stay only in memory. Unsent drafts do not survive a full page reload. Real generation, task recovery after reload, shutdown and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "comfyui-host-explicit-no-install-policy",
+      "work_criteria": [
+        "strict-default-preserving-policy",
+        "both-hosts-and-related-supervisor-behavior",
+        "reviewed-feature-checkpoint-and-honest-gaps"
+      ],
+      "receipt_digest": "a39a60b6835b2adc9d5facb674790bd53c07d2554e1f3c68a3762ec3b79d6511",
+      "review_digest": "10b69dfe575b05a3b74d9717ae9806046d3981dfa6dc90c8b3e1420cd734aa75",
+      "scope": "Desktop and server can disable automatic ComfyUI installation and repair. They still check the managed installation before startup. The default path stays unchanged. 29 focused checks, 4 routing checks, the server build and scoped gates passed. Actual generation, process shutdown and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "comfyui-host-explicit-no-install-policy",
+      "work_criteria": [
+        "strict-default-preserving-policy",
+        "both-hosts-and-related-supervisor-behavior",
+        "reviewed-feature-checkpoint-and-honest-gaps"
+      ],
+      "receipt_digest": "a39a60b6835b2adc9d5facb674790bd53c07d2554e1f3c68a3762ec3b79d6511",
+      "review_digest": "10b69dfe575b05a3b74d9717ae9806046d3981dfa6dc90c8b3e1420cd734aa75",
+      "scope": "Desktop and server can disable automatic ComfyUI installation and repair. They still check the managed installation before startup. The default path stays unchanged. 29 focused checks, 4 routing checks, the server build and scoped gates passed. Actual generation, process shutdown and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

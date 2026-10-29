@@ -12930,6 +12930,28 @@
           "The test code passed focused checks. Real training and resource or process-cleanup checks still need the scheduled run. Accepted model accuracy checks will not run again."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5c38485506a4f0965ce1703edc78a99c0c20e4903c6c67b7d9a7d5c2dd1c3a8a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop image form now keeps unsent changes when you leave the page and return. Tests confirmed that workspaces and replacement clients keep separate drafts.",
+          "Drafts stay in memory and do not survive a full page reload. Real generation, task recovery after reload and shutdown checks are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "47a702304b1319cff55d4a2aad434cfbaab58c851316c6373d1c987b2557076a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and server can now disable automatic image runtime installation and repair. They still check the managed installation before starting it, and the normal startup path stays the same.",
+          "Focused tests and the server build passed. Real image generation and process shutdown checks are still pending."
+        ]
+      }
     }
   ]
 }

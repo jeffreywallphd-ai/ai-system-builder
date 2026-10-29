@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "74360b551507b90986969778e314fef93199562f",
+ "source_baseline": "937de667124e245215c7f23cbe31421a2a30d551",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -602,7 +602,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "fe9d857f4a2a4d32fbaec6134765934daf79afbdd60e6ce6a7c6d8900ed61c6b"
+   "committed_sha256": "acf8fb82453000a5fd3a1fa090075fcde0925d0982cf2ba548db61de7bd30914"
   },
   {
    "path": "apps/desktop/src/renderer/features/models/hooks/useModelTrainingFeature.ts",
@@ -13083,7 +13083,81 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "768fa73fd801716300f7aad27c4ec43f21f71e98b969576dde01027e4f44d168"
+   "committed_sha256": "d279c50140fdd9ad967ecc0a947d546395b2c7b6295011bddbc78e9a68aff9ff"
+  },
+  {
+   "path": "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
+   "facts": {
+    "sha256": "04f012fda1135e05a3458e4fc1f2c35dd48532a784eb0e73e4df10e20038bdd3",
+    "bytes": 11449,
+    "cases": [
+     {
+      "name": "ComfyUI host startup preserves the default and explicit enabled policy",
+      "line": 11
+     },
+     {
+      "name": "malformed host policy denies without echoing the supplied value",
+      "line": 17
+     },
+     {
+      "name": "a composed policy is a scalar snapshot, independent of later environment changes",
+      "line": 25
+     },
+     {
+      "name": "disabled host policy starts only the owned child and never invokes installation or repair",
+      "line": 122
+     },
+     {
+      "name": "no-install admission reads only the exact managed target, root and official source",
+      "line": 155
+     },
+     {
+      "name": "missing, unconfirmed or mismatched managed metadata denies without starting or repairing",
+      "line": 170
+     },
+     {
+      "name": "status read failures stay fixed and do not disclose provider errors",
+      "line": 192
+     }
+    ],
+    "dynamicCases": 1,
+    "functions": [
+     {
+      "name": "visit",
+      "line": 56
+     },
+     {
+      "name": "installedStatus",
+      "line": 150
+     }
+    ],
+    "assertionCount": 52,
+    "assertionDigest": "3cb2f3569fb00e95a03781f702d434ca4c8b32a9daa0d71d3ab503659cb2cde8",
+    "assertionExamples": [
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "0bfdd2a37cd67491aa7b1ae0c28285ffd8b9ff1dd21c61959a999dcd6c162802"
+     },
+     {
+      "line": 13,
+      "kind": "assert",
+      "sha256": "7338b0eae205525a71c8fa37d9e70c8bd58acd8fa42e648818097eedf01091dd"
+     },
+     {
+      "line": 14,
+      "kind": "assert",
+      "sha256": "7b0f8ff9ed83edadd6ae34e8e5fbfab5d55fe8a2a372f18a1cf88e2a55fa019b"
+     },
+     {
+      "line": 19,
+      "kind": "assert",
+      "sha256": "2771b353765829d5f19731d2669056e633130ba29f430f5ef354d0c727e1a509"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "04f012fda1135e05a3458e4fc1f2c35dd48532a784eb0e73e4df10e20038bdd3"
   }
  ],
  "scenarios": [
@@ -14317,7 +14391,8 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts"
      ]
     }
    ],

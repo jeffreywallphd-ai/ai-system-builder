@@ -128,6 +128,15 @@ test("checks the current repository map against original scope and actual source
   const imageDraft=map.sources.find(s=>s.path==="apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx");
   assert(imageDraft.facts.cases.some(c=>c.name==="retains the same owned image form after a page remount without starting a task"));
   assert(imageDraft.facts.cases.some(c=>c.name==="isolates workspace and client drafts and refuses retired form callbacks"));
+  for(const name of [imageDraft.path,"apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx"]) {
+    const row=map.sources.find(s=>s.path===name);assert.equal(row.facts.sha256,row.committed_sha256,"Reviewed image assertions bind to their actual commit.");
+  }
+  const managedStart="modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts";
+  const managedFacts=map.sources.find(s=>s.path===managedStart);
+  assert(managedFacts.facts.cases.some(c=>c.name==="no-install admission reads only the exact managed target, root and official source"));
+  assert(managedFacts.facts.cases.some(c=>c.name==="missing, unconfirmed or mismatched managed metadata denies without starting or repairing"));
+  assert.equal(managedFacts.facts.sha256,managedFacts.committed_sha256);
+  assert(map.scenarios.find(s=>s.id==="image-generation-recovery").behavior_links[2].assertion_sources.includes(managedStart));
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));
