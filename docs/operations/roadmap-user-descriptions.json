@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -11214,7 +11214,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -12895,6 +12895,39 @@
           "The agent fixed Settings errors, late replies and misleading save messages.",
           "Both app versions use the same field controls. Focused tests, source checks and the thin-client build passed.",
           "Running-app and final checks remain pending. Saved model accuracy results stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "960ee02906097eaae6137bfaaa7739213ea5190128e2fe4fa61777553788200e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Three browser tests passed on the local review site. They checked roadmap and work links, refresh recovery, and theme or storage failures.",
+          "These results cover the review site. They do not show that the product apps passed their final tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "da77d2abd2a2b104aae1be759436cad37d484c67d2b4ebf572b9e717761b0cf1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a browser test to import one authorized website page and reopen its raw and readable files.",
+          "The test code passed focused checks. The test still needs to run against a real page."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "12e802cbcd83360483324c0d804d5d37304aee3a9eb51e5b89c06e25dedbb42f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a Desktop test to train one small local adapter, review it privately, save it, and reopen the same model.",
+          "The test code passed focused checks. Real training and resource or process-cleanup checks still need the scheduled run. Accepted model accuracy checks will not run again."
         ]
       }
     }

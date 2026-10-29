@@ -2250,7 +2250,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2269,7 +2269,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -5881,6 +5881,120 @@
       "receipt_digest": "10ba5da2703cf82b34801f80bb9cb56e583d96acef1e41cd7377f80ccc8cc22a",
       "review_digest": "9b394a270766c2b7bdc58aef33d3a64db8d805484652230d6e95f85affbf1af7",
       "scope": "Reviewed Settings recovery and shared fields. Labels focus real controls. HTTP refusals, malformed data and late replies cannot report success. Save and Clear confirm the returned public value; secret checks use masked state. The 104 focused tests, selected source checks, thin build and scoped gates passed. Actual host and final checks remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "review-site-ui-regressions",
+      "work_id": "review-site-browser-journey-qualified",
+      "work_criteria": [
+        "meaningful-read-only-browser-workflow",
+        "bounded-private-free-browser-boundary",
+        "truthful-coverage-and-finite-routing",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "2d34836beb91944ad94465462be2723c6c4475c65f4e153d85761b41612a074c",
+      "review_digest": "4c6916f5fbacf908ae7643c81ee9a878b9b3f97b8c76d04859d02fd821d1a63b",
+      "scope": "Three real read-only Chrome journeys passed for the local review site: roadmap and work links, refresh recovery, and theme or storage failures. Focused fixtures, selected source checks and scoped gates also passed. These checks cover the review site only. Product app, provider, hardware, native and final qualification stay separate.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "review-site-browser-journey-qualified",
+      "work_criteria": [
+        "meaningful-read-only-browser-workflow",
+        "bounded-private-free-browser-boundary",
+        "truthful-coverage-and-finite-routing",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "2d34836beb91944ad94465462be2723c6c4475c65f4e153d85761b41612a074c",
+      "review_digest": "4c6916f5fbacf908ae7643c81ee9a878b9b3f97b8c76d04859d02fd821d1a63b",
+      "scope": "Three real read-only Chrome journeys passed for the local review site: roadmap and work links, refresh recovery, and theme or storage failures. Focused fixtures, selected source checks and scoped gates also passed. These checks cover the review site only. Product app, provider, hardware, native and final qualification stay separate.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "website-host-acquisition-and-census",
+      "work_criteria": [
+        "meaningful-host-workflow",
+        "bounded-authorized-prerequisites",
+        "finite-routing-and-history",
+        "focused-owned-checkpoint"
+      ],
+      "receipt_digest": "edaa1f7d68e31f83a8685663cebe8381ae482b427bd204e833196261274e9510",
+      "review_digest": "3e6bc30b8a6bc30a6d94c2d37fc725f82e88b9fade8a0675660c8f768d41f1fd",
+      "scope": "Reviewed website test code uses one explicitly authorized HTTPS page, checks raw and readable artifacts, and reopens the same workspace records. Focused fixtures, selected builds and types, one collected host case and scoped checks passed. The website journey has not run against a real page. This support does not grant a parent pass.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "website-host-acquisition-and-census",
+      "work_criteria": [
+        "meaningful-host-workflow",
+        "bounded-authorized-prerequisites",
+        "finite-routing-and-history",
+        "focused-owned-checkpoint"
+      ],
+      "receipt_digest": "edaa1f7d68e31f83a8685663cebe8381ae482b427bd204e833196261274e9510",
+      "review_digest": "3e6bc30b8a6bc30a6d94c2d37fc725f82e88b9fade8a0675660c8f768d41f1fd",
+      "scope": "Reviewed website test code uses one explicitly authorized HTTPS page, checks raw and readable artifacts, and reopens the same workspace records. Focused fixtures, selected builds and types, one collected host case and scoped checks passed. The website journey has not run against a real page. This support does not grant a parent pass.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "desktop-training-host-typed-journey",
+      "work_criteria": [
+        "actual-training-review-persistence",
+        "bounded-offline-prerequisites-and-launch",
+        "finite-coverage-and-current-census",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "3f28cac91f7e6234925ce8f65cd1cea24e34be4979ebda74f9ab8547ede64a2e",
+      "review_digest": "d672f2b8d725f35835f64cfb7b3d3756914d7a532365ac8d6c05e7c742b983c1",
+      "scope": "Reviewed Desktop test code selects verified local inputs, runs one bounded LoRA step through the production task, holds output private until Save, and reopens the exact saved record. Focused fixtures, selected source checks, one collected host case and scoped gates passed. Real training, resource and native checks remain pending. Accepted model accuracy stays closed.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "desktop-training-host-typed-journey",
+      "work_criteria": [
+        "actual-training-review-persistence",
+        "bounded-offline-prerequisites-and-launch",
+        "finite-coverage-and-current-census",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "3f28cac91f7e6234925ce8f65cd1cea24e34be4979ebda74f9ab8547ede64a2e",
+      "review_digest": "d672f2b8d725f35835f64cfb7b3d3756914d7a532365ac8d6c05e7c742b983c1",
+      "scope": "Reviewed Desktop test code selects verified local inputs, runs one bounded LoRA step through the production task, holds output private until Save, and reopens the exact saved record. Focused fixtures, selected source checks, one collected host case and scoped gates passed. Real training, resource and native checks remain pending. Accepted model accuracy stays closed.",
       "limitations": [
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."

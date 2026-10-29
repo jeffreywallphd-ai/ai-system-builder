@@ -116,6 +116,14 @@ test("checks the current repository map against original scope and actual source
   assert.deepEqual(map.scenarios.find(s=>s.id==="desktop-model-training").host_definitions,[training]);
   assert(map.sources.find(s=>s.path===training).facts.cases.some(c=>c.name==="packaged desktop trains one local adapter, reviews privately, saves and reopens it"));
   assert(map.sources.find(s=>s.path===training).facts.modifiers.length>0,"Unready real inputs keep training execution pending.");
+  for(const name of [training,website,"dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]) {
+    const source=map.sources.find(s=>s.path===name);assert.equal(source.facts.sha256,source.committed_sha256,"Known reviewed host source is bound to its actual commit.");
+  }
+  for(const [id,stem] of [["contributor-review-site","review-site"],["website-acquisition-refresh","website-acquisition"],["desktop-model-training","model-training"]]) {
+    const source=`dev-tools/scripts/qualification/tests/${stem}-oracles.unit.test.ts`;
+    const row=map.sources.find(s=>s.path===source);assert(row&&row.facts.assertionCount>0);assert.equal(row.facts.sha256,row.committed_sha256);
+    assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));
+  }
   for(const id of ["image-generation-create-and-register","image-generation-recovery"])assert.deepEqual(map.scenarios.find(s=>s.id===id).host_definitions,[]);
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);

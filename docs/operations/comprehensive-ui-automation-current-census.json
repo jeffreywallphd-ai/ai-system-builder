@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "b87724c58e691189e286064b1941760064345adf",
+ "source_baseline": "74360b551507b90986969778e314fef93199562f",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -8275,7 +8275,7 @@
      }
     ]
    },
-   "committed_sha256": "f1018818ffb592769eb62ed037f31b2d4840399ce88d210fabaeaf3fb4942055"
+   "committed_sha256": "ffd95e1ff5b6fa82953a8d988cff194af0027ccaf9cc98032abf9e7e8aa9e86e"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -8789,7 +8789,7 @@
      }
     ]
    },
-   "committed_sha256": "ccad6db9d99eb8b0707dccd1a7d3f065115bff9872821275f9b9d19648f72269"
+   "committed_sha256": "5d4de333f286bbaf272428367df9ed3220f195f18b9117665fac7860f349c2ce"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
@@ -8967,7 +8967,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "6eb0f05b2d104358e3cf6685b949ff5d424f4e56b7a68053db467a4169b6b8ee"
+   "committed_sha256": "bac6ffcb712c2fa424baaf0e7e8b333bce4d90dc9ffa7c57d7ec91bb514a9116"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -12342,6 +12342,622 @@
     "modifiers": []
    },
    "committed_sha256": "760b890a02c727013816e98b4f121201ea960c2d7984e6c645082fe482b5b3de"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+   "facts": {
+    "sha256": "e4d72c2cb6906928bf441ba3787e7adb0c03ef6d6eee294438bb496ecf0ff67a",
+    "bytes": 16126,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "readReviewRoute",
+      "line": 12
+     },
+     {
+      "name": "qualifyReviewSiteBrowser",
+      "line": 42
+     },
+     {
+      "name": "read",
+      "line": 47
+     },
+     {
+      "name": "step",
+      "line": 73
+     },
+     {
+      "name": "openCanonical",
+      "line": 95
+     }
+    ],
+    "assertionCount": 34,
+    "assertionDigest": "14e16cfa3fe2964c6695a25f20adb2715c1ba6bdcb5f23aa3e77b5d9082612a0",
+    "assertionExamples": [
+     {
+      "line": 97,
+      "kind": "expect",
+      "sha256": "c79960b515019279746fb34a5365467699de0147591bed4be066b5898c0db192"
+     },
+     {
+      "line": 98,
+      "kind": "expect",
+      "sha256": "bdb3101623f4d31b34e972482c4b790583ad5472497b6ec2c88331430abcfaff"
+     },
+     {
+      "line": 103,
+      "kind": "expect",
+      "sha256": "e8d535ab3d7b2cec16e2aea13930182ba74b6f93e51b895c4dc2c0ad3107a5d2"
+     },
+     {
+      "line": 104,
+      "kind": "expect",
+      "sha256": "8eaafb24b6ee8dfaee5b9acac22e3bd109e8c25e93979a54101cf3a5f9272b87"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "e4d72c2cb6906928bf441ba3787e7adb0c03ef6d6eee294438bb496ecf0ff67a"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
+   "facts": {
+    "sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e",
+    "bytes": 14492,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "deny",
+      "line": 26
+     },
+     {
+      "name": "field",
+      "line": 27
+     },
+     {
+      "name": "array",
+      "line": 33
+     },
+     {
+      "name": "id",
+      "line": 45
+     },
+     {
+      "name": "hash",
+      "line": 49
+     },
+     {
+      "name": "reviewRepositoryId",
+      "line": 53
+     },
+     {
+      "name": "allowReviewSiteRequest",
+      "line": 59
+     },
+     {
+      "name": "parseReviewSiteJson",
+      "line": 67
+     },
+     {
+      "name": "verifyReviewSiteStatus",
+      "line": 73
+     },
+     {
+      "name": "captureReviewProjection",
+      "line": 92
+     },
+     {
+      "name": "reviewRouteMaximum",
+      "line": 157
+     },
+     {
+      "name": "assertReviewRequirementText",
+      "line": 161
+     },
+     {
+      "name": "captureReviewSiteReply",
+      "line": 169
+     },
+     {
+      "name": "reviewBrowserPhases",
+      "line": 185
+     },
+     {
+      "name": "reviewBrowserReport",
+      "line": 188
+     }
+    ],
+    "assertionCount": 0,
+    "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "assertionExamples": [],
+    "modifiers": []
+   },
+   "committed_sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+   "facts": {
+    "sha256": "1568ceef4d7dce87f07ae552142231b1b5feab2f1c316a7a3659f1d8daf82bf5",
+    "bytes": 12372,
+    "cases": [
+     {
+      "name": "matches canonical repository strings including Windows slashes, Unicode and LF",
+      "line": 15
+     },
+     {
+      "name": "admits only exact fixed-origin GET routes without credentials or redirects",
+      "line": 19
+     },
+     {
+      "name": "bounds UTF8/JSON reads and keeps malformed response content out of errors",
+      "line": 26
+     },
+     {
+      "name": "denies a wrong server identity or malformed status without invoking accessors",
+      "line": 32
+     },
+     {
+      "name": "captures independent ordered records and linked work without promoting support",
+      "line": 39
+     },
+     {
+      "name": "rejects malformed, duplicate, foreign and missing required canonical records",
+      "line": 47
+     },
+     {
+      "name": "reports only closed phase labels; failed, incomplete and cleanup failures never pass",
+      "line": 67
+     },
+     {
+      "name": "checks every required bullet in order, including later and nested requirements",
+      "line": 79
+     },
+     {
+      "name": "admits exact bounded live replies and denies changed assets or weakened headers",
+      "line": 85
+     },
+     {
+      "name": "redacts initial Page-port sync and async failures, including falsy rejection reasons",
+      "line": 97
+     },
+     {
+      "name": "retains fixed primary and cleanup facts when report publication also fails",
+      "line": 109
+     },
+     {
+      "name": "refuses an unknown case before key coercion, Page reads or report callbacks",
+      "line": 114
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [],
+    "assertionCount": 54,
+    "assertionDigest": "2360b2f80333b602018af22126c0519d70b5422e5bbae714725df3ab3bf8cc42",
+    "assertionExamples": [
+     {
+      "line": 16,
+      "kind": "assert",
+      "sha256": "8c5c43b07d532412cc2823b1ca3c1b86613a70c7ab3a0d964001e1af1ccb3fe3"
+     },
+     {
+      "line": 17,
+      "kind": "assert",
+      "sha256": "006e2f135e7d7d61d78f2b74b39b9a8c8743869dcd76e1e7e752a15627dba430"
+     },
+     {
+      "line": 20,
+      "kind": "assert",
+      "sha256": "f399e183681df52c7957d63fd57f2e5dd2e4925c3d269807f0f4b8cb7fe32c0e"
+     },
+     {
+      "line": 21,
+      "kind": "assert",
+      "sha256": "8cf5599dc96eb77e9db6b0f6f08896c37208f2f3c286a4e536dbb9fd649b3281"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "1568ceef4d7dce87f07ae552142231b1b5feab2f1c316a7a3659f1d8daf82bf5"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+   "facts": {
+    "sha256": "81be8472fd6c473ad40314a7336b16e7b4ca765e1d8542627fec44cc3a7e3158",
+    "bytes": 7803,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "createWebsiteQualificationWorkspace",
+      "line": 4
+     },
+     {
+      "name": "qualifyWebsiteAcquisitionJourney",
+      "line": 24
+     },
+     {
+      "name": "step",
+      "line": 29
+     },
+     {
+      "name": "reopen",
+      "line": 40
+     }
+    ],
+    "assertionCount": 30,
+    "assertionDigest": "38ac96f13c5eb6401705b449b2b5ec77a96e5ae68c548fecbece994e8217b7c0",
+    "assertionExamples": [
+     {
+      "line": 8,
+      "kind": "expect",
+      "sha256": "56021b288c71b69a730fabfdfc5efdf4c719a9e661db6a82b56364662164d38d"
+     },
+     {
+      "line": 15,
+      "kind": "expect",
+      "sha256": "0d384b5b6f11ee7b0891a02fabcdf46745caaf6ace6be841ad88a8133bab104f"
+     },
+     {
+      "line": 16,
+      "kind": "expect",
+      "sha256": "3ef1397a481a5d9c18c1c64b9da1d5a11c46656bcc1718e7c404b1ac5b5dc40f"
+     },
+     {
+      "line": 17,
+      "kind": "expect",
+      "sha256": "4b6515273dfc325262116d5fdc5977cc6fbe89545407e9aa3753d9f72a798427"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "81be8472fd6c473ad40314a7336b16e7b4ca765e1d8542627fec44cc3a7e3158"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts",
+   "facts": {
+    "sha256": "b951e3fce1fc701a0f8061ac21825b8776857a6fdd8c6a190fac63fa037facf1",
+    "bytes": 5131,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "denseStrings",
+      "line": 13
+     },
+     {
+      "name": "readWebsiteHostFixture",
+      "line": 27
+     },
+     {
+      "name": "websiteWorkspace",
+      "line": 51
+     },
+     {
+      "name": "websiteArtifactPair",
+      "line": 55
+     },
+     {
+      "name": "websiteHostReport",
+      "line": 75
+     }
+    ],
+    "assertionCount": 0,
+    "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "assertionExamples": [],
+    "modifiers": []
+   },
+   "committed_sha256": "b951e3fce1fc701a0f8061ac21825b8776857a6fdd8c6a190fac63fa037facf1"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
+   "facts": {
+    "sha256": "502c0750fe2dcac459e4baf9258fb2aefa3d57ae90fb01d1eba28e4424dd8d8f",
+    "bytes": 7403,
+    "cases": [
+     {
+      "name": "admits an explicit bounded public synthetic declaration without treating it as authorization",
+      "line": 9
+     },
+     {
+      "name": "refuses unsafe target forms and never includes the input in its error",
+      "line": 14
+     },
+     {
+      "name": "refuses malformed schema, excess fields, unsupported markers and oversized declarations before coercion",
+      "line": 19
+     },
+     {
+      "name": "binds raw and readable artifacts to one exact workspace/source/snapshot",
+      "line": 26
+     },
+     {
+      "name": "denies foreign, duplicate, traversal, partial and mismatched output identities",
+      "line": 31
+     },
+     {
+      "name": "partial and failed phases cannot pass or claim parent qualification",
+      "line": 38
+     },
+     {
+      "name": "refuses an invalid declaration before reading the Page port",
+      "line": 45
+     },
+     {
+      "name": "initial Page and attachment failures preserve a fixed phase without private diagnostic content",
+      "line": 52
+     },
+     {
+      "name": "report and artifact admission refuse sparse, accessor, proxy and method-overridden arrays",
+      "line": 63
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [],
+    "assertionCount": 32,
+    "assertionDigest": "6cc295ddb51d7bc9f3dc218155088c0a85d072602743cce1c21f4c00d2ba6ab5",
+    "assertionExamples": [
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "86ad8f004b20eb26a99cb3aa5859d3885f2fb8d5a224d3c67b989512d39782d9"
+     },
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "82dfe66d40a89440971c8bb1b85b3e83f5a0f060274509c54fd612ea78b0a007"
+     },
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "7e791b9af8e5338e5af6d52b4adbc73f81f1357eb0c483a9760d71c94e61398f"
+     },
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "fb519b6ff4331227565786e497ce4f8bd836eb4e976cf4da2dbe73137ba4b1f2"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "502c0750fe2dcac459e4baf9258fb2aefa3d57ae90fb01d1eba28e4424dd8d8f"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+   "facts": {
+    "sha256": "57a4fd8182dff345d2a1afca48493258cc95c18f52ad6879e537a37b2a0b5852",
+    "bytes": 13336,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "readTrainingHostInventory",
+      "line": 5
+     },
+     {
+      "name": "qualifyDesktopTrainingJourney",
+      "line": 54
+     },
+     {
+      "name": "step",
+      "line": 59
+     },
+     {
+      "name": "dismissNotifications",
+      "line": 72
+     },
+     {
+      "name": "refreshInventory",
+      "line": 76
+     },
+     {
+      "name": "readSavedRecord",
+      "line": 150
+     }
+    ],
+    "assertionCount": 31,
+    "assertionDigest": "f29a4fd21abba7e62877b35fe8905042b3d0becdb98470e54669a4f3b72f6497",
+    "assertionExamples": [
+     {
+      "line": 79,
+      "kind": "expect",
+      "sha256": "8b1a4e20ddbb3cb0e7d0eed8599954f90ec5225671ee4de2974c0ecd09e03710"
+     },
+     {
+      "line": 83,
+      "kind": "expect",
+      "sha256": "3a369e3f6f97e53c268e617cdb4d3c7e929db54fa6713afe8a6bf4ee81efe9e0"
+     },
+     {
+      "line": 84,
+      "kind": "expect",
+      "sha256": "3cdd520de6cd9d84d08d16a578748f6239fdb78389806ed9e938c127e32f7dac"
+     },
+     {
+      "line": 86,
+      "kind": "expect",
+      "sha256": "9a6f81f56771d89dd1ff248930f2c7f4bbcfc0a6466ca03719b959255b1bf388"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "57a4fd8182dff345d2a1afca48493258cc95c18f52ad6879e537a37b2a0b5852"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+   "facts": {
+    "sha256": "1acc0d15367949924070176042b4a513f9aac3b341e2c585c5d02a5d8291478d",
+    "bytes": 5064,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "denseStrings",
+      "line": 16
+     },
+     {
+      "name": "trainingPublicId",
+      "line": 28
+     },
+     {
+      "name": "trainingWorkspaceId",
+      "line": 32
+     },
+     {
+      "name": "trainingDatasetIds",
+      "line": 36
+     },
+     {
+      "name": "captureTrainingHostFixture",
+      "line": 52
+     },
+     {
+      "name": "trainingHostReport",
+      "line": 70
+     }
+    ],
+    "assertionCount": 0,
+    "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "assertionExamples": [],
+    "modifiers": []
+   },
+   "committed_sha256": "1acc0d15367949924070176042b4a513f9aac3b341e2c585c5d02a5d8291478d"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+   "facts": {
+    "sha256": "30067058d5b86324686a1a5c918d88a6101224bed5243704fc51d89f247274b2",
+    "bytes": 10928,
+    "cases": [
+     {
+      "name": "the no-install delegate admits only exact declared read-only probes and pip version",
+      "line": 8
+     },
+     {
+      "name": "captures only the fixed current training declaration and detaches its dataset identities",
+      "line": 20
+     },
+     {
+      "name": "rejects stale or foreign source, workspace, base and dataset declarations",
+      "line": 26
+     },
+     {
+      "name": "closed public identities cannot contain paths, queries or coercion hooks",
+      "line": 38
+     },
+     {
+      "name": "only a dense ordered complete phase list can pass; failure never grants parent qualification",
+      "line": 44
+     },
+     {
+      "name": "unknown prerequisites cannot enter Page ports or disclose the declaration",
+      "line": 57
+     },
+     {
+      "name": "initial Page and attachment failures retain a fixed training phase without raw private errors",
+      "line": 64
+     },
+     {
+      "name": "real read-only inventory projection returns only IDs and exact base/task-owned output facts",
+      "line": 89
+     },
+     {
+      "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
+      "line": 98
+     },
+     {
+      "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
+      "line": 110
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "withInventoryPort",
+      "line": 84
+     }
+    ],
+    "assertionCount": 38,
+    "assertionDigest": "0c6af1fd8ed87c730241164f6fb12a0dbdeb27bd912de4b4835549721dd0231f",
+    "assertionExamples": [
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "e813aff1a0957fa9eee9e8f04012ee88043fc2dc64acf723c5ba9c3805521ef4"
+     },
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "1ff6d80c889e301e048d62919d5e4b5c00c46a80b3eb97007768ea50a97588e9"
+     },
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "6ddc53dfc038dab73b298dc2bdd7f42cf5b1d7a8d5dbdc1cf4d7f3810dac3a46"
+     },
+     {
+      "line": 21,
+      "kind": "assert",
+      "sha256": "cf891e7cce0ee35d3b2e10b3fda6053313cc767bb70967c00e666675055bf0d8"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "30067058d5b86324686a1a5c918d88a6101224bed5243704fc51d89f247274b2"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
+   "facts": {
+    "sha256": "3913793d46cda0faea8360fb02076209c0cac9cb401a3344b300ad34642d8fa2",
+    "bytes": 5187,
+    "cases": [
+     {
+      "name": "missing declared inputs return a pending profile before package or app startup",
+      "line": 6
+     },
+     {
+      "name": "fixed Desktop training reuses the host plan and preserves ordinary server and browser launch",
+      "line": 25
+     },
+     {
+      "name": "a literal training slot gets distinct private cache and temporary roots without touching files",
+      "line": 41
+     },
+     {
+      "name": "caller paths and other model families cannot become a launch selector",
+      "line": 49
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [],
+    "assertionCount": 27,
+    "assertionDigest": "5fb119d8f5f3f0990f9cf126ee126a2b29fdc8fa4ef0ce33db9a267b65728ff5",
+    "assertionExamples": [
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "292c35737cb11427709fdb38e9ac698123a754f51f637d4f84237f5d289702a6"
+     },
+     {
+      "line": 13,
+      "kind": "assert",
+      "sha256": "88530838ef3a3647fffe6785010dfa1c8a74a6c09ae93f49f4ff30ebab5c9b5d"
+     },
+     {
+      "line": 28,
+      "kind": "assert",
+      "sha256": "46d486f7b863dfdfdd6aabf2d33df4c93805684627a6067260012917fc3f6da4"
+     },
+     {
+      "line": 28,
+      "kind": "assert",
+      "sha256": "92670e525069e577c78a01da7e4608568697553cf2569a4a6acc47325f8a18d2"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "3913793d46cda0faea8360fb02076209c0cac9cb401a3344b300ad34642d8fa2"
   }
  ],
  "scenarios": [
@@ -12888,7 +13504,9 @@
       "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
       "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
       "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
-      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts"
+      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+      "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
      ]
     },
     {
@@ -12898,7 +13516,9 @@
       "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
       "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
       "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
-      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts"
+      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+      "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
      ]
     },
     {
@@ -12908,7 +13528,9 @@
       "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
       "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
       "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
-      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts"
+      "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+      "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
      ]
     }
    ],
@@ -13463,28 +14085,36 @@
      "behavior_index": 0,
      "assertion_sources": [
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
-      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx"
+      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
      ]
     },
     {
      "behavior_index": 1,
      "assertion_sources": [
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
-      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx"
+      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
      ]
     },
     {
      "behavior_index": 2,
      "assertion_sources": [
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
-      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx"
+      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
      ]
     },
     {
      "behavior_index": 3,
      "assertion_sources": [
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
-      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx"
+      "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
      ]
     }
    ],
@@ -14250,21 +14880,27 @@
      "behavior_index": 0,
      "assertion_sources": [
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
-      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
      ]
     },
     {
      "behavior_index": 1,
      "assertion_sources": [
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
-      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
      ]
     },
     {
      "behavior_index": 2,
      "assertion_sources": [
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
-      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+      "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
      ]
     }
    ],
