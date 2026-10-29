@@ -31,8 +31,8 @@ class UiRunEvidenceProfile(unittest.TestCase):
 
     def test_closed_extension_preserves_prior_members_and_auto_triggers(self):
         profile = self.profile()
-        self.assertEqual(len(profile["test_paths"]), 49)
-        self.assertEqual(profile["test_paths"][-3:], [
+        self.assertEqual(len(profile["test_paths"]), 56)
+        self.assertEqual(profile["test_paths"][46:49], [
             "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
             "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
             "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
@@ -87,6 +87,30 @@ class UiRunEvidenceProfile(unittest.TestCase):
                     profiles = {"operational-ui": profile, **{
                         name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"],
                                "source_paths": [source]} for name in neighbors}}
+                    config = root / CONFIG; config.parent.mkdir(parents=True, exist_ok=True)
+                    config.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
+                    ids = {check["id"] for check in catalog.plan(root, [CORE, source], required, "synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertTrue(neighbors.issubset(ids))
+                    self.assertEqual("focused-tests" in ids, generic)
+
+
+    def test_owned_run_sources_keep_exact_borrowed_and_adjacent_coverage(self):
+        sources = ['dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-import-cleanup.ts']
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
+        self.assertEqual(self.profile()["test_paths"][49:], ['dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts', 'dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts', 'dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts', 'dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts'])
+        for source in sources:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+            neighbors = {name for name, patterns in catalog.QUALIFICATION_PROFILE_PATTERNS.items()
+                         if name != "operational-ui" and any(fnmatch.fnmatchcase(source, pattern) for pattern in patterns)}
+            with self.subTest(source=source), tempfile.TemporaryDirectory(prefix="owned-run-profile-") as directory:
+                root = Path(directory)
+                for incomplete, required, generic in [(False, ["documentation"], False), (False, ["focused-tests"], True), (True, ["documentation"], True)]:
+                    profile = self.profile()
+                    if incomplete:
+                        profile["source_paths"].remove(source)
+                    profiles = {"operational-ui": profile, **{name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"], "source_paths": [source]} for name in neighbors}}
                     config = root / CONFIG; config.parent.mkdir(parents=True, exist_ok=True)
                     config.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
                     ids = {check["id"] for check in catalog.plan(root, [CORE, source], required, "synthetic-candidate")["selected"]}

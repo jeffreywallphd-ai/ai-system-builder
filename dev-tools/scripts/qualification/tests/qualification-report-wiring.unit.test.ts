@@ -11,11 +11,11 @@ function calls(source: ts.SourceFile) {
   const visit = (node: ts.Node) => { if (ts.isCallExpression(node)) found.push(node); ts.forEachChild(node, visit); };
   visit(source); return found;
 }
-function inspectFinalization(name: string, text: string) {
+function inspectFinalization(name: string, text: string, argumentCount = 4) {
   const source = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true);
   const all = calls(source), finalizers = all.filter(call => call.expression.getText(source) === "finalizeQualificationEvidence");
   assert.equal(finalizers.length, 1);
-  const finalizer = finalizers[0]!; assert.equal(finalizer.arguments.length, 4);
+  const finalizer = finalizers[0]!; assert.equal(finalizer.arguments.length, argumentCount);
   assert.equal(finalizer.arguments[0]!.getText(source), "report");
   assert.equal(finalizer.arguments[1]!.getText(source), "failures");
   let owner: ts.TryStatement | undefined;
@@ -143,4 +143,53 @@ for (const [label, change] of [
 ] as const) test(`late writer refuses ${label}`, () => {
   const [name, attachment, maximum] = lateWriters[0];
   assert.throws(() => inspectLateWriter(name, attachment, maximum, change(readFileSync(path.join(folder, name), "utf8"))));
+});
+
+test("owned tasks use one captured profile and explicit diagnostic finalization",()=>{
+  const text=readFileSync(path.join(folder,"owned-task-journey.ts"),"utf8");
+  const {source,finalizer}=inspectFinalization("owned-task-journey.ts",text,5);
+  assert.equal(finalizer.arguments[4]!.getText(source),"profile.successfulStatus");
+  const declaration=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="qualifyOwnedTaskJourney");
+  assert(declaration&&ts.isFunctionDeclaration(declaration)&&declaration.body);
+  const body=declaration.body.getText(source);
+  assert(body.indexOf("readOwnedTaskQualificationProfile(options)")<body.indexOf('page.getByLabel("Select current workspace")'));
+  assert(!body.includes("options.samples"));assert(!body.includes("options.transport"));
+  assert(body.includes("samples:profile.samples"));assert(body.includes("qualificationComplete:profile.qualificationComplete"));
+  assert(body.includes("i<profile.samples"));assert.equal(body.match(/toBeLessThanOrEqual\(2000\)/g)?.length,2);
+});
+test("both native cleanup seams catch observer disposal and use fixed failure labels",()=>{
+  for(const name of ["desktop-task-cleanup.ts","desktop-import-cleanup.ts"]){
+    const text=readFileSync(path.join(folder,name),"utf8"),source=ts.createSourceFile(name,text,ts.ScriptTarget.Latest,true),all=calls(source);
+    const finalizers=all.filter(call=>call.expression.getText(source)==="finalizeQualificationEvidence");assert.equal(finalizers.length,1);
+    assert.equal(finalizers[0]!.arguments[0]!.getText(source),"report");assert.equal(finalizers[0]!.arguments[1]!.getText(source),"errors");
+    assert(text.includes('recordFailure("observer-close",error)'));assert(text.includes("errors.map(safeQualificationFailureType)"));assert(!text.includes("error.name"));
+    assert(text.includes('flag: "wx"')||text.includes('flag:"wx"'));
+    assert(text.includes("8192"));assert(text.includes("willQuitAcknowledged"));assert(text.includes("mainExitCode"));
+  }
+});
+test("the file-import wrapper retains two cases and delegates the exact owned cleanup",()=>{
+  const text=readFileSync(path.join(folder,"packaged-desktop-ingestion.e2e.spec.ts"),"utf8"),source=ts.createSourceFile("import.ts",text,ts.ScriptTarget.Latest,true),all=calls(source);
+  assert(text.includes('from "./desktop-import-cleanup"'));assert(!text.includes("async function closeImportedFileDesktop"));
+  const phases=all.filter(call=>call.expression.getText(source)==="runOwnedRestartPhase");assert.equal(phases.length,1);
+  assert.equal(phases[0]!.arguments[1]!.getText(source).replace(/\s/g,""),"()=>closeImportedFileDesktop(app,isolated.dataRoot,test.info(),stage,mode)");
+  assert.equal(all.filter(call=>call.expression.getText(source)==="test").length,2);
+  assert.equal(all.filter(call=>call.expression.getText(source)==="test.setTimeout"&&call.arguments[0]?.getText(source)==="180_000").length,2);
+  assert(text.includes('"ingestion-native400" : "ingestion"'));
+});
+test("meaningful construction protects setup, removes owned observers and preserves purpose/replay assertions",()=>{
+  const text=readFileSync(path.join(folder,"meaningful-system-journeys.ts"),"utf8"),source=ts.createSourceFile("meaningful.ts",text,ts.ScriptTarget.Latest,true);
+  const declaration=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="buildMeaningfulSystem");
+  assert(declaration&&ts.isFunctionDeclaration(declaration)&&declaration.body);const body=declaration.body.getText(source);
+  const sequence=['try {','page.on("pageerror", pageError)','started = performance.now()','await startLongTasks(page)','measurements =','await record(measurements)','page.getByLabel("New system name")'];
+  let previous=-1;for(const step of sequence){const index=body.indexOf(step);assert(index>previous,step);previous=index;}
+  assert(body.includes('page.off("pageerror", pageError)'));assert(body.includes("__canvasLongTasks?.observer?.disconnect()"));
+  assert(body.includes("finalizeQualificationEvidence(report, failures"));assert.equal(body.match(/exercisePurpose\(preview, scenario\)/g)?.length,2);
+  assert(body.includes("assertMeaningfulSystemPreserved"));assert(body.includes('runtimeQualification: "unavailable-custom-authoring-not-qualified"'));
+});
+test("managed task setup creates and binds a distinct workspace without resetting reference data",()=>{
+  const text=readFileSync(path.join(folder,"managed-reference-tasks.e2e.spec.ts"),"utf8");
+  const steps=['new URL("/",','name:"Create new workspace"','name:"Create workspace"','toHaveCount(0)','not.toHaveValue(previousWorkspaceId)','const createdWorkspaceId','new URL("/systems",','toHaveValue(createdWorkspaceId)','qualifyOwnedTaskJourney(page'];
+  let previous=-1;for(const step of steps){const index=text.indexOf(step);assert(index>previous,step);previous=index;}
+  assert(text.includes("test.setTimeout(300000)"));assert(text.includes('QUALIFICATION_TASK_DIAGNOSTIC==="1"?1:30'));
+  assert(!/request\.(?:delete|post)|unlink|remove|resetDatabase/.test(text));
 });

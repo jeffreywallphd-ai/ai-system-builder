@@ -1834,7 +1834,14 @@
         "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
         "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
-        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py"
+        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
+        "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1938,7 +1945,19 @@
         "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
-        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py"
+        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
+        "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts",
+        "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/desktop-import-cleanup.ts",
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"
       ]
     }
   }

@@ -67,6 +67,17 @@ TESTS += [
     "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
     "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
 ]
+TESTS += [
+    "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"
+]
+
+# Fixed literal Node groups retain the twelve-file Windows argument bound.
 EXPECTED_COMMANDS = [
     [
         "node",
@@ -81,11 +92,11 @@ EXPECTED_COMMANDS = [
         "apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx",
         "apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx",
         "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
-        "modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts"
     ],
     [
         "node",
@@ -93,6 +104,15 @@ EXPECTED_COMMANDS = [
         "tsx",
         "--test",
         "--",
+        "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
         "modules/ui/shared/notifications/tests/notificationState.unit.test.ts",
         "modules/ui/shared/notifications/tests/taskObservation.unit.test.ts",
         "modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts"
@@ -119,6 +139,11 @@ EXPECTED_COMMANDS = [
         "apps/thin-client/src/tests/app-routing.ui.test.tsx",
         "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
         "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
@@ -128,24 +153,6 @@ EXPECTED_COMMANDS = [
         "modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx"
     ]
 ]
-
-# Keep the fixed 12-file Windows Node chunks. One existing Node oracle file
-# enters after the seven app files; the former twelfth file moves to chunk two.
-EXPECTED_COMMANDS[0].insert(12, "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts")
-EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
-EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts")
-
-EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts")
-
-EXPECTED_COMMANDS[0].insert(13, "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts")
-EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
-EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts")
-
-EXPECTED_COMMANDS[0].insert(13, "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts")
-EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
-EXPECTED_COMMANDS[0].insert(13, "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts")
-EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
-
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_ui_run_evidence_profile.py"])
 
@@ -158,7 +165,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 49)
+        self.assertEqual(len(self.profile()["test_paths"]), 56)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -191,7 +198,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 49)
+        self.assertEqual(len(self.profile()["test_paths"]), 56)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -217,7 +224,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 49)
+        self.assertEqual(len(self.profile()["test_paths"]), 56)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { finalizeQualificationEvidence, type QualificationEvidenceReport } from "../visual-composer/qualification-reporting";
+import { finalizeQualificationEvidence, safeQualificationFailureType, isQualificationFailureType, isOwnedCleanupFailureStage, type QualificationEvidenceReport } from "../visual-composer/qualification-reporting";
 
 async function caught(action: () => Promise<unknown>) {
   try { await action(); return undefined; } catch (error) { return error; }
@@ -67,4 +67,62 @@ test("public report facts never contain private exception text or arbitrary thro
   assert(error instanceof AggregateError); assert.equal(error.errors[0], privateFailure);
   for (const body of publicCopies) assert(!/synthetic-private-detail|synthetic-not-a-credential|message|token/.test(body));
   assert.deepEqual(Object.keys(report).sort(), ["failureStage", "status"]);
+});
+
+test("explicit diagnostic success stays diagnostic and cannot acquire qualification", async () => {
+  const report = {status:"diagnostic-passed", qualificationComplete:false}, saved: unknown[] = [];
+  await finalizeQualificationEvidence(report, [], async () => {saved.push(structuredClone(report));}, async () => undefined, "diagnostic-passed");
+  assert.deepEqual(saved, [{status:"diagnostic-passed", qualificationComplete:false}]);
+  const error = await caught(() => finalizeQualificationEvidence({...report}, [], async () => undefined, async () => undefined));
+  assert(error instanceof AggregateError);
+});
+test("a qualified report cannot borrow the diagnostic success channel", async () => {
+  const report = {status:"passed"};
+  const error = await caught(() => finalizeQualificationEvidence(report, [], async () => undefined, async () => undefined, "diagnostic-passed"));
+  assert(error instanceof AggregateError); assert.equal(report.status, "failed");
+});
+for (const failure of rejectedValues) test(`diagnostic attachment rejection remains a failure: ${rejectedValues.indexOf(failure)}`, async () => {
+  const report = {status:"diagnostic-passed", qualificationComplete:false}; let saved: unknown;
+  const error = await caught(() => finalizeQualificationEvidence(report, [], async () => {saved=structuredClone(report);}, async () => {throw failure;}, "diagnostic-passed"));
+  assert(error instanceof AggregateError); assert.deepEqual(error.errors,[failure]);
+  assert.equal((saved as typeof report).status,"failed"); assert.equal((saved as typeof report).qualificationComplete,false);
+});
+for (const invalid of [null, undefined, {}, false, "diagnostic", Symbol("status")]) test(`unknown success channel is rejected before report or callbacks: ${typeof invalid}`, async () => {
+  let reads=0, effects=0;
+  const report=new Proxy({}, {get(){reads++;throw new Error("Unexpected report read.");}}) as QualificationEvidenceReport;
+  const error=await caught(()=>finalizeQualificationEvidence(report,[],async()=>{effects++;},async()=>{effects++;},invalid as never));
+  // Undefined deliberately selects the established default argument.
+  if(invalid===undefined) {assert.equal(reads,1);assert.equal(effects,0);}
+  else {assert(error instanceof Error);assert.equal(error.message,"Unsupported qualification success status.");assert.equal(reads,0);assert.equal(effects,0);}
+});
+for (const [value,label] of [[new Error("synthetic-private"),"Error"],[new TypeError("synthetic-private"),"TypeError"],
+  [new RangeError("synthetic-private"),"RangeError"],[new SyntaxError("synthetic-private"),"SyntaxError"],
+  [new ReferenceError("synthetic-private"),"ReferenceError"],[new AggregateError([],"synthetic-private"),"AggregateError"],
+  [null,"Unknown"],[undefined,"Unknown"],[false,"Unknown"],[Symbol("synthetic-private"),"Unknown"]] as const) test(`failure type uses fixed label ${label}`,()=>{
+  assert.equal(safeQualificationFailureType(value),label);
+});
+test("error name getters and proxy traps are never invoked",()=>{
+  let calls=0;
+  const native=new Error("synthetic-private");Object.defineProperty(native,"name",{get(){calls++;throw new Error("synthetic-private-name");}});
+  assert.equal(safeQualificationFailureType(native),"Unknown");
+  const proxy=new Proxy(new Error("synthetic-private"),{get(){calls++;throw 0;},getPrototypeOf(){calls++;throw 0;},ownKeys(){calls++;throw 0;},getOwnPropertyDescriptor(){calls++;throw 0;}});
+  assert.equal(safeQualificationFailureType(proxy),"Unknown");
+  const ordinary=Object.defineProperty({},"name",{get(){calls++;throw 0;}});assert.equal(safeQualificationFailureType(ordinary),"Unknown");
+  assert.equal(calls,0);
+});
+test("only fixed own error names survive classification",()=>{
+  for(const label of ["TimeoutError","AssertionError"]) {const value=new Error("synthetic-private");value.name=label;assert.equal(safeQualificationFailureType(value),label);}
+  for(const label of ["synthetic-private-detail","x".repeat(65536),""]) {const value=new Error();value.name=label;assert.equal(safeQualificationFailureType(value),"Unknown");}
+  const value=new Error();let calls=0;
+  Object.setPrototypeOf(value,new Proxy({}, {get(){calls++;throw 0;},getPrototypeOf(){calls++;throw 0;}}));
+  assert.equal(safeQualificationFailureType(value),"Error");assert.equal(calls,0);
+});
+test("public cleanup type and stage vocabularies are finite and non-coercing",()=>{
+  for(const label of ["Error","TimeoutError","Unknown"])assert.equal(isQualificationFailureType(label),true);
+  for(const stage of ["admission","app-close","main-exit","observer-close","worker-exit","worker-list"])assert.equal(isOwnedCleanupFailureStage(stage),true);
+  let calls=0;const value=new Proxy({}, {get(){calls++;throw 0;},getPrototypeOf(){calls++;throw 0;},ownKeys(){calls++;throw 0;}});
+  for(const candidate of ["synthetic-private",null,undefined,false,Symbol("stage"),value]){
+    assert.equal(isQualificationFailureType(candidate),false);assert.equal(isOwnedCleanupFailureStage(candidate),false);
+  }
+  assert.equal(calls,0);
 });

@@ -1122,3 +1122,31 @@ Adjacent OCR and dataset profiles still run when their source rules apply; missi
 or explicit generic coverage retains its gate. Model accuracy remains separately
 closed. Task diagnostics, native cleanup, other report recovery, final HTTP byte
 budgeting and actual host/full qualification remain pending.
+
+
+## Owned-run diagnostic and cleanup reporting
+
+Task runs capture one immutable profile before UI effects: one sample remains a
+diagnostic, while 30 samples retain the existing qualification flag and timing
+thresholds. The finalizer admits the diagnostic success label only explicitly;
+ordinary callers still require passed. Unknown profiles and mutable/accessor or
+proxy inputs cannot broaden work or turn a diagnostic into qualification.
+
+Worker and file-import cleanup preserve primary, observer-disposal, attachment
+and storage failures, including empty thrown values. Public JSON uses only fixed
+type and bounded stage labels. Exception names, messages and supplied getters or
+proxy traps are not read. Native identities, acknowledgments, phase hashes,
+worker bounds, exclusive reports and actual retirement requirements remain.
+File-import cleanup is a local testable adapter with closed host/mode/stage
+admission; the two existing app journeys keep their launch, zoom and deadlines.
+
+Meaningful system construction protects listener/observer setup and final
+recording; failed cleanup cannot hide earlier UI failures. The original successful
+clock and observer/setup sequence, multi-component purpose, replay and build
+assertions remain. Managed tasks explicitly create and bind a fresh workspace
+without resetting reference data. The operational profile retains its 49 earlier
+members and adds seven fixed new/related test files, for 56. Its 22 automatic
+patterns, literal runners, twelve-file Node groups and generic/adjacent-profile
+guards remain. Focused fake ports do not qualify actual apps, native processes,
+model accuracy or final roadmap closure. Wire budgeting and final qualification
+remain pending.

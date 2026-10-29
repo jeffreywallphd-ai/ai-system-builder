@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence,type QualificationEvidenceReport} from "../qualification-reporting";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
@@ -212,13 +213,16 @@ async function exercisePurpose(dialog: Locator, scenario: MeaningfulSystemCase) 
 export async function buildMeaningfulSystem(page: Page, scenario: MeaningfulSystemCase, reopen: () => Promise<void>, record: (value: Record<string, unknown>) => Promise<void>) {
   const errors: string[] = [];
   const pageError = () => errors.push("Uncaught browser error");
-  page.on("pageerror", pageError);
-  const started = performance.now();
+  let started: number | undefined;
   const paintSamples: PaintSample[] = [];
-  await startLongTasks(page);
-  const measurements: Record<string, unknown> = { schemaVersion: "meaningful-canvas-journey-v1", scenario: scenario.id, componentKinds: scenario.elements.map(e => e.definition), sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, status: "running", phase: "create", addDurationsMs: [], paintSamples };
-  await record(measurements);
+  let measurements: (Record<string, unknown> & QualificationEvidenceReport) | undefined;
+  const failures: unknown[] = [];
   try {
+    page.on("pageerror", pageError);
+    started = performance.now();
+    await startLongTasks(page);
+    measurements = { schemaVersion: "meaningful-canvas-journey-v1", scenario: scenario.id, componentKinds: scenario.elements.map(e => e.definition), sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, status: "running", phase: "create", addDurationsMs: [], paintSamples };
+    await record(measurements);
     await page.getByLabel("New system name").fill(scenario.name);
     await page.getByRole("button", { name: "Create system", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Canvas", exact: true })).toBeVisible({ timeout: 30_000 });
@@ -303,12 +307,19 @@ export async function buildMeaningfulSystem(page: Page, scenario: MeaningfulSyst
     expect(errors).toEqual([]);
     measurements.reopenedLongTasks = await finishLongTasks(page);
     Object.assign(measurements, { status: "passed", phase: "reopened", persistedInstanceCount: persistedNodes.length, totalMs: performance.now() - started, behavior: "actual-composed-preview-controls-and-save-reopen", build: scenario.id === "conversation-interface" ? "denied-invalid-composition" : scenario.id === "request-intake" ? "denied-missing-platform-policy" : "checked-build", runtimeQualification: "unavailable-custom-authoring-not-qualified" });
-    await record(measurements);
     return { ...measurements, savedObservation };
-  } catch (error) {
-    await record({ ...measurements, status: "failed", totalMs: performance.now() - started });
-    throw error;
-  } finally { page.off("pageerror", pageError); }
+  } catch (error) { failures.push(error); }
+  finally {
+    try { await page.evaluate(() => (window as any).__canvasLongTasks?.observer?.disconnect()); }
+    catch (error) { failures.push(error); }
+    try { page.off("pageerror", pageError); } catch (error) { failures.push(error); }
+    const report: Record<string,unknown> & QualificationEvidenceReport = measurements ?? {schemaVersion:"meaningful-canvas-journey-v1", scenario:scenario.id,
+      componentKinds:scenario.elements.map(element => element.definition), sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
+      status:"failed", phase:"setup", addDurationsMs:[], paintSamples};
+    if (failures.length) report.totalMs = started === undefined ? 0 : performance.now() - started;
+    await finalizeQualificationEvidence(report, failures, () => record(report), async () => undefined);
+  }
+  throw new Error("Meaningful system journey did not complete.");
 }
 
 async function observeMeaningfulSystem(page: Page, scenario: MeaningfulSystemCase, ids: Map<string, string>) {
@@ -464,6 +475,8 @@ export async function revisitMeaningfulSystems(page: Page, expected: readonly Me
     await exercisePurpose(preview, scenario);
     await preview.press("Escape");
     observations.push({ scenario: scenario.id, mode: index === 0 ? "fresh-view" : "warm-system-switch", exactSavedIdentityStructureAndProperties: true, canvasReadyMs: readyMs, longTasks: await finishLongTasks(page) });
-    await record({ schemaVersion: "meaningful-canvas-revisit-v1", status: index === meaningfulSystemCases.length - 1 ? "passed" : "running", sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, observations });
+    const report = { schemaVersion: "meaningful-canvas-revisit-v1", status: index === meaningfulSystemCases.length - 1 ? "passed" : "running", sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, observations };
+    if (report.status === "passed") await finalizeQualificationEvidence(report, [], () => record(report), async () => undefined);
+    else await record(report);
   }
 }

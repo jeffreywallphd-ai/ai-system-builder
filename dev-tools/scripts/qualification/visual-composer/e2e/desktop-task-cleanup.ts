@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence, safeQualificationFailureType, isQualificationFailureType, isOwnedCleanupFailureStage, type OwnedCleanupFailureStage} from "../qualification-reporting";
 import {expect,type TestInfo} from "@playwright/test";
 import type {ElectronApplication} from "playwright";
 import {readFile,readdir,lstat,writeFile,realpath,mkdir} from "node:fs/promises";
@@ -19,9 +20,15 @@ export async function persistOwnedHostReport(kind:"cleanup"|"worker-recovery",re
   expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   const allowed=kind==="cleanup"
-    ? ["sourceRevision","status","mainPid","launchedPid","mainExitCode","willQuitAcknowledged","cleanupMilliseconds","physicalWorkersObserved","physicalWorkersAlive","failures","failureTypes"]
+    ? ["sourceRevision","status","mainPid","launchedPid","mainExitCode","willQuitAcknowledged","cleanupMilliseconds","physicalWorkersObserved","physicalWorkersAlive","failures","failureTypes","failureStages","failureStage","finalizationStage"]
     : ["sourceRevision","scenario","transport","terminal","cleanupMilliseconds","physicalWorkersObserved","listenerRefusalObserved","transientConnectionResets"];
   expect(Object.keys(report).every(key=>allowed.includes(key))).toBe(true);
+  if(kind==="cleanup") {
+    expect(Array.isArray(report.failureTypes) && report.failureTypes.length <= 8 && report.failureTypes.every(isQualificationFailureType)).toBe(true);
+    if (report.failureStages !== undefined) expect(Array.isArray(report.failureStages) && report.failureStages.length === report.failures && report.failureStages.length <= 8 && report.failureStages.every(isOwnedCleanupFailureStage)).toBe(true);
+    if (report.failureStage !== undefined) expect(["journey","evidence-attach","evidence-save"].includes(report.failureStage as string)).toBe(true);
+    if (report.finalizationStage !== undefined) expect(["evidence-attach","evidence-save"].includes(report.finalizationStage as string)).toBe(true);
+  }
   if(kind==="worker-recovery"){
     expect(typeof report.listenerRefusalObserved).toBe("boolean");
     expect(typeof report.transientConnectionResets==="number" && Number.isSafeInteger(report.transientConnectionResets) && report.transientConnectionResets>=0).toBe(true);
@@ -51,6 +58,8 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
   const cleanupIdentity = ownedDesktopCleanupIdentity(info.project.name, info.title, phase);
   const started=performance.now(),errors:unknown[]=[];let parentPid:number|undefined,observer:Awaited<ReturnType<typeof observeOwnedNativeProcessExit>>|undefined;
   let mainExitCode:number|undefined,physicalWorkersObserved=0,launchedPid:number|undefined,willQuitAcknowledged=false;
+  const failureStages: OwnedCleanupFailureStage[] = [];
+  const recordFailure = (stage: OwnedCleanupFailureStage, error: unknown) => {failureStages.push(stage);errors.push(error);};
   const ack=path.join(cache,cleanupIdentity.acknowledgment);
   try {
     launchedPid=app.process().pid;
@@ -66,15 +75,15 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
       return process.pid;
     },ack);
     expect(rechecked).toBe(parentPid);
-  }catch(error){errors.push(error);}
-  try{await app.close();}catch(error){errors.push(error);}
+  }catch(error){recordFailure("admission",error);}
+  try{await app.close();}catch(error){recordFailure("app-close",error);}
   try{
     if(!observer)throw new Error("Owned main process was not admitted.");
     mainExitCode=(await observer.outcome).exitCode;expect(mainExitCode).toBe(0);
     const stat=await lstat(ack);expect(stat.isSymbolicLink()).toBe(false);expect(stat.size).toBeLessThanOrEqual(1024);
     expect(JSON.parse(await readFile(ack,"utf8"))).toEqual({pid:parentPid,event:"will-quit"});
     willQuitAcknowledged=true;
-  }catch(error){errors.push(error);}finally{await observer?.close();}
+  }catch(error){recordFailure("main-exit",error);}finally{try {await observer?.close();} catch(error) {recordFailure("observer-close",error);}}
   try{
     const names=(await readdir(cache)).filter(name=>/^qualification-worker-identity-[0-9]+\.json$/.test(name));
     physicalWorkersObserved=names.length;expect(names.length).toBeGreaterThan(0);expect(names.length).toBeLessThanOrEqual(4);
@@ -85,11 +94,15 @@ export async function closeDesktopAndQualifyOwnedWorkers(app:ElectronApplication
       expect(Number.isInteger(identity.pid)&&identity.pid>0).toBe(true);
       expect(identity.parentPid).toBe(parentPid);expect(name).toBe(`qualification-worker-identity-${identity.pid}.json`);
       await expect.poll(()=>{try {process.kill(identity.pid,0);return true;}catch(error){if((error as NodeJS.ErrnoException).code!=="ESRCH")throw error;return false;}},{timeout:5000}).toBe(false);
-    }catch(error){errors.push(error);}
-  }catch(error){errors.push(error);}
-  const report={sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,status:errors.length?"failed":"passed",mainPid:parentPid,launchedPid,mainExitCode,willQuitAcknowledged,cleanupMilliseconds:performance.now()-started,physicalWorkersObserved,physicalWorkersAlive:errors.length?null:0,failures:errors.length,failureTypes:errors.map(error=>error instanceof Error?error.name:"Unknown")};
-  await info.attach("desktop-owned-worker-cleanup",{body:JSON.stringify(report),contentType:"application/json"});
-  if(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID || !errors.length)await persistOwnedHostReport("cleanup",report,info,phase);
-  if(errors.length)throw new AggregateError(errors,"Desktop owned shutdown qualification failed.");
+    }catch(error){recordFailure("worker-exit",error);}
+  }catch(error){recordFailure("worker-list",error);}
+  const report={sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,status:errors.length?"failed":"passed",mainPid:parentPid,launchedPid,mainExitCode,willQuitAcknowledged,cleanupMilliseconds:performance.now()-started,physicalWorkersObserved,physicalWorkersAlive:errors.length?null:0,failures:errors.length,failureTypes:errors.map(safeQualificationFailureType),failureStages};
+  try {
+    await finalizeQualificationEvidence(report, errors, async () => {
+      if(process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID || !errors.length) await persistOwnedHostReport("cleanup",report,info,phase);
+    }, () => info.attach("desktop-owned-worker-cleanup",{body:JSON.stringify(report),contentType:"application/json"}));
+  } catch (error) {
+    throw new AggregateError(error instanceof AggregateError ? error.errors : [error], "Desktop owned shutdown qualification failed.");
+  }
   return report;
 }

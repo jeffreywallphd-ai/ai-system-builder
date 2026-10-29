@@ -1,9 +1,30 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, type Page, type TestInfo } from "@playwright/test";
+import {types as nodeTypes} from "node:util";
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { captureInitialProgress, progressVisibilityDelay, terminalVisibilityDelay } from "../task-visibility-measurement";
 
 type Operation="start"|"read"|"list"|"cancel"|"complete";
+
+export interface OwnedTaskQualificationProfile {
+  readonly samples: 1 | 30;
+  readonly transport: "thin-http" | "desktop-ipc";
+  readonly successfulStatus: "passed" | "diagnostic-passed";
+  readonly qualificationComplete: boolean;
+}
+
+export function readOwnedTaskQualificationProfile(value: unknown): OwnedTaskQualificationProfile {
+  const refuse = () => { throw new Error("Unsupported owned task qualification profile."); };
+  if (typeof value !== "object" || value === null || nodeTypes.isProxy(value) || Object.getPrototypeOf(value) !== Object.prototype) return refuse();
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== 2 || !keys.every(key => key === "samples" || key === "transport")) return refuse();
+  const samples = Object.getOwnPropertyDescriptor(value, "samples"), transport = Object.getOwnPropertyDescriptor(value, "transport");
+  if (!samples || !("value" in samples) || (samples.value !== 1 && samples.value !== 30) ||
+      !transport || !("value" in transport) || (transport.value !== "thin-http" && transport.value !== "desktop-ipc")) return refuse();
+  return Object.freeze({samples: samples.value, transport: transport.value,
+    successfulStatus: samples.value === 30 ? "passed" : "diagnostic-passed", qualificationComplete: samples.value === 30});
+}
 export async function taskOperation(page:Page,operation:Operation,input:Record<string,unknown>) {
   if (!["start", "read", "list", "cancel", "complete"].includes(operation)) throw new Error("Unsupported owned task operation.");
   const response=await page.evaluate(async({operation,input})=>{
@@ -60,17 +81,19 @@ async function showNotifications(page:Page) {
 /** Real host API/IPC tasks, real shared observers and rendered notifications.
  * The worker is a fixed synthetic transport fixture, never inference evidence. */
 export async function qualifyOwnedTaskJourney(page:Page,info:TestInfo,options:{samples:number; transport:"thin-http"|"desktop-ipc"}) {
+  const profile = readOwnedTaskQualificationProfile(options);
   const workspaceId=await page.getByLabel("Select current workspace").inputValue();
   expect(workspaceId).toMatch(/^workspace\./);
   const run=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!; expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
   const folder=path.resolve("artifacts/qualification/visual-composer/runs",run,"owned-tasks",info.project.name);
   await mkdir(folder,{recursive:true});
-  const report={schemaVersion:"owned-task-host-journey-v1",sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,host:info.project.name,transport:options.transport,fixture:"observed-download-4500ms-no-model-weights",samples:options.samples,progressVisibilityMilliseconds:[] as number[],terminalVisibilityMilliseconds:[] as number[],requestIds:[] as string[],checks:[] as string[],status:"running",qualificationComplete:options.samples===30};
+  const report={schemaVersion:"owned-task-host-journey-v1",sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,host:info.project.name,transport:profile.transport,fixture:"observed-download-4500ms-no-model-weights",samples:profile.samples,progressVisibilityMilliseconds:[] as number[],terminalVisibilityMilliseconds:[] as number[],requestIds:[] as string[],checks:[] as string[],status:"running",qualificationComplete:profile.qualificationComplete};
   const save=()=>writeFile(path.join(folder,"evidence.json"),JSON.stringify(report,null,2)+"\n");
   await save();
+  const failures: unknown[] = [];
   const start=(displayName:string)=>taskOperation(page,"start",{workspaceId,provider:"huggingface",modelId:"qualification/controlled-chat",displayName,inferenceMode:"chat",taskTags:["text-generation"],artifactForm:"full-model"});
   try {
-    for(let i=0;i<options.samples;i++) {
+    for(let i=0;i<profile.samples;i++) {
       const title=`Reference owned task ${i}`;
       const started=await start(title); const requestId=started.activity.requestId;
       expect(started.activity.status).toMatch(/queued|running/); report.requestIds.push(requestId);
@@ -130,7 +153,7 @@ export async function qualifyOwnedTaskJourney(page:Page,info:TestInfo,options:{s
     await expect(restored).toHaveCount(1);
     await expect(restored).toContainText("Model download completed.");
     report.checks.push("workspace-change-fences-old-results","return-reconciles-authoritative-task");
-    if(options.transport==="thin-http") {
+    if(profile.transport==="thin-http") {
       const reconnect=await start("Reference reconnect");
       await page.reload();
       panel=await showNotifications(page);
@@ -151,7 +174,10 @@ export async function qualifyOwnedTaskJourney(page:Page,info:TestInfo,options:{s
     const percentile=(values:number[])=>[...values].sort((a,b)=>a-b)[Math.ceil(values.length*.95)-1]!;
     expect(percentile(report.progressVisibilityMilliseconds)).toBeLessThanOrEqual(2000);
     expect(percentile(report.terminalVisibilityMilliseconds)).toBeLessThanOrEqual(2000);
-    report.status=options.samples===30?"passed":"diagnostic-passed";
-    await info.attach("owned-task-journey",{body:JSON.stringify(report),contentType:"application/json"});
-  } finally {if(report.status==="running")report.status="failed";await save();}
+    report.status=profile.successfulStatus;
+  } catch (error) { failures.push(error); }
+  finally {
+    await finalizeQualificationEvidence(report, failures, save,
+      () => info.attach("owned-task-journey", {body:JSON.stringify(report), contentType:"application/json"}), profile.successfulStatus);
+  }
 }
