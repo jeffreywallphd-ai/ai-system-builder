@@ -180,3 +180,4 @@ finite native model/tokenizer support, pre-supplier PEFT discovery denial and se
 Cached-generator ownership survives task completion; teardown cannot rematerialize
 weights or declare unsupported running cancellation complete. Passive reads never
 install/load. Installed-model and native filesystem evidence remain separate.
+- Test-only Windows exit checks bind held read-only process handles through at most two parent links before app close. See `dev-tools/README.md` for launcher handling, weaker exited-fixture evidence and focused tests. These checks grant no process ownership, native/offload protection, full job-tree or model/parent qualification.

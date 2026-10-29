@@ -1882,7 +1882,9 @@
         "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py",
         "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
-        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts"
+        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -2021,7 +2023,14 @@
         "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.d.mts",
         "apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts",
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts",
-        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts"
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "dev-tools/scripts/qualification/observe_windows_process_exit.py",
+        "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
+        "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py",
+        "dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
+        "docs/operations/comprehensive-ui-automation-current-census.json",
+        "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+        "docs/context/packs/runtime.pack.md"
       ]
     },
     "comfyui-host-policy": {

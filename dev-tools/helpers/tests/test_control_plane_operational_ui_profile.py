@@ -85,6 +85,7 @@ TESTS += ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.tes
  'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py']
 
 TESTS += ['apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts']
+TESTS += ['dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py']
 
 # Exact literal commands, preserving the twelve-file Windows bound.
 EXPECTED_COMMANDS = [['node',
@@ -110,6 +111,7 @@ EXPECTED_COMMANDS = [['node',
   '--test',
   '--',
   'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts',
   'dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts',
   'dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts',
@@ -119,13 +121,13 @@ EXPECTED_COMMANDS = [['node',
   'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts',
   'modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx',
-  'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx',
-  'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx'],
+  'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx'],
  ['node',
   '--import',
   'tsx',
   '--test',
   '--',
+  'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx',
   'modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts',
   'modules/ui/shared/notifications/tests/notificationState.unit.test.ts',
@@ -190,6 +192,15 @@ EXPECTED_COMMANDS = [['node',
   '-s',
   'dev-tools/scripts/qualification/tests',
   '-p',
+  'test_observe_windows_process_exit.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
   'test_training_host_prerequisites.py'],
  [sys.executable,
   '-B',
@@ -202,11 +213,39 @@ EXPECTED_COMMANDS = [['node',
   'test_training_qualification_worker.py']]
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_owned_native_observation_has_finite_sources_and_preserves_fallback(self):
+        new = ["dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
+               "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py"]
+        self.assertEqual(self.profile()["test_paths"][63:], new)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[44:], new)
+        borrowed = ["dev-tools/scripts/qualification/observe_windows_process_exit.py",
+                    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
+                    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"]
+        for source in borrowed:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        for source in new + borrowed:
+            for incomplete, required, generic in [(False,["operational-ui"],False),
+                                                    (False,["operational-ui","focused-tests"],True),
+                                                    (True,["operational-ui"],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix="owned-native-profile-") as directory:
+                    root=Path(directory); profile=self.profile()
+                    if incomplete:
+                        profile["source_paths"].remove(source)
+                        if source in profile["test_paths"]: profile["test_paths"].remove(source)
+                    self.fixture(root,profile)
+                    ids={c["id"] for c in catalog.plan(root,[source],required,"synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui",ids);self.assertEqual("focused-tests" in ids,generic)
+        with tempfile.TemporaryDirectory(prefix="owned-native-unknown-") as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c["id"] for c in catalog.plan(root,[new[0],"dev-tools/scripts/qualification/unknown-process.py"],["operational-ui"],"synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests",ids)
+
     def test_image_draft_sources_keep_exact_coverage_and_generic_fallback(self):
         import copy
         paths = ['apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts', 'apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts', 'apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts']
-        self.assertEqual(self.profile()['test_paths'][62:], [paths[1]])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[41:], paths)
+        self.assertEqual(self.profile()['test_paths'][62:63], [paths[1]])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[41:44], paths)
         for source in paths:
             for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
                 with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='image-draft-profile-') as directory:
@@ -253,8 +292,8 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 63)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 44)
+        self.assertEqual(len(self.profile()["test_paths"]), 65)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -286,8 +325,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 63)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 44)
+        self.assertEqual(len(self.profile()["test_paths"]), 65)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -312,8 +351,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 63)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 44)
+        self.assertEqual(len(self.profile()["test_paths"]), 65)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:

@@ -137,6 +137,10 @@ test("checks the current repository map against original scope and actual source
   assert(managedFacts.facts.cases.some(c=>c.name==="missing, unconfirmed or mismatched managed metadata denies without starting or repairing"));
   assert.equal(managedFacts.facts.sha256,managedFacts.committed_sha256);
   assert(map.scenarios.find(s=>s.id==="image-generation-recovery").behavior_links[2].assertion_sources.includes(managedStart));
+  const cleanup=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts");
+  assert(cleanup.facts.cases.some(c=>c.name==="admits a live real-worker shape through its launcher before closing the app"));
+  assert(cleanup.facts.cases.some(c=>c.name==="does not downgrade refused live native admission to a PID-absence pass"));
+  assert.notEqual(cleanup.facts.sha256,cleanup.committed_sha256,"Edited assertions retain the genuine older committed binding until this owned source checkpoint is committed.");
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

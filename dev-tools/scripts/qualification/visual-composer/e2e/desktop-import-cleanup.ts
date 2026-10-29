@@ -29,10 +29,13 @@ export async function closeImportedFileDesktop(app: ElectronApplication, dataRoo
     expect((await lstat(dataRoot)).isSymbolicLink()).toBe(false);
     expect(await lstat(ack).then(() => true, error => { if (error.code === "ENOENT") return false; throw error; }), "A previous acknowledgment cannot qualify this shutdown").toBe(false);
     launchedPid = app.process().pid;
+    expect(Number.isInteger(launchedPid)&&launchedPid!>0&&launchedPid!<=0xffffffff).toBe(true);
     const identity = await app.evaluate(() => ({ pid: process.pid, ppid: process.ppid }));
     mainPid = identity.pid;
-    expect(identity.ppid).toBe(launchedPid);
-    observer = await observeOwnedNativeProcessExit(mainPid);
+    expect(Number.isInteger(mainPid)&&mainPid!>0&&mainPid!<=0xffffffff&&Number.isInteger(identity.ppid)&&identity.ppid>0&&identity.ppid<=0xffffffff).toBe(true);
+    expect(mainPid===launchedPid||identity.ppid===launchedPid).toBe(true);
+    observer = await observeOwnedNativeProcessExit(mainPid!,{rootPid:launchedPid!});
+    expect(observer.admission.parentPid).toBe(identity.ppid);
     expect(await app.evaluate(({ app }, file) => {
       const { writeFileSync } = process.getBuiltinModule("fs");
       app.once("will-quit", () => writeFileSync(file, JSON.stringify({ pid: process.pid, event: "will-quit" }), { flag: "wx" }));

@@ -6406,8 +6406,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
    "facts": {
-    "sha256": "fd579dfb2ebb89e5e36c659eebe282718f25e780f95c1c8c0152c19da7c3187a",
-    "bytes": 10490,
+    "sha256": "026b965df5a0243f265f532d9e72d444e3df3cd18c1d0559fc72c7ab43f8a804",
+    "bytes": 10509,
     "cases": [
      {
       "name": "successful publication attaches before the final passed write",
@@ -7379,8 +7379,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts",
    "facts": {
-    "sha256": "f5b93885075bb21a4dc41c7dba06e49b073ef855b8ce3e93288bd1c95362495c",
-    "bytes": 8618,
+    "sha256": "e04b77e1858e248b1fa3b2fa52263ca0c36d065e4d1cc1ecc36288b00682a646",
+    "bytes": 10847,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7401,8 +7401,8 @@
       "line": 57
      }
     ],
-    "assertionCount": 35,
-    "assertionDigest": "be1a2b65632621805537e29043cef69ee779c379b3eb6b2e7351f054049edf6c",
+    "assertionCount": 44,
+    "assertionDigest": "758893393d0a265e57b71f131f3efeb7e361d5180dc8bbf29ce5a5309e8e6d19",
     "assertionExamples": [
      {
       "line": 20,
@@ -7422,7 +7422,7 @@
      {
       "line": 27,
       "kind": "expect",
-      "sha256": "4671929eaca4f6d4eb2454b13963623ce662eb90d59b05999010613d9c232b66"
+      "sha256": "2acae33b9cae2b3667cf967f1b87a8b0d1e72dd22421db8f42c96e63ec92128b"
      }
     ],
     "modifiers": []
@@ -13158,6 +13158,170 @@
     "modifiers": []
    },
    "committed_sha256": "04f012fda1135e05a3458e4fc1f2c35dd48532a784eb0e73e4df10e20038bdd3"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+   "facts": {
+    "sha256": "33ac9403a00c99ecbcd41f0ba47de62a73c9ef5946f20284359c1899c84dffe2",
+    "bytes": 12824,
+    "cases": [
+     {
+      "name": "retains the successful owned identity and disposal checks",
+      "line": 64
+     },
+     {
+      "name": "accepts the genuine same-process launch shape with root-bound native observation",
+      "line": 72
+     },
+     {
+      "name": "retains a falsy app-close failure %#",
+      "line": 77
+     },
+     {
+      "name": "preserves close, observer disposal and attachment failures in order",
+      "line": 84
+     },
+     {
+      "name": "retains both failed storage attempts without overwriting an unknown file",
+      "line": 91
+     },
+     {
+      "name": "does not invoke or serialize exception name getters",
+      "line": 97
+     },
+     {
+      "name": "admits a live real-worker shape through its launcher before closing the app",
+      "line": 112
+     },
+     {
+      "name": "a confirmed native exit is not overridden by an unrelated process reusing that number",
+      "line": 119
+     },
+     {
+      "name": "a refused native exit remains failed without a numeric-PID polling fallback",
+      "line": 125
+     },
+     {
+      "name": "rejects a marker whose immediate parent disagrees with native observation, without rewriting it",
+      "line": 132
+     },
+     {
+      "name": "does not downgrade refused live native admission to a PID-absence pass",
+      "line": 139
+     },
+     {
+      "name": "keeps an already-exited nested worker unqualified because its ancestry cannot be observed",
+      "line": 154
+     },
+     {
+      "name": "import cleanup rejects unsupported host, mode and stage before any app or file effects",
+      "line": 160
+     },
+     {
+      "name": "cleanup persistence refuses private types and unknown stage values",
+      "line": 168
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "app",
+      "line": 38
+     },
+     {
+      "name": "info",
+      "line": 43
+     },
+     {
+      "name": "caught",
+      "line": 48
+     },
+     {
+      "name": "liveWorker",
+      "line": 106
+     }
+    ],
+    "assertionCount": 71,
+    "assertionDigest": "9177ee3bbdd12246327d8fbe3e03733c145a648587dc3566e799e8aab20055f6",
+    "assertionExamples": [
+     {
+      "line": 20,
+      "kind": "expect",
+      "sha256": "4e3f2b6a547285a681e5c4ea582cf8bc983ceb317a8230c20669f3cc53d91bf3"
+     },
+     {
+      "line": 65,
+      "kind": "expect",
+      "sha256": "42315d8a088de76c6b15791c6373ded3f76bf6597f3bf70686184fa4d6f0e7c5"
+     },
+     {
+      "line": 65,
+      "kind": "expect",
+      "sha256": "b05d2c348719ca3dc5a239e18c3f60520eca33cef83ea5c59f7f211e1ded34b0"
+     },
+     {
+      "line": 66,
+      "kind": "expect",
+      "sha256": "a6638f8e5ae296f0653d8d53ee1f453a23cd4b9b4965cb97a54f609dcf135baf"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "c3fab8bdf798769c913c6e344962830db5e6d0785f760a6f445db9364a41c8fe"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+   "facts": {
+    "sha256": "41e4cdb380af46a7a4751ef5224ea1ee781d11637a0c04acae1d78f26274a31d",
+    "bytes": 2823,
+    "cases": [
+     {
+      "name": "a previously crashed host cannot qualify shutdown, and cleanup is still attempted",
+      "line": 19
+     },
+     {
+      "name": "a previous will-quit file is rejected before main-process admission",
+      "line": 31
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "freshCache",
+      "line": 7
+     },
+     {
+      "name": "removeOwnedCache",
+      "line": 12
+     }
+    ],
+    "assertionCount": 16,
+    "assertionDigest": "71f7714730361476ca1a6bd0183bb927592d5aad910b0db9fbcbd7bc815d5ede",
+    "assertionExamples": [
+     {
+      "line": 9,
+      "kind": "assert",
+      "sha256": "2ddb2fa875056c57f44107884835799d7f392a0f4957d768cfbb251f185bbc14"
+     },
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "174a3094e362832dcd7bdf1f1368a83b3dd361b53cc5eb6ce607ed3f39b1d342"
+     },
+     {
+      "line": 13,
+      "kind": "assert",
+      "sha256": "fc6f3f1f49a80018d1ee505bd0e640f51127961983b27c95cbf8c184835dfe7a"
+     },
+     {
+      "line": 14,
+      "kind": "assert",
+      "sha256": "2ddb2fa875056c57f44107884835799d7f392a0f4957d768cfbb251f185bbc14"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "ab3ec702fc9a8544f920ca007917f445aae0a93e3e06005c56d63dce6d7cafc6"
   }
  ],
  "scenarios": [
@@ -13359,7 +13523,9 @@
       "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
       "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts",
       "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
-      "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts"
+      "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
+      "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts"
      ]
     }
    ],

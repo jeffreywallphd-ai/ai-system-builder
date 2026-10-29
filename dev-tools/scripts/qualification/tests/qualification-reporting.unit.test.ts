@@ -119,7 +119,7 @@ test("only fixed own error names survive classification",()=>{
 });
 test("public cleanup type and stage vocabularies are finite and non-coercing",()=>{
   for(const label of ["Error","TimeoutError","Unknown"])assert.equal(isQualificationFailureType(label),true);
-  for(const stage of ["admission","app-close","main-exit","observer-close","worker-exit","worker-list"])assert.equal(isOwnedCleanupFailureStage(stage),true);
+  for(const stage of ["admission","worker-admission","app-close","main-exit","observer-close","worker-exit","worker-list"])assert.equal(isOwnedCleanupFailureStage(stage),true);
   let calls=0;const value=new Proxy({}, {get(){calls++;throw 0;},getPrototypeOf(){calls++;throw 0;},ownKeys(){calls++;throw 0;}});
   for(const candidate of ["synthetic-private",null,undefined,false,Symbol("stage"),value]){
     assert.equal(isQualificationFailureType(candidate),false);assert.equal(isOwnedCleanupFailureStage(candidate),false);

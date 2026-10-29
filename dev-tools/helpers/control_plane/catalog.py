@@ -67,6 +67,8 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts",
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts",
         "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",

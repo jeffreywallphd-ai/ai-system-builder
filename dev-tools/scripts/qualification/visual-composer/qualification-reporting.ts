@@ -54,8 +54,8 @@ export function isQualificationFailureType(value: unknown): value is string {
   return value === "Unknown" || typeof value === "string" && safeErrorNames.has(value);
 }
 
-export type OwnedCleanupFailureStage = "admission" | "app-close" | "main-exit" | "observer-close" | "worker-exit" | "worker-list";
-const ownedCleanupFailureStages = new Set<unknown>(["admission", "app-close", "main-exit", "observer-close", "worker-exit", "worker-list"]);
+export type OwnedCleanupFailureStage = "admission" | "worker-admission" | "app-close" | "main-exit" | "observer-close" | "worker-exit" | "worker-list";
+const ownedCleanupFailureStages = new Set<unknown>(["admission", "worker-admission", "app-close", "main-exit", "observer-close", "worker-exit", "worker-list"]);
 export function isOwnedCleanupFailureStage(value: unknown): value is OwnedCleanupFailureStage {
   return ownedCleanupFailureStages.has(value);
 }

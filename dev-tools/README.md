@@ -888,3 +888,28 @@ only at the scheduled host qualification boundary. `--list --reporter list`
 collects the definition without running a model or opening the app. A collected
 case is not a successful host test. Outputs and caches use a fresh training slot;
 existing slots and original model files are retained.
+
+### Launcher-aware shutdown checks
+
+The Windows test observer can bind a known worker to its known test root through
+at most two parent links. It holds read-only process handles, checks creation
+order and liveness, and waits for the worker and intermediate launcher to exit.
+The root remains an ancestry anchor and is observed separately when needed.
+After native exit, a recycled process number is not treated as the old worker.
+Numeric PID absence is checked only for the weaker legacy fixture path.
+Unsupported APIs, layouts, rights, mismatched parents and incomplete frames deny
+admission. The existing PID-only mode remains available to existing callers.
+
+Desktop cleanup captures live worker handles before it closes the owned test
+app. It preserves the actual immediate parent, including a Windows Python
+launcher. An already-exited direct controlled fixture retains only the older
+PID-absence check. That limited check is not a native ownership or security pass.
+A missing live admission cannot fall back to that limited check. The public
+report identifies `worker-admission` separately and retains at most 32 fixed
+failure labels for the bounded four-worker cleanup; private errors stay private.
+
+Focused tests use portable protocol/denial fixtures and fresh inert Windows
+children. They do not load PyTorch, models, ComfyUI or the product app. These
+checks establish the helper behavior only. Actual app and complete job-tree
+shutdown, native offload protection and parent-roadmap qualification remain
+separate. Full cross-roadmap testing remains deferred by the current user request.
