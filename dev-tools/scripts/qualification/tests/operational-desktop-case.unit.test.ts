@@ -1,10 +1,10 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const probe = vi.hoisted(() => ({ existing: false, statCalls: [] as string[], calls: [] as Array<{ executable: string; argvPrefix: string[]; script: string; dataRoot: string; large: string; runAsNode: string; timeout: number; windowsHide: boolean }> }));
+const probe = vi.hoisted(() => ({ existing: false, physicalBase: undefined as string | undefined, statCalls: [] as string[], calls: [] as Array<{ executable: string; argvPrefix: string[]; script: string; dataRoot: string; large: string; runAsNode: string; timeout: number; windowsHide: boolean }> }));
 vi.mock("node:fs", () => { const lstatSync = (value: string, options: { throwIfNoEntry: boolean }) => {
   if (options.throwIfNoEntry !== false) throw new Error("Unexpected fixture stat mode.");
   probe.statCalls.push(value); return probe.existing ? {} : undefined;
-}; return { lstatSync, default: { lstatSync } }; });
+}; const realpathSync = (value: string) => probe.physicalBase ?? value; return { lstatSync, realpathSync, default: { lstatSync, realpathSync } }; });
 // Capture only fixed safe facts; never retain/dump the full inherited environment.
 vi.mock("node:child_process", () => { const spawnSync = (executable: string, argv: string[], options: { env: Record<string, string>; timeout: number; windowsHide: boolean }) => {
   const parts = argv[argv.length - 1]!.split(/[\\/]/);
@@ -15,20 +15,25 @@ import { prepareIsolatedDesktopCase } from "../visual-composer/e2e/isolated-desk
 import { applyOwnedDesktopNativeZoom } from "../visual-composer/e2e/native-desktop-zoom";
 import type { ElectronApplication, Page } from "playwright";
 const base = path.resolve("artifacts/qualification/visual-composer/d/operational-fixture");
-beforeEach(() => { probe.calls.length = 0; probe.statCalls.length = 0; probe.existing = false; vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT", base); vi.stubEnv("VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE", "synthetic-electron-node"); });
+beforeEach(() => { probe.calls.length = 0; probe.statCalls.length = 0; probe.existing = false; probe.physicalBase = undefined; vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT", base); vi.stubEnv("VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE", "synthetic-electron-node"); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("fixed operational desktop slot", () => {
-  it.each(["ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("uses a separate fresh %s slot with existing bounds",slot=>{
+  it("denies a redirected training base before identity seeding or any slot write", () => {
+    probe.physicalBase = path.resolve(".local-codex/foreign-run");
+    expect(() => prepareIsolatedDesktopCase("training")).toThrow("Training qualification requires its existing physical run root.");
+    expect(probe.calls).toEqual([]); expect(probe.statCalls).toEqual([]);
+  });
+  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("uses a separate fresh %s slot with existing bounds",slot=>{
     const result=prepareIsolatedDesktopCase(slot);expect(result.dataRoot).toBe(path.join(base,slot));
     expect(result.env.HF_HUB_CACHE).toBe(path.join(result.dataRoot,"controlled-model-cache"));
     expect(probe.statCalls).toEqual([result.dataRoot]);expect(probe.calls).toHaveLength(1);
     expect(probe.calls[0]).toMatchObject({dataRoot:result.dataRoot,large:"0",runAsNode:"1",timeout:30000,windowsHide:true,script:"visual-composer-desktop-seed.ts"});
   });
-  it.each(["ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("retains existing/dangling %s without seeding",slot=>{
+  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("retains existing/dangling %s without seeding",slot=>{
     probe.existing=true;expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("An existing operational profile requires a fresh qualification run.");
     expect(probe.statCalls).toEqual([path.join(base,slot)]);expect(probe.calls).toEqual([]);
   });
-  it.each(["ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("refuses unsafe roots and a sample index for %s",slot=>{
+  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("refuses unsafe roots and a sample index for %s",slot=>{
     expect(()=>prepareIsolatedDesktopCase(slot,0)).toThrow();
     for(const root of ["", "relative/artifacts/qualification/visual-composer/d/fixture",path.resolve(".local-codex/outside"),path.resolve("..","lookalike","artifacts/qualification/visual-composer/d/fixture")]){
       vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT",root);expect(()=>prepareIsolatedDesktopCase(slot)).toThrow();

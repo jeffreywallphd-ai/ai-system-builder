@@ -1877,7 +1877,11 @@
         "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
         "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py",
+        "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -2000,7 +2004,20 @@
         "dev-tools/config/playwright.review-site.config.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts",
-        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py",
+        "dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts",
+        "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+        "dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs",
+        "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py",
+        "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
+        "dev-tools/config/playwright.training-host.config.ts",
+        "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.d.mts"
       ]
     }
   }

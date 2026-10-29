@@ -79,95 +79,149 @@ TESTS += [
 
 TESTS += ['dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
 
-# Fixed literal Node groups retain the twelve-file Windows argument bound.
-EXPECTED_COMMANDS = [
-    [
-        "node",
-        "--import",
-        "tsx",
-        "--test",
-        "--",
-        "apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts",
-        "apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-client-boundary.unit.test.ts",
-        "apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-ui-wording.unit.test.ts",
-        "apps/desktop/src/renderer/tests/app-navigation.ui.test.tsx",
-        "apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx",
-        "apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx",
-        "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts"
-    ],
-    [
-        "node",
-        "--import",
-        "tsx",
-        "--test",
-        "--",
-        "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
-        "modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
-        "modules/ui/shared/notifications/tests/notificationState.unit.test.ts"
-    ],
-    [
-        "node",
-        "--import",
-        "tsx",
-        "--test",
-        "--",
-        "modules/ui/shared/notifications/tests/taskObservation.unit.test.ts",
-        "modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts"
-    ],
-    [
-        "node",
-        "dev-tools/helpers/run_vitest_checks.mjs",
-        "--",
-        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
-        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx",
-        "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-notification-bridge.unit.test.tsx",
-        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
-        "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/model-training-notification-bridge.unit.test.tsx",
-        "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
-        "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
-        "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
-        "apps/desktop/src/renderer/features/python-runtime/tests/use-python-runtime-footer.unit.test.tsx",
-        "apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
-        "apps/thin-client/src/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
-        "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
-        "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
-        "apps/thin-client/src/tests/app-routing.ui.test.tsx",
-        "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
-        "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
-        "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
-        "modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
-        "modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx"
-    ]
-]
-EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
-EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_ui_run_evidence_profile.py"])
+TESTS += ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py',
+ 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py']
+
+# Exact literal commands, preserving the twelve-file Windows bound.
+EXPECTED_COMMANDS = [['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-client-boundary.unit.test.ts',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-ui-wording.unit.test.ts',
+  'apps/desktop/src/renderer/tests/app-navigation.ui.test.tsx',
+  'apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx',
+  'apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx',
+  'apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts',
+  'modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts',
+  'modules/ui/shared/notifications/tests/notificationState.unit.test.ts',
+  'modules/ui/shared/notifications/tests/taskObservation.unit.test.ts',
+  'modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts'],
+ ['node',
+  'dev-tools/helpers/run_vitest_checks.mjs',
+  '--',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-notification-bridge.unit.test.tsx',
+  'apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx',
+  'apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/model-training-notification-bridge.unit.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx',
+  'apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts',
+  'apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx',
+  'apps/desktop/src/renderer/features/python-runtime/tests/use-python-runtime-footer.unit.test.tsx',
+  'apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts',
+  'apps/thin-client/src/features/image-generation/tests/use-image-generation-feature.unit.test.tsx',
+  'apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts',
+  'apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts',
+  'apps/thin-client/src/tests/app-routing.ui.test.tsx',
+  'apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx',
+  'dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts',
+  'modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx',
+  'modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx',
+  'modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/helpers/tests',
+  '-p',
+  'test_control_plane_operational_ui_profile.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/helpers/tests',
+  '-p',
+  'test_control_plane_ui_run_evidence_profile.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
+  'test_training_host_prerequisites.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
+  'test_training_qualification_worker.py']]
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_training_sources_are_finite_and_cannot_hide_unknown_impact(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts', 'dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts', 'dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs', 'dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py', 'dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py', 'dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py', 'dev-tools/config/playwright.training-host.config.ts']
+        self.assertEqual(self.profile()['test_paths'][58:], ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py'])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[29:], paths)
+        declaration='dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.d.mts'
+        self.assertIn(declaration,self.profile()['source_paths'])
+        self.assertNotIn(declaration,catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='training-profile-') as directory:
+                    root=Path(directory); profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']: profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+        with tempfile.TemporaryDirectory(prefix='training-unknown-profile-') as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c['id'] for c in catalog.plan(root,[paths[0],"dev-tools/scripts/qualification/visual-composer/unknown-training.py"],['documentation'],'synthetic-candidate')['selected']}
+            self.assertIn('focused-tests',ids)
+
     def test_native_data_sources_retain_exact_coverage_and_unknown_fallback(self):
         source = "dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
@@ -176,8 +230,8 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 58)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
+        self.assertEqual(len(self.profile()["test_paths"]), 62)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 41)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -209,8 +263,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 58)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
+        self.assertEqual(len(self.profile()["test_paths"]), 62)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 41)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -235,8 +289,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 58)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
+        self.assertEqual(len(self.profile()["test_paths"]), 62)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 41)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -334,8 +388,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_website_host_sources_preserve_finite_routing_and_borrowed_guards(self):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts', 'dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
-        self.assertEqual(self.profile()['test_paths'][57:], [paths[2]])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:], paths)
+        self.assertEqual(self.profile()['test_paths'][57:58], [paths[2]])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:29], paths)
         borrowed = 'dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts'
         self.assertIn(borrowed, self.profile()['source_paths'])
         self.assertNotIn(borrowed, catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])

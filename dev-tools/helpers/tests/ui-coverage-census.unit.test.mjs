@@ -112,7 +112,11 @@ test("checks the current repository map against original scope and actual source
   const websiteFacts=map.sources.find(s=>s.path===website).facts;
   assert(websiteFacts.cases.some(c=>c.name==="browser acquires an authorized website page and reopens isolated raw and readable artifacts"));
   assert(websiteFacts.modifiers.length>0,"Missing authorized fixture remains a declared conditional execution gap.");
-  for(const id of ["desktop-model-training","image-generation-create-and-register","image-generation-recovery"])assert.deepEqual(map.scenarios.find(s=>s.id===id).host_definitions,[]);
+  const training="dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts";
+  assert.deepEqual(map.scenarios.find(s=>s.id==="desktop-model-training").host_definitions,[training]);
+  assert(map.sources.find(s=>s.path===training).facts.cases.some(c=>c.name==="packaged desktop trains one local adapter, reviews privately, saves and reopens it"));
+  assert(map.sources.find(s=>s.path===training).facts.modifiers.length>0,"Unready real inputs keep training execution pending.");
+  for(const id of ["image-generation-create-and-register","image-generation-recovery"])assert.deepEqual(map.scenarios.find(s=>s.id===id).host_definitions,[]);
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

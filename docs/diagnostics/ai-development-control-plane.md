@@ -1283,3 +1283,17 @@ The operational profile preserves its prior 57 files and appends this one oracle
 file, with three exact automatic source rules. It retains adjacent ingestion
 coverage and generic fallback checks. Actual host execution, native recovery,
 provider qualification and the later combined test run remain separate.
+
+### Desktop training test construction
+
+The optional training host profile uses the actual Desktop controls and the
+production local training task. Its setup creates input records only. It checks
+that output stays private until Save and that the saved record survives reload.
+The source-owned prerequisite check accepts only the existing pinned local 0.5B
+model and fixed installed Python runtime. It cannot install missing packages or
+download a model. Missing prerequisites leave host execution pending.
+
+Focused fixture tests and Playwright collection qualify this test construction
+only. They do not close actual training, model quality, resource, native cleanup
+or parent roadmap criteria. Keep those results separate until the scheduled
+combined host qualification. See `dev-tools/README.md` for the opt-in command.

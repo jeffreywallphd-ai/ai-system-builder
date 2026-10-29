@@ -870,3 +870,21 @@ The operational profile preserves its prior 57 files and appends this one oracle
 file, with three exact automatic source rules. It retains adjacent ingestion
 coverage and generic fallback checks. Actual host execution, native recovery,
 provider qualification and the later combined test run remain separate.
+
+### Offline Desktop training journey
+
+The dedicated `dev-tools/config/playwright.training-host.config.ts` profile covers a
+small local LoRA training run, private review, explicit Save, and the same saved
+model after a reload. The ordinary Desktop qualification profile is unchanged.
+
+Set `VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION` to the repository-relative
+`acquisition.json` for the already authorized, pinned Qwen 0.5B input. The fixed
+preflight verifies its hashes and the installed Python 3.12 dependencies. It
+denies installation and download. Missing inputs leave the case pending before
+packaging or app launch. It does not rerun accepted model accuracy tests.
+
+Use `npx playwright test --config dev-tools/config/playwright.training-host.config.ts`
+only at the scheduled host qualification boundary. `--list --reporter list`
+collects the definition without running a model or opening the app. A collected
+case is not a successful host test. Outputs and caches use a fresh training slot;
+existing slots and original model files are retained.
