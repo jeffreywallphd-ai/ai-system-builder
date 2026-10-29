@@ -335,6 +335,37 @@
         "No actual app, model, OCR engine, provider or full suite was run for this declaration. Parent technical qualification remains pending."
       ],
       "title": "Accessible UI and startup observations"
+    },
+    {
+      "areas": [
+        "Bounded truthful test reports and owned cleanup failure recovery",
+        "Fresh workspace setup and meaningful system journey listener recovery",
+        "Read-only review UI, final response bytes and current versioned metadata"
+      ],
+      "chunkId": "review-site-and-run-evidence-recovery",
+      "completedAt": "2026-10-29T13:13:52Z",
+      "criteriaIds": [
+        "review-site-ui-regressions",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/review-site/README.md",
+        "dev-tools/README.md",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-review-site-and-run-evidence-recovery",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Completed review-site and reporting feature recovery. Reports preserve primary, cleanup and publication failures without promoting a short diagnostic. Managed UI journeys explicitly create a fresh workspace. The read-only site keeps all canonical detail within its final byte limit and validates current user descriptions without requiring ignored historical receipts. Current source checks, simulated failure paths, review UI contracts and local HTTP tests passed with separate review. Actual app/native and final combined qualification remain pending.",
+      "tests": [
+        "Four coherent source Works are committed with current executed receipts and genuine separate reviews; combined readiness preserves their exact scope.",
+        "Owned-run source passed210Node and29Vitest fixture tests,17selected builds,12type roots and seven scoped gates; five UI cases were discovered, not executed.",
+        "Review-site source passed7wire,14presentation/current-repository and14realHTTP tests plus reviewUI/controller/documentation/architecture gates. The live server preserves22roadmaps and198plannedworkitems.",
+        "Existing read-only status/order/work-item/theme/refresh and finite collection/admission/cleanup tests remain. No actual app, model, provider, native or full suite is qualified by this declaration."
+      ],
+      "title": "Read-only review UI and reliable test reporting"
     }
   ],
   "completion": null,
@@ -858,6 +889,12 @@
       "recordedAt": "2026-10-29T10:57:48Z",
       "sequence": 41,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "da23112794bb75b3d0331dff8726d9dccaeacb48445dfe17ff2a433961062997",
+      "recordedAt": "2026-10-29T13:13:52Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1318,7 +1355,8 @@
       "completedChunks": [
         "settings-save-and-query-recovery",
         "operational-task-and-shell-coverage",
-        "accessible-host-observation-definitions"
+        "accessible-host-observation-definitions",
+        "review-site-and-run-evidence-recovery"
       ],
       "deliverables": [
         "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
@@ -1544,5 +1582,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-29T10:57:48Z"
+  "updatedAt": "2026-10-29T13:13:52Z"
 }

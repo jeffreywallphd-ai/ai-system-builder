@@ -12837,6 +12837,30 @@
           "Tests in the running apps and final roadmap checks are still pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "67797c3fc142f123880506bb59e09c7ebadebd13ba791ece32371ab8b57adc7a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent made task diagnostics, cleanup failures and test workspace setup clearer and more reliable.",
+          "Focused failure tests and source checks passed. A short diagnostic cannot count as full qualification.",
+          "Running-app, native and final roadmap checks remain pending. Accepted model accuracy stays closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4e045936c014440246ef173ca94c4ac2e1cc1eacca05417fdab7c23c9848d6ab",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The review site keeps all roadmap details while limiting the size of each response.",
+          "Current descriptions, support links, status, work chunks and live response checks passed. Older execution records remain saved when omitted from a response.",
+          "This review-site work does not close the remaining running-app or final roadmap checks."
+        ]
+      }
     }
   ]
 }

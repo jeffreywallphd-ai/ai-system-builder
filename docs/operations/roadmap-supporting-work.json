@@ -5792,6 +5792,43 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "owned-run-diagnostics-and-recovery",
+      "work_criteria": [
+        "closed-diagnostic-profile-and-status",
+        "owned-cleanup-and-safe-diagnostics",
+        "meaningful-journey-and-managed-setup-recovery",
+        "focused-ownership-and-source-checkpoint"
+      ],
+      "receipt_digest": "7b93f456852f1a9ca953ef9e65217e7a6e4e15c5005cb3680003f88558d535e3",
+      "review_digest": "01100b2ffedb69142b0ac3693aecc8f8bf697f2c7f9ffe61cff5a708163c9dff",
+      "scope": "Reviewed local task diagnostics and test cleanup. A one-sample diagnostic stays separate from qualification. Fixed safe error types and stages preserve earlier failures. Managed tests create a distinct workspace. Focused tests, source checks and seven scoped gates passed. Actual app, native and final qualification remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "review-site-ui-regressions",
+      "work_id": "bounded-current-review-site-data",
+      "work_criteria": [
+        "exact-final-wire-admission",
+        "current-versioned-metadata-regression",
+        "focused-failure-and-contract-coverage"
+      ],
+      "receipt_digest": "7107398f825b2e695f5c85c11aa4ae7dfebaff52c64334269efd1ee8b200b95c",
+      "review_digest": "f19f32066a342a643c77a3ced482910b58dcf871bd321e66d97ada9aa9dc49ba",
+      "scope": "Reviewed read-only review-site response handling and current display data. Exact final bytes retain all roadmap and criterion details within the existing limit. Only older execution history may leave a response, with an exact notice. Focused tests, live HTTP checks and five scoped gates passed. Parent qualification remains pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }
