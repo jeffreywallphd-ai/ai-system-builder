@@ -12814,6 +12814,29 @@
           "Tests in the running apps and the final roadmap checks are still pending. These source tests do not close those checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0e79779031bcc9bb886cb5c1f7770c2b24ce1554272f91d7533b793f3fdc1405",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed reporting failures in three test journeys and made the browser test create its own workspace.",
+          "Focused tests and source checks passed. Tests in the running apps and final roadmap checks are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "62fa7f0096183982a4f6b3085eb397479ed87ae13d884d569b90f7a16057fb69",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added the same reporting protection to seven Data and Context journeys.",
+          "Existing import, scanned-data review, version, source, restart and memory-notification checks remain. Focused tests and source checks passed.",
+          "Tests in the running apps and final roadmap checks are still pending."
+        ]
+      }
     }
   ]
 }

@@ -5755,6 +5755,43 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualification-reporting-and-workspace-recovery",
+      "work_criteria": [
+        "bounded-truthful-report-finalization",
+        "preserved-reference-cold-and-structured-journeys",
+        "explicit-standard-browse-workspace",
+        "finite-source-coverage-and-checkpoint"
+      ],
+      "receipt_digest": "590bf5356f3521482916918474c1c0198f9e1af09368aa698d71aed4ff36e180",
+      "review_digest": "bdff55167ae012247403c9daaea7e54d6fc062bc14ac11418d49fe957ef5acf3",
+      "scope": "Reviewed local report finalization and browser setup. Reference, cold Canvas and structured-output reports preserve primary and reporting failures. Standard browser authoring explicitly creates a new workspace. Exact-source tests and five scoped gates passed. Actual app, native and final qualification remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "late-ui-journey-report-finalization",
+      "work_criteria": [
+        "faithful-seven-writer-migration",
+        "existing-data-context-and-model-scope-preserved",
+        "finite-coverage-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "ff26efdab104c76371935e07a169bec79a32e544f0f3f515bd59a8e94ae7ab4b",
+      "review_digest": "77377478063e9c8836a04902a9053aa2a05e3ec445383aa901e7a0287fd325a1",
+      "scope": "Reviewed local migration of seven Data and Context report writers to the bounded finalizer. Fresh serialization preserves failed status, exclusive file creation and byte limits. Existing workflow assertions remain. Exact-source tests and seven scoped gates passed. Actual app, native and final qualification remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }
