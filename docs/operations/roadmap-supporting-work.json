@@ -5736,6 +5736,25 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "lifecycle-ocr-native-test-definitions",
+      "work_criteria": [
+        "closed-lifecycle-ocr-mode-and-critical-coverage",
+        "named-local-host-variants-and-standard-regressions",
+        "owned-protocol-and-process-retirement",
+        "focused-source-coverage-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "804085abe2f82c977e1cccc5f1a35ca71e5e62cfe8528f662458b38874cf3b34",
+      "review_digest": "1569e417624278d651720fde962b247854b770beba028b869a3a4ec3f6d096e9",
+      "scope": "Reviewed test definitions for eight system and OCR views at native zoom. Four named host cases preserve standard authorization, runtime isolation, cancellation, approval and saved-data checks. Nine builds and type checks,161selected-source fixtures,18runtime oracles,eight-case discovery and six scoped gates passed. Actual app,native OCR,performance and final roadmap qualification remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

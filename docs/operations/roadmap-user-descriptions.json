@@ -12802,6 +12802,18 @@
           "Focused source tests pass. Tests in the running apps remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8d24c5bd28a3e283f9649869e0c7b26f40b5f847f411433893b80c900484d0f4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added zoom test cases for the final eight system and scanned-data views.",
+          "Focused tests, source checks and test discovery passed. The existing authorization, workspace, cancellation and restart checks remain.",
+          "Tests in the running apps and the final roadmap checks are still pending. These source tests do not close those checks."
+        ]
+      }
     }
   ]
 }

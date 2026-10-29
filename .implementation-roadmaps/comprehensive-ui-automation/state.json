@@ -305,6 +305,36 @@
         "Earlier failures and exact selected/mixed-source applicability are retained. No accepted accuracy/OCR rerun or app/provider/native/full-suite execution."
       ],
       "title": "Operational controls, task notifications and shell recovery"
+    },
+    {
+      "areas": [
+        "Shared critical accessibility and native frame definitions",
+        "Local browser and packaged desktop journey definitions",
+        "Opened-menu keyboard behavior and startup observation boundaries"
+      ],
+      "chunkId": "accessible-host-observation-definitions",
+      "completedAt": "2026-10-29T10:57:48Z",
+      "criteriaIds": [
+        "automated-accessibility-and-local-host-observation",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/README.md",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-accessible-host-observation-definitions",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Completed reusable standard and native accessibility definitions for all 35 critical views, including the opened navigation menu. Added separately named local-host cases with exact owned-window/browser zoom, bounded private-free reports and source admission/cleanup regressions. Startup and Canvas measurements remain separate. Focused tests, source builds/types and test collection passed with independent review. Actual running-app/native and final combined qualification remain pending.",
+      "tests": [
+        "Current lifecycle/OCR Work lifecycle-ocr-native-test-definitions passed six scoped gates; receipt 804085abe2f82c977e1cccc5f1a35ca71e5e62cfe8528f662458b38874cf3b34.",
+        "Exact selected-source fixtures:161 Vitest and18 runtime oracle tests passed; nine builds and nine type roots have zero diagnostics; eight cases discovered.",
+        "Earlier menu, core/browser, desktop, Data/Context, Assets/System and startup commits retain their separately reviewed evidence. Independent combined readiness confirms all35 critical IDs have correct native host construction.",
+        "No actual app, model, OCR engine, provider or full suite was run for this declaration. Parent technical qualification remains pending."
+      ],
+      "title": "Accessible UI and startup observations"
     }
   ],
   "completion": null,
@@ -822,6 +852,12 @@
       "recordedAt": "2026-10-28T14:08:42Z",
       "sequence": 40,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "03ec82720e872f5d0be05656c7308461b4c154ed7abf2f8f0f1fcb6a23af0cc8",
+      "recordedAt": "2026-10-29T10:57:48Z",
+      "sequence": 41,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1281,7 +1317,8 @@
       "completedAt": null,
       "completedChunks": [
         "settings-save-and-query-recovery",
-        "operational-task-and-shell-coverage"
+        "operational-task-and-shell-coverage",
+        "accessible-host-observation-definitions"
       ],
       "deliverables": [
         "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
@@ -1507,5 +1544,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-28T14:08:42Z"
+  "updatedAt": "2026-10-29T10:57:48Z"
 }
