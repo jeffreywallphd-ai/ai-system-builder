@@ -1231,3 +1231,26 @@ explicit refresh. A 202 acknowledgement means restart requested, not reconnected
 See the leaf Settings READMEs for behavior and focused evidence limits. The initial
 census follow-up stays pending until a reviewed source checkpoint is linked.
 Actual host and final full testing remain separate.
+
+
+## Review-site browser feature check
+
+The existing thin operational host entry includes three separately named
+`review site real browser` cases. The fixed
+`dev-tools/config/playwright.review-site.config.ts` selects only those titles in
+one thin Chrome project and has no application global setup. Start the review
+server first. The feature command and scope limits are in
+`dev-tools/review-site/README.md`. The ordinary operational profile retains all
+56 earlier files and appends one oracle test file; its automatic coverage adds
+only four exact helper/oracle/test/config paths. It never launches these browser
+cases implicitly. Candidate census facts retain the real prior committed hash
+for an edited host spec until a later reviewed commit-binding update. No future
+commit, unversioned source binding or parent pass is invented.
+
+The live browser reads use a bounded read-only proxy to the verified loopback
+server. Every live reply retains the server's security headers and checks its
+bytes, current repository identity or exact shipped asset. This is distinct from
+the controlled refresh/error copy. The canonical journey pins the existing
+Comprehensive UI operational increment and compares every requirement bullet in
+order, including nested bullets. Initial port failures, owned-read retirement and
+report publication retain fixed primary/cleanup facts without private errors.

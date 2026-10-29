@@ -822,3 +822,22 @@ not hide unknown, incomplete or explicitly requested generic impact. Synthetic
 fixtures cover HTTP denial, consumed/masked data, labels, readback and current-view
 recovery. They do not start an app/model/provider or qualify physical restart,
 reconnection or final full testing. See the host/shared Settings READMEs.
+
+
+The operational UI profile now retains its original 56 ordinary files and adds
+`review-site-oracles.unit.test.ts`. Its 26 exact automatic rules include the four
+review-browser helper/oracle/test/config paths; existing borrowed host coverage
+and unknown, incomplete or explicit generic fallbacks remain. It runs no browser
+by itself. Use the focused review-site Playwright config documented in the
+review-site README for the three named real-browser cases without app bootstrap.
+The existing final browser matrix also includes those cases. Live canonical
+observations and controlled refresh/storage variations have separate reports;
+none grants app/model/native/full or parent roadmap qualification.
+
+The live browser reads use a bounded read-only proxy to the verified loopback
+server. Every live reply retains the server's security headers and checks its
+bytes, current repository identity or exact shipped asset. This is distinct from
+the controlled refresh/error copy. The canonical journey pins the existing
+Comprehensive UI operational increment and compares every requirement bullet in
+order, including nested bullets. Initial port failures, owned-read retirement and
+report publication retain fixed primary/cleanup facts without private errors.

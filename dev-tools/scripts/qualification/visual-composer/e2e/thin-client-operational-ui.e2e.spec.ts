@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { qualifyOperationalUiJourney } from "./operational-ui-journey";
 import { OPERATIONAL_HOST_TIMEOUT_MS, operationalStatusUrl } from "../operational-ui-oracles";
 import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
+import { qualifyReviewSiteBrowser } from "./review-site-journey";
+import { REVIEW_SITE_BROWSER_TIMEOUT_MS } from "../review-site-oracles";
 
 test.use({ screenshot: "off", trace: "off", video: "off" });
 function operationalBrowserConfiguration() {
@@ -40,4 +42,21 @@ test("thin client preserves operational controls at native 400 percent zoom", as
   } catch (error) { failures.push(error); }
   try { await owned.close(); } catch (error) { failures.push(error); }
   if (failures.length) throw new AggregateError(failures, "Native operational journey or owned browser retirement failed.");
+});
+
+// These read-only review cases do not use the app's token or runtime setup.
+test.describe("review site real browser", () => {
+  test.use({ serviceWorkers: "block", acceptDownloads: false, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: {} });
+  test("opens canonical details and linked work without changing qualification", async ({ page }) => {
+    test.setTimeout(REVIEW_SITE_BROWSER_TIMEOUT_MS);
+    await qualifyReviewSiteBrowser(page, test.info(), "live");
+  });
+  test("refreshes a controlled current copy and recovers from connection refusal", async ({ page }) => {
+    test.setTimeout(REVIEW_SITE_BROWSER_TIMEOUT_MS);
+    await qualifyReviewSiteBrowser(page, test.info(), "refresh-recovery");
+  });
+  test("keeps theme, keyboard and narrow review usable when storage refuses access", async ({ page }) => {
+    test.setTimeout(REVIEW_SITE_BROWSER_TIMEOUT_MS);
+    await qualifyReviewSiteBrowser(page, test.info(), "theme-storage");
+  });
 });

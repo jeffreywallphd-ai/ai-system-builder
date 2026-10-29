@@ -205,3 +205,36 @@ A display-limit notice says how many recent execution records are shown and conf
 that older records remain saved. Description maintenance and genuine record failures
 are explained separately, including when both occur. No user action is requested
 for these agent-owned display issues.
+
+
+## Focused real-browser review
+
+Start the review server with the documented contributor command above. Then run
+only the read-only review cases with the existing installed Chrome:
+
+```text
+node node_modules/@playwright/test/cli.js test --config dev-tools/config/playwright.review-site.config.ts
+```
+
+This fixed configuration selects three named cases in the existing thin Chrome
+project and disables the application setup. It does not open the app, load models
+or contact providers. One browser worker uses fresh contexts with recordings off.
+The live case checks this repository's loopback server and shipped assets, original
+roadmap order, criterion bullets, local-support limits and linked work navigation.
+Separate current-copy fixtures check refresh failure/recovery and storage refusal.
+Theme persistence and narrow keyboard use are checked in the isolated browser.
+
+The helper bounds response bytes, time and request routes. Reports contain fixed
+phase labels rather than page text, private errors or credentials. Failed setup,
+assertions, cleanup or report publication cannot count as a pass. The ordinary
+operational profile runs only oracle and routing tests; browser execution remains
+an explicit feature command. It does not qualify app hosts, models, native controls
+or final combined roadmap testing.
+
+The live browser reads use a bounded read-only proxy to the verified loopback
+server. Every live reply retains the server's security headers and checks its
+bytes, current repository identity or exact shipped asset. This is distinct from
+the controlled refresh/error copy. The canonical journey pins the existing
+Comprehensive UI operational increment and compares every requirement bullet in
+order, including nested bullets. Initial port failures, owned-read retirement and
+report publication retain fixed primary/cleanup facts without private errors.

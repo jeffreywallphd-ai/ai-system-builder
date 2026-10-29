@@ -41,6 +41,10 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/ui/shared/hooks/useNavigationMenu.ts",
         "apps/desktop/src/renderer/components/layout/AppShell.tsx",
         "apps/thin-client/src/components/layout/AppShell.tsx",
+        "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
+        "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+        "dev-tools/config/playwright.review-site.config.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",
