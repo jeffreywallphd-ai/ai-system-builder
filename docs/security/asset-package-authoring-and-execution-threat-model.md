@@ -469,3 +469,29 @@ drafts with published global metadata, wrong versions/kinds and reader failure.
 Browsing still executes no authored source or runtime work. These local controls
 do not complete the separately pending legacy review, managed-host, accessibility
 or overall roadmap qualification.
+
+
+## Repeatable Assets UI test definitions
+
+The Assets test profile has 41 fixed test files. It retains the earlier 39 and
+adds evidence-oracle tests and the existing desktop-slot tests. Five exact source
+rules select the profile. Missing coverage and explicit generic requests retain
+their additional checks. The profile does not launch an app or load a model.
+
+Four host cases cover import, Foundation and imported copies, Studio resources,
+save and reopen, review and publication. The cases capture their test identity
+before effects, create a distinct workspace, and check that workspace after each
+restart. Desktop cases refuse an existing test slot and retire each owned app
+before another launch. Native zoom targets the app's owned window.
+
+Evidence uses the bounded `asset-accessibility-v2` format. Browser text, selectors
+and private error messages stay out of JSON. Reports use fixed stages, finite
+facts and exclusive initial creation. Cleanup, restoration, attachment and save
+failures remain failures. Deliberate PNG captures retain their original hashes,
+device-coordinate mapping and focus/text contrast assertions. Each PNG is capped
+at 16 MiB; the capture set is capped at 64 MiB. Native cases do not replace the
+physical viewport with an emulated one.
+
+Local fake-port tests and test discovery verify these definitions. They do not
+qualify real app behavior, native process isolation, storage protection, model
+quality or final roadmap completion. Those checks keep their separate evidence.

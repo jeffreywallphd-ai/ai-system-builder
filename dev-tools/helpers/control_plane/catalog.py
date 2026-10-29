@@ -123,6 +123,13 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts"],
     "system-runtime-conversation-ui": ['apps/desktop/src/system-runtime/SystemRuntimeApp.tsx', 'apps/desktop/src/system-runtime-preload/systemRuntimePreloadApi.ts', 'apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx', 'apps/desktop/src/system-runtime-preload/tests/systemRuntimePreloadApi.unit.test.ts'],
+    "asset-authoring-ui": [
+        "dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-asset-experience.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-asset-experience.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/asset-experience-oracles.ts",
+        "dev-tools/scripts/qualification/tests/asset-experience-oracles.unit.test.ts",
+    ],
 }
 
 

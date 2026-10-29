@@ -28,7 +28,9 @@ class AssetUiProfileTests(unittest.TestCase):
     def configure(self, profile):
         p = self.root / self.config
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"asset-authoring-ui": profile}}))
+        profiles = json.loads((self.actual / self.config).read_text())["profiles"]
+        profiles["asset-authoring-ui"] = profile
+        p.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
 
     def test_exact_rendered_feature_tests_without_host_or_model_execution(self):
         expected = [
@@ -66,8 +68,9 @@ class AssetUiProfileTests(unittest.TestCase):
         expected.extend(['modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts', 'modules/application/use-cases/asset-authoring/tests/derived-workspace-authorization-and-capture.unit.test.ts', 'modules/hosts/desktop/composition/tests/derived-workspace-authority.integration.test.ts'])
         expected.extend(['modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts'])
         expected.extend(['modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts', 'modules/hosts/shared/composition/tests/composeInternalAssetRegistry.unit.test.ts'])
+        expected.extend(['dev-tools/scripts/qualification/tests/asset-experience-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts'])
         self.assertEqual(self.profile["test_paths"], expected)
-        self.assertEqual(self.profile["source_paths"], [
+        self.assertEqual(self.profile["source_paths"], ([
             "dev-tools/config/contributor-check-profiles.json",
             "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
             "modules/ui/shared/asset-studio/AssetStudioManager.tsx",
@@ -110,7 +113,7 @@ class AssetUiProfileTests(unittest.TestCase):
             'modules/adapters/package/aisb/createAisbPackageInspector.ts',
             'modules/application/services/asset-package/capture-package-commands.ts',
                     'dev-tools/scripts/architecture/check-asset-system-fitness.mjs',
-        ] + ['modules/application/use-cases/asset-studio/start-asset-studio.use-case.ts', 'modules/application/use-cases/asset-studio/propose-asset-studio-change.use-case.ts', 'modules/application/use-cases/asset-studio/review-asset-studio-proposal.use-case.ts', 'modules/application/use-cases/asset-studio/read-asset-studio-workflows.use-case.ts', 'modules/application/use-cases/asset-studio/asset-studio-asset-draft-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetStudioWorkflow.ts', 'modules/application/services/asset-studio/capture-studio-requests.ts'] + ['modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetDerivedCustomization.ts', 'modules/application/services/asset/capture-derived-customization-requests.ts', 'modules/application/services/asset/asset-derived-customization-target-catalog.service.ts'] + ['modules/application/ports/asset-publication/asset-definition-publication.port.ts', 'modules/application/ports/asset-publication/index.ts', 'modules/adapters/persistence/asset-publication/createStructuredAssetDefinitionPublication.ts', 'modules/adapters/persistence/asset-publication/index.ts', 'modules/adapters/persistence/asset-publication/tests/asset-publication.fixture.ts', 'modules/adapters/README.md'] + ['modules/application/services/asset/workspace-asset-registry-read-facade.service.ts', 'modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts', 'modules/hosts/shared/composition/composeInternalAssetRegistry.ts', 'modules/hosts/shared/composition/tests/composeInternalAssetRegistry.unit.test.ts'])
+        ] + ['modules/application/use-cases/asset-studio/start-asset-studio.use-case.ts', 'modules/application/use-cases/asset-studio/propose-asset-studio-change.use-case.ts', 'modules/application/use-cases/asset-studio/review-asset-studio-proposal.use-case.ts', 'modules/application/use-cases/asset-studio/read-asset-studio-workflows.use-case.ts', 'modules/application/use-cases/asset-studio/asset-studio-asset-draft-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetStudioWorkflow.ts', 'modules/application/services/asset-studio/capture-studio-requests.ts'] + ['modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts', 'modules/hosts/shared/composition/composeAssetDerivedCustomization.ts', 'modules/application/services/asset/capture-derived-customization-requests.ts', 'modules/application/services/asset/asset-derived-customization-target-catalog.service.ts'] + ['modules/application/ports/asset-publication/asset-definition-publication.port.ts', 'modules/application/ports/asset-publication/index.ts', 'modules/adapters/persistence/asset-publication/createStructuredAssetDefinitionPublication.ts', 'modules/adapters/persistence/asset-publication/index.ts', 'modules/adapters/persistence/asset-publication/tests/asset-publication.fixture.ts', 'modules/adapters/README.md'] + ['modules/application/services/asset/workspace-asset-registry-read-facade.service.ts', 'modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts', 'modules/hosts/shared/composition/composeInternalAssetRegistry.ts', 'modules/hosts/shared/composition/tests/composeInternalAssetRegistry.unit.test.ts'] + ['dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-asset-experience.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-asset-experience.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts', 'dev-tools/scripts/qualification/visual-composer/asset-experience-oracles.ts', 'dev-tools/scripts/qualification/tests/asset-experience-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts', 'dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts', 'dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts', 'dev-tools/scripts/qualification/visual-composer/native-browser-zoom.mjs']))
         commands = profile_commands(self.actual, "asset-authoring-ui")
         self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(expected))
         self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] or command[:3] == ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--"] for command in commands))
@@ -254,6 +257,35 @@ class AssetUiProfileTests(unittest.TestCase):
         self.configure(self.profile)
         selected = catalog.plan(self.root, self.profile["source_paths"] + self.profile["test_paths"], ["asset-authoring-ui"], "candidate")["selected"]
         self.assertNotIn("focused-tests", {check["id"] for check in selected})
+
+
+    def test_assets_host_definitions_keep_fixed_membership_and_fallback(self):
+        import fnmatch
+        added_tests = ['dev-tools/scripts/qualification/tests/asset-experience-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts']
+        owned = ['dev-tools/scripts/qualification/visual-composer/e2e/asset-experience-journey.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-asset-experience.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-asset-experience.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/asset-experience-oracles.ts', 'dev-tools/scripts/qualification/tests/asset-experience-oracles.unit.test.ts']
+        self.assertEqual(len(self.profile['test_paths']), 41)
+        self.assertEqual(self.profile['test_paths'][-2:], added_tests)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['asset-authoring-ui'])[-5:], owned)
+        for source in owned:
+            self.assertIn(source, self.profile['source_paths'])
+            neighbors = {name for name, patterns in catalog.QUALIFICATION_PROFILE_PATTERNS.items()
+                         if name != 'asset-authoring-ui' and any(fnmatch.fnmatchcase(source, p) for p in patterns)}
+            for incomplete, required, generic in [(False, ['documentation'], False), (False, ['focused-tests'], True), (True, ['documentation'], True)]:
+                profile = copy.deepcopy(self.profile)
+                if incomplete:
+                    profile['source_paths'].remove(source)
+                    if source in profile['test_paths']: profile['test_paths'].remove(source)
+                profiles = {'asset-authoring-ui': profile, **{name: {'test_paths': [added_tests[0]], 'source_paths': [source]} for name in neighbors}}
+                (self.root / self.config).parent.mkdir(parents=True, exist_ok=True)
+                (self.root / self.config).write_text(json.dumps({'schema_version': 'contributor-check-profiles-v1', 'profiles': profiles}))
+                ids = {c['id'] for c in catalog.plan(self.root, [source], required, 'synthetic-candidate')['selected']}
+                self.assertIn('asset-authoring-ui', ids)
+                self.assertTrue(neighbors.issubset(ids))
+                self.assertEqual('focused-tests' in ids, generic)
+        self.configure(self.profile)
+        ids = {c['id'] for c in catalog.plan(self.root, [owned[0], 'modules/unknown/changed.ts'], ['documentation'], 'synthetic-candidate')['selected']}
+        self.assertIn('focused-tests', ids)
+
 
 if __name__ == "__main__":
     unittest.main()
