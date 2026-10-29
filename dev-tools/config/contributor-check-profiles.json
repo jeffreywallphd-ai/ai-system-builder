@@ -2023,6 +2023,27 @@
         "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts",
         "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts"
       ]
+    },
+    "comfyui-host-policy": {
+      "test_paths": [
+        "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
+        "modules/adapters/runtime/comfyui/tests/createComfyUiRuntimeSupervisor.unit.test.ts",
+        "dev-tools/helpers/tests/test_control_plane_comfyui_host_policy.py"
+      ],
+      "source_paths": [
+        "modules/hosts/shared/resolveComfyUiAutoInstall.ts",
+        "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
+        "modules/hosts/desktop/composition/composeDesktopComfyUiImageRuntimeFeature.ts",
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "modules/hosts/desktop/composition/README.md",
+        "modules/hosts/server/composition/README.md",
+        "docs/context/packs/runtime-installer.pack.md",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/helpers/tests/test_control_plane_comfyui_host_policy.py",
+        "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+        "modules/adapters/runtime/comfyui/tests/createComfyUiRuntimeSupervisor.unit.test.ts"
+      ]
     }
   }
 }

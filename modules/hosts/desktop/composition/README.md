@@ -1,5 +1,24 @@
 # Desktop host composition
 
+## Restrict automatic ComfyUI setup
+
+Set `COMFYUI_AUTO_INSTALL=0` in the Desktop host environment before launch to
+disable automatic ComfyUI installation and dependency repair during image runtime
+startup. The host snapshots this value when it composes the feature. An unset
+value or `1` retains the existing automatic setup behavior. Other values stop
+composition with a fixed configuration error.
+
+Before every start with automatic setup disabled, the host reads the installer's
+managed metadata for the exact root, target and official Git source. Missing,
+unconfirmed or mismatched metadata stops startup with a fixed error. The read
+cannot fall back to installation or repair.
+
+This setting does not disable explicit installer operations or Python runtime
+setup. Managed metadata does not prove file integrity or import readiness. This
+setting does not prevent the launched
+runtime's own network activity, or grant model download authority. Test profiles
+must still verify their prerequisites and own the runtime process and files.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `composeDesktopHost` wires desktop-host lifecycle dependencies while keeping Electron IPC transport thin.

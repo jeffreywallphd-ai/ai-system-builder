@@ -1,4 +1,5 @@
 import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
+import { requireManagedComfyUiInstall, resolveComfyUiAutoInstall } from "../../shared/resolveComfyUiAutoInstall";
 import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
@@ -645,6 +646,7 @@ export {
 export function composeServerHost(
   options: ComposeServerHostOptions = {},
 ): ServerHostComposition {
+  const comfyUiAutoInstall = resolveComfyUiAutoInstall(options.env ?? process.env);
   const pythonRuntimeEnvironmentPreparer = options.pythonRuntimeEnvironmentPreparer;
   if (pythonRuntimeEnvironmentPreparer !== undefined) {
     if ((options.env ?? process.env).NODE_ENV === "production" || process.env.NODE_ENV === "production") {
@@ -1252,6 +1254,12 @@ export function composeServerHost(
           mode: ComfyUiRuntimeDeviceMode,
           fallbackReason?: string,
         ) => {
+          let configuredInstaller: Awaited<ReturnType<typeof createComfyUiInstallerForMode>> | undefined;
+          const installSourceRef = env.COMFYUI_INSTALL_REF;
+          if (!comfyUiAutoInstall) {
+            configuredInstaller = await createComfyUiInstallerForMode(mode);
+            await requireManagedComfyUiInstall(configuredInstaller, comfyUiInstallRoot, installSourceRef);
+          }
           const modeChanged =
             activeRuntimeDeviceMode !== undefined &&
             activeRuntimeDeviceMode !== mode;
@@ -1263,13 +1271,13 @@ export function composeServerHost(
             comfyUiSupervisor = createComfyUiRuntimeSupervisor({
               workingDirectory: comfyUiInstallRoot,
               pythonExecutable: launchPythonResolution.launchPythonExecutable,
-              installer: await createComfyUiInstallerForMode(mode),
+              installer: configuredInstaller ?? await createComfyUiInstallerForMode(mode),
               installRoot: comfyUiInstallRoot,
               host: comfyUiHost,
               port: comfyUiPort,
               runtimeDeviceMode: mode,
-              autoInstall: true,
-              installSourceRef: env.COMFYUI_INSTALL_REF,
+              autoInstall: comfyUiAutoInstall,
+              installSourceRef,
               logging: loggingPort,
             });
             activeRuntimeDeviceMode = mode;

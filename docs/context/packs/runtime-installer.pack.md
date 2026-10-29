@@ -25,6 +25,15 @@ Include this pack when prompts involve:
 - **Runtime readiness contracts**: transport-neutral host capability availability snapshots composed later from host-scoped installer/supervisor/task state.
 - **Runtime supervisor**: process lifecycle (start/stop/restart/health) after runtime is install-ready.
 - Supervisor may call installer before startup when configured, but installer remains a separate concern.
+- Both Desktop and server hosts accept `COMFYUI_AUTO_INSTALL=0` to disable the
+  image supervisor's automatic installation and dependency repair. Unset or `1`
+  preserves the existing behavior; other values fail with a fixed configuration
+  error. The policy is captured at composition. Before every no-install start,
+  the existing installer must confirm managed metadata for the exact root,
+  target and official source; unknown, failed or mismatched status denies without
+  mutation. This status does not prove file integrity or import readiness.
+  Explicit setup, Python setup, runtime network behavior and prerequisite/process
+  qualification stay separate.
 
 ## ComfyUI Positioning
 

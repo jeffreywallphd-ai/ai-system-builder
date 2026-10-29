@@ -4,6 +4,7 @@ import { execFile as nodeExecFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { requireManagedComfyUiInstall, resolveComfyUiAutoInstall } from "../../shared/resolveComfyUiAutoInstall";
 import type { LoggingPort } from "../../../application/ports/logging";
 import type { ApplicationSettingsPort } from "../../../application/ports/settings";
 import type { RuntimeInstallerPort } from "../../../application/ports/runtime-installer";
@@ -54,6 +55,7 @@ export interface ComposeDesktopComfyUiImageRuntimeFeatureOptions {
 export function composeDesktopComfyUiImageRuntimeFeature(
   options: ComposeDesktopComfyUiImageRuntimeFeatureOptions,
 ): any {
+  const comfyUiAutoInstall = resolveComfyUiAutoInstall(process.env);
   const installRoot = resolveComfyUiInstallRoot(
     process.env,
     options.runtimeRootDirectory,
@@ -143,6 +145,12 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         gpuType: persistedGpuType,
         cudaTorchWheelIndexUrl,
       });
+      let configuredInstaller: RuntimeInstallerPort | undefined;
+      const installSourceRef = process.env.COMFYUI_INSTALL_REF;
+      if (!comfyUiAutoInstall) {
+        configuredInstaller = await createConfiguredComfyUiInstaller(resolvedRuntimeDeviceMode);
+        await requireManagedComfyUiInstall(configuredInstaller, installRoot, installSourceRef);
+      }
       const modeChanged =
         activeRuntimeDeviceMode !== undefined &&
         activeRuntimeDeviceMode !== resolvedRuntimeDeviceMode;
@@ -151,17 +159,14 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         comfyUiSupervisor = undefined;
       }
       if (!comfyUiSupervisor) {
-        const configuredInstaller = await createConfiguredComfyUiInstaller(
-          resolvedRuntimeDeviceMode,
-        );
         comfyUiSupervisor = createComfyUiRuntimeSupervisor({
           workingDirectory: installRoot,
           pythonExecutable: comfyUiPythonCommand,
-          installer: configuredInstaller,
+          installer: configuredInstaller ?? await createConfiguredComfyUiInstaller(resolvedRuntimeDeviceMode),
           installRoot,
           runtimeDeviceMode: resolvedRuntimeDeviceMode,
-          autoInstall: true,
-          installSourceRef: process.env.COMFYUI_INSTALL_REF,
+          autoInstall: comfyUiAutoInstall,
+          installSourceRef,
           logging: options.loggingPort,
         });
         activeRuntimeDeviceMode = resolvedRuntimeDeviceMode;

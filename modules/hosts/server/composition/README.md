@@ -1,5 +1,23 @@
 # Server host composition
 
+## Restrict automatic ComfyUI setup
+
+Set `COMFYUI_AUTO_INSTALL=0` in the server host environment to disable automatic
+ComfyUI installation and dependency repair during image runtime startup. The
+host snapshots this policy before composition effects. An unset value or `1`
+preserves the existing automatic setup behavior. Other values stop composition
+with a fixed configuration error. Restart the host after changing the setting.
+
+Before every start with automatic setup disabled, the host reads managed install
+metadata for the exact root, target and official Git source. Missing, unconfirmed
+or mismatched metadata stops startup with a fixed error. No installation or repair
+is attempted by this read-only check.
+
+Explicit installer operations and Python runtime setup remain separate. This
+setting does not prove file integrity or import readiness, block the launched runtime's
+own network activity, or authorize model downloads. Qualification profiles must
+still verify prerequisites and own the process and its runtime files.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `composeServerHost` wires server-host lifecycle dependencies while keeping transport setup thin.
