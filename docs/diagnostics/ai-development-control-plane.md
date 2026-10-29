@@ -1148,5 +1148,21 @@ without resetting reference data. The operational profile retains its 49 earlier
 members and adds seven fixed new/related test files, for 56. Its 22 automatic
 patterns, literal runners, twelve-file Node groups and generic/adjacent-profile
 guards remain. Focused fake ports do not qualify actual apps, native processes,
-model accuracy or final roadmap closure. Wire budgeting and final qualification
-remain pending.
+model accuracy or final roadmap closure. Final qualification remains pending.
+
+The review response keeps the existing conservative technical byte estimate and
+adds exact final admission after user-copy formatting. Admission and HTTP use the
+same compact, finite JSON encoding and unchanged 2 MiB ceiling. If final text needs
+more space, remove only older execution-history rows from the response, retaining
+the original creation-date and stable-ID selection. Keep every canonical roadmap,
+merged history, planned chunk, criterion and supporting-work entry. Update the
+exact inventory, one truncation diagnostic and content digest after selection.
+Canonical-only overflow returns the fixed unavailable response; it never grants a
+partial-view completion. GET and HEAD use the same response bytes and length.
+
+The current-versioned-presentation regression loads the real roadmap, support and
+user-copy files with an empty ignored receipt store. It requires complete source
+admission, preserves nested status/criterion/chunk/support facts and checks that
+canonical bytes, including approvals, are unchanged. Missing historical receipts
+stay `record-unavailable` and `current_qualification: not-asserted`. This detects
+malformed or stale current display data without inventing execution evidence.

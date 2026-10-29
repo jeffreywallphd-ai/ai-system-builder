@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "helpers"))
-from control_plane.projection import project
+from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
 from control_plane.user_presentation import user_project
 from control_plane.common import digest
 from control_plane.site import server_version
@@ -86,8 +86,8 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/api/review":
             try:
                 value = self.server.projection(self.server.root)
-                body = json.dumps(value).encode()
-                if len(body) > 2 * 1024 * 1024:
+                body = encode_review_projection(value)
+                if len(body) > REVIEW_MAX_BYTES:
                     raise ValueError("projection bound")
                 return self.reply(200, body, head=head)
             except Exception:

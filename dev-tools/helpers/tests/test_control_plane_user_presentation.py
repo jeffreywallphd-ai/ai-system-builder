@@ -6,10 +6,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest
-from control_plane.user_presentation import REFERENCE, UNAVAILABLE, apply_user_descriptions
+from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
+from control_plane.records import Records
+from control_plane.user_presentation import REFERENCE, UNAVAILABLE, apply_user_descriptions, user_project
 
 
 def hashed(value):
@@ -72,6 +75,38 @@ class UserPresentationTests(unittest.TestCase):
         self.assertEqual(support['status'], 'record-unavailable')
         self.assertEqual(support['current_qualification'], 'not-asserted')
         self.assertEqual(support['scope'], 'Earlier local work was checked.')
+
+    def test_admitted_user_copy_expansion_is_bounded_after_formatting(self):
+        self.document['criteria'][0]['user_description']['requirements'] = [
+            'Read the test results. ' * 64 for _ in range(9)]
+        path = self.root/REFERENCE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self.document), encoding='utf-8')
+        base = copy.deepcopy(self.value)
+        base['padding'] = 'x' * (REVIEW_MAX_BYTES - 45000)
+        base['work_items'] = [{'source': 'execution', 'id': f'work-{n:02}',
+            'created_at': f'2026-10-29T00:00:{n:02}Z', 'outcome': 'y' * 1000}
+            for n in reversed(range(30))]
+        base['inventory'] = {'execution_records_total': 30, 'execution_records_shown': 30,
+                             'execution_records_truncated': False}
+        before = copy.deepcopy(base)
+        self.assertLess(len(encode_review_projection(base)), REVIEW_MAX_BYTES)
+        expanded = apply_user_descriptions(self.root, copy.deepcopy(base))
+        self.assertEqual(expanded['diagnostics'], [])
+        self.assertGreater(len(encode_review_projection(expanded)), REVIEW_MAX_BYTES)
+        with patch('control_plane.user_presentation.project', side_effect=lambda root: copy.deepcopy(base)):
+            result = user_project(self.root)
+        self.assertEqual(base, before)
+        self.assertLessEqual(len(encode_review_projection(result)), REVIEW_MAX_BYTES)
+        self.assertEqual(result['roadmaps'], expanded['roadmaps'])
+        self.assertEqual(result['presentation_view'], 'user-v1')
+        shown = result['inventory']['execution_records_shown']
+        self.assertGreater(shown, 0)
+        self.assertLess(shown, 30)
+        self.assertEqual([r['id'] for r in result['work_items']], [r['id'] for r in base['work_items'][:shown]])
+        self.assertEqual(self.criterion(result)['outcome'], 'pending')
+        self.assertEqual(self.criterion(result)['supporting_work'][0]['status'], 'record-unavailable')
+        self.assertEqual(self.state_path.read_bytes(), self.original)
 
     def test_stale_description_and_qualification_refuse_only_the_affected_copy(self):
         for key, value in [('source_description_sha256', '0'*64), ('qualification', 'local')]:
@@ -168,6 +203,59 @@ class UserPresentationTests(unittest.TestCase):
         self.assertEqual(old['increments'][0]['criteria'][0]['outcome'], 'passed')
         self.assertEqual(old['status'], 'blocked')
         self.assertEqual(json.loads(path.read_text(encoding='utf-8')), legacy)
+
+
+class CurrentVersionedPresentationTests(unittest.TestCase):
+    def test_current_metadata_admits_without_ignored_receipts_or_canonical_mutation(self):
+        repository = Path(__file__).resolve().parents[3]
+        for name in (REFERENCE, 'docs/operations/roadmap-supporting-work.json'):
+            self.assertTrue((repository/name).is_file())
+        sources = sorted((repository/'.implementation-roadmaps').glob('*/state.json'))
+        self.assertTrue(0 < len(sources) <= 200)
+        self.assertTrue(all(p.stat().st_size <= 2 * 1024 * 1024 for p in sources))
+        before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
+        with patch('control_plane.projection.Records.load', side_effect=lambda: Records.empty()):
+            technical, user = project(repository), user_project(repository)
+        self.assertEqual(technical['diagnostics'], [])
+        self.assertEqual(user['diagnostics'], [])
+        self.assertLessEqual(len(encode_review_projection(user)), REVIEW_MAX_BYTES)
+
+        def canonical_facts(value):
+            result = copy.deepcopy(value)
+            for key in ('source_digest', 'generated_at', 'repository_id', 'presentation_view'):
+                result.pop(key, None)
+            def visit(roadmap):
+                for heading in [roadmap, *roadmap['increments']]:
+                    for key in ('title', 'objective', 'user_scope'):
+                        heading.pop(key, None)
+                for increment in roadmap['increments']:
+                    for criterion in increment['criteria']:
+                        for key in ('description', 'requirements', 'user_instructions', 'evidence_summary', 'evidence_recorded'):
+                            criterion.pop(key, None)
+                        for support in criterion.get('supporting_work', []):
+                            support.pop('scope', None)
+                            support.pop('limitations', None)
+                for history in roadmap.get('merged_history', []):
+                    visit(history)
+            for roadmap in result['roadmaps']:
+                visit(roadmap)
+            for row in result['work_items']:
+                row.pop('roadmap_title', None)
+                row.pop('increment_title', None)
+            return result
+
+        self.assertEqual(canonical_facts(user), canonical_facts(technical))
+        def all_roadmaps(rows):
+            for row in rows:
+                yield row
+                yield from all_roadmaps(row.get('merged_history', []))
+        support = [item for roadmap in all_roadmaps(user['roadmaps']) for increment in roadmap['increments']
+                   for criterion in increment['criteria'] for item in criterion.get('supporting_work', [])]
+        self.assertTrue(support)
+        self.assertTrue(all(item['status'] == 'record-unavailable'
+                            and item['current_qualification'] == 'not-asserted' for item in support))
+        # Includes each original approval and complete canonical requirement/history.
+        self.assertEqual({p: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}, before)
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ from pathlib import Path
 HELPERS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HELPERS))
 from control_plane.common import digest
-from control_plane.projection import project
+from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
 from control_plane.records import Records
 from control_plane import site
 from control_plane.storage import canonical_bytes
@@ -49,6 +49,35 @@ class SiteTests(unittest.TestCase):
 
     def test_remote_binding_is_refused(self):
         with self.assertRaises(ValueError): server_module.Server(("0.0.0.0", 0), self.root)
+
+    def test_final_wire_boundary_and_head_use_the_same_compact_bytes(self):
+        overhead = len(encode_review_projection({"text": ""}))
+        payload = {"text": "x" * (REVIEW_MAX_BYTES - overhead)}
+        self.server.projection = lambda root: payload
+        status, headers, body = self.request()
+        self.assertEqual(status, 200)
+        self.assertEqual(len(body), REVIEW_MAX_BYTES)
+        self.assertEqual(int(headers["Content-Length"]), len(body))
+        self.assertEqual(json.loads(body), payload)
+        head_status, head_headers, head_body = self.request(method="HEAD")
+        self.assertEqual(head_status, 200)
+        self.assertEqual(head_headers["Content-Length"], headers["Content-Length"])
+        self.assertEqual(head_body, b"")
+        payload["text"] += "x"
+        for method in ("GET", "HEAD"):
+            with self.subTest(method=method):
+                status, headers, body = self.request(method=method)
+                self.assertEqual(status, 503)
+                self.assertLess(int(headers["Content-Length"]), 100)
+                self.assertEqual(body, b"" if method == "HEAD" else b'{"error": "review.projection-unavailable"}')
+
+    def test_nonfinite_and_encoded_unicode_overflow_have_only_a_safe_error(self):
+        for payload in ({"value": float("nan")}, {"text": "\u00e9" * (REVIEW_MAX_BYTES // 6)}):
+            with self.subTest(kind=next(iter(payload))):
+                self.server.projection = lambda root: payload
+                status, _, body = self.request()
+                self.assertEqual(status, 503)
+                self.assertEqual(json.loads(body), {"error": "review.projection-unavailable"})
 
     def test_stale_server_is_distinguished_from_a_foreign_instance_for_shutdown(self):
         port = self.server.server_port

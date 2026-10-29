@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .common import digest, fields, identifier, read_json, safe_text, text
 from .contracts import ControlError
-from .projection import project
+from .projection import bound_review_projection, project
 from .storage import confined_path
 
 REFERENCE = 'docs/operations/roadmap-user-descriptions.json'
@@ -198,4 +198,4 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
 
 
 def user_project(root: Path) -> dict:
-    return apply_user_descriptions(root, project(root))
+    return bound_review_projection(apply_user_descriptions(root, project(root)))

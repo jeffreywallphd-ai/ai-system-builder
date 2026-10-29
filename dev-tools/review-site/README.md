@@ -16,6 +16,20 @@ Other proposal/chunk execution detail retains its existing structured ownership.
 Text limits count Unicode code points in admission and rendering; invalid Unicode
 is refused. File and HTTP limits continue to count encoded bytes.
 
+The final response uses compact JSON and the existing 2 MiB limit. The server
+checks the exact bytes it sends, after user descriptions are added. If more space
+is needed, only older execution-history rows can leave this response. The page
+retains every roadmap, merged history, planned work chunk, criterion and support
+entry. Its inventory and single display-limit notice give the exact shown and
+saved record counts. The final content digest covers those display facts.
+If canonical details alone cannot fit, the server returns its fixed unavailable
+response. It does not present a partial roadmap as a complete one.
+
+Control-plane tests also admit the current versioned descriptions and support map
+with an empty local receipt store. This catches stale or malformed display data
+without requiring ignored historical receipts on another checkout. Missing
+receipts remain unavailable and cannot qualify a parent roadmap.
+
 Start through the unified contributor entry point:
 
 ```text

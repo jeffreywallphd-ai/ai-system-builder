@@ -13,6 +13,68 @@ from .storage import confined_path
 from .supporting_work import enrich
 from .criterion_presentation import apply_presentations, canonical_blocker_source, apply_blocker_presentations
 
+REVIEW_MAX_BYTES = 2 * 1024 * 1024
+
+
+def encode_review_projection(value: dict) -> bytes:
+    """The exact JSON encoding used for review admission and HTTP delivery."""
+    return json.dumps(value, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def bound_review_projection(value: dict) -> dict:
+    """Bound final display bytes without discarding canonical roadmap detail.
+
+    User descriptions can expand a previously admitted technical projection.
+    Retain the newest execution records that fit; canonical rows are never
+    candidates for truncation. Failed admission leaves the input unchanged.
+    """
+    def stamped(content):
+        public = {k: v for k, v in content.items()
+                  if k not in {"source_digest", "generated_at", "repository_id"}}
+        return {**content, "source_digest": digest(public)}
+
+    result = stamped(value)
+    if len(encode_review_projection(result)) <= REVIEW_MAX_BYTES:
+        return result
+    works = value["work_items"]
+    executions = [row for row in works if row.get("source") == "execution"]
+    inventory = value["inventory"]
+    total = inventory["execution_records_total"]
+    if (type(total) is not int or total < len(executions)
+            or not 0 < len(executions) <= 1000):
+        raise ValueError("Review projection exceeds its bound.")
+    # Match the projection's original creation-date order and stable ID ties.
+    executions.sort(key=lambda row: row["id"])
+    executions.sort(key=lambda row: creation_time(row.get("created_at")) or "", reverse=True)
+    diagnostics = [row for row in value["diagnostics"]
+                   if row.get("code") != "projection.execution-records-truncated"]
+
+    def narrowed(shown):
+        keep = {id(row) for row in executions[:shown]}
+        content = {**value,
+                   "work_items": [row for row in works
+                                  if row.get("source") != "execution" or id(row) in keep],
+                   "inventory": {**inventory, "execution_records_shown": shown,
+                                 "execution_records_truncated": shown < total},
+                   "diagnostics": [*diagnostics, {"code": "projection.execution-records-truncated",
+                                                 "total": total, "shown": shown}]}
+        return stamped(content)
+
+    result = narrowed(0)
+    if len(encode_review_projection(result)) > REVIEW_MAX_BYTES:
+        raise ValueError("Review projection exceeds its bound.")
+    # All-record admission already failed. Each remaining candidate therefore
+    # keeps the same truncation diagnostic, making encoded size monotonic.
+    low, high = 0, len(executions) - 1
+    while low < high:
+        middle = (low + high + 1) // 2
+        candidate = narrowed(middle)
+        if len(encode_review_projection(candidate)) <= REVIEW_MAX_BYTES:
+            low, result = middle, candidate
+        else:
+            high = middle - 1
+    return result
+
 
 def creation_time(value):
     """Normalize authoritative dates for sorting; never infer from file mtime."""
@@ -165,7 +227,7 @@ def project(root: Path) -> dict:
     shown = 0
     for row in executions:
         addition = len(json.dumps(row).encode("utf-8")) + 2
-        if size + addition > 2 * 1024 * 1024 - 4096:
+        if size + addition > REVIEW_MAX_BYTES - 4096:
             break
         works.append(row)
         size += addition
@@ -175,7 +237,6 @@ def project(root: Path) -> dict:
         diagnostics.append({"code": "projection.execution-records-truncated", "total": execution_total, "shown": shown})
     works.sort(key=lambda w: (w.get("roadmap_id", ""), w.get("increment_number", 0), w.get("chunk_number", 0), w["id"]))
     works.sort(key=lambda w: w["created_at"] or "", reverse=True)
-    content["source_digest"] = digest(content)
     content["generated_at"] = now()
     content["repository_id"] = digest(str(root.resolve()))
-    return content
+    return bound_review_projection(content)
