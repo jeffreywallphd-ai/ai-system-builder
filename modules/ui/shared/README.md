@@ -363,3 +363,10 @@ Manage systems owns pending reads and actions within the mounted workspace/clien
 Build & test and Publish use committed workspace/client/target sessions. Retry failed checks or reads through the named control; unexpected errors use fixed notification-center copy while typed readiness and policy denials stay contextual. Synchronous admission owns build, cancel and approval commands. A confirmation captures its named system, exact saved revision, build and lock. Validate the returned build/release target before showing success; failed post-publication refresh cannot negate a saved release. Retire owners during layout cleanup and preserve committed state across abandoned renders.
 
 Published lifecycle cards own committed workspace/client/build/revision/release sessions. Match status/action reply release identity before adopting controls or success. Keep one physical status-read slot until settlement; accepted actions invalidate an older poll result without claiming cancellation. A denied action waits for that slot, then performs one fresh authoritative reconciliation. Layout retirement prevents old replies, busy state or notices from affecting replacement controls. Eligible actions and expected revisions remain application-owned.
+
+
+- Host-neutral application-setting fields live in `modules/ui/shared/settings`.
+  They use public contracts and glossary UI only. Desktop field paths remain
+  compatible reexports; host clients and action ownership stay outside this module.
+  Labels target real controls and keep interactive help outside the label.
+  See `settings/README.md` for supported values and secret-draft rules.

@@ -1215,3 +1215,19 @@ The detailed map is `docs/operations/comprehensive-ui-automation-current-census.
 The historical coverage ledger keeps every approved requirement and earlier
 feature-evidence entry. Its small current-census pointer does not replace that
 history or qualify newer source from an older test result.
+
+
+## Settings recovery and field coverage
+
+The fixed `settings-ui` profile retains four Desktop files and adds three new
+thin-client/shared-field files plus two related dashboard/use-case files: nine
+files total, with one literal Node entry and eight Vitest entries. Its 23 exact
+automatic source rules retain unknown, incomplete and explicit generic checks.
+Shared fields use contract/glossary imports and compatible Desktop reexports.
+Thin Settings admits successful HTTP status and envelope, validates consumed and
+masked data, and binds mutation acknowledgements to the captured key/state.
+Current-view admission serializes writes/restart; failed readback requires an
+explicit refresh. A 202 acknowledgement means restart requested, not reconnected.
+See the leaf Settings READMEs for behavior and focused evidence limits. The initial
+census follow-up stays pending until a reviewed source checkpoint is linked.
+Actual host and final full testing remain separate.

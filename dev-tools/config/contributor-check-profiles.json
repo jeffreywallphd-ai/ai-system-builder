@@ -1752,7 +1752,12 @@
         "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
         "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
         "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-        "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+        "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+        "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+        "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+        "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+        "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts",
@@ -1769,7 +1774,22 @@
         "apps/desktop/src/renderer/lib/applicationSettingsApi.ts",
         "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
         "dev-tools/config/contributor-check-profiles.json",
-        "docs/diagnostics/ai-development-control-plane.md"
+        "docs/diagnostics/ai-development-control-plane.md",
+        "modules/ui/shared/settings/SettingField.tsx",
+        "modules/ui/shared/settings/SecretSettingField.tsx",
+        "modules/ui/shared/settings/ModelDefaultSettingField.tsx",
+        "modules/ui/shared/settings/index.ts",
+        "modules/ui/shared/settings/README.md",
+        "apps/thin-client/src/pages/SettingsPage.tsx",
+        "apps/thin-client/src/features/settings/hooks/useThinClientSettings.ts",
+        "apps/thin-client/src/features/settings/api/apiApplicationSettingsClient.ts",
+        "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+        "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+        "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+        "apps/thin-client/src/features/settings/README.md",
+        "modules/ui/shared/README.md",
+        "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
       ]
     },
     "security-status-ui": {

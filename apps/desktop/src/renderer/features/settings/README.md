@@ -30,3 +30,12 @@ The fixed `settings-ui` contributor profile runs the panel, page, view-ownership
 and API tests with synthetic values. It starts no app or model and uses no real
 credential store or provider. Actual packaged restart and final cross-roadmap
 qualification remain separate. Keep those checks pending until executed.
+
+
+The three field components now live in `modules/ui/shared/settings`; these
+Desktop component paths remain compatible reexports. Labels target their actual
+controls, with interactive help outside the label. Clear is retained across
+configured field kinds. Secret draft revision and callback success rules remain.
+Host clients, request ownership, folder selection and model resolution stay in
+this Desktop feature. See the shared field README and thin-client Settings README
+for their separate boundaries.

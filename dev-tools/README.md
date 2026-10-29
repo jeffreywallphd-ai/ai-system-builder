@@ -813,3 +813,12 @@ The detailed map is `docs/operations/comprehensive-ui-automation-current-census.
 The historical coverage ledger keeps every approved requirement and earlier
 feature-evidence entry. Its small current-census pointer does not replace that
 history or qualify newer source from an older test result.
+
+
+The fixed Settings profile has nine test files: four existing Desktop files,
+three new thin-client/shared-field files and two related dashboard/use-case files.
+One uses literal Node arguments and eight use Vitest. Its 23 exact source rules do
+not hide unknown, incomplete or explicitly requested generic impact. Synthetic
+fixtures cover HTTP denial, consumed/masked data, labels, readback and current-view
+recovery. They do not start an app/model/provider or qualify physical restart,
+reconnection or final full testing. See the host/shared Settings READMEs.

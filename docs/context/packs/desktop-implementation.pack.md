@@ -69,3 +69,10 @@
 - `401` in `lan-https-token` mode should guide pairing/re-pairing.
 - `403` should guide missing-permission remediation.
 - Never render or log bearer tokens or pairing codes.
+
+
+Host-neutral application-setting fields live in `modules/ui/shared/settings`.
+Desktop's previous field paths are compatible reexports. Host client/query,
+mutation ownership and runtime/folder APIs stay in each host feature. Follow
+`modules/ui/shared/settings/README.md` and the host Settings README for the exact
+field, secret-draft and accessible label/help contracts.
