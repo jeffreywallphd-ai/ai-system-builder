@@ -1,3 +1,6 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { runOwnedRestartPhase } from "../asset-authoring-oracles";
+import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -25,11 +28,15 @@ const axeSource = readFileSync(
   "utf8",
 );
 
-test("packaged desktop completes the guided build and publication lifecycle", async () => {
+test.use({trace: "off", screenshot: "off", video: "off"});
+
+async function runDesktopLifecycle(mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && test.info().project.name !== "packaged-desktop") throw new Error("Unsupported native lifecycle host.");
   const executablePath = requiredEnvironment(
     "VISUAL_COMPOSER_DESKTOP_EXECUTABLE",
   );
-  const isolated = prepareIsolatedDesktopCase("lifecycle");
+  const isolated = prepareIsolatedDesktopCase(mode === "native400" ? "lifecycle-native400" : "lifecycle");
   const dataRoot = isolated.dataRoot;
   const electronApp = await electron.launch({
     executablePath,
@@ -76,8 +83,9 @@ test("packaged desktop completes the guided build and publication lifecycle", as
   let qualificationWorkspaceId = "";
   let qualificationContexts: readonly RuntimeReleaseContext[] = [];
 
-  try {
+  await runOwnedRestartPhase(async () => {
     const page = await electronApp.firstWindow({ timeout: 60_000 });
+    if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, page);
     const rendererErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") rendererErrors.push(message.text());
@@ -89,7 +97,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
     ).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Create new workspace" }).click();
     await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
-    await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create");
+    await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create", mode);
     await page
       .locator('input[name="workspaceName"]')
       .fill("Desktop lifecycle qualification");
@@ -109,7 +117,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Systems", level: 1 }),
     ).toBeVisible();
 
-    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "initial", info: test.info() } });
+    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "initial", info: test.info() }, zoomMode: mode });
     const runtimePages = () => electronApp.windows().filter(candidate => candidate !== page);
     const observer = createOwnedRuntimePageObserver(runtimePages);
     let secondary: GuidedSystemRuntimeHandle | undefined;
@@ -135,6 +143,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
           .find((candidate) => candidate !== page);
         if (!runtimePage)
           throw new Error("Published runtime window is unavailable.");
+        if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
         observer.opened(primary.context, runtimePage);
         runtimePage.on("console", (message) => {
           if (message.type() === "error") rendererErrors.push(message.text());
@@ -156,7 +165,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             runtimePage.getByText("Start a conversation"),
           ).toBeVisible();
           await expect(transcript.locator("li")).toHaveCount(0);
-          await qualifyCriticalSurfaceAccessibility(runtimePage, test.info(), "runtime-conversation");
+          await qualifyCriticalSurfaceAccessibility(runtimePage, test.info(), "runtime-conversation", mode);
           const input = runtimePage.getByLabel("Message");
           await expect(input).toHaveAttribute("maxlength", String(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS));
           const fullInput = "x".repeat(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS);
@@ -239,7 +248,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       afterStop: async attempt => {
         await observeStop(primary.context);
         if (attempt !== 1) return;
-        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "repeat" } });
+        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "repeat", info: test.info() }, zoomMode: mode });
         qualificationContexts = readRuntimeReleasePair([primary.context, secondary.context]);
         const isolatedRuntime = secondary;
         await runObservedRuntimeLifecycle({
@@ -248,7 +257,8 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             await expect.poll(() => runtimePages().length, { timeout: 30_000 }).toBe(1);
             const runtimePage = runtimePages()[0];
             if (!runtimePage) throw new Error("Isolated runtime window is unavailable.");
-            observer.opened(isolatedRuntime.context, runtimePage);
+            if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
+        observer.opened(isolatedRuntime.context, runtimePage);
             runtimePage.on("console", message => { if (message.type() === "error") rendererErrors.push(message.text()); });
             runtimePage.on("pageerror", error => rendererErrors.push(error.message));
             await expect(runtimePage.getByRole("heading", { name: "Isolated portal", level: 1 })).toBeVisible({ timeout: 30_000 });
@@ -297,13 +307,14 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       reducedMotion: "reduce",
       forcedColors: "active",
     });
-    await assertGuidedLifecycleReflow(page);
+    await assertGuidedLifecycleReflow(page, mode);
     expect(rendererErrors).toEqual([]);
-  } finally {
-    await electronApp.close();
-  }
+  }, () => electronApp.close());
   verifyIsolatedRuntimeData(dataRoot, qualificationWorkspaceId, readRuntimeReleasePair(qualificationContexts));
-});
+}
+
+test("packaged desktop completes the guided build and publication lifecycle", async () => { await runDesktopLifecycle(); });
+test("packaged desktop completes build, publication and runtime windows at native 400 percent zoom", async () => { await runDesktopLifecycle("native400"); });
 
 async function seedDesktopQualificationModel(
   page: import("@playwright/test").Page,

@@ -1,10 +1,13 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { collectNative400Frame } from "./technical-accessibility";
 import { expect, type Page, type Locator, type TestInfo } from "@playwright/test";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readRuntimeReleaseContext, runObservedRuntimeLifecycle, type RuntimeReleaseContext } from "../runtime-lifecycle-oracles";
 
 export interface GuidedSystemLifecycleOptions {
   readonly modelDisplayName: string;
-  readonly accessibility: { readonly mode: "initial"; readonly info: TestInfo } | { readonly mode: "repeat" };
+  readonly zoomMode?: CriticalAccessibilityMode;
+  readonly accessibility: { readonly mode: "initial"; readonly info: TestInfo } | { readonly mode: "repeat"; readonly info?: TestInfo };
   readonly exerciseStartedRuntime?: (attempt: 1 | 2) => Promise<void>;
   readonly restartRuntime?: boolean;
   readonly exerciseStoppedRuntime?: (attempt: 1 | 2) => Promise<void>;
@@ -15,12 +18,14 @@ export async function prepareGuidedSystemLifecycle(
   systemName: string,
   options: GuidedSystemLifecycleOptions,
 ): Promise<GuidedSystemRuntimeHandle> {
+  const zoomMode = readCriticalAccessibilityMode(options.zoomMode === undefined ? "standard" : options.zoomMode);
   const accessibility = options.accessibility;
   if (!accessibility || typeof accessibility !== "object" ||
       (accessibility.mode !== "initial" && accessibility.mode !== "repeat") ||
       (accessibility.mode === "initial" && (!accessibility.info || typeof accessibility.info !== "object"))) {
     throw new Error("Unknown lifecycle accessibility mode.");
   }
+  if (zoomMode === "native400" && (!accessibility.info?.project || !["thin-chrome", "packaged-desktop"].includes(accessibility.info.project.name))) throw new Error("Unsupported native lifecycle host.");
   const auditInfo = accessibility.mode === "initial" ? accessibility.info : undefined;
   await page.getByRole("tab", { name: "Compose", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
@@ -79,7 +84,7 @@ export async function prepareGuidedSystemLifecycle(
   await page.getByRole("tab", { name: "Manage" }).click();
   const systemRow = page.getByRole("row", { name: new RegExp(systemName) });
   await expect(systemRow).toBeVisible({ timeout: 30_000 });
-  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-manage");
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-manage", zoomMode);
   await systemRow.getByRole("button", { name: "Open in Compose" }).click();
   await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
     "aria-selected",
@@ -116,7 +121,7 @@ export async function prepareGuidedSystemLifecycle(
     exact: true,
   });
   await expect(modalBuildAction).toBeFocused();
-  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-build-dialog");
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-build-dialog", zoomMode);
   await modalBuildAction.press("Enter");
   await expect(
     buildDialog.getByRole("heading", { name: "Build and checks completed" }),
@@ -157,7 +162,7 @@ export async function prepareGuidedSystemLifecycle(
   await expect(
     publishWorkspace.getByText("Ready to publish", { exact: true }).first(),
   ).toBeVisible();
-  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publish");
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publish", zoomMode);
   const selectedSystem = await publishWorkspace.getByRole("combobox", { name: "System", exact: true }).inputValue();
   const selectedBuild = await publishWorkspace.getByRole("combobox", { name: "Build version", exact: true }).inputValue();
 
@@ -171,7 +176,7 @@ export async function prepareGuidedSystemLifecycle(
   await expect(
     publishDialog.getByRole("button", { name: "Publish", exact: true }),
   ).toBeFocused();
-  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publication-confirm");
+  if (auditInfo) await qualifyCriticalSurfaceAccessibility(page, auditInfo, "system-publication-confirm", zoomMode);
   await page.keyboard.press("Escape");
   await expect(publishDialog).toBeHidden();
   await expect(publishBuild).toBeFocused();
@@ -271,8 +276,10 @@ export async function completeGuidedSystemLifecycle(page: Page, systemName: stri
   }, options.restartRuntime);
 }
 
-export async function assertGuidedLifecycleReflow(page: Page): Promise<void> {
-  await page.setViewportSize({ width: 320, height: 1_000 });
+export async function assertGuidedLifecycleReflow(page: Page, mode: CriticalAccessibilityMode = "standard"): Promise<void> {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "standard") await page.setViewportSize({ width: 320, height: 1_000 });
+  else expect((await collectNative400Frame(page)).status).toBe("passed");
   await expect(
     page.getByRole("heading", { name: "Publish", level: 2 }),
   ).toBeVisible();

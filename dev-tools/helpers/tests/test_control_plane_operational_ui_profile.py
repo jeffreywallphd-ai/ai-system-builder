@@ -61,6 +61,8 @@ TESTS += [
     "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
     "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
     "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
 ]
 EXPECTED_COMMANDS = [
     [
@@ -132,6 +134,10 @@ EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualif
 
 EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts")
 
+EXPECTED_COMMANDS[0].insert(13, "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts")
+EXPECTED_COMMANDS[1].insert(5, EXPECTED_COMMANDS[0].pop())
+EXPECTED_COMMANDS[2].insert(EXPECTED_COMMANDS[2].index("dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"), "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts")
+
 EXPECTED_COMMANDS.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_operational_ui_profile.py"])
 
 class OperationalUiProfile(unittest.TestCase):
@@ -142,8 +148,8 @@ class OperationalUiProfile(unittest.TestCase):
         oracle = "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
-        self.assertEqual(self.profile()["test_paths"][-3:-1], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 44)
+        self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
+        self.assertEqual(len(self.profile()["test_paths"]), 46)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -176,7 +182,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 44)
+        self.assertEqual(len(self.profile()["test_paths"]), 46)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -202,7 +208,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 44)
+        self.assertEqual(len(self.profile()["test_paths"]), 46)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])

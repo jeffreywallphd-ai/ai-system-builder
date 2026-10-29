@@ -1829,7 +1829,9 @@
         "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
         "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
         "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1922,7 +1924,12 @@
         "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
-        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
+        "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts"
       ]
     }
   }

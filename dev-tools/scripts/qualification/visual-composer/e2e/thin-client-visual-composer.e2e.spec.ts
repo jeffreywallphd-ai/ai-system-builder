@@ -1,3 +1,7 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
+import { operationalStatusUrl } from "../operational-ui-oracles";
+import { runOwnedRestartPhase } from "../asset-authoring-oracles";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
@@ -9,14 +13,14 @@ import {
 
 test.setTimeout(180_000);
 const QUALIFICATION_MODEL_NAME = "Controlled qualification model";
-const protocol = new WeakMap<Page, () => Promise<void>>();
-test.beforeEach(async ({ page }, info) => { protocol.set(page, observeComposerProtocol(page, info)); });
-test.afterEach(async ({ page }) => { await protocol.get(page)?.(); });
 
-test("thin client completes the guided build and publication lifecycle", async ({
-  page,
-  request,
-}) => {
+test.use({trace: "off", screenshot: "off", video: "off"});
+
+async function runBrowserLifecycle(page: Page, request: import("@playwright/test").APIRequestContext, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && test.info().project.name !== "thin-chrome") throw new Error("Unsupported native lifecycle host.");
+  const finishProtocol = observeComposerProtocol(page, test.info());
+  await runOwnedRestartPhase(async () => {
   const browserErrors: string[] = [];
   const summaryFailures: Promise<void>[] = [];
   const summaryConsoleUrls: string[] = [];
@@ -65,7 +69,7 @@ test("thin client completes the guided build and publication lifecycle", async (
       localStorage.setItem("ai-system-builder.paired-device-token", token),
     { token: bearerToken },
   );
-  await page.setViewportSize({ width: 1_440, height: 1_000 });
+  if (mode === "standard") await page.setViewportSize({ width: 1_440, height: 1_000 });
   await page.goto(new URL("/systems", origin).href);
   const workspaceRequired = page.getByRole("region", { name: "Workspace required" });
   await expect(workspaceRequired.or(page.getByRole("heading", { name: "Systems", exact: true }))).toBeVisible();
@@ -74,7 +78,7 @@ test("thin client completes the guided build and publication lifecycle", async (
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
   }
   await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create");
+  await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create", mode);
   await page
     .locator('input[name="workspaceName"]')
     .fill("Browser lifecycle qualification");
@@ -129,6 +133,7 @@ test("thin client completes the guided build and publication lifecycle", async (
   await completeGuidedSystemLifecycle(page, "Browser portal", {
     modelDisplayName: QUALIFICATION_MODEL_NAME,
     accessibility: { mode: "initial", info: test.info() },
+    zoomMode: mode,
   });
   const summary = page.getByRole("region", { name: "Page summary", exact: true });
   await expect(summary.getByText("Summary unavailable.", { exact: true })).toBeVisible();
@@ -146,13 +151,29 @@ test("thin client completes the guided build and publication lifecycle", async (
     reducedMotion: "reduce",
     forcedColors: "active",
   });
-  await assertGuidedLifecycleReflow(page);
+  await assertGuidedLifecycleReflow(page, mode);
   await Promise.all(summaryFailures);
   expect(summaryFailures.length).toBeGreaterThan(0);
   expect(summaryConsoleUrls.every(url => verifiedSummaryUrls.has(url))).toBe(true);
   await test.info().attach("nonmanaged-summary-boundary", { contentType: "application/json",
     body: JSON.stringify({ status: "unavailable", reason: "nonmanaged-fixture-has-no-summary-authority", countsQualified: false }) });
   expect(browserErrors).toEqual([]);
+  }, finishProtocol);
+}
+
+test("thin client completes the guided build and publication lifecycle", async ({page, request}) => {
+  await runBrowserLifecycle(page, request);
+});
+
+test("thin client completes system build and publication at native 400 percent zoom", async ({request}) => {
+  if (test.info().project.name !== "thin-chrome") throw new Error("Unsupported native lifecycle host.");
+  operationalStatusUrl(requiredEnvironment("VISUAL_COMPOSER_THIN_CLIENT_ORIGIN"));
+  requiredEnvironment("VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN");
+  const owned = await launchOwnedNativeZoomContext(4), failures: unknown[] = [];
+  try { await runBrowserLifecycle(owned.context.pages()[0] ?? await owned.context.newPage(), request, "native400"); }
+  catch (error) { failures.push(error); }
+  try { await owned.close(); } catch (error) { failures.push(error); }
+  if (failures.length) throw new AggregateError(failures, "Native lifecycle or browser retirement failed.");
 });
 
 function requiredEnvironment(name: string): string {

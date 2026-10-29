@@ -1,3 +1,5 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { collectNative400Frame } from "./technical-accessibility";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
@@ -103,13 +105,20 @@ async function readSavedDataset(page: Page, workspace: string, host: "desktop" |
 
 // Only generation is synthetic. Import, transports, task admission, native
 // capture/recognition, curation, review and approval persistence remain real.
-export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host: "desktop" | "thin") {
+export function ocrDatasetEvidenceName(host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (host !== "desktop" && host !== "thin") throw new Error("Invalid OCR evidence identity.");
+  return `${host}${mode === "native400" ? "-native400" : ""}.json`;
+}
+
+export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
   if ((host !== "desktop" && host !== "thin") || info?.project?.name !== (host === "desktop" ? "packaged-desktop" : "thin-chrome")) throw new Error("Unknown OCR host context.");
   async function auditOcrSurface(surface: "ocr-configuration" | "ocr-output-review") {
-    await qualifyCriticalSurfaceAccessibility(page, info, surface);
+    await qualifyCriticalSurfaceAccessibility(page, info, surface, mode);
     // Keep the OCR journey's original profile after the shared audit restores its base.
     await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "none" });
-    await page.setViewportSize({ width: 1280, height: 900 });
+    if (mode === "standard") await page.setViewportSize({ width: 1280, height: 900 });
   }
   const runId = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!;
   expect(runId).toMatch(/^[a-z0-9-]{20,80}$/);
@@ -150,10 +159,10 @@ export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host:
   await expect(language).toHaveValue(""); await expect(language).toHaveAttribute("maxlength", "35");
   await expect(language).toHaveAttribute("aria-describedby", /.+/);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setViewportSize({ width: 640, height: 900 });
+  if (mode === "standard") await page.setViewportSize({ width: 640, height: 900 });
   await expect(language).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.setViewportSize({ width: 1280, height: 900 });
+  if (mode === "standard") await page.setViewportSize({ width: 1280, height: 900 });
   const model = page.getByRole("textbox", { name: host === "desktop" ? /^Model ID/ : /^Local generation model/ });
   if (host === "desktop" && !await model.isVisible()) {
     if (!await page.getByRole("button", { name: /Generation prompt/ }).isVisible()) await page.getByRole("button", { name: "Advanced settings", exact: true }).click();
@@ -267,20 +276,22 @@ export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host:
   await page.getByRole("button", { name: host === "desktop" ? "Data" : "Artifacts", exact: true }).click();
   await page.getByRole("tab", { name: "Dataset Preparation", exact: true }).click();
   await expect(sourceBox()).toHaveCount(0);
-  const report = { schemaVersion: "real-ocr-dataset-host-journey-v1", host, status: "passed",
+  const native400Frame = mode === "native400" ? await collectNative400Frame(page) : undefined;
+  if (native400Frame) expect(native400Frame.status).toBe("passed");
+  const report = { schemaVersion: mode === "standard" ? "real-ocr-dataset-host-journey-v1" : "real-ocr-native400-dataset-host-journey-v1", host, status: "passed",
     sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
     fixtureSha256: fixture.sha256, pagesRead: 5, linesRead: 5, reviewedRows: 5,
     unavailableLanguageDenied: true, languageRetrySucceeded: true, keyboardLabelsAndFocus: true,
     savedRowsChecked: 5, originalSourceAndPageLineage: true, previewRemainsTruncated: true,
     savedArtifactBytes: savedBytes.length, savedArtifactSha256: createHash("sha256").update(savedBytes).digest("hex"),
-    reducedMotionAnd640pxReflow: true, explicitApprovalAndReload: true,
+    ...(mode === "standard" ? {reducedMotionAnd640pxReflow: true} : {zoomMode: mode, native400Frame}), explicitApprovalAndReload: true,
     observedRunningCancellation: true, retryAndDiscard: true, otherWorkspaceSourceHidden: true,
     elapsedMilliseconds: performance.now() - started, generation: "fixed-synthetic-only",
-    scope: "Real deployed task/native reader and host delivery. Synthetic generation does not qualify model accuracy. Native retirement is recorded by the fixed outer operator and actual worker exchange journals; viewport checks do not claim browser zoom qualification. No parent completion." };
+    scope: mode === "standard" ? "Real deployed task/native reader and host delivery. Synthetic generation does not qualify model accuracy. Native retirement is recorded by the fixed outer operator and actual worker exchange journals; viewport checks do not claim browser zoom qualification. No parent completion." : "Real deployed OCR task and host delivery with a measured native400 frame and separate critical-surface audits. Synthetic generation does not qualify model accuracy. Native retirement remains separate. No parent completion." };
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   await mkdir(folder, { recursive: true });
   const body = JSON.stringify(report, null, 2) + "\n";
   expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  await writeFile(path.join(folder, ocrDatasetEvidenceName(host, mode)), body, { flag: "wx" });
   await info.attach("real-ocr-dataset-host-journey", { body, contentType: "application/json" });
 }

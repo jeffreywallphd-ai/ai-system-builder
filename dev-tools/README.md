@@ -682,3 +682,19 @@ retains one awaited browse step before one awaited Assets core, the declared
 host, default or explicit native mode, bounded public reads, document reload
 restrictions and the original per-case deadline. Earlier failed guard evidence
 is retained; no actual host or parent pass follows from this source check.
+
+
+The lifecycle/OCR definitions add four named native-zoom variations for the
+remaining eight critical contexts. Standard authorization, summary-unavailable,
+runtime release/transcript isolation, stop/restart/uninstall and OCR source,
+review, cancellation and persistence checks remain. Repeat lifecycle preparation
+requires local host metadata in native mode and does not repeat initial audit
+files. The main and each standalone runtime Page use exact owned-window zoom;
+the browser variant acquires no unused default Page. OCR keeps its real fixed
+scenario and existing resource envelope. Native reports use separate filenames
+and measured fit; they do not claim the standard640px emulated viewport check.
+Two fresh native slots retain existing seeding/root guards. The fixed operational
+profile has46files and the same22automatic paths, with unchanged literal runners,
+Windows argument bounds and unknown/explicit fallback. Focused fixtures, syntax,
+builds/types and case collection do not qualify actual apps, native OCR, model
+accuracy or the parent roadmap. Full testing stays at the approved later boundary.
