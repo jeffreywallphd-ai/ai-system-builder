@@ -862,3 +862,23 @@ observation after refused cancellation. In-process invoke, finite runtime/access
 and passive inventory/settings/media fixtures do not qualify physical host,
 production sender/authentication/SQLite, actual ComfyUI/model or native effects.
 Existing browser joined evidence and accepted model/OCR results remain intact.
+
+### Desktop image navigation drafts
+
+The Desktop image form retains only a bounded navigation draft in renderer
+memory. The key includes the current image, model and artifact client identities
+and the canonical workspace. Default clients use the current preload bridge as
+their owner. Replacing any owner retires the prior view before draft writes; a
+retired callback cannot change the next workspace or client draft.
+
+Each owner context retains at most eight workspace drafts. A draft contains only
+the twenty known form fields and at most 128 KiB of serialized UTF-8 data. Reads
+and writes copy values. An inadmissible latest edit removes any older cached
+draft, so navigation cannot restore stale text. Cache refusal does not prevent
+normal form use. Weak owner keys permit retired client contexts to be collected.
+
+No prompt, error, preview, generated result or success state is added to browser
+or disk storage by this cache. Full document reload keeps the existing opaque
+task-ID recovery path, which must re-read the actual scoped task. Unsent form
+text does not survive a process reload. This local navigation fix does not
+qualify real ComfyUI generation, native cleanup or the deferred combined tests.

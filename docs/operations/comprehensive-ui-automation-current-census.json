@@ -473,8 +473,8 @@
   {
    "path": "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
    "facts": {
-    "sha256": "fe9d857f4a2a4d32fbaec6134765934daf79afbdd60e6ce6a7c6d8900ed61c6b",
-    "bytes": 17761,
+    "sha256": "acf8fb82453000a5fd3a1fa090075fcde0925d0982cf2ba548db61de7bd30914",
+    "bytes": 18223,
     "cases": [
      {
       "name": "admits one Start before a render or host acceptance",
@@ -486,59 +486,59 @@
      },
      {
       "name": "does not finalize or release a task after a foreign terminal reply",
-      "line": 58
+      "line": 67
      },
      {
       "name": "retains unknown task ownership and refuses a second start",
-      "line": 66
+      "line": 75
      },
      {
       "name": "retains retry after incomplete registered image output",
-      "line": 72
+      "line": 81
      },
      {
       "name": "catches an unexpected start rejection with fixed public text",
-      "line": 78
+      "line": 87
      },
      {
       "name": "keeps a finalized result when an older cancellation is %s",
-      "line": 83
+      "line": 92
      },
      {
       "name": "admits only one pending finalization retry for the accepted request",
-      "line": 95
-     },
-     {
-      "name": "clears workspace-specific form values without relying on a keyed remount",
       "line": 104
      },
      {
+      "name": "clears workspace-specific form values without relying on a keyed remount",
+      "line": 113
+     },
+     {
       "name": "ignores a retired %s Refresh before it can affect the new load",
-      "line": 112
+      "line": 121
      },
      {
       "name": "uses the committed callback while a replacement render remains suspended",
-      "line": 125
-     },
-     {
-      "name": "keeps confirmed output when a consumer refresh callback throws",
       "line": 134
      },
      {
+      "name": "keeps confirmed output when a consumer refresh callback throws",
+      "line": 143
+     },
+     {
       "name": "does not report success for an unconfirmed model unload",
-      "line": 139
+      "line": 148
      },
      {
       "name": "releases retired session previews when the client changes",
-      "line": 147
+      "line": 156
      },
      {
       "name": "refuses invalid settings before host dispatch: %j",
-      "line": 157
+      "line": 166
      },
      {
       "name": "keeps seed zero, latent source, three FaceID references and explicit parameters",
-      "line": 161
+      "line": 170
      }
     ],
     "dynamicCases": 0,
@@ -576,8 +576,8 @@
       "line": 39
      }
     ],
-    "assertionCount": 47,
-    "assertionDigest": "d08ef869608dad8d4c5621f82c2584fd2f153807917e058f66305349842bb878",
+    "assertionCount": 50,
+    "assertionDigest": "43279048cf0586d6a46b993e1bd19de27ed82e4e4120758a989d5ab88a95bdec",
     "assertionExamples": [
      {
       "line": 45,
@@ -585,19 +585,19 @@
       "sha256": "542b704af6defaecada8c04be0574fbfe9342c7dd6cd95f0760833425f72ab91"
      },
      {
-      "line": 55,
+      "line": 54,
       "kind": "expect",
-      "sha256": "0faa8792480ff770611784bf26c81fcb7a4daf934fda589e6dbb97d8014a2401"
+      "sha256": "15f56fdb6e444ca253a9700d9fb90124251e0f23865acd77d0db1ab22103e575"
      },
      {
-      "line": 55,
+      "line": 59,
       "kind": "expect",
-      "sha256": "44c993da48e2ba0e27b538a75a78d86e960dde0d95e7ffd07a77c328966e0e65"
+      "sha256": "d11b0ba6391a5f70ddfcf98d61dc8c9c31dc3822ebf83fec1590193582e31657"
      },
      {
-      "line": 55,
+      "line": 60,
       "kind": "expect",
-      "sha256": "54da6b277df56b2aa1ff247a6029fea157dc2e4dad60f3a5b83d49df6e146ca5"
+      "sha256": "fefe013c68357d6a84dbe9e4de5150713b789bae93796dcfd3ad1aeca452bb3c"
      }
     ],
     "modifiers": []
@@ -12958,6 +12958,132 @@
     "modifiers": []
    },
    "committed_sha256": "3913793d46cda0faea8360fb02076209c0cac9cb401a3344b300ad34642d8fa2"
+  },
+  {
+   "path": "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
+   "facts": {
+    "sha256": "d279c50140fdd9ad967ecc0a947d546395b2c7b6295011bddbc78e9a68aff9ff",
+    "bytes": 26525,
+    "cases": [
+     {
+      "name": "retains the same owned image form after a page remount without starting a task",
+      "line": 45
+     },
+     {
+      "name": "isolates workspace and client drafts and refuses retired form callbacks",
+      "line": 67
+     },
+     {
+      "name": "a replaced artifact client gets a separate draft and cannot overwrite the old client draft",
+      "line": 94
+     },
+     {
+      "name": "restores default preload drafts after remount and isolates a replacement bridge",
+      "line": 111
+     },
+     {
+      "name": "omits empty seed and includes explicit seed",
+      "line": 146
+     },
+     {
+      "name": "prevents duplicate starts while running",
+      "line": 159
+     },
+     {
+      "name": "does not set install status after unmount while reading install status",
+      "line": 172
+     },
+     {
+      "name": "updates repair status correctly for success and failure",
+      "line": 183
+     },
+     {
+      "name": "keeps installed status when an older status read resolves after repair",
+      "line": 213
+     },
+     {
+      "name": "lists only text-to-image models in the model dropdown source",
+      "line": 229
+     },
+     {
+      "name": "shows a model inventory load error instead of silently emptying the dropdown source",
+      "line": 251
+     },
+     {
+      "name": "accepts downloaded text-to-image full models from model management",
+      "line": 264
+     },
+     {
+      "name": "uses modelId for dropdown values even when localPath exists and does not remain loading after resolve",
+      "line": 278
+     },
+     {
+      "name": "prevents model state updates after model load effect cancellation",
+      "line": 318
+     },
+     {
+      "name": "keeps selected model identifiers intact (repo id, inventory id, checkpoint filename/path)",
+      "line": 344
+     },
+     {
+      "name": "sends selected model for downstream checkpoint resolution",
+      "line": 351
+     },
+     {
+      "name": "hydrates finalized asset previews from artifact-backed storage",
+      "line": 370
+     },
+     {
+      "name": "keeps the previous finalized preview visible until a later generation is ready",
+      "line": 395
+     },
+     {
+      "name": "includes faceId payload when enabled with up to three references",
+      "line": 428
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "Harness",
+      "line": 25
+     },
+     {
+      "name": "settleAsyncWork",
+      "line": 28
+     },
+     {
+      "name": "DefaultHarness",
+      "line": 121
+     }
+    ],
+    "assertionCount": 58,
+    "assertionDigest": "b7b5388e4d158d6e5cb2db5fad6d724d09388b3319da5ea29d8d723b388b66a5",
+    "assertionExamples": [
+     {
+      "line": 57,
+      "kind": "expect",
+      "sha256": "1323e2fa6cdc4ccbfcc697a55df2ee25246892ab2407a0fd9e8ad1873b096719"
+     },
+     {
+      "line": 58,
+      "kind": "expect",
+      "sha256": "ce50dbef28a8253a4f8f6da6dc30586ad0b48116baabf12e3ebf9f0bd316dc4d"
+     },
+     {
+      "line": 59,
+      "kind": "expect",
+      "sha256": "93d9217ee2290f16f27adefd75a07b679aa87e54120a5db2ecb2622f07a032d3"
+     },
+     {
+      "line": 60,
+      "kind": "expect",
+      "sha256": "3e1cdadf766cd283e1eeff6e5b2fa0712fcc5a603796043b336af7bda5634d5a"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "768fa73fd801716300f7aad27c4ec43f21f71e98b969576dde01027e4f44d168"
   }
  ],
  "scenarios": [
@@ -14174,7 +14300,8 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx"
      ]
     },
     {

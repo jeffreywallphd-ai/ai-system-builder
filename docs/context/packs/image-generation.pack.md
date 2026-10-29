@@ -95,3 +95,15 @@ Use this pack for tasks involving image generation contracts, runtime lifecycle 
   existing request bounds; unexpected errors use safe Notifications copy.
 - Focused fixtures do not qualify physical generation or native cleanup. See
   `docs/architecture/runtime-model.md` for the owning boundary and limitations.
+
+## Desktop navigation draft recovery
+
+The Desktop form uses bounded renderer memory keyed by workspace and the exact
+image, model and artifact client owners. It retains only known form fields,
+with eight workspace entries and a 128 KiB serialized limit per draft. Detached
+reads and owner-labelled updates prevent a retired view from writing into the
+next scope. No private prompt is added to browser or disk storage. Full reload
+recovers only the existing opaque task ID, not unsent form text or cached task
+success. Read `docs/architecture/runtime-model.md` before changing these limits
+or retention. Focused remount and isolation tests do not qualify actual image
+generation or native cleanup.

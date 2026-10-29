@@ -60,6 +60,9 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py",
         "dev-tools/scripts/qualification/tests/test_training_qualification_worker.py",
         "dev-tools/config/playwright.training-host.config.ts",
+        "apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts",
+        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts",
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",

@@ -1,5 +1,5 @@
 import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 
 import type { ImageGenerationRequest } from "../../../../../../../modules/contracts/image-generation";
 import type { ModelInventoryRecord } from "../../../../../../../modules/contracts/model";
@@ -17,6 +17,9 @@ import {
 } from "../../artifact-browser/api/desktopArtifactBrowserClient";
 import { recordSectionLoadMilestone } from "../../../diagnostics/sectionLoadDiagnostics";
 import { recordRendererMemorySnapshot } from "../../../diagnostics/rendererMemoryDiagnostics";
+import { getDesktopApi } from "../../../lib/desktopApi";
+import { imageDraftCacheForOwners, type ImageGenerationFormValues } from "./image-generation-draft-state";
+export type { ImageGenerationFormValues } from "./image-generation-draft-state";
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -45,28 +48,6 @@ export interface ImageGenerationTaskDataView {
   status?: string;
   progress?: { message?: string; current?: number; total?: number };
   outputs: ImageGenerationOutputReference[];
-}
-export interface ImageGenerationFormValues {
-  prompt: string;
-  negativePrompt: string;
-  seed: string;
-  width: string;
-  height: string;
-  steps: string;
-  cfg: string;
-  denoise: string;
-  sampler: string;
-  scheduler: string;
-  model: string;
-  numImages: string;
-  latentSourceArtifactId: string;
-  faceIdEnabled: boolean;
-  faceIdArtifactId1: string;
-  faceIdArtifactId2: string;
-  faceIdArtifactId3: string;
-  faceIdIdentityStrength: string;
-  faceIdStructureStrength: string;
-  faceIdNoise: string;
 }
 export type ImageGenerationUiStatus =
   | "idle"
@@ -260,22 +241,40 @@ export function useImageGenerationFeature(
   artifactClient?: DesktopArtifactBrowserClient,
   workspaceId?: string,
 ) {
+  // Default clients capture this immutable preload bridge. Binding its identity
+  // permits navigation recovery without sharing injected or replaced clients.
+  let bridge: ReturnType<typeof getDesktopApi> | undefined;
+  if (!client || !modelsClient || !artifactClient) {
+    try { bridge = getDesktopApi(); } catch { /* Injected test clients may have no preload bridge. */ }
+  }
   const imageGenerationClient = useMemo(
     () => client ?? createDesktopImageGenerationClient(),
-    [client],
+    [client, bridge],
   );
   const modelInventoryClient = useMemo(
     () => modelsClient ?? createDesktopModelsClient(),
-    [modelsClient],
+    [modelsClient, bridge],
   );
   const artifacts = useMemo(
     () => artifactClient ?? createDesktopArtifactBrowserClient(),
-    [artifactClient],
+    [artifactClient, bridge],
   );
-  const formWorkspaceRef = useRef(workspaceId);
   const session = useMemo(() => ({ active: false, action: undefined as "start" | "cancel" | "repair" | undefined, finalizing: false }), [imageGenerationClient, modelInventoryClient, artifacts, workspaceId]);
+  const draftCache = useMemo(() => imageDraftCacheForOwners([client ?? bridge ?? imageGenerationClient, modelsClient ?? bridge ?? modelInventoryClient, artifactClient ?? bridge ?? artifacts]), [client, modelsClient, artifactClient, bridge, imageGenerationClient, modelInventoryClient, artifacts]);
   const previewUrlsRef = useRef<string[]>([]);
-  const [form, setForm] = useState<ImageGenerationFormValues>(createDefaultForm);
+  const [formState, setFormState] = useState(() => ({ owner: session, value: draftCache?.read(workspaceId) ?? createDefaultForm() }));
+  const form = useMemo(() => formState.owner === session ? formState.value : draftCache?.read(workspaceId) ?? createDefaultForm(), [formState, session, draftCache, workspaceId]);
+  const setForm = useCallback((next: SetStateAction<ImageGenerationFormValues>) => {
+    if (!session.active) return;
+    setFormState(previous => {
+      if (!session.active) return previous;
+      const value = previous.owner === session ? previous.value : draftCache?.read(workspaceId) ?? createDefaultForm();
+      return { owner: session, value: typeof next === "function" ? next(value) : next };
+    });
+  }, [session, draftCache, workspaceId]);
+  useEffect(() => {
+    if (session.active && formState.owner === session) draftCache?.write(workspaceId, formState.value);
+  }, [formState, session, draftCache, workspaceId]);
   const [status, setStatus] = useState<ImageGenerationUiStatus>("idle");
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -341,7 +340,6 @@ export function useImageGenerationFeature(
   );
   useLayoutEffect(() => {
     session.active = true;
-    if (formWorkspaceRef.current !== workspaceId) { formWorkspaceRef.current = workspaceId; setForm(createDefaultForm()); }
     setRequestId(undefined); setStatus("idle"); setError(undefined); setMessage(undefined); setTaskData(undefined); setProgress(undefined); setOutputs([]);
     setFinalizedAssets([]); finalizedAssetsRef.current = []; setSessionGallery([]); setAvailableModels([]); setAvailableImageArtifacts([]); setInstallStatus("unknown");
     recordSectionLoadMilestone("renderer.section.load.skipped", {

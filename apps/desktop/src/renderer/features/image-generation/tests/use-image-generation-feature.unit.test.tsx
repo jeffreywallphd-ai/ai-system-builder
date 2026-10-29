@@ -20,8 +20,9 @@ const defaultArtifactClient = {
   browseArtifacts: vi.fn(async () => []),
   createArtifactMediaViewUrl: vi.fn(async () => ""),
 };
+const defaultModelClient = { listModels: listModelsMock };
 
-function Harness({ client, artifactClient, onReady }: { client: ReturnType<typeof makeClient>; artifactClient?: { browseArtifacts?: () => Promise<unknown[]>; createArtifactMediaViewUrl: (locator: { storageKey: string }) => Promise<string> }; onReady: (h: ReturnType<typeof useImageGenerationFeature>) => void }) { onReady(useImageGenerationFeature(client as never, undefined, (artifactClient ?? defaultArtifactClient) as never, "workspace-a")); return null; }
+function Harness({ client, artifactClient, onReady, workspaceId = "workspace-a" }: { client: ReturnType<typeof makeClient>; artifactClient?: { browseArtifacts?: () => Promise<unknown[]>; createArtifactMediaViewUrl: (locator: { storageKey: string }) => Promise<string> }; workspaceId?: string; onReady: (h: ReturnType<typeof useImageGenerationFeature>) => void }) { onReady(useImageGenerationFeature(client as never, defaultModelClient as never, (artifactClient ?? defaultArtifactClient) as never, workspaceId)); return null; }
 const makeClient = () => ({ startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn(), readComfyUiInstallStatus: vi.fn().mockResolvedValue({ ok: true, value: { status: "installed" } }), repairComfyUiInstall: vi.fn().mockResolvedValue({ ok: true, value: { status: "installed" } }) });
 
 async function settleAsyncWork(): Promise<void> {
@@ -39,6 +40,107 @@ describe("useImageGenerationFeature", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("retains the same owned image form after a page remount without starting a task", async () => {
+    const client = makeClient();
+    let hook!: ReturnType<typeof useImageGenerationFeature>;
+    const first = createRoot(document.createElement("div")); let second: ReturnType<typeof createRoot> | undefined;
+    let firstClosed = false;
+    try {
+      await act(async () => first.render(<Harness client={client} onReady={value => { hook = value; }} />));
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic image navigation draft", negativePrompt: "Synthetic exclusion", seed: "7", width: "256", height: "256" }));
+      await act(async () => first.unmount()); firstClosed = true;
+      second = createRoot(document.createElement("div"));
+      await act(async () => second!.render(<Harness client={client} onReady={value => { hook = value; }} />));
+      await settleAsyncWork();
+      expect(hook.form).toMatchObject({ prompt: "Synthetic image navigation draft", negativePrompt: "Synthetic exclusion", seed: "7", width: "256", height: "256" });
+      expect(client.startImageGeneration).not.toHaveBeenCalled();
+      expect(client.finalizeImageGenerationIfCompleted).not.toHaveBeenCalled();
+      expect(sessionStorage.length).toBe(0);
+    } finally {
+      if (!firstClosed) await act(async () => first.unmount());
+      if (second) await act(async () => second!.unmount());
+    }
+  });
+
+  it("isolates workspace and client drafts and refuses retired form callbacks", async () => {
+    const firstClient = makeClient(), secondClient = makeClient();
+    let hook!: ReturnType<typeof useImageGenerationFeature>;
+    const root = createRoot(document.createElement("div"));
+    const show = async (client: ReturnType<typeof makeClient>, workspaceId: string) => {
+      await act(async () => root.render(<Harness client={client} workspaceId={workspaceId} onReady={value => { hook = value; }} />));
+      await settleAsyncWork();
+    };
+    try {
+      await show(firstClient, "workspace-a");
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic first workspace" }));
+      const retired = hook.setForm;
+      await show(firstClient, "workspace-b"); expect(hook.form.prompt).toBe("");
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic second workspace" }));
+      await act(async () => retired(previous => ({ ...previous, prompt: "Retired write must be ignored" })));
+      expect(hook.form.prompt).toBe("Synthetic second workspace");
+      await show(firstClient, "workspace-a"); expect(hook.form.prompt).toBe("Synthetic first workspace");
+      await show(secondClient, "workspace-a"); expect(hook.form.prompt).toBe("");
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic other client" }));
+      await show(firstClient, "workspace-a"); expect(hook.form.prompt).toBe("Synthetic first workspace");
+      for (const client of [firstClient, secondClient]) {
+        expect(client.startImageGeneration).not.toHaveBeenCalled(); expect(client.finalizeImageGenerationIfCompleted).not.toHaveBeenCalled();
+      }
+      expect(sessionStorage.length).toBe(0);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("a replaced artifact client gets a separate draft and cannot overwrite the old client draft", async () => {
+    const client = makeClient(), otherArtifacts = { browseArtifacts: vi.fn(async () => []), createArtifactMediaViewUrl: vi.fn(async () => "") };
+    let hook!: ReturnType<typeof useImageGenerationFeature>;
+    const root = createRoot(document.createElement("div"));
+    const show = async (artifactClient: typeof defaultArtifactClient) => {
+      await act(async () => root.render(<Harness client={client} artifactClient={artifactClient} onReady={value => { hook = value; }} />));
+      await settleAsyncWork();
+    };
+    try {
+      await show(defaultArtifactClient); await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic original artifact scope" }));
+      await show(otherArtifacts); expect(hook.form.prompt).toBe("");
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic replacement artifact scope" }));
+      await show(defaultArtifactClient); expect(hook.form.prompt).toBe("Synthetic original artifact scope");
+      expect(client.startImageGeneration).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("restores default preload drafts after remount and isolates a replacement bridge", async () => {
+    const previous = Object.getOwnPropertyDescriptor(window, "desktopApi");
+    const makeBridge = () => ({
+      browseArtifacts: vi.fn(async () => ({ ok: true, value: { items: [] } })),
+      startImageGeneration: vi.fn(async () => { throw new Error("Generation must stay idle in this fixture."); }),
+      finalizeImageGenerationIfCompleted: vi.fn(async () => { throw new Error("Finalization must stay idle in this fixture."); }),
+    });
+    const firstBridge = makeBridge(), secondBridge = makeBridge();
+    const install = (bridge: ReturnType<typeof makeBridge>) => Object.defineProperty(window, "desktopApi", { configurable: true, value: bridge });
+    let hook!: ReturnType<typeof useImageGenerationFeature>;
+    function DefaultHarness() { hook = useImageGenerationFeature(undefined, undefined, undefined, "workspace-a"); return null; }
+    let root = createRoot(document.createElement("div"));
+    try {
+      install(firstBridge);
+      await act(async () => root.render(<DefaultHarness />)); await settleAsyncWork();
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic default bridge draft" }));
+      await act(async () => root.unmount());
+      root = createRoot(document.createElement("div"));
+      await act(async () => root.render(<DefaultHarness />)); await settleAsyncWork();
+      expect(hook.form.prompt).toBe("Synthetic default bridge draft");
+      install(secondBridge);
+      await act(async () => root.render(<DefaultHarness />)); await settleAsyncWork(); expect(hook.form.prompt).toBe("");
+      await act(async () => hook.setForm({ ...hook.form, prompt: "Synthetic replacement bridge draft" }));
+      install(firstBridge);
+      await act(async () => root.render(<DefaultHarness />)); await settleAsyncWork(); expect(hook.form.prompt).toBe("Synthetic default bridge draft");
+      for (const bridge of [firstBridge, secondBridge]) {
+        expect(bridge.startImageGeneration).not.toHaveBeenCalled(); expect(bridge.finalizeImageGenerationIfCompleted).not.toHaveBeenCalled();
+      }
+      expect(sessionStorage.length).toBe(0);
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) Object.defineProperty(window, "desktopApi", previous); else Reflect.deleteProperty(window, "desktopApi");
+    }
   });
 
   it("omits empty seed and includes explicit seed", async () => {

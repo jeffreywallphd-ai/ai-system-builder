@@ -49,7 +49,16 @@ for (const host of ["desktop", "browser"] as const) describe(`${host} image requ
     const old=client();const late=pending<ReturnType<typeof envelope<{requestId:string}>>>();old.startImageGeneration.mockReturnValue(late.promise);
     const {root}=await mount(old);await act(async()=>{void feature.start();});
     const current=client();current.startImageGeneration.mockResolvedValue(envelope({requestId:"current-image"}));
-    await act(async()=>root.render(<Shell value={current} workspace="image-workspace"/>));await act(async()=>{void feature.start();});await flush();
+    await act(async()=>root.render(<Shell value={current} workspace="image-workspace"/>));
+    if (host === "desktop") {
+      expect(feature.form.prompt).toBe("");
+      await act(async()=>feature.setForm(form=>({...form,prompt:"A synthetic current-client scene",seed:"0"})));
+    }
+    await act(async()=>{void feature.start();});await flush();
+    if (host === "desktop") {
+      expect(current.startImageGeneration).toHaveBeenCalledTimes(1);
+      expect(current.startImageGeneration.mock.calls[0]?.[0]).toMatchObject({workspaceId:"image-workspace",prompt:"A synthetic current-client scene",seed:0});
+    }
     late.resolve(envelope({requestId:"retired-image"}));await flush();
     const key=host==="desktop"?"ai-system-builder.image-task.v1:image-workspace":"ai-system-builder.thin-image-task.v1:image-workspace";
     expect(sessionStorage.getItem(key)).toBe("current-image");expect(feature.requestId).toBe("current-image");expect(old.readImageGeneration).not.toHaveBeenCalled();

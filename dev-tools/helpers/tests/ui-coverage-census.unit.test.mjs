@@ -125,6 +125,9 @@ test("checks the current repository map against original scope and actual source
     assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));
   }
   for(const id of ["image-generation-create-and-register","image-generation-recovery"])assert.deepEqual(map.scenarios.find(s=>s.id===id).host_definitions,[]);
+  const imageDraft=map.sources.find(s=>s.path==="apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx");
+  assert(imageDraft.facts.cases.some(c=>c.name==="retains the same owned image form after a page remount without starting a task"));
+  assert(imageDraft.facts.cases.some(c=>c.name==="isolates workspace and client drafts and refuses retired form callbacks"));
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

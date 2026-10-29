@@ -74,3 +74,20 @@ notification, task-family, shell, dashboard and readiness regressions. It select
 Node or Vitest from the test imports. Its synthetic UI/client evidence does not
 start an actual app, worker or model and does not qualify physical runtime,
 provider, native offload, actual-host accessibility or the deferred full suite.
+
+# Image form navigation drafts
+
+Leaving Image Generation and returning to the same workspace restores the form
+within the current renderer session. The draft belongs to the image, model and
+artifact client context. Another workspace or client has a separate draft;
+retired callbacks cannot replace it. The cache retains at most eight workspaces
+and 128 KiB of serialized known form fields per draft. It copies each snapshot
+and never caches task success, errors or preview URLs.
+
+The cache adds no prompt to browser or disk storage. Full reload retains the
+existing opaque task-ID recovery, which reads the actual task again. Unsent form
+text is not preserved after a process reload. The focused image-hook remount
+regression and `image-generation-draft-state.unit.test.ts` cover this feature
+without starting ComfyUI. Run the finite `operational-ui` contributor profile
+for related checks. Real generation, native cleanup and full testing remain
+separate qualification.
