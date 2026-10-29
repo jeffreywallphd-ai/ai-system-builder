@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,6 +27,7 @@ export async function qualifyStructuredOutputControls(
   readCriticalAccessibilityMode(mode);
   if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   let stage = "open-controls";
+  const failures: unknown[] = [];
   const completed: string[] = [];
   let current = page;
   const editor = () => current.locator("section.dataset-output-shape-editor");
@@ -145,18 +147,26 @@ export async function qualifyStructuredOutputControls(
     await expect(checked()).toBeChecked();
     completed.push("field-reset-preserves-user-choice");
     stage = "passed";
-  } finally {
-    const report = { schemaVersion: "structured-output-host-controls-v1", host, stage, completed,
+  } catch (error) { failures.push(error); }
+  finally {
+    const report = { status: stage === "passed" ? "passed" : "failed", schemaVersion: "structured-output-host-controls-v1", host, stage, completed,
       sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
       evidence: "Actual isolated host UI with synthetic decoder capability and declared 8 GiB accelerator total; no generation, model quality, physical resource or parent qualification." };
     const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!;
-    expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
-    expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
-    const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "structured-output-controls");
-    await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
-    const body = JSON.stringify(report, null, 2) + "\n";
-    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(4096);
-    await writeFile(path.join(folder, `${host}${mode === "native400" ? "-native400" : ""}.json`), body, { flag: "wx" });
-    await info.attach("structured-output-controls", { body, contentType: "application/json" });
+    const serialize = () => {
+      expect(run).toMatch(/^[a-z0-9-]{20,80}$/);
+      expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
+      const body = JSON.stringify({...report,
+        stage: report.status === "failed" && report.stage === "passed" ? "evidence-finalization" : report.stage,
+      }, null, 2) + "\n";
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(4096);
+      return body;
+    };
+    await finalizeQualificationEvidence(report, failures, async () => {
+      const body = serialize();
+      const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "structured-output-controls");
+      await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
+      await writeFile(path.join(folder, `${host}${mode === "native400" ? "-native400" : ""}.json`), body, { flag: "wx" });
+    }, () => info.attach("structured-output-controls", { body: serialize(), contentType: "application/json" }));
   }
 }

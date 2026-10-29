@@ -1084,3 +1084,27 @@ profile has46files and the same22automatic paths, with unchanged literal runners
 Windows argument bounds and unknown/explicit fallback. Focused fixtures, syntax,
 builds/types and case collection do not qualify actual apps, native OCR, model
 accuracy or the parent roadmap. Full testing stays at the approved later boundary.
+
+
+## Reliable UI test reports and workspace setup
+
+The reference browse, cold Canvas and structured-output journeys preserve the
+first test failure and later reporting failures, including empty thrown values.
+They attach current facts before final storage. Attachment or storage failure
+changes the result to failed and permits at most one failed-write retry. No raw
+exception enters the JSON. Structured output recalculates both serialized copies
+and replaces a stale passed stage when finalization fails. Its exclusive-create
+rule stays in force: an existing unknown file is never overwritten for recovery.
+If storage refuses the failed report, the failed test receipt remains decisive.
+Cold attempts also preserve a journey failure when owned app shutdown fails.
+
+The standard browser authoring case opens the Home creation form and waits for a
+new, distinct selected workspace before opening Systems. All existing browse,
+Assets, reload, timing and native-case assertions remain.
+
+The existing operational profile retains its 46 earlier files and adds two fixed
+reporting tests and one routing test, for 49 files. Its 22 automatic source
+patterns, fixed runners and argument bounds remain. Report consumers have exact
+borrowed coverage; unknown, incomplete or explicitly requested generic impact
+keeps generic checks. These checks start no app, model or provider. Other report
+writers, actual app/native qualification and final combined testing remain pending.

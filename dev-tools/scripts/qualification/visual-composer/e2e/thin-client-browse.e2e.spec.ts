@@ -13,9 +13,20 @@ test("thin client preserves the complete browse authoring journey", async ({page
   const origin = process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!;
   const token = process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!;
   await page.addInitScript(value => localStorage.setItem("ai-system-builder.paired-device-token", value), token);
-  await page.goto(new URL("/systems", origin).href);
+  await page.goto(new URL("/", origin).href);
+  const selectedWorkspace = page.getByLabel("Select current workspace");
+  await expect(selectedWorkspace).toBeVisible();
+  const previousWorkspaceId = await selectedWorkspace.inputValue();
+  await page.getByRole("button", {name: "Create new workspace", exact: true}).click();
   await page.locator('input[name="workspaceName"]').fill("Browse journey fixture");
   await page.getByRole("button", {name: "Create workspace", exact: true}).click();
+  await expect(page.locator(".workspace-create-form")).toHaveCount(0);
+  await expect(selectedWorkspace).toHaveValue(/^workspace\./);
+  await expect(selectedWorkspace).not.toHaveValue(previousWorkspaceId);
+  const createdWorkspaceId = await selectedWorkspace.inputValue();
+  await expect(page.getByRole("heading", {name: "Browse journey fixture", exact: true})).toBeVisible();
+  await page.goto(new URL("/systems", origin).href);
+  await expect(selectedWorkspace).toHaveValue(createdWorkspaceId);
   await expect(page.getByRole("heading", {name: "Systems", exact: true})).toBeVisible();
   const result = await completeBrowseAuthoringJourney(page, "Browser browse fixture", async () => {
     await page.reload(); await expect(page.getByRole("heading", {name: "Systems", exact: true})).toBeVisible();

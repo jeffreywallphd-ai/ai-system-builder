@@ -1,3 +1,5 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
+import {runOwnedRestartPhase} from "../asset-authoring-oracles";
 import {expect,test} from "@playwright/test";
 import {_electron as electron} from "playwright";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
@@ -16,12 +18,13 @@ test("packaged desktop fresh profiles qualify first Canvas readiness",async()=>{
   const folder=path.resolve("artifacts/qualification/visual-composer/runs",run,"cold-canvas");await mkdir(folder,{recursive:true});
   const report={schemaVersion:"cold-canvas-reference-v1",sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,profile:profile.environmentId,status:"running",warmups:5,samples:30,canvasReadyMilliseconds:[] as number[],allAttemptsMilliseconds:[] as number[],startupObservations:[] as (DesktopStartupObservation & {attempt:number;warmup:boolean})[],startupBoundary:"Owned Electron launch to first Page handle and interactive first-run shell. Includes test-driver observation overhead and the styled loading screen. Handle availability is not first paint. Profile seeding/workspace creation/inference excluded; OS/model caches uncontrolled. No startup speed verdict.",p95:0,budgetMilliseconds:profile.performance.maximumColdCanvasMilliseconds,boundary:"First system name entry/Create through visible Canvas with ready draft and initial layout in each newly seeded desktop profile. Host launch/workspace creation excluded, matching the retained observation; OS/model caches uncontrolled."};
   const save=()=>writeFile(path.join(folder,"evidence.json"),JSON.stringify(report,null,2)+"\n");await save();
+  const failures: unknown[] = [];
   try {
     for(let i=0;i<35;i++) {
       const isolated=prepareIsolatedDesktopCase("cold",i);
       const launchStarted=performance.now();
       const app=await electron.launch({executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60000});
-      try {
+      await runOwnedRestartPhase(async () => {
         const page=await app.firstWindow({timeout:60000});
         const firstWindowMilliseconds=performance.now()-launchStarted;
         await page.setViewportSize({width:1440,height:1000});expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
@@ -46,7 +49,7 @@ test("packaged desktop fresh profiles qualify first Canvas readiness",async()=>{
         await page.waitForFunction(()=>{const editor=document.querySelector<HTMLFieldSetElement>('[aria-label="System draft editor"]');return editor?.getAttribute("aria-busy")==="false" && !editor.disabled && editor.querySelectorAll(".system-composer__canvas-node").length>=2;},undefined,{polling:"raf"});
         const elapsed=performance.now()-started;report.allAttemptsMilliseconds.push(elapsed);
         if(i>=5)report.canvasReadyMilliseconds.push(elapsed);
-      }finally{await app.close();}
+      }, () => app.close());
       await save();
     }
     report.p95=[...report.canvasReadyMilliseconds].sort((a,b)=>a-b)[28]!;
@@ -54,6 +57,9 @@ test("packaged desktop fresh profiles qualify first Canvas readiness",async()=>{
     expect(report.canvasReadyMilliseconds).toHaveLength(30);
     expect(report.p95).toBeLessThanOrEqual(report.budgetMilliseconds);
     report.status="passed";
-    await test.info().attach("cold-canvas-reference",{body:JSON.stringify(report),contentType:"application/json"});
-  }finally{if(report.status==="running")report.status="failed";await save();}
+  } catch (error) { failures.push(error); }
+  finally {
+    await finalizeQualificationEvidence(report, failures, save,
+      () => test.info().attach("cold-canvas-reference", {body:JSON.stringify(report), contentType:"application/json"}));
+  }
 });

@@ -1831,7 +1831,10 @@
         "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
         "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
+        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1929,7 +1932,13 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
         "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts",
+        "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
+        "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py"
       ]
     }
   }

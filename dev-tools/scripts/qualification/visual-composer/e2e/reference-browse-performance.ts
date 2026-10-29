@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -18,6 +19,7 @@ export async function qualifyReferenceBrowsePerformance(page: Page, info: TestIn
   const report = {schemaVersion:"reference-browse-performance-v1", sourceRevision:process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, profile:profile.environmentId, profileSha256:createHash("sha256").update(bytes).digest("hex"), host:info.project.name, warmups:profile.performance.warmups, samples:profile.performance.samples, summaryMilliseconds:[] as number[], firstCompatiblePageMilliseconds:[] as number[], summaryP95:0, firstCompatiblePageP95:0, status:"running", fixture:{systems:1000,releases:10000,models:10000,customAssets:10000,sparseCandidates:1000,compatible:100,actualUiPageSize:48}, boundary:"User navigation/search action through exact usable rendered results; includes API/IPC and rendering. Setup, prior-page work and explicit warmups excluded; OS caches uncontrolled.", completedChecks:[] as string[]};
   const save=()=>writeFile(path.join(folder,"evidence.json"),JSON.stringify(report,null,2)+"\n");
   await save();
+  const failures: unknown[] = [];
   try {
     await page.setViewportSize({width:1440,height:1000});
     expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
@@ -90,7 +92,10 @@ export async function qualifyReferenceBrowsePerformance(page: Page, info: TestIn
     expect(report.summaryP95).toBeLessThanOrEqual(profile.performance.maximumSummaryPageMilliseconds);
     expect(report.firstCompatiblePageP95).toBeLessThanOrEqual(profile.performance.maximumFirstCompatiblePageMilliseconds);
     report.status="passed";
-    await info.attach("reference-browse-performance",{body:JSON.stringify(report),contentType:"application/json"});
-    return report;
-  } finally {if(report.status==="running") report.status="failed"; await save();}
+  } catch (error) { failures.push(error); }
+  finally {
+    await finalizeQualificationEvidence(report, failures, save,
+      () => info.attach("reference-browse-performance", {body:JSON.stringify(report), contentType:"application/json"}));
+  }
+  return report;
 }
