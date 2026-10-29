@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -11214,7 +11214,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -12859,6 +12859,42 @@
           "The review site keeps all roadmap details while limiting the size of each response.",
           "Current descriptions, support links, status, work chunks and live response checks passed. Older execution records remain saved when omitted from a response.",
           "This review-site work does not close the remaining running-app or final roadmap checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "84ef5c625722787bc620a6225dd61ed8824059aa393abbb9d7754f3961383075",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent improved the Assets test journeys and their reports.",
+          "Focused tests and source checks passed. The original media checks remain.",
+          "The app journeys still need to run during final testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7c618500ffef737b7bab9603872e2ce9c63d84cde3a9dd8969478fa9e81c06cb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent mapped all 39 approved feature groups to their test sources.",
+          "The map checks current routes, tabs and supported capabilities. It also lists missing and unrun tests.",
+          "A coverage map does not prove that the app tests passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0998b94686f9e605609eebbcd7b53925aecebf4ba457f6611625458f7ad992cd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed Settings errors, late replies and misleading save messages.",
+          "Both app versions use the same field controls. Focused tests, source checks and the thin-client build passed.",
+          "Running-app and final checks remain pending. Saved model accuracy results stay closed."
         ]
       }
     }

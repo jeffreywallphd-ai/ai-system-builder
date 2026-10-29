@@ -2250,7 +2250,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2269,7 +2269,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -5825,6 +5825,62 @@
       "receipt_digest": "7107398f825b2e695f5c85c11aa4ae7dfebaff52c64334269efd1ee8b200b95c",
       "review_digest": "f19f32066a342a643c77a3ced482910b58dcf871bd321e66d97ada9aa9dc49ba",
       "scope": "Reviewed read-only review-site response handling and current display data. Exact final bytes retain all roadmap and criterion details within the existing limit. Only older execution history may leave a response, with an exact notice. Focused tests, live HTTP checks and five scoped gates passed. Parent qualification remains pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "asset-to-published-system-journeys",
+      "criterion_id": "asset-authoring-lifecycle",
+      "work_id": "asset-ui-qualification-definition-reconciliation",
+      "work_criteria": [
+        "closed-assets-identity-and-fresh-slots",
+        "bounded-private-free-evidence-and-cleanup",
+        "meaningful-asset-and-pixel-oracles-preserved",
+        "finite-routing-and-owned-source-checkpoint"
+      ],
+      "receipt_digest": "534bc95046ca78b3d1b07729620ed56ba1d73ec1762c6194f64ddfde9b43fccd",
+      "review_digest": "0ac3b38fb7ed65bfc2a6404978e50e028a26ec75c6be0f6ea91cd70285cda751",
+      "scope": "Reviewed Assets test definitions and safe reporting. Existing original-media checks remain. The fixed profile has 41 test files. Focused tests, selected source checks and separate review passed. Host cases were collected only. Actual app, native and final checks remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "current-ui-coverage-census",
+      "work_criteria": [
+        "complete-current-definition-map",
+        "safe-bounded-census-validation",
+        "honest-scope-and-owned-checkpoint"
+      ],
+      "receipt_digest": "3a90f829d5f5ac3fdc4fea5368522c116054d8be11396f1bdf710682500c9d16",
+      "review_digest": "2f3900e1762b641092d74b6e60c5ecbb8e45502c2da8dd9157593dfb70f6c07e",
+      "scope": "Reviewed read-only coverage inventory. All 39 approved families and 131 behavior links retain their original scope. Source, route, tab and capability checks are bounded. Missing, conditional and unrun evidence remains visible. This inventory does not pass any app or parent check.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "thin-settings-recovery-and-shared-fields",
+      "work_criteria": [
+        "accessible-shared-compatible-fields",
+        "status-and-consumed-data-admission",
+        "truthful-current-view-recovery",
+        "reviewed-focused-owned-checkpoint"
+      ],
+      "receipt_digest": "10ba5da2703cf82b34801f80bb9cb56e583d96acef1e41cd7377f80ccc8cc22a",
+      "review_digest": "9b394a270766c2b7bdc58aef33d3a64db8d805484652230d6e95f85affbf1af7",
+      "scope": "Reviewed Settings recovery and shared fields. Labels focus real controls. HTTP refusals, malformed data and late replies cannot report success. Save and Clear confirm the returned public value; secret checks use masked state. The 104 focused tests, selected source checks, thin build and scoped gates passed. Actual host and final checks remain pending.",
       "limitations": [
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."

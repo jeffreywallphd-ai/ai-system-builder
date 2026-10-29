@@ -104,5 +104,10 @@ test("checks the current repository map against original scope and actual source
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
-  assert(result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
+  assert(!result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
+  const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
+    const row=map.scenarios.find(s=>s.id===id);
+    for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));
+  }
 });

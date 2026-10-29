@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "aefd1f749f939f4088ab85c3ceb4eeb1cd09a23d",
+ "source_baseline": "b87724c58e691189e286064b1941760064345adf",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -3965,6 +3965,72 @@
    "committed_sha256": "478e604177f780e0b11e24478c952e9b4ae2ebdfce77772ad9c22c301251664a"
   },
   {
+   "path": "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+   "facts": {
+    "sha256": "269c77cd78fe414d13c396d0111ac5b8a3ff297fd2167a9ab9f3393ad0e334df",
+    "bytes": 7023,
+    "cases": [
+     {
+      "name": "keeps canonical authentication status and codes without private response text",
+      "line": 36
+     },
+     {
+      "name": "accepts masked secret metadata and public model objects without loading or resolving models",
+      "line": 52
+     },
+     {
+      "name": "rejects malformed consumed definitions and false restart acknowledgements",
+      "line": 57
+     },
+     {
+      "name": "admits legacy partial model defaults but rejects wrong consumed kinds, foreign values and malformed model fields",
+      "line": 71
+     },
+     {
+      "name": "owns consumed model fields before a deferred renderer commit and does not invoke model accessors",
+      "line": 81
+     }
+    ],
+    "dynamicCases": 4,
+    "functions": [
+     {
+      "name": "response",
+      "line": 15
+     },
+     {
+      "name": "call",
+      "line": 18
+     }
+    ],
+    "assertionCount": 25,
+    "assertionDigest": "8ca7ddcebd0312528e3cebdead3b15084ed52f0db16301bfdb3fa6a8be6a132d",
+    "assertionExamples": [
+     {
+      "line": 26,
+      "kind": "assert",
+      "sha256": "07a7b4702b85bb5d26b007e6da6fc308d2ffd629ce79efe38f95dafe379c6a65"
+     },
+     {
+      "line": 26,
+      "kind": "assert",
+      "sha256": "c87a7014079872255fd136bf8cbd3daeeafa7c169ab772eb8ba29b915d7dc069"
+     },
+     {
+      "line": 27,
+      "kind": "assert",
+      "sha256": "d39e72f0268d861efba31305b78cccf471f1cda769f757ff8d7d38bb0f3a2007"
+     },
+     {
+      "line": 27,
+      "kind": "assert",
+      "sha256": "99ab37c9a7d237f503426c397885c869bf8aa219c13d1bc0c5f32cf12201267e"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "269c77cd78fe414d13c396d0111ac5b8a3ff297fd2167a9ab9f3393ad0e334df"
+  },
+  {
    "path": "apps/thin-client/src/features/workspace/tests/workspace-readiness-recovery.unit.test.tsx",
    "facts": {
     "sha256": "e40b93dd4b844ef3dc250f4fdc75242d927c3c53d3c98967fe4801729df846fe",
@@ -4009,6 +4075,140 @@
     "modifiers": []
    },
    "committed_sha256": "e40b93dd4b844ef3dc250f4fdc75242d927c3c53d3c98967fe4801729df846fe"
+  },
+  {
+   "path": "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+   "facts": {
+    "sha256": "91db2168a41ff3c79550970042224754afc9c39e7815680d41b26cc3059d757a",
+    "bytes": 16806,
+    "cases": [
+     {
+      "name": "saves and clears through the supported client and displays confirmed readback",
+      "line": 41
+     },
+     {
+      "name": "does not report a successful save after failed readback and requires explicit refresh before another mutation",
+      "line": 46
+     },
+     {
+      "name": "retains a refused write draft and sends only a fixed safe failure to the real notification center",
+      "line": 52
+     },
+     {
+      "name": "recovers an initial read failure by an explicit refresh instead of a false empty successful view",
+      "line": 57
+     },
+     {
+      "name": "keeps the newer StrictMode read when the first request resolves later",
+      "line": 61
+     },
+     {
+      "name": "serializes restart against settings writes and reports only an acknowledged request",
+      "line": 65
+     },
+     {
+      "name": "denies an unconfirmed restart acknowledgement and retains explicit retry",
+      "line": 73
+     },
+     {
+      "name": "keeps safe guidance for HTTP%s",
+      "line": 78
+     },
+     {
+      "name": "admits only one write and excludes clear and restart before React disables controls",
+      "line": 83
+     },
+     {
+      "name": "does not read again or publish a late write from an unmounted view",
+      "line": 90
+     },
+     {
+      "name": "retains a submitted secret and refuses success for %s readback",
+      "line": 100
+     },
+     {
+      "name": "retains the secret draft and refuses Clear success while readback remains configured",
+      "line": 109
+     },
+     {
+      "name": "keeps malformed model objects outside render and recovers after an explicit valid read",
+      "line": 114
+     },
+     {
+      "name": "confirms canonical Save readback before success (matches=%s)",
+      "line": 122
+     },
+     {
+      "name": "confirms the canonical default returned after Clear (matches=%s)",
+      "line": 130
+     },
+     {
+      "name": "confirms projected partial canonical model defaults (matches=%s)",
+      "line": 138
+     },
+     {
+      "name": "confirms secret state without comparing or displaying a submitted secret",
+      "line": 148
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "held",
+      "line": 13
+     },
+     {
+      "name": "rows",
+      "line": 14
+     },
+     {
+      "name": "fakeClient",
+      "line": 15
+     },
+     {
+      "name": "mount",
+      "line": 30
+     },
+     {
+      "name": "button",
+      "line": 38
+     },
+     {
+      "name": "change",
+      "line": 39
+     },
+     {
+      "name": "typeSecret",
+      "line": 99
+     }
+    ],
+    "assertionCount": 81,
+    "assertionDigest": "8434f69601fe4d2119d7da8f68e853c7047aef3f5b46573c78581be8e1511d0d",
+    "assertionExamples": [
+     {
+      "line": 38,
+      "kind": "expect",
+      "sha256": "d966b0554257464300c46c298744589040b7ce5dca4a5bc36b806a2a10e44ae4"
+     },
+     {
+      "line": 42,
+      "kind": "expect",
+      "sha256": "08e8377ff733d99cf4d5e4c6ad136101aa8b8f05f0fb957468933ee0e02626eb"
+     },
+     {
+      "line": 43,
+      "kind": "expect",
+      "sha256": "6514ad1d1280752eca602200aa83f984a66bba931ee4a17555ccabb17ce82348"
+     },
+     {
+      "line": 43,
+      "kind": "expect",
+      "sha256": "b2b8951c76c6b7fd4b502208444c052ef266904b7d3e314dd63e0f35c192d2cc"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "91db2168a41ff3c79550970042224754afc9c39e7815680d41b26cc3059d757a"
   },
   {
    "path": "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
@@ -9256,6 +9456,72 @@
    "committed_sha256": "de43d2db2225cbbe9818a397dfff94f1a6e41fde0d2937284d9188857163584d"
   },
   {
+   "path": "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
+   "facts": {
+    "sha256": "db20617c26d4814c9c7b07488525083ef63c0b31f2393113abc9b84eebfeb9dc",
+    "bytes": 5531,
+    "cases": [
+     {
+      "name": "masks secret values when reading settings",
+      "line": 79
+     },
+     {
+      "name": "routes secret and non-secret setting updates to different ports",
+      "line": 100
+     },
+     {
+      "name": "rejects masked placeholder for secret updates and never reads maskedValue as input",
+      "line": 134
+     },
+     {
+      "name": "rejects blank and unknown keys for update and clear",
+      "line": 141
+     },
+     {
+      "name": "clears values from the correct store",
+      "line": 156
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "createSettingsPort",
+      "line": 31
+     },
+     {
+      "name": "createSecretsPort",
+      "line": 59
+     }
+    ],
+    "assertionCount": 10,
+    "assertionDigest": "9f82088cbad4526ae7819230322c3d1d22cc366858b4a49fa7bbda2ace0b8d08",
+    "assertionExamples": [
+     {
+      "line": 92,
+      "kind": "expect",
+      "sha256": "a92001aa1724280b5355a13416a1cc6e7fffe056d785c9b4c2e51cae3b46d586"
+     },
+     {
+      "line": 128,
+      "kind": "expect",
+      "sha256": "d0064fa96fb6d1b196f6ac9109a8f9cb07e8f573acb2a3cd998ea657d6278cdf"
+     },
+     {
+      "line": 129,
+      "kind": "expect",
+      "sha256": "0243a71a75775c0fa8e4eb195b70074df85c147125b7342d21da7839c8800944"
+     },
+     {
+      "line": 130,
+      "kind": "expect",
+      "sha256": "8cbf66b8dff3256a95bf239065078794dbb91cce4134494a06923b81405cc461"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "db20617c26d4814c9c7b07488525083ef63c0b31f2393113abc9b84eebfeb9dc"
+  },
+  {
    "path": "modules/domain/website-ingestion/tests/website-ingestion-domain.unit.test.ts",
    "facts": {
     "sha256": "b64ec8554903790c0926719883e8162c5789a60ac10c915e2c399b729a915307",
@@ -10886,6 +11152,60 @@
    "committed_sha256": "48945b39deb57f504b6bd272212bf6212a129d7d9ed23eef5bed41181b3e87e6"
   },
   {
+   "path": "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+   "facts": {
+    "sha256": "7c1f692ee51a3a5662a103f6d2a6c1dc5fa9552d1f16b2ef44eefb200c5e988e",
+    "bytes": 4489,
+    "cases": [
+     {
+      "name": "binds $valueKind field labels to controls and keeps interactive help outside labels",
+      "line": 24
+     },
+     {
+      "name": "does not turn an empty numeric draft into an unintended zero",
+      "line": 36
+     },
+     {
+      "name": "retains existing Thin Clear capability for $valueKind fields",
+      "line": 45
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "render",
+      "line": 9
+     }
+    ],
+    "assertionCount": 14,
+    "assertionDigest": "617c39ed8812428341c95c8cb4a6c496bf1f8c2fd3b25395d0498031ea33cd20",
+    "assertionExamples": [
+     {
+      "line": 28,
+      "kind": "expect",
+      "sha256": "e4a817cb8cc2acf88a9af670b4be1c9f895bf352cf09beb32536dccb31cbe1a3"
+     },
+     {
+      "line": 29,
+      "kind": "expect",
+      "sha256": "bea4301e181c583872857f9d18c2254746b3cb40cc3d3aa7a7444b98875e3b55"
+     },
+     {
+      "line": 29,
+      "kind": "expect",
+      "sha256": "73d94c077b91602fb6b25b7de507b179715afc045e6b2cd3dd805a1218fac0df"
+     },
+     {
+      "line": 30,
+      "kind": "expect",
+      "sha256": "590c64871d4bd86e3eba78ec30ba4bdd7c0d6e2c5b390c7cb87d1af81c1058ad"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "7c1f692ee51a3a5662a103f6d2a6c1dc5fa9552d1f16b2ef44eefb200c5e988e"
+  },
+  {
    "path": "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
    "facts": {
     "sha256": "60c48d13d168e224bce58e49318d2b0c4bc037dc55e38ae363b0479d0b47f099",
@@ -12218,7 +12538,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     },
     {
@@ -12228,7 +12553,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     },
     {
@@ -12238,7 +12568,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     }
    ],
@@ -12247,9 +12582,7 @@
     "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": [
-    "The agent must add and run thin-client Settings save, clear, failed-refresh and restart recovery tests."
-   ]
+   "pending_feature_checks": []
   },
   {
    "id": "settings-secrets-and-model-defaults",
@@ -12264,7 +12597,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     },
     {
@@ -12273,7 +12611,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     },
     {
@@ -12282,7 +12625,12 @@
       "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-page.unit.test.tsx",
       "apps/desktop/src/renderer/features/settings/tests/settings-recovery.ui.test.tsx",
-      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts"
+      "apps/desktop/src/renderer/lib/application-settings-api.unit.test.ts",
+      "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+      "apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts",
+      "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+      "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+      "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
      ]
     }
    ],
