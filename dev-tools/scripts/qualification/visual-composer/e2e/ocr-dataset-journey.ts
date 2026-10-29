@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { collectNative400Frame } from "./technical-accessibility";
 import { expect, type Page, type TestInfo } from "@playwright/test";
@@ -290,8 +291,13 @@ export async function qualifyOcrDatasetJourney(page: Page, info: TestInfo, host:
     scope: mode === "standard" ? "Real deployed task/native reader and host delivery. Synthetic generation does not qualify model accuracy. Native retirement is recorded by the fixed outer operator and actual worker exchange journals; viewport checks do not claim browser zoom qualification. No parent completion." : "Real deployed OCR task and host delivery with a measured native400 frame and separate critical-surface audits. Synthetic generation does not qualify model accuracy. Native retirement remains separate. No parent completion." };
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   await mkdir(folder, { recursive: true });
-  const body = JSON.stringify(report, null, 2) + "\n";
-  expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, ocrDatasetEvidenceName(host, mode)), body, { flag: "wx" });
-  await info.attach("real-ocr-dataset-host-journey", { body, contentType: "application/json" });
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, ocrDatasetEvidenceName(host, mode)), body, { flag: "wx" });
+  }, () => info.attach("real-ocr-dataset-host-journey", { body: serialize(), contentType: "application/json" }));
 }

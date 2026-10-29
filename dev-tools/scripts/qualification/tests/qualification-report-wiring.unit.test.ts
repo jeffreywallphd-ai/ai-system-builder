@@ -95,3 +95,52 @@ for (const step of ['name: "Create new workspace", exact: true', 'await expect(s
   const text = readFileSync(path.join(folder, "thin-client-browse.e2e.spec.ts"), "utf8");
   assert.throws(() => inspectWorkspace(text.replace(step, "/* synthetic missing ownership step */")));
 });
+
+const lateWriters = [
+  ["ingestion-source-journey.ts", "real-ingestion-source-host-journey", 8192],
+  ["ocr-dataset-journey.ts", "real-ocr-dataset-host-journey", 8192],
+  ["provided-dataset-version-journey.ts", "provided-version-host-journey", 8192],
+  ["saved-row-review-host-journey.ts", "saved-row-review-host-journey", 8192],
+  ["source-context-host-journey.ts", "source-context-host-journey", 8192],
+  ["manual-context-host-journey.ts", "manual-context-host-journey", 8192],
+  ["low-memory-dataset-journey.ts", "low-memory-dataset-host-journey", 4096],
+] as const;
+function inspectLateWriter(name: string, attachmentName: string, maximum: number, text: string) {
+  const source = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true), all = calls(source);
+  const finalizers = all.filter(call => call.expression.getText(source) === "finalizeQualificationEvidence");
+  assert.equal(finalizers.length, 1); const finalizer = finalizers[0]!;
+  assert.equal(finalizer.arguments.length, 4); assert.equal(finalizer.arguments[0]!.getText(source), "report");
+  const primary = finalizer.arguments[1]!; assert(ts.isArrayLiteralExpression(primary)); assert.equal(primary.elements.length, 0);
+  const save = finalizer.arguments[2]!, attach = finalizer.arguments[3]!;
+  assert(ts.isArrowFunction(save)); assert(ts.isArrowFunction(attach));
+  assert(save.getText(source).includes("const body = serialize()"));
+  const writes = all.filter(call => call.expression.getText(source) === "writeFile"); assert.equal(writes.length, 1);
+  assert(writes[0]!.pos >= save.pos && writes[0]!.end <= save.end);
+  const options = writes[0]!.arguments[2]!; assert(ts.isObjectLiteralExpression(options)); assert.equal(options.properties.length, 1);
+  const flag = options.properties[0]!; assert(ts.isPropertyAssignment(flag)); assert.equal(flag.name.getText(source), "flag");
+  assert(ts.isStringLiteral(flag.initializer)); assert.equal(flag.initializer.text, "wx");
+  const attachments = all.filter(call => call.expression.getText(source) === "info.attach" && ts.isStringLiteral(call.arguments[0]!) && call.arguments[0].text === attachmentName);
+  assert.equal(attachments.length, 1); assert(attachments[0]!.pos >= attach.pos && attachments[0]!.end <= attach.end);
+  assert(attach.getText(source).includes("body: serialize()"));
+  let serializer: ts.ArrowFunction | undefined;
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(source) === "serialize" && node.initializer && ts.isArrowFunction(node.initializer)) serializer = node.initializer;
+    ts.forEachChild(node, visit);
+  };
+  visit(source); assert(serializer);
+  const fresh = all.filter(call => call.expression.getText(source) === "JSON.stringify" && call.arguments[0]?.getText(source) === "report");
+  assert.equal(fresh.length, 1); assert(fresh[0]!.pos >= serializer.pos && fresh[0]!.end <= serializer.end);
+  assert(serializer.getText(source).includes(`Buffer.byteLength(body)`)); assert(serializer.getText(source).includes(String(maximum)));
+  assert.equal(finalizer.parent.getText(source).startsWith("await finalizeQualificationEvidence"), true);
+}
+for (const [name, attachment, maximum] of lateWriters) test(`${name} publishes fresh status and preserves exclusive creation and its byte limit`, () => {
+  inspectLateWriter(name, attachment, maximum, readFileSync(path.join(folder, name), "utf8"));
+});
+for (const [label, change] of [
+  ["missing finalizer", (text: string) => text.replace("finalizeQualificationEvidence(report", "unrelatedPublisher(report")],
+  ["cached attachment", (text: string) => text.replace("body: serialize()", "body")],
+  ["unknown file overwrite", (text: string) => text.replace('flag: "wx"', 'flag: "w"')],
+] as const) test(`late writer refuses ${label}`, () => {
+  const [name, attachment, maximum] = lateWriters[0];
+  assert.throws(() => inspectLateWriter(name, attachment, maximum, change(readFileSync(path.join(folder, name), "utf8"))));
+});

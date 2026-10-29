@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -125,8 +126,13 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "ingestion-source");
   await mkdir(folder, { recursive: true });
   expect(await realpath(folder)).toBe(folder);
-  const body = JSON.stringify(report, null, 2) + "\n";
-  expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, evidenceName), body, { flag: "wx" });
-  await info.attach("real-ingestion-source-host-journey", { body, contentType: "application/json" });
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, evidenceName), body, { flag: "wx" });
+  }, () => info.attach("real-ingestion-source-host-journey", { body: serialize(), contentType: "application/json" }));
 }

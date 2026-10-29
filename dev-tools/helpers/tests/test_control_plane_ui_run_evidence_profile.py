@@ -1,5 +1,6 @@
 """Borrowed report ownership must not weaken unknown or explicit test impact."""
 from pathlib import Path
+import fnmatch
 import json
 import sys
 import tempfile
@@ -16,6 +17,11 @@ BORROWED = [V + "qualification-reporting.ts", V + "e2e/reference-browse-performa
             V + "e2e/packaged-desktop-cold-canvas.e2e.spec.ts", V + "e2e/structured-output-controls-journey.ts",
             V + "e2e/thin-client-browse.e2e.spec.ts", CONFIG]
 CORE = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+LATE_SOURCES = [V + "e2e/" + name for name in [
+    "ingestion-source-journey.ts", "ocr-dataset-journey.ts", "provided-dataset-version-journey.ts",
+    "saved-row-review-host-journey.ts", "source-context-host-journey.ts", "manual-context-host-journey.ts",
+    "low-memory-dataset-journey.ts",
+]]
 
 
 class UiRunEvidenceProfile(unittest.TestCase):
@@ -62,6 +68,31 @@ class UiRunEvidenceProfile(unittest.TestCase):
                 ids = {check["id"] for check in catalog.plan(root, [CORE, *BORROWED], ["documentation"], "synthetic-candidate")["selected"]}
                 self.assertIn("operational-ui", ids)
                 self.assertIn("focused-tests", ids)
+
+    def test_late_writers_preserve_adjacent_profiles_and_incomplete_fallback(self):
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 22)
+        for source in LATE_SOURCES:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+            neighbors = {name for name, patterns in catalog.QUALIFICATION_PROFILE_PATTERNS.items()
+                         if name != "operational-ui" and any(fnmatch.fnmatchcase(source, pattern) for pattern in patterns)}
+            with self.subTest(source=source), tempfile.TemporaryDirectory(prefix="late-report-profile-") as directory:
+                root = Path(directory)
+                for incomplete, required, generic in [(False, ["documentation"], False),
+                                                       (False, ["focused-tests"], True),
+                                                       (True, ["documentation"], True)]:
+                    profile = self.profile()
+                    if incomplete:
+                        profile["source_paths"].remove(source)
+                    profiles = {"operational-ui": profile, **{
+                        name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"],
+                               "source_paths": [source]} for name in neighbors}}
+                    config = root / CONFIG; config.parent.mkdir(parents=True, exist_ok=True)
+                    config.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
+                    ids = {check["id"] for check in catalog.plan(root, [CORE, source], required, "synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertTrue(neighbors.issubset(ids))
+                    self.assertEqual("focused-tests" in ids, generic)
 
 
 if __name__ == "__main__":

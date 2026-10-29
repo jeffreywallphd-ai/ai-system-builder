@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
@@ -253,11 +254,18 @@ export async function verifySavedRowReviewAfterRestart(page: Page, host: Host, s
   if (!/^[a-z0-9-]{20,80}$/.test(run) || !/^source\.[a-f0-9]{64}$/.test(source)) throw invalid();
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "saved-row-review");
   await mkdir(folder, { recursive: true }); if (await realpath(folder) !== folder) throw invalid();
-  const body = JSON.stringify({ schemaVersion: "saved-row-review-host-journey-v1", sourceRevision: source, host, status: "passed",
+  const report = { schemaVersion: "saved-row-review-host-journey-v1", sourceRevision: source, host, status: "passed",
     savedVersions: 3, rowCounts: [8, 8, 7], exactVisibleValues: true, exactParentSourceRecipeLineage: true,
     originalBytesRetained: true, persistedRecordsAndBytesAfterRestart: true, modelGeneration: false, ocr: false,
     datasetDigests: current.map(entry => artifact(entry.version, "dataset").digest),
-    scope: "Fixed public UI/storage/restart support only. Native retirement, physical platform and final parent qualification remain separate." }, null, 2) + "\n";
-  if (Buffer.byteLength(body) > 8192) throw invalid();
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" }); await info.attach("saved-row-review-host-journey", { body, contentType: "application/json" });
+    scope: "Fixed public UI/storage/restart support only. Native retirement, physical platform and final parent qualification remain separate." };
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    if (Buffer.byteLength(body) > 8192) throw invalid();
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  }, () => info.attach("saved-row-review-host-journey", { body: serialize(), contentType: "application/json" }));
 }

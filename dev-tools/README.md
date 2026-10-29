@@ -722,3 +722,17 @@ patterns, fixed runners and argument bounds remain. Report consumers have exact
 borrowed coverage; unknown, incomplete or explicitly requested generic impact
 keeps generic checks. These checks start no app, model or provider. Other report
 writers, actual app/native qualification and final combined testing remain pending.
+
+
+The same report finalizer now protects the seven tracked ingestion, OCR, version,
+saved-row, source/manual Context and low-memory UI result writers. Each callback
+serializes current status again. Attachment failure is stored as failed; refused
+storage remains a failed test. Existing exclusive-create rules and byte limits
+stay in force. All workflow checks before publication and all later operations
+are preserved, including source bytes/lineage, OCR approval/cancellation, standard
+and native output identities, restart and explicit low-memory notification choices.
+The fixed operational membership stays at 49 files with 22 automatic patterns.
+Adjacent OCR and dataset profiles still run when their source rules apply; missing
+or explicit generic coverage retains its gate. Model accuracy remains separately
+closed. Task diagnostics, native cleanup, other report recovery, final HTTP byte
+budgeting and actual host/full qualification remain pending.

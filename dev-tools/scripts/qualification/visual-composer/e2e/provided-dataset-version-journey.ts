@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
@@ -279,8 +280,13 @@ export async function verifyProvidedVersionsAfterRestart(page: Page, host: Host,
   expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "provided-versions");
   await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
-  const body = JSON.stringify(report, null, 2) + "\n";
-  expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
-  await info.attach("provided-version-host-journey", { body, contentType: "application/json" });
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192);
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  }, () => info.attach("provided-version-host-journey", { body: serialize(), contentType: "application/json" }));
 }

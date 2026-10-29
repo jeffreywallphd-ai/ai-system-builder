@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -123,10 +124,15 @@ export async function qualifyLowMemoryDatasetJourney(page: Page, info: TestInfo,
   expect(runId).toMatch(/^[a-z0-9-]{20,80}$/); expect(report.sourceRevision).toMatch(/^source\.[a-f0-9]{64}$/);
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", runId, "low-memory-dataset");
   await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
-  const body = JSON.stringify(report, null, 2) + "\n";
-  expect(Buffer.byteLength(body)).toBeLessThanOrEqual(4096);
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
-  await info.attach("low-memory-dataset-host-journey", { body, contentType: "application/json" });
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(4096);
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  }, () => info.attach("low-memory-dataset-host-journey", { body: serialize(), contentType: "application/json" }));
 }
 
 export async function uploadLowMemorySource(page: Page, host: "desktop" | "thin" = "desktop") {

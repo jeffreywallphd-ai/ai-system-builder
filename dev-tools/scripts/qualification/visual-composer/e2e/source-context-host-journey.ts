@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
@@ -318,12 +319,19 @@ export async function verifySourceContextAfterRestart(page: Page, host: Host, sa
   const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!, revision = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!;
   if (!/^[a-z0-9-]{20,80}$/.test(run) || !/^source\.[a-f0-9]{64}$/.test(revision)) throw invalid();
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "source-context"); await mkdir(folder, { recursive: true }); if (await realpath(folder) !== folder) throw invalid();
-  const body = JSON.stringify({ schemaVersion: "source-context-host-journey-v1", sourceRevision: revision, host, status: "passed",
+  const report = { schemaVersion: "source-context-host-journey-v1", sourceRevision: revision, host, status: "passed",
     sourcePackAndRagReopened: true, exactSavedBytesAndSourceLineage: true, citedRetrievalAndSourceReturn: true,
     originalPreservingRebuilds: 2, cancelledDeletionRetainedCatalog: true, selectedRemovalSurvivedReload: true,
     discardedCandidateDidNotPublish: true, desktopDownloadVerified: host === "desktop", thinClientDownload: "not-an-existing-UI-control",
     embedding: "closed-finite-vectors", modelGeneration: false, ocr: false,
-    scope: "Fixed source Context UI/real processors/storage/restart only. Actual model accuracy, physical backing-file erasure, native retirement and parent/final qualification remain separate." }, null, 2) + "\n";
-  if (Buffer.byteLength(body) > 8192) throw invalid(); await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
-  await info.attach("source-context-host-journey", { body, contentType: "application/json" });
+    scope: "Fixed source Context UI/real processors/storage/restart only. Actual model accuracy, physical backing-file erasure, native retirement and parent/final qualification remain separate." };
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    if (Buffer.byteLength(body) > 8192) throw invalid();
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  }, () => info.attach("source-context-host-journey", { body: serialize(), contentType: "application/json" }));
 }

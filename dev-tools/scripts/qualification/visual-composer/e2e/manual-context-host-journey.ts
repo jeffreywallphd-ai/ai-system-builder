@@ -1,3 +1,4 @@
+import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
@@ -181,12 +182,19 @@ export async function verifyManualContextAfterRestart(page: Page, host: Host, sa
   const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!, source = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!;
   if (!/^[a-z0-9-]{20,80}$/.test(run) || !/^source\.[a-f0-9]{64}$/.test(source)) throw new Error("The current Context journey source identity is unavailable.");
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", run, "manual-context"); await mkdir(folder, { recursive: true }); if (await realpath(folder) !== folder) throw new Error("The Context evidence folder is unavailable.");
-  const body = JSON.stringify({ schemaVersion: "manual-context-host-journey-v1", sourceRevision: source, host, status: "passed", ...saved,
+  const report = { schemaVersion: "manual-context-host-journey-v1", sourceRevision: source, host, status: "passed", ...saved,
     modelGeneration: false, ocr: false, discardNoPublication: true, cancelledDeletePreservedBytes: true,
     confirmedCatalogRemoval: true, deletedDetailRefused: true, removalSurvivedRendererReload: true,
-    scope: "Actual fixed manual pack UI/storage/restart/discard/catalog-removal support only. Physical backing-file erasure, native retirement and parent qualification remain separate." }, null, 2) + "\n";
-  if (Buffer.byteLength(body) > 8192) throw new Error("The Context evidence exceeded its limit.");
-  await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" }); await info.attach("manual-context-host-journey", { body, contentType: "application/json" });
+    scope: "Actual fixed manual pack UI/storage/restart/discard/catalog-removal support only. Physical backing-file erasure, native retirement and parent qualification remain separate." };
+  const serialize = () => {
+    const body = JSON.stringify(report, null, 2) + "\n";
+    if (Buffer.byteLength(body) > 8192) throw new Error("The Context evidence exceeded its limit.");
+    return body;
+  };
+  await finalizeQualificationEvidence(report, [], async () => {
+    const body = serialize();
+    await writeFile(path.join(folder, `${host}.json`), body, { flag: "wx" });
+  }, () => info.attach("manual-context-host-journey", { body: serialize(), contentType: "application/json" }));
 }
 
 async function verifyManualContextDiscardAndDelete(page: Page, host: Host, saved: ManualContextSnapshot) {
