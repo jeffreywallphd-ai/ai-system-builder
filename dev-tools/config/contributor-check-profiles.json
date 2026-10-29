@@ -1876,7 +1876,8 @@
         "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
         "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
         "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -1996,7 +1997,10 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
         "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
         "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
-        "dev-tools/config/playwright.review-site.config.ts"
+        "dev-tools/config/playwright.review-site.config.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts",
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts"
       ]
     }
   }

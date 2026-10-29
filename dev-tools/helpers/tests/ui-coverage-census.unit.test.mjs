@@ -107,6 +107,12 @@ test("checks the current repository map against original scope and actual source
   assert(!result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   assert.deepEqual(map.scenarios.find(s=>s.id==="contributor-review-site").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
+  const website="dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts";
+  assert.deepEqual(map.scenarios.find(s=>s.id==="website-acquisition-refresh").host_definitions,[website]);
+  const websiteFacts=map.sources.find(s=>s.path===website).facts;
+  assert(websiteFacts.cases.some(c=>c.name==="browser acquires an authorized website page and reopens isolated raw and readable artifacts"));
+  assert(websiteFacts.modifiers.length>0,"Missing authorized fixture remains a declared conditional execution gap.");
+  for(const id of ["desktop-model-training","image-generation-create-and-register","image-generation-recovery"])assert.deepEqual(map.scenarios.find(s=>s.id===id).host_definitions,[]);
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

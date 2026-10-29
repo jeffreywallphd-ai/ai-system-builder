@@ -77,7 +77,7 @@ TESTS += [
     "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"
 ]
 
-TESTS += ['dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts']
+TESTS += ['dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
 
 # Fixed literal Node groups retain the twelve-file Windows argument bound.
 EXPECTED_COMMANDS = [
@@ -111,13 +111,13 @@ EXPECTED_COMMANDS = [
         "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
         "modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
         "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
-        "modules/ui/shared/notifications/tests/notificationState.unit.test.ts",
-        "modules/ui/shared/notifications/tests/taskObservation.unit.test.ts"
+        "modules/ui/shared/notifications/tests/notificationState.unit.test.ts"
     ],
     [
         "node",
@@ -125,6 +125,7 @@ EXPECTED_COMMANDS = [
         "tsx",
         "--test",
         "--",
+        "modules/ui/shared/notifications/tests/taskObservation.unit.test.ts",
         "modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts"
     ],
     [
@@ -175,8 +176,8 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 57)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 26)
+        self.assertEqual(len(self.profile()["test_paths"]), 58)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -208,8 +209,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 57)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 26)
+        self.assertEqual(len(self.profile()["test_paths"]), 58)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -234,8 +235,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 57)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 26)
+        self.assertEqual(len(self.profile()["test_paths"]), 58)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 29)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -317,8 +318,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_review_browser_sources_keep_finite_coverage_and_generic_fallback(self):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts', 'dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts', 'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/config/playwright.review-site.config.ts']
-        self.assertEqual(self.profile()['test_paths'][-1], paths[2])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[-4:], paths)
+        self.assertEqual(self.profile()['test_paths'][56], paths[2])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[22:26], paths)
         for source in paths:
             for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
                 with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='review-browser-profile-') as directory:
@@ -329,6 +330,25 @@ class OperationalUiProfile(unittest.TestCase):
                     self.fixture(root,profile)
                     ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
                     self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+
+    def test_website_host_sources_preserve_finite_routing_and_borrowed_guards(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts', 'dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
+        self.assertEqual(self.profile()['test_paths'][57:], [paths[2]])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:], paths)
+        borrowed = 'dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts'
+        self.assertIn(borrowed, self.profile()['source_paths'])
+        self.assertNotIn(borrowed, catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='website-host-profile-') as directory:
+                    root=Path(directory); profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']: profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids); self.assertEqual('focused-tests' in ids,generic)
 
     def test_auto_selection_preserves_unknown_and_explicit_generic_tests(self):
         with tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:

@@ -841,3 +841,32 @@ the controlled refresh/error copy. The canonical journey pins the existing
 Comprehensive UI operational increment and compares every requirement bullet in
 order, including nested bullets. Initial port failures, owned-read retirement and
 report publication retain fixed primary/cleanup facts without private errors.
+
+
+## Website acquisition host definition
+
+The existing thin ingestion Playwright entry also defines a real website import
+journey. It uses Add data, one page and the existing production capture controls.
+It checks separate HTML and readable-text records, their exact workspace/source/
+snapshot identity after reload, their preview text and workspace separation.
+Existing file-import cases and focused pages/sitemap/retry/cancel tests remain.
+Refresh is an application/API operation; this test does not invent a Refresh UI.
+
+Before actual execution, separately authorize one public synthetic HTTPS page
+and its use policy, robots policy and expected short text. Supply only that
+page in `VISUAL_COMPOSER_WEBSITE_FIXTURE`, as JSON with exactly these fields:
+`schemaVersion` (`authorized-website-host-fixture-v1`), `pageUrl`, `expectedText`
+and `authorizationRef` (the reference to the prior authorization). The declaration
+records prerequisites. It does not grant network authority. Do not use private
+content, credentials, query strings or a local/private test server. The existing
+capture adapter still verifies DNS, redirects, robots and resource limits.
+The expected text must be a short, harmless ASCII marker present in both the
+HTML source and extracted text. A missing declaration skips this case and keeps
+acquisition qualification pending. An invalid declaration fails before page work.
+
+Focused construction checks run the bounded declaration/key/report oracle and
+collect the named browser entry without starting the app or requesting a page.
+The operational profile preserves its prior 57 files and appends this one oracle
+file, with three exact automatic source rules. It retains adjacent ingestion
+coverage and generic fallback checks. Actual host execution, native recovery,
+provider qualification and the later combined test run remain separate.

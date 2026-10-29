@@ -45,6 +45,9 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
         "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
         "dev-tools/config/playwright.review-site.config.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts",
+        "dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",
