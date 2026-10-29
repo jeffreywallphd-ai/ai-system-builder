@@ -3702,5 +3702,17 @@
     "scope": "Current feature checks and separate all-criterion review govern local outcomes. Historical results cannot qualify a newer source. Actual packaged desktop/local Chrome, process/server restart, native/runtime/managed/provider and final combined qualification remain pending. No accepted accuracy or OCR rerun.",
     "actual_host_qualification": "pending",
     "full_cross_roadmap_testing": "deferred-by-user"
+  },
+  "current_definition_census": {
+    "source": "docs/operations/comprehensive-ui-automation-current-census.json",
+    "command": "node dev-tools/helpers/ui_coverage_census.mjs",
+    "work_id": "current-ui-coverage-census",
+    "status": "definition-map-validation-pending-review",
+    "scope": "Current source assertions and inventories are references only. Existing scenario fields preserve earlier implementation evidence. No test execution or parent pass follows from this map.",
+    "pending_agent_work": [
+      "Add focused thin-client Settings mutation/recovery tests.",
+      "Review missing family-specific host definitions and conditional test modifiers before the final matrix."
+    ],
+    "full_testing_status": "deferred-by-user"
   }
 }

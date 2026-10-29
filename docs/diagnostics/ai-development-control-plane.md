@@ -1192,3 +1192,26 @@ physical viewport with an emulated one.
 Local fake-port tests and test discovery verify these definitions. They do not
 qualify real app behavior, native process isolation, storage protection, model
 quality or final roadmap completion. Those checks keep their separate evidence.
+
+
+## Current functional UI definition census
+
+Run `node dev-tools/helpers/ui_coverage_census.mjs` to check the current JSON map
+against the original 39 scenario families and their 131 behavior statements.
+The map records exact source hashes, named cases, assertion locations/digests,
+29 host test files and 16 route, tab and dataset capability inventories. Source
+analysis does not execute the inspected code. The fixed controller test runs
+the census and its focused invalid-input and file-admission checks.
+
+The checker reads bounded regular repository files only. It reports changed
+source, test modifiers, missing host mappings and pending feature checks. It
+always reports zero executed product tests and grants no host or parent pass.
+Current missing mappings are visible work for the agent; they do not require
+human intervention. Thin-client Settings still needs focused mutation/recovery
+tests. Existing accepted model accuracy stays closed. Full testing remains
+deferred by the user until feature work across open roadmaps is worked through.
+
+The detailed map is `docs/operations/comprehensive-ui-automation-current-census.json`.
+The historical coverage ledger keeps every approved requirement and earlier
+feature-evidence entry. Its small current-census pointer does not replace that
+history or qualify newer source from an older test result.
