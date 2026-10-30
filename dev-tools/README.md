@@ -1213,3 +1213,26 @@ Run the focused observer test file for fake boundary checks and inert owned
 Windows children. The native file-identity integration test additionally uses
 the fixed installed compiler profile and new disposable synthetic fixtures.
 Neither test runs model accuracy checks or qualifies a stable staging fence.
+
+
+### Model-free Windows identity checks
+
+The fixed `windows-file-identity` profile runs exactly the TypeScript protocol/
+adapter unit file and Python native-builder denial unit file:
+
+```text
+python -B dev-tools/helpers/run_focused_checks.py --profile windows-file-identity
+```
+
+These tests use mocks and newly owned synthetic files. They do not compile or
+run native code, load a model or qualify a file effect. The separate
+`windows-model-file-identity.native.integration.test.ts` fixture builds only the
+fixed installed MSVC14.42/SDK26100 profile, with no fetch or arbitrary compiler,
+source or destination. Select the qualification Python through `PYTHON` before
+that explicit controlled test. It uses new disposable roots, actual native exit
+and source/tool/binary observations. Missing tooling remains unavailable.
+
+Read-only identity cannot fence new child bytes or establish protected ownership,
+production binary protection, stable storage accounting or offload recovery.
+Existing broader profiles and generic fallback remain unchanged. Accepted model
+accuracy and the deferred combined software campaign are outside this profile.

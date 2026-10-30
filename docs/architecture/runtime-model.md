@@ -903,3 +903,21 @@ stable retained tree, durable accounting or restart authority. Native identity
 fixtures can qualify read-only identity behavior; they cannot qualify a staging
 fence because read-only identity still permits child creation. Actual offload
 protection and recovery qualification remain pending.
+
+
+## Versioned read-only Windows identity support
+
+The private Windows x64/NTFS helper accepts a bounded drive-root request and
+strict single child components relative to held parent handles. It rejects
+observed reparse points, identity/type mismatches, multiple file links and
+write/delete sharing conflicts. It revalidates held facts before release; the
+adapter requires actual helper close and fences reuse after unknown exit.
+It is uncomposed support under ADR-0043, with no production effect capability.
+
+The fixed `windows-file-identity` profile runs only two model-free unit files.
+Actual installed-toolchain/native fixtures are separate observations; their
+identity and exit evidence cannot prove a stable tree fence. New child files
+remain possible while an identity lease is held. Owner/DACL observations do not
+grant protected journal, deletion, reveal, publication, crash recovery, a fresh
+offload lease or production binary provenance. Those controls remain pending.
+No existing retained data or production model source is adopted by this helper.

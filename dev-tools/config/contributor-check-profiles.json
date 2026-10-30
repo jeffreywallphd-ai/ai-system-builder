@@ -2230,6 +2230,29 @@
         "dev-tools/README.md",
         "docs/diagnostics/ai-development-control-plane.md"
       ]
+    },
+    "windows-file-identity": {
+      "test_paths": [
+        "modules/adapters/model/local/tests/windows-model-file-identity.unit.test.ts",
+        "dev-tools/scripts/native/tests/test_build_windows_model_file_identity.py"
+      ],
+      "source_paths": [
+        "modules/adapters/model/local/native/windows/model_file_identity.cc",
+        "modules/adapters/model/local/windowsModelFileIdentityProtocol.ts",
+        "modules/adapters/model/local/createWindowsModelFileIdentityAdapter.ts",
+        "modules/adapters/model/local/tests/windows-model-file-identity.unit.test.ts",
+        "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts",
+        "dev-tools/scripts/native/build_windows_model_file_identity.py",
+        "dev-tools/scripts/native/tests/test_build_windows_model_file_identity.py",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_windows_identity_profile.py",
+        "modules/adapters/README.md",
+        "dev-tools/README.md",
+        "docs/architecture/runtime-model.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/runtime.pack.md"
+      ]
     }
   }
 }

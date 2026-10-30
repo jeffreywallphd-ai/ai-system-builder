@@ -1651,3 +1651,21 @@ creates another dataset/repository, changes visibility/conversion or deletes
 remote data. Concurrent remote administration is outside this cooperative proof.
 Source/loader/contract tests and collection grant no actual app/provider/native,
 full-suite, parent or accepted-model-accuracy qualification.
+
+
+## Private Windows identity component boundary
+
+The versioned read-only Windows identity helper is a prerequisite, not a file
+effect or ownership service. Bounded native framing, handle-relative no-follow
+opens, exact expected identities, revalidation, finite handles/deadlines and
+confirmed helper exit reduce accidental substitution and cleanup errors in
+new disposable fixtures. The fixed installed compiler profile has bounded
+process/memory/time/output and source/tool/binary observations, without fetch.
+
+Read-only handles do not prevent new child bytes or all security changes.
+Private owner/DACL facts do not authorize deletion, reveal, protected publication
+or durable storage accounting. Binary path checks are not production packaging
+or a hostile replacement guarantee. Protected worker/file lifetime, crash
+recovery and actual offload remain pending. Production composition stays absent;
+unknown retained sources are not inspected, adopted, moved, deleted or changed.
+Model-free unit and native fixture evidence remain separate from parent closure.

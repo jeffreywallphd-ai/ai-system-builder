@@ -52,3 +52,15 @@ reconciliation of the exact existing commit. The original reviewed revision or
 current published revision may request this read-only check; actor/time remain
 those of the committed record. This does not qualify filesystem
 publication, legacy authoring, live PostgreSQL or complete Assets security.
+
+
+### Private Windows file-identity prerequisite
+
+The model-local native helper and its TypeScript protocol/adapter inspect an
+expected Windows x64 NTFS root and strict handle-relative children. They retain
+read-only identity handles, deny observed redirects, mismatches, multiple links
+and share conflicts, and require confirmed helper exit before reuse. The helper
+is deliberately absent from production model composition and public exports.
+Owner/DACL facts are private observations, not ownership or effect authority.
+New child creation remains possible. Delete/reveal, protected publication,
+stable retained-tree accounting and safe offload restart remain unavailable.
