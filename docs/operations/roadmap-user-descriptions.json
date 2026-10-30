@@ -13160,6 +13160,17 @@
           "The agent still needs to protect complete folder trees, finish saved disk accounting and connect safe worker recovery to actual low-memory loading. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d1def7d09454358fd287ea363ab35a63584c2786fe04bea03b654f112d23d8a5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both new Windows tests passed. The agent counted three files in two folders and refused a file identity from the wrong folder. All files from this attempt were removed. The earlier failed attempt stays recorded.",
+          "The agent still needs to protect complete folder trees, finish saved disk accounting and connect safe worker recovery to actual low-memory loading. No user action is needed."
+        ]
+      }
     }
   ]
 }

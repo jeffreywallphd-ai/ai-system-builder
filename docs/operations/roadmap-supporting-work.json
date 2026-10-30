@@ -7055,6 +7055,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-guarded-tree-probe",
+      "work_criteria": [
+        "fixed-two-level-owned-fixture",
+        "complete-parent-bound-guarded-tree",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "078a32cff6a8c81d7f0f2d20ea8f838fb1e0ef478c766a1ff1af0e4bfd920e4a",
+      "review_digest": "91cc7479df12821bdc3f7e73f0357a688ed14d58b67c3627813000c40b277557",
+      "scope": "Added a fixed two-level guarded-tree diagnostic. Twenty-nine code tests and two Windows controls passed: complete equal listings for two folders/three files and refusal of a same-name file identity from the wrong parent. Current fixtures were removed. The earlier guard-break attempt remains failed and untouched; its cause is unresolved. General tree/inherited protection, protected disk accounting, crash ordering, real offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-guarded-tree-probe",
+      "work_criteria": [
+        "fixed-two-level-owned-fixture",
+        "complete-parent-bound-guarded-tree",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "078a32cff6a8c81d7f0f2d20ea8f838fb1e0ef478c766a1ff1af0e4bfd920e4a",
+      "review_digest": "91cc7479df12821bdc3f7e73f0357a688ed14d58b67c3627813000c40b277557",
+      "scope": "Added a fixed two-level guarded-tree diagnostic. Twenty-nine code tests and two Windows controls passed: complete equal listings for two folders/three files and refusal of a same-name file identity from the wrong parent. Current fixtures were removed. The earlier guard-break attempt remains failed and untouched; its cause is unresolved. General tree/inherited protection, protected disk accounting, crash ordering, real offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-guarded-tree-probe",
+      "work_criteria": [
+        "fixed-two-level-owned-fixture",
+        "complete-parent-bound-guarded-tree",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "078a32cff6a8c81d7f0f2d20ea8f838fb1e0ef478c766a1ff1af0e4bfd920e4a",
+      "review_digest": "91cc7479df12821bdc3f7e73f0357a688ed14d58b67c3627813000c40b277557",
+      "scope": "Added a fixed two-level guarded-tree diagnostic. Twenty-nine code tests and two Windows controls passed: complete equal listings for two folders/three files and refusal of a same-name file identity from the wrong parent. Current fixtures were removed. The earlier guard-break attempt remains failed and untouched; its cause is unresolved. General tree/inherited protection, protected disk accounting, crash ordering, real offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-guarded-tree-probe",
+      "work_criteria": [
+        "fixed-two-level-owned-fixture",
+        "complete-parent-bound-guarded-tree",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "078a32cff6a8c81d7f0f2d20ea8f838fb1e0ef478c766a1ff1af0e4bfd920e4a",
+      "review_digest": "91cc7479df12821bdc3f7e73f0357a688ed14d58b67c3627813000c40b277557",
+      "scope": "Added a fixed two-level guarded-tree diagnostic. Twenty-nine code tests and two Windows controls passed: complete equal listings for two folders/three files and refusal of a same-name file identity from the wrong parent. Current fixtures were removed. The earlier guard-break attempt remains failed and untouched; its cause is unresolved. General tree/inherited protection, protected disk accounting, crash ordering, real offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }
