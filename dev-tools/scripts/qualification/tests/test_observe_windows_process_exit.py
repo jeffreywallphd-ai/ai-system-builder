@@ -185,6 +185,67 @@ class ObserverLogicTests(unittest.TestCase):
                 self.assertEqual(frames, [{"phase": "ready", "pid": 300}, {"phase": "exited", "pid": 300, "exitCode": 0}])
 
 
+class ObserverQualificationDeadlineTests(unittest.TestCase):
+    # Existing controller execution windows plus retirement, or startup and
+    # retirement. Keep these values independent of the implementation constant.
+    WINDOWS = (630_000, 690_000, 930_000, 990_000, 1_200_000,
+               1_230_000, 1_290_000, 2_430_000, 2_490_000)
+
+    def test_declared_qualification_windows_keep_the_pid_only_contract(self):
+        for timeout in self.WINDOWS:
+            api = FakeApi()
+            admissions = []
+            with self.subTest(timeout=timeout), patch.object(observer.os, "name", "nt"), patch.object(observer, "_api", return_value=api) as factory:
+                self.assertEqual(observer.observe(300, lambda: admissions.append(True), timeout), 0)
+            factory.assert_called_once_with(False)
+            self.assertEqual(admissions, [True])
+            self.assertEqual(api.opened, [300])
+            self.assertEqual(api.waits, [(300, timeout)])
+            self.assertEqual(api.closed, [300])
+
+    def test_arbitrary_long_or_invalid_windows_deny_before_probing(self):
+        for timeout in [True, False, None, 0, -1, 30_001, 600_000,
+                        690_001, 2_490_001, 2**32, 690_000.0, "690000"]:
+            with self.subTest(timeout=timeout), patch.object(observer.os, "name", "nt"), patch.object(observer, "_api") as api, self.assertRaises(ValueError):
+                observer.observe(300, lambda: self.fail("Invalid window admitted"), timeout)
+            api.assert_not_called()
+
+    def test_qualification_windows_never_extend_root_bound_shutdown(self):
+        for timeout in self.WINDOWS:
+            with self.subTest(timeout=timeout), patch.object(observer.os, "name", "nt"), patch.object(observer, "_api") as api, self.assertRaises(ValueError):
+                observer.observe_with_root(300, 100, lambda _value: self.fail("Long root wait admitted"), timeout)
+            api.assert_not_called()
+
+    def test_cli_cannot_select_a_longer_wait_in_either_mode(self):
+        for args in [["300", "--timeout-ms", "690000"],
+                     ["300", "--root-pid", "100", "--timeout-ms", "690000"]]:
+            with self.subTest(args=args), patch.object(sys, "argv", [str(SOURCE), *args]), patch.object(observer, "_api") as api, contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(observer.main(), 1)
+                self.assertEqual(out.getvalue(), "")
+            api.assert_not_called()
+
+    def test_long_wait_never_invents_an_exit_or_admits_an_exited_process(self):
+        for kind in ["unknown-exit", "already-exited", "callback-failed"]:
+            api = FakeApi()
+            admissions = []
+            if kind == "unknown-exit":
+                api.bad_wait.add(300)
+            elif kind == "already-exited":
+                api.dead.add(300)
+            def ready():
+                admissions.append(True)
+                if kind == "callback-failed":
+                    raise RuntimeError("Synthetic callback failure")
+            error = RuntimeError if kind == "callback-failed" else ValueError
+            message = {"unknown-exit": "exit was not observed", "already-exited": "not live", "callback-failed": "Synthetic callback failure"}[kind]
+            with self.subTest(kind=kind), patch.object(observer.os, "name", "nt"), patch.object(observer, "_api", return_value=api), self.assertRaisesRegex(error, message):
+                observer.observe(300, ready, 690_000)
+            self.assertEqual(admissions, [] if kind == "already-exited" else [True])
+            self.assertEqual(api.closed, [300])
+            if kind != "unknown-exit":
+                self.assertEqual(api.waits, [])
+
+
 class NativeInformationBoundaryTests(unittest.TestCase):
     def api(self, variant="valid"):
         api = object.__new__(observer._WindowsApi)

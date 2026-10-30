@@ -1483,3 +1483,20 @@ validates the read-only denial and arithmetic component; actual Windows file
 protection, durable accounting, owned-worker recovery and optional-model outcomes
 remain separate. Keep failed broader profile evidence as history. This profile
 does not qualify that native work or replace the later combined test campaign.
+
+
+### Qualification exit-observer compatibility
+
+If a qualification controller reports an unconfirmed child exit before native
+setup, inspect its diagnostic output and declared observation window. The
+shared observer's private PID-only Python API accepts only the existing exact
+630000/690000/930000/990000/1200000/1230000/1290000/2430000/2490000-millisecond
+qualification windows, plus short waits up to 30000 milliseconds. The root-bound
+shutdown API and CLI retain the short limit. There is no CLI timeout override.
+
+The controller still enforces the original execution and resource budgets.
+This read-only compatibility fix does not authorize new processes, model
+loading, retained-file access, deletion, a fresh lease or offload recovery.
+Preserve an earlier failed receipt and diagnose its narrow failing feature;
+a later observer test does not convert that receipt or a parent criterion to a
+pass. No user action is needed for this agent-owned compatibility repair.

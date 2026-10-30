@@ -9,6 +9,16 @@ import time
 
 MAX_PARENT_HOPS = 2
 PROCESS_ACCESS = 0x00100000 | 0x1000  # synchronize/limited query only
+# Existing qualification controllers allow 600/900/1200/2400 seconds of work,
+# then 30 seconds for retirement, or 60 seconds of startup plus retirement.
+# Installed generation separately observes its existing 1200-second window.
+# Only the compatible PID-only Python API uses these exact windows. The CLI
+# and root-bound shutdown API retain the short limit; this grants no authority
+# to start work, extend its execution budget or establish job ownership.
+QUALIFICATION_OBSERVATION_WINDOWS_MS = frozenset({
+    630_000, 690_000, 930_000, 990_000, 1_200_000,
+    1_230_000, 1_290_000, 2_430_000, 2_490_000,
+})
 
 
 class _FileTime(ctypes.Structure):
@@ -98,7 +108,9 @@ def _api(ancestry):
 
 def _observe(pid, ready, timeout_ms, root_pid):
     _pid(pid)
-    if os.name != "nt" or type(timeout_ms) is not int or not 0 < timeout_ms <= 30_000:
+    if (os.name != "nt" or type(timeout_ms) is not int
+            or not (0 < timeout_ms <= 30_000
+                    or root_pid is None and timeout_ms in QUALIFICATION_OBSERVATION_WINDOWS_MS)):
         raise ValueError("A bounded Windows process observation is required.")
     if root_pid is not None:
         _pid(root_pid)
@@ -160,7 +172,11 @@ def _observe(pid, ready, timeout_ms, root_pid):
 
 
 def observe(pid: int, ready, timeout_ms: int = 30_000) -> int:
-    """Compatible PID-only mode; the caller supplies the owned process identity."""
+    """PID-only compatibility: short waits or exact existing qualification windows.
+
+    The caller supplies the owned identity and enforces its execution limits.
+    Observation is read-only and does not prove a protected job or staging fence.
+    """
     return _observe(pid, lambda _admission: ready(), timeout_ms, None)["exitCode"]
 
 

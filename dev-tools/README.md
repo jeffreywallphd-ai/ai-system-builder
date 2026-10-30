@@ -1189,3 +1189,27 @@ Unknown retained content keeps the full existing 12 GiB charge. Arithmetic and
 serialized state grant no protection, journal authority or fresh lease. Actual
 native protection, worker recovery and optional model qualification stay pending.
 The existing outcome profiles and all unknown-impact checks remain unchanged.
+
+
+### Qualification observation windows
+
+The private Python `observe` API in
+`dev-tools/scripts/qualification/observe_windows_process_exit.py` supports the
+existing qualification controllers' exact execution windows. It accepts
+630000, 690000, 930000, 990000, 1200000, 1230000, 1290000, 2430000 or 2490000 milliseconds,
+in addition to short waits up to 30000 milliseconds. The separate 1200000-millisecond installed-generation wait has no added grace. The other windows combine the existing
+600/900/1200/2400-second work limit with 30 seconds for retirement, or with
+60 seconds for startup and 30 seconds for retirement. Other longer waits fail
+before Windows process access. Boolean and non-integer values also fail.
+
+The command-line interface has no timeout option and retains its 30-second
+limit. The `observe_with_root` API also retains that limit. Both modes use only
+held read-only process handles. The longer compatibility wait does not extend
+the controller's execution, process, memory, disk or cleanup limits. An unknown
+exit still fails. PID-only exit evidence does not prove a protected job tree,
+staging protection or permission to restart offload work.
+
+Run the focused observer test file for fake boundary checks and inert owned
+Windows children. The native file-identity integration test additionally uses
+the fixed installed compiler profile and new disposable synthetic fixtures.
+Neither test runs model accuracy checks or qualifies a stable staging fence.
