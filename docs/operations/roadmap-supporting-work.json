@@ -6421,6 +6421,132 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "focused-offload-readiness-profile",
+      "work_criteria": [
+        "exact-pure-readiness-profile",
+        "unchanged-guard-and-preserved-failure",
+        "current-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "ebffd9cbb5c99bc11b0db51ffd92d40cb1d1110f58bf2f4041fb64cfbe6347ae",
+      "review_digest": "5eb26c14dccac1f0a590b30ed417f7e241ced215cea07d06f6c0101cfe28b880",
+      "scope": "The agent committed the read-only restart check and budget calculations. Eleven focused checks and four routing checks passed. Unknown retained files still reserve the full12GiB limit. This planning check cannot protect files, start a worker or grant a new offload run.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "focused-offload-readiness-profile",
+      "work_criteria": [
+        "exact-pure-readiness-profile",
+        "unchanged-guard-and-preserved-failure",
+        "current-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "ebffd9cbb5c99bc11b0db51ffd92d40cb1d1110f58bf2f4041fb64cfbe6347ae",
+      "review_digest": "5eb26c14dccac1f0a590b30ed417f7e241ced215cea07d06f6c0101cfe28b880",
+      "scope": "The agent committed the read-only restart check and budget calculations. Eleven focused checks and four routing checks passed. Unknown retained files still reserve the full12GiB limit. This planning check cannot protect files, start a worker or grant a new offload run.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "qualification-controller-observer-compatibility",
+      "work_criteria": [
+        "bounded-qualification-window-compatibility",
+        "current-regression-and-native-setup-evidence",
+        "documented-safe-owned-checkpoint"
+      ],
+      "receipt_digest": "4806e29a2525da6dca716b023614054886c7a0d447df0aab0f350cb41b90d4bc",
+      "review_digest": "79837bfad2a3ac67effef87866bd0fc83d586822887d66ff91306fcb7b04e31d",
+      "scope": "The agent fixed a test-tool mismatch that stopped native setup. Twenty-five observer tests and scoped checks passed. Nine Windows file-identity tests passed on the earlier narrow candidate; independent review confirmed that the later change leaves their tested branch unchanged. This does not prove file protection, actual offload or parent completion.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "qualification-controller-observer-compatibility",
+      "work_criteria": [
+        "bounded-qualification-window-compatibility",
+        "current-regression-and-native-setup-evidence",
+        "documented-safe-owned-checkpoint"
+      ],
+      "receipt_digest": "4806e29a2525da6dca716b023614054886c7a0d447df0aab0f350cb41b90d4bc",
+      "review_digest": "79837bfad2a3ac67effef87866bd0fc83d586822887d66ff91306fcb7b04e31d",
+      "scope": "The agent fixed a test-tool mismatch that stopped native setup. Twenty-five observer tests and scoped checks passed. Nine Windows file-identity tests passed on the earlier narrow candidate; independent review confirmed that the later change leaves their tested branch unchanged. This does not prove file protection, actual offload or parent completion.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualification-controller-observer-compatibility",
+      "work_criteria": [
+        "bounded-qualification-window-compatibility",
+        "current-regression-and-native-setup-evidence",
+        "documented-safe-owned-checkpoint"
+      ],
+      "receipt_digest": "4806e29a2525da6dca716b023614054886c7a0d447df0aab0f350cb41b90d4bc",
+      "review_digest": "79837bfad2a3ac67effef87866bd0fc83d586822887d66ff91306fcb7b04e31d",
+      "scope": "The agent fixed a test-tool mismatch that stopped native setup. Twenty-five observer tests and scoped checks passed. Nine Windows file-identity tests passed on the earlier narrow candidate; independent review confirmed that the later change leaves their tested branch unchanged. This does not prove file protection, actual offload or parent completion.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualification-controller-observer-compatibility",
+      "work_criteria": [
+        "bounded-qualification-window-compatibility",
+        "current-regression-and-native-setup-evidence",
+        "documented-safe-owned-checkpoint"
+      ],
+      "receipt_digest": "4806e29a2525da6dca716b023614054886c7a0d447df0aab0f350cb41b90d4bc",
+      "review_digest": "79837bfad2a3ac67effef87866bd0fc83d586822887d66ff91306fcb7b04e31d",
+      "scope": "The agent fixed a test-tool mismatch that stopped native setup. Twenty-five observer tests and scoped checks passed. Nine Windows file-identity tests passed on the earlier narrow candidate; independent review confirmed that the later change leaves their tested branch unchanged. This does not prove file protection, actual offload or parent completion.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualification-controller-observer-compatibility",
+      "work_criteria": [
+        "bounded-qualification-window-compatibility",
+        "current-regression-and-native-setup-evidence",
+        "documented-safe-owned-checkpoint"
+      ],
+      "receipt_digest": "4806e29a2525da6dca716b023614054886c7a0d447df0aab0f350cb41b90d4bc",
+      "review_digest": "79837bfad2a3ac67effef87866bd0fc83d586822887d66ff91306fcb7b04e31d",
+      "scope": "The agent fixed a test-tool mismatch that stopped native setup. Twenty-five observer tests and scoped checks passed. Nine Windows file-identity tests passed on the earlier narrow candidate; independent review confirmed that the later change leaves their tested branch unchanged. This does not prove file protection, actual offload or parent completion.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

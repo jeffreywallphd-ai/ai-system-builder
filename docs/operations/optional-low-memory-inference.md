@@ -356,3 +356,24 @@ Creation-time assignment closes the suspended-before-assignment crash window
 described in [Microsoft's process job example](https://devblogs.microsoft.com/oldnewthing/20230209-00/?p=107812/).
 See also [job-list process attributes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
 and [native job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information).
+
+
+## Reviewed feature support: 2026-10-30
+
+The read-only restart check and its pure budget calculations are committed with
+focused passing checks and a separate review. Unknown retained usage still
+reserves the full 12 GiB ceiling. The check cannot protect retained files or
+grant another model run.
+
+The shared exit observer now accepts only the nine exact existing qualification
+windows through its private PID-only Python API. Root-bound shutdown and the CLI
+retain 30 seconds. This fixes a setup mismatch without changing work deadlines
+or resource limits. The observer's 25 focused tests passed. Nine Windows
+file-identity cases passed on the earlier narrow candidate; independent review
+confirmed that the later extra wait does not change their tested branch.
+
+File identity still permits new child files. Native file protection, protected
+accounting, owned-worker recovery and actual optional offload remain pending.
+Accepted Standard model accuracy stays closed. Full combined testing is deferred
+until the open roadmaps' feature work is complete. No user action is needed for
+the remaining agent-owned implementation.

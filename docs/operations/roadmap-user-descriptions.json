@@ -13029,6 +13029,49 @@
           "The focused map checks passed within the existing size limits. App-level checks and final combined testing remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "781681aeb68c201bc824f7dc53eba9c5deba14c5b375b08d4fea64cd7d34ef03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The read-only restart check and budget calculations are committed. Their focused checks passed.",
+          "Actual file protection and safe restart remain pending. The check cannot start a new model run. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9635e43bbd18a55e4b1ba2fa3c90d98f1e02a25a7092485678fde20853d4bdc8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test-tool repair is committed. The observer tests passed, and the native file-identity test can now finish.",
+          "File identity does not protect a folder from new files. Safe offload restart and actual offload tests remain pending. Accepted accuracy results stay closed. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "abfa1f6e2ff94acc2b03f8b0088dd5b911f835c56ef983155d08f115b7b91781",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results show reviewed local support. They do not complete a roadmap requirement or qualify the current software."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3ef593e5470834f117d168265b3b90263e924d4b051eacbdd71d27761b135920",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "File protection, protected storage records, worker recovery and actual offload tests remain pending.",
+          "Full combined testing is deferred. Accepted model accuracy results stay closed."
+        ]
+      }
     }
   ]
 }
