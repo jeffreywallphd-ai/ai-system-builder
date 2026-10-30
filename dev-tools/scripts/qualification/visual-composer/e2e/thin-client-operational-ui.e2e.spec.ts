@@ -98,3 +98,16 @@ for(const scenario of ["public-values","secret-defaults"] as const)test(`thin cl
   await expect(page.locator(".workspace-create-form")).toHaveCount(0);await expect(workspace).toHaveValue(/^workspace\./);await expect(workspace).not.toHaveValue(previous);
   await qualifySettingsHostJourney(page,test.info(),"thin-chrome",scenario);
 });
+
+import {qualifyModelReferenceHostJourney} from "./model-reference-host-journey";
+import {FUNCTIONAL_HOST_TIMEOUT_MS} from "../functional-host-oracles";
+
+test("thin client model reference searches, saves and survives reload and workspace changes",async({page})=>{
+  test.setTimeout(FUNCTIONAL_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1","Pending the dedicated isolated model metadata profile.");
+  if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported functional host.");
+  const {statusUrl,token}=operationalBrowserConfiguration();
+  await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);
+  await page.goto(new URL("/systems",statusUrl).href);
+  await qualifyModelReferenceHostJourney(page,test.info(),"thin-chrome");
+});

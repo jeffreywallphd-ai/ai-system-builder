@@ -8,17 +8,19 @@ import {finalizeQualificationEvidence,safeQualificationFailureType,type OwnedCle
 
 export type ImportedFileJourneyStage = "startup" | "workspace" | "file-import" | "complete";
 export type ImageCleanupStage = "startup" | "generation" | "complete";
+export type FunctionalCleanupStage = "startup" | "models" | "complete";
 export type SettingsCleanupStage = "startup" | "settings" | "complete";
 
 /** Finite-purpose main-only proof. This never qualifies image/model workers. */
-async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: ImportedFileJourneyStage | ImageCleanupStage | SettingsCleanupStage, mode: CriticalAccessibilityMode, purpose: "file-import" | "image" | "settings") {
+async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: ImportedFileJourneyStage | ImageCleanupStage | SettingsCleanupStage | FunctionalCleanupStage, mode: CriticalAccessibilityMode, purpose: "file-import" | "image" | "settings" | "functional-data") {
   readCriticalAccessibilityMode(mode);
-  const image = purpose === "image", settings=purpose === "settings";
-  const stages = settings ? ["startup","settings","complete"] : image ? ["startup","generation","complete"] : ["startup","workspace","file-import","complete"];
-  if (!stages.includes(journeyStage)) throw new Error(settings ? "Unsupported Settings cleanup stage." : image ? "Unsupported image cleanup stage." : "Unsupported file-import cleanup stage.");
-  if (info?.project?.name !== "packaged-desktop") throw new Error(settings ? "Unsupported Settings cleanup host." : image ? "Unsupported image cleanup host." : "Unsupported file-import cleanup host.");
+  const image = purpose === "image", settings=purpose === "settings", functional=purpose === "functional-data";
+  const stages = functional ? ["startup","models","complete"] : settings ? ["startup","settings","complete"] : image ? ["startup","generation","complete"] : ["startup","workspace","file-import","complete"];
+  if (!stages.includes(journeyStage)) throw new Error(functional ? "Unsupported functional cleanup admission." : settings ? "Unsupported Settings cleanup stage." : image ? "Unsupported image cleanup stage." : "Unsupported file-import cleanup stage.");
+  if (info?.project?.name !== "packaged-desktop") throw new Error(functional ? "Unsupported functional cleanup admission." : settings ? "Unsupported Settings cleanup host." : image ? "Unsupported image cleanup host." : "Unsupported file-import cleanup host.");
   if (image && !["image-create-register","image-task-recovery"].includes(path.basename(dataRoot))) throw new Error("Unsupported image cleanup slot.");
   if (settings && !["settings-public-values","settings-secret-defaults"].includes(path.basename(dataRoot))) throw new Error("Unsupported Settings cleanup slot.");
+  if (functional && path.basename(dataRoot)!=="functional-model-reference") throw new Error("Unsupported functional cleanup slot.");
   const errors: unknown[] = [];
   const failureStages: OwnedCleanupFailureStage[] = [];
   const recordFailure = (stage: OwnedCleanupFailureStage, error: unknown) => {failureStages.push(stage);errors.push(error);};
@@ -26,7 +28,7 @@ async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string,
   let mainPid: number | undefined, launchedPid: number | undefined, mainExitCode: number | undefined;
   let willQuitAcknowledged = false;
   let observer: Awaited<ReturnType<typeof observeOwnedNativeProcessExit>> | undefined;
-  const ack = path.join(dataRoot, settings ? "qualification-settings-will-quit.json" : image ? "qualification-image-will-quit.json" : "qualification-ingestion-will-quit.json");
+  const ack = path.join(dataRoot, functional ? "qualification-functional-will-quit.json" : settings ? "qualification-settings-will-quit.json" : image ? "qualification-image-will-quit.json" : "qualification-ingestion-will-quit.json");
   try {
     expect(path.isAbsolute(dataRoot)).toBe(true);
     expect(path.resolve(dataRoot).replaceAll("\\", "/")).toContain("/artifacts/qualification/visual-composer/d/");
@@ -59,12 +61,13 @@ async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string,
     willQuitAcknowledged = true;
   } catch (error) { recordFailure("main-exit",error); } finally { try { await observer?.close(); } catch (error) { recordFailure("observer-close",error); } }
   const report = {
-    schemaVersion: settings ? "real-settings-desktop-main-shutdown-v1" : image ? "real-image-desktop-main-shutdown-v1" : "real-ingestion-desktop-shutdown-v1", status: errors.length ? "failed" : "passed",
+    schemaVersion: functional ? "real-functional-desktop-main-shutdown-v1" : settings ? "real-settings-desktop-main-shutdown-v1" : image ? "real-image-desktop-main-shutdown-v1" : "real-ingestion-desktop-shutdown-v1", status: errors.length ? "failed" : "passed",
     sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
     journeyStage, mainPid, launchedPid, mainExitCode, willQuitAcknowledged,
     cleanupMilliseconds: performance.now() - started, failures: errors.length,
     failureTypes: errors.map(safeQualificationFailureType), failureStages,
-    modelWorkers: image || settings ? "not-qualified" : "not-exercised", scope: settings
+    modelWorkers: functional || image || settings ? "not-qualified" : "not-exercised", scope: functional
+      ? "Owned main-process shutdown only. Background/model workers and complete job-tree retirement remain unqualified. No model, provider, native restart or parent qualification." : settings
       ? "Owned main-process shutdown only. Background/model workers and complete job-tree retirement remain unqualified. No model, native restart or parent qualification."
       : image
       ? "Owned main-process shutdown only. ComfyUI/model workers and complete job-tree retirement remain unqualified. No model, native restart or parent qualification."
@@ -81,13 +84,13 @@ async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string,
   try {
     await finalizeQualificationEvidence(report, errors, async () => {
       const body = serialize();
-      const folder = settings ? path.resolve("artifacts/qualification/visual-composer/runs",run,"settings-source",path.basename(dataRoot)) : image ? path.resolve("artifacts/qualification/visual-composer/runs",run,"image-source",path.basename(dataRoot))
+      const folder = functional ? path.resolve("artifacts/qualification/visual-composer/runs",run,"functional-source",path.basename(dataRoot)) : settings ? path.resolve("artifacts/qualification/visual-composer/runs",run,"settings-source",path.basename(dataRoot)) : image ? path.resolve("artifacts/qualification/visual-composer/runs",run,"image-source",path.basename(dataRoot))
         : path.resolve("artifacts/qualification/visual-composer/runs",run,"ingestion-source");
       await mkdir(folder, { recursive: true }); expect(await realpath(folder)).toBe(folder);
       await writeFile(path.join(folder, mode === "native400" ? "desktop-shutdown-native400.json" : "desktop-shutdown.json"), body, { flag: "wx" });
-    }, () => info.attach(settings ? "desktop-settings-main-shutdown" : image ? "desktop-image-main-shutdown" : "desktop-file-import-shutdown", { body: serialize(), contentType: "application/json" }));
+    }, () => info.attach(functional ? "desktop-functional-main-shutdown" : settings ? "desktop-settings-main-shutdown" : image ? "desktop-image-main-shutdown" : "desktop-file-import-shutdown", { body: serialize(), contentType: "application/json" }));
   } catch (error) {
-    throw new AggregateError(error instanceof AggregateError ? error.errors : [error], settings ? "Owned Settings desktop main shutdown failed." : image ? "Owned image desktop main shutdown failed." : "Owned file-import desktop shutdown failed.");
+    throw new AggregateError(error instanceof AggregateError ? error.errors : [error], functional ? "Owned functional desktop main shutdown failed." : settings ? "Owned Settings desktop main shutdown failed." : image ? "Owned image desktop main shutdown failed." : "Owned file-import desktop shutdown failed.");
   }
 }
 
@@ -100,4 +103,8 @@ export function closeImageGenerationDesktop(app: ElectronApplication, dataRoot: 
 
 export function closeSettingsDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: SettingsCleanupStage) {
   return closeOwnedMainDesktop(app,dataRoot,info,journeyStage,"standard","settings");
+}
+
+export function closeFunctionalDesktop(app: ElectronApplication,dataRoot:string,info:TestInfo,journeyStage:FunctionalCleanupStage){
+  return closeOwnedMainDesktop(app,dataRoot,info,journeyStage,"standard","functional-data");
 }

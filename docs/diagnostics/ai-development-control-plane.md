@@ -1339,3 +1339,23 @@ Fresh isolated profiles and stripped ambient credentials protect the user token.
 These are test definitions with focused evidence. Actual app, provider, model,
 physical restart, full native worker and parent qualification remain separate.
 See `dev-tools/README.md` for the later serial campaign selectors.
+
+
+### Model reference host journeys
+
+The `functional-host-ui` profile checks the isolated model-reference definitions
+and borrows the existing model preload/HTTP and ownership regressions. It keeps
+the Operational profile and its limits unchanged. Unknown, incomplete and
+explicit generic test impact retains its checks.
+
+The two named actual-host cases search the already approved small Qwen model,
+save its reference, inspect details, reload and check a second workspace. They
+never download weights or run inference/accuracy. Dedicated functional Desktop
+and Thin configs use one worker, no retries and no capture. Setup requires both
+`VISUAL_COMPOSER_FUNCTIONAL_HOST=1` and `VISUAL_COMPOSER_FUNCTIONAL_METADATA=1`;
+these declarations do not grant new provider authority. Profiles are fresh and
+strip ambient credentials. The managed credential adds only credential-use for
+metadata lookup; it cannot write secrets or create repositories. Functional
+Server shutdown drains background tasks before persistence. Desktop evidence
+qualifies only its owned main process. Actual hosts, provider behavior, full
+worker retirement and final combined qualification remain pending.

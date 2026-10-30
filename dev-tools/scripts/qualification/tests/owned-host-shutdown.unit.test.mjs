@@ -32,3 +32,15 @@ test("a real inert owned Settings child must acknowledge the fixed command and c
   const child=spawn(process.execPath,["--input-type=module","-e",program],{stdio:["pipe","pipe","pipe"],windowsHide:true});child.stderr.resume();
   const result=await observeOwnedHostShutdown("settings",child,run,source).stop();assert.equal(result.pid,child.pid);assert.equal(result.schemaVersion,"settings-host-shutdown-v1");assert.equal(result.fullJobQualified,false);
 });
+
+test("functional-data shutdown has its own bounded protocol and actual inert child proof",async()=>{
+  const protocol=ownedHostShutdownProtocol("functional-data");
+  assert.equal(protocol.command,"stop-functional-data-host-v1\n");assert.equal(protocol.prefix,"AISB_FUNCTIONAL_DATA_HOST_SHUTDOWN ");
+  const value={...record(),schemaVersion:protocol.schemaVersion};
+  assert.equal(readOwnedHostShutdownAck("functional-data",protocol.prefix+JSON.stringify(value),run,source,123).fullJobQualified,false);
+  assert.throws(()=>readOwnedHostShutdownAck("functional-data",p.prefix+JSON.stringify(record()),run,source,123));
+  const url=new URL("../visual-composer/owned-host-shutdown.mjs",import.meta.url).href;
+  const program=`import {installOwnedHostShutdown} from ${JSON.stringify(url)};installOwnedHostShutdown("functional-data",{input:process.stdin,output:process.stdout,runId:${JSON.stringify(run)},sourceRevision:${JSON.stringify(source)},shutdown:async()=>{},onSettled:passed=>{process.exitCode=passed?0:1;}});`;
+  const child=spawn(process.execPath,["--input-type=module","-e",program],{stdio:["pipe","pipe","pipe"],windowsHide:true});child.stderr.resume();
+  const result=await observeOwnedHostShutdown("functional-data",child,run,source).stop();assert.equal(result.pid,child.pid);assert.equal(result.schemaVersion,protocol.schemaVersion);assert.equal(result.fullJobQualified,false);
+});

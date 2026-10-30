@@ -13,11 +13,12 @@ from .storage import confined_path
 QUALIFICATION_PROFILES = (
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
-    "review-site", "settings-ui", "security-status-ui", "operational-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy", "comfyui-host-policy",
+    "functional-host-ui", "review-site", "settings-ui", "security-status-ui", "operational-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy", "comfyui-host-policy",
 )
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "functional-host-ui": ['dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts', 'dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.mjs', 'dev-tools/scripts/qualification/visual-composer/functional-host-global-setup.mjs', 'dev-tools/scripts/qualification/visual-composer/functional-host-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts', 'dev-tools/scripts/qualification/tests/functional-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/functional-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/functional-host-wiring.unit.test.mjs', 'dev-tools/config/playwright.functional-host-desktop.config.ts', 'dev-tools/config/playwright.functional-host-thin.config.ts', 'dev-tools/helpers/tests/test_control_plane_functional_host_ui_profile.py'],
     "comfyui-host-policy": [
         "modules/hosts/shared/resolveComfyUiAutoInstall.ts",
         "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",

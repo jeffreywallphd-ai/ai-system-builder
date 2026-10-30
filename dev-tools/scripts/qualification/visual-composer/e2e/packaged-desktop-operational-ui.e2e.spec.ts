@@ -112,3 +112,17 @@ for(const scenario of ["public-values","secret-defaults"] as const)test(`package
     stage="settings";await qualifySettingsHostJourney(page,test.info(),"packaged-desktop",scenario);stage="complete";
   },()=>closeSettingsDesktop(app,isolated.dataRoot,test.info(),stage));
 });
+
+import {qualifyModelReferenceHostJourney} from "./model-reference-host-journey";
+import {FUNCTIONAL_HOST_TIMEOUT_MS} from "../functional-host-oracles";
+import {closeFunctionalDesktop,type FunctionalCleanupStage} from "./desktop-main-cleanup";
+
+test("packaged desktop model reference searches, saves and survives reload and workspace changes",async()=>{
+  test.setTimeout(FUNCTIONAL_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1","Pending the dedicated isolated model metadata profile.");
+  if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported functional host.");
+  const isolated=prepareIsolatedDesktopCase("functional-model-reference");
+  const app=await electron.launch({executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
+  let stage:FunctionalCleanupStage="startup";
+  await runOwnedRestartPhase(async()=>{const page=await app.firstWindow({timeout:60_000});stage="models";await qualifyModelReferenceHostJourney(page,test.info(),"packaged-desktop");stage="complete";},()=>closeFunctionalDesktop(app,isolated.dataRoot,test.info(),stage));
+});

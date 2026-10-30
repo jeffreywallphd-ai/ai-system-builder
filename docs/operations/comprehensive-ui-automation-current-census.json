@@ -8235,8 +8235,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "c9096a572df686f3cc5cf4a7e012f8ffa6209e0ff549ec4a41e4152ad0611668",
-    "bytes": 9614,
+    "sha256": "4586c921c6644ff9861d6ddacc471a9cd770961ca857b407f679093e7d27c894",
+    "bytes": 10827,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8249,9 +8249,13 @@
      {
       "name": "packaged desktop trains one local adapter, reviews privately, saves and reopens it",
       "line": 51
+     },
+     {
+      "name": "packaged desktop model reference searches, saves and survives reload and workspace changes",
+      "line": 120
      }
     ],
-    "dynamicCases": 5,
+    "dynamicCases": 6,
     "functions": [
      {
       "name": "runOperationalDesktop",
@@ -8293,6 +8297,10 @@
      },
      {
       "line": 99,
+      "kind": "skip"
+     },
+     {
+      "line": 122,
       "kind": "skip"
      }
     ]
@@ -8938,8 +8946,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "d8b42c53346972a30e0b4b10bcedd9a54df611ea49cded955d6abf1a92cf1899",
-    "bytes": 7097,
+    "sha256": "742bd7215e68c92c2de792c075ae3dbf8d4e4219c4b466632aa4c097cfce1459",
+    "bytes": 7929,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
@@ -8960,9 +8968,13 @@
      {
       "name": "keeps theme, keyboard and narrow review usable when storage refuses access",
       "line": 61
+     },
+     {
+      "name": "thin client model reference searches, saves and survives reload and workspace changes",
+      "line": 105
      }
     ],
-    "dynamicCases": 4,
+    "dynamicCases": 5,
     "functions": [
      {
       "name": "operationalBrowserConfiguration",
@@ -9004,6 +9016,10 @@
      },
      {
       "line": 89,
+      "kind": "skip"
+     },
+     {
+      "line": 107,
       "kind": "skip"
      }
     ]
@@ -13203,95 +13219,95 @@
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
    "facts": {
-    "sha256": "105495a853b7b61b7084c272d58408887bf7a738c0a89658680a3577e3b43953",
-    "bytes": 14718,
+    "sha256": "e23ba8423802dde449e6393ab34d8b3ecf12d33f9f55187fe797ec2cedada17b",
+    "bytes": 15243,
     "cases": [
      {
       "name": "retains the successful owned identity and disposal checks",
-      "line": 69
+      "line": 71
      },
      {
       "name": "accepts the genuine same-process launch shape with root-bound native observation",
-      "line": 80
+      "line": 83
      },
      {
       "name": "retains a falsy app-close failure %#",
-      "line": 85
+      "line": 88
      },
      {
       "name": "preserves close, observer disposal and attachment failures in order",
-      "line": 92
+      "line": 95
      },
      {
       "name": "retains both failed storage attempts without overwriting an unknown file",
-      "line": 99
+      "line": 102
      },
      {
       "name": "does not invoke or serialize exception name getters",
-      "line": 105
+      "line": 108
      },
      {
       "name": "admits a live real-worker shape through its launcher before closing the app",
-      "line": 120
+      "line": 123
      },
      {
       "name": "a confirmed native exit is not overridden by an unrelated process reusing that number",
-      "line": 127
+      "line": 130
      },
      {
       "name": "a refused native exit remains failed without a numeric-PID polling fallback",
-      "line": 133
+      "line": 136
      },
      {
       "name": "rejects a marker whose immediate parent disagrees with native observation, without rewriting it",
-      "line": 140
+      "line": 143
      },
      {
       "name": "does not downgrade refused live native admission to a PID-absence pass",
-      "line": 147
+      "line": 150
      },
      {
       "name": "keeps an already-exited nested worker unqualified because its ancestry cannot be observed",
-      "line": 162
+      "line": 165
      },
      {
       "name": "import cleanup rejects unsupported host, mode and stage before any app or file effects",
-      "line": 168
+      "line": 171
      },
      {
       "name": "cleanup persistence refuses private types and unknown stage values",
-      "line": 176
+      "line": 179
      },
      {
       "name": "refuses an unlisted slot before observing or closing an app",
-      "line": 185
+      "line": 188
      },
      {
       "name": "refuses a foreign journey stage before app effects",
-      "line": 189
+      "line": 192
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "app",
-      "line": 41
+      "line": 42
      },
      {
       "name": "info",
-      "line": 46
+      "line": 47
      },
      {
       "name": "caught",
-      "line": 51
+      "line": 52
      },
      {
       "name": "liveWorker",
-      "line": 114
+      "line": 117
      }
     ],
-    "assertionCount": 87,
-    "assertionDigest": "dc31b3bc44560daf23cfcbfc1cf6288564aedfc727c0a8a7b648f8f033fd338a",
+    "assertionCount": 90,
+    "assertionDigest": "3d33b3f8eec2a55fae51260789ddb03edbb33717f3cae5bdf802b70e91974b35",
     "assertionExamples": [
      {
       "line": 20,
@@ -13299,17 +13315,17 @@
       "sha256": "4e3f2b6a547285a681e5c4ea582cf8bc983ceb317a8230c20669f3cc53d91bf3"
      },
      {
-      "line": 70,
+      "line": 72,
       "kind": "expect",
       "sha256": "42315d8a088de76c6b15791c6373ded3f76bf6597f3bf70686184fa4d6f0e7c5"
      },
      {
-      "line": 70,
+      "line": 72,
       "kind": "expect",
       "sha256": "b05d2c348719ca3dc5a239e18c3f60520eca33cef83ea5c59f7f211e1ded34b0"
      },
      {
-      "line": 71,
+      "line": 73,
       "kind": "expect",
       "sha256": "a6638f8e5ae296f0653d8d53ee1f453a23cd4b9b4965cb97a54f609dcf135baf"
      }

@@ -171,4 +171,10 @@ test("checks the current repository map against original scope and actual source
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));
   }
+  for(const name of [training,"dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]){
+    const text=read(name).toString();
+    assert(text.includes("model reference searches, saves and survives reload and workspace changes"));
+    assert(text.includes("qualifyModelReferenceHostJourney"));
+    assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_READY"));
+  }
 });

@@ -1,6 +1,7 @@
 import {ChildProcess} from "node:child_process";
 
 const protocols=Object.freeze({
+  "functional-data":Object.freeze({command:"stop-functional-data-host-v1\n",prefix:"AISB_FUNCTIONAL_DATA_HOST_SHUTDOWN ",schemaVersion:"functional-data-host-shutdown-v1"}),
   image:Object.freeze({command:"stop-image-host-v1\n",prefix:"AISB_IMAGE_HOST_SHUTDOWN ",schemaVersion:"image-host-shutdown-v1"}),
   settings:Object.freeze({command:"stop-settings-host-v1\n",prefix:"AISB_SETTINGS_HOST_SHUTDOWN ",schemaVersion:"settings-host-shutdown-v1"}),
 });

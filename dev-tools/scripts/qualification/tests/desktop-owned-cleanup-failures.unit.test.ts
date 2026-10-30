@@ -33,10 +33,11 @@ vi.mock("../visual-composer/owned-native-process-exit.mjs",()=>({observeOwnedNat
 
 import {closeDesktopAndQualifyOwnedWorkers,persistOwnedHostReport} from "../visual-composer/e2e/desktop-task-cleanup";
 import {closeImportedFileDesktop} from "../visual-composer/e2e/desktop-import-cleanup";
-import {closeImageGenerationDesktop,closeSettingsDesktop} from "../visual-composer/e2e/desktop-main-cleanup";
+import {closeImageGenerationDesktop,closeSettingsDesktop,closeFunctionalDesktop} from "../visual-composer/e2e/desktop-main-cleanup";
 const cache=path.resolve("artifacts/qualification/visual-composer/d/synthetic-cleanup-fixture");
 const imageCache=path.join(cache,"image-create-register");
 const settingsCache=path.join(cache,"settings-secret-defaults");
+const functionalCache=path.join(cache,"functional-model-reference");
 const attachments:string[]=[];
 function app():ElectronApplication {
   return {process:()=>({pid:io.sameMainRoot?401:301}),evaluate:async(_callback:unknown,argument?:unknown)=>{
@@ -50,7 +51,7 @@ function info():TestInfo {
 }
 async function caught(action:()=>Promise<unknown>){try{await action();return undefined;}catch(error){return error;}}
 beforeEach(()=>{
-  io.files.clear();io.directories.clear();io.directories.add(cache);io.directories.add(imageCache);io.directories.add(settingsCache);io.writes=[];io.closeErrors=[];io.observerErrors=[];io.attachErrors=[];io.writeErrors=[];
+  io.files.clear();io.directories.clear();io.directories.add(cache);io.directories.add(imageCache);io.directories.add(settingsCache);io.directories.add(functionalCache);io.writes=[];io.closeErrors=[];io.observerErrors=[];io.attachErrors=[];io.writeErrors=[];
   io.ack="";io.closed=false;io.closes=io.disposed=io.evaluations=io.reads=0;attachments.length=0;
   io.nativeErrors=[];io.workerOutcomeErrors=[];io.nativeCalls=[];io.nativeWorkerParent=401;io.sameMainRoot=false;
   io.files.set(path.join(cache,"qualification-worker-identity-501.json"),JSON.stringify({pid:501,parentPid:401}));
@@ -60,6 +61,7 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllEnvs();});
 const variants=[
+  {name:"functional main cleanup",message:"Owned functional desktop main shutdown failed.",run:()=>closeFunctionalDesktop(app(),functionalCache,info(),"complete")},
   {name:"Settings main cleanup",message:"Owned Settings desktop main shutdown failed.",run:()=>closeSettingsDesktop(app(),settingsCache,info(),"complete")},
   {name:"image main cleanup",message:"Owned image desktop main shutdown failed.",run:()=>closeImageGenerationDesktop(app(),imageCache,info(),"complete")},
   {name:"worker cleanup",message:"Desktop owned shutdown qualification failed.",run:()=>closeDesktopAndQualifyOwnedWorkers(app(),cache,info())},
@@ -71,6 +73,7 @@ for(const variant of variants)describe(variant.name,()=>{
     expect(io.writes).toHaveLength(1);const report=JSON.parse(io.writes[0]!);
     expect(report.status).toBe("passed");expect(report.mainPid).toBe(401);expect(report.launchedPid).toBe(301);
     expect(report.willQuitAcknowledged).toBe(true);
+    if(variant.name==="functional main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-functional-desktop-main-shutdown-v1");}
     if(variant.name==="Settings main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-settings-desktop-main-shutdown-v1");}
     if(variant.name==="image main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-image-desktop-main-shutdown-v1");}
     if(variant.name==="file import cleanup"){expect(report.modelWorkers).toBe("not-exercised");expect(report.schemaVersion).toBe("real-ingestion-desktop-shutdown-v1");}expect(report.failureTypes).toEqual([]);expect(report.failureStages).toEqual([]);

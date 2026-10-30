@@ -2111,6 +2111,58 @@
         "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
         "modules/adapters/runtime/comfyui/tests/createComfyUiRuntimeSupervisor.unit.test.ts"
       ]
+    },
+    "functional-host-ui": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/functional-host-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-host-wiring.unit.test.mjs",
+        "dev-tools/helpers/tests/test_control_plane_functional_host_ui_profile.py",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+        "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/functional-host-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/functional-host-server-entry.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts",
+        "dev-tools/scripts/qualification/tests/functional-host-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-host-wiring.unit.test.mjs",
+        "dev-tools/config/playwright.functional-host-desktop.config.ts",
+        "dev-tools/config/playwright.functional-host-thin.config.ts",
+        "dev-tools/helpers/tests/test_control_plane_functional_host_ui_profile.py",
+        "dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs",
+        "dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/desktop-main-cleanup.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts",
+        "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "docs/operations/comprehensive-ui-automation-current-census.json",
+        "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+        "dev-tools/README.md",
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
+        "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts"
+      ]
     }
   }
 }
