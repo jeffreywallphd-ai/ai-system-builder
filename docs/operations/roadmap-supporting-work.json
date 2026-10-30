@@ -7127,6 +7127,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "close-custody-reviewed-checkpoint",
+      "work_criteria": [
+        "unknown-close-custody",
+        "creator-close-and-default-compatibility",
+        "focused-verification-and-owned-checkpoint"
+      ],
+      "receipt_digest": "7e8f99aae8612cbf055f0abb1628a5bf5b5d7a80494190e9631d5b32c58bedfd",
+      "review_digest": "75bba9c82d6ea230311973cf5b4afeb9db8fdf8760a73f81e37e6885d67659dd",
+      "scope": "Fixed shared native handle-close failures. All193pure checks, including8new regressions, passed. Unknown close retains ownership and denies retry or cleanup; confirmed closure stays idempotent. No real native failure was injected or retained files accessed. A commit guard caught a test newline defect; corrected source passed fresh checks and separate review before commit. General tree, journal, worker recovery, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "close-custody-reviewed-checkpoint",
+      "work_criteria": [
+        "unknown-close-custody",
+        "creator-close-and-default-compatibility",
+        "focused-verification-and-owned-checkpoint"
+      ],
+      "receipt_digest": "7e8f99aae8612cbf055f0abb1628a5bf5b5d7a80494190e9631d5b32c58bedfd",
+      "review_digest": "75bba9c82d6ea230311973cf5b4afeb9db8fdf8760a73f81e37e6885d67659dd",
+      "scope": "Fixed shared native handle-close failures. All193pure checks, including8new regressions, passed. Unknown close retains ownership and denies retry or cleanup; confirmed closure stays idempotent. No real native failure was injected or retained files accessed. A commit guard caught a test newline defect; corrected source passed fresh checks and separate review before commit. General tree, journal, worker recovery, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "close-custody-reviewed-checkpoint",
+      "work_criteria": [
+        "unknown-close-custody",
+        "creator-close-and-default-compatibility",
+        "focused-verification-and-owned-checkpoint"
+      ],
+      "receipt_digest": "7e8f99aae8612cbf055f0abb1628a5bf5b5d7a80494190e9631d5b32c58bedfd",
+      "review_digest": "75bba9c82d6ea230311973cf5b4afeb9db8fdf8760a73f81e37e6885d67659dd",
+      "scope": "Fixed shared native handle-close failures. All193pure checks, including8new regressions, passed. Unknown close retains ownership and denies retry or cleanup; confirmed closure stays idempotent. No real native failure was injected or retained files accessed. A commit guard caught a test newline defect; corrected source passed fresh checks and separate review before commit. General tree, journal, worker recovery, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "close-custody-reviewed-checkpoint",
+      "work_criteria": [
+        "unknown-close-custody",
+        "creator-close-and-default-compatibility",
+        "focused-verification-and-owned-checkpoint"
+      ],
+      "receipt_digest": "7e8f99aae8612cbf055f0abb1628a5bf5b5d7a80494190e9631d5b32c58bedfd",
+      "review_digest": "75bba9c82d6ea230311973cf5b4afeb9db8fdf8760a73f81e37e6885d67659dd",
+      "scope": "Fixed shared native handle-close failures. All193pure checks, including8new regressions, passed. Unknown close retains ownership and denies retry or cleanup; confirmed closure stays idempotent. No real native failure was injected or retained files accessed. A commit guard caught a test newline defect; corrected source passed fresh checks and separate review before commit. General tree, journal, worker recovery, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

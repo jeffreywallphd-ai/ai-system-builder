@@ -13171,6 +13171,17 @@
           "The agent still needs to protect complete folder trees, finish saved disk accounting and connect safe worker recovery to actual low-memory loading. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5afe8ea44a445ab15ec4c97cd1ef20688f86ca0279de6e180e248f85a36ffe39",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All 193 focused tests passed, including 8 new regression tests. A failed or interrupted file-handle close now stops retry and cleanup. Confirmed close still works normally. No operating-system failure was forced and no retained files were accessed.",
+          "The commit check caught a test-file formatting error. The corrected files were retested and reviewed before commit. The agent still needs to finish complete folder protection, saved disk accounting and safe worker recovery for actual low-memory loading. No action is needed."
+        ]
+      }
     }
   ]
 }
