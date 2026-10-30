@@ -293,7 +293,7 @@
       "user_description": {
         "purpose": "Prove executed coverage for every supported feature without claiming unrelated qualification.",
         "owner": "agent",
-        "next_action": "The agent must add the Hugging Face import, model search/save and artifact publication/deletion journeys. The Settings journeys are committed. Then link each feature to its tests and review the coverage. No user action is needed.",
+        "next_action": "The agent must add the Hugging Face import and artifact management journeys. The Settings and model-reference journeys are committed. Then link each feature to its tests and review the coverage. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must regenerate the mounted route, tab, action and capability-registry inventory.",
@@ -12983,6 +12983,17 @@
         "sentences": [
           "Four Settings test journeys now check saved values, masked test tokens, model defaults and recovery. Focused checks and test collection passed.",
           "The app journeys have not run yet. Full app and worker shutdown checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bb53b79ee98af692ae87645e2a7e5e481e5cf477466991ae343f5eddb96ebdac",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and Thin Client now have tests that search for a model, save its reference and check workspace separation. Focused checks and test collection passed.",
+          "The app journeys have not run yet. Model loading, full worker shutdown and the full test campaign remain pending."
         ]
       }
     }

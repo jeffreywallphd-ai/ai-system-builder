@@ -8305,7 +8305,7 @@
      }
     ]
    },
-   "committed_sha256": "c9096a572df686f3cc5cf4a7e012f8ffa6209e0ff549ec4a41e4152ad0611668"
+   "committed_sha256": "4586c921c6644ff9861d6ddacc471a9cd770961ca857b407f679093e7d27c894"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -9024,7 +9024,7 @@
      }
     ]
    },
-   "committed_sha256": "d8b42c53346972a30e0b4b10bcedd9a54df611ea49cded955d6abf1a92cf1899"
+   "committed_sha256": "742bd7215e68c92c2de792c075ae3dbf8d4e4219c4b466632aa4c097cfce1459"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -13332,7 +13332,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "105495a853b7b61b7084c272d58408887bf7a738c0a89658680a3577e3b43953"
+   "committed_sha256": "e23ba8423802dde449e6393ab34d8b3ecf12d33f9f55187fe797ec2cedada17b"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
@@ -14929,7 +14929,7 @@
    "host_definitions": [],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": [
-    "Add named Desktop and Thin Client journeys that search for an already approved model, save its reference and verify it after reload. No model weight download or accuracy run is required."
+    "The two model search and Save reference host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. No weights or accuracy tests were run."
    ]
   },
   {

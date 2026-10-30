@@ -6220,6 +6220,60 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "model-reference-functional-host-definitions",
+      "work_criteria": [
+        "bounded-model-host-setup",
+        "model-reference-ui-roundtrip-definitions",
+        "source-owned-feature-verification"
+      ],
+      "receipt_digest": "a9fb52259fc118b532d16c5287f5bb5624acb081d0c7e9ea525b2864a52b71d3",
+      "review_digest": "e818a586b3a722fa4510a54477ccb5db4bf12d43c66859d3e2e233f39b42a2aa",
+      "scope": "Two model-reference test journeys now search approved model metadata, save a reference, inspect details, reload and check workspace isolation. Focused checks, source checks and test collection passed. Actual app runs, model loading and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "model-reference-functional-host-definitions",
+      "work_criteria": [
+        "bounded-model-host-setup",
+        "model-reference-ui-roundtrip-definitions",
+        "source-owned-feature-verification"
+      ],
+      "receipt_digest": "a9fb52259fc118b532d16c5287f5bb5624acb081d0c7e9ea525b2864a52b71d3",
+      "review_digest": "e818a586b3a722fa4510a54477ccb5db4bf12d43c66859d3e2e233f39b42a2aa",
+      "scope": "Two model-reference test journeys now search approved model metadata, save a reference, inspect details, reload and check workspace isolation. Focused checks, source checks and test collection passed. Actual app runs, model loading and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "model-reference-functional-host-definitions",
+      "work_criteria": [
+        "bounded-model-host-setup",
+        "model-reference-ui-roundtrip-definitions",
+        "source-owned-feature-verification"
+      ],
+      "receipt_digest": "a9fb52259fc118b532d16c5287f5bb5624acb081d0c7e9ea525b2864a52b71d3",
+      "review_digest": "e818a586b3a722fa4510a54477ccb5db4bf12d43c66859d3e2e233f39b42a2aa",
+      "scope": "Two model-reference test journeys now search approved model metadata, save a reference, inspect details, reload and check workspace isolation. Focused checks, source checks and test collection passed. Actual app runs, model loading and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }
