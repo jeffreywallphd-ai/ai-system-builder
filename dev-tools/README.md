@@ -1552,3 +1552,20 @@ Job ABI definitions reuse the fixed native probe design without importing its
 transitive loaders. Installed runtime bindings include the base image, DLL,
 selected standard-library source and any existing caches for those modules;
 they are cooperative installation bindings, not hostile same-user isolation.
+
+
+### Correct per-child timer reporting
+
+Native report version 2 requires acknowledged timer configuration in every
+successful child case. The producer writes that fact only after `arm_deadline`
+returns with the exact confirmed state. False or unknown configuration stops
+before Core operations and cannot satisfy the strict report oracle. The new
+fixed diagnostic output namespace is `windows-offload-core-native-v2`.
+
+Version 1 incorrectly left this field false for Core cases despite arming their
+timers. Preserve those original reports. Their separately reviewed timer-control
+exit, empty/index cleanup and collision-refusal observations remain limited
+history; the erroneous Core-case timer field is excluded from qualification.
+Do not read version 1 as version 2 or infer missing Core-case timers from that
+old field. The source correction alone is not a new native run. Configured
+timers never replace actual callback delivery, exit or cleanup observations.

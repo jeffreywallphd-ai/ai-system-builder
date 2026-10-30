@@ -1806,3 +1806,15 @@ also recorded. The summary directory is latched only after exclusive creation
 succeeds, and its identity is rechecked before output. A failed create never
 opens the candidate's summary path. These checks do not establish malicious
 same-user filesystem or Python-installation isolation.
+
+
+The native report version 2 correction closes an evidence-integrity defect:
+version 1 armed the Core-child timer but left its report field false, and its
+oracle required that false value. The producer now records confirmed actual
+configuration for every successful child, and the oracle refuses false/unknown
+states. A distinct report schema and fresh diagnostic namespace prevent old
+reports from being interpreted as corrected evidence. Original raw/source facts
+stay immutable, with the erroneous Core timer field excluded from historical
+qualification. Timer configuration still proves no callback delivery, native
+exit or physical cleanup. No execution authority, resource limit, model policy,
+production factory or parent qualification changes in this reporting repair.

@@ -20,7 +20,7 @@ import time
 import types
 import uuid
 
-SCHEMA = 'windows-offload-core-native-v1'
+SCHEMA = 'windows-offload-core-native-v2'
 CASES = ('deadline-control', 'empty-stage', 'one-index', 'namespace-denied')
 CORE_CASES = CASES[1:]
 MEMORY_BYTES = 512 * 1024**2
@@ -31,7 +31,7 @@ MAX_REPORT_BYTES = 8192
 MAX_NATIVE_CALLS = 4096
 ROOT = Path(__file__).absolute().parents[3]
 ENTRY = ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_core.py'
-RUNS = ROOT / '.local-codex/windows-offload-core-native-v1'
+RUNS = ROOT / '.local-codex/windows-offload-core-native-v2'
 TASK_FILES = tuple('modules/adapters/runtime/python/worker/tasks/' + name for name in (
     'local_model_offload.py', 'offload_recovery.py', 'windows_offload_core.py', 'windows_offload_backend.py'))
 TOOL_FILES = (
@@ -108,6 +108,7 @@ def validate_child_report(value, case, expected_source):
                  'core_uncertainty_retained', 'timer_configured', 'model_started', 'production_composed'):
         require(type(value[name]) is bool, 'report-boolean')
     require(not value['model_started'] and not value['production_composed'], 'report-scope')
+    require(value['timer_configured'] is True, 'report-timer-unconfirmed')
     require(value['failure_stage'] == 'none', 'report-child-failure')
     require(type(value['index_bytes']) is int and value['index_bytes'] in (0, 2), 'report-index')
     require(type(value['native_call_count']) is int and 0 <= value['native_call_count'] <= MAX_NATIVE_CALLS, 'report-count')
@@ -128,13 +129,13 @@ def validate_child_report(value, case, expected_source):
         require(value['outcome'] == 'expected-denial' and value['expected_refusal']
                 and value['core_uncertainty_retained'] and not value['core_created']
                 and not value['core_cleanup_confirmed'] and not value['core_handles_closed']
-                and not value['timer_configured'] and value['index_bytes'] == 0
+                and value['index_bytes'] == 0
                 and value['native_call_count'] > 0 and value['last_native_phase'] == 'NtCreateFile'
                 and value['last_native_return_code'] == 0xc0000035, 'report-native-refusal')
     else:
         require(value['outcome'] == 'observed' and not value['expected_refusal']
                 and value['core_created'] and value['core_cleanup_confirmed'] and value['core_handles_closed']
-                and not value['core_uncertainty_retained'] and not value['timer_configured']
+                and not value['core_uncertainty_retained']
                 and value['native_call_count'] > 0
                 and value['index_bytes'] == (2 if case == 'one-index' else 0)
                 and value['last_native_phase'] == 'CloseHandle'
@@ -848,14 +849,16 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
         value = _base_report(case, source, started)
         if case == 'deadline-control':
             native.deadline_ns = min(deadline_ns, time.monotonic_ns() + CONTROL_NS)
-            native.arm_deadline()
-            value.update(outcome='armed', timer_configured=True, elapsed_ns=max(1, time.monotonic_ns() - started))
+        native.arm_deadline()
+        require(native.timer_configured is True, 'child-timer-unconfirmed')
+        value['timer_configured'] = True
+        if case == 'deadline-control':
+            value.update(outcome='armed', elapsed_ns=max(1, time.monotonic_ns() - started))
             _write_report(native, report, value)
             # Timer delivery must cause actual native exit2 while WinDLL Sleep
             # releases the GIL. A marker or IsTimerSet result is not a pass.
             native.k.Sleep(0xffffffff)
             raise FixtureError('timer-returned')
-        native.arm_deadline()
         folder = RUNS / run_id / case
         _exercise_core(native, case, hashes, folder, value)
         require(_all_hashes(native) == hashes, 'source-drift')

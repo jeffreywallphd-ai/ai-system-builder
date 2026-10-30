@@ -724,7 +724,7 @@ retain the files and failure details.
 
 Default and plan commands still report pending without native effects. A reviewed
 standalone run will save bounded source-bound JSON under a new opaque run folder
-in `.local-codex/windows-offload-core-native-v1/`. Results contain fixed failure
+in `.local-codex/windows-offload-core-native-v2/`. Results contain fixed failure
 stages and numeric native error codes, not raw exceptions or private payloads.
 The 512 MiB child ceiling applies to these model-free tests only. The timer has
 host/GIL/suspend limits described in the dev-tools guide; this is not a general
@@ -732,3 +732,19 @@ production deadline guarantee. Existing protected files, durable accounting,
 owned-worker restart/crash behavior and actual offload memory delivery still
 need their own implementation and evidence. No parent criterion passes merely
 because the runner exists or returns zero.
+
+
+### Test-report correction
+
+The first small Windows run observed its timeout control, empty-folder cleanup,
+tiny-index cleanup and existing-name refusal. Its timer field was wrong for
+the folder tests. Those original results remain unchanged, and the incorrect
+field does not count as evidence. The agent corrected the report producer and
+its checks in version 2. Configuration must be confirmed for every successful
+child. An unknown result stops the test before folder operations.
+
+No user action is needed. Version 2 still needs its separate reviewed native run;
+the source fix does not supply that result. Timer configuration is different
+from proving that a timeout ended a process. Production offload, durable disk
+accounting, worker restart, retained-file protection and real resources remain
+separate work. Accepted model accuracy and OCR results stay closed.

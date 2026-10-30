@@ -32,7 +32,7 @@ def child(case):
             'last_native_phase': 'none' if control else 'NtCreateFile' if denied else 'CloseHandle',
             'last_native_return_code': None if control else 0xc0000035 if denied else 1,
             'last_os_error_code': None if control else 0, 'elapsed_ns': 100_000,
-            'timer_configured': control, 'model_started': False, 'production_composed': False, 'failure_stage': 'none'}
+            'timer_configured': True, 'model_started': False, 'production_composed': False, 'failure_stage': 'none'}
 
 
 def parent(case):
@@ -369,6 +369,56 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaises(Parked): subject._finish_output(native, None, None, {'status': 'failed'}, time.monotonic_ns())
         self.assertEqual(exits, [9]); park.assert_called_once_with(native)
 
+    def child_producer(self, case, configured):
+        """Run the actual child branch with explicit synthetic controller ports.
+
+        The fake exit sentinel is caught by its failure handler; no actual exit,
+        timer or Core/file observation is supplied by this source test.
+        """
+        class End(BaseException): pass
+        events, reports, exits = [], [], []
+        native = SimpleNamespace(uncertain=False, timer_configured=False,
+                                 deadline_ns=time.monotonic_ns()+subject.BUDGET_NS,
+                                 k=SimpleNamespace(GetFileType=lambda *_: 1, SetEvent=lambda *_: 1),
+                                 wait=lambda *_: True, close=lambda *_: None)
+        def arm(): events.append('arm'); native.timer_configured = configured
+        def exit_self(code): exits.append(code); raise End()
+        def write(_native, _report, value):
+            if reports: raise subject.FixtureError('synthetic-report-already-written')
+            reports.append(json.loads(json.dumps(value)))
+        def exercise(_native, actual_case, _hashes, _folder, value):
+            events.append('core')
+            facts = child(actual_case)
+            for key in ('outcome','expected_refusal','core_created','core_cleanup_confirmed','core_handles_closed',
+                        'core_uncertainty_retained','index_bytes','native_call_count','last_native_phase',
+                        'last_native_return_code','last_os_error_code'):
+                value[key] = facts[key]
+        native.arm_deadline, native.exit_self = arm, exit_self
+        native.call = lambda _stage, function, *args, **_kwargs: function(*args)
+        hashes = {'synthetic.py':'a'*64}
+        with patch.object(sys, 'flags', SimpleNamespace(isolated=1, no_site=1)), patch.object(sys, 'dont_write_bytecode', True), patch.object(sys, 'prefix', sys.base_prefix), patch.object(subject, '_Native', return_value=native), patch.object(subject, '_all_hashes', return_value=hashes), patch.object(subject, '_inherited', return_value=SimpleNamespace(value=1)), patch.object(subject, '_report_size', return_value=0), patch.object(subject, '_child_readback'), patch.object(subject, '_exercise_core', side_effect=exercise), patch.object(subject, '_write_report', side_effect=write):
+            with self.assertRaises(End): subject._owned_child('a'*32, case, hashes, native.deadline_ns, 1, 2, 3)
+        return events, reports, exits
+
+    def test_actual_child_producer_reports_confirmed_timer_on_every_core_case(self):
+        for case in subject.CORE_CASES:
+            with self.subTest(case=case):
+                events, reports, exits = self.child_producer(case, True)
+                self.assertEqual(events, ['arm','core'])
+                self.assertIs(reports[0]['timer_configured'], True)
+                self.assertEqual(reports[0]['schema_version'], 'windows-offload-core-native-v2')
+                self.assertEqual(reports[0]['failure_stage'], 'none')
+                self.assertEqual(exits[0], 0)
+
+    def test_child_unconfirmed_timer_stops_before_core_and_cannot_report_success(self):
+        for configured in (False, None, 1):
+            with self.subTest(configured=configured):
+                events, reports, exits = self.child_producer('empty-stage', configured)
+                self.assertEqual(events, ['arm'])
+                self.assertIs(reports[0]['timer_configured'], False)
+                self.assertEqual(reports[0]['failure_stage'], 'child-timer-unconfirmed')
+                self.assertEqual(exits, [9])
+
 
 class FixtureOracleTests(unittest.TestCase):
     def test_exact_case_facts_remain_distinct_from_native_qualification(self):
@@ -402,6 +452,16 @@ class FixtureOracleTests(unittest.TestCase):
         with self.assertRaises(subject.FixtureError): subject.validate_parent_observation(observed, 'deadline-control')
         observed['exit_code'] = 2; observed['process_exit_observed'] = False
         with self.assertRaises(subject.FixtureError): subject.validate_parent_observation(observed, 'deadline-control')
+
+    def test_schema2_requires_actual_timer_configuration_for_every_successful_case(self):
+        self.assertEqual(subject.SCHEMA, 'windows-offload-core-native-v2')
+        for case in subject.CASES:
+            for bad in (False, None, 0, 1):
+                value = child(case); value['timer_configured'] = bad
+                with self.subTest(case=case, bad=bad), self.assertRaises(subject.FixtureError):
+                    subject.validate_child_report(value, case, 'a' * 64)
+            value = child(case); value['schema_version'] = 'windows-offload-core-native-v1'
+            with self.assertRaises(subject.FixtureError): subject.validate_child_report(value, case, 'a' * 64)
 
     def test_malformed_extra_bool_or_changed_source_does_not_enter_native_path(self):
         samples = []
