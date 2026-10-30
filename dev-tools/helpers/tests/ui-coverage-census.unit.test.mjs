@@ -126,7 +126,16 @@ test("checks the current repository map against original scope and actual source
   assert(map.sources.find(s=>s.path===training).facts.modifiers.length>0,"Unready real inputs keep training execution pending.");
   for(const name of [training,website,"dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]) {
     const source=map.sources.find(s=>s.path===name);
-    assert.equal(source.facts.sha256,source.committed_sha256,"Reviewed host definitions bind to their actual committed source.");
+    if(source.facts.sha256!==source.committed_sha256){
+      assert.notEqual(name,website,"Unchanged website definitions still bind to their actual committed source.");
+      assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===name),"Changed OP definitions retain their real older Git binding and an explicit drift gap until reviewed source is committed.");
+    }
+    if(name!==website){
+      const text=read(name).toString();
+      assert(text.includes('["public-values","secret-defaults"]'));
+      assert(text.includes("qualifySettingsHostJourney"));
+      assert(text.includes("VISUAL_COMPOSER_SETTINGS_READY"));
+    }
   }
   for(const [id,stem] of [["contributor-review-site","review-site"],["website-acquisition-refresh","website-acquisition"],["desktop-model-training","model-training"]]) {
     const source=`dev-tools/scripts/qualification/tests/${stem}-oracles.unit.test.ts`;
@@ -155,7 +164,9 @@ test("checks the current repository map against original scope and actual source
   const cleanup=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts");
   assert(cleanup.facts.cases.some(c=>c.name==="admits a live real-worker shape through its launcher before closing the app"));
   assert(cleanup.facts.cases.some(c=>c.name==="does not downgrade refused live native admission to a PID-absence pass"));
-  assert.equal(cleanup.facts.sha256,cleanup.committed_sha256,"The reviewed cleanup assertions bind to their actual committed checkpoint.");
+  if(cleanup.facts.sha256!==cleanup.committed_sha256)assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===cleanup.path),"The extended cleanup assertions retain their actual older checkpoint and explicit source drift until reviewed and committed.");
+  assert(cleanup.facts.cases.some(c=>c.name==="refuses an unlisted slot before observing or closing an app"));
+  assert(cleanup.facts.cases.some(c=>c.name==="refuses a foreign journey stage before app effects"));
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

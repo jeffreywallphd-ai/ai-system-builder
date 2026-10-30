@@ -8235,8 +8235,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "84a3373bef4e44402fd401345d8831c537619f56a5c2a9556b6c3528c1bcc0a6",
-    "bytes": 7787,
+    "sha256": "c9096a572df686f3cc5cf4a7e012f8ffa6209e0ff549ec4a41e4152ad0611668",
+    "bytes": 9614,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8251,15 +8251,15 @@
       "line": 51
      }
     ],
-    "dynamicCases": 3,
+    "dynamicCases": 5,
     "functions": [
      {
       "name": "runOperationalDesktop",
       "line": 21
      }
     ],
-    "assertionCount": 2,
-    "assertionDigest": "584d914eda6fb8dc1260486ba67c4c7adf7c73ba3211d008dbfd61e7b251c9fb",
+    "assertionCount": 5,
+    "assertionDigest": "8b4a6a842c8559a26e59e385c8cfb4ee3c28674d2d52b8a352b7a91c5427216f",
     "assertionExamples": [
      {
       "line": 28,
@@ -8270,6 +8270,16 @@
       "line": 32,
       "kind": "expect",
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+     },
+     {
+      "line": 106,
+      "kind": "expect",
+      "sha256": "4aec4f3cd2e1363691f43dc9b9f2221057e583ee37bc6f7ac1b95514a4dcc117"
+     },
+     {
+      "line": 110,
+      "kind": "expect",
+      "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
      }
     ],
     "modifiers": [
@@ -8279,6 +8289,10 @@
      },
      {
       "line": 75,
+      "kind": "skip"
+     },
+     {
+      "line": 99,
       "kind": "skip"
      }
     ]
@@ -8924,8 +8938,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "ed72556520e2eba612db7a53eede06120aeffa310713e80258853acdde30e419",
-    "bytes": 5653,
+    "sha256": "d8b42c53346972a30e0b4b10bcedd9a54df611ea49cded955d6abf1a92cf1899",
+    "bytes": 7097,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
@@ -8948,7 +8962,7 @@
       "line": 61
      }
     ],
-    "dynamicCases": 2,
+    "dynamicCases": 4,
     "functions": [
      {
       "name": "operationalBrowserConfiguration",
@@ -8959,8 +8973,8 @@
       "line": 18
      }
     ],
-    "assertionCount": 4,
-    "assertionDigest": "c60985a2953c21e65ca0039c907c81ee7c20e93bf75c8c270ad4365dca9bda4a",
+    "assertionCount": 8,
+    "assertionDigest": "12cb70ab3519abaf1a0e7a1328465945bada625f07f3d3336727f66410537abf",
     "assertionExamples": [
      {
       "line": 21,
@@ -8986,6 +9000,10 @@
     "modifiers": [
      {
       "line": 69,
+      "kind": "skip"
+     },
+     {
+      "line": 89,
       "kind": "skip"
      }
     ]
@@ -13185,87 +13203,95 @@
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
    "facts": {
-    "sha256": "61064c5ec6c94a991793968f560369732ce4ca55feea83af56b72dbf9716776e",
-    "bytes": 13549,
+    "sha256": "105495a853b7b61b7084c272d58408887bf7a738c0a89658680a3577e3b43953",
+    "bytes": 14718,
     "cases": [
      {
       "name": "retains the successful owned identity and disposal checks",
-      "line": 67
+      "line": 69
      },
      {
       "name": "accepts the genuine same-process launch shape with root-bound native observation",
-      "line": 77
+      "line": 80
      },
      {
       "name": "retains a falsy app-close failure %#",
-      "line": 82
+      "line": 85
      },
      {
       "name": "preserves close, observer disposal and attachment failures in order",
-      "line": 89
+      "line": 92
      },
      {
       "name": "retains both failed storage attempts without overwriting an unknown file",
-      "line": 96
+      "line": 99
      },
      {
       "name": "does not invoke or serialize exception name getters",
-      "line": 102
+      "line": 105
      },
      {
       "name": "admits a live real-worker shape through its launcher before closing the app",
-      "line": 117
+      "line": 120
      },
      {
       "name": "a confirmed native exit is not overridden by an unrelated process reusing that number",
-      "line": 124
+      "line": 127
      },
      {
       "name": "a refused native exit remains failed without a numeric-PID polling fallback",
-      "line": 130
+      "line": 133
      },
      {
       "name": "rejects a marker whose immediate parent disagrees with native observation, without rewriting it",
-      "line": 137
+      "line": 140
      },
      {
       "name": "does not downgrade refused live native admission to a PID-absence pass",
-      "line": 144
+      "line": 147
      },
      {
       "name": "keeps an already-exited nested worker unqualified because its ancestry cannot be observed",
-      "line": 159
+      "line": 162
      },
      {
       "name": "import cleanup rejects unsupported host, mode and stage before any app or file effects",
-      "line": 165
+      "line": 168
      },
      {
       "name": "cleanup persistence refuses private types and unknown stage values",
-      "line": 173
+      "line": 176
+     },
+     {
+      "name": "refuses an unlisted slot before observing or closing an app",
+      "line": 185
+     },
+     {
+      "name": "refuses a foreign journey stage before app effects",
+      "line": 189
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "app",
-      "line": 40
+      "line": 41
      },
      {
       "name": "info",
-      "line": 45
+      "line": 46
      },
      {
       "name": "caught",
-      "line": 50
+      "line": 51
      },
      {
       "name": "liveWorker",
-      "line": 111
+      "line": 114
      }
     ],
-    "assertionCount": 76,
-    "assertionDigest": "5dd99c8572ce6f08278b6a1c4432859cdee9bc58d13a88367fafc1e3c9d703d7",
+    "assertionCount": 87,
+    "assertionDigest": "dc31b3bc44560daf23cfcbfc1cf6288564aedfc727c0a8a7b648f8f033fd338a",
     "assertionExamples": [
      {
       "line": 20,
@@ -13273,17 +13299,17 @@
       "sha256": "4e3f2b6a547285a681e5c4ea582cf8bc983ceb317a8230c20669f3cc53d91bf3"
      },
      {
-      "line": 68,
+      "line": 70,
       "kind": "expect",
       "sha256": "42315d8a088de76c6b15791c6373ded3f76bf6597f3bf70686184fa4d6f0e7c5"
      },
      {
-      "line": 68,
+      "line": 70,
       "kind": "expect",
       "sha256": "b05d2c348719ca3dc5a239e18c3f60520eca33cef83ea5c59f7f211e1ded34b0"
      },
      {
-      "line": 69,
+      "line": 71,
       "kind": "expect",
       "sha256": "a6638f8e5ae296f0653d8d53ee1f453a23cd4b9b4965cb97a54f609dcf135baf"
      }

@@ -1320,3 +1320,22 @@ host, supplier, native-job, model-quality or parent pass. Full image execution i
 deferred and accepted accuracy remains closed. Unknown, incomplete and explicit
 generic impact retain the generic checks. Input layout and use are in
 `dev-tools/README.md`.
+
+## Functional Settings host definition support
+
+The `operational-ui` profile now includes the four functional Settings host
+definitions and their focused helper/Settings regressions. It uses 81 exact test
+paths, 186 source paths and 76 automatic source bindings. Shared declarations
+and borrowed regressions do not activate this profile by themselves. Unknown
+impact, explicit generic checks and incomplete ownership retain their fallback.
+
+Dedicated one-host Settings selectors exercise public Save/readback/reload/Clear,
+masked synthetic credentials, passive model-default restoration and explicit Thin
+read-failure recovery. The existing default/image credential purposes and wire
+protocol remain intact. A fixed Settings purpose adds only Settings and credential
+management scopes; it grants no provider credential-use or runtime-admin scope.
+Fresh isolated profiles and stripped ambient credentials protect the user token.
+
+These are test definitions with focused evidence. Actual app, provider, model,
+physical restart, full native worker and parent qualification remain separate.
+See `dev-tools/README.md` for the later serial campaign selectors.

@@ -1,3 +1,4 @@
+import {settingsHostLayout} from "../visual-composer/settings-host-launch-plan.mjs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const probe = vi.hoisted(() => ({ existing: false, physicalBase: undefined as string | undefined, statCalls: [] as string[], calls: [] as Array<{ executable: string; argvPrefix: string[]; script: string; dataRoot: string; large: string; runAsNode: string; timeout: number; windowsHide: boolean }> }));
@@ -146,5 +147,26 @@ describe("exact owned desktop window zoom",()=>{
   it("does not coerce an unexpected factor object",async()=>{
     let coercions=0;const factor={valueOf(){coercions++;throw new Error("synthetic-private-coercion");}};
     const {app}=fixture({factor});expect(await caught(()=>applyOwnedDesktopNativeZoom(app,page))).toBeInstanceOf(Error);expect(coercions).toBe(0);
+  });
+});
+
+describe("fresh isolated Settings profiles",()=>{
+  const run="settings-case-fixture-20261029",source="source."+"a".repeat(64);
+  function setup(){
+    vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID",run);vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION",source);
+    const folder=settingsHostLayout(process.cwd(),run,source).desktopDataRoot;vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT",folder);return folder;
+  }
+  it.each(["settings-public-values","settings-secret-defaults"] as const)("uses only the fresh exact %s slot",slot=>{
+    const folder=setup();vi.stubEnv("HF_TOKEN","synthetic-user-token");vi.stubEnv("HUGGING_FACE_TOKEN","synthetic-other-token");
+    const result=prepareIsolatedDesktopCase(slot);expect(result.dataRoot).toBe(path.join(folder,slot));
+    const captured:Record<string,unknown>=result.env;
+    expect(captured.HF_TOKEN).toBeUndefined();expect(captured.HUGGING_FACE_TOKEN).toBeUndefined();expect(captured.PYTHON_RUNTIME_QUALIFICATION_SCENARIO).toBe("immediate");
+    expect(captured.HF_HUB_OFFLINE).toBe("1");expect(captured.COMFYUI_AUTO_INSTALL).toBe("0");
+    expect(probe.calls).toHaveLength(1);expect(probe.calls[0]).toMatchObject({dataRoot:result.dataRoot,large:"0",runAsNode:"1",timeout:30000,windowsHide:true});
+  });
+  it.each(["settings-public-values","settings-secret-defaults"] as const)("retains existing %s and refuses redirected roots before seed",slot=>{
+    const folder=setup();probe.existing=true;expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("An existing operational profile requires a fresh qualification run.");expect(probe.calls).toEqual([]);
+    probe.existing=false;probe.statCalls.length=0;probe.physicalBase=path.resolve(".local-codex/foreign-profile");expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("physical run root");expect(probe.statCalls).toEqual([]);expect(probe.calls).toEqual([]);
+    probe.physicalBase=undefined;vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT",path.join(folder,"lookalike"));expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("exact fresh run root");expect(probe.calls).toEqual([]);
   });
 });

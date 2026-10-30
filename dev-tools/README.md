@@ -1015,3 +1015,32 @@ model-accuracy matrices closed. Actual host, provider, accessibility, performanc
 native and final current-candidate qualification remain pending until their own
 required evidence passes and is independently reviewed. See
 `docs/diagnostics/ai-development-control-plane.md` for source support limits.
+
+### Functional Settings host journeys
+
+The two dedicated Settings selectors each collect two cases from the existing
+Operational host specs. They test a public value and a synthetic token plus a
+passive model default. The checks save, confirm readback, reload and clear the
+values. Clearing the model default restores its built-in value. The Thin Client
+case also fails one read after a real save, checks that further writes are disabled,
+then uses Refresh settings to read the actual saved value.
+
+For the later qualification campaign, set `VISUAL_COMPOSER_SETTINGS_HOST=1` and
+use either `dev-tools/config/playwright.settings-host-desktop.config.ts` or
+`dev-tools/config/playwright.settings-host-thin.config.ts`. Run one host at a time.
+Use a new run ID. The setup refuses an existing run/profile, strips ambient
+provider tokens and migration settings, and uses only synthetic credentials in
+the isolated profile. No new model, provider publication or dependency download
+is part of these cases. Screenshots, traces and video stay off.
+
+The fixed Settings test credential adds Settings read/write and provider-credential
+read/write scopes to the existing qualification scopes. It has no credential-use
+or runtime-administration scope. The production route and organization policies
+remain authoritative. A successful Settings check grants no provider authority.
+
+The Server uses a fixed Settings-only stdin stop message and acknowledges only
+after canonical task/listener/persistence draining. The shared finite shutdown
+core preserves the image protocol. Desktop reports main-process exit separately;
+background/model workers and complete job-tree retirement stay unqualified.
+Missing opt-in is a pending test, not a pass. Focused fixtures and collection
+do not qualify actual host execution; the full campaign remains deferred.

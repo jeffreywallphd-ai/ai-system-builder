@@ -80,3 +80,21 @@ for(const scenario of ["create-register","task-recovery"] as const)test(`thin cl
   await workspace.selectOption(fixture.workspaceId);await expect(workspace).toHaveValue(fixture.workspaceId);
   await qualifyImageHostJourney(page,test.info(),declaration,scenario);
 });
+
+import {qualifySettingsHostJourney} from "./settings-host-journey";
+import {SETTINGS_HOST_TIMEOUT_MS} from "../settings-host-oracles";
+
+for(const scenario of ["public-values","secret-defaults"] as const)test(`thin client settings ${scenario} saves, reloads and clears through the public UI`,async({page})=>{
+  test.setTimeout(SETTINGS_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_SETTINGS_READY!=="1","Pending the dedicated fresh isolated Settings profile.");
+  if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported Settings host.");
+  const {statusUrl,token}=operationalBrowserConfiguration();
+  await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);
+  await page.goto(new URL("/systems",statusUrl).href);
+  const workspace=page.getByLabel("Select current workspace");await expect(workspace).toBeVisible();const previous=await workspace.inputValue();
+  await page.getByRole("button",{name:"Create new workspace",exact:true}).click();
+  await page.locator('input[name="workspaceName"]').fill(`Settings ${scenario} fixture`);
+  await page.getByRole("button",{name:"Create workspace",exact:true}).click();
+  await expect(page.locator(".workspace-create-form")).toHaveCount(0);await expect(workspace).toHaveValue(/^workspace\./);await expect(workspace).not.toHaveValue(previous);
+  await qualifySettingsHostJourney(page,test.info(),"thin-chrome",scenario);
+});

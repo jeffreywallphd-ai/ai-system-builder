@@ -89,3 +89,26 @@ for(const scenario of ["create-register","task-recovery"] as const)test(`package
     await qualifyImageHostJourney(page,test.info(),JSON.stringify(fixture),scenario);stage="complete";
   },()=>closeImageGenerationDesktop(app,isolated.dataRoot,test.info(),stage));
 });
+
+import {qualifySettingsHostJourney} from "./settings-host-journey";
+import {SETTINGS_HOST_TIMEOUT_MS} from "../settings-host-oracles";
+import {closeSettingsDesktop,type SettingsCleanupStage} from "./desktop-main-cleanup";
+
+for(const scenario of ["public-values","secret-defaults"] as const)test(`packaged desktop settings ${scenario} saves, reloads and clears through the public UI`,async()=>{
+  test.setTimeout(SETTINGS_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_SETTINGS_READY!=="1","Pending the dedicated fresh isolated Settings profile.");
+  if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported Settings host.");
+  const isolated=prepareIsolatedDesktopCase(scenario==="public-values"?"settings-public-values":"settings-secret-defaults");
+  const app=await electron.launch({executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
+  let stage:SettingsCleanupStage="startup";
+  await runOwnedRestartPhase(async()=>{
+    const page=await app.firstWindow({timeout:60_000});
+    await expect(page.getByLabel("Select current workspace")).toBeVisible({timeout:60_000});
+    await page.getByRole("button",{name:"Create new workspace",exact:true}).click();
+    await page.locator('input[name="workspaceName"]').fill(`Settings ${scenario} fixture`);
+    await page.getByRole("button",{name:"Create workspace",exact:true}).click();
+    await expect(page.locator(".workspace-create-form")).toHaveCount(0);
+    await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
+    stage="settings";await qualifySettingsHostJourney(page,test.info(),"packaged-desktop",scenario);stage="complete";
+  },()=>closeSettingsDesktop(app,isolated.dataRoot,test.info(),stage));
+});

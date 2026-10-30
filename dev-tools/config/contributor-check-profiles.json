@@ -1893,7 +1893,14 @@
         "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts",
         "apps/server/src/tests/shutdownServerResources.unit.test.ts",
-        "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts"
+        "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs",
+        "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+        "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -2064,7 +2071,24 @@
         "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts",
         "apps/server/src/tests/shutdownServerResources.unit.test.ts",
         "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
-        "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"
+        "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
+        "dev-tools/config/playwright.settings-host-desktop.config.ts",
+        "dev-tools/config/playwright.settings-host-thin.config.ts",
+        "dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts",
+        "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
+        "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
       ]
     },
     "comfyui-host-policy": {

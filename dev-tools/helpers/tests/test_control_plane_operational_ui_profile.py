@@ -98,6 +98,14 @@ TESTS += ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.u
  'apps/server/src/tests/shutdownServerResources.unit.test.ts',
  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts']
 
+TESTS += ['dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs',
+ 'apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx',
+ 'modules/ui/shared/settings/tests/SettingField.unit.test.tsx',
+ 'modules/application/use-cases/tests/settings.use-cases.unit.test.ts']
+
 EXPECTED_COMMANDS = [['node',
   '--import',
   'tsx',
@@ -129,31 +137,36 @@ EXPECTED_COMMANDS = [['node',
   'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts',
   'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs',
-  'dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts',
-  'dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts'],
+  'dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts'],
  ['node',
   '--import',
   'tsx',
   '--test',
   '--',
+  'dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts',
   'dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts',
   'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts',
   'dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts',
   'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts',
-  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts',
+  'modules/application/use-cases/tests/settings.use-cases.unit.test.ts',
+  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
   'modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx',
-  'modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts'],
- ['node',
-  '--import',
-  'tsx',
-  '--test',
-  '--',
+  'modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts',
   'modules/ui/shared/notifications/tests/notificationState.unit.test.ts',
   'modules/ui/shared/notifications/tests/taskObservation.unit.test.ts',
   'modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts'],
@@ -175,6 +188,7 @@ EXPECTED_COMMANDS = [['node',
   'apps/thin-client/src/features/image-generation/tests/use-image-generation-feature.unit.test.tsx',
   'apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts',
   'apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts',
+  'apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx',
   'apps/thin-client/src/tests/app-routing.ui.test.tsx',
   'apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx',
   'dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts',
@@ -189,7 +203,8 @@ EXPECTED_COMMANDS = [['node',
   'modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx',
   'modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx',
-  'modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx'],
+  'modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx',
+  'modules/ui/shared/settings/tests/SettingField.unit.test.tsx'],
  [sys.executable,
   '-B',
   '-m',
@@ -236,13 +251,26 @@ EXPECTED_COMMANDS = [['node',
   '-p',
   'test_training_qualification_worker.py']]
 
+SETTINGS_AUTOMATIC = ['dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts',
+ 'dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts',
+ 'dev-tools/config/playwright.settings-host-desktop.config.ts',
+ 'dev-tools/config/playwright.settings-host-thin.config.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs']
+
 class OperationalUiProfile(unittest.TestCase):
     def test_image_host_sources_preserve_fixed_runners_and_unknown_impact(self):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/image-generation-host-oracles.ts', 'dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.mjs', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-input-records.ts', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.mjs', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/config/playwright.image-host-desktop.config.ts', 'dev-tools/config/playwright.image-host-thin.config.ts', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts']
         borrowed = ['dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.d.mts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-main-cleanup.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs']
-        self.assertEqual(self.profile()["test_paths"][65:], ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'])
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[46:], paths)
+        self.assertEqual(self.profile()["test_paths"][65:74], ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[46:64], paths)
         for source in paths + borrowed:
             self.assertIn(source, self.profile()["source_paths"])
             if source in borrowed: self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -347,8 +375,8 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 74)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
+        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -380,8 +408,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 74)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
+        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -406,8 +434,8 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 74)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
+        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -578,6 +606,32 @@ class OperationalUiProfile(unittest.TestCase):
                 with patch.object(run_focused_checks, "snapshot", return_value={"files": {}}):
                     with self.assertRaises(ControlError):
                         run_focused_checks.profile_commands(root, "operational-ui")
+
+
+    def test_settings_host_sources_have_finite_coverage_and_unknown_or_explicit_fallback(self):
+        v="dev-tools/scripts/qualification/visual-composer/"
+        core=v+"e2e/settings-host-journey.ts"
+        declarations=[v+"owned-host-shutdown.d.mts",v+"settings-host-launch-plan.d.mts"]
+        additions=SETTINGS_AUTOMATIC
+        self.assertEqual(len(additions),12)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:],additions)
+        for source in additions:
+            self.assertIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+            self.assertIn(source,self.profile()["source_paths"])
+        for source in declarations:
+            self.assertIn(source,self.profile()["source_paths"])
+            self.assertNotIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="settings-host-profile-") as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            for paths,required,generic in [(additions+declarations,["documentation"],False),
+                ([core,*declarations],["focused-tests"],True),([core,v+"unreviewed-settings.ts"],["documentation"],True)]:
+                ids={c["id"] for c in catalog.plan(root,paths,required,"synthetic-candidate")["selected"]}
+                self.assertIn("operational-ui",ids);self.assertEqual("focused-tests" in ids,generic)
+            for missing in [core,*declarations]:
+                profile=self.profile();profile["source_paths"].remove(missing)
+                (root/CONFIG).write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"operational-ui":profile}}))
+                ids={c["id"] for c in catalog.plan(root,[core,*declarations],["documentation"],"synthetic-candidate")["selected"]}
+                self.assertIn("focused-tests",ids)
 
 if __name__ == "__main__":
     unittest.main()
