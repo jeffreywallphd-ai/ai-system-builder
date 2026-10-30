@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const severityNames = ["info", "low", "moderate", "high", "critical"];
@@ -255,10 +256,46 @@ export function validateRuntimeSbom(sbom) {
   };
 }
 
+function isRegularFile(file) {
+  try { return statSync(file).isFile(); }
+  catch { return false; }
+}
+
+export function resolveNpmInvocation({
+  platform = process.platform,
+  npmExecPath = process.env.npm_execpath,
+  executablePath = process.execPath,
+  searchPath = process.env.PATH ?? process.env.Path ?? "",
+  isFile = isRegularFile,
+} = {}) {
+  if (npmExecPath) return { command: executablePath, prefixArgs: [npmExecPath] };
+  if (platform !== "win32") return { command: "npm", prefixArgs: [] };
+  const unavailable = () => new Error(
+    "The npm CLI is unavailable. Run this check from npm or select an installed Node.js/npm toolchain.",
+  );
+  if (typeof searchPath !== "string" || searchPath.length > 32_768) throw unavailable();
+  // The operator-configured toolchain remains trusted. Never run a command
+  // script through a shell; skip current-directory, relative and UNC entries.
+  for (const entry of searchPath.split(";").slice(0, 128)) {
+    const trimmed = entry.trim();
+    const directory = trimmed.startsWith('"') && trimmed.endsWith('"')
+      ? trimmed.slice(1, -1) : trimmed;
+    if (!/^[A-Za-z]:[\\/]/.test(directory)
+        || /[\u0000-\u001f"<>|?*]/u.test(directory) || directory.slice(2).includes(":")) continue;
+    for (const name of ["npm.exe", "npm.com"]) {
+      const executable = path.win32.join(directory, name);
+      if (isFile(executable)) return { command: executable, prefixArgs: [] };
+    }
+    const wrapper = path.win32.join(directory, "npm.cmd");
+    const cli = path.win32.join(directory, "node_modules", "npm", "bin", "npm-cli.js");
+    if (isFile(wrapper) && isFile(cli)) return { command: executablePath, prefixArgs: [cli] };
+  }
+  throw unavailable();
+}
+
 function runNpmJson(args, acceptedExitCodes = [0]) {
-  const npmCliPath = process.env.npm_execpath;
-  const command = npmCliPath ? process.execPath : "npm";
-  const commandArgs = npmCliPath ? [npmCliPath, ...args] : args;
+  const { command, prefixArgs } = resolveNpmInvocation();
+  const commandArgs = [...prefixArgs, ...args];
   const result = spawnSync(command, commandArgs, {
     cwd: process.cwd(),
     encoding: "utf8",

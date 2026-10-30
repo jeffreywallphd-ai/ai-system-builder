@@ -1236,3 +1236,25 @@ Read-only identity cannot fence new child bytes or establish protected ownership
 production binary protection, stable storage accounting or offload recovery.
 Existing broader profiles and generic fallback remain unchanged. Accepted model
 accuracy and the deferred combined software campaign are outside this profile.
+
+
+### Direct Windows dependency audits
+
+The dependency checker preserves npm's inherited `npm_execpath` and the existing
+Unix invocation. When started directly on Windows, it searches only a bounded
+set of configured local absolute PATH entries. Native npm executable shims stay
+supported. For a standard `npm.cmd` installation, it runs the adjacent installed
+npm JavaScript CLI with the current Node executable, fixed arguments and
+`shell: false`. It does not install tools or change package versions.
+
+This follows [Node's documented Windows command-script behavior](https://nodejs.org/download/release/v24.21.0/docs/api/child_process.html#spawning-bat-and-cmd-files-on-windows).
+Missing or incomplete tools still fail the check. The checker does not use a
+shell or search relative or UNC PATH entries. The configured local toolchain remains trusted;
+this lookup does not verify its supplier signature or provide a sandbox. Audit
+JSON validation, accepted command exits, SBOM checks and the zero-advisory policy
+are unchanged. Focused tests cover inherited CLI, spaces, native shims, Unix,
+bounded lookup and denied paths. Direct invocation needs no manual npm-path edit:
+
+```text
+node dev-tools/scripts/security/check-dependency-security.mjs
+```

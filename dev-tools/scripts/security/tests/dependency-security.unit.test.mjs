@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   evaluateAuditReport,
+  resolveNpmInvocation,
   validatePythonContextDependencyInventory,
   validatePythonDecoderDependencyInventory,
   validatePythonModelPlacementDependencyInventory,
@@ -485,4 +486,59 @@ test("CI and image builds use the tracked lockfile and immutable action referenc
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@(?![0-9a-f]{40}(?:\s|$))/);
   assert.match(dockerfile, /COPY package\.json package-lock\.json/);
   assert.doesNotMatch(dockerfile, /npm install/);
+});
+
+test("npm invocation preserves inherited CLI and non-Windows behavior", () => {
+  const node = "C:\\Selected Node\\node.exe";
+  const cli = "C:\\Trusted tools & data\\npm\\bin\\npm-cli.js";
+  const noProbe = () => assert.fail("The existing invocation must not inspect PATH");
+  assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: cli, executablePath: node, isFile: noProbe }), { command: node, prefixArgs: [cli] });
+  for (const platform of ["linux", "darwin"]) {
+    assert.deepEqual(resolveNpmInvocation({ platform, npmExecPath: "", searchPath: "unneeded", isFile: noProbe }), { command: "npm", prefixArgs: [] });
+  }
+});
+
+test("direct Windows npm.cmd installation uses the current Node and one literal CLI path", () => {
+  const directory = "C:\\Program Files\\Node & Tools";
+  const cli = path.win32.join(directory, "node_modules", "npm", "bin", "npm-cli.js");
+  const files = new Set([path.win32.join(directory, "npm.cmd"), cli]);
+  assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: "", executablePath: "C:\\Selected Node\\node.exe", searchPath: `"${directory}"`, isFile: (p) => files.has(p) }), { command: "C:\\Selected Node\\node.exe", prefixArgs: [cli] });
+});
+
+test("direct Windows native npm shims remain supported in configured PATH order", () => {
+  for (const extension of ["exe", "com"]) {
+    const shim = `C:\\Native tool\\npm.${extension}`;
+    const later = "C:\\Later tool\\npm.exe";
+    assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "C:\\Native tool;C:\\Later tool", isFile: (p) => p === shim || p === later }), { command: shim, prefixArgs: [] });
+  }
+});
+
+test("Windows lookup ignores relative, current-directory, network and control-character entries", () => {
+  const probes = [];
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: ".;relative;C:relative;\\\\server\\share;C:\\bad\nentry;;", isFile: (p) => { probes.push(p); return true; } }), /npm CLI is unavailable/);
+  assert.deepEqual(probes, []);
+});
+
+test("an incomplete command-script installation never falls back to a shell or a pass", () => {
+  const onlyWrapper = "C:\\Incomplete\\npm.cmd";
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "C:\\Incomplete", isFile: (p) => p === onlyWrapper }), /npm CLI is unavailable/);
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "", isFile: () => assert.fail("Empty PATH must not probe") }), /npm CLI is unavailable/);
+});
+
+test("Windows tool lookup bounds the PATH string and the number of inspected entries", () => {
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "x".repeat(32_769), isFile: () => assert.fail("Oversized PATH must not probe") }), /npm CLI is unavailable/);
+  const probes = [];
+  const entries = Array.from({ length: 128 }, (_v, i) => `C:\\Missing${i}`);
+  entries.push("C:\\Beyond bound");
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: entries.join(";"), isFile: (p) => { probes.push(p); return p.startsWith("C:\\Beyond bound"); } }), /npm CLI is unavailable/);
+  assert.equal(probes.some((p) => p.startsWith("C:\\Beyond bound")), false);
+  assert.ok(probes.length > 0 && probes.length <= 4 * 128);
+});
+
+test("Windows lookup selects the next complete installed tool without changing the scan arguments", () => {
+  const complete = "C:\\Second tool";
+  const cli = path.win32.join(complete, "node_modules", "npm", "bin", "npm-cli.js");
+  const files = new Set(["C:\\First tool\\npm.cmd", path.win32.join(complete, "npm.cmd"), cli]);
+  const invocation = resolveNpmInvocation({ platform: "win32", npmExecPath: "", executablePath: "C:\\Node\\node.exe", searchPath: "C:\\First tool;C:\\Second tool", isFile: (p) => files.has(p) });
+  assert.deepEqual([invocation.command, ...invocation.prefixArgs, "audit", "--omit=dev", "--json"], ["C:\\Node\\node.exe", cli, "audit", "--omit=dev", "--json"]);
 });
