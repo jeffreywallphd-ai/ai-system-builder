@@ -568,3 +568,32 @@ requirement or qualify an unconfirmed shutdown or cleanup.
 The fixed event-only worker uses `DETACHED_PROCESS`. It does not inherit or
 allocate a console. There is no hidden-console or larger-process-limit fallback.
 The memory, ownership, native-exit and cleanup requirements remain the same.
+
+
+## Bounded folder metadata inventory
+
+No user action is needed. The agent is testing a small newly created folder
+before using this mechanism for larger tree accounting. The default and
+`--plan` modes have no native effects. Explicit `--self-test` creates a fresh
+4096-byte file and, for the refusal case, a second empty file. It reads only
+metadata and never opens retained model files.
+
+The helper requires two complete equal listings with root and file guards
+still active. It checks native identities and known file sizes. An additional
+entry must refuse the one-file expected inventory. Uncertain entries or native
+lifetimes prevent cleanup and completion. Only acknowledged new objects with
+matching identities and known streams can be removed. The parent guard must
+retire before child cleanup to avoid a self-deadlock.
+
+[The Windows directory metadata structure](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_extd_dir_info)
+uses variable records with 128-bit IDs.
+[The file information API](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex)
+provides classes 20 and 19 for restarting and continuing this listing. A record
+that ends a page does not prove that the complete listing has ended.
+
+Logical data size and native allocation metadata are separate observations.
+They do not measure all physical filesystem storage or grant a quota lease.
+Recursive existing/inherited tree protection, protected saved accounting,
+guardian crash ordering and actual offload remain pending. The unknown retained
+usage still consumes the full 12 GiB budget. Accepted accuracy stays closed;
+full software testing remains deferred.

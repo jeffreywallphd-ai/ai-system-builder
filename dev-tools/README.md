@@ -1368,3 +1368,31 @@ requirement or qualify an unconfirmed shutdown or cleanup.
 The fixed event-only worker uses `DETACHED_PROCESS`. It does not inherit or
 allocate a console. There is no hidden-console or larger-process-limit fallback.
 The memory, ownership, native-exit and cleanup requirements remain the same.
+
+
+## Guarded folder inventory diagnostic
+
+`python -B dev-tools/scripts/native/probe_windows_guarded_inventory.py --plan`
+prints an effect-free plan. Explicit `--self-test` uses only new private flat
+folders, one 4096-byte file and an optional additional empty file. It never
+reads retained staging or starts a model or worker. There are no path, PID,
+command or limit overrides.
+
+The reader parses aligned 64 KiB directory metadata pages. A scan can read at
+most four pages and 32 records. Classes 20 and 19 restart and continue the scan.
+Only an explicit clean `ERROR_NO_MORE_FILES` completes it. Partial pages,
+duplicate names or identities, unsupported metadata and ambiguous completion
+fail. Names and native IDs stay internal; reports contain scalar counts only.
+
+Two equal complete scans must match the known created identities and sizes
+while root and file guards stay unbroken. The extra-file case must refuse the
+one-file expected inventory even though both fixture objects are known owned.
+Unknown content or lifetime denies cleanup. Known cleanup retires child guards
+and then the parent guard before child deletion, with the private DACL retained
+until its existing exact-handle cleanup. No recursive path cleanup is used.
+
+The `windows-guarded-inventory-probe` profile runs mocked pure tests only. Native
+controls require separate source safety review and explicit execution. This is
+flat fixture metadata, not recursive tree protection, whole physical disk usage,
+a protected journal, crash ordering, real offload or a staging capability.
+The 12 GiB unknown charge, model guards and application denials stay unchanged.
