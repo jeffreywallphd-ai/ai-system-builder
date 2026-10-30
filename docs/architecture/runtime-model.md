@@ -921,3 +921,24 @@ remain possible while an identity lease is held. Owner/DACL observations do not
 grant protected journal, deletion, reveal, publication, crash recovery, a fresh
 offload lease or production binary provenance. Those controls remain pending.
 No existing retained data or production model source is adopted by this helper.
+
+
+## Private guarded offload consumer
+
+ADR-0045's recovery integration is adapter-private. A trusted parent owner
+supplies a worker context to the real generator/cache, pinned loader and lease;
+model/task JSON and public runtime ports carry no such authority. An omitted
+ordinary context preserves the existing empty-root behavior. Explicit guarded
+requests refuse missing authority before model/path inspection and cannot reuse
+an ordinary or different live owner's cache. Fresh loading and cached forward
+have separate admission checks. Supplier interruption fences the context.
+
+The owner pins its native backend and lease before callbacks. Its backend
+contract requires protected durable reservation before writing and native seal
+before reuse. Worker reference release is distinct from parent-confirmed native
+retirement; pending/uncertain cleanup remains charged and cannot stop the shared
+worker. Readiness, marker files, serialized arithmetic and interface tests grant
+no native capability. No production backend is composed. Native protection,
+protected journal, owned-job/reader lifetime, applicable model execution policy
+and actual offload resource qualification remain pending. Accepted accuracy is
+not rerun by the fixed resource-only gate or model-free lifecycle profile.

@@ -642,3 +642,36 @@ failure is forced, and no old or failed test folder is inspected or changed.
 This closes only a helper failure path. Complete folder protection, saved disk
 accounting, worker recovery and actual low-memory loading still need work.
 Accepted model accuracy stays closed; full software testing remains deferred.
+
+
+## Guarded lifecycle consumer and resource-only entry
+
+The private guarded context reaches the actual generator factory/cache/forward,
+pinned loader and `OwnedOffloadLease`. An explicit guarded request needs its exact
+live host-owned context before model or cache-path inspection. Missing or
+serialized context cannot fall back to ordinary mode. Ordinary empty-root leases
+and Standard loading retain their existing behavior. A second owner cannot reuse
+the first owner's cache or start another fresh lease through that context.
+
+The parent owner is retained before readiness/reserve/create callbacks. The
+native backend must acknowledge protected reservation before supplier writes and
+native sealing before reuse. Supplier interruption or unknown callback results
+retain custody and deny another attempt. Worker cleanup signals reference release
+once; it does not prove process exit, delete guarded files or free the charge.
+Only the separate parent view may confirm native retirement. Unconfirmed exit,
+readers/IRPs, closes or accounting keep cleanup pending.
+
+No production backend is composed. Agent work still includes the protected native
+tree/journal/process provider and actual resource/lifecycle qualification. The
+fixed command below identifies the separate model-quality record and prints
+pending native readiness. It opens no old staging, starts no worker/model and scores no output:
+
+```text
+python -B dev-tools/scripts/qualification/run_offload_resource_qualification.py --plan
+```
+
+Without `--plan`, it reports the same pending state and exits3. A successful plan
+exit is not a test pass or execution authority. There is no root, quota, PID,
+model, force or native-proof option. The four-file model-free lifecycle profile
+uses synthetic new-domain ports and preserves actual native/model gaps. Accepted
+accuracy remains closed; original protocols and failed evidence remain history.

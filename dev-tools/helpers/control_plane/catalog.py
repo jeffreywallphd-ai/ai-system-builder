@@ -11,6 +11,7 @@ from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
 QUALIFICATION_PROFILES = (
+    "offload-resource-lifecycle",
     "model-qualification-scheduling",
     "windows-guarded-tree-probe",
     "windows-guarded-inventory-probe",
@@ -26,6 +27,7 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "offload-resource-lifecycle": ['modules/adapters/runtime/python/worker/tasks/local_model_offload.py', 'modules/adapters/runtime/python/worker/tasks/bounded_model_loader.py', 'modules/adapters/runtime/python/worker/tasks/local_text_generation.py', 'modules/adapters/runtime/python/worker/tasks/offload_recovery.py', 'modules/adapters/runtime/python/worker/tests/test_offload_recovery.py', 'dev-tools/scripts/qualification/run_offload_resource_qualification.py', 'dev-tools/scripts/qualification/tests/test_offload_resource_qualification.py', 'dev-tools/helpers/tests/test_control_plane_offload_lifecycle_profile.py'],
     "model-qualification-scheduling": ['dev-tools/scripts/qualification/run_model_blocker_tests.py', 'dev-tools/scripts/qualification/tests/test_model_blocker_tests.py', 'dev-tools/helpers/tests/test_control_plane_model_scheduling_profile.py'],
     "windows-guarded-tree-probe": ['dev-tools/scripts/native/probe_windows_guarded_tree.py', 'dev-tools/scripts/native/tests/test_windows_guarded_tree_probe.py', 'dev-tools/helpers/tests/test_control_plane_tree_probe_profile.py'],
     "windows-guarded-inventory-probe": ['dev-tools/scripts/native/probe_windows_guarded_inventory.py', 'dev-tools/scripts/native/tests/test_windows_guarded_inventory_probe.py', 'dev-tools/helpers/tests/test_control_plane_inventory_probe_profile.py'],

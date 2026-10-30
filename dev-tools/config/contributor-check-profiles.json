@@ -1,6 +1,36 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "offload-resource-lifecycle": {
+      "test_paths": [
+        "modules/adapters/runtime/python/worker/tests/test_offload_recovery.py",
+        "modules/adapters/runtime/python/worker/tests/test_local_model_offload.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_generator.py",
+        "dev-tools/scripts/qualification/tests/test_offload_resource_qualification.py"
+      ],
+      "source_paths": [
+        "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
+        "modules/adapters/runtime/python/worker/tasks/bounded_model_loader.py",
+        "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
+        "modules/adapters/runtime/python/worker/tasks/offload_recovery.py",
+        "modules/adapters/runtime/python/worker/tests/test_offload_recovery.py",
+        "dev-tools/scripts/qualification/run_offload_resource_qualification.py",
+        "dev-tools/scripts/qualification/tests/test_offload_resource_qualification.py",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_offload_lifecycle_profile.py",
+        "modules/adapters/runtime/python/worker/README.md",
+        "modules/adapters/runtime/python/README.md",
+        "docs/operations/optional-low-memory-inference.md",
+        "docs/architecture/runtime-model.md",
+        "docs/security/data-management-threat-model.md",
+        "dev-tools/README.md",
+        "modules/adapters/runtime/python/worker/tests/test_local_model_offload.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_generator.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader.py",
+        "dev-tools/scripts/qualification/offload_guarded_restart.py"
+      ]
+    },
     "model-qualification-scheduling": {
       "test_paths": [
         "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py"

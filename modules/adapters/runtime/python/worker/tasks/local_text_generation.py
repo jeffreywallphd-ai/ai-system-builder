@@ -32,7 +32,8 @@ from .bounded_model_loader import (
     validate_generation_limits,
     validate_offload_config,
 )
-from .local_model_offload import OffloadAdmissionError
+from .local_model_offload import ORDINARY_OFFLOAD, OffloadAdmissionError
+from .offload_recovery import require_fresh_guarded_context, require_guarded_context
 
 DEFAULT_MAX_NEW_TOKENS = 256
 DEFAULT_HUGGINGFACE_DOWNLOAD_TIMEOUT_SECONDS = "60"
@@ -1056,7 +1057,10 @@ class TransformersChatGenerator(TransformersCausalGenerator):
 
 
 class BoundedOffloadGenerator(TransformersCausalGenerator):
-    def __init__(self, model_config: LocalModelConfig, generation_params: dict[str, Any]):
+    def __init__(self, model_config: LocalModelConfig, generation_params: dict[str, Any], *, _recovery=ORDINARY_OFFLOAD):
+        if _recovery is not ORDINARY_OFFLOAD:
+            require_fresh_guarded_context(_recovery)
+        self._recovery_context = _recovery
         reference = _RESOLVED_MODEL_REFERENCES.get(model_config.modelId)
         cache_root = _resolve_huggingface_cache_root()
         _assert_huggingface_model_id(model_config.modelId)
@@ -1073,6 +1077,7 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
         self._bundle = load_bounded_local_model(
             model_config, generation_params, reference=Path(reference), cache_root=cache_root,
             read_memory=_read_system_memory_snapshot, read_cuda_memory=_available_cuda_memory_bytes,
+            **({} if _recovery is ORDINARY_OFFLOAD else {"_recovery": _recovery}),
         )
 
     @property
@@ -1092,6 +1097,7 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
         self._owner._decoder = value
 
     def for_request(self, generation_params: dict[str, Any]):
+        self._assert_guarded_lifecycle()
         if self._owner._closed or self._owner._poisoned:
             raise OffloadAdmissionError()
         # Share owned weights/decoder/lock, not another request's generation
@@ -1102,6 +1108,7 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
         return view
 
     def assert_reusable(self):
+        self._assert_guarded_lifecycle()
         if self._owner._closed or self._owner._poisoned:
             raise OffloadAdmissionError()
         current = _RESOLVED_MODEL_REFERENCES.get(self._owner._model_id)
@@ -1111,6 +1118,7 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
         self._owner._bundle.inventory.verify_unchanged()
 
     def _generate_new_tokens_text(self, input_ids, generation_inputs, constrained_json_schema=None):
+        self._assert_guarded_lifecycle()
         validate_generation_limits(self._model, input_ids, self._generation_params)
         plan = self._owner._bundle.resources
         memory = _read_system_memory_snapshot()
@@ -1183,6 +1191,12 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
             # Dropping the graph and collecting cycles does not invoke Accelerate
             # detach hooks, model.to/cpu, save or full state reconstruction.
             release_offload_lease(owner._bundle.lease, owner._bundle.model_references)
+
+    def _assert_guarded_lifecycle(self):
+        context = getattr(self._owner, "_recovery_context", ORDINARY_OFFLOAD)
+        if context is not ORDINARY_OFFLOAD:
+            require_guarded_context(context)
+            self._owner._bundle.lease.assert_guarded_reusable(context)
 
 
 def ensure_generation_model_downloaded(
@@ -2026,7 +2040,17 @@ def get_or_create_local_text_generator(
     on_memory_overflow: Callable[[dict[str, int]], None] | None = None,
     *,
     allow_offload: bool = False,
+    _offload_recovery=ORDINARY_OFFLOAD,
 ) -> LocalTextGenerator:
+    if _offload_recovery is not ORDINARY_OFFLOAD:
+        try:
+            if config.model.memoryMode != "offload-v1" or not allow_offload:
+                raise OffloadAdmissionError()
+            require_guarded_context(_offload_recovery)
+        except OffloadAdmissionError:
+            raise GenerationInsufficientResourcesError(
+                "The optional low-memory profile has no qualified recovery owner."
+            ) from None
     key = _generator_cache_key(config.model)
 
     with _GENERATOR_CACHE_LOCK:
@@ -2038,11 +2062,12 @@ def get_or_create_local_text_generator(
                 validate_offload_config(config.model, params)
                 for cached_key, generator in _GENERATOR_CACHE.items():
                     if isinstance(generator, BoundedOffloadGenerator):
-                        if cached_key[:8] != key:
+                        if cached_key[:8] != key or getattr(generator, "_recovery_context", ORDINARY_OFFLOAD) is not _offload_recovery:
                             raise OffloadAdmissionError()
                         generator.assert_reusable()
                         return generator.for_request(params)
-                created = BoundedOffloadGenerator(config.model, params)
+                created = (BoundedOffloadGenerator(config.model, params) if _offload_recovery is ORDINARY_OFFLOAD
+                           else BoundedOffloadGenerator(config.model, params, _recovery=_offload_recovery))
                 _GENERATOR_CACHE[(*key, created._bundle.inventory.source_digest)] = created
                 return created.for_request(params)
             except OffloadAdmissionError:

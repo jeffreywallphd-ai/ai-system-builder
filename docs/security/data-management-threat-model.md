@@ -1669,3 +1669,29 @@ or a hostile replacement guarantee. Protected worker/file lifetime, crash
 recovery and actual offload remain pending. Production composition stays absent;
 unknown retained sources are not inspected, adopted, moved, deleted or changed.
 Model-free unit and native fixture evidence remain separate from parent closure.
+
+
+## Guarded offload lifecycle consumer delta
+
+The private parent/worker context reaches the actual generator factory/cache,
+pinned loader and lease. Explicit guarded requests cannot use an ordinary owner,
+serialized ticket, caller path, PID or missing provider as native authority.
+Before model/path inspection, fresh loading checks the exact live context; reuse
+and forward recheck its sealed owner. The ordinary/default path stays separate.
+
+Strong backend and per-lease custody precede native callback dispatch. A bounded
+retained-owner registry refuses saturation without evicting uncertain owners.
+The native backend must itself register acquisitions before uncertain effects,
+durably reserve within the same12GiB domain before writes and establish protected
+seal/accounting before readiness. Constructor/supplier interruption, reentry or
+malformed acknowledgements retain custody and fence retries. Raw exceptions and
+paths are not reports or evidence of release.
+
+Worker weak-reference release signals only that event, at most once. A distinct
+private parent view must confirm exact owned exit, active-zero where queryable,
+reader/IRP retirement, closes and durable cleanup before capacity is released.
+There is no parent flag or worker-callable retirement operation and no shared
+worker stop. The backend remains unavailable in production. Synthetic new-domain
+ports exercise source behavior only; they do not qualify native protection,
+durable journal, crash recovery, actual offload resources or a parent roadmap.
+Retained historical data and failed native fixtures are not accessed or changed.

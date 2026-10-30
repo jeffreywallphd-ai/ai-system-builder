@@ -22,6 +22,7 @@ CAPABILITY = "dataset-preparation.offload-v1"
 CPU_WEIGHT_LIMIT = 1024**3
 CUDA_WEIGHT_LIMIT = 2 * 1024**3
 STAGING_LIMIT = 12 * 1024**3
+ORDINARY_OFFLOAD = object()
 MAX_INPUT_TOKENS = 2048
 MAX_NEW_TOKENS = 512
 MAX_MODEL_BYTES = 20 * 1024**3
@@ -632,9 +633,19 @@ class OwnedOffloadLease:
     delete originals. A stale/foreign active slot denies admission. Filesystem
     identity checks are cooperative, not an ACL/reparse race guarantee.
     """
-    def __init__(self, cache_root: Path, reservation: int):
+    def __init__(self, cache_root: Path, reservation: int, *, _recovery=ORDINARY_OFFLOAD):
         if not cache_root.is_absolute() or ".." in cache_root.parts or type(reservation) is not int or not 0 < reservation <= STAGING_LIMIT:
             raise OffloadAdmissionError()
+        self._guarded_lease = None
+        if _recovery is not ORDINARY_OFFLOAD:
+            from .offload_recovery import require_guarded_context
+            context = require_guarded_context(_recovery)
+            self._guarded_lease = context.new_lease(cache_root, reservation)
+            self.path = self._guarded_lease.path
+            self.root = self.path.parent
+            self.reservation = reservation
+            self.released = False
+            return
         _directory_identity(cache_root)
         self.root = cache_root / ".aisb-offload-v1"
         try:
@@ -662,6 +673,9 @@ class OwnedOffloadLease:
             raise OffloadAdmissionError()
 
     def seal(self) -> None:
+        if self._guarded_lease is not None:
+            self._guarded_lease.seal()
+            return
         self._check_identity()
         if self._sealed is not None:
             self._verify_sealed()
@@ -690,6 +704,13 @@ class OwnedOffloadLease:
     def cleanup(self, *, model_released: bool) -> None:
         if self.released:
             return
+        if self._guarded_lease is not None:
+            if model_released is not True:
+                raise OffloadAdmissionError()
+            self._guarded_lease.release_references()
+            self._guarded_lease.require_retired()
+            self.released = True
+            return
         self._check_identity()
         if model_released is not True or self._sealed is None:
             raise OffloadAdmissionError()
@@ -713,3 +734,8 @@ class OwnedOffloadLease:
         except OSError:
             # Retain the slot/reservation after failed or uncertain cleanup.
             raise OffloadAdmissionError() from None
+
+    def assert_guarded_reusable(self, context) -> None:
+        if self.released or self._guarded_lease is None:
+            raise OffloadAdmissionError()
+        self._guarded_lease.assert_live(context)

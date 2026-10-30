@@ -191,3 +191,14 @@ text, model/source details, filesystem paths, prompts or raw logs enter the new
 public field. Existing guards, limits, admission, cleanup and offload opt-in
 controls remain unchanged; notifications never authorize a denied model load.
 
+
+
+## Private guarded low-memory ownership
+
+The worker's private recovery context now reaches the actual cached generator,
+pinned loader and offload lease. This is not a task/config/API option. Guarded
+requests deny before model/path inspection when native authority is unavailable;
+ordinary and guarded cache owners remain distinct. Worker reference release and
+parent native retirement are separate, and unknown outcomes retain custody.
+No native backend is composed, so actual guarded recovery remains unavailable.
+See the worker README and optional low-memory operations guide for scope and tests.

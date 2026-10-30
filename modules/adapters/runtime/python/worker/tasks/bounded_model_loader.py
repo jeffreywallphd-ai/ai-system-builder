@@ -18,8 +18,9 @@ import weakref
 from .local_model_offload import (
     CPU_WEIGHT_LIMIT, CUDA_WEIGHT_LIMIT, MAX_INPUT_TOKENS, MAX_NEW_TOKENS,
     LocalModelInventory, OffloadAdmissionError, OffloadResourcePlan,
-    OwnedOffloadLease, inspect_local_model, plan_resources, validate_device_map, fit_cpu_residency,
+    ORDINARY_OFFLOAD, OwnedOffloadLease, inspect_local_model, plan_resources, validate_device_map, fit_cpu_residency,
 )
+from .offload_recovery import require_fresh_guarded_context, require_guarded_context
 
 
 def offload_runtime_available() -> bool:
@@ -273,7 +274,32 @@ def load_bounded_local_model(
     cache_root: Path,
     read_memory: Callable,
     read_cuda_memory: Callable,
+    _recovery=ORDINARY_OFFLOAD,
 ) -> BoundedModelBundle:
+    arguments = dict(reference=reference, cache_root=cache_root, read_memory=read_memory,
+                     read_cuda_memory=read_cuda_memory, _recovery=_recovery)
+    if _recovery is ORDINARY_OFFLOAD:
+        return _load_bounded_local_model(model_config, generation_params, **arguments)
+    context = require_fresh_guarded_context(_recovery)
+    try:
+        return _load_bounded_local_model(model_config, generation_params, **arguments)
+    except BaseException:
+        context.retain_failure()
+        raise
+
+
+def _load_bounded_local_model(
+    model_config: Any,
+    generation_params: dict,
+    *,
+    reference: Path,
+    cache_root: Path,
+    read_memory: Callable,
+    read_cuda_memory: Callable,
+    _recovery=ORDINARY_OFFLOAD,
+) -> BoundedModelBundle:
+    if _recovery is not ORDINARY_OFFLOAD:
+        require_guarded_context(_recovery)
     validate_offload_config(model_config, generation_params)
     if not offload_runtime_available() or _RETAINED_LEASES:
         raise OffloadAdmissionError()
@@ -332,7 +358,8 @@ def load_bounded_local_model(
             tied_groups=tied, unsplit_groups=unsplit, nonpersistent_buffer_modules=buffer_modules)
     resources = resource_plan(cpu_bytes)
     inventory.verify_unchanged()
-    lease = OwnedOffloadLease(cache_root, reservation)
+    lease = (OwnedOffloadLease(cache_root, reservation) if _recovery is ORDINARY_OFFLOAD
+             else OwnedOffloadLease(cache_root, reservation, _recovery=_recovery))
     references = []
 
     class TrackedQwen2ForCausalLM(Qwen2ForCausalLM):

@@ -524,3 +524,24 @@ Both host dependency preparers remain active. Validate copied helper source,
 manifest and binary before actual host qualification; a successful package can
 still have OCR unavailable. Portable form/fixture tests, real native OCR, full
 app delivery and model quality remain separate evidence.
+
+
+## Guarded offload lifecycle integration
+
+The private `offload_recovery.py` owner connects the real generator, loader and
+`OwnedOffloadLease` guarded branch. Missing native support denies before model
+inspection/import or staging. Explicit missing/serialized contexts cannot become
+ordinary mode. Omitted ordinary empty-root behavior and Standard stay unchanged.
+Cache reuse and each forward recheck the original live context; another context
+or ordinary owner cannot alias it. A supplier interruption retains that owner.
+
+The parent view retains the backend and lease before callbacks. Native reserve
+acknowledgement must precede writing; seal must establish real protection before
+reuse. Worker close signals reference release once and keeps cleanup pending.
+Only the distinct parent view may request native retirement, which must confirm
+owned exit, readers/IRPs, closes and durable charge removal. It cannot stop the
+shared worker or infer exit from a task result. Unknown outcomes stay retained.
+
+No production native backend is composed. The fixed `offload-resource-lifecycle`
+profile uses four model-free unit files and explicitly synthetic fresh-domain
+ports. It neither qualifies native protection nor reruns accepted accuracy.

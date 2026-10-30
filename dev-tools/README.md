@@ -1473,3 +1473,19 @@ checks. The `model-qualification-scheduling` profile runs the fixed model-free
 Python test file and preserves unknown, explicit and incomplete coverage fallback.
 It grants no native capability, new resource/quality result or parent closure.
 Unrelated explicit standalone diagnostics and the launcher forwarding stay intact.
+
+
+## Guarded offload resource entry
+
+`python -B dev-tools/scripts/qualification/run_offload_resource_qualification.py
+--plan` identifies the separate quality record and the pending private lifecycle
+gate. Keep the command on one line. It starts no model/process, reads no archived
+outputs or retained staging, writes no evidence directory and grants no native
+or parent qualification. Without `--plan` it reports pending and exits3. Unsupported
+arguments or unexpected gate failures refuse with fixed safe copy. Accepted accuracy
+is never rescheduled.
+
+The fixed `offload-resource-lifecycle` profile runs four model-free files for the
+real guarded lease/loader/cache, ordinary compatibility and resource entry. Native
+backend, protected journal, owned-worker retirement and actual resource delivery
+remain pending. Unknown or explicitly generic impact keeps normal test fallback.
