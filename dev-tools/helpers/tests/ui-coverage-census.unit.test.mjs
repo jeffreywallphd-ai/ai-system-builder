@@ -104,8 +104,16 @@ test("checks the current repository map against original scope and actual source
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
-  assert(!result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
+  assert(result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const missingFunctional=["settings-public-values","settings-secrets-and-model-defaults","provider-source-acquisition","artifact-backing-publish-delete","models-discover-and-reference"];
+  for(const id of missingFunctional){const row=map.scenarios.find(s=>s.id===id);assert.deepEqual(row.host_definitions,[]);assert.equal(row.pending_feature_checks.length,1);assert(result.gaps.some(g=>g.kind==="host-definition-not-mapped"&&g.scenario===id));}
+  assert(map.scenarios.find(s=>s.id==="settings-public-values").pending_feature_checks[0].includes("already complete"));
+  assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
+  assert(!map.scenarios.find(s=>s.id==="runtime-status-and-explicit-controls").host_definitions.some(n=>n.includes("thin-client")));
+  assert(map.scenarios.find(s=>s.id==="dashboard-counts").host_definitions.some(n=>n.endsWith("packaged-desktop-reference-performance.e2e.spec.ts")));
+  assert(map.scenarios.find(s=>s.id==="notifications-all-task-families").host_definitions.some(n=>n.endsWith("packaged-desktop-owned-tasks.e2e.spec.ts")));
+
   assert.deepEqual(map.scenarios.find(s=>s.id==="contributor-review-site").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
   const website="dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts";
   assert.deepEqual(map.scenarios.find(s=>s.id==="website-acquisition-refresh").host_definitions,[website]);
@@ -118,8 +126,7 @@ test("checks the current repository map against original scope and actual source
   assert(map.sources.find(s=>s.path===training).facts.modifiers.length>0,"Unready real inputs keep training execution pending.");
   for(const name of [training,website,"dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]) {
     const source=map.sources.find(s=>s.path===name);
-    if(name===website)assert.equal(source.facts.sha256,source.committed_sha256,"The unchanged host source retains its actual committed binding.");
-    else assert.notEqual(source.facts.sha256,source.committed_sha256,"Edited image host definitions retain their genuine prior committed binding until this checkpoint is committed.");
+    assert.equal(source.facts.sha256,source.committed_sha256,"Reviewed host definitions bind to their actual committed source.");
   }
   for(const [id,stem] of [["contributor-review-site","review-site"],["website-acquisition-refresh","website-acquisition"],["desktop-model-training","model-training"]]) {
     const source=`dev-tools/scripts/qualification/tests/${stem}-oracles.unit.test.ts`;
@@ -132,7 +139,7 @@ test("checks the current repository map against original scope and actual source
     assert(row.behavior_links.every(link=>link.assertion_sources.includes("dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts")));
   }
   const imageJourney=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts");
-  assert(imageJourney.facts.assertionCount>10);assert.equal(imageJourney.committed_sha256,"0".repeat(64),"New definitions retain explicit uncommitted drift until the actual source checkpoint.");
+  assert(imageJourney.facts.assertionCount>10);assert.equal(imageJourney.facts.sha256,imageJourney.committed_sha256,"Image definitions bind only after their real reviewed source commit.");
   const imageDraft=map.sources.find(s=>s.path==="apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx");
   assert(imageDraft.facts.cases.some(c=>c.name==="retains the same owned image form after a page remount without starting a task"));
   assert(imageDraft.facts.cases.some(c=>c.name==="isolates workspace and client drafts and refuses retired form callbacks"));
@@ -148,7 +155,7 @@ test("checks the current repository map against original scope and actual source
   const cleanup=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts");
   assert(cleanup.facts.cases.some(c=>c.name==="admits a live real-worker shape through its launcher before closing the app"));
   assert(cleanup.facts.cases.some(c=>c.name==="does not downgrade refused live native admission to a PID-absence pass"));
-  assert.notEqual(cleanup.facts.sha256,cleanup.committed_sha256,"Edited assertions retain the genuine older committed binding until this owned source checkpoint is committed.");
+  assert.equal(cleanup.facts.sha256,cleanup.committed_sha256,"The reviewed cleanup assertions bind to their actual committed checkpoint.");
   for(const id of ["settings-public-values","settings-secrets-and-model-defaults"]){
     const row=map.scenarios.find(s=>s.id===id);
     for(const name of ["apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx","apps/thin-client/src/features/settings/tests/api-application-settings-client.unit.test.ts","modules/ui/shared/settings/tests/SettingField.unit.test.tsx"])assert(row.behavior_links.every(link=>link.assertion_sources.includes(name)));

@@ -293,7 +293,7 @@
       "user_description": {
         "purpose": "Prove executed coverage for every supported feature without claiming unrelated qualification.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "The agent must add working app tests for Settings, Hugging Face imports, model search and save, and artifact backing, publication and deletion. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must regenerate the mounted route, tab, action and capability-registry inventory.",
@@ -12950,6 +12950,28 @@
         "sentences": [
           "Desktop and server can now disable automatic image runtime installation and repair. They still check the managed installation before starting it, and the normal startup path stays the same.",
           "Focused tests and the server build passed. Real image generation and process shutdown checks are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e87205fb4160ad60bc2ea6f346254b37ae975d7d0fea082a34a0fad34f4ae464",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows helper now checks the app launch chain and keeps shutdown failures visible. Tests with small controlled child processes passed.",
+          "Full app and image-worker shutdown checks are still pending. These results do not complete the roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "226d5e0ccee6d7236e547dcfcd7033075a98582ee0aff017b2f1f095976be367",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Four image test journeys now check setup, task recovery and the same saved picture on Desktop and Thin Client. The focused tests and source checks passed.",
+          "The four app journeys have not run yet. Real image creation and complete worker shutdown checks remain pending."
         ]
       }
     }

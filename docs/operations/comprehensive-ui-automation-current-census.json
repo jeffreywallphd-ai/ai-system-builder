@@ -6405,7 +6405,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "c98029be349e654a21971218a90a008ae292a8042bb0d0151596808ccec1982b"
+   "committed_sha256": "1ea97862f7956a6044760cd00b6dbf7e466d835db9bd82e2034ca98b0cddcdb1"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
@@ -8283,7 +8283,7 @@
      }
     ]
    },
-   "committed_sha256": "ffd95e1ff5b6fa82953a8d988cff194af0027ccaf9cc98032abf9e7e8aa9e86e"
+   "committed_sha256": "84a3373bef4e44402fd401345d8831c537619f56a5c2a9556b6c3528c1bcc0a6"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -8990,7 +8990,7 @@
      }
     ]
    },
-   "committed_sha256": "bac6ffcb712c2fa424baaf0e7e8b333bce4d90dc9ffa7c57d7ec91bb514a9116"
+   "committed_sha256": "ed72556520e2eba612db7a53eede06120aeffa310713e80258853acdde30e419"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -13290,7 +13290,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "33ac9403a00c99ecbcd41f0ba47de62a73c9ef5946f20284359c1899c84dffe2"
+   "committed_sha256": "61064c5ec6c94a991793968f560369732ce4ca55feea83af56b72dbf9716776e"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
@@ -13430,7 +13430,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "ad8177b4643ea5d48002895eb4647076ebeeb0180e10ef93bdfdbf191921e5f8"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
@@ -13495,7 +13495,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "325761f8e734db7ef2684a267897c3f4ffe7f34442e9937ebdd6003d17b51ab3"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
@@ -13557,7 +13557,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "c6e7c8e337e7e15fabf28368e4207a6107f23154c060862bfe62921a2db87779"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
@@ -13607,7 +13607,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "4da725ca842759a70a93ea3ae9d090de989f7fae19a4c93723aba6595ba72618"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
@@ -13669,7 +13669,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "df6108a40eee5d0219c43a7edc958f85515bbd5ba10fb998feea4c192dbf8f24"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
@@ -13722,7 +13722,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "094004b53108a54ac18074b35b36753b7650865f2429b56218f79bbcca4491bc"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts",
@@ -13780,7 +13780,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "e8b070a5f2b079f08adee377ca42f208f968a4949a8d1daf73a2a5e047f9e60e"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
@@ -13845,7 +13845,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+   "committed_sha256": "07f1e9b54abba7f804af3f5b1d71b1affec0331c4d26a8d9eb8dea6dd6668e62"
   }
  ],
  "scenarios": [
@@ -13944,7 +13944,11 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -13985,8 +13989,9 @@
     }
    ],
    "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-reference-performance.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-performance.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14055,7 +14060,11 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-owned-failure.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14113,12 +14122,11 @@
      ]
     }
    ],
-   "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
-   ],
+   "host_definitions": [],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": []
+   "pending_feature_checks": [
+    "Add named Desktop and Thin Client journeys that save a supported setting and confirm it after reload. Focused Settings mutation and recovery checks are already complete."
+   ]
   },
   {
    "id": "settings-secrets-and-model-defaults",
@@ -14170,12 +14178,11 @@
      ]
     }
    ],
-   "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
-   ],
+   "host_definitions": [],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": []
+   "pending_feature_checks": [
+    "Add named Desktop and Thin Client journeys for supported secret clearing, model defaults and explicit readback recovery in isolated test profiles. Do not copy user credentials."
+   ]
   },
   {
    "id": "runtime-status-and-explicit-controls",
@@ -14237,7 +14244,7 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14302,7 +14309,6 @@
     }
    ],
    "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
     "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
@@ -14373,12 +14379,11 @@
      ]
     }
    ],
-   "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts"
-   ],
+   "host_definitions": [],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": []
+   "pending_feature_checks": [
+    "Add a functional host journey that imports a small sample from an authorized provider source and verifies the saved file. Existing file import and focused transport checks do not supply this host journey."
+   ]
   },
   {
    "id": "website-acquisition-refresh",
@@ -14472,7 +14477,10 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-pdf-preview.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14506,12 +14514,11 @@
      ]
     }
    ],
-   "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
-   ],
+   "host_definitions": [],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": []
+   "pending_feature_checks": [
+    "Add functional host journeys for backing state, authorized synthetic publication and local artifact deletion with confirmation and reference isolation. No unapproved remote deletion is authorized."
+   ]
   },
   {
    "id": "dataset-goal-and-input-intent",
@@ -14717,13 +14724,7 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14762,13 +14763,7 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14807,13 +14802,7 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14852,13 +14841,7 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -14901,12 +14884,11 @@
      ]
     }
    ],
-   "host_definitions": [
-    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
-   ],
+   "host_definitions": [],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": []
+   "pending_feature_checks": [
+    "Add named Desktop and Thin Client journeys that search for an already approved model, save its reference and verify it after reload. No model weight download or accuracy run is required."
+   ]
   },
   {
    "id": "models-download-inventory-validation",
@@ -14960,7 +14942,11 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-owned-failure.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -15668,7 +15654,19 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ocr.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
@@ -15769,7 +15767,10 @@
    ],
    "host_definitions": [
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-owned-failure.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []

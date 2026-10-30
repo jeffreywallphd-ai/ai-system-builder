@@ -942,3 +942,76 @@ unqualified by that report. Neither definition construction nor synthetic helper
 tests qualify an actual image, model quality, native security or parent roadmap.
 Accepted model-accuracy results stay closed. Full host execution stays deferred
 until the user-directed combined qualification campaign.
+
+
+### Later named UI qualification campaign
+
+The user has deferred this campaign until feature implementation is worked
+through across the open roadmaps. The current definitions and focused tests do
+not supply a full app pass. Five families still need four functional host-journey
+groups: Settings public/secret/default changes, provider acquisition, model
+search/save, and artifact backing/publication/local deletion. Their focused
+variation tests stay useful; the missing functional host bodies stay pending.
+
+Choose the matching host, case and trusted fixture composition below. The files
+are under `dev-tools/scripts/qualification/visual-composer/e2e/`; each listed stem
+ends in `.e2e.spec.ts`. Visual Composer means
+`dev-tools/config/playwright.visual-composer.config.ts`; Managed Reference means
+`dev-tools/config/playwright.managed-reference.config.ts` with its separately
+owned database reference. The generic setup supplies a controlled Node runtime.
+Provided-dataset, real OCR, training and image cases require their own declared
+composition or dedicated setup; a generic selection does not supply those inputs.
+The fixed native/operator admission and resource rules still govern each case.
+
+| Current host files | Entry or selector | Required setup | Evidence after an actual pass |
+| --- | --- | --- | --- |
+| `packaged-desktop-visual-composer`; `thin-client-visual-composer` | Visual Composer; one declared project | Fresh isolated profile; controlled Foundation runtime | Canvas smoke, UI state and storage only |
+| `packaged-desktop-browse`; `thin-client-browse` | Visual Composer; matching host | Fresh workspace and declared asset fixtures | Typed browse/authoring/publication and restart UI |
+| `packaged-desktop-meaningful-systems`; `thin-client-meaningful-systems` | Visual Composer; matching host | Fresh workspace; meaningful multi-component system fixtures | Build, connect, save and reopen supported systems |
+| `packaged-desktop-reference-performance`; `managed-reference-performance` | Visual Composer / Managed Reference respectively | Declared 1000/2500/10000 fixtures and named environment | Exact counts and declared UI observations; separate from inference |
+| `managed-reference-browse` | Managed Reference | Separately owned authorized database reference | Managed browse/authoring boundary |
+| `packaged-desktop-asset-experience`; `managed-reference-asset-experience` | Visual Composer / Managed Reference respectively | Owned asset fixtures and matching host/database | Layered asset experience and persistence |
+| `packaged-desktop-owned-tasks`; `managed-reference-tasks` | Visual Composer / Managed Reference respectively | Declared task-family fixture and cache | Mounted task notices/actions; controlled fixture tier |
+| `packaged-desktop-worker-recovery`; `managed-reference-owned-failure` | Matching host; explicit worker-failure-download case | Owned worker/cache/fault gate and confirmed cleanup | Actual owned failure/recovery; no unrelated native security pass |
+| `packaged-desktop-cold-canvas` | Visual Composer; packaged Desktop | Fresh cold profiles; frozen named observation workload | Startup/render observations only |
+| `packaged-desktop-pdf-preview` | Visual Composer; packaged Desktop | Fixed synthetic PDF and isolated storage | Rasterized PDF preview and saved bytes |
+| `packaged-desktop-ingestion`; `thin-client-ingestion` | Visual Composer; matching host | Isolated file fixtures; website case also needs its declared authorized public HTTPS page | File/source lineage and preview; website is not provider import |
+| `packaged-desktop-dataset-versions`; `thin-client-dataset-versions` | Explicit provided-dataset host composition | Existing approved Python and provided-dataset-host-launch-plan.mjs preflight | Dataset versions, saved rows and manual/source/RAG Context UI |
+| `packaged-desktop-low-memory`; `thin-client-low-memory` | Controlled Node runtime; fixed `dataset-profile` scenario | Desktop sets the scenario in its launch; Thin requires `PYTHON_RUNTIME_QUALIFICATION_SCENARIO=dataset-profile` before its controlled Server starts | Synthetic denial/cancellation and UI persistence only; no real model, offload or native ownership qualification |
+| `packaged-desktop-structured-output`; `thin-client-structured-output` | Declared structured-output-controls composition | Matching fixed capability and dataset fixture | Output controls and constrained-structure UI contract |
+| `packaged-desktop-ocr`; `thin-client-ocr` | Declared real OCR composition | Approved installed Python/package/Windows OCR and bounded native/OCR preflight | Actual OCR and document UI; synthetic adapters alone cannot qualify OCR |
+| `packaged-desktop-operational-ui`; `thin-client-operational-ui` | Visual Composer for ordinary operational cases; dedicated selectors below for extra cases | Fresh profile; explicit standard/native400 mode and required per-case inputs | Shell/runtime/Security/Notifications plus critical accessibility definitions; opening Settings is not save/readback coverage |
+
+Four dedicated selectors reuse the operational files. They add no host-file
+inventory entry:
+
+| Selector | Cases | Required input and scope |
+| --- | --- | --- |
+| `playwright.review-site.config.ts` | Three `review site real browser` cases in the thin operational file | A verified running local review server. No app global setup, model or provider pass. |
+| `playwright.training-host.config.ts` | The Desktop local adapter training/review/save/reopen case | Explicit opt-in, existing pinned approved offline model and installed dependencies. Missing readiness is pending; no installation or fresh accuracy trial. |
+| `playwright.image-host-desktop.config.ts` | Desktop image create/register and task recovery | Explicit image opt-in and the fixed verified managed inputs described above. Main-only shutdown does not qualify image workers. |
+| `playwright.image-host-thin.config.ts` | Thin image create/register and task recovery | The same fixed inputs, one host at a time, scoped test credentials and acknowledged owned Server shutdown. Full native job proof remains separate. |
+
+Before actual execution, freeze current source, the exact expected case set,
+profile, fixture/input identities and evidence tier. Collect only the intended
+cases first. Missing inputs or conditional skips remain pending; they cannot
+close a required row. Declarations grant no database, credential, provider,
+publication, model-download or native-process authority. Use only already
+approved inputs and destinations. Preserve failed and interrupted attempts.
+
+Run one Playwright worker with no competing app, model, build or performance
+workload. Keep the existing per-case deadlines, capture restrictions and owned
+cleanup checks. Sensitive traces/capture stay disabled. UI status alone does not
+prove process exit or native ownership; retain each declared physical check.
+Read source and runtime setup together before choosing standard versus native400,
+controlled versus real Python, or worker-failure variants. Current unsupported
+combinations remain pending instead of gaining a new permission or bypass.
+
+The named packaged/managed/dedicated tests remain explicit outside `test:all`.
+After all implementation is worked through and the final campaign is due, run
+the declared named cases and the roadmap's once-only `npm run test:all` boundary
+plus affected documentation/architecture/build/package checks. Keep accepted
+model-accuracy matrices closed. Actual host, provider, accessibility, performance,
+native and final current-candidate qualification remain pending until their own
+required evidence passes and is independently reviewed. See
+`docs/diagnostics/ai-development-control-plane.md` for source support limits.

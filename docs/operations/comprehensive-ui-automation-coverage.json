@@ -3707,12 +3707,33 @@
     "source": "docs/operations/comprehensive-ui-automation-current-census.json",
     "command": "node dev-tools/helpers/ui_coverage_census.mjs",
     "work_id": "current-ui-coverage-census",
-    "status": "definition-map-validation-pending-review",
-    "scope": "Current source assertions and inventories are references only. Existing scenario fields preserve earlier implementation evidence. No test execution or parent pass follows from this map.",
+    "status": "technical-check-pending",
+    "scope": "Focused Settings and Native/image source support is committed and reviewed. The current source map retains exact assertions and inventories, corrects host witnesses and exposes five families needing four functional host-definition groups. Source analysis executes no inspected product tests and grants no host or parent pass.",
     "pending_agent_work": [
-      "Add focused thin-client Settings mutation/recovery tests.",
-      "Review missing family-specific host definitions and conditional test modifiers before the final matrix."
+      "Add named Desktop and Thin Client journeys that save a supported setting and confirm it after reload. Focused Settings mutation and recovery checks are already complete.",
+      "Add named Desktop and Thin Client journeys for supported secret clearing, model defaults and explicit readback recovery in isolated test profiles. Do not copy user credentials.",
+      "Add a functional host journey that imports a small sample from an authorized provider source and verifies the saved file. Existing file import and focused transport checks do not supply this host journey.",
+      "Add functional host journeys for backing state, authorized synthetic publication and local artifact deletion with confirmation and reference isolation. No unapproved remote deletion is authorized.",
+      "Add named Desktop and Thin Client journeys that search for an already approved model, save its reference and verify it after reload. No model weight download or accuracy run is required."
     ],
-    "full_testing_status": "deferred-by-user"
+    "full_testing_status": "deferred-by-user",
+    "original_assessment": {
+      "source": "docs/operations/comprehensive-ui-automation-current-census.json",
+      "command": "node dev-tools/helpers/ui_coverage_census.mjs",
+      "work_id": "current-ui-coverage-census",
+      "status": "definition-map-validation-pending-review",
+      "scope": "Current source assertions and inventories are references only. Existing scenario fields preserve earlier implementation evidence. No test execution or parent pass follows from this map.",
+      "pending_agent_work": [
+        "Add focused thin-client Settings mutation/recovery tests.",
+        "Review missing family-specific host definitions and conditional test modifiers before the final matrix."
+      ],
+      "full_testing_status": "deferred-by-user"
+    },
+    "source_support_work_ids": [
+      "thin-settings-recovery-and-shared-fields",
+      "launcher-aware-owned-process-observation",
+      "image-host-ui-journey-definitions-checked"
+    ],
+    "reconciliation_basis": "Independent all39family source audit; thirteen reused-host mapping corrections and five missing functional family definitions. Original approved scenario/behavior and execution fields remain unchanged."
   }
 }

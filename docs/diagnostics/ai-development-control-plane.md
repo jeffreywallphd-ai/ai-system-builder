@@ -1207,8 +1207,14 @@ The checker reads bounded regular repository files only. It reports changed
 source, test modifiers, missing host mappings and pending feature checks. It
 always reports zero executed product tests and grants no host or parent pass.
 Current missing mappings are visible work for the agent; they do not require
-human intervention. Thin-client Settings still needs focused mutation/recovery
-tests. Existing accepted model accuracy stays closed. Full testing remains
+human intervention. The original thin-client Settings mutation/recovery finding
+was repaired and linked by the reviewed Settings source/publication work. The
+current semantic audit still requires four functional host-journey groups for
+Settings, provider acquisition, model search/save and artifact backing/publication/
+local deletion. Their five family mappings remain explicitly pending; opening a
+form or a transport fixture is not its functional host witness. Thirteen other
+family rows now point to the existing test bodies that exercise their actions.
+Existing accepted model accuracy stays closed. Full testing remains
 deferred by the user until feature work across open roadmaps is worked through.
 
 The detailed map is `docs/operations/comprehensive-ui-automation-current-census.json`.
@@ -1228,9 +1234,11 @@ Thin Settings admits successful HTTP status and envelope, validates consumed and
 masked data, and binds mutation acknowledgements to the captured key/state.
 Current-view admission serializes writes/restart; failed readback requires an
 explicit refresh. A 202 acknowledgement means restart requested, not reconnected.
-See the leaf Settings READMEs for behavior and focused evidence limits. The initial
-census follow-up stays pending until a reviewed source checkpoint is linked.
-Actual host and final full testing remain separate.
+See the leaf Settings READMEs for behavior and focused evidence limits. The
+initial focused-test finding was repaired in the reviewed Settings checkpoint
+and linked to the current census. Functional host save/clear/readback/reload
+journeys still need construction. Actual host and final full testing remain
+separate; the source repair grants neither pass.
 
 
 ## Review-site browser feature check

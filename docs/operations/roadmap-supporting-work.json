@@ -6073,6 +6073,99 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "launcher-aware-owned-process-observation",
+      "work_criteria": [
+        "bounded-read-only-native-ancestry",
+        "truthful-launcher-aware-cleanup-and-errors",
+        "focused-platform-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "56a70f302916d74fcbe6275c8f986062d4deb6ad4dda0ad828b0463e189e2a0a",
+      "review_digest": "066cce08057eb94be7ad151f92ca4d73a5d8d56cfa02d0575e8d6115e89787ac",
+      "scope": "Windows process checks now follow the app launch chain and preserve startup, shutdown and cleanup failures. Controlled child-process checks passed. Full app and image-worker shutdown, native restart and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "launcher-aware-owned-process-observation",
+      "work_criteria": [
+        "bounded-read-only-native-ancestry",
+        "truthful-launcher-aware-cleanup-and-errors",
+        "focused-platform-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "56a70f302916d74fcbe6275c8f986062d4deb6ad4dda0ad828b0463e189e2a0a",
+      "review_digest": "066cce08057eb94be7ad151f92ca4d73a5d8d56cfa02d0575e8d6115e89787ac",
+      "scope": "Windows process checks now follow the app launch chain and preserve startup, shutdown and cleanup failures. Controlled child-process checks passed. Full app and image-worker shutdown, native restart and final testing remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "image-host-ui-journey-definitions-checked",
+      "work_criteria": [
+        "bounded-no-install-inputs",
+        "meaningful-real-image-journeys",
+        "owned-graceful-shutdown-and-truthful-scope",
+        "finite-current-coverage-and-owned-checkpoint"
+      ],
+      "receipt_digest": "e21085fd96d679cacbc115ff804c6a9dce22d094fe5fd961d63c55bb2ba51efd",
+      "review_digest": "5dd8b747a06956404c38d8ed614860cbf2f4e5e2934fe62ce071244cc0c092e8",
+      "scope": "Four image test journeys now check input setup, real task recovery and the same saved picture on Desktop and Thin Client. Focused feature tests, source checks, types and test collection passed. Actual app runs, image creation and full image-worker cleanup remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "image-host-ui-journey-definitions-checked",
+      "work_criteria": [
+        "bounded-no-install-inputs",
+        "meaningful-real-image-journeys",
+        "owned-graceful-shutdown-and-truthful-scope",
+        "finite-current-coverage-and-owned-checkpoint"
+      ],
+      "receipt_digest": "e21085fd96d679cacbc115ff804c6a9dce22d094fe5fd961d63c55bb2ba51efd",
+      "review_digest": "5dd8b747a06956404c38d8ed614860cbf2f4e5e2934fe62ce071244cc0c092e8",
+      "scope": "Four image test journeys now check input setup, real task recovery and the same saved picture on Desktop and Thin Client. Focused feature tests, source checks, types and test collection passed. Actual app runs, image creation and full image-worker cleanup remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "image-host-ui-journey-definitions-checked",
+      "work_criteria": [
+        "bounded-no-install-inputs",
+        "meaningful-real-image-journeys",
+        "owned-graceful-shutdown-and-truthful-scope",
+        "finite-current-coverage-and-owned-checkpoint"
+      ],
+      "receipt_digest": "e21085fd96d679cacbc115ff804c6a9dce22d094fe5fd961d63c55bb2ba51efd",
+      "review_digest": "5dd8b747a06956404c38d8ed614860cbf2f4e5e2934fe62ce071244cc0c092e8",
+      "scope": "Four image test journeys now check input setup, real task recovery and the same saved picture on Desktop and Thin Client. Focused feature tests, source checks, types and test collection passed. Actual app runs, image creation and full image-worker cleanup remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }
