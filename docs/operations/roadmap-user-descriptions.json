@@ -13182,6 +13182,17 @@
           "The commit check caught a test-file formatting error. The corrected files were retested and reviewed before commit. The agent still needs to finish complete folder protection, saved disk accounting and safe worker recovery for actual low-memory loading. No action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5d48c3e0ec73aefcdb34bd453fb36a57f4c6e2d8b6ccc18be482659998d6b453",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The --all-blocked command keeps accepted model quality closed. It lists all six roadmap owners and starts no quality tests. All 39 focused tests, 4 routing tests and the real command check passed. Earlier test rules and results stay in the history.",
+          "Missing or inconsistent completion details stop the command safely. The agent still needs to finish safe low-memory recovery and collect memory, delivery and cleanup evidence. This fix grants no roadmap pass. No action is needed for this fix."
+        ]
+      }
     }
   ]
 }

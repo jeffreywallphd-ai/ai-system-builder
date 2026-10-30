@@ -7199,6 +7199,82 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "closed-quality-scheduling",
+      "work_criteria": [
+        "closed-quality-history-only",
+        "completed-and-pending-owner-inventory",
+        "zero-effects-current-all-blocked-entry",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "9fa8d42f82db7af47ffe66ffb64bb2d4e5dac8e059594a4dd9106c03325a75cb",
+      "review_digest": "727684453c65dad76b7ec98234cc6fb453b94c6f3fdabf344e967e62f6ac1445",
+      "scope": "Fixed --all-blocked scheduling. The command reports all six roadmap owners and schedules no accepted quality tests. Completed owners are history; malformed completion data refuses effects. Thirty-nine focused tests, four routing tests and the real delegated command passed without models or native probes. Historical22/23arithmetic and evidence remain unchanged. Native recovery, resource, delivery and cleanup evidence and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "closed-quality-scheduling",
+      "work_criteria": [
+        "closed-quality-history-only",
+        "completed-and-pending-owner-inventory",
+        "zero-effects-current-all-blocked-entry",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "9fa8d42f82db7af47ffe66ffb64bb2d4e5dac8e059594a4dd9106c03325a75cb",
+      "review_digest": "727684453c65dad76b7ec98234cc6fb453b94c6f3fdabf344e967e62f6ac1445",
+      "scope": "Fixed --all-blocked scheduling. The command reports all six roadmap owners and schedules no accepted quality tests. Completed owners are history; malformed completion data refuses effects. Thirty-nine focused tests, four routing tests and the real delegated command passed without models or native probes. Historical22/23arithmetic and evidence remain unchanged. Native recovery, resource, delivery and cleanup evidence and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "closed-quality-scheduling",
+      "work_criteria": [
+        "closed-quality-history-only",
+        "completed-and-pending-owner-inventory",
+        "zero-effects-current-all-blocked-entry",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "9fa8d42f82db7af47ffe66ffb64bb2d4e5dac8e059594a4dd9106c03325a75cb",
+      "review_digest": "727684453c65dad76b7ec98234cc6fb453b94c6f3fdabf344e967e62f6ac1445",
+      "scope": "Fixed --all-blocked scheduling. The command reports all six roadmap owners and schedules no accepted quality tests. Completed owners are history; malformed completion data refuses effects. Thirty-nine focused tests, four routing tests and the real delegated command passed without models or native probes. Historical22/23arithmetic and evidence remain unchanged. Native recovery, resource, delivery and cleanup evidence and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "closed-quality-scheduling",
+      "work_criteria": [
+        "closed-quality-history-only",
+        "completed-and-pending-owner-inventory",
+        "zero-effects-current-all-blocked-entry",
+        "focused-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "9fa8d42f82db7af47ffe66ffb64bb2d4e5dac8e059594a4dd9106c03325a75cb",
+      "review_digest": "727684453c65dad76b7ec98234cc6fb453b94c6f3fdabf344e967e62f6ac1445",
+      "scope": "Fixed --all-blocked scheduling. The command reports all six roadmap owners and schedules no accepted quality tests. Completed owners are history; malformed completion data refuses effects. Thirty-nine focused tests, four routing tests and the real delegated command passed without models or native probes. Historical22/23arithmetic and evidence remain unchanged. Native recovery, resource, delivery and cleanup evidence and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }
