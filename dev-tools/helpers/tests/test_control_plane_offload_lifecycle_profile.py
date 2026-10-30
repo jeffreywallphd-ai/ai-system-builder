@@ -23,6 +23,9 @@ TESTS = [
     "modules/adapters/runtime/python/worker/tests/test_local_model_offload.py",
     "modules/adapters/runtime/python/worker/tests/test_bounded_generator.py",
     "dev-tools/scripts/qualification/tests/test_offload_resource_qualification.py",
+    "modules/adapters/runtime/python/worker/tests/test_windows_offload_core.py",
+    "modules/adapters/runtime/python/worker/tests/test_windows_offload_backend.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py",
 ]
 
 
@@ -36,7 +39,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             path.write_bytes((ROOT / name).read_bytes())
         (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {PROFILE: profile}}))
 
-    def test_fixed_profile_executes_only_four_model_free_files(self):
+    def test_fixed_profile_executes_only_seven_model_free_files(self):
         self.assertEqual(self.profile()["test_paths"], TESTS)
         expected = [run_focused_checks.python_test_command(ROOT, name) for name in sorted(TESTS)]
         self.assertEqual(run_focused_checks.profile_commands(ROOT, PROFILE), expected)
@@ -50,6 +53,13 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             for paths, required, selected, generic in [
                 ([CORE, ENTRY, CONFIG, "dev-tools/README.md"], ["documentation"], True, False),
                 ([GUARD], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tasks/windows_offload_core.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tasks/windows_offload_backend.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tests/test_windows_offload_core.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tests/test_windows_offload_backend.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/qualify_windows_offload_core.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py"], ["documentation"], True, False),
+
                 ([CORE], ["focused-tests"], True, True),
                 ([CORE, "modules/unknown/current.ts"], ["documentation"], True, True),
                 (["dev-tools/README.md"], ["documentation"], False, False),

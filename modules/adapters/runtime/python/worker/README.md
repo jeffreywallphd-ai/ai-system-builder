@@ -557,3 +557,34 @@ or reads after cancellation-callback reentry. Pipe joins occur outside the close
 lock. Fixed OCR process limits, trusted installation paths, public errors and
 source-bound cancellation remain unchanged. Portable fault tests cover these
 contracts; actual Windows locking, launch and crash qualification remain separate.
+
+
+## Private fresh Windows staging Core
+
+`tasks/windows_offload_core.py` implements actual Windows handle-relative fresh
+namespace/leaf creation, private DACL checks, bounded identity/stream/inventory
+queries, RH requests and one-attempt retirement. Constructors do no I/O. Explicit
+private preparation pins a fixed local NTFS ancestor chain. Existing namespaces,
+unexpected entries, links, named streams and changed guards are refused.
+
+`tasks/windows_offload_backend.py` consumes this Core through the existing guarded
+lease. Protected-journal and exact standalone-worker producers are mandatory;
+neither has a successful placeholder. Durable reservation precedes creation,
+writer quiescence precedes sealing, and parent-native retirement precedes fresh
+held-object cleanup and charge credit. Unknown replies retain custody.
+
+The production factory stays backendless. Source tests inject synthetic native,
+journal and worker facts and exercise the real lease. They supply no native
+qualification. This initial Core handles only its own new protected-current-user
+namespace and one optional index file. Inherited/retained trees, saved protected
+accounting, owned-worker/crash composition and actual model resources remain
+pending. Accepted model quality stays closed.
+
+
+The Core also requires a separate trusted finite execution owner before native
+preparation or dispatch. No real producer is supplied yet. Its strict callback
+admission refuses skipped, duplicate, early or foreign-thread execution. Locks
+do not span execution-owner callbacks. Canonical Core/API/backend origin checks
+refuse shallow copies before callbacks. Guard retirement requires actual aborted
+completion; a raced successful break remains pending and cannot authorize deletion.
+The fixed1500ms guard wait does not bound synchronous native calls by itself.

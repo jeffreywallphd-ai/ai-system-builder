@@ -942,3 +942,32 @@ no native capability. No production backend is composed. Native protection,
 protected journal, owned-job/reader lifetime, applicable model execution policy
 and actual offload resource qualification remain pending. Accepted accuracy is
 not rerun by the fixed resource-only gate or model-free lifecycle profile.
+
+
+## Private fresh Windows offload Core
+
+The Python adapter now contains a concrete Windows staging Core and an existing
+`_NativeOffloadBackend` implementation. Construction is effect-free. Explicit
+private preparation and fresh-only operations use held native objects, strict
+metadata and one-attempt custody; no runtime source imports dev-tools.
+
+Core composition requires live protected accounting and an exact standalone
+worker owner. Reserve, create, quiesce/seal, reuse, reference release and native
+retirement remain separate acknowledgements. Missing producers, malformed replies
+or uncertain lifetimes deny reuse and retain charge. The current factory stays
+backendless and advertises no guarded capability. Synthetic real-lease tests
+are source evidence, not actual Windows or resource qualification.
+
+The initial implementation supports only its new protected-current-user namespace
+and optional index file. It refuses unsupported inherited/retained trees; unknown
+old staging retains the full12GiB charge. Protected journal, worker/crash and real
+model delivery remain pending. No model-specific hard Job ceiling is chosen.
+
+
+A mandatory private finite-execution producer also gates Core preparation and
+native dispatch. No real producer is composed. Its callback must execute exactly
+once, on the admitted thread, and finish before returning the exact result.
+Skipped, duplicate, early, foreign-thread and unknown replies retain custody.
+Core/backend state locks do not span execution callbacks. Canonical self-origin
+and API-owner checks deny copied owners before callbacks. A successful raced
+break is not an aborted cancellation and cannot authorize native retirement.

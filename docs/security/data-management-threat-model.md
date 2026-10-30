@@ -1727,3 +1727,40 @@ or unregistered dictionary cannot authorize a close. State locks do not span
 native calls or reader joins. Existing source-bound run identity, fixed process
 limits, crash assertions and public failure codes remain. Portable fault checks
 are not native execution or a parent-roadmap pass.
+
+
+### Fresh Windows staging Core and concrete consumer
+
+The private native Core owns output slots before handle-returning dispatch,
+retains descriptor allocations and IRP buffers, and records close/disposition
+attempts before effects. Interruptions, reentry, unknown results, stale guards,
+unexpected inventory and failed retirement retain the exact owner; they cannot
+authorize retry, adoption, recursive deletion or capacity credit.
+
+Only exclusively new private namespaces/leaves and an optional unnamed-stream
+index are within this initial Core. Directory protection requires the exact new
+protected-current-user descriptor; inherited profiles are refused rather than
+normalized. Fixed-local NTFS and non-reparse ancestor/file identities, complete
+bounded metadata, single-link files and live guards are required. Cleanup targets
+held original objects and refuses unknown content. Actual OS behavior, including
+mapping/security-change and late-break behavior, is not qualified by the portable
+fault tests. Existing or failed native fixtures are not revisited.
+
+The concrete backend requires separate trusted protected-journal and exact
+standalone-worker producers. None has a no-op successful implementation. Durable
+reservation precedes supplier staging, quiescence precedes protected sealing,
+and acknowledged worker/readers/IRP/native retirement precedes file cleanup and
+durable credit. Missing producers deny before Core effects. Synthetic new-domain
+ports exercise the actual lease but grant no production readiness. Current factory,
+full unknown charge, accepted accuracy and the stronger application denials stay
+unchanged. This is not malicious same-user isolation or a parent-roadmap pass.
+
+
+Native preparation and dispatch additionally require a trusted finite-execution
+producer, which remains missing. Synthetic finite callbacks do not qualify real
+operation deadlines. Exact callback/thread/result admission and predispatch
+custody survive early, duplicate or skipped execution. Copied Core/backend/API
+objects cannot dispatch original owners. Retirement accepts only acknowledged
+aborted completion with the cancelled native status; a raced successful break
+keeps the watch, owner and charge retained. The original failed source and causal
+regression remain history; no actual Windows failure or parent pass is invented.

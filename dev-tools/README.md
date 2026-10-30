@@ -1489,3 +1489,27 @@ The fixed `offload-resource-lifecycle` profile runs four model-free files for th
 real guarded lease/loader/cache, ordinary compatibility and resource entry. Native
 backend, protected journal, owned-worker retirement and actual resource delivery
 remain pending. Unknown or explicitly generic impact keeps normal test fallback.
+
+
+## Fresh Windows staging feature checks
+
+`offload-resource-lifecycle` includes seven fixed model-free files. The new Core
+and concrete backend tests use synthetic native, journal and standalone-worker
+facts through the real guarded lease. They do not start a model or native worker.
+Unknown, incomplete and explicit generic impact keeps its fallback checks.
+
+`python -B dev-tools/scripts/qualification/qualify_windows_offload_core.py --plan`
+prints remaining native checks. Default exits3 with pending status. It cannot
+execute a native fixture or accept a root, command, budget, PID or proof. Actual
+fresh-fixture effects require separate reviewed execution. Existing/inherited
+tree, protected journal, owned-worker/crash, model resources and the final combined
+campaign remain separate. Accepted accuracy stays closed.
+
+
+The declaration includes the still-missing finite native execution owner.
+Preparation and dispatch refuse its absence. Source tests qualify canonical
+owner/callback admission and the late-break cancellation refusal, not a native
+deadline or physical cleanup. Microsoft documents the distinct cancellation
+outcomes in [CancelIoEx](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelioex)
+and the pending operation in [FSCTL_REQUEST_OPLOCK](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
+The output-slot event API is [NtCreateEvent](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-zwcreateevent).

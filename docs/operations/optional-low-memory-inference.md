@@ -675,3 +675,38 @@ exit is not a test pass or execution authority. There is no root, quota, PID,
 model, force or native-proof option. The four-file model-free lifecycle profile
 uses synthetic new-domain ports and preserves actual native/model gaps. Accepted
 accuracy remains closed; original protocols and failed evidence remain history.
+
+
+## Fresh Windows Core source and qualification limits
+
+No user action is needed. The agent is implementing the private Windows staging
+provider and its real lease consumer. The first Core supports only a namespace
+and leaf it exclusively creates, with zero or one unnamed-stream index file.
+It refuses an existing namespace and unsupported inherited permissions. This is
+not protection or ownership of the old retained slot and cannot reset its charge.
+
+Protected accounting and exact standalone-worker producers remain required.
+Missing producers deny before file effects. Source tests use explicitly synthetic
+new-domain producers, not JSON proof or a production admission switch. Standard,
+ordinary empty-root leases, existing guards and accepted accuracy stay unchanged.
+
+The finite `offload-resource-lifecycle` profile has seven model-free test files.
+The additional declaration prints the native checks still needed:
+
+```text
+python -B dev-tools/scripts/qualification/qualify_windows_offload_core.py --plan
+```
+
+Default execution reports pending and exits3. This declaration has no native
+execution flag, root, budget, command, PID or proof input. A separately reviewed
+fresh-fixture owner must qualify actual Windows behavior before composition.
+Protected durable accounting, owned-worker/crash ordering and model resource
+delivery remain additional implementation or qualification. Full testing remains
+deferred until the open roadmap features are worked through.
+
+
+A real finite execution owner is another pending implementation component. The
+Core refuses actual native preparation and dispatch without it. Source tests use
+an explicit finite in-memory dispatcher. They cannot supply a native timing pass.
+A cancel request is not completion: a raced successful change notification keeps
+retirement pending. No user action is needed for these agent-owned repairs.

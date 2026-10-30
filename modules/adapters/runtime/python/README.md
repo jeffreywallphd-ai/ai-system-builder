@@ -202,3 +202,18 @@ ordinary and guarded cache owners remain distinct. Worker reference release and
 parent native retirement are separate, and unknown outcomes retain custody.
 No native backend is composed, so actual guarded recovery remains unavailable.
 See the worker README and optional low-memory operations guide for scope and tests.
+
+
+## Private Windows staging implementation
+
+The worker owns the fresh Windows staging Core and concrete guarded-backend
+consumer. Dev-tools depends on that adapter direction, never the reverse.
+Missing real protected-journal or standalone-worker owners denies readiness
+before Core operations. No production composition or capability is added.
+See the worker README and optional low-memory operations guide for the synthetic
+feature checks and still-pending native, retained-tree and resource evidence.
+
+
+Actual native preparation also requires a trusted finite execution owner. That
+producer remains missing; a synthetic dispatcher supplies no native authority.
+Canonical owner checks prevent copied Core/backend/API objects from dispatching.
