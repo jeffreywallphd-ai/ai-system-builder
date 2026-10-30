@@ -1258,3 +1258,13 @@ bounded lookup and denied paths. Direct invocation needs no manual npm-path edit
 ```text
 node dev-tools/scripts/security/check-dependency-security.mjs
 ```
+
+
+### Native identity builder impact checks
+
+A change to the fixed Windows identity builder now selects both its model-free
+unit profile and the existing dependency audit in the control-plane check plan.
+The unit profile does not replace the build-script audit required by `AGENTS.md`.
+The impact rule adds only this exact source path; existing profile tests,
+dependency paths and generic fallback stay unchanged. This selection does not
+compile native code, start a model or qualify production file protection.

@@ -45,6 +45,13 @@ class WindowsIdentityProfileTests(unittest.TestCase):
         self.assertIn(GUARD, catalog.QUALIFICATION_PROFILE_PATTERNS[PROFILE])
         self.assertNotIn(NATIVE, profile["test_paths"])
 
+    def test_native_builder_also_selects_the_required_dependency_audit(self):
+        builder = "dev-tools/scripts/native/build_windows_model_file_identity.py"
+        ids = {c["id"] for c in catalog.plan(ROOT, [builder], ["documentation"], "synthetic-candidate")["selected"]}
+        self.assertIn(PROFILE, ids)
+        self.assertIn("dependencies", ids)
+        self.assertNotIn("focused-tests", ids)
+
     def test_known_explicit_unknown_and_borrowed_changes_keep_their_guards(self):
         with tempfile.TemporaryDirectory(prefix="windows-identity-profile-") as directory:
             root = Path(directory)
