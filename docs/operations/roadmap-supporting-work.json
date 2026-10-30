@@ -6695,6 +6695,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-staging-protection-probe",
+      "work_criteria": [
+        "fresh-owned-fixture-only",
+        "bounded-protection-observations",
+        "focused-routing-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "c35e5402806478b7c31ae51bf6a0dadaa091a4d7ca5c909704af6fb3c039f471",
+      "review_digest": "5580107d070ebcec8ad1bc7a365c028cc759bf56dee01801db54e4a84bbce682",
+      "scope": "Qualified a bounded Windows diagnostic on newly created private folders: 62 pure units and three actual controls passed, with exact restoration, cleanup and a preopened permission-change barrier. Four scoped checks and separate review passed. Earlier failed runs remain failed. This component does not qualify inherited/existing roots, full-tree/file/mapping protection, durable accounting, worker/crash composition, actual offload or a parent roadmap.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-staging-protection-probe",
+      "work_criteria": [
+        "fresh-owned-fixture-only",
+        "bounded-protection-observations",
+        "focused-routing-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "c35e5402806478b7c31ae51bf6a0dadaa091a4d7ca5c909704af6fb3c039f471",
+      "review_digest": "5580107d070ebcec8ad1bc7a365c028cc759bf56dee01801db54e4a84bbce682",
+      "scope": "Qualified a bounded Windows diagnostic on newly created private folders: 62 pure units and three actual controls passed, with exact restoration, cleanup and a preopened permission-change barrier. Four scoped checks and separate review passed. Earlier failed runs remain failed. This component does not qualify inherited/existing roots, full-tree/file/mapping protection, durable accounting, worker/crash composition, actual offload or a parent roadmap.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-staging-protection-probe",
+      "work_criteria": [
+        "fresh-owned-fixture-only",
+        "bounded-protection-observations",
+        "focused-routing-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "c35e5402806478b7c31ae51bf6a0dadaa091a4d7ca5c909704af6fb3c039f471",
+      "review_digest": "5580107d070ebcec8ad1bc7a365c028cc759bf56dee01801db54e4a84bbce682",
+      "scope": "Qualified a bounded Windows diagnostic on newly created private folders: 62 pure units and three actual controls passed, with exact restoration, cleanup and a preopened permission-change barrier. Four scoped checks and separate review passed. Earlier failed runs remain failed. This component does not qualify inherited/existing roots, full-tree/file/mapping protection, durable accounting, worker/crash composition, actual offload or a parent roadmap.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-staging-protection-probe",
+      "work_criteria": [
+        "fresh-owned-fixture-only",
+        "bounded-protection-observations",
+        "focused-routing-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "c35e5402806478b7c31ae51bf6a0dadaa091a4d7ca5c909704af6fb3c039f471",
+      "review_digest": "5580107d070ebcec8ad1bc7a365c028cc759bf56dee01801db54e4a84bbce682",
+      "scope": "Qualified a bounded Windows diagnostic on newly created private folders: 62 pure units and three actual controls passed, with exact restoration, cleanup and a preopened permission-change barrier. Four scoped checks and separate review passed. Earlier failed runs remain failed. This component does not qualify inherited/existing roots, full-tree/file/mapping protection, durable accounting, worker/crash composition, actual offload or a parent roadmap.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

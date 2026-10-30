@@ -13105,6 +13105,17 @@
           "Existing test profiles and commands stay in place. Native protection and the remaining security work still need implementation or later qualification. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1ac3c16e2bffe878aca8bcf3a67c14776b60d2d5aac8341959ce5bab955ad320",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All three Windows private-folder tests and 62 code checks passed. The Windows tests left the folder permissions in their original state and removed all three folders.",
+          "The agent still needs to protect existing folders and finish restart recovery. Actual low-memory qualification remains pending. No user action is needed."
+        ]
+      }
     }
   ]
 }
