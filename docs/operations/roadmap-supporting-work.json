@@ -7275,6 +7275,90 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "guarded-offload-lifecycle-integration",
+      "work_criteria": [
+        "explicit-compatible-option",
+        "bounded-loading-and-staging",
+        "cancellation-and-resource-cleanup",
+        "automated-optional-mode-journeys",
+        "measured-low-memory-model-outcomes",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d3b5f765aade74a7bc23a3ffca7bf677ee2c77e12559806fd65aadd669398bd2",
+      "review_digest": "2ae515c85536a9f7de4fb3ff51b242c1f2356d31c1bdc5c8f77c384146ddc148",
+      "scope": "Guarded ownership reaches the real factory, cache, loader and lease. Copied owners and interrupted loads deny unsafe retries. Worker reference release cannot call parent retirement.79 focused tests,9 loader checks,4 routing checks and6 repository gates passed without models. The resource entry imports no accuracy runners. Native backend, protected accounting, actual memory/delivery/cleanup and combined qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "guarded-offload-lifecycle-integration",
+      "work_criteria": [
+        "explicit-compatible-option",
+        "bounded-loading-and-staging",
+        "cancellation-and-resource-cleanup",
+        "automated-optional-mode-journeys",
+        "measured-low-memory-model-outcomes",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d3b5f765aade74a7bc23a3ffca7bf677ee2c77e12559806fd65aadd669398bd2",
+      "review_digest": "2ae515c85536a9f7de4fb3ff51b242c1f2356d31c1bdc5c8f77c384146ddc148",
+      "scope": "Guarded ownership reaches the real factory, cache, loader and lease. Copied owners and interrupted loads deny unsafe retries. Worker reference release cannot call parent retirement.79 focused tests,9 loader checks,4 routing checks and6 repository gates passed without models. The resource entry imports no accuracy runners. Native backend, protected accounting, actual memory/delivery/cleanup and combined qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "guarded-offload-lifecycle-integration",
+      "work_criteria": [
+        "explicit-compatible-option",
+        "bounded-loading-and-staging",
+        "cancellation-and-resource-cleanup",
+        "automated-optional-mode-journeys",
+        "measured-low-memory-model-outcomes",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d3b5f765aade74a7bc23a3ffca7bf677ee2c77e12559806fd65aadd669398bd2",
+      "review_digest": "2ae515c85536a9f7de4fb3ff51b242c1f2356d31c1bdc5c8f77c384146ddc148",
+      "scope": "Guarded ownership reaches the real factory, cache, loader and lease. Copied owners and interrupted loads deny unsafe retries. Worker reference release cannot call parent retirement.79 focused tests,9 loader checks,4 routing checks and6 repository gates passed without models. The resource entry imports no accuracy runners. Native backend, protected accounting, actual memory/delivery/cleanup and combined qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "guarded-offload-lifecycle-integration",
+      "work_criteria": [
+        "explicit-compatible-option",
+        "bounded-loading-and-staging",
+        "cancellation-and-resource-cleanup",
+        "automated-optional-mode-journeys",
+        "measured-low-memory-model-outcomes",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d3b5f765aade74a7bc23a3ffca7bf677ee2c77e12559806fd65aadd669398bd2",
+      "review_digest": "2ae515c85536a9f7de4fb3ff51b242c1f2356d31c1bdc5c8f77c384146ddc148",
+      "scope": "Guarded ownership reaches the real factory, cache, loader and lease. Copied owners and interrupted loads deny unsafe retries. Worker reference release cannot call parent retirement.79 focused tests,9 loader checks,4 routing checks and6 repository gates passed without models. The resource entry imports no accuracy runners. Native backend, protected accounting, actual memory/delivery/cleanup and combined qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

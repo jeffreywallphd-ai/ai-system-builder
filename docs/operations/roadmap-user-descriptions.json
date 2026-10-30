@@ -13193,6 +13193,17 @@
           "Missing or inconsistent completion details stop the command safely. The agent still needs to finish safe low-memory recovery and collect memory, delivery and cleanup evidence. This fix grants no roadmap pass. No action is needed for this fix."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7a58fa334d54c79e6ff9db672f44de4d48422fec07ee80cc344f81c1fe32c08f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent connected startup and cleanup checks to the low-memory loader, cache and temporary-file owner. The code refuses copied controls and unsafe retries after interrupted loading. The worker cannot complete protected cleanup itself. All 79 feature tests, 9 related loader checks, 4 routing checks and 6 repository checks passed without running a model.",
+          "The resource command loads no accuracy-test code and reads no old model outputs. Windows file protection, protected disk records, worker recovery, actual memory, delivery and cleanup checks, and final combined testing still need work. This update does not pass a roadmap requirement. No action is needed from you."
+        ]
+      }
     }
   ]
 }
