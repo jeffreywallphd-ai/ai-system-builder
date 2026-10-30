@@ -311,4 +311,36 @@ class FileProbeTests(unittest.TestCase):
         self.assertTrue(fixture.cleanup());self.assertEqual([c.args[0] for c in fixture.n.close.call_args_list],[31,21,22])
 
 
+    def test_creator_close_success_retires_only_temporary_custody_and_is_idempotent(self):
+        fixture=self.fixture();before=len(p._RETAINED)
+        def close(handle):
+            self.assertEqual(handle,21);self.assertEqual(len(p._RETAINED),before+1)
+            self.assertTrue(any(type(v) is tuple and len(v)==2 and v[0] is fixture and v[1]==21 for v in p._RETAINED))
+        fixture.n.close.side_effect=close;fixture.close_creator();fixture.close_creator()
+        fixture.n.close.assert_called_once_with(21);self.assertIsNone(fixture.creator);self.assertEqual(fixture.meta,22)
+        self.assertFalse(fixture.uncertain);self.assertFalse(fixture.n.uncertain);self.assertEqual(len(p._RETAINED),before)
+
+    def test_unknown_creator_close_retains_local_and_shared_custody_and_refuses_cleanup(self):
+        for failure in [p.ProbeError('synthetic-close'),KeyboardInterrupt()]:
+            fixture=self.fixture();fixture.n.close.side_effect=failure
+            with self.assertRaises(type(failure)) as caught:fixture.close_creator()
+            self.assertIs(caught.exception,failure);self.assertTrue(fixture.uncertain);self.assertTrue(fixture.n.uncertain);self.assertEqual(fixture.creator,21)
+            self.assertTrue(any(type(v) is tuple and len(v)==2 and v[0] is fixture and v[1]==21 for v in p._RETAINED))
+            with self.assertRaises(p.ProbeError):fixture.close_creator()
+            self.assertFalse(fixture.cleanup());fixture.n.close.assert_called_once_with(21);fixture.n.identity.assert_not_called();fixture.n.delete_owned.assert_not_called();fixture.directory.cleanup.assert_not_called()
+
+    def test_uncertain_creator_close_is_denied_before_any_native_effect(self):
+        for local,shared in [(True,False),(False,True)]:
+            fixture=self.fixture();fixture.uncertain=local;fixture.n.uncertain=shared;before=len(p._RETAINED)
+            with self.assertRaises(p.ProbeError):fixture.close_creator()
+            fixture.n.close.assert_not_called();self.assertEqual(len(p._RETAINED),before)
+
+    def test_interrupted_creator_close_finalization_keeps_failure_and_refuses_cleanup(self):
+        fixture=self.fixture();fixture.n.close.return_value=None
+        with patch.object(p,'retire_reference',side_effect=KeyboardInterrupt()),self.assertRaises(KeyboardInterrupt):fixture.close_creator()
+        self.assertTrue(fixture.uncertain);self.assertTrue(fixture.n.uncertain);self.assertIsNone(fixture.creator);self.assertEqual(fixture.meta,22)
+        self.assertFalse(fixture.cleanup());fixture.n.close.assert_called_once_with(21);fixture.n.delete_owned.assert_not_called();fixture.directory.cleanup.assert_not_called()
+
+
+
 if __name__=='__main__':unittest.main()

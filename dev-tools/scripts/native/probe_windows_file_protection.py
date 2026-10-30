@@ -206,8 +206,14 @@ class Fixture:
         value=Mapping(self.n,handle,writable=writable,view=view);self.maps.append(value);return value
 
     def close_creator(self):
+        p.require(self.uncertain is False and self.n.uncertain is False,'file-creator-close-uncertain')
         p.require(not self.creator or self.creator!=self.meta,'file-creator-is-recovery')
-        if self.creator:self.n.close(self.creator);self.creator=None
+        if self.creator:
+            reference=(self,self.creator);p._RETAINED.append(reference)
+            try:
+                self.n.close(self.creator);self.creator=None
+                p.retire_reference(reference)
+            except BaseException:self.uncertain=True;self.n.uncertain=True;raise
 
     def add_seed_stream(self):
         handle=self.n.seed_stream(self);self.extra_handles.append(handle);self.known_streams[SEED_STREAM]=0

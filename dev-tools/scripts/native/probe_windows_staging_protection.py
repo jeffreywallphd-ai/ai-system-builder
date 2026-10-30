@@ -178,7 +178,12 @@ class Windows:
             function = getattr(library, name); function.argtypes = args; function.restype = result
 
     def close(self, handle):
-        require(bool(self.k.CloseHandle(handle)), 'handle-close', C.get_last_error())
+        require(getattr(self,'uncertain',True) is False,'handle-lifetime-unconfirmed')
+        reference=(self,handle);_RETAINED.append(reference)
+        try:
+            require(bool(self.k.CloseHandle(handle)), 'handle-close', C.get_last_error())
+            retire_reference(reference)
+        except BaseException:self.uncertain=True;raise
 
     def directory(self, handle):
         attributes = (U32 * 2)()

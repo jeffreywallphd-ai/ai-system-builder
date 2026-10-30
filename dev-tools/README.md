@@ -1434,3 +1434,24 @@ Failures report only a fixed guard role and setup/inventory checkpoint. Each
 already acquired guard is checked after the next setup operation; any break
 stops immediately and preserves the failed fixture. The initial failed run
 remains historical evidence, without an inferred cause or cleanup pass.
+
+
+## Uncertain native handle closure
+
+The shared Windows diagnostic close operation retains its native adapter and
+exact handle before the operating-system call. A failed or interrupted result
+marks the adapter uncertain. Later close attempts stop before native dispatch.
+Only acknowledged success retires the temporary reference. No stale handle is
+retried after an unknown outcome.
+
+File creator closure also retains its fixture before calling the adapter. An
+unknown return or interruption marks both local and shared lifetime uncertain.
+It preserves the primary error and prevents cleanup or retry. A known successful
+close clears the creator and remains idempotent. Finalization interruptions keep
+the stronger denial.
+
+The focused regressions use mocks for failures and successful close paths, then
+reuse the existing file, folder, inventory and nested-tree checks. They inject no
+real failed handle, start no worker/model and inspect no failed or retained tree.
+These helper guarantees do not qualify production protection, durable accounting,
+guardian ordering, guarded restart or another roadmap.

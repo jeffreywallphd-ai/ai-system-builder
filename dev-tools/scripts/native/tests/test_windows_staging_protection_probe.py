@@ -577,4 +577,41 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(value['failure_stage'],'creation-profile-unavailable');self.assertEqual(value['additional_failures'],error.secondary);self.assertFalse(value['all_cases_observed'])
 
 
+    def test_known_native_close_holds_custody_until_acknowledged(self):
+        native=p.Windows.__new__(p.Windows);native.uncertain=False;native.k=Mock();before=len(p._RETAINED)
+        def close(handle):
+            self.assertEqual(handle,11);self.assertEqual(len(p._RETAINED),before+1)
+            self.assertTrue(any(type(v) is tuple and len(v)==2 and v[0] is native and v[1]==11 for v in p._RETAINED));return 1
+        native.k.CloseHandle.side_effect=close
+        with patch.object(p.C,'get_last_error',create=True,return_value=0):native.close(11)
+        self.assertFalse(native.uncertain);self.assertEqual(len(p._RETAINED),before);native.k.CloseHandle.assert_called_once_with(11)
+
+    def test_failed_or_interrupted_native_close_retains_custody_and_denies_retry(self):
+        for outcome in [0,KeyboardInterrupt(),RuntimeError('HIDDEN_VALUE')]:
+            native=p.Windows.__new__(p.Windows);native.uncertain=False;native.k=Mock();before=len(p._RETAINED)
+            if isinstance(outcome,BaseException):native.k.CloseHandle.side_effect=outcome
+            else:native.k.CloseHandle.return_value=outcome
+            with patch.object(p.C,'get_last_error',create=True,return_value=6),self.assertRaises(BaseException) as caught:native.close(11)
+            if isinstance(outcome,BaseException):self.assertIs(caught.exception,outcome)
+            self.assertTrue(native.uncertain);self.assertEqual(len(p._RETAINED),before+1)
+            self.assertTrue(any(type(v) is tuple and len(v)==2 and v[0] is native and v[1]==11 for v in p._RETAINED))
+            with self.assertRaises(p.ProbeError):native.close(11)
+            native.k.CloseHandle.assert_called_once_with(11);self.assertEqual(len(p._RETAINED),before+1)
+
+    def test_missing_or_uncertain_native_state_never_dispatches_close(self):
+        for state in [True,None,0,'unknown','missing']:
+            native=p.Windows.__new__(p.Windows);native.k=Mock();before=len(p._RETAINED)
+            if state!='missing':native.uncertain=state
+            with self.assertRaises(p.ProbeError):native.close(11)
+            native.k.CloseHandle.assert_not_called();self.assertEqual(len(p._RETAINED),before)
+
+    def test_interrupted_close_finalization_cannot_reset_shared_uncertainty(self):
+        native=p.Windows.__new__(p.Windows);native.uncertain=False;native.k=Mock();native.k.CloseHandle.return_value=1
+        with patch.object(p.C,'get_last_error',create=True,return_value=0),patch.object(p,'retire_reference',side_effect=KeyboardInterrupt()),self.assertRaises(KeyboardInterrupt):native.close(11)
+        self.assertTrue(native.uncertain)
+        with self.assertRaises(p.ProbeError):native.close(11)
+        native.k.CloseHandle.assert_called_once_with(11)
+
+
+
 if __name__=='__main__':unittest.main()

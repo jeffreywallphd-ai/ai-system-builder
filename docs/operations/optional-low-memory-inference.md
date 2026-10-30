@@ -627,3 +627,18 @@ Accepted model accuracy stays closed; full software testing remains deferred.
 The first Windows attempt failed because a guard changed. Its test files stay
 untouched. Fixed role and step facts now help identify where a later attempt
 fails. A failed test never becomes a completed check through this reporting.
+
+
+## Safe handling of a failed file-handle close
+
+No user action is needed. The agent is fixing a shared test helper. If closing a
+known file handle fails or is interrupted, the helper must keep its ownership
+record and stop. It must not retry that handle or remove the test files.
+
+Focused tests cover failure, interruption, denied retries, confirmed success and
+normal repeated cleanup. They use synthetic native replies. No operating-system
+failure is forced, and no old or failed test folder is inspected or changed.
+
+This closes only a helper failure path. Complete folder protection, saved disk
+accounting, worker recovery and actual low-memory loading still need work.
+Accepted model accuracy stays closed; full software testing remains deferred.
