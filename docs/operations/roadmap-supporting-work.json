@@ -6983,6 +6983,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-guarded-inventory-probe",
+      "work_criteria": [
+        "fixed-new-fixture-boundary",
+        "complete-guarded-metadata-controls",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "9b0fe8ea34d55c0abd61bea93a8107ccca90f1ab18a5cd91020794bb6d1a0cce",
+      "review_digest": "ce3a06fed75852fa994dc7fca1ed6a0293fde20a0c4123b673a8391e18f3a671",
+      "scope": "Added a fixed guarded flat-folder inventory diagnostic. Thirty-seven code tests and two Windows controls passed: two complete equal listings, exact identities and sizes, and refusal of an unexpected owned file. All fresh test files were removed. The final-read guard regression stays preserved. Recursive/inherited tree protection, whole physical disk usage, protected accounting, guardian ordering, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-guarded-inventory-probe",
+      "work_criteria": [
+        "fixed-new-fixture-boundary",
+        "complete-guarded-metadata-controls",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "9b0fe8ea34d55c0abd61bea93a8107ccca90f1ab18a5cd91020794bb6d1a0cce",
+      "review_digest": "ce3a06fed75852fa994dc7fca1ed6a0293fde20a0c4123b673a8391e18f3a671",
+      "scope": "Added a fixed guarded flat-folder inventory diagnostic. Thirty-seven code tests and two Windows controls passed: two complete equal listings, exact identities and sizes, and refusal of an unexpected owned file. All fresh test files were removed. The final-read guard regression stays preserved. Recursive/inherited tree protection, whole physical disk usage, protected accounting, guardian ordering, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-guarded-inventory-probe",
+      "work_criteria": [
+        "fixed-new-fixture-boundary",
+        "complete-guarded-metadata-controls",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "9b0fe8ea34d55c0abd61bea93a8107ccca90f1ab18a5cd91020794bb6d1a0cce",
+      "review_digest": "ce3a06fed75852fa994dc7fca1ed6a0293fde20a0c4123b673a8391e18f3a671",
+      "scope": "Added a fixed guarded flat-folder inventory diagnostic. Thirty-seven code tests and two Windows controls passed: two complete equal listings, exact identities and sizes, and refusal of an unexpected owned file. All fresh test files were removed. The final-read guard regression stays preserved. Recursive/inherited tree protection, whole physical disk usage, protected accounting, guardian ordering, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-guarded-inventory-probe",
+      "work_criteria": [
+        "fixed-new-fixture-boundary",
+        "complete-guarded-metadata-controls",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "9b0fe8ea34d55c0abd61bea93a8107ccca90f1ab18a5cd91020794bb6d1a0cce",
+      "review_digest": "ce3a06fed75852fa994dc7fca1ed6a0293fde20a0c4123b673a8391e18f3a671",
+      "scope": "Added a fixed guarded flat-folder inventory diagnostic. Thirty-seven code tests and two Windows controls passed: two complete equal listings, exact identities and sizes, and refusal of an unexpected owned file. All fresh test files were removed. The final-read guard regression stays preserved. Recursive/inherited tree protection, whole physical disk usage, protected accounting, guardian ordering, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

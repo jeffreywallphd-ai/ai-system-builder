@@ -13149,6 +13149,17 @@
           "The agent still needs to connect worker shutdown to file protection and test crash recovery. Folder-wide protection, saved disk accounting and actual low-memory loading remain pending. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b4da2a8502bf02c40b027e7f01565284047e5b5ad40f46372b7889f89d158d1a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both Windows folder tests passed. The file count and size stayed consistent across two complete reads. The test refused an extra file. All test files were removed.",
+          "The agent still needs to protect complete folder trees, finish saved disk accounting and connect safe worker recovery to actual low-memory loading. No user action is needed."
+        ]
+      }
     }
   ]
 }
