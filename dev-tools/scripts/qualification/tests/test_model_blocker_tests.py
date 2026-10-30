@@ -1,6 +1,6 @@
 """Model-free adversarial coverage, lifecycle and one-command handoff tests."""
 import copy
-from contextlib import nullcontext
+from contextlib import nullcontext, ExitStack
 import importlib.util
 import io
 import json
@@ -47,7 +47,7 @@ class BlockerRunnerTests(unittest.TestCase):
             for ref in owner['criteria']:
                 increment, criterion = ref.split('/')
                 increments.setdefault(increment, {'id':increment, 'status':'verifying', 'acceptanceCriteria':[]})['acceptanceCriteria'].append(
-                    {'id':criterion, 'description':'Synthetic qualification requirement.', 'qualification':{'status':'pending'}})
+                    {'id':criterion, 'description':'Synthetic qualification requirement.', 'qualification':'controlled-environment'})
             metadata[owner['id']] = {'status':'executing', 'increments':list(increments.values()),
                 'blockers':[{'id':owner['id']+'-synthetic', 'kind':'technical', 'status':'open',
                     'summary':'Synthetic unresolved requirement.', 'requiredAction':'Synthetic action.'}]}
@@ -55,10 +55,10 @@ class BlockerRunnerTests(unittest.TestCase):
         self.metadata = metadata
         state_root = runner.ROOT/'.implementation-roadmaps'
         original_glob, original_read = Path.glob, runner.read
-        def glob(path, pattern):
+        def glob(path, pattern, **options):
             if path == state_root and pattern == '*/state.json':
                 return iter(state_root/name/'state.json' for name in sorted(metadata))
-            return original_glob(path, pattern)
+            return original_glob(path, pattern, **options)
         def read(path, *args, **kwargs):
             path = Path(path)
             if path.parent.parent == state_root and path.name == 'state.json':
@@ -67,6 +67,125 @@ class BlockerRunnerTests(unittest.TestCase):
         self.enterContext(patch.object(Path, 'glob', glob))
         self.enterContext(patch.object(runner, 'read', side_effect=read))
         self.enterContext(patch.object(runner, 'folded_history', return_value=[]))
+
+    def completed_quality_owners(self):
+        for name in ('functionality-optimization','optional-constrained-json-generation'):
+            value=self.metadata[name];value['status']='completed';value['blockers']=[]
+            for increment in value['increments']:
+                increment['status']='completed';increment['pendingCriteria']=[]
+
+    def current_no_collection(self,argv,expected=0):
+        effects=[(runner,name) for name in ('remaining_selection','plan_bundle','execute_bundle','restart_bundle','folder_for','save','slot')]
+        effects += [(runner.standard,name) for name in ('plan_experiment','execute','run_folder')]
+        effects += [(runner.standard.original,'verified_model'),(runner.standard.owned,'run_child'),(Path,'mkdir')]
+        with ExitStack() as stack:
+            for subject,name in effects:stack.enter_context(patch.object(subject,name,side_effect=AssertionError('Unexpected collection effect: '+name)))
+            output=stack.enter_context(patch('sys.stdout',io.StringIO()))
+            result=runner.main(argv)
+        self.assertEqual(result,expected);value=json.loads(output.getvalue())
+        self.assertFalse(value['qualification_complete']);self.assertFalse(value['model_started']);self.assertFalse(value['native_effects'])
+        self.assertEqual(value['scheduled_quality_cohorts'],[]);self.assertNotIn('HIDDEN_VALUE',output.getvalue());return value
+
+    def test_current_all_blocked_forms_never_reschedule_closed_quality(self):
+        self.completed_quality_owners()
+        forms=[[],['--plan-only'],['--plan-only','--remaining-from','b'*32],['--run'],
+               ['--run','--plan-only'],['--run','--approved-run','a'*32,'--plan-sha256','b'*64],
+               ['--run','--restart','--approved-run','a'*32,'--plan-sha256','b'*64]]
+        for argv in forms:
+            with self.subTest(argv=argv):
+                value=self.current_no_collection(argv)
+                self.assertEqual(value['status'],'quality-closed-no-collection')
+                self.assertEqual({p['profile']:p['required_accuracy_percent'] for p in value['accepted_quality_history']},
+                                 {'qwen05-float32':30,'qwen15-bfloat16':80})
+                self.assertEqual(len(value['owners']),6)
+                self.assertEqual({r['roadmap_id'] for r in value['owners'] if r['classification']=='completed-history'},
+                                 {'functionality-optimization','optional-constrained-json-generation'})
+                self.assertEqual(sum(r['classification']=='technical-work-pending' for r in value['owners']),4)
+
+    def test_current_standalone_dispatch_uses_real_closed_quality_gate(self):
+        self.completed_quality_owners();module=types.ModuleType('run_model_blocker_tests');module.main=runner.main
+        with patch.dict(sys.modules,{'run_model_blocker_tests':module}),patch.object(sys,'argv',['runner','--run','--all-blocked','--plan-only']), \
+                patch.object(runner,'plan_bundle',side_effect=AssertionError('No quality planner')), \
+                patch.object(runner,'slot',side_effect=AssertionError('No model lock')),patch('sys.stdout',io.StringIO()) as output:
+            self.assertEqual(runner.standard.diagnostics.main(),0)
+        value=json.loads(output.getvalue());self.assertEqual(value['scheduled_quality_cohorts'],[]);self.assertFalse(value['model_started'])
+
+    def test_current_inventory_keeps_completed_owners_as_history(self):
+        self.completed_quality_owners();rows=runner.inventory(self.config)
+        self.assertEqual({r['roadmap_id'] for r in rows},{r['id'] for r in self.config['owners']})
+        for row in rows:
+            if row['roadmap_status']=='completed':
+                self.assertTrue(row['completed_history']);self.assertEqual(row['blockers'],[])
+                self.assertEqual(row['parent_qualification'],'not-asserted')
+
+    def test_completed_history_requires_explicit_empty_pending_lists(self):
+        self.completed_quality_owners();increment=self.metadata['functionality-optimization']['increments'][0]
+        for label,value in [('missing',None),('none',None),('false',False),('zero',0),('dict',{}),('string',''),('tuple',()),('pending',['unconfirmed'])]:
+            if label=='missing':increment.pop('pendingCriteria',None)
+            else:increment['pendingCriteria']=value
+            with self.subTest(kind=label):self.assertEqual(self.current_no_collection(['--plan-only'],1)['status'],'metadata-unavailable-no-collection')
+        increment['pendingCriteria']=[]
+        self.assertEqual(self.current_no_collection(['--plan-only'])['status'],'quality-closed-no-collection')
+
+    def test_completed_issue_only_owner_is_history_without_requiring_a_new_issue(self):
+        self.completed_quality_owners();owner=self.metadata['asset-experience-layered-customization']
+        owner.update(status='completed',blockers=[],increments=[{'id':'completed-history','status':'completed','pendingCriteria':[],
+            'acceptanceCriteria':[{'id':'security-impact-reviewed','description':'Synthetic completed record.','qualification':'local'}]}])
+        value=self.current_no_collection(['--plan-only'])
+        row=next(r for r in value['owners'] if r['roadmap_id']=='asset-experience-layered-customization')
+        self.assertEqual(row['classification'],'completed-history');self.assertEqual(row['criterion_refs'],[])
+        owner['status']='executing'
+        self.assertEqual(self.current_no_collection(['--plan-only'],1)['status'],'metadata-unavailable-no-collection')
+
+    def test_missing_unknown_or_contradictory_owner_refuses_current_collection(self):
+        self.completed_quality_owners();baseline=copy.deepcopy(self.metadata)
+        for kind in ('missing','unknown','criterion','status','completed-blocker','completed-increment','completed-qualification','completed-pending'):
+            self.metadata.clear();self.metadata.update(copy.deepcopy(baseline))
+            if kind=='missing':self.metadata.pop('security-findings-refresh')
+            elif kind=='unknown':self.metadata['unexpected-owner']={'status':'executing','increments':[],'blockers':[{'status':'open'}]}
+            elif kind=='criterion':self.metadata['optional-low-memory-inference']['increments'][0]['acceptanceCriteria']=[]
+            elif kind=='status':self.metadata['optional-low-memory-inference']['status']='HIDDEN_VALUE'
+            elif kind=='completed-blocker':self.metadata['functionality-optimization']['blockers']=[{'status':'open'}]
+            elif kind=='completed-increment':self.metadata['functionality-optimization']['increments'][0]['status']='verifying'
+            elif kind=='completed-qualification':self.metadata['functionality-optimization']['increments'][0]['acceptanceCriteria'][0]['qualification']={'status':'passed'}
+            else:self.metadata['functionality-optimization']['increments'][0]['pendingCriteria']=['unconfirmed']
+            with self.subTest(kind=kind):self.assertEqual(self.current_no_collection(['--plan-only'],1)['status'],'metadata-unavailable-no-collection')
+
+    def test_current_policy_corruption_never_falls_back_to_old_quality(self):
+        self.completed_quality_owners();original=(runner.ROOT/'docs/operations/model-software-quality-qualification.json').read_bytes();base=json.loads(original)
+        values=[b'[]',b'\xff',b'x'*65537,original.replace(b'"status": "completed"',b'"status": "completed", "status": "pending"',1),
+                original[:-1]+b' NaN']
+        for kind in ('status','floor','profile','duplicate','test-status','production-guard','reference'):
+            value=copy.deepcopy(base)
+            if kind=='status':value['status']='pending'
+            elif kind=='floor':value['requirements']['qwen05-float32_minimum_accuracy_percent']=22
+            elif kind=='profile':value['profiles'][0]['profile']='unexpected'
+            elif kind=='duplicate':value['profiles'][1]=copy.deepcopy(value['profiles'][0])
+            elif kind=='test-status':value['profiles'][0]['quality_test_status']='pending'
+            elif kind=='production-guard':value['requirements']['changes_to_production_safety_guards']=True
+            else:value['evidence']['index_sha256']='not-a-digest'
+            values.append(json.dumps(value).encode())
+        for value in values:
+            with self.subTest(value_type=type(value).__name__,size=len(value)),patch.object(runner,'_closed_quality_bytes',return_value=value,create=True):
+                result=self.current_no_collection(['--plan-only'],1)
+                self.assertEqual(result['status'],'metadata-unavailable-no-collection');self.assertNotIn('accepted_quality_history',result)
+
+    def test_current_policy_read_error_is_fixed_redacted_and_effect_free(self):
+        with patch.object(runner,'_closed_quality_bytes',side_effect=OSError('HIDDEN_VALUE'),create=True):
+            self.assertEqual(self.current_no_collection(['--plan-only'],1)['status'],'metadata-unavailable-no-collection')
+
+    def test_current_policy_reader_is_bounded_and_copies_only_accepted_references(self):
+        original=(runner.ROOT/'docs/operations/model-software-quality-qualification.json').read_bytes()
+        with patch.object(runner,'_closed_quality_bytes',return_value=original,create=True):history=runner.closed_quality_history()
+        self.assertEqual({r['profile'] for r in history},set(runner.PROFILES))
+        self.assertTrue(all(r['qualification']=='completed-reference-only' for r in history));self.assertTrue(all('cohorts' not in r for r in history))
+        self.assertTrue(all(len(r['policy_sha256'])==64 and len(r['report_sha256'])==64 for r in history))
+
+    def test_current_invalid_options_are_redacted_before_any_collection(self):
+        for args in (['--devices','HIDDEN_VALUE'],['--quality-policy','HIDDEN_VALUE'],['--force','HIDDEN_VALUE']):
+            with self.subTest(args=args),patch.object(runner,'plan_bundle') as plan,patch.object(runner,'execute_bundle') as execute, \
+                    patch('sys.stderr',io.StringIO()) as output,self.assertRaises(SystemExit):runner.main(args)
+            self.assertNotIn('HIDDEN_VALUE',output.getvalue());plan.assert_not_called();execute.assert_not_called()
 
     def test_inventory_excludes_validated_folded_history_but_not_an_unknown_owner(self):
         retired = 'synthetic-retired-roadmap'
@@ -256,10 +375,10 @@ class BlockerRunnerTests(unittest.TestCase):
                     patch.object(runner,'bindings',return_value=plan['bindings']),self.assertRaises(ValueError):
                 runner.load_bundle(self.folder,runner.standard.owned.sha256_file(self.folder/'plan.json'))
 
-    def test_unreviewed_execution_and_subset_flags_are_refused_before_models(self):
+    def test_legacy_unreviewed_execution_and_subset_flags_are_refused_before_models(self):
         for argv in (['--run'],['--run','--approved-run','a'*32],['--run','--devices','cpu'],['--plan-only','--approved-run','a'*32],['--plan-only','--restart']):
             with self.subTest(argv=argv),patch.object(runner,'plan_bundle') as plan,patch.object(runner,'execute_bundle') as execute, \
-                    patch('sys.stderr',io.StringIO()),self.assertRaises(SystemExit):runner.main(argv)
+                    patch('sys.stderr',io.StringIO()),self.assertRaises(SystemExit):runner._legacy_quality_main(argv)
             plan.assert_not_called();execute.assert_not_called()
 
     def test_standalone_dispatch_preserves_full_arguments_without_loading_weights(self):
@@ -357,12 +476,12 @@ class BlockerRunnerTests(unittest.TestCase):
             runner.restart_bundle(self.folder,'a'*64)
         execute.assert_not_called()
 
-    def test_cli_explicit_restart_is_one_shot_and_busy_or_reentry_diagnostics_are_safe(self):
+    def test_legacy_cli_explicit_restart_is_one_shot_and_busy_or_reentry_diagnostics_are_safe(self):
         argv=['--run','--approved-run','a'*32,'--plan-sha256','b'*64]
         with patch.object(runner,'folder_for',return_value=self.folder),patch.object(runner,'slot',side_effect=lambda k:nullcontext()), \
                 patch.object(runner,'restart_bundle',return_value=(self.folder,'c'*64)) as restart, \
                 patch.object(runner,'execute_bundle',return_value=1) as execute:
-            self.assertEqual(runner.main(argv+['--restart']),1)
+            self.assertEqual(runner._legacy_quality_main(argv+['--restart']),1)
         restart.assert_called_once();execute.assert_called_once_with(self.folder,'c'*64)
         for error,reason in ((runner.AttemptedBundle('private-secret'),'bundle-already-attempted'),
                 (runner.QualificationBusy('private-secret'),'standard-test-still-running'),
@@ -370,18 +489,18 @@ class BlockerRunnerTests(unittest.TestCase):
             output=io.StringIO()
             with patch.object(runner,'folder_for',return_value=self.folder),patch.object(runner,'slot',side_effect=lambda k:nullcontext()), \
                     patch.object(runner,'execute_bundle',side_effect=error),patch('sys.stdout',output):
-                self.assertEqual(runner.main(argv),1)
+                self.assertEqual(runner._legacy_quality_main(argv),1)
             self.assertEqual(json.loads(output.getvalue())['reason_code'],reason)
             self.assertNotIn('private-secret',output.getvalue())
             if isinstance(error,ValueError) and not isinstance(error,(runner.AttemptedBundle,runner.QualificationBusy)):
                 log=json.loads(output.getvalue())['failure_log']
                 self.assertEqual(log['stage'],'operator-admission')
-                self.assertTrue(any(f['function']=='main' for f in log['source_frames']))
+                self.assertTrue(any(f['function']=='_legacy_quality_main' for f in log['source_frames']))
 
-    def test_busy_slot_refuses_before_cloning_or_starting_any_worker(self):
+    def test_legacy_busy_slot_refuses_before_cloning_or_starting_any_worker(self):
         with patch.object(runner,'folder_for',return_value=self.folder),patch.object(runner,'slot',side_effect=runner.QualificationBusy()), \
                 patch.object(runner,'restart_bundle') as restart,patch.object(runner,'execute_bundle') as execute,patch('sys.stdout',io.StringIO()):
-            self.assertEqual(runner.main(['--run','--restart','--approved-run','a'*32,'--plan-sha256','b'*64]),1)
+            self.assertEqual(runner._legacy_quality_main(['--run','--restart','--approved-run','a'*32,'--plan-sha256','b'*64]),1)
         restart.assert_not_called();execute.assert_not_called()
 
 
@@ -439,12 +558,12 @@ class RawResultReplayTests(unittest.TestCase):
             runner.save(file.parent,'cohort.json',{'forged':'passed'})
             with self.assertRaises(ValueError):runner.remaining_selection('b'*32,'qwen05-float32')
 
-    def test_remaining_plan_cli_is_separate_from_execution_and_keeps_exact_reference(self):
+    def test_legacy_remaining_plan_cli_is_separate_from_execution_and_keeps_exact_reference(self):
         with patch.object(runner,'plan_bundle') as plan,patch('sys.stdout',io.StringIO()):
-            self.assertEqual(runner.main(['--plan-only','--remaining-from','b'*32]),0)
+            self.assertEqual(runner._legacy_quality_main(['--plan-only','--remaining-from','b'*32]),0)
         plan.assert_called_once_with('b'*32)
         with patch.object(runner,'execute_bundle') as execute,patch('sys.stderr',io.StringIO()),self.assertRaises(SystemExit):
-            runner.main(['--run','--remaining-from','b'*32,'--approved-run','a'*32,'--plan-sha256','1'*64])
+            runner._legacy_quality_main(['--run','--remaining-from','b'*32,'--approved-run','a'*32,'--plan-sha256','1'*64])
         execute.assert_not_called()
 
     def setUp(self):

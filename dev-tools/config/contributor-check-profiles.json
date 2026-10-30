@@ -1,6 +1,24 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "model-qualification-scheduling": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/qualification/run_model_blocker_tests.py",
+        "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py",
+        "docs/operations/model-blocker-testing.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_model_scheduling_profile.py",
+        "dev-tools/README.md",
+        "dev-tools/scripts/qualification/run_standalone_model_tests.py",
+        "dev-tools/scripts/qualification/run_standard_generation_qualification.py",
+        "docs/operations/model-software-quality-qualification.json",
+        "dev-tools/config/model-blocker-qualification.json"
+      ]
+    },
     "windows-guarded-tree-probe": {
       "test_paths": [
         "dev-tools/scripts/native/tests/test_windows_guarded_tree_probe.py"

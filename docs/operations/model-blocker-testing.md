@@ -11,14 +11,31 @@ The user accepted at least 30% correct output for the 0.5B model and at least
 are closed. Do not repeat them to close unrelated resource, host or native work.
 Earlier thresholds, failures and collected evidence remain historical records.
 
-The inventory includes each registered incomplete roadmap and its declared
-criteria, even if an old issue record is resolved. A resolved issue does not
-pass a technical criterion. Unknown open-issue owners, changed registry inputs,
-missing criteria and owners whose declared targets are all complete still refuse planning. The
-issue-only security entry must retain its unresolved issue. The legacy CLI and
-JSON field names remain compatible. Only a specific required human action is a
-blocker in the roadmap review site; agent work stays pending. Inventory reads
-public metadata and starts no model or provider call.
+The inventory keeps every registered owner visible. Completed roadmaps are
+historical entries. Their criteria do not become new work. Unknown active owners,
+missing criteria and contradictory completion records refuse the current request.
+A resolved issue does not pass a technical criterion. Agent implementation and
+qualification stay pending; only a required human action is a roadmap blocker.
+Inventory reads public metadata and starts no model or provider call.
+
+## Current command
+
+Use the existing command to report accepted quality and remaining technical work:
+
+```bat
+dev-tools\scripts\qualification\run-model-tests.cmd --all-blocked --plan-only
+```
+
+The command schedules no accepted quality tests. It does not create a model-test
+evidence folder, acquire model locks, inspect archived cohorts or start a worker.
+The same no-collection rule applies to old run and restart forms. Closed quality
+is a reference to accepted evidence, never a new native, resource or roadmap pass.
+
+The agent must still finish safe temporary-file recovery and collect separate
+memory, delivery and cleanup evidence. Host, provider and security qualification
+remain separate. Missing or inconsistent metadata produces a fixed request for
+the agent to repair it; the command cannot fall back to the old full matrix.
+Unrelated explicit standalone diagnostic requests retain their existing entry.
 
 ## Historical remaining-only protocol
 

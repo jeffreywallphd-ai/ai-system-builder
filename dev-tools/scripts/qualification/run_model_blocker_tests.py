@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -87,32 +88,45 @@ def inventory(config):
     for path in sorted((ROOT / '.implementation-roadmaps').glob('*/state.json')):
         state = read(path)
         if (path.parent.name not in {r['source'] for r in folded}
-                and state['status'] not in ('completed','complete','final-approved')
-                and (path.parent.name in declared or any(b['status']=='open' for b in state['blockers']))):
+                and (path.parent.name in declared or state['status'] not in ('completed','complete','final-approved')
+                     and any(b['status']=='open' for b in state['blockers']))):
             states[path.parent.name] = state
     if set(states) != {o['id'] for o in config['owners']}:
         raise ValueError('Unmapped or changed open roadmap owner; update coverage before execution.')
     result = []
     for owner in config['owners']:
         state = states[owner['id']]
+        if type(state['status']) is not str or state['status'] not in {
+                'discovery','decision-options','decision-approval','roadmap-drafting','roadmap-review',
+                'approval-required','ready','executing','implementation-complete-qualification-pending',
+                'roadmap-ready-to-close','blocked','completed','complete','final-approved'}:
+            raise ValueError('Unknown recorded roadmap status.')
         refs = []
         for ref in owner['criteria']:
             increment_id, criterion_id = ref.split('/')
             increment = next((i for i in state['increments'] if i['id']==increment_id), None)
             criterion = next((c for c in increment['acceptanceCriteria'] if c['id']==criterion_id), None) if increment else None
             if criterion is None: raise ValueError('Missing canonical criterion.')
+            if type(criterion.get('qualification')) is not str or criterion['qualification'] not in ('local','controlled-environment'):
+                raise ValueError('Unknown canonical qualification type.')
             refs.append({'increment_id':increment_id, 'criterion_id':criterion_id,
                 'increment_status':increment['status'], 'description':criterion['description'], 'qualification':criterion['qualification']})
-        if refs and not any(ref['increment_status'] not in ('completed','complete','final-approved') for ref in refs):
+        completed = state['status'] in ('completed','complete','final-approved')
+        if completed and (any(b['status']=='open' for b in state['blockers'])
+                or any(i['status'] not in ('completed','complete','final-approved') for i in state['increments'])
+                or any(type(i.get('pendingCriteria')) is not list or i['pendingCriteria'] for i in state['increments'])):
+            raise ValueError('Completed owner metadata is contradictory.')
+        if not completed and refs and not any(ref['increment_status'] not in ('completed','complete','final-approved') for ref in refs):
             raise ValueError('Registered qualification targets are already complete.')
         blockers = [{k:b[k] for k in ('id','kind','summary','requiredAction')} for b in state['blockers'] if b['status']=='open']
-        if not refs and not blockers:
+        if not completed and not refs and not blockers:
             raise ValueError('Issue-only security coverage requires an unresolved issue.')
         # A resolved issue never qualifies a pending technical criterion. The
         # legacy field name stays compatible; human-only labels live in the UI.
         if len(blockers) > 24: raise ValueError('Blocker count exceeded.')
         result.append({'roadmap_id':owner['id'], 'roadmap_status':state['status'], 'coverage':owner['coverage'],
-            'criteria':refs, 'blockers':blockers, 'remaining_prerequisites':owner['pending'], 'parent_qualification':'pending',
+            'criteria':refs, 'blockers':blockers, 'remaining_prerequisites':owner['pending'],
+            'completed_history':completed, 'parent_qualification':'not-asserted' if completed else 'pending',
             'folded_history':[r for r in folded if r['owner']==owner['id']]})
     return result
 
@@ -419,7 +433,8 @@ def execute_bundle(folder, approved_sha):
     return code
 
 
-def main(argv=None):
+def _legacy_quality_main(argv=None):
+    """Historical protocol compatibility; the current CLI never dispatches here."""
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run',action='store_true'); parser.add_argument('--plan-only',action='store_true')
     parser.add_argument('--approved-run'); parser.add_argument('--plan-sha256')
@@ -459,6 +474,99 @@ def main(argv=None):
             'failure_log':standard.diagnostics.failure_log(error,'operator-admission'),
             'next_action':'Keep the saved evidence and request a fresh reviewed current-source plan.'}), flush=True)
         return 1
+
+
+def _closed_quality_bytes():
+    path=standard.original.checked_path('docs/operations/model-software-quality-qualification.json')
+    with path.open('rb') as stream:return stream.read(65537)
+
+
+def closed_quality_history():
+    """Read accepted metadata only. Never inspect/rescore the archived cohorts."""
+    body=_closed_quality_bytes()
+    if type(body) is not bytes or not 0<len(body)<=65536:raise ValueError('Quality policy byte bound.')
+    def unique(pairs):
+        result={}
+        for key,value in pairs:
+            if key in result:raise ValueError('Duplicate policy key.')
+            result[key]=value
+        return result
+    def invalid(_value):raise ValueError('Invalid policy number.')
+    def finite(value):
+        number=float(value)
+        if not math.isfinite(number):raise ValueError('Invalid policy number.')
+        return number
+    value=json.loads(body.decode('utf-8'),object_pairs_hook=unique,parse_constant=invalid,parse_float=finite)
+    if (type(value) is not dict or value.get('schema_version')!='model-software-quality-qualification-v1'
+            or value.get('status')!='completed' or value.get('qualification')!='passed'
+            or value.get('authority_ref')!='user-explicit-30percent-small-80percent-larger-software-quality-and-close-model-quality-tests'):
+        raise ValueError('Closed quality policy required.')
+    expected={'qwen05-float32':(30,'Qwen/Qwen2.5-0.5B-Instruct'),
+              'qwen15-bfloat16':(80,'Qwen/Qwen2.5-1.5B-Instruct')}
+    requirements=value['requirements'];evidence=value['evidence'];profiles=value['profiles']
+    if (type(requirements) is not dict or type(evidence) is not dict or type(profiles) is not list or len(profiles)!=2
+            or requirements.get('changes_to_production_safety_guards') is not False):
+        raise ValueError('Invalid closed quality policy.')
+    def hexadecimal(item,length):
+        if type(item) is not str or not re.fullmatch('[a-f0-9]{'+str(length)+'}',item):raise ValueError('Invalid accepted reference.')
+        return item
+    bundle=hexadecimal(evidence['bundle'],32)
+    for name in ('plan_sha256','summary_sha256','index_sha256'):hexadecimal(evidence[name],64)
+    result={};policy_sha=hashlib.sha256(body).hexdigest()
+    for profile in profiles:
+        if type(profile) is not dict or profile.get('profile') not in expected or profile['profile'] in result:
+            raise ValueError('Unknown or duplicate accepted profile.')
+        name=profile['profile'];floor,model=expected[name];declared=requirements[name+'_minimum_accuracy_percent']
+        if (type(declared) is not int or declared!=floor or type(profile.get('required_accuracy_percent')) is not int
+                or profile['required_accuracy_percent']!=floor or profile.get('model')!=model or profile.get('memory_mode')!='standard'
+                or profile.get('quality_test_status')!='completed' or profile.get('quality_qualification')!='passed'
+                or type(profile.get('integer_minimum_correct_per24')) is not int
+                or profile['integer_minimum_correct_per24']!=(floor*24+99)//100):
+            raise ValueError('Accepted profile differs from closed policy.')
+        result[name]={'profile':name,'required_accuracy_percent':floor,'qualification':'completed-reference-only',
+            'memory_mode':'standard','model_revision':hexadecimal(profile['revision'],40),
+            'run_id':hexadecimal(profile['run_id'],32),'plan_sha256':hexadecimal(profile['plan_sha256'],64),
+            'report_sha256':hexadecimal(profile['report_sha256'],64),'evidence_index_sha256':hexadecimal(profile['evidence_index_sha256'],64),
+            'policy_sha256':policy_sha,'accepted_bundle_id':bundle,'accepted_bundle_index_sha256':evidence['index_sha256']}
+    return [result[name] for name in PROFILES]
+
+
+class SchedulingParser(argparse.ArgumentParser):
+    def error(self,_message):self.exit(2,'Invalid model-test scheduling options. Use --help.\n')
+
+
+def main(argv=None):
+    """Current all-blocked entry: closed quality is history, never new work."""
+    parser=SchedulingParser(prog='model-test-scheduling',description='Report accepted model quality and remaining technical work without loading models.')
+    parser.add_argument('--run',action='store_true');parser.add_argument('--plan-only',action='store_true')
+    parser.add_argument('--approved-run');parser.add_argument('--plan-sha256')
+    parser.add_argument('--remaining-from',help='Historical bundle reference; accepted quality is not collected again.')
+    parser.add_argument('--restart',action='store_true',help='Compatibility option; closed quality tests are not restarted.')
+    args=parser.parse_args(argv)
+    if ((args.approved_run is None)!=(args.plan_sha256 is None)
+            or args.approved_run is not None and not re.fullmatch('[a-f0-9]{32}',args.approved_run)
+            or args.plan_sha256 is not None and not re.fullmatch('[a-f0-9]{64}',args.plan_sha256)
+            or args.remaining_from is not None and not re.fullmatch('[a-f0-9]{32}',args.remaining_from)
+            or args.restart and args.approved_run is None):parser.error('Invalid historical selector.')
+    report={'schema_version':'current-model-work-v1','qualification_complete':False,'model_started':False,
+            'native_effects':False,'scheduled_quality_cohorts':[],'evidence_directory_created':False,
+            'resource_qualification':'pending-not-asserted','parent_qualification':'not-asserted'}
+    try:
+        history=closed_quality_history();rows=inventory(registry())
+        owners=[{'roadmap_id':row['roadmap_id'],'recorded_status':row['roadmap_status'],
+            'classification':'completed-history' if row['completed_history'] else 'technical-work-pending',
+            'criterion_refs':[r['increment_id']+'/'+r['criterion_id'] for r in row['criteria']]} for row in rows]
+        report.update(status='quality-closed-no-collection',accepted_quality_history=history,owners=owners,
+            message='Accepted model quality stays closed. No quality tests were started.',
+            next_action='The agent must finish native recovery and separate resource, delivery and cleanup checks. These remain pending.')
+        if len(json.dumps(report,allow_nan=False).encode())>65536:raise ValueError('Current work report exceeded its bound.')
+    except Exception:
+        report.update(status='metadata-unavailable-no-collection',
+            message='The agent must repair the test status records. No model tests were started.')
+        # Do not disclose partial, contradictory or unbounded metadata.
+        report.pop('accepted_quality_history',None);report.pop('owners',None);report.pop('next_action',None)
+        print(json.dumps(report,allow_nan=False,sort_keys=True),flush=True);return 1
+    print(json.dumps(report,allow_nan=False,sort_keys=True),flush=True);return 0
 
 
 if __name__=='__main__':

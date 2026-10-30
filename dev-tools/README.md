@@ -1455,3 +1455,21 @@ reuse the existing file, folder, inventory and nested-tree checks. They inject n
 real failed handle, start no worker/model and inspect no failed or retained tree.
 These helper guarantees do not qualify production protection, durable accounting,
 guardian ordering, guarded restart or another roadmap.
+
+
+## Current model-quality scheduling
+
+The existing `run-model-tests.cmd --all-blocked --plan-only` path reports the
+accepted 30% small-model and 80% larger-model quality references. It schedules no
+quality cohorts, creates no evidence directory and acquires no model lock. Old
+run/restart forms cannot reopen that accepted work. Completed declared roadmap
+owners remain visible as history, while real resource/native/provider/host work
+stays pending. Unknown owners, missing criteria or contradictory records refuse
+effects with fixed messages. No accepted quality is rescored.
+
+The current public dispatcher never invokes the private historical quality entry.
+Its old 22/23 arithmetic and protocol functions remain for archived compatibility
+checks. The `model-qualification-scheduling` profile runs the fixed model-free
+Python test file and preserves unknown, explicit and incomplete coverage fallback.
+It grants no native capability, new resource/quality result or parent closure.
+Unrelated explicit standalone diagnostics and the launcher forwarding stay intact.

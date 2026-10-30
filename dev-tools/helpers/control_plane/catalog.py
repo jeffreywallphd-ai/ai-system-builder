@@ -11,6 +11,7 @@ from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
 QUALIFICATION_PROFILES = (
+    "model-qualification-scheduling",
     "windows-guarded-tree-probe",
     "windows-guarded-inventory-probe",
     "windows-owned-job-probe",
@@ -25,6 +26,7 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "model-qualification-scheduling": ['dev-tools/scripts/qualification/run_model_blocker_tests.py', 'dev-tools/scripts/qualification/tests/test_model_blocker_tests.py', 'dev-tools/helpers/tests/test_control_plane_model_scheduling_profile.py'],
     "windows-guarded-tree-probe": ['dev-tools/scripts/native/probe_windows_guarded_tree.py', 'dev-tools/scripts/native/tests/test_windows_guarded_tree_probe.py', 'dev-tools/helpers/tests/test_control_plane_tree_probe_profile.py'],
     "windows-guarded-inventory-probe": ['dev-tools/scripts/native/probe_windows_guarded_inventory.py', 'dev-tools/scripts/native/tests/test_windows_guarded_inventory_probe.py', 'dev-tools/helpers/tests/test_control_plane_inventory_probe_profile.py'],
     "windows-owned-job-probe": ['dev-tools/scripts/native/probe_windows_owned_job.py', 'dev-tools/scripts/native/tests/test_windows_owned_job_probe.py', 'dev-tools/helpers/tests/test_control_plane_owned_job_probe_profile.py'],
