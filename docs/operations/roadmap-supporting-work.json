@@ -6547,6 +6547,82 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "version-windows-readonly-identity-source",
+      "work_criteria": [
+        "exact-prior-native-source-checkpoint",
+        "bounded-unit-profile-and-fallback",
+        "native-evidence-and-scope-truth",
+        "selected-head-proof-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b197d196b64fcab3d53c81494c9958de3bef29f4c395c7372eea576f052e52f1",
+      "review_digest": "24046c5436e20ba53069a53c811792b96ac1117f9735a92e3798a4e99cbe1eba",
+      "scope": "Committed the private Windows file-identity helper with selected-source and committed-dependency proof. Four routing, nine adapter, thirteen builder and nine physical native cases passed. Production composition stays absent. New child creation remains possible; deletion, reveal, protected accounting, recovery and actual offload remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "version-windows-readonly-identity-source",
+      "work_criteria": [
+        "exact-prior-native-source-checkpoint",
+        "bounded-unit-profile-and-fallback",
+        "native-evidence-and-scope-truth",
+        "selected-head-proof-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b197d196b64fcab3d53c81494c9958de3bef29f4c395c7372eea576f052e52f1",
+      "review_digest": "24046c5436e20ba53069a53c811792b96ac1117f9735a92e3798a4e99cbe1eba",
+      "scope": "Committed the private Windows file-identity helper with selected-source and committed-dependency proof. Four routing, nine adapter, thirteen builder and nine physical native cases passed. Production composition stays absent. New child creation remains possible; deletion, reveal, protected accounting, recovery and actual offload remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "version-windows-readonly-identity-source",
+      "work_criteria": [
+        "exact-prior-native-source-checkpoint",
+        "bounded-unit-profile-and-fallback",
+        "native-evidence-and-scope-truth",
+        "selected-head-proof-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b197d196b64fcab3d53c81494c9958de3bef29f4c395c7372eea576f052e52f1",
+      "review_digest": "24046c5436e20ba53069a53c811792b96ac1117f9735a92e3798a4e99cbe1eba",
+      "scope": "Committed the private Windows file-identity helper with selected-source and committed-dependency proof. Four routing, nine adapter, thirteen builder and nine physical native cases passed. Production composition stays absent. New child creation remains possible; deletion, reveal, protected accounting, recovery and actual offload remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "version-windows-readonly-identity-source",
+      "work_criteria": [
+        "exact-prior-native-source-checkpoint",
+        "bounded-unit-profile-and-fallback",
+        "native-evidence-and-scope-truth",
+        "selected-head-proof-and-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b197d196b64fcab3d53c81494c9958de3bef29f4c395c7372eea576f052e52f1",
+      "review_digest": "24046c5436e20ba53069a53c811792b96ac1117f9735a92e3798a4e99cbe1eba",
+      "scope": "Committed the private Windows file-identity helper with selected-source and committed-dependency proof. Four routing, nine adapter, thirteen builder and nine physical native cases passed. Production composition stays absent. New child creation remains possible; deletion, reveal, protected accounting, recovery and actual offload remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

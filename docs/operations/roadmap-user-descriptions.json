@@ -13072,6 +13072,17 @@
           "Full combined testing is deferred. Accepted model accuracy results stay closed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f6df3f4d109c5fb297cfb29d886aae2ec4528a8adfb505ce5623bead67ef8380",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent committed Windows support that checks file and folder references. Test selection, adapter, build-helper and nine native Windows cases passed.",
+          "The selected source passed with committed dependencies. This support is separate from production file actions. File protection and safe offload restart remain pending. No user action is needed."
+        ]
+      }
     }
   ]
 }
