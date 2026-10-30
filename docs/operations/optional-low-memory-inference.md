@@ -597,3 +597,33 @@ Recursive existing/inherited tree protection, protected saved accounting,
 guardian crash ordering and actual offload remain pending. The unknown retained
 usage still consumes the full 12 GiB budget. Accepted accuracy stays closed;
 full software testing remains deferred.
+
+
+## Nested-folder guard composition
+
+No user action is needed. The agent is testing how the existing guards work
+together across two small newly created folders. Three files contain a total
+of 4096 data bytes. Two empty files have the same name under different parents.
+The default and `--plan` modes have no native effects.
+
+The helper requires two complete equal listings while all folder and file
+guards remain active. It checks native identities under the correct parent.
+A deliberately wrong parent-specific identity must be refused by the metadata
+comparison. No unexpected entry is opened or followed. Native IDs and names
+stay internal; reports contain bounded scalar results.
+
+The nested folder borrows its parent handle. It must not close that handle.
+Cleanup releases all relevant guards before removing known children, then
+confirms the parent is still available before its own cleanup. Unknown native
+close results, constructor returns, guard states or metadata stop cleanup and
+retain ownership. No recursive path deletion or old-data adoption is allowed.
+
+This is a fixed two-level test, not a general recursive protection provider.
+Existing/inherited trees, protected saved accounting, actual guardian crash
+ordering and real low-memory loading still require implementation or evidence.
+The full unknown 12 GiB charge and stronger application denials remain intact.
+Accepted model accuracy stays closed; full software testing remains deferred.
+
+The first Windows attempt failed because a guard changed. Its test files stay
+untouched. Fixed role and step facts now help identify where a later attempt
+fails. A failed test never becomes a completed check through this reporting.

@@ -1396,3 +1396,41 @@ controls require separate source safety review and explicit execution. This is
 flat fixture metadata, not recursive tree protection, whole physical disk usage,
 a protected journal, crash ordering, real offload or a staging capability.
 The 12 GiB unknown charge, model guards and application denials stay unchanged.
+
+
+## Nested guarded-folder composition diagnostic
+
+`python -B dev-tools/scripts/native/probe_windows_guarded_tree.py --plan` prints
+an effect-free plan. Explicit `--self-test` uses only one new two-level fixture
+per case: two folders, three files and 4096 data bytes. Two empty files have the
+same leaf name in different folders. No path, PID, command or limit override
+exists; no model or worker starts.
+
+The nested-directory control borrows its parent handle and never closes it.
+Creation must acknowledge a new object; unknown returns, alias handles or
+lifetimes prevent cleanup. All permission changes precede all guards. Shared
+close failures mark the native adapter uncertain, and failed setup prevents
+cleanup or retries.
+
+Both directory listings must complete twice under every root, nested and file
+guard. Final guard checks follow all metadata reads. IDs, volume, sizes and
+parent membership must match the known created tree; unknown entries are not
+opened or followed. The refusal case swaps expected same-name file identities
+and must fail the parent-specific comparison. This is a software comparison
+refusal after native observation, not a foreign filesystem operation.
+
+Cleanup retires file guards, then nested and root guards, before child deletion.
+It removes only exact known objects and confirms that the borrowed parent is
+still open before root cleanup. There is no recursive path deletion.
+The `windows-guarded-tree-probe` profile runs mocked pure tests only; native
+effects need separate source preflight and explicit execution.
+
+This fixed two-level composition is not arbitrary recursive/existing/inherited
+tree protection, physical disk accounting, a protected journal, guardian crash
+ordering, actual offload or parent qualification. Original guards and the
+unknown retained 12 GiB charge remain unchanged.
+
+Failures report only a fixed guard role and setup/inventory checkpoint. Each
+already acquired guard is checked after the next setup operation; any break
+stops immediately and preserves the failed fixture. The initial failed run
+remains historical evidence, without an inferred cause or cleanup pass.
