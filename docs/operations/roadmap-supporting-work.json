@@ -6839,6 +6839,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-stream-directory-protection-probe",
+      "work_criteria": [
+        "closed-new-fixture-and-metadata-boundary",
+        "truthful-stream-and-directory-refusal",
+        "focused-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35b1b6fe2946c49ca3690dada8e2abd77a18b2a2cdc8d5e552257ac18212f1d3",
+      "review_digest": "b873601466506ded2a365637a3f3e62a5a5172a11f5b2e1d4a32c346037a3b0a",
+      "scope": "Added strict stream metadata refusal, native refusal of protection while an earlier FILE_ADD_FILE folder handle stayed open, and interruption-safe guard ownership. 119 pure checks, three focused gates and nine Windows controls passed with exact cleanup. Earlier setup failure remains failed. Native801 was not exercised; the named-stream control is software refusal. Existing/inherited/full trees, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-stream-directory-protection-probe",
+      "work_criteria": [
+        "closed-new-fixture-and-metadata-boundary",
+        "truthful-stream-and-directory-refusal",
+        "focused-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35b1b6fe2946c49ca3690dada8e2abd77a18b2a2cdc8d5e552257ac18212f1d3",
+      "review_digest": "b873601466506ded2a365637a3f3e62a5a5172a11f5b2e1d4a32c346037a3b0a",
+      "scope": "Added strict stream metadata refusal, native refusal of protection while an earlier FILE_ADD_FILE folder handle stayed open, and interruption-safe guard ownership. 119 pure checks, three focused gates and nine Windows controls passed with exact cleanup. Earlier setup failure remains failed. Native801 was not exercised; the named-stream control is software refusal. Existing/inherited/full trees, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-stream-directory-protection-probe",
+      "work_criteria": [
+        "closed-new-fixture-and-metadata-boundary",
+        "truthful-stream-and-directory-refusal",
+        "focused-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35b1b6fe2946c49ca3690dada8e2abd77a18b2a2cdc8d5e552257ac18212f1d3",
+      "review_digest": "b873601466506ded2a365637a3f3e62a5a5172a11f5b2e1d4a32c346037a3b0a",
+      "scope": "Added strict stream metadata refusal, native refusal of protection while an earlier FILE_ADD_FILE folder handle stayed open, and interruption-safe guard ownership. 119 pure checks, three focused gates and nine Windows controls passed with exact cleanup. Earlier setup failure remains failed. Native801 was not exercised; the named-stream control is software refusal. Existing/inherited/full trees, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-stream-directory-protection-probe",
+      "work_criteria": [
+        "closed-new-fixture-and-metadata-boundary",
+        "truthful-stream-and-directory-refusal",
+        "focused-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35b1b6fe2946c49ca3690dada8e2abd77a18b2a2cdc8d5e552257ac18212f1d3",
+      "review_digest": "b873601466506ded2a365637a3f3e62a5a5172a11f5b2e1d4a32c346037a3b0a",
+      "scope": "Added strict stream metadata refusal, native refusal of protection while an earlier FILE_ADD_FILE folder handle stayed open, and interruption-safe guard ownership. 119 pure checks, three focused gates and nine Windows controls passed with exact cleanup. Earlier setup failure remains failed. Native801 was not exercised; the named-stream control is software refusal. Existing/inherited/full trees, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

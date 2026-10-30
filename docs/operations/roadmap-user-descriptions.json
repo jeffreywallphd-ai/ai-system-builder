@@ -13127,6 +13127,17 @@
           "The agent still needs to protect existing folder trees and finish restart recovery. Actual low-memory testing remains pending. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5279787f404fb658a9bb4801367dbd52954d28690ce6ed5dcda50f4f9bf39747",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All nine Windows tests and 119 code checks passed. The file test refused an extra data stream. The folder test refused protection while a handle that could add files remained open. All temporary files and folders were removed.",
+          "The agent still needs to protect complete existing folder trees and finish restart recovery. Actual low-memory loading tests remain pending. No user action is needed."
+        ]
+      }
     }
   ]
 }
