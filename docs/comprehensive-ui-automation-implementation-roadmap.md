@@ -3,7 +3,7 @@
 # Comprehensive Functional UI Automation Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-10-29T13:13:52Z`
+- Updated: `2026-10-30T04:57:35Z`
 
 ## Objective
 
@@ -96,7 +96,7 @@ Both options cover the current mounted functionality and require tests, executio
 | --- | --- | --- | --- |
 | 1: Data, Context and AI preparation journeys | Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects. | None | `implemented-pending-qualification` |
 | 2: Assets to useful compositions and published runtimes | Protect the complete supported asset-authoring and system-building user journey on both hosts. Build meaningful multi-component systems through the actual current modal/click editor, preserve configuration and immutable versions, build/publish exact revisions and exercise the currently mounted controlled-conversation runtime. Execute tests and repair identified defects. | daily-data-and-ai-journeys | `implemented-pending-qualification` |
-| 3: Operational recovery and complete UI coverage qualification | Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure. | daily-data-and-ai-journeys, asset-to-published-system-journeys | `implementing` |
+| 3: Operational recovery and complete UI coverage qualification | Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure. | daily-data-and-ai-journeys, asset-to-published-system-journeys | `verifying` |
 
 ## Increment 1: Data, Context and AI preparation journeys
 
@@ -213,7 +213,7 @@ Revert the scoped tested authoring/lifecycle corrections and harness extension w
 ## Increment 3: Operational recovery and complete UI coverage qualification
 
 - Id: `operational-ui-and-coverage-qualification`
-- Status: `implementing`
+- Status: `verifying`
 - Dependencies: `daily-data-and-ai-journeys`, `asset-to-published-system-journeys`
 
 Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure.

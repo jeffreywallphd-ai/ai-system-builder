@@ -249,7 +249,7 @@
       "user_description": {
         "purpose": "Preserve everyday settings, navigation, notifications and runtime recovery.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must cover mounted Settings, thin-client Security, runtime readiness and controls, workspace summaries and shell navigation.",
@@ -270,7 +270,7 @@
       "user_description": {
         "purpose": "Prove accessible critical workflows and observe startup and editor responsiveness separately from inference.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Packaged Windows desktop and local Chrome must complete critical workflows with keyboard and correct focus and return behavior.",
@@ -293,7 +293,7 @@
       "user_description": {
         "purpose": "Prove executed coverage for every supported feature without claiming unrelated qualification.",
         "owner": "agent",
-        "next_action": "The agent must add the two Hugging Face import journeys and the Desktop private-publication journey. Settings, model-reference and local artifact journeys are committed. Then link each feature to its tests and review the coverage. No user action is needed.",
+        "next_action": "All 39 feature families now link to current test definitions. The agent will collect the remaining app-level evidence during the later test campaign. Source inspection does not run those tests. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must regenerate the mounted route, tab, action and capability-registry inventory.",
@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -340,7 +340,7 @@
       "user_description": {
         "purpose": "Preserve a readable, dynamic and read-only review site.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Relevant document and browser tests must verify Open and Completed sections and original creation-date order.",
@@ -360,7 +360,7 @@
       "user_description": {
         "purpose": "Complete the declared current interface tests and final repository checks before closure.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "After every planned implementation chunk is complete, all applicable packaged-desktop and local Chrome journeys must pass on final source.",
@@ -384,7 +384,7 @@
       "user_description": {
         "purpose": "Prove interface repairs without weakening the underlying security controls.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must update the security threat and control review for the actual changed paths.",
@@ -13005,6 +13005,28 @@
         "sentences": [
           "Desktop and Thin Client now have tests for local file import, content checks, reload, deletion and workspace separation. Desktop also has an export check. The browser app has a publication permission check.",
           "Focused checks and test collection passed. Actual app runs, provider import, private publication and final coverage review remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f846dfa94276da8857ea009c7f7b77123310058013a4660161796cf64cb80683",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added two provider-import test journeys and one private-publication test journey.",
+          "Focused checks passed for credential handling, exact file content, time limits and cleanup. Actual app and provider runs remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d488cb159ad61c0264e6eebf33db3ea20e04b2a7c19ce73100f0286390022306",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All 39 supported feature families now link to current test definitions. The agent kept all 131 behavior requirements and saved unused inventory rows as history.",
+          "The focused map checks passed within the existing size limits. App-level checks and final combined testing remain pending."
         ]
       }
     }

@@ -6328,6 +6328,99 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "provider-functional-host-definitions",
+      "work_criteria": [
+        "provider-reference-host-journeys",
+        "private-publication-host-journey",
+        "closed-private-fixture-and-loader",
+        "current-scoped-tests-and-preservation"
+      ],
+      "receipt_digest": "42f38d146713b22918decd42321c47bbef87620daf31622ef8949c237c1a768d",
+      "review_digest": "410d5575d65e1f3e9eadd2c4f1a5b805bde636e82428eafe2a806fbc964376c2",
+      "scope": "Three test journeys now cover exact provider references on Desktop and Thin Client and private Desktop publication. Synthetic credential, byte, timeout and cleanup checks passed. The tests keep local branch records separate from remote commit evidence. Actual app and provider runs remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "provider-functional-host-definitions",
+      "work_criteria": [
+        "provider-reference-host-journeys",
+        "private-publication-host-journey",
+        "closed-private-fixture-and-loader",
+        "current-scoped-tests-and-preservation"
+      ],
+      "receipt_digest": "42f38d146713b22918decd42321c47bbef87620daf31622ef8949c237c1a768d",
+      "review_digest": "410d5575d65e1f3e9eadd2c4f1a5b805bde636e82428eafe2a806fbc964376c2",
+      "scope": "Three test journeys now cover exact provider references on Desktop and Thin Client and private Desktop publication. Synthetic credential, byte, timeout and cleanup checks passed. The tests keep local branch records separate from remote commit evidence. Actual app and provider runs remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "provider-functional-host-definitions",
+      "work_criteria": [
+        "provider-reference-host-journeys",
+        "private-publication-host-journey",
+        "closed-private-fixture-and-loader",
+        "current-scoped-tests-and-preservation"
+      ],
+      "receipt_digest": "42f38d146713b22918decd42321c47bbef87620daf31622ef8949c237c1a768d",
+      "review_digest": "410d5575d65e1f3e9eadd2c4f1a5b805bde636e82428eafe2a806fbc964376c2",
+      "scope": "Three test journeys now cover exact provider references on Desktop and Thin Client and private Desktop publication. Synthetic credential, byte, timeout and cleanup checks passed. The tests keep local branch records separate from remote commit evidence. Actual app and provider runs remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "final-functional-definition-census",
+      "work_criteria": [
+        "all-families-meaningfully-linked",
+        "bounded-current-map-and-exact-history",
+        "honest-readiness-and-owned-checkpoint"
+      ],
+      "receipt_digest": "991e5a3537eb7475cce775338a1aa90cff3f125856a0feccdf13e6f3702496c6",
+      "review_digest": "5e9286db9c3d0016bd60d052f75e76d1f4d8745243bb31e16b4acf191d4bdcfa",
+      "scope": "All39 supported families and131 behavior requirements now link current reviewed test definitions. Nine meaningful bodies and oracles were added to the map. Eight unused rows remain in a historical archive. The unchanged size limits and27 focused checks passed. Source inspection runs no app tests; final qualification remains pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "final-functional-definition-census",
+      "work_criteria": [
+        "all-families-meaningfully-linked",
+        "bounded-current-map-and-exact-history",
+        "honest-readiness-and-owned-checkpoint"
+      ],
+      "receipt_digest": "991e5a3537eb7475cce775338a1aa90cff3f125856a0feccdf13e6f3702496c6",
+      "review_digest": "5e9286db9c3d0016bd60d052f75e76d1f4d8745243bb31e16b4acf191d4bdcfa",
+      "scope": "All39 supported families and131 behavior requirements now link current reviewed test definitions. Nine meaningful bodies and oracles were added to the map. Eight unused rows remain in a historical archive. The unchanged size limits and27 focused checks passed. Source inspection runs no app tests; final qualification remains pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

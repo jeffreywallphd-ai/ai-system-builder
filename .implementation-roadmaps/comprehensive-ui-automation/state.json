@@ -366,6 +366,37 @@
         "Existing read-only status/order/work-item/theme/refresh and finite collection/admission/cleanup tests remain. No actual app, model, provider, native or full suite is qualified by this declaration."
       ],
       "title": "Read-only review UI and reliable test reporting"
+    },
+    {
+      "areas": [
+        "Meaningful current UI bodies and exact functional assertions",
+        "Bounded source coverage and immutable historical inventory",
+        "Clear reviewed support and final qualification scheduling"
+      ],
+      "chunkId": "coverage-census-and-qualification-readiness",
+      "completedAt": "2026-10-30T04:57:35Z",
+      "criteriaIds": [
+        "coverage-complete-and-honest",
+        "final-current-ui-and-repository-gates",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-current-census.json",
+        "docs/operations/comprehensive-ui-automation-census-source-history.json",
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-coverage-census-and-qualification-readiness",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Finished feature-level UI test construction and coverage readiness. All39 supported families and131 original behavior requirements link current reviewed test definitions and applicable hosts. Settings, model-reference, local-artifact and provider journeys have focused helper and source checks. Eight unused inventory rows are preserved as history within unchanged limits. Current candidate source mapping passed27 focused checks and separate review. This records implementation readiness only; actual app/native/provider observations and final combined qualification remain pending or deferred. Accepted model accuracy stays closed.",
+      "tests": [
+        "Settings, model-reference, artifact and provider source chunks are committed with passed scoped checks and genuine separate reviews.",
+        "Provider source passed80Node and327Vitest checks,31 selected builds,21 type roots with zero diagnostics, and exact2Desktop/1Thin test discovery. No app or provider case was executed.",
+        "The final source map passed27 focused checks. All39 families,131 requirements,16 inventories and29 host files remain; aggregate190 source inputs and489516 document bytes meet unchanged limits.",
+        "Actual running-app, managed authorization, native accessibility/performance/runtime and the final all-suite campaign remain pending. Source inspection, discovery and synthetic outcomes grant no parent pass."
+      ],
+      "title": "Complete coverage map and final qualification readiness"
     }
   ],
   "completion": null,
@@ -895,6 +926,12 @@
       "recordedAt": "2026-10-29T13:13:52Z",
       "sequence": 42,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "877d5dfa0766a09e29bb244c78631bcb7dd401910bb9fac90db23d67c0fd4fcc",
+      "recordedAt": "2026-10-30T04:57:35Z",
+      "sequence": 43,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1356,7 +1393,8 @@
         "settings-save-and-query-recovery",
         "operational-task-and-shell-coverage",
         "accessible-host-observation-definitions",
-        "review-site-and-run-evidence-recovery"
+        "review-site-and-run-evidence-recovery",
+        "coverage-census-and-qualification-readiness"
       ],
       "deliverables": [
         "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
@@ -1525,7 +1563,7 @@
       ],
       "rollback": "Revert scoped operational UI and harness corrections while retaining secure settings defaults, exact current guards, read-only review semantics and immutable evidence. Never erase failed runs, downgrade policy, clear unknown native ownership or delete retained staging as a recovery shortcut. Preserve user data and use explicit retry/blocked state when proof is unavailable.",
       "startedAt": "2026-10-27T22:46:18Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Operational recovery and complete UI coverage qualification",
       "verification": [
         "Run exact settings/security/client, notification/task-observation, runtime/readiness, memory-shortfall, shell/dashboard and shared accessibility tests; retain a rendered denied/failure path for each changed trust boundary.",
@@ -1582,5 +1620,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-29T13:13:52Z"
+  "updatedAt": "2026-10-30T04:57:35Z"
 }
