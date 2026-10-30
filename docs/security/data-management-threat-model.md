@@ -1713,3 +1713,17 @@ or further use. No close lock spans pipe-thread joins. These controls preserve
 the fixed helper identity, Job limits, atomic membership, source binding and
 fixed public errors. Model-free fault and caller tests cover these paths; they
 do not establish physical Windows resource locks, host OCR or crash qualification.
+
+
+### Native OCR qualification retirement
+
+The model-free OCR test operator keeps a private exact-entry retirement ledger
+before any observer or guardian cleanup effect. A confirmed repeated retirement
+is a no-op. False returns, exceptions, reentry, interrupted metadata and unknown
+detachment retain the exact entry and deny later close/detach attempts. The
+guardian captures its original process wrapper and numeric handle before Detach,
+and validates the exact acknowledged transfer before one native close. A copied
+or unregistered dictionary cannot authorize a close. State locks do not span
+native calls or reader joins. Existing source-bound run identity, fixed process
+limits, crash assertions and public failure codes remain. Portable fault checks
+are not native execution or a parent-roadmap pass.

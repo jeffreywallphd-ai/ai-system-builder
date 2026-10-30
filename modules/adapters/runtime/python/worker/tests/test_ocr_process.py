@@ -1,7 +1,7 @@
 """Portable fault semantics. Native lifetime evidence is collected separately."""
 import threading
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 from modules.adapters.runtime.python.worker.ocr import windows_process as p
 from modules.adapters.runtime.python.worker.ocr.protocol import OcrCancelled
 from modules.adapters.runtime.python.worker.ocr.windows_api import NativeFailure, Windows
@@ -285,6 +285,8 @@ class OcrProcessTests(unittest.TestCase):
         child.wait.return_value = 91
         child.stdin.close.side_effect = OSError("synthetic-close-failure")
         child.stdout.closed = True
+        child._handle = MagicMock()
+        child._handle.__int__.return_value = 123
         child._handle.Detach.return_value = 123
         native.k.CloseHandle.return_value = False
         reader.is_alive.return_value = False
@@ -328,6 +330,216 @@ class OcrProcessTests(unittest.TestCase):
         self.assertTrue(result["cleanup_confirmed"])
         self.assertEqual(result["root_exit_code"], p._FORCED_EXIT)
         self.assertIsNone(result["failure_phase"])
+
+
+class OcrOperatorRetirementTests(unittest.TestCase):
+    def setUp(self):
+        self.patches = [patch.object(q, name, {}, create=True) for name in
+                        ("_GUARDIANS", "_OBSERVERS", "_OPERATOR_PENDING", "_RETIREMENTS")]
+        for item in self.patches:
+            item.start(); self.addCleanup(item.stop)
+
+    def observer(self, native):
+        import ctypes
+        entry = {"handle": ctypes.c_void_p(123)}
+        q._OBSERVERS[id(entry)] = entry
+        return entry
+
+    def guardian(self, native):
+        class Handle:
+            def __init__(self):
+                self.Detach = Mock(return_value=123)
+            def __int__(self):
+                return 123
+        child, reader = Mock(), Mock()
+        child.poll.return_value = child.wait.return_value = 0
+        child._handle = Handle()
+        child.stdin.closed = child.stdout.closed = True
+        reader.ident = 1
+        reader.is_alive.return_value = False
+        entry = {"child": child, "reader": reader}
+        q._GUARDIANS[id(entry)] = entry
+        return entry
+
+    def test_successful_observer_retirement_is_idempotent(self):
+        native = Mock()
+        native.k.CloseHandle.return_value = True
+        entry = self.observer(native)
+        q.retire_observer(entry, native)
+        q.retire_observer(entry, native)
+        native.k.CloseHandle.assert_called_once_with(123)
+        self.assertFalse(q._OBSERVERS or q._OPERATOR_PENDING)
+
+    def test_unknown_observer_close_is_never_repeated(self):
+        for failure in (False, OSError("private diagnostic"), KeyboardInterrupt(), SystemExit()):
+            with self.subTest(failure=type(failure).__name__):
+                native = Mock()
+                entry = self.observer(native)
+                native.k.CloseHandle.side_effect = failure if isinstance(failure, BaseException) else None
+                native.k.CloseHandle.return_value = failure
+                for _ in range(2):
+                    with self.assertRaises(NativeFailure):
+                        q.retire_observer(entry, native)
+                native.k.CloseHandle.assert_called_once_with(123)
+                self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+                self.assertEqual(entry["handle"].value, 123)
+
+    def test_successful_guardian_retirement_never_detaches_or_closes_twice(self):
+        native = Mock()
+        native.k.CloseHandle.return_value = True
+        entry = self.guardian(native)
+        q.retire_guardian(entry, native)
+        q.retire_guardian(entry, native)
+        entry["child"]._handle.Detach.assert_called_once()
+        entry["child"].wait.assert_called_once_with(timeout=10)
+        entry["child"].stdin.close.assert_called_once()
+        native.k.CloseHandle.assert_called_once_with(123)
+        self.assertFalse(q._GUARDIANS or q._OPERATOR_PENDING)
+
+    def test_guardian_unknown_close_keeps_original_handle_and_never_detaches_again(self):
+        native = Mock()
+        native.k.CloseHandle.return_value = False
+        entry = self.guardian(native)
+        for _ in range(2):
+            with self.assertRaises(NativeFailure):
+                q.retire_guardian(entry, native)
+        entry["child"]._handle.Detach.assert_called_once()
+        native.k.CloseHandle.assert_called_once_with(123)
+        self.assertEqual(entry["process_handle"], 123)
+        self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+
+    def test_unregistered_or_copied_observer_has_no_close_authority(self):
+        native = Mock()
+        original = self.observer(native)
+        for entry in (dict(original), {"handle": original["handle"]}):
+            with self.assertRaises(NativeFailure):
+                q.retire_observer(entry, native)
+        native.k.CloseHandle.assert_not_called()
+
+    def test_uncertain_detach_retains_original_wrapper_and_value_without_native_close(self):
+        for failure in (OSError("private diagnostic"), KeyboardInterrupt(), SystemExit()):
+            with self.subTest(failure=type(failure).__name__):
+                native = Mock()
+                entry = self.guardian(native)
+                wrapper = entry["child"]._handle
+                wrapper.Detach.side_effect = failure
+                for _ in range(2):
+                    with self.assertRaises(NativeFailure):
+                        q.retire_guardian(entry, native)
+                wrapper.Detach.assert_called_once()
+                native.k.CloseHandle.assert_not_called()
+                record = q._RETIREMENTS[id(entry)]
+                self.assertIs(record["process_wrapper"], wrapper)
+                self.assertEqual(record["native_handle"], 123)
+                self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+
+    def test_mismatched_transfer_and_preexisting_raw_value_never_grant_close_authority(self):
+        for preexisting in (True, False):
+            with self.subTest(preexisting=preexisting):
+                native = Mock()
+                entry = self.guardian(native)
+                if preexisting:
+                    entry["process_handle"] = 999
+                else:
+                    entry["child"]._handle.Detach.return_value = 999
+                with self.assertRaises(NativeFailure):
+                    q.retire_guardian(entry, native)
+                with self.assertRaises(NativeFailure):
+                    q.retire_guardian(entry, native)
+                self.assertEqual(entry["child"]._handle.Detach.call_count, 0 if preexisting else 1)
+                native.k.CloseHandle.assert_not_called()
+                self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+
+    def test_reentry_cannot_overwrite_uncertainty_with_native_acknowledgement(self):
+        native = Mock()
+        entry = self.observer(native)
+        def close(handle):
+            self.assertIs(q._RETIREMENTS[id(entry)]["entry"], entry)
+            self.assertEqual(q._RETIREMENTS[id(entry)]["native_handle"], handle)
+            with self.assertRaises(NativeFailure):
+                q.retire_observer(entry, native)
+            return True
+        native.k.CloseHandle.side_effect = close
+        for _ in range(2):
+            with self.assertRaises(NativeFailure):
+                q.retire_observer(entry, native)
+        native.k.CloseHandle.assert_called_once_with(123)
+        self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+
+    def test_post_ack_registry_failure_preserves_custody_without_second_close(self):
+        class Interrupted(dict):
+            def pop(self, key):
+                super().pop(key)
+                raise KeyboardInterrupt()
+        native = Mock()
+        native.k.CloseHandle.return_value = True
+        entry = self.observer(native)
+        with patch.object(q, "_OBSERVERS", Interrupted({id(entry): entry})):
+            for _ in range(2):
+                with self.assertRaises(NativeFailure):
+                    q.retire_observer(entry, native)
+            self.assertIs(q._RETIREMENTS[id(entry)]["entry"], entry)
+            self.assertEqual(q._RETIREMENTS[id(entry)]["native_handle"], 123)
+            self.assertIs(q._OPERATOR_PENDING[id(entry)], entry)
+        native.k.CloseHandle.assert_called_once_with(123)
+
+    def test_concurrent_close_never_holds_retirement_lock_across_native_dispatch(self):
+        native = Mock()
+        entry = self.observer(native)
+        entered, release = threading.Event(), threading.Event()
+        failures = []
+        def close(handle):
+            entered.set()
+            self.assertTrue(release.wait(2))
+            return True
+        def retire():
+            try:
+                q.retire_observer(entry, native)
+            except NativeFailure:
+                failures.append(True)
+        native.k.CloseHandle.side_effect = close
+        first = threading.Thread(target=retire)
+        second = threading.Thread(target=retire)
+        first.start()
+        try:
+            self.assertTrue(entered.wait(2))
+            second.start(); second.join(1)
+            self.assertFalse(second.is_alive())
+        finally:
+            release.set(); first.join(2)
+            if second.ident is not None:
+                second.join(2)
+        self.assertFalse(first.is_alive() or second.is_alive())
+        self.assertEqual(len(failures), 2)
+        native.k.CloseHandle.assert_called_once_with(123)
+
+    def test_guardian_reader_join_has_no_retirement_lock(self):
+        native = Mock()
+        native.k.CloseHandle.return_value = True
+        entry = self.guardian(native)
+        acquired = []
+        def join(timeout):
+            def other():
+                with q._RETIREMENT_LOCK:
+                    acquired.append(True)
+            thread = threading.Thread(target=other, daemon=True)
+            thread.start(); thread.join(1)
+            self.assertFalse(thread.is_alive())
+        entry["reader"].join.side_effect = join
+        q.retire_guardian(entry, native)
+        self.assertEqual(acquired, [True])
+        native.k.CloseHandle.assert_called_once_with(123)
+
+    def test_native_failure_details_stay_private_and_unknown_owner_denies_successor(self):
+        native = Mock()
+        entry = self.observer(native)
+        native.k.CloseHandle.side_effect = OSError("private diagnostic")
+        with self.assertRaises(NativeFailure) as caught:
+            q.retire_observer(entry, native)
+        self.assertEqual(str(caught.exception), "observer-close-unconfirmed")
+        self.assertTrue(caught.exception.__suppress_context__)
+        with self.assertRaises(NativeFailure):
+            q.fresh_operator()
 
 
 if __name__ == "__main__":

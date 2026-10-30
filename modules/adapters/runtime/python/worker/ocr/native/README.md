@@ -193,3 +193,14 @@ denial byte, preserves exact text and refuses a PDF above 16 total pages. It
 cannot turn OCR errors into skipped-source success. These remain local adapter
 checks; public capability, task/staging and both-host delivery are not qualified
 by this operator. Accepted model accuracy is not rerun.
+
+
+The native qualification observer and guardian now have exact-entry, one-shot
+retirement records. Successful repeated cleanup is a no-op. Failed, interrupted
+or reentrant cleanup retains its original owner and native value and denies a
+successor. The guardian records its original Popen handle before detaching it;
+an unknown or mismatched transfer cannot authorize a close. The retirement lock
+is held only for state changes, never native calls or pipe-reader joins. Existing
+case definitions, 512 MiB limits, process identities and crash assertions remain.
+Portable fault tests exercise these controls; source tests do not qualify the
+actual twelve-case Windows run or enable product OCR.

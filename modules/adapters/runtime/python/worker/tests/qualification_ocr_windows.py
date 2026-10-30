@@ -29,6 +29,8 @@ OCR = ROOT / "modules/adapters/runtime/python/worker/ocr"
 _GUARDIANS = {}
 _OBSERVERS = {}
 _OPERATOR_PENDING = {}
+_RETIREMENTS = {}
+_RETIREMENT_LOCK = threading.RLock()
 
 
 def fresh_operator():
@@ -54,7 +56,54 @@ def directory(path, *, create=False):
              not (getattr(info, "st_file_attributes", 0) & 0x400), "qualification-directory-redirected")
 
 
+def _begin_retirement(entry, registry):
+    with _RETIREMENT_LOCK:
+        need(type(entry) is dict, "operator-retirement-entry")
+        record = _RETIREMENTS.get(id(entry))
+        if record is not None:
+            need(record["entry"] is entry, "operator-retirement-identity")
+            if record["state"] == "retired":
+                return False
+            record["state"] = "uncertain"
+            _OPERATOR_PENDING[id(entry)] = entry
+            raise NativeFailure("operator-retirement-unconfirmed")
+        need(registry.get(id(entry)) is entry and id(entry) not in _OPERATOR_PENDING,
+             "operator-retirement-authority")
+        # Strong exact-entry custody exists before any wait, join, detach or
+        # close. Do not hold this lock across those operations.
+        _RETIREMENTS[id(entry)] = {"entry": entry, "state": "retiring"}
+        return True
+
+
+def _finish_retirement(entry, registry):
+    with _RETIREMENT_LOCK:
+        record = _RETIREMENTS[id(entry)]
+        need(record["entry"] is entry and record["state"] == "retiring" and
+             id(entry) not in _OPERATOR_PENDING and registry.get(id(entry)) is entry,
+             "operator-retirement-unconfirmed")
+        registry.pop(id(entry))
+        record["state"] = "retired"
+
+
+def _retain_retirement(entry):
+    record = _RETIREMENTS.get(id(entry))
+    if record is not None and record["entry"] is entry:
+        _OPERATOR_PENDING[id(entry)] = entry
+        record["state"] = "uncertain"
+
+
 def retire_guardian(entry, native):
+    try:
+        if not _begin_retirement(entry, _GUARDIANS):
+            return
+        _retire_guardian_once(entry, native)
+        _finish_retirement(entry, _GUARDIANS)
+    except BaseException:
+        _retain_retirement(entry)
+        raise NativeFailure("guardian-retirement-unconfirmed") from None
+
+
+def _retire_guardian_once(entry, native):
     """Independently attempt retirement; preserve exact unacknowledged owners."""
     errors = []
     child, reader = entry.get("child"), entry.get("reader")
@@ -87,32 +136,46 @@ def retire_guardian(entry, native):
                 except BaseException:
                     errors.append("guardian-" + name + "-close")
             try:
-                entry["process_handle"] = child._handle.Detach()
+                record = _RETIREMENTS[id(entry)]
+                need(record["state"] == "retiring" and "process_handle" not in entry,
+                     "guardian-handle-state")
+                wrapper = child._handle
+                handle = int(wrapper)
+                need(0 < handle < 2**64 - 1, "guardian-handle-identity")
+                record["process_wrapper"], record["native_handle"] = wrapper, handle
+                detached = wrapper.Detach()
+                record["detached_value"] = detached
+                need(type(detached) is int and detached == handle, "guardian-handle-transfer")
+                entry["process_handle"] = detached
+                transferred = detached
             except BaseException:
                 errors.append("guardian-handle-detach")
-            handle = entry.get("process_handle")
-            if handle:
+                transferred = None
+            if transferred:
                 try:
-                    need(native.k.CloseHandle(handle), "guardian-handle-close")
+                    need(_RETIREMENTS[id(entry)]["state"] == "retiring", "guardian-handle-state")
+                    need(native.k.CloseHandle(transferred), "guardian-handle-close")
+                    need(entry.get("process_handle") == transferred, "guardian-handle-drift")
                     entry.pop("process_handle")
                 except BaseException:
                     errors.append("guardian-handle-close")
     if errors:
         entry["errors"] = errors
-        _OPERATOR_PENDING[id(entry)] = entry
-    else:
-        _GUARDIANS.pop(id(entry), None)
     need(not errors, "guardian-retirement-unconfirmed")
 
 
 def retire_observer(entry, native):
     try:
+        if not _begin_retirement(entry, _OBSERVERS):
+            return
         handle = entry["handle"].value
+        _RETIREMENTS[id(entry)]["native_handle"] = handle
         if handle:
             need(native.k.CloseHandle(handle), "observer-close")
-        _OBSERVERS.pop(id(entry), None)
+            need(entry["handle"].value == handle, "observer-handle-drift")
+        _finish_retirement(entry, _OBSERVERS)
     except BaseException:
-        _OPERATOR_PENDING[id(entry)] = entry
+        _retain_retirement(entry)
         raise NativeFailure("observer-close-unconfirmed") from None
 
 
