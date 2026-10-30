@@ -545,3 +545,15 @@ shared worker or infer exit from a task result. Unknown outcomes stay retained.
 No production native backend is composed. The fixed `offload-resource-lifecycle`
 profile uses four model-free unit files and explicitly synthetic fresh-domain
 ports. It neither qualifies native protection nor reruns accepted accuracy.
+
+
+OCR process and resource handles now keep a strong owner before close dispatch.
+Each exact handle has one close attempt. An unknown native return, interruption
+or bookkeeping failure retains the owner and denies unsafe reuse; cleanup never
+retries that numeric handle. In-flight custody is separate from terminal
+uncertainty, so a successful pipe-writer close does not block normal resume.
+Resource retirement serializes synchronous reads and refuses later acquisition
+or reads after cancellation-callback reentry. Pipe joins occur outside the close
+lock. Fixed OCR process limits, trusted installation paths, public errors and
+source-bound cancellation remain unchanged. Portable fault tests cover these
+contracts; actual Windows locking, launch and crash qualification remain separate.

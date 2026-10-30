@@ -11,12 +11,14 @@ import json
 from pathlib import Path
 import re
 import struct
+import threading
 from .windows_api import FileInfo, NativeFailure, Windows, need
 
 MAX_BINARY_BYTES = 2 * 1024**2
 MAX_SOURCE_BYTES = 1024**2
 MAX_MANIFEST_BYTES = 4096
 _UNCERTAIN_RESOURCES = {}
+_CLOSING_RESOURCES = {}
 
 
 def _unique(pairs):
@@ -59,26 +61,67 @@ class _Resource:
     def __init__(self, native):
         self.native, self.handles = native, []
         self.executable = None
+        self._close_lock = threading.RLock()
+        self._close_attempts = {}
+        self._closing = False
 
     def close(self):
-        # Keep every unacknowledged handle alive. Do not silently unlock a lease.
-        remaining = []
-        for handle in reversed(self.handles):
-            try:
-                acknowledged = bool(self.native.k.CloseHandle(handle))
-            except BaseException:
-                acknowledged = False
-            if not acknowledged:
-                remaining.append(handle)
-        self.handles = list(reversed(remaining))
-        if self.handles:
+        self._closing = True
+        _CLOSING_RESOURCES[id(self)] = self
+        try:
+            with self._close_lock:
+                return self._close_held()
+        except BaseException:
+            # Lock entry, snapshot allocation and bookkeeping can all fail.
+            # Preserve the primary open/read error and exact native custody.
             _UNCERTAIN_RESOURCES[id(self)] = self
             return False
+
+    def _close_held(self):
+        handles = self.handles
+        for handle in reversed(tuple(handles)):
+            attempt = self._close_attempts.get(handle)
+            if attempt is not None:
+                # An earlier unknown result, or a reentrant attempt, cannot
+                # be made safe by a later positive native return value.
+                attempt["state"] = "unknown"
+                _UNCERTAIN_RESOURCES[id(self)] = self
+                continue
+            attempt = {"handle": handle, "state": "closing"}
+            self._close_attempts[handle] = attempt
+            try:
+                need(self.native.k.CloseHandle(handle), "resource-close")
+                need(attempt["state"] == "closing" and self.handles is handles and
+                     handles.count(handle) == 1, "resource-close-identity")
+                handles.remove(handle)
+                attempt["state"] = "closed"
+            except BaseException:
+                attempt["state"] = "unknown"
+                _UNCERTAIN_RESOURCES[id(self)] = self
+        if (self.handles or id(self) in _UNCERTAIN_RESOURCES or
+                any(item["state"] != "closed" for item in self._close_attempts.values())):
+            _UNCERTAIN_RESOURCES[id(self)] = self
+            return False
+        _CLOSING_RESOURCES.pop(id(self), None)
         return True
 
-    def pin(self, path, *, directory=False, maximum=0, check_cancelled=None):
+    def _check_active(self, check_cancelled):
+        need(not self._closing, "retired-resource-lease")
         if check_cancelled is not None:
             check_cancelled()
+        # RLock allows a cancellation callback to retire this resource. It must
+        # not return to an acquisition or read on that retired generation.
+        need(not self._closing, "retired-resource-lease")
+
+    def pin(self, path, *, directory=False, maximum=0, check_cancelled=None):
+        # Serialize synchronous native reads with close; never hold this lock
+        # across process pipe joins. Check again after every callback reentry.
+        with self._close_lock:
+            return self._pin(path, directory=directory, maximum=maximum,
+                             check_cancelled=check_cancelled)
+
+    def _pin(self, path, *, directory, maximum, check_cancelled):
+        self._check_active(check_cancelled)
         # Attribute-only directory handles do not participate in delete-sharing
         # checks. Request LIST_DIRECTORY too, without enumerating any contents.
         access = 0x81 if directory else 0x80000000
@@ -87,8 +130,7 @@ class _Resource:
         handle = self.native.k.CreateFileW(str(path), access, sharing, None, 3, flags, None)
         need(handle and handle != c.c_void_p(-1).value, "resource-open")
         self.handles.append(handle)
-        if check_cancelled is not None:
-            check_cancelled()
+        self._check_active(check_cancelled)
         info = FileInfo()
         need(not self.native.inheritable(handle) and
              self.native.k.GetFileType(handle) == 1 and
@@ -102,12 +144,10 @@ class _Resource:
         data = bytearray()
         buffer = c.create_string_buffer(65536)
         while True:
-            if check_cancelled is not None:
-                check_cancelled()
+            self._check_active(check_cancelled)
             count = c.c_uint32()
             need(self.native.k.ReadFile(handle, buffer, len(buffer), c.byref(count), None), "resource-read")
-            if check_cancelled is not None:
-                check_cancelled()
+            self._check_active(check_cancelled)
             if not count.value:
                 break
             data.extend(buffer.raw[:count.value])
@@ -136,7 +176,11 @@ def _open_bundle(native, folder):
         resource.executable = executable
         return resource
     except BaseException:
-        resource.close()
+        try:
+            resource.close()
+        except BaseException:
+            _CLOSING_RESOURCES[id(resource)] = resource
+            _UNCERTAIN_RESOURCES[id(resource)] = resource
         raise
 
 

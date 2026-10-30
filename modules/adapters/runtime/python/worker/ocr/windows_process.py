@@ -20,6 +20,9 @@ _FORCED_EXIT = 0xE0000043
 _COMPLETION_KEY = 0x4F435231
 _GATE = threading.Lock()
 _PENDING = {}
+# Strong custody during dispatch is distinct from terminal uncertainty. In
+# particular, a normal writer close must not deny the parent's resume check.
+_CLOSING_OWNERS = {}
 
 
 class OcrProcessError(RuntimeError):
@@ -42,25 +45,69 @@ class _Owner:
         self.limit_messages = []
         self.event_count = 0
         self.observation = None
+        self._close_lock = threading.RLock()
+        self._close_attempts = {}
+        self._close_entry_failed = False
 
     def hold(self, name, handle):
-        need(name not in self.handles and handle and handle != c.c_void_p(-1).value, "handle-create")
+        need(name not in self.handles and name not in self._close_attempts and
+             handle and handle != c.c_void_p(-1).value, "handle-create")
         self.handles[name] = handle
         return handle
 
     def close(self, name):
-        handle = self.handles.get(name)
-        if handle:
-            try:
-                acknowledged = bool(self.n.k.CloseHandle(handle))
-            except BaseException:
-                acknowledged = False
-            if not acknowledged:
-                self.close_failed = True
-                _PENDING[id(self)] = self
-                return False
-            del self.handles[name]
+        _CLOSING_OWNERS[id(self)] = self
+        try:
+            with self._close_lock:
+                if self._close_entry_failed:
+                    return False
+                result = self._close_held(name)
+                if self._close_entry_failed:
+                    return False
+                if result and all(item["state"] == "closed" for item in self._close_attempts.values()):
+                    _CLOSING_OWNERS.pop(id(self), None)
+                return result
+        except BaseException:
+            # Unconfirmed serialization/bookkeeping cannot permit another close
+            # attempt, even if no per-handle dispatch was recorded yet.
+            self._close_entry_failed = self.close_failed = True
+            _CLOSING_OWNERS[id(self)] = self
+            _PENDING[id(self)] = self
+            return False
+
+    def _close_held(self, name):
+        attempt = self._close_attempts.get(name)
+        if attempt is not None:
+            if attempt["state"] == "closed" and name not in self.handles:
+                return True
+            return self._uncertain_close(attempt)
+        handles = self.handles
+        handle = handles.get(name)
+        if not handle:
+            return True
+        # Keep exact identity even if native dispatch or later dictionary
+        # finalization is interrupted. An unknown close is never retried.
+        _CLOSING_OWNERS[id(self)] = self
+        attempt = {"handle": handle, "state": "closing"}
+        self._close_attempts[name] = attempt
+        try:
+            need(self.n.k.CloseHandle(handle), "handle-close")
+            need(attempt["state"] == "closing" and self.handles is handles and
+                 handles.get(name) == handle, "handle-close-identity")
+            del handles[name]
+            attempt["state"] = "closed"
+        except BaseException:
+            return self._uncertain_close(attempt)
+        if all(item["state"] == "closed" for item in self._close_attempts.values()):
+            _CLOSING_OWNERS.pop(id(self), None)
         return True
+
+    def _uncertain_close(self, attempt):
+        attempt["state"] = "unknown"
+        self.close_failed = True
+        _CLOSING_OWNERS[id(self)] = self
+        _PENDING[id(self)] = self
+        return False
 
     def limits(self):
         value = Limits()

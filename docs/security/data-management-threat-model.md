@@ -1695,3 +1695,21 @@ worker stop. The backend remains unavailable in production. Synthetic new-domain
 ports exercise source behavior only; they do not qualify native protection,
 durable journal, crash recovery, actual offload resources or a parent roadmap.
 Retained historical data and failed native fixtures are not accessed or changed.
+
+
+### OCR close-attempt custody
+
+The process owner and trusted resource lease retain strong custody before native
+handle-close dispatch. A per-handle ledger preserves the exact attempted value
+through unknown returns, interruption and post-acknowledgement bookkeeping
+failures. Cleanup cannot retry an uncertain numeric handle or infer retirement
+from an empty or replaced handle table. Other independently known handles can
+retire, while terminal uncertainty keeps successor admission denied. Normal
+in-flight close custody is separate from terminal uncertainty at resume.
+
+Resource close serializes with synchronous pin/read operations. Cancellation
+callbacks are followed by an active-generation check before native acquisition
+or further use. No close lock spans pipe-thread joins. These controls preserve
+the fixed helper identity, Job limits, atomic membership, source binding and
+fixed public errors. Model-free fault and caller tests cover these paths; they
+do not establish physical Windows resource locks, host OCR or crash qualification.

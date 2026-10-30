@@ -9,6 +9,155 @@ from modules.adapters.runtime.python.worker.tests import qualification_ocr_windo
 
 
 class OcrProcessTests(unittest.TestCase):
+    def test_finish_never_retries_uncertain_child_handle(self):
+        native = Mock()
+        native.k.CloseHandle.return_value = False
+        owner = p._Owner(native)
+        owner.hold("stdin-read", 321)
+        with patch.dict(p._PENDING, {}, clear=True):
+            self.assertFalse(owner.close("stdin-read"))
+            self.assertFalse(owner.finish("native-failure")["cleanup_confirmed"])
+            owner.finish("native-failure")
+            native.k.CloseHandle.assert_called_once_with(321)
+
+    def test_close_has_strong_custody_before_dispatch_without_terminal_uncertainty(self):
+        owner = p._Owner(Mock())
+        owner.hold("extra", 321)
+        def close(handle):
+            self.assertIs(p._CLOSING_OWNERS[id(owner)], owner)
+            self.assertNotIn(id(owner), p._PENDING)
+            return True
+        owner.n.k.CloseHandle.side_effect = close
+        with patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+            self.assertTrue(owner.close("extra"))
+            self.assertTrue(owner.close("extra"))
+            self.assertNotIn(id(owner), p._CLOSING_OWNERS)
+            owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_unknown_close_is_not_repeated_but_other_handles_retire(self):
+        for result in (False, OSError("private"), KeyboardInterrupt(), SystemExit()):
+            with self.subTest(result=type(result).__name__), \
+                    patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+                owner = p._Owner(Mock())
+                owner.hold("first", 1); owner.hold("second", 2)
+                def close(handle):
+                    if handle == 2:
+                        return True
+                    if isinstance(result, BaseException):
+                        raise result
+                    return result
+                owner.n.k.CloseHandle.side_effect = close
+                self.assertFalse(owner.close("first"))
+                self.assertFalse(owner.close("first"))
+                self.assertTrue(owner.close("second"))
+                self.assertEqual(owner.n.k.CloseHandle.call_count, 2)
+                self.assertIs(p._PENDING[id(owner)], owner)
+                self.assertIs(p._CLOSING_OWNERS[id(owner)], owner)
+
+    def test_post_ack_mapping_failure_retains_exact_attempt_without_retry(self):
+        class Broken(dict):
+            def __delitem__(self, key):
+                super().__delitem__(key)
+                raise KeyboardInterrupt()
+        owner = p._Owner(Mock())
+        owner.handles = Broken(extra=321)
+        owner.n.k.CloseHandle.return_value = True
+        with patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+            self.assertFalse(owner.close("extra"))
+            self.assertFalse(owner.close("extra"))
+            self.assertEqual(owner._close_attempts["extra"]["handle"], 321)
+            self.assertFalse(owner.finish(None)["cleanup_confirmed"])
+            owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_reentrant_close_fences_even_when_outer_native_call_acknowledges(self):
+        owner = p._Owner(Mock())
+        owner.hold("extra", 321)
+        def close(handle):
+            self.assertFalse(owner.close("extra"))
+            return True
+        owner.n.k.CloseHandle.side_effect = close
+        with patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+            self.assertFalse(owner.close("extra"))
+            self.assertIs(p._PENDING[id(owner)], owner)
+            owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_concurrent_close_dispatches_once_and_does_not_clear_prior_uncertainty(self):
+        owner = p._Owner(Mock())
+        owner.hold("extra", 321)
+        entered, release = threading.Event(), threading.Event()
+        results = []
+        def close(handle):
+            entered.set()
+            self.assertTrue(release.wait(2))
+            return True
+        owner.n.k.CloseHandle.side_effect = close
+        with patch.dict(p._PENDING, {id(owner): owner}, clear=True):
+            first = threading.Thread(target=lambda: results.append(owner.close("extra")))
+            second = threading.Thread(target=lambda: results.append(owner.close("extra")))
+            first.start()
+            try:
+                self.assertTrue(entered.wait(2))
+                second.start()
+            finally:
+                release.set()
+                first.join(2)
+                if second.ident is not None:
+                    second.join(2)
+            self.assertFalse(first.is_alive() or second.is_alive())
+            self.assertEqual(results, [True, True])
+            self.assertIs(p._PENDING[id(owner)], owner)
+            owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_pipe_join_allows_writer_to_retire_its_handle(self):
+        owner = p._Owner(Mock())
+        owner.hold("stdin-write", 321)
+        owner.n.k.CloseHandle.return_value = True
+        def join(timeout):
+            writer = threading.Thread(target=lambda: owner.close("stdin-write"))
+            writer.start(); writer.join(1)
+            self.assertFalse(writer.is_alive())
+        pipe = Mock()
+        pipe.join.side_effect = join
+        pipe.is_alive.return_value = False
+        owner.threads = [pipe]
+        self.assertTrue(owner.finish(None)["cleanup_confirmed"])
+        owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_ack_with_rebound_table_retains_original_value_and_denies_reacquisition(self):
+        owner = p._Owner(Mock())
+        owner.hold("extra", 321)
+        def close(handle):
+            owner.handles = {}
+            return True
+        owner.n.k.CloseHandle.side_effect = close
+        with patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+            self.assertFalse(owner.close("extra"))
+            self.assertFalse(owner.close("extra"))
+            self.assertEqual(owner._close_attempts["extra"]["handle"], 321)
+            with self.assertRaises(NativeFailure):
+                owner.hold("extra", 999)
+            owner.n.k.CloseHandle.assert_called_once_with(321)
+
+    def test_close_lock_interruption_retains_owner_and_denies_future_closes(self):
+        owner = p._Owner(Mock())
+        owner.hold("extra", 321)
+        class InterruptedLock:
+            def __enter__(self):
+                self.custody = p._CLOSING_OWNERS[id(owner)]
+                raise KeyboardInterrupt()
+            def __exit__(self, *args):
+                return False
+        lock = owner._close_lock = InterruptedLock()
+        with patch.dict(p._PENDING, {}, clear=True), patch.dict(p._CLOSING_OWNERS, {}, clear=True):
+            self.assertFalse(owner.close("extra"))
+            self.assertIs(lock.custody, owner)
+            self.assertIs(p._PENDING[id(owner)], owner)
+            owner._close_lock = threading.RLock()
+            self.assertFalse(owner.close("extra"))
+            self.assertFalse(owner.finish(None)["cleanup_confirmed"])
+            self.assertEqual(owner.handles, {"extra": 321})
+            owner.n.k.CloseHandle.assert_not_called()
+
     def test_invalid_exchange_does_not_construct_a_native_owner(self):
         with patch.object(p, "Windows") as native:
             for frame in (b"", b"1234", bytearray(b"12345"), b"x" * (p.MAX_REQUEST_BYTES + 5)):
