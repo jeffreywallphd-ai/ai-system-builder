@@ -1287,3 +1287,26 @@ Unknown completion or unexpected content prevents cleanup and further cases.
 This is cooperative disposable-fixture evidence, not hostile same-user isolation,
 retained-tree protection, durable accounting, worker crash safety or offload
 admission. See the [owning guide](../docs/operations/optional-low-memory-inference.md).
+
+
+## Windows file and mapping protection diagnostic
+
+`python -B dev-tools/scripts/native/probe_windows_file_protection.py --plan`
+prints a plan without native effects. The explicit `--self-test` runs four
+model-free checks on new private regular files of 4096 bytes. They test refusal
+with an existing writer, writable section and writable view, then read-only
+access with a waiting security change. Anonymous mappings are not executable.
+The companion reuses the directory diagnostic's native identity, private
+creation, exact permission restoration and bounded process lifetime.
+
+The `windows-file-protection-probe` profile runs only pure unit tests. This shared-code change
+runs both the file and existing directory pure profiles. Native checks
+remain separate explicit actions; there is no path, PID, command or size input.
+Unconfirmed mapping, thread, IO or cleanup stops the test. Only newly created
+objects can be removed, through held handles and without recursion. Reports
+contain fixed phases and numeric codes, with no paths or permission contents.
+
+This diagnostic does not qualify retained or inherited files, alternate streams,
+full trees, durable accounting, worker crashes or production offload. It does
+not grant restart admission or roadmap acceptance. See the
+[owning guide](../docs/operations/optional-low-memory-inference.md).

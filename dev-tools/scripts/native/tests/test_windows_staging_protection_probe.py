@@ -18,6 +18,43 @@ ACL=struct.pack('<BBHHH',2,0,8,0,0)
 
 
 class ProbeTests(unittest.TestCase):
+    def test_transfer_count_is_unavailable_until_a_successful_query(self):
+        lock=self.lock();lock.output=p.OplockOutput(1,24,3,1,1,0,0)
+        self.assertIsNone(lock.frame()['transferred_bytes'])
+        lock.native.k.WaitForSingleObject.return_value=0;lock.native.k.GetOverlappedResult.return_value=0
+        with patch.object(p.C,'get_last_error',create=True,return_value=995):
+            with self.assertRaises(p.ProbeError) as caught:lock.completed_break()
+        self.assertIsNone(caught.exception.frame['transferred_bytes'])
+        def completed(_h,_ov,count,_wait):ctypes.cast(count,ctypes.POINTER(p.U32)).contents.value=24;return 1
+        lock.native.k.GetOverlappedResult.side_effect=completed
+        lock.completed_break();self.assertEqual(lock.frame()['transferred_bytes'],24)
+
+    def test_only_unmeasured_transfer_count_can_be_null_in_closed_frame(self):
+        frame={'structure_version':1,'structure_length':24,'original_level':0,'new_level':0,'flags':4,'transferred_bytes':None,'native_status':0x8000002e}
+        self.assertEqual(p.ProbeError('rejected-frame',frame=frame).frame,frame)
+        for key in frame:
+            if key!='transferred_bytes':self.assertIsNone(p.ProbeError('rejected-frame',frame={**frame,key:None}).frame)
+        for bad in (True,-1,2**32,'private-value'):
+            self.assertIsNone(p.ProbeError('rejected-frame',frame={**frame,'transferred_bytes':bad}).frame)
+
+    def test_shared_owner_hooks_preserve_directory_failure_schema(self):
+        owner=p.DiagnosticOwner();value=owner.failure_report('native-deadline')
+        self.assertEqual(value,p.failed_report('native-deadline'))
+        self.assertEqual(owner.encode(value),p.encode_report(value))
+
+    def test_rejected_oplock_keeps_native_frame_before_event_retirement(self):
+        native=Mock();native.uncertain=False;native.k.CreateEventW.return_value=31
+        def rejected(_h,_code,_in,_insize,out,_size,_bytes,overlapped):
+            frame=ctypes.cast(out,ctypes.POINTER(p.OplockOutput)).contents
+            frame.version=1;frame.length=24;frame.flags=4
+            ctypes.cast(overlapped,ctypes.POINTER(p.Overlapped)).contents.internal=0x8000002e
+            return 0
+        native.k.DeviceIoControl.side_effect=rejected
+        with patch.object(p.C,'get_last_error',create=True,return_value=801):
+            with self.assertRaises(p.ProbeError) as caught:p.Oplock(native,21)
+        self.assertEqual(caught.exception.frame['native_status'],0x8000002e)
+        self.assertEqual(caught.exception.frame['flags'],4);self.assertIsNone(caught.exception.frame['transferred_bytes']);native.close.assert_called_once_with(31)
+
     def test_default_and_explicit_plan_have_no_native_or_fixture_effect(self):
         for argv in ([],['--plan']):
             with self.subTest(argv=argv),patch.object(p,'Windows') as native,patch.object(p,'self_test') as run,contextlib.redirect_stdout(io.StringIO()) as out:

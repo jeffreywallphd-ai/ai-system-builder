@@ -47,7 +47,7 @@ class ProbeError(Exception):
         if type(state) is dict and set(state)=={'acl_equal','expected_dacl_control','actual_dacl_control'} and type(state['acl_equal']) is bool and all(type(state[k]) is int and 0 <= state[k] <= 65535 for k in ['expected_dacl_control','actual_dacl_control']):
             self.state=state.copy()
         self.frame=None
-        if type(frame) is dict and set(frame)=={'structure_version','structure_length','original_level','new_level','flags','transferred_bytes','native_status'} and all(type(v) is int and 0 <= v <= 0xffffffff for v in frame.values()):
+        if type(frame) is dict and set(frame)=={'structure_version','structure_length','original_level','new_level','flags','transferred_bytes','native_status'} and all((k=='transferred_bytes' and v is None) or type(v) is int and 0 <= v <= 0xffffffff for k,v in frame.items()):
             self.frame=frame.copy()
         self.secondary=[]
         super().__init__('The directory protection diagnostic did not complete.')
@@ -192,7 +192,7 @@ class Windows:
         us = UnicodeString(len(name.encode('utf-16-le')), (len(name)+1)*2, C.cast(text,PTR))
         attrs = ObjectAttributes(C.sizeof(ObjectAttributes), parent, C.pointer(us), 0x40, None, None)
         if initial_security is not None:
-            require(create and directory and type(initial_security) is tuple and len(initial_security)==2 and type(initial_security[1]) is SecurityDescriptor,'creation-security')
+            require(create and type(directory) is bool and type(initial_security) is tuple and len(initial_security)==2 and type(initial_security[1]) is SecurityDescriptor,'creation-security')
             attrs.security=C.cast(C.byref(initial_security[1]),PTR)
         io = IoStatus(); result = PTR()
         buffers=(self,text,us,attrs,io,result,initial_security)
@@ -295,15 +295,23 @@ class Windows:
             return C.string_at(sid,length)
         finally:self.close(token.value)
 
-    def private_root(self,parent,name):
+    def _private_object(self,parent,name,*,directory):
+        require(type(directory) is bool,'private-object-kind')
         acl=private_acl(self.current_user_sid());value=C.create_string_buffer(acl);descriptor=SecurityDescriptor()
         require(self.a.IsValidAcl(value),'private-acl')
         require(self.a.InitializeSecurityDescriptor(C.byref(descriptor),1),'private-descriptor',C.get_last_error())
         require(self.a.SetSecurityDescriptorDacl(C.byref(descriptor),1,value,False),'private-dacl',C.get_last_error())
         require(self.a.SetSecurityDescriptorControl(C.byref(descriptor),0x1500,0x1000),'private-control',C.get_last_error())
         require(self.a.IsValidSecurityDescriptor(C.byref(descriptor)),'private-descriptor-valid')
-        handle=self.relative(parent,name,0x10000 | 0x40000 | 0x20000 | 0x80 | 0x21,create=True,initial_security=(value,descriptor))
+        access=0x700a1 if directory else 0x170083
+        handle=self.relative(parent,name,access,create=True,directory=directory,initial_security=(value,descriptor))
         return handle,acl
+
+    def private_root(self,parent,name):
+        return self._private_object(parent,name,directory=True)
+
+    def private_file(self,parent,name):
+        return self._private_object(parent,name,directory=False)
 
     def delete_owned(self, handle):
         value=I32(1)
@@ -326,9 +334,10 @@ class Oplock:
             native.uncertain=True
             raise
         if ok or error != 997:
+            frame=self.frame()
             native.close(self.event); self.event=None
             retire_reference(self)
-            raise ProbeError('oplock-not-granted',error)
+            raise ProbeError('oplock-not-granted',error,frame=frame)
 
     def broken(self):
         return self.native.k.WaitForSingleObject(self.event,0) == 0
@@ -350,14 +359,14 @@ class Oplock:
     def frame(self):
         return {'structure_version':int(self.output.version),'structure_length':int(self.output.length),
                 'original_level':int(self.output.original),'new_level':int(self.output.new),
-                'flags':int(self.output.flags),'transferred_bytes':getattr(self,'transferred',0),
+                'flags':int(self.output.flags),'transferred_bytes':getattr(self,'transferred',None),
                 'native_status':int(self.overlapped.internal)&0xffffffff}
 
     def completed_break(self):
         require(self.broken(),'security-break-missing')
         transferred=U32()
         ok=self.native.k.GetOverlappedResult(self.handle,C.byref(self.overlapped),C.byref(transferred),0)
-        self.transferred=transferred.value
+        self.transferred=transferred.value if ok else None
         if not (ok and self.overlapped.internal == 0):raise ProbeError('security-break-completion',C.get_last_error(),frame=self.frame())
         if not (transferred.value == C.sizeof(self.output) and self.output.version == 1 and self.output.length == C.sizeof(self.output)):
             raise ProbeError('security-break-frame',frame=self.frame())
@@ -579,6 +588,10 @@ class DiagnosticOwner:
 
     def start(self):self.watchdog.start()
 
+    def failure_report(self,stage):return failed_report(stage)
+
+    def encode(self,value):return encode_report(value)
+
     def claim_report(self):
         with self.lock:
             if self.claimed:return False
@@ -590,7 +603,7 @@ class DiagnosticOwner:
         with self.lock:
             if self.stopping or self.claimed:return
             self.claimed=True
-        self.abort_claimed(failed_report('native-deadline'))
+        self.abort_claimed(self.failure_report('native-deadline'))
 
     def abort(self,value):
         if not self.claim_report():
@@ -604,7 +617,7 @@ class DiagnosticOwner:
         try:
             timer=threading.Timer(REPORT_SECONDS,os._exit,args=(2,));timer.daemon=True;timer.start()
             value={**value,'cleanup_confirmed':False,'unconfirmed_native_lifetime':True,'all_cases_observed':False}
-            sys.stdout.write(encode_report(value));sys.stdout.flush()
+            sys.stdout.write(self.encode(value));sys.stdout.flush()
         finally:
             self.report_done.set();os._exit(2)
 
@@ -614,14 +627,14 @@ class DiagnosticOwner:
             already_claimed=self.claimed
             if not already_claimed:
                 self.stopping=True;self.stopped.set()
-        if already_claimed:self.abort(failed_report('report-ownership'))
+        if already_claimed:self.abort(self.failure_report('report-ownership'))
         self.watchdog.join(WAIT_MS/1000)
-        if self.watchdog.is_alive():self.abort(failed_report('watchdog-exit-unconfirmed'))
-        if not self.claim_report():self.abort(failed_report('report-ownership'))
+        if self.watchdog.is_alive():self.abort(self.failure_report('watchdog-exit-unconfirmed'))
+        if not self.claim_report():self.abort(self.failure_report('report-ownership'))
         # Native/worker users and the watchdog are now confirmed retired. Bound
         # the final stdout write as well; an incomplete publication cannot exit0.
         timer=threading.Timer(REPORT_SECONDS,os._exit,args=(2,));timer.daemon=True;timer.start()
-        text=encode_report(value)
+        text=self.encode(value)
         try:
             sys.stdout.write(text);sys.stdout.flush()
             self.report_done.set()

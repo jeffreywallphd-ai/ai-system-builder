@@ -460,3 +460,38 @@ the content operation already proceeded. The security-change control remains
 stricter: a fresh RH guard, validated RH-to-R break and required acknowledgment,
 a waiting mutation thread, confirmed release/completion and exact restoration.
 A new private baseline does not turn a failed inherited round trip into a pass.
+
+
+## File and mapping protection checks
+
+No user action is needed. The agent uses a fixed companion diagnostic to test
+whether open writers or memory maps can bypass the proposed protection. Each
+case creates a new private directory and regular file with 4096 synthetic bytes.
+It never opens retained model files. Default and `--plan` make no native changes.
+
+The explicit `--self-test` must observe refusal while an existing writable file
+handle, writable section or writable view remains open. A separate positive
+case checks read-only mapping access, refusal of a new writer, and a waiting
+permission change through a preopened handle. The test validates the actual
+Read-Handle oplock frame and thread exit; a prebroken guard or a change that
+finishes before release cannot pass the barrier check.
+[Microsoft lists the writable-section grant restriction](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/granting-oplocks).
+[Creating a writable section can cause a break](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/fs-filter-acquire-for-section-synchronization2),
+so this fixed test combines file sharing with the native grant check.
+
+The code retains anonymous nonexecutable mappings until confirmed release. It
+requires exact identities, file shape and original permission restoration. An
+unknown map, thread, IO or cleanup lifetime stops further cases. The standalone
+process retains the directory diagnostic's fixed deadlines and redacted output.
+
+These observations apply only to new private unnamed-stream files. Existing
+and inherited files, full trees, alternate streams, protected durable accounting
+and owned-worker crash/restart proof remain separate work. Even a passing run
+does not admit real offload or close a parent criterion. The existing guard and
+full 12 GiB charge for unknown retained usage stay in force. Accepted model
+accuracy stays closed. Full software testing remains deferred.
+
+Rejected or unsuccessful native requests have no measured transfer count. Their
+`transferred_bytes` field is `null`. A successful completed-result query records
+its actual count. This reporting distinction does not change admission or the
+required status, frame, acknowledgment and lifetime checks.
