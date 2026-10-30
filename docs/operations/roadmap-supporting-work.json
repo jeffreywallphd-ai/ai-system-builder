@@ -6767,6 +6767,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-file-mapping-protection-probe",
+      "work_criteria": [
+        "fresh-private-file-effects-only",
+        "truthful-file-mapping-admission-and-lifetime",
+        "focused-regressions-and-owned-checkpoint"
+      ],
+      "receipt_digest": "ea22384e3b2b634676ad2f9b7c34a4d05c4c15d44502db059227d0e45890ba95",
+      "review_digest": "ecd6a927a94c4cbccfc85f1db1fa553dd7748d610ce395d66c7a468eb2013445",
+      "scope": "Qualified fresh private-file controls for an existing writer, writable section/view, read-only access and a waiting security change. Four actual file cases, three directory regressions, 94 pure units, five focused checks and separate review passed with exact cleanup. Unsafe cases were refused at file open; native warning801 was not exercised. Existing/inherited trees, streams, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-file-mapping-protection-probe",
+      "work_criteria": [
+        "fresh-private-file-effects-only",
+        "truthful-file-mapping-admission-and-lifetime",
+        "focused-regressions-and-owned-checkpoint"
+      ],
+      "receipt_digest": "ea22384e3b2b634676ad2f9b7c34a4d05c4c15d44502db059227d0e45890ba95",
+      "review_digest": "ecd6a927a94c4cbccfc85f1db1fa553dd7748d610ce395d66c7a468eb2013445",
+      "scope": "Qualified fresh private-file controls for an existing writer, writable section/view, read-only access and a waiting security change. Four actual file cases, three directory regressions, 94 pure units, five focused checks and separate review passed with exact cleanup. Unsafe cases were refused at file open; native warning801 was not exercised. Existing/inherited trees, streams, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-file-mapping-protection-probe",
+      "work_criteria": [
+        "fresh-private-file-effects-only",
+        "truthful-file-mapping-admission-and-lifetime",
+        "focused-regressions-and-owned-checkpoint"
+      ],
+      "receipt_digest": "ea22384e3b2b634676ad2f9b7c34a4d05c4c15d44502db059227d0e45890ba95",
+      "review_digest": "ecd6a927a94c4cbccfc85f1db1fa553dd7748d610ce395d66c7a468eb2013445",
+      "scope": "Qualified fresh private-file controls for an existing writer, writable section/view, read-only access and a waiting security change. Four actual file cases, three directory regressions, 94 pure units, five focused checks and separate review passed with exact cleanup. Unsafe cases were refused at file open; native warning801 was not exercised. Existing/inherited trees, streams, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-file-mapping-protection-probe",
+      "work_criteria": [
+        "fresh-private-file-effects-only",
+        "truthful-file-mapping-admission-and-lifetime",
+        "focused-regressions-and-owned-checkpoint"
+      ],
+      "receipt_digest": "ea22384e3b2b634676ad2f9b7c34a4d05c4c15d44502db059227d0e45890ba95",
+      "review_digest": "ecd6a927a94c4cbccfc85f1db1fa553dd7748d610ce395d66c7a468eb2013445",
+      "scope": "Qualified fresh private-file controls for an existing writer, writable section/view, read-only access and a waiting security change. Four actual file cases, three directory regressions, 94 pure units, five focused checks and separate review passed with exact cleanup. Unsafe cases were refused at file open; native warning801 was not exercised. Existing/inherited trees, streams, durable accounting, worker/crash, actual offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }

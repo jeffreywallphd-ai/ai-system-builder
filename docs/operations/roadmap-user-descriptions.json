@@ -13116,6 +13116,17 @@
           "The agent still needs to protect existing folders and finish restart recovery. Actual low-memory qualification remains pending. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "272f2bdcd49fcac544958861597db18c1f35652063a65c66d7b910bf148823a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All four Windows file tests and three folder tests passed. Each temporary file and folder was removed. The 94 code checks also passed.",
+          "The agent still needs to protect existing folder trees and finish restart recovery. Actual low-memory testing remains pending. No user action is needed."
+        ]
+      }
     }
   ]
 }
