@@ -13204,6 +13204,46 @@
           "The resource command loads no accuracy-test code and reads no old model outputs. Windows file protection, protected disk records, worker recovery, actual memory, delivery and cleanup checks, and final combined testing still need work. This update does not pass a roadmap requirement. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "49359fa2296129608ec18df3adaf9d892e4b674ca928fc3fc6eec9e19c96c0ac",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "OCR cleanup now keeps interrupted work safe and refuses another unsafe attempt. All 88 focused checks and 5 repository checks passed. Separate Windows test results are listed below. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aafef737ac2a35bf15c43d49440210eaa79a154dd6e7517cb08a1feff4c4c1a2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The OCR test runner does not retry an uncertain close. It keeps failed cleanup pending and prevents unsafe reuse. All 100 focused checks and 4 repository checks passed. These are code checks; the Windows run is reported separately. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3e4f5184b4a8ca66042374e9a50fbba2c892c4aa9514b31a9a2a317e9f04afc4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows run passed all 12 test groups. Sixteen request results confirmed cleanup, including one cancellation before startup. It checked file locks, safety limits and crash handling. A separate intentional failed-close test correctly refused another run. Earlier accepted results stay closed. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "041383403426427f9dccf2e067568c98b6db8907de60b4d8cc68c9d92de9f9f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier accepted OCR and model results stay closed. The agent still needs the remaining controlled checks and the final combined test campaign. These results do not complete a roadmap requirement. No action is needed from you."
+        ]
+      }
     }
   ]
 }

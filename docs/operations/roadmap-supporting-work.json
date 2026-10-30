@@ -7359,6 +7359,159 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "ocr-handle-close-custody",
+      "work_criteria": [
+        "one-attempt-retirement",
+        "caller-compatibility"
+      ],
+      "receipt_digest": "fdaa98392dc3e536ae5940a6635b685a685dd672c64ea541d700f0ff841d4ce2",
+      "review_digest": "3ed7d5b30ed37d88e5a5ee38bf1f8151480723d3f78781fd5bfa2f87d5809532",
+      "scope": "Process and resource close retain exact owners before dispatch and never repeat unknown closes. Lock-entry, bookkeeping, reentry and concurrent retirement failures remain retained.88 focused tests and5 source gates passed. This source work supplies no physical Windows, app-host, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "ocr-handle-close-custody",
+      "work_criteria": [
+        "one-attempt-retirement",
+        "caller-compatibility"
+      ],
+      "receipt_digest": "fdaa98392dc3e536ae5940a6635b685a685dd672c64ea541d700f0ff841d4ce2",
+      "review_digest": "3ed7d5b30ed37d88e5a5ee38bf1f8151480723d3f78781fd5bfa2f87d5809532",
+      "scope": "Process and resource close retain exact owners before dispatch and never repeat unknown closes. Lock-entry, bookkeeping, reentry and concurrent retirement failures remain retained.88 focused tests and5 source gates passed. This source work supplies no physical Windows, app-host, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "ocr-handle-close-custody",
+      "work_criteria": [
+        "one-attempt-retirement",
+        "caller-compatibility"
+      ],
+      "receipt_digest": "fdaa98392dc3e536ae5940a6635b685a685dd672c64ea541d700f0ff841d4ce2",
+      "review_digest": "3ed7d5b30ed37d88e5a5ee38bf1f8151480723d3f78781fd5bfa2f87d5809532",
+      "scope": "Process and resource close retain exact owners before dispatch and never repeat unknown closes. Lock-entry, bookkeeping, reentry and concurrent retirement failures remain retained.88 focused tests and5 source gates passed. This source work supplies no physical Windows, app-host, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "ocr-operator-one-shot-retirement",
+      "work_criteria": [
+        "exact-one-shot-operator-retirement",
+        "preserve-native-test-contract"
+      ],
+      "receipt_digest": "1ae2b80533a342b65f11d45f07af3c88919eaeb90b127e8b78ecc41465f58b69",
+      "review_digest": "1c307ca8a2a48b0f5826173d819c2bf0e110d843510bb4cf46e75b5c0f47e4f2",
+      "scope": "The native OCR test operator uses exact registered-entry, one-shot retirement. Original Popen wrapper/value is retained before Detach; copied entries, mismatched transfer, unknown close and metadata/reentry failures cannot authorize another close.100 focused tests and4 source gates passed. Native outcomes are separately recorded, not inferred from these source checks.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "ocr-operator-one-shot-retirement",
+      "work_criteria": [
+        "exact-one-shot-operator-retirement",
+        "preserve-native-test-contract"
+      ],
+      "receipt_digest": "1ae2b80533a342b65f11d45f07af3c88919eaeb90b127e8b78ecc41465f58b69",
+      "review_digest": "1c307ca8a2a48b0f5826173d819c2bf0e110d843510bb4cf46e75b5c0f47e4f2",
+      "scope": "The native OCR test operator uses exact registered-entry, one-shot retirement. Original Popen wrapper/value is retained before Detach; copied entries, mismatched transfer, unknown close and metadata/reentry failures cannot authorize another close.100 focused tests and4 source gates passed. Native outcomes are separately recorded, not inferred from these source checks.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "ocr-operator-one-shot-retirement",
+      "work_criteria": [
+        "exact-one-shot-operator-retirement",
+        "preserve-native-test-contract"
+      ],
+      "receipt_digest": "1ae2b80533a342b65f11d45f07af3c88919eaeb90b127e8b78ecc41465f58b69",
+      "review_digest": "1c307ca8a2a48b0f5826173d819c2bf0e110d843510bb4cf46e75b5c0f47e4f2",
+      "scope": "The native OCR test operator uses exact registered-entry, one-shot retirement. Original Popen wrapper/value is retained before Detach; copied entries, mismatched transfer, unknown close and metadata/reentry failures cannot authorize another close.100 focused tests and4 source gates passed. Native outcomes are separately recorded, not inferred from these source checks.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "work_id": "record-ocr-native-lifetime-evidence",
+      "work_criteria": [
+        "exact-native-evidence",
+        "honest-launch-and-scope"
+      ],
+      "receipt_digest": "b4d4ea7c8b3d74991f51052324abbb016694c7c9c7a750bd862f8c61a15bb6f9",
+      "review_digest": "37fee67b4ce004161e3648b31c8e8ca4f286d880c02101807c6f758ccccc87e2",
+      "scope": "12 actual Windows OCR process/resource groups passed in 3.288s on Python 3.14.3. Sixteen exchange observations confirmed cleanup, including one prelaunch cancellation. Exact crash exit and resource locks were observed. Case12 deliberately returned false for its Job close, retained ownership and denied a successor; this is not a real OS close failure. Scope is the local component, not documents, deployed apps, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "record-ocr-native-lifetime-evidence",
+      "work_criteria": [
+        "exact-native-evidence",
+        "honest-launch-and-scope"
+      ],
+      "receipt_digest": "b4d4ea7c8b3d74991f51052324abbb016694c7c9c7a750bd862f8c61a15bb6f9",
+      "review_digest": "37fee67b4ce004161e3648b31c8e8ca4f286d880c02101807c6f758ccccc87e2",
+      "scope": "12 actual Windows OCR process/resource groups passed in 3.288s on Python 3.14.3. Sixteen exchange observations confirmed cleanup, including one prelaunch cancellation. Exact crash exit and resource locks were observed. Case12 deliberately returned false for its Job close, retained ownership and denied a successor; this is not a real OS close failure. Scope is the local component, not documents, deployed apps, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "record-ocr-native-lifetime-evidence",
+      "work_criteria": [
+        "exact-native-evidence",
+        "honest-launch-and-scope"
+      ],
+      "receipt_digest": "b4d4ea7c8b3d74991f51052324abbb016694c7c9c7a750bd862f8c61a15bb6f9",
+      "review_digest": "37fee67b4ce004161e3648b31c8e8ca4f286d880c02101807c6f758ccccc87e2",
+      "scope": "12 actual Windows OCR process/resource groups passed in 3.288s on Python 3.14.3. Sixteen exchange observations confirmed cleanup, including one prelaunch cancellation. Exact crash exit and resource locks were observed. Case12 deliberately returned false for its Job close, retained ownership and denied a successor; this is not a real OS close failure. Scope is the local component, not documents, deployed apps, offload, model or parent qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
+      ]
     }
   ]
 }
