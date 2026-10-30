@@ -13138,6 +13138,17 @@
           "The agent still needs to protect complete existing folder trees and finish restart recovery. Actual low-memory loading tests remain pending. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d0b48252244c511e8bdad1d5063d78374644b1754e9e03088038cd5ca961da68",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test worker stopped after a stop signal and when its Windows control handle closed. Cleanup was confirmed in both tests. Thirty worker code tests also passed. Earlier failed tests remain in the record.",
+          "The agent still needs to connect worker shutdown to file protection and test crash recovery. Folder-wide protection, saved disk accounting and actual low-memory loading remain pending. No user action is needed."
+        ]
+      }
     }
   ]
 }

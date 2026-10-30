@@ -6911,6 +6911,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "windows-owned-job-probe",
+      "work_criteria": [
+        "closed-owned-worker-effects-only",
+        "atomic-job-native-retirement",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "4b811266ebdba628cbab8b77a7b37e49cd175355c76171486396c61c5e9c3316",
+      "review_digest": "ae16042f84e0911308437e67500755614726a4d4fc45120cc708494b6546c6b5",
+      "scope": "Added a fixed detached, one-process Windows job diagnostic. Thirty worker code tests, focused controller checks and two native shutdown controls passed with confirmed cleanup. Earlier console-mode count failures and oracle regressions stay preserved. Closing a control handle is not an actual guardian crash or file-fence proof. Full-tree protection, durable accounting, integrated offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-owned-job-probe",
+      "work_criteria": [
+        "closed-owned-worker-effects-only",
+        "atomic-job-native-retirement",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "4b811266ebdba628cbab8b77a7b37e49cd175355c76171486396c61c5e9c3316",
+      "review_digest": "ae16042f84e0911308437e67500755614726a4d4fc45120cc708494b6546c6b5",
+      "scope": "Added a fixed detached, one-process Windows job diagnostic. Thirty worker code tests, focused controller checks and two native shutdown controls passed with confirmed cleanup. Earlier console-mode count failures and oracle regressions stay preserved. Closing a control handle is not an actual guardian crash or file-fence proof. Full-tree protection, durable accounting, integrated offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-owned-job-probe",
+      "work_criteria": [
+        "closed-owned-worker-effects-only",
+        "atomic-job-native-retirement",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "4b811266ebdba628cbab8b77a7b37e49cd175355c76171486396c61c5e9c3316",
+      "review_digest": "ae16042f84e0911308437e67500755614726a4d4fc45120cc708494b6546c6b5",
+      "scope": "Added a fixed detached, one-process Windows job diagnostic. Thirty worker code tests, focused controller checks and two native shutdown controls passed with confirmed cleanup. Earlier console-mode count failures and oracle regressions stay preserved. Closing a control handle is not an actual guardian crash or file-fence proof. Full-tree protection, durable accounting, integrated offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-owned-job-probe",
+      "work_criteria": [
+        "closed-owned-worker-effects-only",
+        "atomic-job-native-retirement",
+        "focused-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "4b811266ebdba628cbab8b77a7b37e49cd175355c76171486396c61c5e9c3316",
+      "review_digest": "ae16042f84e0911308437e67500755614726a4d4fc45120cc708494b6546c6b5",
+      "scope": "Added a fixed detached, one-process Windows job diagnostic. Thirty worker code tests, focused controller checks and two native shutdown controls passed with confirmed cleanup. Earlier console-mode count failures and oracle regressions stay preserved. Closing a control handle is not an actual guardian crash or file-fence proof. Full-tree protection, durable accounting, integrated offload and parent qualification remain pending.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }
