@@ -8,19 +8,22 @@ import {finalizeQualificationEvidence,safeQualificationFailureType,type OwnedCle
 
 export type ImportedFileJourneyStage = "startup" | "workspace" | "file-import" | "complete";
 export type ImageCleanupStage = "startup" | "generation" | "complete";
-export type FunctionalCleanupStage = "startup" | "models" | "complete";
+export type FunctionalCleanupStage = "startup" | "models" | "artifacts" | "complete";
 export type SettingsCleanupStage = "startup" | "settings" | "complete";
 
 /** Finite-purpose main-only proof. This never qualifies image/model workers. */
 async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string, info: TestInfo, journeyStage: ImportedFileJourneyStage | ImageCleanupStage | SettingsCleanupStage | FunctionalCleanupStage, mode: CriticalAccessibilityMode, purpose: "file-import" | "image" | "settings" | "functional-data") {
   readCriticalAccessibilityMode(mode);
   const image = purpose === "image", settings=purpose === "settings", functional=purpose === "functional-data";
-  const stages = functional ? ["startup","models","complete"] : settings ? ["startup","settings","complete"] : image ? ["startup","generation","complete"] : ["startup","workspace","file-import","complete"];
+  const stages = functional ? ["startup","models","artifacts","complete"] : settings ? ["startup","settings","complete"] : image ? ["startup","generation","complete"] : ["startup","workspace","file-import","complete"];
   if (!stages.includes(journeyStage)) throw new Error(functional ? "Unsupported functional cleanup admission." : settings ? "Unsupported Settings cleanup stage." : image ? "Unsupported image cleanup stage." : "Unsupported file-import cleanup stage.");
   if (info?.project?.name !== "packaged-desktop") throw new Error(functional ? "Unsupported functional cleanup admission." : settings ? "Unsupported Settings cleanup host." : image ? "Unsupported image cleanup host." : "Unsupported file-import cleanup host.");
   if (image && !["image-create-register","image-task-recovery"].includes(path.basename(dataRoot))) throw new Error("Unsupported image cleanup slot.");
   if (settings && !["settings-public-values","settings-secret-defaults"].includes(path.basename(dataRoot))) throw new Error("Unsupported Settings cleanup slot.");
-  if (functional && path.basename(dataRoot)!=="functional-model-reference") throw new Error("Unsupported functional cleanup slot.");
+  if (functional) {
+    const slot=path.basename(dataRoot);if (!["functional-model-reference","functional-artifact-local"].includes(slot)) throw new Error("Unsupported functional cleanup slot.");
+    if(journeyStage!=="startup"&&journeyStage!=="complete"&&journeyStage!==(slot==="functional-model-reference"?"models":"artifacts")) throw new Error("Unsupported functional cleanup stage.");
+  }
   const errors: unknown[] = [];
   const failureStages: OwnedCleanupFailureStage[] = [];
   const recordFailure = (stage: OwnedCleanupFailureStage, error: unknown) => {failureStages.push(stage);errors.push(error);};

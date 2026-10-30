@@ -1064,3 +1064,40 @@ metadata lookup; it cannot write secrets or create repositories. Functional
 Server shutdown drains background tasks before persistence. Desktop evidence
 qualifies only its owned main process. Actual hosts, provider behavior, full
 worker retirement and final combined qualification remain pending.
+
+
+### Local artifact host journeys
+
+The two dedicated `playwright.functional-artifact-*` configs select one Desktop
+and two Thin Client cases. Future actual execution requires both
+`VISUAL_COMPOSER_FUNCTIONAL_HOST=1` and
+`VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT=1`. Collection does not start a host.
+The existing model cases still require their separate metadata opt-in.
+
+These journeys upload a tiny useful inventory, check exact local bytes and
+backing state, reload, cancel deletion, require the exact confirmation and
+preserve another workspace's artifact. Desktop alone uses its Download control.
+Its actual Electron launch enables downloads only for that fixed export case;
+the functional model launch explicitly refuses them. Export reads are bounded
+and checked against the known bytes, without retaining an extra saved file.
+
+Logical keys may repeat across workspaces. The isolation read runs while the
+second workspace is empty, before its own upload. Later deletion must preserve
+its separately scoped content. This proves logical workspace behavior, not
+hostile native races or physical shared-object ownership.
+
+The controlled loopback Server keeps its original primary identity. A separate
+fresh identity has only `artifact:read` and `workspace:read`. It first completes
+an authenticated read, then receives the actual route refusal for missing
+`artifact:write`. This is the existing development LAN-token enforcement path;
+it grants no managed provider-use or LAN-TLS qualification. No provider secret,
+publication or model is used. Identity setup checks only its newly created
+synthetic store and uses bounded cooperative file guards, not native ownership
+proof. Canonical owned shutdown and truthful main-only cleanup remain in force.
+
+The finite `functional-host-ui` group adds the real HMAC/HTTP denial, byte-bound
+and fixture tests and borrows existing artifact UI/storage regressions. Its
+unknown and incomplete impact fallbacks and the Operational bounds are retained.
+Provider import, real private publication, actual-host execution, full worker
+retirement and the final combined campaign remain pending. Accepted model
+accuracy stays closed.

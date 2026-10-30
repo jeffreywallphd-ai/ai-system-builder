@@ -5,9 +5,9 @@ import {createSettingsHostEnvironment,createSettingsHostLaunchPlan,settingsHostL
 // wrapper supplies its own truthful purpose, case slot and shutdown entry.
 export const functionalHostLayout=settingsHostLayout;
 export function createFunctionalHostEnvironment(input,repoRoot,runId,sourceRevision,target,caseId){
-  if(caseId!==undefined&&caseId!=="model-reference"||target==="thin-chrome"&&caseId!==undefined)throw new Error("Unsupported functional host case.");
+  if(caseId!==undefined&&!["model-reference","artifact-local"].includes(caseId)||target==="thin-chrome"&&caseId!==undefined)throw new Error("Unsupported functional host case.");
   const env=createSettingsHostEnvironment(input,repoRoot,runId,sourceRevision,target);
-  if(caseId)env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT=path.join(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT,"functional-model-reference");
+  if(caseId)env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT=path.join(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT,`functional-${caseId}`);
   // All cache roots must follow this case's actual data root.
   const cache=path.join(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT,"controlled-model-cache");
   Object.assign(env,{HF_HUB_CACHE:cache,HF_HOME:path.join(cache,"hf-home"),TRANSFORMERS_CACHE:path.join(cache,"transformers"),HF_DATASETS_CACHE:path.join(cache,"datasets"),TORCH_HOME:path.join(cache,"torch")});

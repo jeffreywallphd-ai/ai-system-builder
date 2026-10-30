@@ -176,5 +176,7 @@ test("checks the current repository map against original scope and actual source
     assert(text.includes("model reference searches, saves and survives reload and workspace changes"));
     assert(text.includes("qualifyModelReferenceHostJourney"));
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_READY"));
+    assert(text.includes("qualifyArtifactLifecycleHostJourney"));
+    assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT"));
   }
 });

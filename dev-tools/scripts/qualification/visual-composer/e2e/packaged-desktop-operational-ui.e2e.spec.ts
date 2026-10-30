@@ -119,10 +119,25 @@ import {closeFunctionalDesktop,type FunctionalCleanupStage} from "./desktop-main
 
 test("packaged desktop model reference searches, saves and survives reload and workspace changes",async()=>{
   test.setTimeout(FUNCTIONAL_HOST_TIMEOUT_MS);
-  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1","Pending the dedicated isolated model metadata profile.");
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1","Pending the dedicated isolated model metadata profile.");
   if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported functional host.");
   const isolated=prepareIsolatedDesktopCase("functional-model-reference");
-  const app=await electron.launch({executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
+  const app=await electron.launch({acceptDownloads:false,executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
   let stage:FunctionalCleanupStage="startup";
   await runOwnedRestartPhase(async()=>{const page=await app.firstWindow({timeout:60_000});stage="models";await qualifyModelReferenceHostJourney(page,test.info(),"packaged-desktop");stage="complete";},()=>closeFunctionalDesktop(app,isolated.dataRoot,test.info(),stage));
+});
+
+import {qualifyArtifactLifecycleHostJourney} from "./artifact-lifecycle-host-journey";
+import {ARTIFACT_HOST_TIMEOUT_MS} from "../functional-artifact-oracles";
+
+test("packaged desktop artifact local lifecycle preserves actual bytes and scope",async()=>{
+  test.setTimeout(ARTIFACT_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT!=="1","Pending the dedicated isolated local artifact profile.");
+  if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported artifact host.");
+  const isolated=prepareIsolatedDesktopCase("functional-artifact-local");
+  // This sole explicit synthetic export case may accept a download. The model
+  // reference case explicitly refuses downloads on its actual Electron context.
+  const app=await electron.launch({acceptDownloads:true,executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
+  let stage:FunctionalCleanupStage="startup";
+  await runOwnedRestartPhase(async()=>{const page=await app.firstWindow({timeout:60_000});stage="artifacts";await qualifyArtifactLifecycleHostJourney(page,test.info(),"packaged-desktop","local-lifecycle");stage="complete";},()=>closeFunctionalDesktop(app,isolated.dataRoot,test.info(),stage));
 });

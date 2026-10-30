@@ -104,10 +104,21 @@ import {FUNCTIONAL_HOST_TIMEOUT_MS} from "../functional-host-oracles";
 
 test("thin client model reference searches, saves and survives reload and workspace changes",async({page})=>{
   test.setTimeout(FUNCTIONAL_HOST_TIMEOUT_MS);
-  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1","Pending the dedicated isolated model metadata profile.");
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1","Pending the dedicated isolated model metadata profile.");
   if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported functional host.");
   const {statusUrl,token}=operationalBrowserConfiguration();
   await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);
   await page.goto(new URL("/systems",statusUrl).href);
   await qualifyModelReferenceHostJourney(page,test.info(),"thin-chrome");
+});
+
+import {qualifyArtifactLifecycleHostJourney} from "./artifact-lifecycle-host-journey";
+import {ARTIFACT_HOST_TIMEOUT_MS} from "../functional-artifact-oracles";
+
+for(const scenario of ["local lifecycle","readonly publication denial"] as const)test(`thin client artifact ${scenario} preserves actual bytes and scope`,async({page})=>{
+  test.setTimeout(ARTIFACT_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT!=="1","Pending the dedicated isolated local artifact profile.");
+  if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported artifact host.");
+  const {statusUrl,token}=operationalBrowserConfiguration();await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);await page.goto(new URL("/systems",statusUrl).href);
+  await qualifyArtifactLifecycleHostJourney(page,test.info(),"thin-chrome",scenario==="local lifecycle"?"local-lifecycle":"publication-denial");
 });

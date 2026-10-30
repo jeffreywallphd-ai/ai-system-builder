@@ -7,6 +7,7 @@ import {createVisualComposerQualificationRunId} from "./visual-composer-qualific
 import {startVisualComposerHostLifecycle} from "./visual-composer-host-lifecycle.mjs";
 import {buildPackagedDesktopFromCurrentWorktree,preparePackagedDesktopQualificationIdentity,prepareThinClientQualificationIdentity} from "./visual-composer-global-setup.mjs";
 import {resolveVisualComposerQualificationEnvironment} from "./visual-composer-qualification-environment.mjs";
+import {prepareFunctionalArtifactReadIdentity} from "./functional-artifact-read-identity.mjs";
 import {observeOwnedHostShutdown} from "./owned-host-shutdown.mjs";
 import {readAssetSystemSourceIdentity,assertAssetSystemSourceIdentity} from "../asset-system-source-identity.mjs";
 
@@ -27,8 +28,8 @@ export async function assertFreshFunctionalHostRoots(repoRoot,runId,sourceRevisi
 
 /** Dedicated source-bound opt-in; collection or a stale flag grants no launch. */
 export default async function functionalHostSetup(config){
-  delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;
-  if(process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1"||process.platform!=="win32")return async()=>{};
+  delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
+  if(process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST!=="1"||(process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1"&&process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT!=="1")||process.platform!=="win32")return async()=>{};
   const target=config.projects[0]?.name;
   if(config.projects.length!==1||!["packaged-desktop","thin-chrome"].includes(target))throw new Error("Functional qualification needs exactly one fixed host.");
   const repoRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../../.."),runId=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID??createVisualComposerQualificationRunId();
@@ -39,19 +40,21 @@ export default async function functionalHostSetup(config){
   if(target==="packaged-desktop"){
     buildPackagedDesktopFromCurrentWorktree(plan);preparePackagedDesktopQualificationIdentity(plan);
     process.env.VISUAL_COMPOSER_FUNCTIONAL_READY="1";
-    return async()=>{delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;await assertAssetSystemSourceIdentity(repoRoot,source);};
+    return async()=>{delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;await assertAssetSystemSourceIdentity(repoRoot,source);};
   }
   const identity=prepareThinClientQualificationIdentity(plan,"functional-data");let observer,lifecycle;
   const failures=[];
   async function teardown(){
-    delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;
+    delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
     if(observer)try{await observer.stop();}catch(error){failures.push(error);}
     if(lifecycle)try{await lifecycle.stop();}catch(error){failures.push(error);}
-    try{await rm(identity.credentialPath);delete process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN;}catch(error){failures.push(error);}
+    try{await rm(identity.credentialPath);}catch(error){failures.push(error);}
+    delete process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
     try{await assertAssetSystemSourceIdentity(repoRoot,source);}catch(error){failures.push(error);}
     if(failures.length)throw new AggregateError(failures,"Functional host setup or owned shutdown remains unqualified.");
   }
   try{
+    if(process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT==="1")process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER=prepareFunctionalArtifactReadIdentity(plan,identity,source).bearerToken;
     lifecycle=await startVisualComposerHostLifecycle({launchPlan:plan,spawnProcess:(command,args,options)=>{
       const server=command===plan.server.command&&JSON.stringify(args)===JSON.stringify(plan.server.args);
       const child=spawn(command,args,server?{...options,stdio:["pipe","pipe","pipe"]}:options);

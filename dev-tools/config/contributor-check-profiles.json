@@ -2123,7 +2123,14 @@
         "apps/desktop/src/renderer/features/models/tests/desktop-model-boundaries.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
-        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-artifact-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-artifact-read-identity.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-artifact-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-publication-denial.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
+        "modules/application/use-cases/tests/delete-registered-artifact.use-case.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
@@ -2161,7 +2168,26 @@
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs",
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts",
         "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
-        "dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts"
+        "dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-artifact-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/artifact-host-browser-reads.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-artifact-read-identity.mjs",
+        "dev-tools/scripts/qualification/visual-composer/functional-artifact-read-identity.d.mts",
+        "dev-tools/scripts/qualification/tests/functional-artifact-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-artifact-read-identity.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-artifact-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-publication-denial.unit.test.ts",
+        "dev-tools/config/playwright.functional-artifact-desktop.config.ts",
+        "dev-tools/config/playwright.functional-artifact-thin.config.ts",
+        "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
+        "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
+        "modules/application/use-cases/tests/delete-registered-artifact.use-case.unit.test.ts",
+        "apps/desktop/src/renderer/features/artifact-browser/helpers/artifactMediaBytes.ts",
+        "modules/adapters/transport/api-express/security/createExpressSecurityMiddleware.ts",
+        "modules/adapters/security/lan/createLanBearerTokenVerifierAdapter.ts",
+        "modules/adapters/transport/api-express/artifact-repo/registerArtifactRepoApiRoutes.ts",
+        "modules/application/use-cases/publish-artifact-to-repo.use-case.ts"
       ]
     }
   }
