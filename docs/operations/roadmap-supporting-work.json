@@ -7512,6 +7512,132 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "This support preserves earlier accepted OCR and model results. It does not replace controlled advanced-quality, deployed-runtime, package/host or final combined qualification. These technical checks remain agent work; no human acceptance task is introduced."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "windows-offload-core-consumer",
+      "work_criteria": [
+        "fresh-core-and-real-consumer",
+        "conservative-ordering-and-failures",
+        "preserve-defaults-and-qualification"
+      ],
+      "receipt_digest": "783de5741e98344b92895f2fe9ac05ff7b0e819038583efed0e316545cc1f835",
+      "review_digest": "9dd81793ccfb1b5cb74c5646f609ba7be81bfe2fb2e61fce926fb2f3b6d96474",
+      "scope": "Concrete Windows staging code is connected to the real guarded lease. 30 new component tests and 6 related check groups passed. Canonical owner/callback admission, strict aborted-watch retirement and conservative reserve/seal/retire ordering were reviewed. Actual native execution remains denied without a real finite execution producer, protected journal and exact worker owner. Existing/inherited trees, model resources and parent qualification remain separate.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
+      ]
     }
   ]
 }

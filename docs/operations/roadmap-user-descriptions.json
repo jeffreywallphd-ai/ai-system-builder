@@ -13244,6 +13244,26 @@
           "Earlier accepted OCR and model results stay closed. The agent still needs the remaining controlled checks and the final combined test campaign. These results do not complete a roadmap requirement. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7798254c4c1b9db6f04401f7dfced1da5067f570977847be4b795aa7fee2afdb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added Windows code to manage temporary files for the optional low-memory profile. Thirty new code tests and six related check groups passed. The code refuses requests that do not belong to the original operation and refuses unsafe retries. These results are code checks; actual Windows file protection and memory savings remain untested. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2ff200e5d7b7363e9d1d06ae0a29ebb4330e62c2e5a851a4f447fe2b015e4055",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must finish and test Windows operation time limits, protection for retained files, saved disk accounting, worker shutdown and actual low-memory use. Unknown retained files still reserve the full 12 GiB limit. Accepted model accuracy tests stay closed. The final combined test campaign remains pending."
+        ]
+      }
     }
   ]
 }
