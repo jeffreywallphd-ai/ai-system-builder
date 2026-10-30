@@ -104,11 +104,31 @@ test("checks the current repository map against original scope and actual source
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
-  assert(result.gaps.some(g=>g.kind==="pending-feature-check"&&g.scenario==="settings-public-values"));
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
-  const missingFunctional=["settings-public-values","settings-secrets-and-model-defaults","provider-source-acquisition","artifact-backing-publish-delete","models-discover-and-reference"];
-  for(const id of missingFunctional){const row=map.scenarios.find(s=>s.id===id);assert.deepEqual(row.host_definitions,[]);assert.equal(row.pending_feature_checks.length,1);assert(result.gaps.some(g=>g.kind==="host-definition-not-mapped"&&g.scenario===id));}
-  assert(map.scenarios.find(s=>s.id==="settings-public-values").pending_feature_checks[0].includes("already complete"));
+  const base="dev-tools/scripts/qualification/visual-composer/";
+  const linkedFunctional={
+    "settings-public-values":["e2e/settings-host-journey.ts","settings-host-oracles.ts"],
+    "settings-secrets-and-model-defaults":["e2e/settings-host-journey.ts","settings-host-oracles.ts"],
+    "provider-source-acquisition":["e2e/provider-source-host-journey.ts","functional-provider-oracles.ts"],
+    "artifact-backing-publish-delete":["e2e/artifact-lifecycle-host-journey.ts","functional-artifact-oracles.ts","e2e/private-publication-host-journey.ts","functional-provider-oracles.ts"],
+    "models-discover-and-reference":["e2e/model-reference-host-journey.ts","functional-host-oracles.ts"]
+  };
+  for(const [id,names] of Object.entries(linkedFunctional)){
+    const row=map.scenarios.find(s=>s.id===id);
+    assert.deepEqual(row.host_definitions,[base+"e2e/packaged-desktop-operational-ui.e2e.spec.ts",base+"e2e/thin-client-operational-ui.e2e.spec.ts"]);
+    assert.deepEqual(row.pending_feature_checks,[]);
+    for(const name of names){
+      const source=map.sources.find(s=>s.path===base+name);
+      assert(source,"Each body and oracle must be inventoried.");
+      if(name.startsWith("e2e/"))assert(source.facts.assertionCount>0,"Each journey body contains meaningful assertions.");
+      else assert(source.facts.functions.length>0,"Inert oracle guards are separate functions, not executed test assertions.");
+      assert.equal(source.facts.sha256,source.committed_sha256,"Each new definition must already be committed after review.");
+      assert(row.behavior_links.every(link=>link.assertion_sources.includes(source.path)));
+    }
+  }
+  assert(!result.gaps.some(g=>["host-definition-not-mapped","unreviewed-source-drift"].includes(g.kind)));
+  assert.equal(result.gaps.filter(g=>g.kind==="actual-host-not-run-by-census").length,39);
+  assert.equal(result.actual_host_pass,false);
   assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
   assert(!map.scenarios.find(s=>s.id==="runtime-status-and-explicit-controls").host_definitions.some(n=>n.includes("thin-client")));
   assert(map.scenarios.find(s=>s.id==="dashboard-counts").host_definitions.some(n=>n.endsWith("packaged-desktop-reference-performance.e2e.spec.ts")));
@@ -185,4 +205,28 @@ test("checks the current repository map against original scope and actual source
     assert(text.includes("qualifyProviderSourceHostJourney"));
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE"));
   }
+});
+
+
+test("preserves exact historical rows outside current coverage and aggregate budgets",()=>{
+  const read=repositoryReader(process.cwd()),map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const bytes=read("docs/operations/comprehensive-ui-automation-census-source-history.json");
+  assert(bytes.byteLength<=64*1024);const archive=JSON.parse(bytes);
+  assert.equal(archive.schema_version,"historical-ui-census-sources-v1");
+  assert.equal(archive.scope,"historical-only-not-current-coverage-or-execution");
+  assert.equal(archive.roadmap_id,map.roadmap_id);assert.match(archive.prior_commit,/^[a-f0-9]{40}$/);
+  assert.equal(archive.prior_census_path,"docs/operations/comprehensive-ui-automation-current-census.json");
+  assert.match(archive.prior_census_sha256,/^[a-f0-9]{64}$/);
+  assert.equal(archive.prior_pointer.pending_agent_work.length,5);
+  assert.equal(archive.sources.length,8);assert.equal(new Set(archive.sources.map(v=>v.row.path)).size,8);
+  const referenced=new Set([...map.scenarios.flatMap(s=>[...s.host_definitions,...s.behavior_links.flatMap(l=>l.assertion_sources)]),...map.host_spec_files,...map.inventories.map(i=>i.source)]);
+  for(const entry of archive.sources){
+    censusPath(entry.row.path);assert(!referenced.has(entry.row.path));assert(!map.sources.some(v=>v.path===entry.row.path));
+    assert.equal(sha(JSON.stringify(entry.row)),entry.prior_row_sha256);assert.match(entry.row.committed_sha256,/^[a-f0-9]{64}$/);
+    assert.match(entry.row.facts.sha256,/^[a-f0-9]{64}$/);assert(entry.reason.length>0);
+  }
+  const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
+  assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
+  assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
+  assert.equal(CENSUS_LIMITS.files,192);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
 });
