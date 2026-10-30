@@ -204,3 +204,13 @@ is held only for state changes, never native calls or pipe-reader joins. Existin
 case definitions, 512 MiB limits, process identities and crash assertions remain.
 Portable fault tests exercise these controls; source tests do not qualify the
 actual twelve-case Windows run or enable product OCR.
+
+
+For the native lifetime operator, use an independently verified direct base
+interpreter. On Windows, a virtual environment’s python.exe can be a launcher
+for another process. The crash check must duplicate the helper handle from the
+actual process that owns it; a launcher PID is insufficient. A path returned by
+sys.executable or sys._base_executable alone does not prove that identity.
+The [scoped local results](../../../../../../../docs/operations/ocr-native-lifetime-qualification.json)
+record one verified Python 3.14.3 run. They preserve expected refusals and do not
+qualify real documents, deployed worker runtimes, app hosts or parent roadmaps.
