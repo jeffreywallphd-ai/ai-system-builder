@@ -1297,3 +1297,18 @@ Focused fixture tests and Playwright collection qualify this test construction
 only. They do not close actual training, model quality, resource, native cleanup
 or parent roadmap criteria. Keep those results separate until the scheduled
 combined host qualification. See `dev-tools/README.md` for the opt-in command.
+
+
+The image host extension adds seven focused helper/oracle files and borrows the
+canonical Server shutdown and managed ComfyUI admission regressions. Its two
+opt-in configs collect four real public-UI image cases in the existing operational
+specs. Fixed source/run/workspace/model declarations create input records only.
+Bounded physical-file/hash snapshots and official managed-source checks precede
+build/start; absent inputs stay pending without installation or download. The
+Server's exact owned-child stdin handshake invokes the canonical task fence before
+persistence close. Desktop main-only cleanup preserves import semantics and labels
+image workers unqualified. Neither helper fixtures nor collection supply an actual
+host, supplier, native-job, model-quality or parent pass. Full image execution is
+deferred and accepted accuracy remains closed. Unknown, incomplete and explicit
+generic impact retain the generic checks. Input layout and use are in
+`dev-tools/README.md`.

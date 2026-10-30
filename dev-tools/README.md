@@ -913,3 +913,32 @@ children. They do not load PyTorch, models, ComfyUI or the product app. These
 checks establish the helper behavior only. Actual app and complete job-tree
 shutdown, native offload protection and parent-roadmap qualification remain
 separate. Full cross-roadmap testing remains deferred by the current user request.
+
+
+### Image generation host journeys
+
+The dedicated `playwright.image-host-desktop.config.ts` and
+`playwright.image-host-thin.config.ts` collect two real-image cases each. Run one
+host at a time. Execution requires `VISUAL_COMPOSER_IMAGE_HOST=1` and an explicit
+qualification run ID. Prepare only already authorized local inputs under that
+run's fixed `thin-runtime/runtime-installs/comfyui` root; the setup never installs,
+repairs or downloads them. The fixed `thin-runtime/image-host-inputs.json` has
+exactly `schemaVersion: image-host-input-manifest-v1`, `runId`,
+`checkpointFileName`, `checkpointSha256`, `checkpointBytes` and `comfyCommitSha`.
+The checkpoint basename ends in `.safetensors` and identifies a file under
+`models/checkpoints`. The existing managed installation and its metadata must
+match the official source and exact commit. A declaration or hash grants no
+supplier trust, runtime readiness or launch authority. Missing inputs leave the
+cases pending before packaging or app startup.
+
+Each case requests one 256-by-256 image with one sampling step through the public
+UI, observes the real task, decodes the PNG and reopens the unique saved artifact.
+The recovery case also checks navigation and task identity after reload. Its
+renderer clock control supplies no timing evidence. The fixed Server child
+accepts one stdin shutdown command and acknowledges the canonical task drain and
+persistence close before generic owned cleanup. Desktop reports only its observed
+main-process exit; ComfyUI/model workers and full native job retirement remain
+unqualified by that report. Neither definition construction nor synthetic helper
+tests qualify an actual image, model quality, native security or parent roadmap.
+Accepted model-accuracy results stay closed. Full host execution stays deferred
+until the user-directed combined qualification campaign.

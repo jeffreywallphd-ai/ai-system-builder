@@ -107,3 +107,18 @@ recovers only the existing opaque task ID, not unsent form text or cached task
 success. Read `docs/architecture/runtime-model.md` before changing these limits
 or retention. Focused remount and isolation tests do not qualify actual image
 generation or native cleanup.
+
+
+## Image host qualification definitions
+
+- Dedicated image Desktop/Thin configs collect create/register and task-recovery
+  cases in the existing operational host specs. Run one host at a time.
+- `image-host-global-setup.mjs` requires explicit opt-in and verifies fixed local
+  managed inputs before build/start. No model or dependency acquisition occurs.
+- `image-host-inputs.mjs` bounds regular-file/header/hash snapshots; these are not
+  supplier, native-file or launch capabilities. Input records contain no results.
+- Actual cases decode/hash the PNG and reopen the exact unique saved artifact.
+- Server stdin shutdown uses the canonical task/persistence fence; Desktop
+  main-only evidence leaves ComfyUI/model workers and native job proof pending.
+- Helper tests and collection are source support. Actual hosts/full testing stay
+  deferred; accepted model accuracy is not rerun. See `dev-tools/README.md`.

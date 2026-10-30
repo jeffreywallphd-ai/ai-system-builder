@@ -23,17 +23,17 @@ describe("fixed operational desktop slot", () => {
     expect(() => prepareIsolatedDesktopCase("training")).toThrow("Training qualification requires its existing physical run root.");
     expect(probe.calls).toEqual([]); expect(probe.statCalls).toEqual([]);
   });
-  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("uses a separate fresh %s slot with existing bounds",slot=>{
+  it.each(["image-create-register","image-task-recovery","training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("uses a separate fresh %s slot with existing bounds",slot=>{
     const result=prepareIsolatedDesktopCase(slot);expect(result.dataRoot).toBe(path.join(base,slot));
     expect(result.env.HF_HUB_CACHE).toBe(path.join(result.dataRoot,"controlled-model-cache"));
     expect(probe.statCalls).toEqual([result.dataRoot]);expect(probe.calls).toHaveLength(1);
     expect(probe.calls[0]).toMatchObject({dataRoot:result.dataRoot,large:"0",runAsNode:"1",timeout:30000,windowsHide:true,script:"visual-composer-desktop-seed.ts"});
   });
-  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("retains existing/dangling %s without seeding",slot=>{
+  it.each(["image-create-register","image-task-recovery","training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("retains existing/dangling %s without seeding",slot=>{
     probe.existing=true;expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("An existing operational profile requires a fresh qualification run.");
     expect(probe.statCalls).toEqual([path.join(base,slot)]);expect(probe.calls).toEqual([]);
   });
-  it.each(["training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("refuses unsafe roots and a sample index for %s",slot=>{
+  it.each(["image-create-register","image-task-recovery","training","ingestion-native400","dataset-native400","structured-output-native400","browse-native400","lifecycle-native400","ocr-native400"] as const)("refuses unsafe roots and a sample index for %s",slot=>{
     expect(()=>prepareIsolatedDesktopCase(slot,0)).toThrow();
     for(const root of ["", "relative/artifacts/qualification/visual-composer/d/fixture",path.resolve(".local-codex/outside"),path.resolve("..","lookalike","artifacts/qualification/visual-composer/d/fixture")]){
       vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT",root);expect(()=>prepareIsolatedDesktopCase(slot)).toThrow();

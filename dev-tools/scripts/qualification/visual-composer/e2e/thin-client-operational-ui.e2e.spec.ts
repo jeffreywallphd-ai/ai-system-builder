@@ -4,6 +4,9 @@ import { OPERATIONAL_HOST_TIMEOUT_MS, operationalStatusUrl } from "../operationa
 import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
 import { qualifyReviewSiteBrowser } from "./review-site-journey";
 import { REVIEW_SITE_BROWSER_TIMEOUT_MS } from "../review-site-oracles";
+import {captureImageInspection} from "../image-host-launch-plan.mjs";
+import {captureImageHostFixture,imageHostWorkspace,imageHostModelRecord,IMAGE_HOST_TIMEOUT_MS} from "../image-generation-host-oracles";
+import {qualifyImageHostJourney} from "./image-generation-host-journey";
 
 test.use({ screenshot: "off", trace: "off", video: "off" });
 function operationalBrowserConfiguration() {
@@ -59,4 +62,21 @@ test.describe("review site real browser", () => {
     test.setTimeout(REVIEW_SITE_BROWSER_TIMEOUT_MS);
     await qualifyReviewSiteBrowser(page, test.info(), "theme-storage");
   });
+});
+
+for(const scenario of ["create-register","task-recovery"] as const)test(`thin client image ${scenario} uses real output and saved artifacts`,async({page})=>{
+  test.setTimeout(IMAGE_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_IMAGE_READY!=="1","Pending the dedicated image profile and approved installed local inputs.");
+  if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported image host.");
+  const run=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!,source=process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!;
+  const input=captureImageInspection(process.env.VISUAL_COMPOSER_IMAGE_INSPECTION,run,source);
+  const declaration=JSON.stringify({schemaVersion:"image-host-fixture-v1",runId:run,sourceRevision:source,host:"thin-chrome",journey:scenario,
+    workspaceId:imageHostWorkspace(run,"thin-chrome",scenario),modelRecordId:imageHostModelRecord(run,"thin-chrome",scenario),checkpointFileName:input.checkpointFileName,checkpointSha256:input.checkpointSha256});
+  const fixture=captureImageHostFixture(declaration,run,source,"thin-chrome",scenario)!;
+  const {statusUrl,token}=operationalBrowserConfiguration();
+  await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);
+  await page.goto(new URL("/systems",statusUrl).href);
+  const workspace=page.getByLabel("Select current workspace",{exact:true});await expect(workspace).toBeVisible();
+  await workspace.selectOption(fixture.workspaceId);await expect(workspace).toHaveValue(fixture.workspaceId);
+  await qualifyImageHostJourney(page,test.info(),declaration,scenario);
 });

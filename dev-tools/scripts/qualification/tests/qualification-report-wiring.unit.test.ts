@@ -158,7 +158,7 @@ test("owned tasks use one captured profile and explicit diagnostic finalization"
   assert(body.includes("i<profile.samples"));assert.equal(body.match(/toBeLessThanOrEqual\(2000\)/g)?.length,2);
 });
 test("both native cleanup seams catch observer disposal and use fixed failure labels",()=>{
-  for(const name of ["desktop-task-cleanup.ts","desktop-import-cleanup.ts"]){
+  for(const name of ["desktop-task-cleanup.ts","desktop-main-cleanup.ts"]){
     const text=readFileSync(path.join(folder,name),"utf8"),source=ts.createSourceFile(name,text,ts.ScriptTarget.Latest,true),all=calls(source);
     const finalizers=all.filter(call=>call.expression.getText(source)==="finalizeQualificationEvidence");assert.equal(finalizers.length,1);
     assert.equal(finalizers[0]!.arguments[0]!.getText(source),"report");assert.equal(finalizers[0]!.arguments[1]!.getText(source),"errors");
@@ -167,6 +167,16 @@ test("both native cleanup seams catch observer disposal and use fixed failure la
     assert(text.includes("8192"));assert(text.includes("willQuitAcknowledged"));assert(text.includes("mainExitCode"));
   }
 });
+test("the import cleanup adapter delegates once to the guarded core without independent cleanup or publication",()=>{
+  const text=readFileSync(path.join(folder,"desktop-import-cleanup.ts"),"utf8"),source=ts.createSourceFile("adapter.ts",text,ts.ScriptTarget.Latest,true);
+  assert(text.includes('from "./desktop-main-cleanup"'));
+  const fn=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="closeImportedFileDesktop");
+  assert(fn&&ts.isFunctionDeclaration(fn)&&fn.body);assert.equal(fn.body.statements.length,1);
+  assert.equal(fn.body.statements[0]!.getText(source).replace(/\s/g,""),'returncloseImportedMainDesktop(app,dataRoot,info,journeyStage,mode);');
+  assert.equal(calls(source).filter(call=>call.expression.getText(source)==="closeImportedMainDesktop").length,1);
+  assert(!text.includes("app.close")&&!text.includes("observeOwnedNativeProcessExit")&&!text.includes("finalizeQualificationEvidence"));
+});
+
 test("the file-import wrapper retains two cases and delegates the exact owned cleanup",()=>{
   const text=readFileSync(path.join(folder,"packaged-desktop-ingestion.e2e.spec.ts"),"utf8"),source=ts.createSourceFile("import.ts",text,ts.ScriptTarget.Latest,true),all=calls(source);
   assert(text.includes('from "./desktop-import-cleanup"'));assert(!text.includes("async function closeImportedFileDesktop"));

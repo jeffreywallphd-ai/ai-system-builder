@@ -6312,8 +6312,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
    "facts": {
-    "sha256": "c98029be349e654a21971218a90a008ae292a8042bb0d0151596808ccec1982b",
-    "bytes": 15781,
+    "sha256": "1ea97862f7956a6044760cd00b6dbf7e466d835db9bd82e2034ca98b0cddcdb1",
+    "bytes": 16726,
     "cases": [
      {
       "name": "the old passed-before-attachment finally pattern cannot satisfy wiring",
@@ -6344,16 +6344,20 @@
       "line": 160
      },
      {
-      "name": "the file-import wrapper retains two cases and delegates the exact owned cleanup",
+      "name": "the import cleanup adapter delegates once to the guarded core without independent cleanup or publication",
       "line": 170
      },
      {
+      "name": "the file-import wrapper retains two cases and delegates the exact owned cleanup",
+      "line": 180
+     },
+     {
       "name": "meaningful construction protects setup, removes owned observers and preserves purpose/replay assertions",
-      "line": 179
+      "line": 189
      },
      {
       "name": "managed task setup creates and binds a distinct workspace without resetting reference data",
-      "line": 189
+      "line": 199
      }
     ],
     "dynamicCases": 4,
@@ -6375,8 +6379,8 @@
       "line": 108
      }
     ],
-    "assertionCount": 96,
-    "assertionDigest": "6b4af0ffd88daf0baeb907f23ad4fe5e7fc92de5282ad0ecd364fcf568159915",
+    "assertionCount": 102,
+    "assertionDigest": "aeb52b0ba43ad51fcee1963fa2f23495c7669fcf2c8b71c845d977519b684984",
     "assertionExamples": [
      {
       "line": 17,
@@ -6479,7 +6483,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "fd579dfb2ebb89e5e36c659eebe282718f25e780f95c1c8c0152c19da7c3187a"
+   "committed_sha256": "026b965df5a0243f265f532d9e72d444e3df3cd18c1d0559fc72c7ab43f8a804"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
@@ -7427,7 +7431,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "f5b93885075bb21a4dc41c7dba06e49b073ef855b8ce3e93288bd1c95362495c"
+   "committed_sha256": "e04b77e1858e248b1fa3b2fa52263ca0c36d065e4d1cc1ecc36288b00682a646"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
@@ -8231,46 +8235,50 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "ffd95e1ff5b6fa82953a8d988cff194af0027ccaf9cc98032abf9e7e8aa9e86e",
-    "bytes": 5277,
+    "sha256": "84a3373bef4e44402fd401345d8831c537619f56a5c2a9556b6c3528c1bcc0a6",
+    "bytes": 7787,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
-      "line": 37
+      "line": 41
      },
      {
       "name": "packaged desktop preserves operational controls at native 400 percent zoom",
-      "line": 42
+      "line": 46
      },
      {
       "name": "packaged desktop trains one local adapter, reviews privately, saves and reopens it",
-      "line": 47
+      "line": 51
      }
     ],
-    "dynamicCases": 1,
+    "dynamicCases": 3,
     "functions": [
      {
       "name": "runOperationalDesktop",
-      "line": 17
+      "line": 21
      }
     ],
     "assertionCount": 2,
-    "assertionDigest": "636ffb1f196c2ba787620d7fb1581d1590821c70145d78eeb06eb0956f593069",
+    "assertionDigest": "584d914eda6fb8dc1260486ba67c4c7adf7c73ba3211d008dbfd61e7b251c9fb",
     "assertionExamples": [
      {
-      "line": 24,
+      "line": 28,
       "kind": "expect",
       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
      },
      {
-      "line": 28,
+      "line": 32,
       "kind": "expect",
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
      }
     ],
     "modifiers": [
      {
-      "line": 49,
+      "line": 53,
+      "kind": "skip"
+     },
+     {
+      "line": 75,
       "kind": "skip"
      }
     ]
@@ -8916,56 +8924,71 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "bac6ffcb712c2fa424baaf0e7e8b333bce4d90dc9ffa7c57d7ec91bb514a9116",
-    "bytes": 3753,
+    "sha256": "ed72556520e2eba612db7a53eede06120aeffa310713e80258853acdde30e419",
+    "bytes": 5653,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
-      "line": 25
+      "line": 28
      },
      {
       "name": "thin client preserves operational controls at native 400 percent zoom",
-      "line": 31
+      "line": 34
      },
      {
       "name": "opens canonical details and linked work without changing qualification",
-      "line": 50
+      "line": 53
      },
      {
       "name": "refreshes a controlled current copy and recovers from connection refusal",
-      "line": 54
+      "line": 57
      },
      {
       "name": "keeps theme, keyboard and narrow review usable when storage refuses access",
-      "line": 58
+      "line": 61
      }
     ],
-    "dynamicCases": 0,
+    "dynamicCases": 2,
     "functions": [
      {
       "name": "operationalBrowserConfiguration",
-      "line": 9
+      "line": 12
      },
      {
       "name": "prepareOperationalBrowser",
-      "line": 15
+      "line": 18
      }
     ],
-    "assertionCount": 2,
-    "assertionDigest": "e7f51db5e7c04455523dd67e0cea59410b8d034c8f0212d9fc4d48e9c324d4b0",
+    "assertionCount": 4,
+    "assertionDigest": "c60985a2953c21e65ca0039c907c81ee7c20e93bf75c8c270ad4365dca9bda4a",
     "assertionExamples": [
      {
-      "line": 18,
+      "line": 21,
       "kind": "expect",
       "sha256": "af6c6e9db57ad8b1899bad425a1a8a0b29a42ce24ff120357570fc30bb40ec93"
      },
      {
-      "line": 22,
+      "line": 25,
       "kind": "expect",
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+     },
+     {
+      "line": 79,
+      "kind": "expect",
+      "sha256": "3a1ae67649922b0db4d00006d56227124bea624840c633b78ca501790ef74c73"
+     },
+     {
+      "line": 80,
+      "kind": "expect",
+      "sha256": "b11eff56bb97648199edeafbb1b0d800f604be67d532bda2b70a0a0c33717400"
      }
     ],
-    "modifiers": []
+    "modifiers": [
+     {
+      "line": 69,
+      "kind": "skip"
+     }
+    ]
    },
    "committed_sha256": "bac6ffcb712c2fa424baaf0e7e8b333bce4d90dc9ffa7c57d7ec91bb514a9116"
   },
@@ -13162,87 +13185,87 @@
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
    "facts": {
-    "sha256": "33ac9403a00c99ecbcd41f0ba47de62a73c9ef5946f20284359c1899c84dffe2",
-    "bytes": 12824,
+    "sha256": "61064c5ec6c94a991793968f560369732ce4ca55feea83af56b72dbf9716776e",
+    "bytes": 13549,
     "cases": [
      {
       "name": "retains the successful owned identity and disposal checks",
-      "line": 64
+      "line": 67
      },
      {
       "name": "accepts the genuine same-process launch shape with root-bound native observation",
-      "line": 72
-     },
-     {
-      "name": "retains a falsy app-close failure %#",
       "line": 77
      },
      {
+      "name": "retains a falsy app-close failure %#",
+      "line": 82
+     },
+     {
       "name": "preserves close, observer disposal and attachment failures in order",
-      "line": 84
+      "line": 89
      },
      {
       "name": "retains both failed storage attempts without overwriting an unknown file",
-      "line": 91
+      "line": 96
      },
      {
       "name": "does not invoke or serialize exception name getters",
-      "line": 97
+      "line": 102
      },
      {
       "name": "admits a live real-worker shape through its launcher before closing the app",
-      "line": 112
+      "line": 117
      },
      {
       "name": "a confirmed native exit is not overridden by an unrelated process reusing that number",
-      "line": 119
+      "line": 124
      },
      {
       "name": "a refused native exit remains failed without a numeric-PID polling fallback",
-      "line": 125
+      "line": 130
      },
      {
       "name": "rejects a marker whose immediate parent disagrees with native observation, without rewriting it",
-      "line": 132
+      "line": 137
      },
      {
       "name": "does not downgrade refused live native admission to a PID-absence pass",
-      "line": 139
+      "line": 144
      },
      {
       "name": "keeps an already-exited nested worker unqualified because its ancestry cannot be observed",
-      "line": 154
+      "line": 159
      },
      {
       "name": "import cleanup rejects unsupported host, mode and stage before any app or file effects",
-      "line": 160
+      "line": 165
      },
      {
       "name": "cleanup persistence refuses private types and unknown stage values",
-      "line": 168
+      "line": 173
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "app",
-      "line": 38
+      "line": 40
      },
      {
       "name": "info",
-      "line": 43
+      "line": 45
      },
      {
       "name": "caught",
-      "line": 48
+      "line": 50
      },
      {
       "name": "liveWorker",
-      "line": 106
+      "line": 111
      }
     ],
-    "assertionCount": 71,
-    "assertionDigest": "9177ee3bbdd12246327d8fbe3e03733c145a648587dc3566e799e8aab20055f6",
+    "assertionCount": 76,
+    "assertionDigest": "5dd99c8572ce6f08278b6a1c4432859cdee9bc58d13a88367fafc1e3c9d703d7",
     "assertionExamples": [
      {
       "line": 20,
@@ -13250,24 +13273,24 @@
       "sha256": "4e3f2b6a547285a681e5c4ea582cf8bc983ceb317a8230c20669f3cc53d91bf3"
      },
      {
-      "line": 65,
+      "line": 68,
       "kind": "expect",
       "sha256": "42315d8a088de76c6b15791c6373ded3f76bf6597f3bf70686184fa4d6f0e7c5"
      },
      {
-      "line": 65,
+      "line": 68,
       "kind": "expect",
       "sha256": "b05d2c348719ca3dc5a239e18c3f60520eca33cef83ea5c59f7f211e1ded34b0"
      },
      {
-      "line": 66,
+      "line": 69,
       "kind": "expect",
       "sha256": "a6638f8e5ae296f0653d8d53ee1f453a23cd4b9b4965cb97a54f609dcf135baf"
      }
     ],
     "modifiers": []
    },
-   "committed_sha256": "c3fab8bdf798769c913c6e344962830db5e6d0785f760a6f445db9364a41c8fe"
+   "committed_sha256": "33ac9403a00c99ecbcd41f0ba47de62a73c9ef5946f20284359c1899c84dffe2"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
@@ -13321,7 +13344,508 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "ab3ec702fc9a8544f920ca007917f445aae0a93e3e06005c56d63dce6d7cafc6"
+   "committed_sha256": "41e4cdb380af46a7a4751ef5224ea1ee781d11637a0c04acae1d78f26274a31d"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+   "facts": {
+    "sha256": "ad8177b4643ea5d48002895eb4647076ebeeb0180e10ef93bdfdbf191921e5f8",
+    "bytes": 8916,
+    "cases": [
+     {
+      "name": "real-response witnesses retain the exact scoped task, asset, artifact and storage identity",
+      "line": 7
+     },
+     {
+      "name": "image input declarations are detached, frozen and bound to each host and journey",
+      "line": 23
+     },
+     {
+      "name": "absent image prerequisites are absent declarations and never a pass",
+      "line": 36
+     },
+     {
+      "name": "foreign run, source, host, journey, workspace and unknown payload fields deny",
+      "line": 41
+     },
+     {
+      "name": "shared checkpoint bytes keep four distinct scoped model records",
+      "line": 51
+     },
+     {
+      "name": "malformed, oversized and nonrecord image declarations deny without disclosure",
+      "line": 60
+     },
+     {
+      "name": "only a safe checkpoint basename and exact hash enter the public declaration",
+      "line": 67
+     },
+     {
+      "name": "image task keys use only the actual host namespace and fixed owned workspace",
+      "line": 75
+     },
+     {
+      "name": "only the exact complete phase sequence can produce a passed image UI outcome",
+      "line": 84
+     },
+     {
+      "name": "phase admission rejects holes, accessors, proxies and extra fields without executing them",
+      "line": 96
+     },
+     {
+      "name": "semantic artifact IDs retain exact canonical slash identities and reject normalization or traversal",
+      "line": 108
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "declaration",
+      "line": 18
+     }
+    ],
+    "assertionCount": 32,
+    "assertionDigest": "18fb142544a52a2ca2a02b23b5621d6e07b15628561f83a5bb8bd2ecfb14b07c",
+    "assertionExamples": [
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "f985d615253bf3f9d698c255d14847d3a36fabc76c423e51668bf0469ecdc733"
+     },
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "98372ac0fd2f92bd752ad90c4a0e73393ef370925835eb5d7d53ef5c7bdf0047"
+     },
+     {
+      "line": 13,
+      "kind": "assert",
+      "sha256": "4980450c1cfb6626aad584ad803b254e7e647596f89a10a86b92eb6be5c0ef98"
+     },
+     {
+      "line": 14,
+      "kind": "assert",
+      "sha256": "864f5521d4b25e56828d219f4ad10a2b1cd07c34b1c76e9c389d83553840f905"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+   "facts": {
+    "sha256": "325761f8e734db7ef2684a267897c3f4ffe7f34442e9937ebdd6003d17b51ab3",
+    "bytes": 6617,
+    "cases": [
+     {
+      "name": "image layout matches the existing host run and canonical Server install root",
+      "line": 8
+     },
+     {
+      "name": "only bounded nondevice safe-weight basenames are accepted",
+      "line": 15
+     },
+     {
+      "name": "environment captures values once, strips private/ambient controls, and retains guarded startup",
+      "line": 19
+     },
+     {
+      "name": "environment proxies/getters/unsafe keys never execute",
+      "line": 31
+     },
+     {
+      "name": "inspection is detached source-bound data and never grants runtime/model qualification",
+      "line": 36
+     },
+     {
+      "name": "Desktop cases isolate small caches while sharing only the verified managed input",
+      "line": 42
+     },
+     {
+      "name": "trusted plan selects the dedicated entry without launching or installing",
+      "line": 54
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [],
+    "assertionCount": 43,
+    "assertionDigest": "ea432412499f96c5b9220318c6101f7b3f8d0b57765d8ffc849389387cc6bd01",
+    "assertionExamples": [
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "d25a2a6d78ac9ff7f229e5c402c8c6ca7733b7f6d3769e9a6d659e90f19b8fca"
+     },
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "4282b99917d97f80a8381655d3fd22dc5fe3753233b427a561c6f268f93b3766"
+     },
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "72adaac0c10b43d8d4aab8fa0a68c636433088c77b17e0cf3346785a63d6e264"
+     },
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "47376cb4e30936617954abe61d74ddb35ac711e8bda735475656d364b5302380"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+   "facts": {
+    "sha256": "c6e7c8e337e7e15fabf28368e4207a6107f23154c060862bfe62921a2db87779",
+    "bytes": 5243,
+    "cases": [
+     {
+      "name": "reads exact declared regular bytes without granting model or native authority",
+      "line": 21
+     },
+     {
+      "name": "missing files, foreign scope, malformed declarations and unknown fields deny",
+      "line": 27
+     },
+     {
+      "name": "invalid or unbounded safetensors headers and data offsets deny before a model is loaded",
+      "line": 34
+     },
+     {
+      "name": "hard-linked inputs are not accepted as isolated regular snapshots",
+      "line": 41
+     },
+     {
+      "name": "a linked declared file is denied without reading the linked payload",
+      "line": 45
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "fixture",
+      "line": 13
+     }
+    ],
+    "assertionCount": 19,
+    "assertionDigest": "713c5b635ebfa3351602f0471ec30a46c80e18c1d9e16c9fb14a1888b80a9a83",
+    "assertionExamples": [
+     {
+      "line": 14,
+      "kind": "assert",
+      "sha256": "5ffa63659a27399742a4c400cf96f1f85520e63be8d2315f130a598047dbc0bd"
+     },
+     {
+      "line": 19,
+      "kind": "assert",
+      "sha256": "6aaad575062f8087e46adc75179d8f30f68dc2534f30d152b34c83b0a5ff5593"
+     },
+     {
+      "line": 19,
+      "kind": "assert",
+      "sha256": "5ffa63659a27399742a4c400cf96f1f85520e63be8d2315f130a598047dbc0bd"
+     },
+     {
+      "line": 19,
+      "kind": "assert",
+      "sha256": "cd2e9bb1e5aaa4ed60d6f8eda7a81991ea1723e0daa50947afa1aaf05bea3aa8"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+   "facts": {
+    "sha256": "4da725ca842759a70a93ea3ae9d090de989f7fae19a4c93723aba6595ba72618",
+    "bytes": 3407,
+    "cases": [
+     {
+      "name": "both hosts and cases retain distinct scoped input models without results or cross-workspace leakage",
+      "line": 13
+     },
+     {
+      "name": "unscoped stores and foreign declarations fail before input writes",
+      "line": 27
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "fixture",
+      "line": 11
+     }
+    ],
+    "assertionCount": 12,
+    "assertionDigest": "cccee4953e172f9656d607356437cd8c7babba31d2d3d93bde57259577cdc100",
+    "assertionExamples": [
+     {
+      "line": 17,
+      "kind": "assert",
+      "sha256": "56c7a2d75feb8571df58a4b135e057b370fcf038a72feea395aaaacedb0604ca"
+     },
+     {
+      "line": 20,
+      "kind": "assert",
+      "sha256": "27957dc9877ccf4a46ceabcf1bccfa45eea6fedcdcbb8c2a5595efa473e56b64"
+     },
+     {
+      "line": 20,
+      "kind": "assert",
+      "sha256": "1b0b04b2be595b99b53c7dbc3726d537a2486b2d7097a1a441f4938f0d2a4efc"
+     },
+     {
+      "line": 20,
+      "kind": "assert",
+      "sha256": "9e0ec767938b417ebc1faed9ec95b5b5963eee392450a5a7eeb9f28830c1dfe2"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+   "facts": {
+    "sha256": "df6108a40eee5d0219c43a7edc958f85515bbd5ba10fb998feea4c192dbf8f24",
+    "bytes": 4554,
+    "cases": [
+     {
+      "name": "acknowledgment binds every field and supplies no full-job proof",
+      "line": 9
+     },
+     {
+      "name": "only the exact split fixed command acknowledges drained persistence",
+      "line": 23
+     },
+     {
+      "name": "EOF, malformed, duplicate and falsy drain failures cannot acknowledge success",
+      "line": 27
+     },
+     {
+      "name": "actual inert owned Node child must acknowledge before clean exit",
+      "line": 33
+     },
+     {
+      "name": "actual inert children with missing, foreign, duplicate acknowledgments or nonzero exit remain failed",
+      "line": 42
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "protocol",
+      "line": 15
+     }
+    ],
+    "assertionCount": 16,
+    "assertionDigest": "fd98b2d6170323ed2f88ad395995e4aaf5da2e404bddaf268f6390ba137a88fc",
+    "assertionExamples": [
+     {
+      "line": 10,
+      "kind": "assert",
+      "sha256": "3493f8134027f1bb2ed424b9b189299ce7f172e868ae8a973193f69df830c7d7"
+     },
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "497ed808b62da728a94f002bf2e766b75c0c54655ea3df35bf11ad128417deea"
+     },
+     {
+      "line": 12,
+      "kind": "assert",
+      "sha256": "d6a0cc3143b548b361780f4ccb964eed41ec0288ec0334b7315e7df8fea13171"
+     },
+     {
+      "line": 13,
+      "kind": "assert",
+      "sha256": "50c505e452f0695f0f15078fc663e847eb40a3eee79ea85e3e5a1dcd131abd15"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+   "facts": {
+    "sha256": "094004b53108a54ac18074b35b36753b7650865f2429b56218f79bbcca4491bc",
+    "bytes": 5646,
+    "cases": [
+     {
+      "name": "only the trusted image purpose adds the two required image scopes; defaults and authority stay limited",
+      "line": 9
+     },
+     {
+      "name": "image setup stays dormant without its explicit opt-in and clears stale readiness",
+      "line": 23
+     },
+     {
+      "name": "plan rejects ambient executable, Git and provider overrides and keeps fixed child wiring",
+      "line": 30
+     },
+     {
+      "name": "source definitions retain real image actions, managed admission and canonical persistence fencing",
+      "line": 36
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [],
+    "assertionCount": 38,
+    "assertionDigest": "978b5a8a5778f494d6e13cadde04f387689d597511fa6375f9323d5720e746f4",
+    "assertionExamples": [
+     {
+      "line": 16,
+      "kind": "assert",
+      "sha256": "82bfcfdcad6bd0dab5b8524a09a6abb1ff53105f4563a0c503972c2c8b105446"
+     },
+     {
+      "line": 16,
+      "kind": "assert",
+      "sha256": "65ee8a6646f108b2fdfc377e8b8776b50ba68b1499fe28652de0929bde630a56"
+     },
+     {
+      "line": 17,
+      "kind": "assert",
+      "sha256": "f7268a2667528ca4ad13e5b5a100f5cd87e2ef1f410eb9ae275f43a822fc7490"
+     },
+     {
+      "line": 17,
+      "kind": "assert",
+      "sha256": "d645b52ac358a76ebc7eb1de911373f119daea4b7755d7e58ce7fbf3ce6527b7"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts",
+   "facts": {
+    "sha256": "e8b070a5f2b079f08adee377ca42f208f968a4949a8d1daf73a2a5e047f9e60e",
+    "bytes": 3912,
+    "cases": [
+     {
+      "name": "synthetic preview oracle reports only bounded dimensions, size and digest",
+      "line": 14
+     },
+     {
+      "name": "external URLs, incomplete, wrong-sized and undecodable images cannot trigger a fetch",
+      "line": 18
+     },
+     {
+      "name": "bad media, signatures, oversized streams and stream failures cannot pass",
+      "line": 23
+     },
+     {
+      "name": "failed attachments preserve fixed phase and publication failures without serializing private reasons",
+      "line": 28
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "fixture",
+      "line": 8
+     }
+    ],
+    "assertionCount": 13,
+    "assertionDigest": "0db35fc80112114cfb5510af3137bc0541b05c3d8891ace6fedbaa5c24be1594",
+    "assertionExamples": [
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "3098105f14fdd79c4410eaf788d78293b404f16ec32653ce1e66cbc42599a4e6"
+     },
+     {
+      "line": 11,
+      "kind": "assert",
+      "sha256": "5313a061759ce72f36d18618e4cf106685cc5f0a6279fc8ba216fe5cb85046e3"
+     },
+     {
+      "line": 16,
+      "kind": "assert",
+      "sha256": "bac32278c11061575143a060b84d5f0af08d7b373bdd6f8b7f559eb9d4a47f3f"
+     },
+     {
+      "line": 16,
+      "kind": "assert",
+      "sha256": "9ea4350176a8f43a6f15bf5727171a26da0e65e05b6ebaab54916bffe9352e32"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+   "facts": {
+    "sha256": "07f1e9b54abba7f804af3f5b1d71b1affec0331c4d26a8d9eb8dea6dd6668e62",
+    "bytes": 14249,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "readRenderedImageBytes",
+      "line": 6
+     },
+     {
+      "name": "publishImageHostOutcome",
+      "line": 35
+     },
+     {
+      "name": "qualifyImageHostJourney",
+      "line": 47
+     },
+     {
+      "name": "observe",
+      "line": 58
+     },
+     {
+      "name": "step",
+      "line": 72
+     },
+     {
+      "name": "openImagePage",
+      "line": 78
+     },
+     {
+      "name": "reopenExact",
+      "line": 164
+     }
+    ],
+    "assertionCount": 30,
+    "assertionDigest": "100ccee950ea30e84ebb9882bb26e148bbe1743b39eb6ea3346f4d0fe3948466",
+    "assertionExamples": [
+     {
+      "line": 80,
+      "kind": "expect",
+      "sha256": "1923f7af2a22f62785ed8013d345156c06df271f6577a5b97188383f25a28696"
+     },
+     {
+      "line": 84,
+      "kind": "expect",
+      "sha256": "ebcf93a8fcd4e564e5102ecdd7ea5f1e504f88c3ab01ee1f222db9bd12482f20"
+     },
+     {
+      "line": 86,
+      "kind": "expect",
+      "sha256": "90f1938bfb877c97a7de8ac1c6770fc244d11fe29ed300bd990494376d6d1c77"
+     },
+     {
+      "line": 89,
+      "kind": "expect",
+      "sha256": "164bfb58a958e62603f09c5df5addb478fea2c72e6e694ff88a619c8c7b0d7bd"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   }
  ],
  "scenarios": [
@@ -14504,7 +15028,15 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     },
     {
@@ -14512,7 +15044,15 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     },
     {
@@ -14520,11 +15060,22 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     }
    ],
-   "host_definitions": [],
+   "host_definitions": [
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+   ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
   },
@@ -14541,7 +15092,15 @@
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
       "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     },
     {
@@ -14549,7 +15108,15 @@
      "assertion_sources": [
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
-      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx"
+      "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     },
     {
@@ -14558,11 +15125,22 @@
       "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
       "apps/thin-client/src/features/image-generation/tests/image-http-storage.ui.test.tsx",
       "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
-      "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts"
+      "modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts",
+      "dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts",
+      "dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs",
+      "dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts"
      ]
     }
    ],
-   "host_definitions": [],
+   "host_definitions": [
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"
+   ],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": []
   },

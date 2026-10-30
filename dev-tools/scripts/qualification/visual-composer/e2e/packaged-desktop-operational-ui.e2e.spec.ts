@@ -12,6 +12,10 @@ import { createTrainingCaseEnvironment } from "../training-host-launch-plan.mjs"
 import { captureTrainingHostFixture, TRAINING_HOST_TIMEOUT_MS } from "../model-training-oracles";
 import { qualifyDesktopTrainingJourney } from "./model-training-journey";
 import { runOwnedRestartPhase } from "../asset-authoring-oracles";
+import {createImageCaseEnvironment,captureImageInspection} from "../image-host-launch-plan.mjs";
+import {captureImageHostFixture,IMAGE_HOST_TIMEOUT_MS} from "../image-generation-host-oracles";
+import {qualifyImageHostJourney} from "./image-generation-host-journey";
+import {closeImageGenerationDesktop,type ImageCleanupStage} from "./desktop-main-cleanup";
 
 test.use({ screenshot: "off", trace: "off", video: "off" });
 async function runOperationalDesktop(mode: CriticalAccessibilityMode = "standard") {
@@ -64,4 +68,24 @@ test("packaged desktop trains one local adapter, reviews privately, saves and re
     const page = await app.firstWindow({ timeout: 60_000 });
     await qualifyDesktopTrainingJourney(page, test.info(), JSON.stringify(fixture));
   }, () => closeDesktopAndQualifyOwnedWorkers(app, env.HF_HUB_CACHE, test.info()));
+});
+
+for(const scenario of ["create-register","task-recovery"] as const)test(`packaged desktop image ${scenario} uses real output and saved artifacts`,async()=>{
+  test.setTimeout(IMAGE_HOST_TIMEOUT_MS);
+  test.skip(process.env.VISUAL_COMPOSER_IMAGE_READY!=="1","Pending the dedicated image profile and approved installed local inputs.");
+  if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported image host.");
+  const run=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!,source=process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!;
+  const inspection=captureImageInspection(process.env.VISUAL_COMPOSER_IMAGE_INSPECTION,run,source);
+  const isolated=prepareIsolatedDesktopCase(scenario==="create-register"?"image-create-register":"image-task-recovery");
+  const env=createImageCaseEnvironment(isolated.env,process.cwd(),run,"packaged-desktop",scenario,inspection);
+  if(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT!==isolated.dataRoot)throw new Error("Image input case root mismatch.");
+  const seed=spawnSync(process.env.VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE!,["--preserve-symlinks","--preserve-symlinks-main","--import","tsx",path.resolve("dev-tools/scripts/qualification/visual-composer/image-host-fixture.ts"),"--seed-inputs"],
+    {cwd:process.cwd(),env:{...env,TEMP:process.env.TEMP,TMP:process.env.TMP,ELECTRON_RUN_AS_NODE:"1"},encoding:"utf8",windowsHide:true,timeout:120_000,maxBuffer:8192});
+  const fixture=!seed.error&&seed.status===0?captureImageHostFixture(seed.stdout.trim(),run,source,"packaged-desktop",scenario):undefined;
+  if(!fixture)throw new Error("The image input seed is unavailable.");
+  const app=await electron.launch({executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env,timeout:60_000});
+  let stage:ImageCleanupStage="startup";
+  await runOwnedRestartPhase(async()=>{const page=await app.firstWindow({timeout:60_000});stage="generation";
+    await qualifyImageHostJourney(page,test.info(),JSON.stringify(fixture),scenario);stage="complete";
+  },()=>closeImageGenerationDesktop(app,isolated.dataRoot,test.info(),stage));
 });

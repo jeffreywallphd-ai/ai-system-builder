@@ -189,7 +189,8 @@ export function buildPackagedDesktopFromCurrentWorktree(
   );
 }
 
-function prepareThinClientQualificationIdentity(launchPlan) {
+export function prepareThinClientQualificationIdentity(launchPlan, purpose = "standard") {
+  if (purpose !== "standard" && purpose !== "image-generation") throw new Error("Unsupported qualification credential purpose.");
   const bearerToken = randomBytes(32).toString("base64url");
   const tokenHashSecret = randomBytes(32).toString("base64url");
   const credentialPath = path.join(
@@ -214,6 +215,7 @@ function prepareThinClientQualificationIdentity(launchPlan) {
               .digest("hex"),
             tokenHashAlgorithm: "sha256",
             scopes: [
+              ...(purpose === "image-generation" ? ["image-generation:read", "image-generation:write"] : []),
               "artifact:read",
               "artifact:write",
               "asset:read",

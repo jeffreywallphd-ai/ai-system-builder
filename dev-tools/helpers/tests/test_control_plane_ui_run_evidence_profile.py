@@ -43,14 +43,14 @@ class UiRunEvidenceProfile(unittest.TestCase):
 
     def test_closed_extension_preserves_prior_members_and_auto_triggers(self):
         profile = self.profile()
-        self.assertEqual(len(profile["test_paths"]), 65)
+        self.assertEqual(len(profile["test_paths"]), 74)
         self.assertEqual(profile["test_paths"][46:49], [
             "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
             "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
             "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
         ])
         self.assertEqual(profile["test_paths"], operational.TESTS)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
         for source in BORROWED:
             self.assertIn(source, profile["source_paths"])
             self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -82,7 +82,7 @@ class UiRunEvidenceProfile(unittest.TestCase):
                 self.assertIn("focused-tests", ids)
 
     def test_late_writers_preserve_adjacent_profiles_and_incomplete_fallback(self):
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
         for source in LATE_SOURCES:
             self.assertIn(source, self.profile()["source_paths"])
             self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -109,7 +109,7 @@ class UiRunEvidenceProfile(unittest.TestCase):
 
     def test_owned_run_sources_keep_exact_borrowed_and_adjacent_coverage(self):
         sources = ['dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-import-cleanup.ts']
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 46)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 64)
         self.assertEqual(self.profile()["test_paths"][49:56], ['dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts', 'dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts', 'dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts', 'dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts'])
         self.assertEqual(self.profile()["test_paths"][56:57], ['dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts'])
         for source in sources:
