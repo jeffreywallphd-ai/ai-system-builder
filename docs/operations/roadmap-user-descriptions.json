@@ -13083,6 +13083,28 @@
           "The selected source passed with committed dependencies. This support is separate from production file actions. File protection and safe offload restart remain pending. No user action is needed."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e918bf058bbafc4dcbcd888f6fd1d2d21df926fbbd3cd59d5ce6fb4c6856fc8e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The direct Windows dependency audit now works without a manual environment edit. All 23 unit checks passed, and the real audit reported no advisories.",
+          "The agent kept package versions and audit policy unchanged. Broader security work remains pending. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ebb404d1a005830e71c4c01040ba43316b93baa67669170e235c4232a56c2fed",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The control plane now adds the dependency audit when the native builder changes. All five routing checks and the planned checks passed.",
+          "Existing test profiles and commands stay in place. Native protection and the remaining security work still need implementation or later qualification. No user action is needed."
+        ]
+      }
     }
   ]
 }

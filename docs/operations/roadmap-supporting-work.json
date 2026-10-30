@@ -6623,6 +6623,78 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "bounded-helper-argument-authority",
+      "work_id": "windows-direct-npm-audit-compatibility",
+      "work_criteria": [
+        "portable-installed-npm-invocation",
+        "positive-and-denial-regressions",
+        "owned-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35c9086e5849c5bc2d90265d6b83cfb567bf31cc929e313dc5d5787682414de3",
+      "review_digest": "651671ae112f876068d921cf20735cf95c2070cbf891b9471afe8e7a2f590658",
+      "scope": "Fixed direct Windows dependency checks while preserving inherited npm invocation, Unix behavior and native npm shims. All23 unit checks, including seven new invocation cases, passed. Actual direct and formal audits without npm_execpath reported zero runtime/toolchain advisories. No package/version, shell or audit-policy change; this does not qualify broader security, native or model behavior.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-direct-npm-audit-compatibility",
+      "work_criteria": [
+        "portable-installed-npm-invocation",
+        "positive-and-denial-regressions",
+        "owned-reviewed-checkpoint"
+      ],
+      "receipt_digest": "35c9086e5849c5bc2d90265d6b83cfb567bf31cc929e313dc5d5787682414de3",
+      "review_digest": "651671ae112f876068d921cf20735cf95c2070cbf891b9471afe8e7a2f590658",
+      "scope": "Fixed direct Windows dependency checks while preserving inherited npm invocation, Unix behavior and native npm shims. All23 unit checks, including seven new invocation cases, passed. Actual direct and formal audits without npm_execpath reported zero runtime/toolchain advisories. No package/version, shell or audit-policy change; this does not qualify broader security, native or model behavior.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "work_id": "native-builder-automatic-dependency-gate",
+      "work_criteria": [
+        "native-build-dependency-impact",
+        "meaningful-regression-and-profile-preservation",
+        "owned-reviewed-policy-checkpoint"
+      ],
+      "receipt_digest": "cbb37b6ba147b9764f0c0ee53646d9b828fdb3750d959c82f3c1de565dee16b6",
+      "review_digest": "0aa538f3c9c8b1db638f1752fdaae5da64529bd4ab9aa195d455d04b33892d3c",
+      "scope": "Added the exact Windows identity builder path to the existing dependency impact rule. All five routing checks and five planned scoped checks passed. Future builder changes select both the existing model-free unit profile and dependency audit. Existing profiles, commands, fallback and policy remain unchanged. This performs no native compile or model qualification and gives no parent pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "native-builder-automatic-dependency-gate",
+      "work_criteria": [
+        "native-build-dependency-impact",
+        "meaningful-regression-and-profile-preservation",
+        "owned-reviewed-policy-checkpoint"
+      ],
+      "receipt_digest": "cbb37b6ba147b9764f0c0ee53646d9b828fdb3750d959c82f3c1de565dee16b6",
+      "review_digest": "0aa538f3c9c8b1db638f1752fdaae5da64529bd4ab9aa195d455d04b33892d3c",
+      "scope": "Added the exact Windows identity builder path to the existing dependency impact rule. All five routing checks and five planned scoped checks passed. Future builder changes select both the existing model-free unit profile and dependency audit. Existing profiles, commands, fallback and policy remain unchanged. This performs no native compile or model qualification and gives no parent pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Native file protection, protected accounting, worker recovery, actual offload and final combined testing remain pending. Accepted model accuracy stays closed."
+      ]
     }
   ]
 }
