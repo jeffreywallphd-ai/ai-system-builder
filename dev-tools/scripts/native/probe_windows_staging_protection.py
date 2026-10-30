@@ -21,7 +21,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = 'windows-staging-protection-probe-v1'
-CASES = ('oplock-only', 'permissions-only', 'combined')
+CASES = ('oplock-only', 'permissions-only', 'combined', 'preopened-writer-denied')
 WRITE_MASK = 0x156  # Add file/subdirectory, write EA/attributes, delete child.
 ACL_CONTROL_MASK = 0x150c
 OPLOCK_READ = 0x00000001
@@ -55,6 +55,12 @@ class ProbeError(Exception):
 
 def require(value, stage, code=0):
     if not value: raise ProbeError(stage, code)
+
+
+class OplockNotGranted(ProbeError):
+    """Witness emitted only after a completed rejection and event retirement."""
+    def __init__(self,code=0,*,frame=None):
+        super().__init__('oplock-not-granted',code,frame=frame)
 
 
 def failure_detail(error,phase):
@@ -188,6 +194,12 @@ class Windows:
 
     def relative(self, parent, name, access, *, create=False, directory=True, share=7, initial_security=None):
         require(type(name) is str and re.fullmatch('[a-zA-Z0-9_. -]{1,255}', name) and name not in ('.','..') and name[-1] not in '. ', 'child-name')
+        return self._relative_open(parent,name,access,create=create,directory=directory,share=share,initial_security=initial_security)
+
+    def _relative_open(self, parent, name, access, *, create=False, directory=True, share=7, initial_security=None):
+        ordinary=type(name) is str and re.fullmatch('[a-zA-Z0-9_. -]{1,255}',name) and name not in ('.','..') and name[-1] not in '. '
+        stream=name=='probe.bin:probe-stream:$DATA' and create is True and directory is False and access==0x100083 and share==7 and initial_security is None
+        require(ordinary or stream,'child-name')
         text = C.create_unicode_buffer(name)
         us = UnicodeString(len(name.encode('utf-16-le')), (len(name)+1)*2, C.cast(text,PTR))
         attrs = ObjectAttributes(C.sizeof(ObjectAttributes), parent, C.pointer(us), 0x40, None, None)
@@ -295,8 +307,8 @@ class Windows:
             return C.string_at(sid,length)
         finally:self.close(token.value)
 
-    def _private_object(self,parent,name,*,directory):
-        require(type(directory) is bool,'private-object-kind')
+    def _private_object(self,parent,name,*,directory,share=7):
+        require(type(directory) is bool and type(share) is int and share in (3,7),'private-object-kind')
         acl=private_acl(self.current_user_sid());value=C.create_string_buffer(acl);descriptor=SecurityDescriptor()
         require(self.a.IsValidAcl(value),'private-acl')
         require(self.a.InitializeSecurityDescriptor(C.byref(descriptor),1),'private-descriptor',C.get_last_error())
@@ -304,7 +316,7 @@ class Windows:
         require(self.a.SetSecurityDescriptorControl(C.byref(descriptor),0x1500,0x1000),'private-control',C.get_last_error())
         require(self.a.IsValidSecurityDescriptor(C.byref(descriptor)),'private-descriptor-valid')
         access=0x700a1 if directory else 0x170083
-        handle=self.relative(parent,name,access,create=True,directory=directory,initial_security=(value,descriptor))
+        handle=self.relative(parent,name,access,create=True,directory=directory,share=share,initial_security=(value,descriptor))
         return handle,acl
 
     def private_root(self,parent,name):
@@ -337,10 +349,12 @@ class Oplock:
             frame=self.frame()
             native.close(self.event); self.event=None
             retire_reference(self)
-            raise ProbeError('oplock-not-granted',error,frame=frame)
+            raise OplockNotGranted(error,frame=frame)
 
     def broken(self):
-        return self.native.k.WaitForSingleObject(self.event,0) == 0
+        result=self.native.k.WaitForSingleObject(self.event,0)
+        if type(result) is not int or result not in (0,258):raise ProbeError('oplock-wait-state',C.get_last_error())
+        return result==0
 
     def security_break(self):
         self.completed_break()
@@ -388,6 +402,7 @@ class Oplock:
 class Fixture:
     def __init__(self, native):
         self.n=native;self.parents=[];self.root=None;self.mutator=None;self.lock=None
+        self.pending_guard=None;self.guard_request_started=False
         self.original=None;self.mutated=False;self.uncertain=False;self.id=uuid.uuid4().hex
         try:
             self.parents=native.ancestors()
@@ -424,11 +439,25 @@ class Fixture:
                                          'actual_dacl_control':actual[1]})
 
     def guard(self):
-        handle=self.n.relative(self.parents[-1],self.id,0x20000 | 0x80 | 1)
+        require(self.lock is None and self.pending_guard is None,'directory-guard-state')
+        self.pending_guard=self.n.relative(self.parents[-1],self.id,0x20000 | 0x80 | 1,share=5)
         try:
-            require(self.n.identity(handle)==self.identity,'guard-identity-mismatch')
-            self.lock=Oplock(self.n,handle)
-        except BaseException:self.n.close(handle);raise
+            require(self.n.identity(self.pending_guard)==self.identity,'guard-identity-mismatch')
+            self.guard_request_started=True  # Before the caller/constructor handoff.
+            self.lock=Oplock(self.n,self.pending_guard)
+            expected=self.original
+            if self.mutated:expected=(deny_writes(expected[0],b'\x01\x01\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00'),expected[1]|0x1000)
+            self.assert_permissions(expected,'guard-permission-mismatch')
+            require(not self.lock.broken(),'guard-prebroken')
+        except BaseException as error:
+            rejected=self.guard_request_started and isinstance(error,OplockNotGranted)
+            if self.lock is None:
+                if self.guard_request_started and not rejected:self.uncertain=True;self.n.uncertain=True
+                if not self.uncertain and not self.n.uncertain:
+                    try:
+                        self.n.close(self.pending_guard);self.pending_guard=None;self.guard_request_started=False
+                    except BaseException:self.uncertain=True;self.n.uncertain=True;raise
+            raise
 
     def child_allowed(self):
         try:handle=self.n.relative(self.root,'synthetic-child',0x10000 | 0x2,create=True,directory=False)
@@ -440,10 +469,13 @@ class Fixture:
         return True
 
     def cleanup(self):
+        if self.guard_request_started and self.lock is None:self.uncertain=True;self.n.uncertain=True
         if self.uncertain or self.n.uncertain:
             _RETAINED.append(self);return False
         try:
-            if self.lock:self.lock.release()
+            if self.lock:
+                self.lock.release();self.pending_guard=None  # Alias owned by lock.
+            elif self.pending_guard:self.n.close(self.pending_guard);self.pending_guard=None
             if self.root:
                 if self.original:
                     if self.mutated:self.n.set_permissions(self.root,*self.original)
@@ -472,6 +504,7 @@ def record_failure(facts,error,phase):
 
 def run_case(native, name):
     require(name in CASES, 'case')
+    if name=='preopened-writer-denied':return run_writer_case(native)
     fixture=Fixture(native);worker=None;worker_reference=None;entered=threading.Event();done=threading.Event();result={};facts={'case':name,'fixture_id':fixture.id}
     try:
         if name != 'oplock-only':fixture.protect()
@@ -504,6 +537,7 @@ def run_case(native, name):
             require(entered.wait(WAIT_MS/1000),'security-change-thread-start-unconfirmed')
             if name == 'combined':
                 facts['security_change_waited']=not done.wait(WAIT_MS/1000)
+                require(not fixture.n.uncertain,'security-native-lifetime-unconfirmed')
                 facts['break_observed']=fixture.lock.broken()
                 facts['acknowledgment_required']=bool(fixture.lock.output.flags & 1)
                 facts['break_validated']=fixture.lock.security_break()
@@ -519,7 +553,7 @@ def run_case(native, name):
     except ProbeError as error:
         record_failure(facts,error,'observation')
     finally:
-        if fixture.lock and not fixture.lock.finished:
+        if fixture.lock and not fixture.lock.finished and not fixture.uncertain and not fixture.n.uncertain:
             try:fixture.lock.release()
             except ProbeError as error:
                 fixture.uncertain=True;record_failure(facts,error,'guard-release')
@@ -532,6 +566,33 @@ def run_case(native, name):
         try:facts['cleanup_confirmed']=fixture.cleanup()
         except ProbeError as error:
             facts['cleanup_confirmed']=False;record_failure(facts,error,'cleanup')
+    return facts
+
+
+def run_writer_case(native):
+    fixture=Fixture(native);writer=None;facts={'case':'preopened-writer-denied','fixture_id':fixture.id}
+    try:
+        writer=native.relative(fixture.parents[-1],fixture.id,0x82)  # ADD_FILE + READ_ATTRIBUTES for identity/facts.
+        require(native.identity(writer)==fixture.identity,'directory-writer-identity')
+        fixture.protect()
+        try:fixture.guard()
+        except ProbeError as error:
+            if error.stage!='native-open' or error.code!=0xc0000043:raise
+            facts.update(writer_held=True,admission_denied=True,native_code=error.code)
+        require(facts.get('admission_denied') is True,'directory-writer-admitted')
+        facts['status']='observed'
+    except ProbeError as error:record_failure(facts,error,'observation')
+    finally:
+        if fixture.lock and not fixture.lock.finished and not fixture.uncertain and not fixture.n.uncertain:
+            try:fixture.lock.release()
+            except ProbeError as error:fixture.uncertain=True;record_failure(facts,error,'guard-release')
+        if writer:
+            if native.uncertain or fixture.uncertain:_RETAINED.append((fixture,writer))
+            else:
+                try:native.close(writer)
+                except ProbeError as error:fixture.uncertain=True;record_failure(facts,error,'writer-close')
+        try:facts['cleanup_confirmed']=fixture.cleanup()
+        except ProbeError as error:facts['cleanup_confirmed']=False;record_failure(facts,error,'cleanup')
     return facts
 
 

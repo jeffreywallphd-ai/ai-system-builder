@@ -1273,11 +1273,12 @@ compile native code, start a model or qualify production file protection.
 ## Windows staging protection diagnostic
 
 `python -B dev-tools/scripts/native/probe_windows_staging_protection.py --plan`
-prints an effect-free plan. `--self-test` explicitly runs three model-free
+prints an effect-free plan. `--self-test` explicitly runs four model-free
 controls on new, exclusively handle-created empty directories under the fixed
 `artifacts/tmp` namespace: advisory directory notifications, permission-based
 write denial, and a preopened security handle's permission change with both
-mechanisms. It accepts no caller root, command, PID, ACL or privilege override.
+mechanisms, plus refusal of a preopened folder writer. It accepts no caller
+root, command, PID, ACL or privilege override.
 
 The fixed `windows-staging-protection-probe` contributor profile runs only pure
 unit tests. The native diagnostic is a separate explicit check, with fixed stage
@@ -1292,10 +1293,12 @@ admission. See the [owning guide](../docs/operations/optional-low-memory-inferen
 ## Windows file and mapping protection diagnostic
 
 `python -B dev-tools/scripts/native/probe_windows_file_protection.py --plan`
-prints a plan without native effects. The explicit `--self-test` runs four
+prints a plan without native effects. The explicit `--self-test` runs five
 model-free checks on new private regular files of 4096 bytes. They test refusal
 with an existing writer, writable section and writable view, then read-only
-access with a waiting security change. Anonymous mappings are not executable.
+access with a waiting security change, plus refusal of a named data stream.
+Anonymous mappings are not executable. A stream has at most 4096 bytes; a
+synthetic fixture has at most 8192 data bytes in total.
 The companion reuses the directory diagnostic's native identity, private
 creation, exact permission restoration and bounded process lifetime.
 
@@ -1310,3 +1313,19 @@ This diagnostic does not qualify retained or inherited files, alternate streams,
 full trees, durable accounting, worker crashes or production offload. It does
 not grant restart admission or roadmap acceptance. See the
 [owning guide](../docs/operations/optional-low-memory-inference.md).
+
+
+### Stream and folder-writer admission
+
+The existing pure file and directory profiles also test bounded stream metadata,
+preopened folder-writer refusal and post-grant checks. The fixed stream control
+creates `probe.bin:probe-stream:$DATA` only on its new private seed. Its held
+creator denies delete sharing, so the seed cannot be replaced while that stream
+is created. No caller can supply a stream name or path. Named streams are refusal
+controls; positive protection is limited to unnamed data.
+
+Native stream metadata uses a fixed aligned 64 KiB buffer and at most 16 records.
+Malformed offsets, duplicate names, oversized or invalid entries fail closed.
+Actual names are never reported and payloads are never read. Unknown streams or
+sizes prevent cleanup. A live guard remains held after a failed post-grant check
+until its caller confirms retirement. Default and plan modes remain effect-free.

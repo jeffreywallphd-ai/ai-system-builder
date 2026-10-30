@@ -384,12 +384,13 @@ the remaining agent-owned implementation.
 No user action is needed for this agent-owned implementation. The bounded
 `probe_windows_staging_protection.py` diagnostic tests one prerequisite for the
 approved guarded restart. Its default and `--plan` modes make no native changes.
-An explicit `--self-test` uses three new synthetic empty NTFS directories under
+An explicit `--self-test` uses four new synthetic empty NTFS directories under
 `artifacts/tmp`. It never opens retained offload content or accepts a caller path.
 
 The controls distinguish directory notifications, write denial by permissions,
-and a permission change through a handle opened before the protection. The last
-case tests whether a directory RH oplock delays that change until the guard is
+and a permission change through a handle opened before the protection. A fourth
+case tests refusal of a folder writer opened before protection. The combined
+case tests whether a directory RH oplock delays a security change until the guard is
 released. This is a hypothesis to measure on the installed filesystem.
 [Microsoft describes directory content breaks as advisory](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
 The [object-store oplock model](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/306239fb-cb60-49fe-b293-df4d1a5f757a)
@@ -495,3 +496,35 @@ Rejected or unsuccessful native requests have no measured transfer count. Their
 `transferred_bytes` field is `null`. A successful completed-result query records
 its actual count. This reporting distinction does not change admission or the
 required status, frame, acknowledgment and lifetime checks.
+
+
+## Stream metadata and preopened folder writers
+
+No user action is needed. The agent must test these boundaries before composing
+a protection provider for a complete model folder.
+
+- A folder handle opened for writing before protection must prevent admission.
+- A file with a named data stream must be refused. The test creates only one
+  fixed synthetic stream on a new private seed held against replacement.
+- Native stream metadata must have valid bounded lengths, offsets and sizes.
+  Unknown names or sizes must prevent cleanup. The code never reads payloads
+  or includes stream names in reports.
+- Exact permissions, file shape, stream facts and a fresh guard must be checked
+  after the grant. A failed check must not close a handle with a live request.
+
+[Windows maintains sharing modes and oplocks per stream](https://learn.microsoft.com/en-us/windows/win32/fileio/file-streams).
+The bounded parser uses the
+[FILE_STREAM_INFO layout](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info)
+and [GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex).
+The new synthetic stream is at most 4096 bytes; its fixture has at most 8192
+data bytes. New directory and file controls do not inspect retained content.
+
+A refusal control does not qualify support for arbitrary named streams. Full
+existing or inherited trees, durable accounting and owned-worker crash/restart
+composition remain separate work. Actual offload and parent qualification stay
+pending. Accepted model accuracy stays closed and full software testing is deferred.
+
+An interruption during guard construction leaves ownership uncertain until the
+request is assigned or a completed refusal is proven. Unknown construction
+stops native cleanup and keeps references alive until this test process exits.
+A saved alias of an assigned guard handle must not be closed a second time.

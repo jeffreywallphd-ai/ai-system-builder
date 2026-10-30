@@ -4,6 +4,7 @@ import ctypes
 import importlib.util
 import io
 import json
+import struct
 from pathlib import Path
 from types import SimpleNamespace
 import threading
@@ -20,12 +21,15 @@ ACL=p.private_acl(SID)
 class FileProbeTests(unittest.TestCase):
     def native(self):
         native=Mock();native.uncertain=False;native.k.CreateFileMappingW.return_value=101;native.k.UnmapViewOfFile.return_value=1
+        native.streams.return_value={f.DEFAULT_STREAM:(4096,4096)}
         return native
 
     def fixture(self):
         fixture=f.Fixture.__new__(f.Fixture);fixture.n=self.native();fixture.directory=Mock();fixture.directory.root=11;fixture.directory.cleanup.return_value=True;fixture.id='a'*32
         fixture.creator=21;fixture.meta=22;fixture.pending_meta=None;fixture.guard=None;fixture.pending_guard=None;fixture.initial=(ACL,0x1004)
+        fixture.guard_request_started=False
         fixture.identity=b'own';fixture.mutated=False;fixture.maps=[];fixture.uncertain=False;fixture.n.permissions.return_value=fixture.initial
+        fixture.n.identity.return_value=fixture.identity;fixture.expected_size=4096;fixture.known_streams={f.DEFAULT_STREAM:4096};fixture.extra_handles=[];fixture.seed=False
         return fixture
 
     def frame(self):
@@ -108,12 +112,12 @@ class FileProbeTests(unittest.TestCase):
 
     def test_section_refusal_needs_the_specific_native_warning_and_valid_frame(self):
         fixture=self.fixture();fixture.n.relative.return_value=31;fixture.n.identity.return_value=fixture.identity
-        with patch.object(p,'Oplock',side_effect=p.ProbeError('oplock-not-granted',801,frame=self.frame())):
+        with patch.object(p,'Oplock',side_effect=p.OplockNotGranted(801,frame=self.frame())):
             self.assertTrue(fixture.admit()['denied'])
         fixture.n.close.assert_called_once_with(31)
         for code,frame in ((87,self.frame()),(801,{**self.frame(),'structure_version':0}),(801,{**self.frame(),'flags':0}),(801,{**self.frame(),'native_status':0})):
             fixture=self.fixture();fixture.n.relative.return_value=31;fixture.n.identity.return_value=fixture.identity
-            with patch.object(p,'Oplock',side_effect=p.ProbeError('oplock-not-granted',code,frame=frame)):
+            with patch.object(p,'Oplock',side_effect=p.OplockNotGranted(code,frame=frame)):
                 with self.assertRaises(p.ProbeError):fixture.admit()
 
     def test_guard_identity_mismatch_closes_only_unadmitted_handle(self):
@@ -156,7 +160,7 @@ class FileProbeTests(unittest.TestCase):
         self.assertTrue(mapping.uncertain);self.assertTrue(native.uncertain);self.assertIn(mapping,p._RETAINED)
 
     def test_pending_foreign_recovery_handle_is_never_adopted_on_constructor_failure(self):
-        native=self.native();native.private_file.return_value=(21,ACL);native.identity.side_effect=[b'own',b'foreign'];native.permissions.return_value=(ACL,0x1004);native.relative.return_value=99
+        native=self.native();native.private_file.return_value=(21,ACL);native.identity.side_effect=[b'own',b'foreign',b'own'];native.permissions.return_value=(ACL,0x1004);native.relative.return_value=99
         directory=Mock();directory.root=11;directory.id='a'*32;directory.cleanup.return_value=True
         with patch.object(p,'Fixture',return_value=directory),patch.object(f,'Mapping'),self.assertRaises(p.ProbeError) as caught:f.Fixture(native)
         self.assertEqual(caught.exception.stage,'file-recovery-identity');native.delete_owned.assert_called_once_with(21);native.set_permissions.assert_not_called()
@@ -208,6 +212,103 @@ class FileProbeTests(unittest.TestCase):
             native.k.GetFileInformationByHandleEx.side_effect=facts
             with patch.object(p.C,'get_last_error',create=True,return_value=0):
                 with self.assertRaises(p.ProbeError):native.regular(21,4096)
+
+    def stream_buffer(self,entries):
+        value=bytearray(f.STREAM_BYTES);offset=0
+        for index,(name,size,allocation) in enumerate(entries):
+            encoded=name.encode('utf-16-le');span=(24+len(encoded)+7)//8*8
+            struct.pack_into('<IIqq',value,offset,span if index+1<len(entries) else 0,len(encoded),size,allocation)
+            value[offset+24:offset+24+len(encoded)]=encoded;offset+=span
+        return bytes(value)
+
+    def test_stream_metadata_parses_aligned_default_and_named_entries_without_payload_reads(self):
+        raw=self.stream_buffer([(f.DEFAULT_STREAM,4096,4096),(f.SEED_STREAM,4096,4096)])
+        self.assertEqual(f.stream_records(raw),{f.DEFAULT_STREAM:(4096,4096),f.SEED_STREAM:(4096,4096)})
+
+    def test_stream_metadata_rejects_malformed_offsets_sizes_names_and_duplicates(self):
+        valid=self.stream_buffer([(f.DEFAULT_STREAM,4096,4096)])
+        invalid=[b'',valid[:-1],self.stream_buffer([(f.DEFAULT_STREAM,4097,4096)]),self.stream_buffer([(f.DEFAULT_STREAM,4096,-1)]),self.stream_buffer([(f.DEFAULT_STREAM,0,0),(f.DEFAULT_STREAM.lower(),0,0)]),self.stream_buffer([('bad\0name',0,0)])]
+        for offset,fmt,number in [(0,'<I',25),(0,'<I',f.STREAM_BYTES),(4,'<I',0),(4,'<I',3),(4,'<I',514)]:
+            raw=bytearray(valid);struct.pack_into(fmt,raw,offset,number);invalid.append(bytes(raw))
+        for raw in invalid:
+            with self.subTest(length=len(raw)),self.assertRaises(p.ProbeError):f.stream_records(raw)
+
+    def test_named_stream_refusal_precedes_native_guard_and_never_exposes_names(self):
+        fixture=self.fixture();fixture.n.streams.return_value={f.DEFAULT_STREAM:(4096,4096),'private-stream-value':(0,0)}
+        with patch.object(p,'Oplock') as lock:result=fixture.admit()
+        self.assertEqual(result,{'denied':True,'phase':'streams','native_code':0});fixture.n.relative.assert_not_called();lock.assert_not_called();self.assertNotIn('private-stream',json.dumps(result))
+
+    def test_unknown_stream_or_size_prevents_restore_and_delete(self):
+        for records in [{f.DEFAULT_STREAM:(4096,4096),'other':(0,0)},{f.DEFAULT_STREAM:(1,4096)}]:
+            fixture=self.fixture();fixture.mutated=True;fixture.n.streams.return_value=records
+            with self.assertRaises(p.ProbeError):fixture.cleanup()
+            fixture.n.set_permissions.assert_not_called();fixture.n.delete_owned.assert_not_called();fixture.directory.cleanup.assert_not_called()
+
+    def test_post_grant_failure_retains_live_guard_until_caller_cleanup(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31;fixture.n.permissions.return_value=(ACL,4)
+        lock=Mock();lock.broken.return_value=False;lock.handle=31
+        with patch.object(p,'Oplock',return_value=lock),self.assertRaises(p.ProbeError):fixture.admit()
+        self.assertIs(fixture.guard,lock);fixture.n.close.assert_not_called();lock.release.assert_not_called()
+
+    def test_seed_file_has_fixed_deny_delete_sharing_and_stream_requires_held_seed(self):
+        native=f.Windows.__new__(f.Windows);native._private_object=Mock(return_value=(21,ACL))
+        self.assertEqual(native.seed_file(11),(21,ACL));native._private_object.assert_called_once_with(11,'probe.bin',directory=False,share=3)
+        fixture=self.fixture();fixture.n=native
+        with self.assertRaises(p.ProbeError):native.seed_stream(fixture)
+
+    def test_metadata_query_keeps_aligned_buffer_until_actual_return_and_uses_fixed_size(self):
+        native=f.Windows.__new__(f.Windows);native.k=Mock();native.uncertain=False;raw=self.stream_buffer([(f.DEFAULT_STREAM,4096,4096)]);before=len(p._RETAINED)
+        def queried(handle,kind,buffer,size):
+            self.assertEqual((handle,kind,size),(21,7,65536));self.assertGreater(len(p._RETAINED),before);self.assertEqual(ctypes.cast(buffer,ctypes.c_void_p).value%8,0);ctypes.memmove(buffer,raw,size);return 1
+        native.k.GetFileInformationByHandleEx.side_effect=queried
+        with patch.object(p.C,'get_last_error',create=True,return_value=0),patch.object(p.C,'set_last_error',create=True):result=native.streams(21)
+        self.assertEqual(result,{f.DEFAULT_STREAM:(4096,4096)});self.assertEqual(len(p._RETAINED),before)
+
+    def test_seed_constructor_keeps_one_replacement_fenced_creator_and_recovery_handle(self):
+        native=self.native();native.seed_file.return_value=(21,ACL);native.identity.return_value=b'own';native.permissions.return_value=(ACL,0x1004)
+        directory=Mock();directory.root=11;directory.id='a'*32;directory.cleanup.return_value=True
+        with patch.object(p,'Fixture',return_value=directory),patch.object(f,'Mapping'):fixture=f.Fixture(native,seed=True)
+        self.assertEqual(fixture.creator,fixture.meta);self.assertEqual(fixture.meta,21);native.seed_file.assert_called_once_with(11);native.private_file.assert_not_called();native.relative.assert_not_called()
+        self.assertTrue(fixture.cleanup());native.delete_owned.assert_called_once_with(21);native.close.assert_called_once_with(21)
+
+    def test_seed_stream_uses_only_fixed_literal_after_actual_seed_identity(self):
+        fixture=self.fixture();native=f.Windows.__new__(f.Windows);fixture.n=native;fixture.seed=True;fixture.meta=fixture.creator
+        native.identity=Mock(side_effect=[b'own',b'own']);native.regular=Mock();native._relative_open=Mock(return_value=31)
+        self.assertEqual(native.seed_stream(fixture),31)
+        native._relative_open.assert_called_once_with(11,'probe.bin:probe-stream:$DATA',0x100083,create=True,directory=False)
+
+    def test_post_grant_stream_race_and_wrong_size_are_refused_without_closing_live_irp(self):
+        for records in [{f.DEFAULT_STREAM:(4096,4096),'new-stream':(0,0)},{f.DEFAULT_STREAM:(1,4096)}]:
+            fixture=self.fixture();fixture.n.relative.return_value=31;fixture.n.streams.side_effect=[{f.DEFAULT_STREAM:(4096,4096)},records]
+            guard=Mock();guard.handle=31;guard.broken.return_value=False
+            with patch.object(p,'Oplock',return_value=guard),self.assertRaises(p.ProbeError):fixture.admit()
+            self.assertIs(fixture.guard,guard);fixture.n.close.assert_not_called();guard.release.assert_not_called()
+
+    def test_unknown_stream_query_lifetime_retains_buffer_and_disallows_cleanup(self):
+        native=f.Windows.__new__(f.Windows);native.k=Mock();native.uncertain=False;before=len(p._RETAINED)
+        native.k.GetFileInformationByHandleEx.side_effect=KeyboardInterrupt()
+        with patch.object(p.C,'set_last_error',create=True),self.assertRaises(KeyboardInterrupt):native.streams(21)
+        self.assertTrue(native.uncertain);self.assertGreater(len(p._RETAINED),before)
+
+    def test_unexpected_pending_metadata_status_is_not_retired_or_counted_as_empty(self):
+        for error in (996,997):
+            native=f.Windows.__new__(f.Windows);native.k=Mock();native.uncertain=False;native.k.GetFileInformationByHandleEx.return_value=0;before=len(p._RETAINED)
+            with patch.object(p.C,'set_last_error',create=True),patch.object(p.C,'get_last_error',create=True,return_value=error),self.assertRaises(p.ProbeError):native.streams(21)
+            self.assertTrue(native.uncertain);self.assertGreater(len(p._RETAINED),before)
+
+    def test_unknown_constructor_interrupt_keeps_pending_handle_and_prevents_all_cleanup(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31
+        with patch.object(p,'Oplock',side_effect=KeyboardInterrupt()),self.assertRaises(KeyboardInterrupt):fixture.admit()
+        self.assertTrue(fixture.n.uncertain);self.assertFalse(fixture.cleanup());fixture.n.close.assert_not_called();fixture.n.delete_owned.assert_not_called()
+
+    def test_plain_error_stage_is_not_a_completed_rejection_witness(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31
+        with patch.object(p,'Oplock',side_effect=p.ProbeError('oplock-not-granted',801,frame=self.frame())),self.assertRaises(p.ProbeError):fixture.admit()
+        self.assertTrue(fixture.n.uncertain);fixture.n.close.assert_not_called();self.assertFalse(fixture.cleanup())
+
+    def test_file_pending_alias_is_not_closed_again_after_guard_release(self):
+        fixture=self.fixture();fixture.pending_guard=31;fixture.guard_request_started=True;fixture.guard=Mock();fixture.guard.release.side_effect=lambda:fixture.n.close(31)
+        self.assertTrue(fixture.cleanup());self.assertEqual([c.args[0] for c in fixture.n.close.call_args_list],[31,21,22])
 
 
 if __name__=='__main__':unittest.main()

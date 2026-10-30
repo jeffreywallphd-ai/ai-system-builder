@@ -18,6 +18,14 @@ ACL=struct.pack('<BBHHH',2,0,8,0,0)
 
 
 class ProbeTests(unittest.TestCase):
+    def test_wait_failure_or_unknown_state_cannot_look_like_a_fresh_guard(self):
+        lock=self.lock()
+        for result in (0xffffffff,128,-1,True):
+            lock.native.k.WaitForSingleObject.return_value=result
+            with patch.object(p.C,'get_last_error',create=True,return_value=6),self.assertRaises(p.ProbeError):lock.broken()
+        lock.native.k.WaitForSingleObject.return_value=258;self.assertFalse(lock.broken())
+        lock.native.k.WaitForSingleObject.return_value=0;self.assertTrue(lock.broken())
+
     def test_transfer_count_is_unavailable_until_a_successful_query(self):
         lock=self.lock();lock.output=p.OplockOutput(1,24,3,1,1,0,0)
         self.assertIsNone(lock.frame()['transferred_bytes'])
@@ -101,8 +109,64 @@ class ProbeTests(unittest.TestCase):
     def fixture(self):
         fixture=p.Fixture.__new__(p.Fixture);fixture.n=Mock();fixture.n.uncertain=False
         fixture.parents=[11,12];fixture.root=21;fixture.mutator=22;fixture.lock=None;fixture.original=(ACL,4);fixture.mutated=True;fixture.uncertain=False;fixture.id='a'*32
+        fixture.pending_guard=None;fixture.guard_request_started=False
         fixture.n.permissions.return_value=fixture.original
+        fixture.identity=b'own';fixture.n.identity.return_value=fixture.identity
         return fixture
+
+    def test_directory_guard_denies_write_sharing_and_checks_actual_post_grant_state(self):
+        fixture=self.fixture();fixture.mutated=False;fixture.n.relative.return_value=31
+        guard=Mock();guard.broken.return_value=False
+        with patch.object(p,'Oplock',return_value=guard):fixture.guard()
+        self.assertEqual(fixture.n.relative.call_args.kwargs,{'share':5});self.assertIs(fixture.lock,guard);fixture.n.close.assert_not_called()
+
+    def test_failed_post_grant_check_never_closes_a_live_irp_handle(self):
+        fixture=self.fixture();fixture.mutated=False;fixture.n.relative.return_value=31;fixture.n.permissions.return_value=(ACL,0x1004)
+        guard=Mock();guard.broken.return_value=False
+        with patch.object(p,'Oplock',return_value=guard),self.assertRaises(p.ProbeError):fixture.guard()
+        self.assertIs(fixture.lock,guard);fixture.n.close.assert_not_called();guard.release.assert_not_called()
+
+    def test_unknown_constructor_lifetime_retains_unassigned_guard_handle(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31
+        def interrupted(*_):fixture.n.uncertain=True;raise KeyboardInterrupt()
+        with patch.object(p,'Oplock',side_effect=interrupted),self.assertRaises(KeyboardInterrupt):fixture.guard()
+        fixture.n.close.assert_not_called()
+
+    def test_unclassified_constructor_interrupt_is_uncertain_even_without_preexisting_native_flag(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31
+        with patch.object(p,'Oplock',side_effect=KeyboardInterrupt()),self.assertRaises(KeyboardInterrupt):fixture.guard()
+        self.assertTrue(fixture.n.uncertain);self.assertTrue(fixture.uncertain);fixture.n.close.assert_not_called();self.assertFalse(fixture.cleanup())
+
+    def test_completed_rejection_witness_permits_one_caller_handle_close(self):
+        fixture=self.fixture();fixture.n.relative.return_value=31
+        with patch.object(p,'Oplock',side_effect=p.OplockNotGranted(87)),self.assertRaises(p.OplockNotGranted):fixture.guard()
+        fixture.n.close.assert_called_once_with(31);self.assertIsNone(fixture.pending_guard);self.assertFalse(fixture.guard_request_started);self.assertFalse(fixture.n.uncertain)
+
+    def test_directory_pending_alias_is_not_closed_after_guard_retires_it(self):
+        fixture=self.fixture();fixture.pending_guard=31;fixture.guard_request_started=True;fixture.lock=Mock();fixture.lock.release.side_effect=lambda:fixture.n.close(31)
+        self.assertTrue(fixture.cleanup());self.assertEqual([c.args[0] for c in fixture.n.close.call_args_list],[31,22,21,12,11])
+
+    def test_directory_writer_control_needs_actual_share_refusal_and_closes_own_writer(self):
+        for code,expected in [(0xc0000043,'observed'),(0xc0000022,'failed')]:
+            fixture=self.fixture();fixture.protect=Mock();fixture.guard=Mock(side_effect=p.ProbeError('native-open',code));fixture.cleanup=Mock(return_value=True);fixture.n.relative.return_value=51
+            with patch.object(p,'Fixture',return_value=fixture):facts=p.run_writer_case(fixture.n)
+            self.assertEqual(facts['status'],expected);fixture.n.close.assert_called_once_with(51);self.assertTrue(facts['cleanup_confirmed'])
+
+    def test_writer_fixture_includes_only_the_attribute_read_needed_for_identity_inspection(self):
+        fixture=self.fixture();fixture.protect=Mock();fixture.guard=Mock(side_effect=p.ProbeError('native-open',0xc0000043));fixture.cleanup=Mock(return_value=True)
+        def inspected(_parent,_name,access):
+            if not access & 0x80:raise p.ProbeError('directory-facts',5)
+            self.assertEqual(access,0x82);return 51
+        fixture.n.relative.side_effect=inspected
+        with patch.object(p,'Fixture',return_value=fixture):facts=p.run_writer_case(fixture.n)
+        self.assertEqual(facts['status'],'observed');self.assertTrue(facts['admission_denied']);fixture.n.close.assert_called_once_with(51)
+
+    def test_only_closed_seed_stream_can_reach_internal_relative_open(self):
+        native=p.Windows.__new__(p.Windows);native.n=Mock()
+        with self.assertRaises(p.ProbeError):native.relative(11,'probe.bin:probe-stream:$DATA',0x100083,create=True,directory=False)
+        for name,access,directory in [('other.bin:probe-stream:$DATA',0x100083,False),('probe.bin:probe-stream:$DATA',2,False),('probe.bin:probe-stream:$DATA',0x100083,True)]:
+            with self.assertRaises(p.ProbeError):native._relative_open(11,name,access,create=True,directory=directory)
+        native.n.NtCreateFile.assert_not_called()
 
     def test_cleanup_restores_exact_original_and_only_deletes_owned_handle(self):
         fixture=self.fixture()
