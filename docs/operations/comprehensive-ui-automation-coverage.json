@@ -3708,12 +3708,12 @@
     "command": "node dev-tools/helpers/ui_coverage_census.mjs",
     "work_id": "current-ui-coverage-census",
     "status": "technical-check-pending",
-    "scope": "Settings and model-reference host journeys are committed and reviewed. Provider import and artifact management still need construction. Link all new source during the final coverage review. Source analysis runs no app tests and grants no host or parent pass.",
+    "scope": "Settings, model-reference and local artifact journeys are committed and reviewed. Two provider-import journeys and one Desktop private-publication journey still need construction. Link all new source during the final coverage review. Source analysis runs no app tests and grants no host or parent pass.",
     "pending_agent_work": [
       "The two Settings public-value host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending.",
       "The two Settings token/model-default host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. User credentials are never copied.",
       "Add a functional host journey that imports a small sample from an authorized provider source and verifies the saved file. Existing file import and focused transport checks do not supply this host journey.",
-      "Add functional host journeys for backing state, authorized synthetic publication and local artifact deletion with confirmation and reference isolation. No unapproved remote deletion is authorized.",
+      "Local artifact lifecycle and Thin publication-permission journeys are committed and focused-tested. Final source links and actual app runs remain pending. Add the Desktop private-publication journey. Remote deletion is not authorized.",
       "The two model search and Save reference host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. No weights or accuracy tests were run."
     ],
     "full_testing_status": "deferred-by-user",
@@ -3734,8 +3734,9 @@
       "launcher-aware-owned-process-observation",
       "image-host-ui-journey-definitions-checked",
       "settings-functional-host-journey-definitions-checked",
-      "model-reference-functional-host-definitions"
+      "model-reference-functional-host-definitions",
+      "local-artifact-functional-host-definitions"
     ],
-    "reconciliation_basis": "The independent full-family audit is preserved. Settings and model-reference construction is reviewed and committed; final source linking and two other functional construction groups remain pending. Original approved scenarios, behaviors and execution fields are unchanged."
+    "reconciliation_basis": "The independent full-family audit is preserved. Settings, model-reference and local artifact construction is reviewed and committed; provider import, Desktop private publication and final source linking remain pending. Original scenarios, behaviors and execution fields are unchanged."
   }
 }

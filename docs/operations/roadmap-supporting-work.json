@@ -6274,6 +6274,60 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "local-artifact-functional-host-definitions",
+      "work_criteria": [
+        "meaningful-local-artifact-host-definitions",
+        "genuine-bounded-readonly-token-denial",
+        "closed-host-fixtures-and-current-evidence"
+      ],
+      "receipt_digest": "5295fd2c67d037f6b738c0b49f1af01a94239e5278ec638e39aec7f9356a7bf5",
+      "review_digest": "303a543de2521ab7920d0ec5b232bda0a3c58ee86d917fd35755ec9463c37a7d",
+      "scope": "Two local artifact test journeys now import sample files, check backing and bytes, reload, confirm deletion and preserve another workspace. Desktop also checks export. A third journey checks valid read-only login and publication refusal. Focused checks and collection passed. Actual app runs, private publication and provider import remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "local-artifact-functional-host-definitions",
+      "work_criteria": [
+        "meaningful-local-artifact-host-definitions",
+        "genuine-bounded-readonly-token-denial",
+        "closed-host-fixtures-and-current-evidence"
+      ],
+      "receipt_digest": "5295fd2c67d037f6b738c0b49f1af01a94239e5278ec638e39aec7f9356a7bf5",
+      "review_digest": "303a543de2521ab7920d0ec5b232bda0a3c58ee86d917fd35755ec9463c37a7d",
+      "scope": "Two local artifact test journeys now import sample files, check backing and bytes, reload, confirm deletion and preserve another workspace. Desktop also checks export. A third journey checks valid read-only login and publication refusal. Focused checks and collection passed. Actual app runs, private publication and provider import remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "local-artifact-functional-host-definitions",
+      "work_criteria": [
+        "meaningful-local-artifact-host-definitions",
+        "genuine-bounded-readonly-token-denial",
+        "closed-host-fixtures-and-current-evidence"
+      ],
+      "receipt_digest": "5295fd2c67d037f6b738c0b49f1af01a94239e5278ec638e39aec7f9356a7bf5",
+      "review_digest": "303a543de2521ab7920d0ec5b232bda0a3c58ee86d917fd35755ec9463c37a7d",
+      "scope": "Two local artifact test journeys now import sample files, check backing and bytes, reload, confirm deletion and preserve another workspace. Desktop also checks export. A third journey checks valid read-only login and publication refusal. Focused checks and collection passed. Actual app runs, private publication and provider import remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

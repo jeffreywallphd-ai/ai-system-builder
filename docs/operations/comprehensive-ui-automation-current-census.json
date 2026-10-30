@@ -8313,7 +8313,7 @@
      }
     ]
    },
-   "committed_sha256": "4586c921c6644ff9861d6ddacc471a9cd770961ca857b407f679093e7d27c894"
+   "committed_sha256": "a90c9344004a8662947f01a15690378e50499a588ffc95c3ce5836262314dfc8"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -9036,7 +9036,7 @@
      }
     ]
    },
-   "committed_sha256": "742bd7215e68c92c2de792c075ae3dbf8d4e4219c4b466632aa4c097cfce1459"
+   "committed_sha256": "2f354b3cbcd254e58dc7db3315a0eb3a81081c904fd042d0d395933d732b18ef"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -13348,7 +13348,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "e23ba8423802dde449e6393ab34d8b3ecf12d33f9f55187fe797ec2cedada17b"
+   "committed_sha256": "cfb0b106e0d223fdce15c70a005eeb592eb64e67e8c246743880aff8a0354a46"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
@@ -14575,7 +14575,7 @@
    "host_definitions": [],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": [
-    "Add functional host journeys for backing state, authorized synthetic publication and local artifact deletion with confirmation and reference isolation. No unapproved remote deletion is authorized."
+    "Local artifact lifecycle and Thin publication-permission journeys are committed and focused-tested. Final source links and actual app runs remain pending. Add the Desktop private-publication journey. Remote deletion is not authorized."
    ]
   },
   {
