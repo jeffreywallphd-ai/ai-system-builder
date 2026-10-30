@@ -528,3 +528,43 @@ An interruption during guard construction leaves ownership uncertain until the
 request is assigned or a completed refusal is proven. Unknown construction
 stops native cleanup and keeps references alive until this test process exits.
 A saved alias of an assigned guard handle must not be closed a second time.
+
+
+## Owned-worker launch and exit controls
+
+No user action is needed. The agent uses a separate fixed inert-worker
+diagnostic to test the Windows job ownership needed for safe restart. It loads
+no models, starts no app worker and changes no model memory guard. The default
+and `--plan` modes have no native effects.
+
+An explicit `--self-test` creates a new anonymous job and one small isolated
+Python worker per case. It must read back the one-process and 512 MiB commit
+ceilings, atomic membership and actual native exit. The worker inherits only
+two unnamed events. The job handle is not inherited. The stop-event case must
+exit with its fixed code. The last-job-handle case must observe actual exit
+after the close. Its own success, timeout and error codes cannot qualify this
+case. The fallback timeout is outside the diagnostic watchdog window. The
+ceiling is not allocated up front.
+
+[Windows job objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
+provide the ownership mechanism.
+[Startup attributes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
+place the new suspended worker in its job before execution.
+[Process termination is asynchronous](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess),
+so the helper must confirm the process handle is signalled; a stop request is
+not completion. Failure cleanup has no arbitrary PID or command interface.
+
+These are cooperative inert-process controls. They do not establish actual
+guardian-process crash behavior, file-guard lifetime ordering, protected durable
+accounting or real model loading and delivery. The app's shared worker and all
+old retained data stay outside this diagnostic. The full 12 GiB unknown charge
+and real restart denial remain in place. Accepted model accuracy stays closed.
+Full software testing remains deferred.
+
+Failed process-count checks keep the observed total, active and limit-terminated
+counts for each fixed phase. These numeric diagnostics do not relax the one-worker
+requirement or qualify an unconfirmed shutdown or cleanup.
+
+The fixed event-only worker uses `DETACHED_PROCESS`. It does not inherit or
+allocate a console. There is no hidden-console or larger-process-limit fallback.
+The memory, ownership, native-exit and cleanup requirements remain the same.

@@ -1329,3 +1329,42 @@ Malformed offsets, duplicate names, oversized or invalid entries fail closed.
 Actual names are never reported and payloads are never read. Unknown streams or
 sizes prevent cleanup. A live guard remains held after a failed post-grant check
 until its caller confirms retirement. Default and plan modes remain effect-free.
+
+
+## Windows owned-job diagnostic
+
+`python -B dev-tools/scripts/native/probe_windows_owned_job.py --plan` prints an
+effect-free plan. An explicit `--self-test` starts one new inert Python process
+at a time, with no model or Torch import. The two cases test a stop event and
+closing the last job handle. Each requires actual readiness, native process exit
+and confirmed cleanup. A stop request alone cannot pass. A worker that exits
+by itself with a success, timeout or error code cannot qualify the job-close
+case. Its fallback timeout is outside the diagnostic watchdog window.
+
+The fixed job has a 512 MiB process/job commit ceiling and one active process.
+This ceiling is not an upfront allocation or a change to model memory admission.
+The helper reuses ABI shapes from the existing qualification memory helper but
+does not call or change its 2 GiB policy. It uses the actual current runtime image
+reported by Windows, avoiding a virtual-environment launcher's extra process.
+The child has a fixed isolated-stdlib program, two explicitly inherited unnamed
+events, and a minimal OS-derived environment with no provider credentials.
+
+Creation uses a suspended process and atomic JOB_LIST plus HANDLE_LIST. The job
+handle is not inherited, and there is no AssignProcess fallback. Membership,
+limits and counts are read back before resume. Failure cleanup can stop only
+the new process acknowledged by that creation. Unknown ownership or native
+lifetime stops cleanup and retains references until the diagnostic exits.
+The `windows-owned-job-probe` profile runs pure mocked unit tests only.
+
+No caller can supply a command, executable, path, PID or memory ceiling. Closing
+a job handle is not an actual guardian-process crash or proof of file-fence
+ordering. Existing/inherited staging, protected accounting, production worker
+integration, actual offload and parent qualification remain pending.
+
+Failed process-count checks keep the observed total, active and limit-terminated
+counts for each fixed phase. These numeric diagnostics do not relax the one-worker
+requirement or qualify an unconfirmed shutdown or cleanup.
+
+The fixed event-only worker uses `DETACHED_PROCESS`. It does not inherit or
+allocate a console. There is no hidden-console or larger-process-limit fallback.
+The memory, ownership, native-exit and cleanup requirements remain the same.

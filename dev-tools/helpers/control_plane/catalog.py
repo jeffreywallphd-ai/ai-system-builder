@@ -11,6 +11,7 @@ from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
 QUALIFICATION_PROFILES = (
+    "windows-owned-job-probe",
     "windows-file-protection-probe",
     "windows-staging-protection-probe",
     "windows-file-identity",
@@ -22,6 +23,7 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "windows-owned-job-probe": ['dev-tools/scripts/native/probe_windows_owned_job.py', 'dev-tools/scripts/native/tests/test_windows_owned_job_probe.py', 'dev-tools/helpers/tests/test_control_plane_owned_job_probe_profile.py'],
     "windows-file-protection-probe": ['dev-tools/scripts/native/probe_windows_file_protection.py', 'dev-tools/scripts/native/tests/test_windows_file_protection_probe.py', 'dev-tools/helpers/tests/test_control_plane_file_probe_profile.py'],
     "windows-staging-protection-probe": ['dev-tools/scripts/native/probe_windows_staging_protection.py', 'dev-tools/scripts/native/tests/test_windows_staging_protection_probe.py', 'dev-tools/helpers/tests/test_control_plane_staging_probe_profile.py'],
     "windows-file-identity": ['modules/adapters/model/local/native/windows/model_file_identity.cc', 'modules/adapters/model/local/windowsModelFileIdentityProtocol.ts', 'modules/adapters/model/local/createWindowsModelFileIdentityAdapter.ts', 'modules/adapters/model/local/tests/windows-model-file-identity.unit.test.ts', 'modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts', 'dev-tools/scripts/native/build_windows_model_file_identity.py', 'dev-tools/scripts/native/tests/test_build_windows_model_file_identity.py', 'dev-tools/helpers/tests/test_control_plane_windows_identity_profile.py'],

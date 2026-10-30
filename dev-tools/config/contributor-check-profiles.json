@@ -1,6 +1,22 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "windows-owned-job-probe": {
+      "test_paths": [
+        "dev-tools/scripts/native/tests/test_windows_owned_job_probe.py"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/native/probe_windows_owned_job.py",
+        "dev-tools/scripts/native/tests/test_windows_owned_job_probe.py",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_owned_job_probe_profile.py",
+        "dev-tools/README.md",
+        "docs/operations/optional-low-memory-inference.md",
+        "dev-tools/scripts/native/probe_windows_staging_protection.py",
+        "dev-tools/scripts/qualification/windows_qualification_memory.py"
+      ]
+    },
     "windows-file-protection-probe": {
       "test_paths": [
         "dev-tools/scripts/native/tests/test_windows_file_protection_probe.py"
