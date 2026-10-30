@@ -6166,6 +6166,60 @@
         "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
         "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "settings-functional-host-journey-definitions-checked",
+      "work_criteria": [
+        "safe-isolated-settings-profile",
+        "meaningful-settings-host-definitions",
+        "owned-shutdown-and-exact-review"
+      ],
+      "receipt_digest": "16ebc6735dcb1c93afe733685b3ab3acf0e8db4ece9164cbfe619aec8319e3f0",
+      "review_digest": "b039520720d42a417140f25581544031ab9f23192b482e222bd398ddb8b6b5ae",
+      "scope": "Four Settings test journeys now check saved values, masked test tokens, model defaults and recovery on Desktop and Thin Client. Focused checks, source checks and test collection passed. Actual app runs and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "settings-functional-host-journey-definitions-checked",
+      "work_criteria": [
+        "safe-isolated-settings-profile",
+        "meaningful-settings-host-definitions",
+        "owned-shutdown-and-exact-review"
+      ],
+      "receipt_digest": "16ebc6735dcb1c93afe733685b3ab3acf0e8db4ece9164cbfe619aec8319e3f0",
+      "review_digest": "b039520720d42a417140f25581544031ab9f23192b482e222bd398ddb8b6b5ae",
+      "scope": "Four Settings test journeys now check saved values, masked test tokens, model defaults and recovery on Desktop and Thin Client. Focused checks, source checks and test collection passed. Actual app runs and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "settings-functional-host-journey-definitions-checked",
+      "work_criteria": [
+        "safe-isolated-settings-profile",
+        "meaningful-settings-host-definitions",
+        "owned-shutdown-and-exact-review"
+      ],
+      "receipt_digest": "16ebc6735dcb1c93afe733685b3ab3acf0e8db4ece9164cbfe619aec8319e3f0",
+      "review_digest": "b039520720d42a417140f25581544031ab9f23192b482e222bd398ddb8b6b5ae",
+      "scope": "Four Settings test journeys now check saved values, masked test tokens, model defaults and recovery on Desktop and Thin Client. Focused checks, source checks and test collection passed. Actual app runs and full worker shutdown remain pending.",
+      "limitations": [
+        "These records show reviewed test helpers and source changes. They do not show a full app UI test pass.",
+        "App execution, native controls, provider access, performance and final testing remain pending under their existing owners. Accepted model accuracy checks stay closed. No user action is needed for the remaining code."
+      ]
     }
   ]
 }

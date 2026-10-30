@@ -8297,7 +8297,7 @@
      }
     ]
    },
-   "committed_sha256": "84a3373bef4e44402fd401345d8831c537619f56a5c2a9556b6c3528c1bcc0a6"
+   "committed_sha256": "c9096a572df686f3cc5cf4a7e012f8ffa6209e0ff549ec4a41e4152ad0611668"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -9008,7 +9008,7 @@
      }
     ]
    },
-   "committed_sha256": "ed72556520e2eba612db7a53eede06120aeffa310713e80258853acdde30e419"
+   "committed_sha256": "d8b42c53346972a30e0b4b10bcedd9a54df611ea49cded955d6abf1a92cf1899"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -13316,7 +13316,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "61064c5ec6c94a991793968f560369732ce4ca55feea83af56b72dbf9716776e"
+   "committed_sha256": "105495a853b7b61b7084c272d58408887bf7a738c0a89658680a3577e3b43953"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
@@ -14151,7 +14151,7 @@
    "host_definitions": [],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": [
-    "Add named Desktop and Thin Client journeys that save a supported setting and confirm it after reload. Focused Settings mutation and recovery checks are already complete."
+    "The two Settings public-value host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending."
    ]
   },
   {
@@ -14207,7 +14207,7 @@
    "host_definitions": [],
    "execution_status": "not-asserted-by-census",
    "pending_feature_checks": [
-    "Add named Desktop and Thin Client journeys for supported secret clearing, model defaults and explicit readback recovery in isolated test profiles. Do not copy user credentials."
+    "The two Settings token/model-default host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. User credentials are never copied."
    ]
   },
   {
