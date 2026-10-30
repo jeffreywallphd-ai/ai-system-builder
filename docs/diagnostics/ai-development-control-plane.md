@@ -1472,3 +1472,14 @@ UI/use-case tests. The Operational bounds and generic unknown/incomplete
 fallbacks are unchanged. Source construction, selected builds/types and named
 collection do not qualify actual provider/app execution or the full campaign.
 Accepted model accuracy remains closed. Final coverage linking is separate.
+
+### Pure guarded restart prerequisite
+
+The fixed `offload-restart-readiness` check selects only
+`test_offload_guarded_restart.py`. Its source-owned routing tests preserve
+explicit generic checks and unknown or incomplete impact fallback. Borrowed
+documentation and configuration do not trigger it on their own. This check
+validates the read-only denial and arithmetic component; actual Windows file
+protection, durable accounting, owned-worker recovery and optional-model outcomes
+remain separate. Keep failed broader profile evidence as history. This profile
+does not qualify that native work or replace the later combined test campaign.

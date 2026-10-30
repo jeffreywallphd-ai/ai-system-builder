@@ -1177,3 +1177,15 @@ UI/use-case tests. The Operational bounds and generic unknown/incomplete
 fallbacks are unchanged. Source construction, selected builds/types and named
 collection do not qualify actual provider/app execution or the full campaign.
 Accepted model accuracy remains closed. Final coverage linking is separate.
+
+### Pure offload restart readiness checks
+
+The `offload-restart-readiness` profile runs only the eleven pure Python
+readiness and budget tests. It starts no model, native helper or provider.
+Use `python dev-tools/helpers/run_focused_checks.py --profile offload-restart-readiness`
+for this component. Its CLI plan is
+`python dev-tools/scripts/qualification/offload_guarded_restart.py --plan`.
+Unknown retained content keeps the full existing 12 GiB charge. Arithmetic and
+serialized state grant no protection, journal authority or fresh lease. Actual
+native protection, worker recovery and optional model qualification stay pending.
+The existing outcome profiles and all unknown-impact checks remain unchanged.

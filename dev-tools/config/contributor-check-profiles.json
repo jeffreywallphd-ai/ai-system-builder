@@ -2216,6 +2216,20 @@
         "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts",
         "modules/hosts/shared/huggingFaceTokenConfigStore.ts"
       ]
+    },
+    "offload-restart-readiness": {
+      "test_paths": [
+        "dev-tools/scripts/qualification/tests/test_offload_guarded_restart.py"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/qualification/offload_guarded_restart.py",
+        "dev-tools/scripts/qualification/tests/test_offload_guarded_restart.py",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_offload_restart_readiness_profile.py",
+        "dev-tools/README.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ]
     }
   }
 }
