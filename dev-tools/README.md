@@ -1493,15 +1493,16 @@ remain pending. Unknown or explicitly generic impact keeps normal test fallback.
 
 ## Fresh Windows staging feature checks
 
-`offload-resource-lifecycle` includes seven fixed model-free files. The new Core
+`offload-resource-lifecycle` includes eight fixed model-free files. The new Core
 and concrete backend tests use synthetic native, journal and standalone-worker
 facts through the real guarded lease. They do not start a model or native worker.
 Unknown, incomplete and explicit generic impact keeps its fallback checks.
 
 `python -B dev-tools/scripts/qualification/qualify_windows_offload_core.py --plan`
-prints remaining native checks. Default exits3 with pending status. It cannot
-execute a native fixture or accept a root, command, budget, PID or proof. Actual
-fresh-fixture effects require separate reviewed execution. Existing/inherited
+prints remaining native checks. Default exits3 with pending status. Imported
+calls cannot execute native fixtures. The explicit isolated standalone native
+mode requires separate reviewed execution and accepts no root, command, budget,
+PID or proof. Existing/inherited
 tree, protected journal, owned-worker/crash, model resources and the final combined
 campaign remain separate. Accepted accuracy stays closed.
 
@@ -1513,3 +1514,41 @@ deadline or physical cleanup. Microsoft documents the distinct cancellation
 outcomes in [CancelIoEx](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelioex)
 and the pending operation in [FSCTL_REQUEST_OPLOCK](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
 The output-slot event API is [NtCreateEvent](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-zwcreateevent).
+
+
+## Isolated fresh staging component qualification
+
+`windows_offload_core_fixture.py` supports four fixed standalone cases: an actual
+timer-delivery/exit control, empty stage, one two-byte index and fresh namespace
+collision refusal. No model or existing fixture is read. The eight-file portable
+profile executes synthetic controller/ABI tests only. `--plan`, default and
+imported entry calls cannot start this runner. Actual execution requires separate
+review of the exact source and effect plan, then direct base Python with
+`-I -S -B` from the repository root and `--native` on the qualification entry.
+
+The parent creates one suspended child at a time, with atomic Job membership,
+512 MiB process/Job commit ceilings and an active-process limit of one. These are
+inert component-test limits, not allocations or model policy. Only ready/dispatch
+events and its preopened bounded report handle are inherited; the Job is not.
+Actual native exit, active-zero, limit/membership readback, strict source-bound
+report and parent handle retirement precede acceptance. Failure stops later
+cases. Tiny evidence and uncertain failed fixtures are retained; there is no
+recursive cleanup or model staging credit.
+
+A one-shot native timer covers the fixed 120-second diagnostic budget, including
+final output. The separate short control must observe actual timer-caused child
+exit. Timer configuration alone is insufficient. The Python callback requires the
+GIL and host scheduling; this does not qualify suspend or indefinitely stuck
+kernel I/O. The timer and all callbacks/output slots remain strongly held until
+this exact diagnostic process exits. No thread-start/join watchdog, undrained
+pipe or caller-selected process target is used. The source result does not supply
+a production finite owner, durable journal, worker/crash proof or parent pass.
+
+
+The standalone entry and child bootstrap compile the exact bounded source
+buffer rather than reading a bytecode cache. The real Core loader checks that
+buffer's hash before execution and checks source identity afterward. The local
+Job ABI definitions reuse the fixed native probe design without importing its
+transitive loaders. Installed runtime bindings include the base image, DLL,
+selected standard-library source and any existing caches for those modules;
+they are cooperative installation bindings, not hostile same-user isolation.

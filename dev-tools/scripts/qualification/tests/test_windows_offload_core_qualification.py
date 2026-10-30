@@ -1,4 +1,4 @@
-"""The pending declaration cannot execute a native fixture or reopen accuracy."""
+"""Default/imported declarations cannot execute fixtures or reopen accuracy."""
 import builtins
 import importlib.util
 import io
@@ -35,6 +35,17 @@ class FreshCoreDeclarationTests(unittest.TestCase):
             plan.assert_not_called()
             self.assertNotIn('synthetic-private-input', output.getvalue())
 
+    def test_imported_native_entry_is_refused_before_any_effect_or_native_import(self):
+        original = builtins.__import__
+        def checked(name, *args, **kwargs):
+            if name.split('.')[0] in {'ctypes', 'runpy', 'subprocess', 'windows_offload_core_fixture'}:
+                raise AssertionError('No native import')
+            return original(name, *args, **kwargs)
+        output = io.StringIO()
+        with patch('builtins.__import__', side_effect=checked), patch('sys.stdout', output), patch.object(Path, 'open', side_effect=AssertionError('No file')), patch.object(Path, 'mkdir', side_effect=AssertionError('No directory')):
+            self.assertEqual(subject.main(['--native']), 2)
+        self.assertEqual(json.loads(output.getvalue())['status'], 'request-refused')
+
     def test_import_does_not_load_windows_runtime_frameworks_or_accuracy_runners(self):
         original = builtins.__import__
         def checked(name, *args, **kwargs):
@@ -45,10 +56,11 @@ class FreshCoreDeclarationTests(unittest.TestCase):
         with patch('builtins.__import__', side_effect=checked): spec.loader.exec_module(importlib.util.module_from_spec(spec))
 
     def test_failed_planning_never_prints_private_error_detail(self):
-        output = io.StringIO()
-        with patch.object(subject, 'current_plan', side_effect=ValueError('synthetic-private-path')), patch('sys.stdout', output):
-            self.assertEqual(subject.main(['--plan']), 2)
-        self.assertNotIn('synthetic-private-path', output.getvalue())
+        for error in (ValueError, OSError, SyntaxError):
+            output = io.StringIO()
+            with self.subTest(error=error), patch.object(subject, 'current_plan', side_effect=error('synthetic-private-path')), patch('sys.stdout', output):
+                self.assertEqual(subject.main(['--plan']), 2)
+            self.assertNotIn('synthetic-private-path', output.getvalue())
 
 
 if __name__ == '__main__': unittest.main()

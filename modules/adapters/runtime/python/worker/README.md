@@ -588,3 +588,19 @@ do not span execution-owner callbacks. Canonical Core/API/backend origin checks
 refuse shallow copies before callbacks. Guard retirement requires actual aborted
 completion; a raced successful break remains pending and cannot authorize deletion.
 The fixed1500ms guard wait does not bound synchronous native calls by itself.
+
+
+### Separate fresh Core diagnostic
+
+The qualification helper under dev-tools now constructs an isolated fixed
+parent/child diagnostic. Its private execution port admits the actual Core only
+after real Job limits, parent membership readback and a child handshake. It loads
+the four exact adapter source files in a private package without importing the
+ordinary framework package. This is component evidence only; it does not qualify
+normal managed-runtime startup or supply a production finite-execution producer.
+
+The initial native cases cover empty and two-byte-index cleanup plus exclusive
+namespace denial. The collision case deliberately retains its Core owner and
+files; native process exit is not explicit Core cleanup. Actual Windows results
+remain uncollected until separate reviewed execution. Accepted accuracy, current
+backendless factory, retained-data charge and all model limits are unchanged.

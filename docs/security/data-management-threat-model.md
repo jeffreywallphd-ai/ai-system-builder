@@ -1764,3 +1764,45 @@ objects cannot dispatch original owners. Retirement accepts only acknowledged
 aborted completion with the cancelled native status; a raced successful break
 keeps the watch, owner and charge retained. The original failed source and causal
 regression remain history; no actual Windows failure or parent pass is invented.
+
+
+### Fresh Core diagnostic authority and lifetime
+
+The new explicit standalone component runner accepts no caller command, root,
+PID, budget, proof or model. Default/plan/imported calls are effect-free. The fixed
+installed base image, DLL/selected standard-library files and six repository
+inputs are hash-bound before/after use. `-I -S -B`, an OS-derived minimal environment
+and a fixed working directory avoid ambient Python startup. A private exact-source
+package bypasses unrelated framework initialization without modifying Core checks.
+This is cooperative source integrity, not hostile same-user installation isolation.
+
+The parent records output slots and attributes before issue, atomically assigns
+one suspended child to its held noninherited kill-on-close Job, and verifies
+membership/512 MiB ceilings/active-one before resume and dispatch. Only two fixed
+event handles and a preopened bounded report handle are inherited. Reports are
+read after actual process exit and active-zero. Partial/unknown create, timeout,
+limit drift, oversized/malformed/source-drifted report or unconfirmed close stops
+the sequence and denies acceptance. Canonical owners reject copied sessions;
+close and attribute retirement are one attempt. Failed fresh fixtures remain.
+
+A held one-shot native timer terminates only this diagnostic process; it cannot
+target a caller PID. The short control requires observed timer-caused native exit,
+not a configured flag. No arbitrary thread cancellation, GIL-free guarantee,
+suspend qualification or indefinitely stuck kernel-I/O guarantee is claimed.
+Callback/timer/buffer custody lasts through final output and self-termination.
+Parent exit/Job release after uncertainty is never evidence of confirmed cleanup.
+The child uses the real Core unchanged for empty/index retirement and an actual
+newly created namespace collision; that denial retains Core uncertainty and is
+not a cleanup pass. No old fixture, native ACL relaxation, production journal,
+model/worker admission, quota change or roadmap closure is authorized by this
+source work. Those boundaries need separate current qualification.
+
+
+Source execution uses the exact bounded hash-checked buffer, not
+SourceFileLoader; `-B` alone would still allow cached-code reads. The entry and
+fixed child bootstrap bind their loaded helper bytes. Copied local fixed Job ABI
+definitions avoid transitive probe loaders. Existing selected runtime caches are
+also recorded. The summary directory is latched only after exclusive creation
+succeeds, and its identity is rechecked before output. A failed create never
+opens the candidate's summary path. These checks do not establish malicious
+same-user filesystem or Python-installation isolation.

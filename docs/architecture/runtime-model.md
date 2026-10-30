@@ -971,3 +971,21 @@ Skipped, duplicate, early, foreign-thread and unknown replies retain custody.
 Core/backend state locks do not span execution callbacks. Canonical self-origin
 and API-owner checks deny copied owners before callbacks. A successful raced
 break is not an aborted cancellation and cannot authorize native retirement.
+
+
+### Fresh-only Core component runner
+
+An explicit dev-tools standalone owner can collect initial actual-Core evidence
+without composing the production runtime. Its private fixture port is admitted
+after actual suspended creation-time Job assignment, parent exact membership and
+limit checks, child self-readback and a fixed handshake. No caller JSON/readiness
+flag grants a runtime capability. Four byte-exact adapter files load in a private
+namespace; the ordinary tasks package and managed runtime are not qualified.
+
+One-shot self-only diagnostic timers, strongly retained native slots and bounded
+preopened reports avoid an unbounded Python thread-start/pipe-reader mechanism.
+Exact process exit, Job-active-zero and one-attempt parent retirement are separate
+from child Core cleanup. Expected collision retains Core custody. Timer delivery
+needs the GIL/host scheduler and does not prove suspend or stuck kernel-I/O bounds.
+The current factory stays backendless. No production finite owner, model Job
+quota, protected durable journal, retained-tree or worker/crash readiness follows.

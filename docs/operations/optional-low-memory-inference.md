@@ -690,16 +690,17 @@ Missing producers deny before file effects. Source tests use explicitly syntheti
 new-domain producers, not JSON proof or a production admission switch. Standard,
 ordinary empty-root leases, existing guards and accepted accuracy stay unchanged.
 
-The finite `offload-resource-lifecycle` profile has seven model-free test files.
+The finite `offload-resource-lifecycle` profile has eight model-free test files.
 The additional declaration prints the native checks still needed:
 
 ```text
 python -B dev-tools/scripts/qualification/qualify_windows_offload_core.py --plan
 ```
 
-Default execution reports pending and exits3. This declaration has no native
-execution flag, root, budget, command, PID or proof input. A separately reviewed
-fresh-fixture owner must qualify actual Windows behavior before composition.
+Default execution reports pending and exits3. Plan and imported calls have no
+effects. The explicit standalone native mode requires a separate reviewed effect
+plan and isolated base Python; it admits no caller root, budget, command, PID or
+proof. It collects initial fresh Core evidence only, not production readiness.
 Protected durable accounting, owned-worker/crash ordering and model resource
 delivery remain additional implementation or qualification. Full testing remains
 deferred until the open roadmap features are worked through.
@@ -710,3 +711,24 @@ Core refuses actual native preparation and dispatch without it. Source tests use
 an explicit finite in-memory dispatcher. They cannot supply a native timing pass.
 A cancel request is not completion: a raced successful change notification keeps
 retirement pending. No user action is needed for these agent-owned repairs.
+
+
+## Initial native component test runner
+
+No user action is needed. The agent is preparing four small Windows tests: verify
+that the test timeout ends its child, create and clean an empty temporary folder,
+repeat with one tiny index file, and refuse an existing folder name. The runner
+uses only new disposable test folders. It does not open retained model files or
+repeat accepted model accuracy checks. Unknown results stop the next test and
+retain the files and failure details.
+
+Default and plan commands still report pending without native effects. A reviewed
+standalone run will save bounded source-bound JSON under a new opaque run folder
+in `.local-codex/windows-offload-core-native-v1/`. Results contain fixed failure
+stages and numeric native error codes, not raw exceptions or private payloads.
+The 512 MiB child ceiling applies to these model-free tests only. The timer has
+host/GIL/suspend limits described in the dev-tools guide; this is not a general
+production deadline guarantee. Existing protected files, durable accounting,
+owned-worker restart/crash behavior and actual offload memory delivery still
+need their own implementation and evidence. No parent criterion passes merely
+because the runner exists or returns zero.

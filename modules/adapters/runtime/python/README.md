@@ -217,3 +217,13 @@ feature checks and still-pending native, retained-tree and resource evidence.
 Actual native preparation also requires a trusted finite execution owner. That
 producer remains missing; a synthetic dispatcher supplies no native authority.
 Canonical owner checks prevent copied Core/backend/API objects from dispatching.
+
+
+### Standalone component boundary
+
+The dev-tools fresh Core diagnostic uses exact adapter source with the installed
+isolated base Python, one owned inert child and bounded structured reports. It
+does not start the application, managed worker, model or normal tasks package.
+Portable tests exercise its failure controls with synthetic ABI responses only.
+Native fixture evidence, production execution/journal/worker composition, real
+resources and final combined qualification remain distinct requirements.

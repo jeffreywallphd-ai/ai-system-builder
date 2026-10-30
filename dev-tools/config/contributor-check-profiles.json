@@ -9,7 +9,8 @@
         "dev-tools/scripts/qualification/tests/test_offload_resource_qualification.py",
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_core.py",
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_backend.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_core_fixture.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
@@ -37,7 +38,9 @@
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_core.py",
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_backend.py",
         "dev-tools/scripts/qualification/qualify_windows_offload_core.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py",
+        "dev-tools/scripts/qualification/windows_offload_core_fixture.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_core_fixture.py"
       ]
     },
     "model-qualification-scheduling": {
