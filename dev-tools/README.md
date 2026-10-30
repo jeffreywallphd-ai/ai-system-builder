@@ -1268,3 +1268,22 @@ The unit profile does not replace the build-script audit required by `AGENTS.md`
 The impact rule adds only this exact source path; existing profile tests,
 dependency paths and generic fallback stay unchanged. This selection does not
 compile native code, start a model or qualify production file protection.
+
+
+## Windows staging protection diagnostic
+
+`python -B dev-tools/scripts/native/probe_windows_staging_protection.py --plan`
+prints an effect-free plan. `--self-test` explicitly runs three model-free
+controls on new, exclusively handle-created empty directories under the fixed
+`artifacts/tmp` namespace: advisory directory notifications, permission-based
+write denial, and a preopened security handle's permission change with both
+mechanisms. It accepts no caller root, command, PID, ACL or privilege override.
+
+The fixed `windows-staging-protection-probe` contributor profile runs only pure
+unit tests. The native diagnostic is a separate explicit check, with fixed stage
+codes and no paths, ACLs or private data in output. It restores exact original
+permissions and removes only known empty created objects through their handles.
+Unknown completion or unexpected content prevents cleanup and further cases.
+This is cooperative disposable-fixture evidence, not hostile same-user isolation,
+retained-tree protection, durable accounting, worker crash safety or offload
+admission. See the [owning guide](../docs/operations/optional-low-memory-inference.md).

@@ -377,3 +377,86 @@ accounting, owned-worker recovery and actual optional offload remain pending.
 Accepted Standard model accuracy stays closed. Full combined testing is deferred
 until the open roadmaps' feature work is complete. No user action is needed for
 the remaining agent-owned implementation.
+
+
+## Directory protection primitive diagnostic
+
+No user action is needed for this agent-owned implementation. The bounded
+`probe_windows_staging_protection.py` diagnostic tests one prerequisite for the
+approved guarded restart. Its default and `--plan` modes make no native changes.
+An explicit `--self-test` uses three new synthetic empty NTFS directories under
+`artifacts/tmp`. It never opens retained offload content or accepts a caller path.
+
+The controls distinguish directory notifications, write denial by permissions,
+and a permission change through a handle opened before the protection. The last
+case tests whether a directory RH oplock delays that change until the guard is
+released. This is a hypothesis to measure on the installed filesystem.
+[Microsoft describes directory content breaks as advisory](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
+The [object-store oplock model](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/306239fb-cb60-49fe-b293-df4d1a5f757a)
+is research input, not proof of this local NTFS behavior.
+
+The diagnostic saves and restores the original DACL and its control bits. It uses
+[single-object NtSetSecurityObject](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntsetsecurityobject)
+on each held fixture. It does not use SetSecurityInfo, which propagates inherited
+entries to child objects. The guard must be unbroken before dispatch. Its native
+break frame, RH-to-R transition and required acknowledgment must then be verified.
+A prebroken or canceled guard cannot establish a security barrier. A
+non-inheriting deny entry affects only each newly created empty fixture; owner
+recovery rights are retained. No owner, audit policy, service, driver, account or
+privilege is changed. Native creation must report a new object. Cleanup uses
+only created handles and never recursively removes unknown children. Unconfirmed
+thread/IO completion or changed restoration prevents cleanup and stops the run.
+Output contains only fixed phases, numeric native codes and synthetic IDs.
+The pure unit profile runs no native test, model, provider or worker.
+
+Even if all three observations succeed, full-tree and existing-file/mapping
+protection, protected durable accounting, owned-worker exit and guardian-crash
+lifetime remain separate work. A failed observation remains failed. The report
+requests evidence review and always reports restart and parent qualification
+as false. The real restart guard and full 12 GiB unknown charge remain unchanged.
+Accepted model accuracy stays closed. Full software testing is deferred.
+
+The diagnostic runs in its own short-lived command process. A fixed 30-second
+watchdog starts before native effects. Each report is limited to 8 KiB, with a
+5-second publication deadline. Normal publication requires native IO, mutation
+threads and the watchdog to be retired first. Native buffers are retained before
+issuing operations. Unconfirmed native lifetime produces failed evidence and
+exits only this diagnostic process without Python object finalization. It never
+terminates another PID. Interrupted fixtures may remain protected; no later
+invocation adopts or removes them. These controls are diagnostic safety, not the
+missing production worker/crash or protected-journal qualification.
+
+The directory request uses the Windows SDK read and handle cache flags (RH).
+The native validator checks those same flags. An untouched fixture is checked
+without an unnecessary permission rewrite. A possible update is marked before
+issue, including interrupted calls. Protection and restoration compare actual
+readback. A mismatch reports only ACL equality and bounded expected/current
+DACL control integers, never ACL bytes, hashes or SIDs. Primary failures remain
+separate from cleanup failures. Earlier failed fixtures are not reused or
+removed by a later invocation.
+
+### Controlled new-folder profile
+
+The prospective `fresh-protected-current-user-v1` profile supplies an explicit,
+protected, non-inheriting DACL during exclusive creation. The only allow entry
+is for the current process user's SID, obtained through a bounded read-only
+query of its own token. The SID is kept in memory and filesystem permissions;
+it is never logged or written to evidence. The entry grants file operations and
+permission recovery, with no write-owner grant or privilege enablement.
+
+Creation must read back the exact intended ACL and protected control value
+before any test action. An unexpected baseline is rejected and is not normalized
+for a pass. This profile does not qualify arbitrary inherited ACLs. Earlier
+inherited-baseline failures, including the lost auto-inherited flag with unchanged
+ACL entries, remain failed. The diagnostic explicitly denies auto-inherit
+requests because the documented operation can propagate to existing children.
+No retained folder is converted to this profile.
+
+A failed lock-frame check records only version, length, original/new levels,
+flags, transferred bytes and native status. It records no access/share payload.
+The advisory control requires completed child creation separately from a genuine
+RH-to-None break. The returned frame may request cache acknowledgment even though
+the content operation already proceeded. The security-change control remains
+stricter: a fresh RH guard, validated RH-to-R break and required acknowledgment,
+a waiting mutation thread, confirmed release/completion and exact restoration.
+A new private baseline does not turn a failed inherited round trip into a pass.
