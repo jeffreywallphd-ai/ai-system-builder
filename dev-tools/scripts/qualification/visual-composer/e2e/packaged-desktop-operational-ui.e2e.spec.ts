@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { _electron as electron } from "playwright";
+import { expect, test, type Page } from "@playwright/test";
+import { _electron as electron, type ElectronApplication } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { qualifyOperationalUiJourney } from "./operational-ui-journey";
@@ -140,4 +140,29 @@ test("packaged desktop artifact local lifecycle preserves actual bytes and scope
   const app=await electron.launch({acceptDownloads:true,executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${isolated.dataRoot}`,"--disable-gpu"],env:isolated.env,timeout:60_000});
   let stage:FunctionalCleanupStage="startup";
   await runOwnedRestartPhase(async()=>{const page=await app.firstWindow({timeout:60_000});stage="artifacts";await qualifyArtifactLifecycleHostJourney(page,test.info(),"packaged-desktop","local-lifecycle");stage="complete";},()=>closeFunctionalDesktop(app,isolated.dataRoot,test.info(),stage));
+});
+
+import {qualifyProviderSourceHostJourney} from "./provider-source-host-journey";
+import {prepareProviderDesktopCase,qualifyPrivatePublicationHostJourney} from "./private-publication-host-journey";
+import type {ExecutingProviderFixture} from "../functional-private-provider-fixture";
+
+async function runProviderDesktopCase(purpose:"provider-source"|"provider-publication",journey:(page:Page,capsule:ExecutingProviderFixture)=>ReturnType<typeof qualifyProviderSourceHostJourney>){
+  if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported private provider host.");
+  const prepared=await prepareProviderDesktopCase(purpose);let app:ElectronApplication|undefined,stage:FunctionalCleanupStage="startup",report:Awaited<ReturnType<typeof qualifyProviderSourceHostJourney>>|undefined;
+  await runOwnedRestartPhase(async()=>{
+    prepared.credential.markConsumerLaunch();
+    app=await electron.launch({acceptDownloads:false,executablePath:process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!,args:[`--user-data-dir=${prepared.isolated.dataRoot}`,"--disable-gpu"],env:prepared.isolated.env,timeout:60_000});
+    prepared.credential.bindConsumer(app.process());const page=await app.firstWindow({timeout:60_000});stage="artifacts";report=await journey(page,prepared.capsule);stage="complete";
+  },()=>runOwnedRestartPhase(async()=>{if(app)await closeFunctionalDesktop(app,prepared.isolated.dataRoot,test.info(),stage);},async()=>{if(app)prepared.credential.retireDesktopAfterStop();else prepared.credential.retireBeforeLaunch();}));
+  if(!report)throw new Error("The provider journey did not return evidence.");return report;
+}
+
+test("packaged desktop provider source registers an exact reference and optional localized bytes",async()=>{
+  test.setTimeout(180_000);test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE!=="1","Pending the dedicated prepared private provider-source fixture.");
+  const report=await runProviderDesktopCase("provider-source",async(page,capsule)=>{if(!capsule.sourceFile)throw new Error("The prepared provider source is missing.");return qualifyProviderSourceHostJourney(page,test.info(),"packaged-desktop",capsule.sourceFile);});expect(report.status).toBe("passed");
+});
+
+test("packaged desktop private artifact publication records local branch and remote commit",async()=>{
+  test.setTimeout(180_000);test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION!=="1","Pending the dedicated existing-private-repository fixture.");
+  const report=await runProviderDesktopCase("provider-publication",(page,capsule)=>qualifyPrivatePublicationHostJourney(page,test.info(),capsule));expect(report.status).toBe("passed");
 });

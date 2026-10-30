@@ -1,13 +1,13 @@
 import type {Page} from "@playwright/test";
 import type {FunctionalHost} from "../functional-host-oracles";
 
-export type ArtifactReadMode="inspect"|"list"|"gone"|"isolated"|"readonly-control"|"deny-publication";
+export type ArtifactReadMode="inspect"|"list"|"gone"|"isolated"|"readonly-control"|"deny-publication"|"backing"|"bytes";
 type Input={host:FunctionalHost;workspaceId:string;key:string;mode:ArtifactReadMode;bearer?:string;artifactId?:string};
 export async function readArtifactHostState(page:Page,input:Input){return page.evaluate(readArtifactHostStateInBrowser,input);}
 
 /** Self-contained real public reads. A single explicit denied POST is the only write-shaped call. */
 export async function readArtifactHostStateInBrowser({host,workspaceId,key,mode,bearer,artifactId}:Input){
-  if(host!=="packaged-desktop"&&host!=="thin-chrome"||!/^workspace\.[A-Za-z0-9._:-]{1,160}$/.test(workspaceId)||typeof key!=="string"||key.length>1024||!["inspect","list","gone","isolated","readonly-control","deny-publication"].includes(mode))throw new Error("Invalid artifact read context.");
+  if(host!=="packaged-desktop"&&host!=="thin-chrome"||!/^workspace\.[A-Za-z0-9._:-]{1,160}$/.test(workspaceId)||typeof key!=="string"||key.length>1024||!["inspect","list","gone","isolated","readonly-control","deny-publication","backing","bytes"].includes(mode))throw new Error("Invalid artifact read context.");
   const token=host==="thin-chrome"?(bearer??localStorage.getItem("ai-system-builder.paired-device-token")):undefined;
   if(host==="thin-chrome"&&(!token||!/^[A-Za-z0-9_-]{43}$/.test(token)))throw new Error("The isolated artifact credential is unavailable.");
   if((mode==="readonly-control"||mode==="deny-publication")&&(host!=="thin-chrome"||!bearer))throw new Error("The read-only artifact identity is required.");
@@ -17,7 +17,7 @@ export async function readArtifactHostStateInBrowser({host,workspaceId,key,mode,
     readArtifactContentDescriptor(locator:unknown,context:unknown):Promise<unknown>;
     readArtifactViewerMedia(locator:unknown,context:unknown):Promise<unknown>;
   }}).desktopApi:undefined;
-  const operations=mode==="list"?["list"]:mode==="deny-publication"?["deny"]:mode==="readonly-control"?["detail"]:mode==="gone"||mode==="isolated"?["detail","media"]:["detail","content","media"];
+  const operations=mode==="list"?["list"]:mode==="deny-publication"?["deny"]:mode==="readonly-control"?["detail"]:mode==="backing"?["detail","content"]:mode==="bytes"?["media"]:mode==="gone"||mode==="isolated"?["detail","media"]:["detail","content","media"];
   const values:Record<string,unknown>={},statuses:Record<string,number>={};
   for(const operation of operations){
     let envelope:unknown;
@@ -87,6 +87,7 @@ export async function readArtifactHostStateInBrowser({host,workspaceId,key,mode,
       values.media={sizeBytes:bytes.byteLength,sha256:Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("")};
     }else values[operation]=result.value;
   }
+  if(mode==="bytes")return {requestedWorkspaceId:workspaceId,storageKey:key,...values.media as {sizeBytes:number;sha256:string}};
   if(mode==="gone"||mode==="isolated"){
     const detail=values.detail as {missing?:boolean;isolated?:boolean},media=values.media as {missing?:boolean;isolated?:boolean};
     if(mode==="gone"?!detail?.missing||!media?.missing:!detail?.isolated||!media?.isolated)throw new Error("The artifact remains readable or its absence is unproved.");
@@ -97,6 +98,25 @@ export async function readArtifactHostStateInBrowser({host,workspaceId,key,mode,
   if(mode==="readonly-control")return {authenticatedReadSucceeded:true,storageKey:key};
   const content=(values.content as {content?:{availability?:unknown;locator?:{storageKey?:unknown}}})?.content,media=values.media as {sizeBytes:number;sha256:string},metadata=detail.metadata as {importedSourceBacking?:unknown;publishedBacking?:unknown}|undefined;
   if(metadata!==undefined&&(!metadata||typeof metadata!=="object"||Array.isArray(metadata)))throw new Error("The artifact backing metadata is invalid.");
+  if(mode==="backing"){
+    if(content?.locator?.storageKey!==key||!["available","unavailable"].includes(content.availability as string)||typeof detail.originalName!=="string"||detail.originalName.length>128||typeof detail.sourceKind!=="string"||detail.sourceKind.length>32)throw new Error("The artifact reference projection is invalid.");
+    const backings:Record<string,unknown>={};
+    for(const role of ["importedSourceBacking","publishedBacking"] as const){
+      const raw=metadata?.[role];if(raw===undefined){backings[role]=null;continue;}
+      if(!raw||typeof raw!=="object"||Array.isArray(raw))throw new Error("The artifact backing is invalid.");
+      const fields=Object.getOwnPropertyDescriptors(raw);if(Reflect.ownKeys(fields).length>8)throw new Error("The artifact backing is invalid.");
+      const target=fields.target&&"value" in fields.target?fields.target.value:undefined,verification=fields.verification&&"value" in fields.verification?fields.verification.value:undefined;
+      if(!target||typeof target!=="object"||Array.isArray(target)||!verification||typeof verification!=="object"||Array.isArray(verification))throw new Error("The artifact backing is invalid.");
+      const targetFields=Object.getOwnPropertyDescriptors(target),checked=Object.getOwnPropertyDescriptors(verification),value:Record<string,string|null>={};
+      if(Reflect.ownKeys(targetFields).length>8||Reflect.ownKeys(checked).length>4||!checked.exists||!("value" in checked.exists)||typeof checked.exists.value!=="boolean")throw new Error("The artifact backing verification is invalid.");
+      for(const field of ["provider","repository","path","revision"]){const descriptor=targetFields[field],text=descriptor&&"value" in descriptor?descriptor.value:undefined;
+        if(field==="revision"&&text===undefined){value[field]=null;continue;}
+        if(typeof text!=="string"||!text||text.length>(field==="provider"?32:240)||/[\0-\x1f\x7f]/.test(text))throw new Error("The artifact backing target is invalid.");value[field]=text;
+      }
+      backings[role]={...value,exists:checked.exists.value};
+    }
+    return {requestedWorkspaceId:workspaceId,storageKey:key,originalName:detail.originalName,sourceKind:detail.sourceKind,contentAvailable:content.availability==="available",...backings};
+  }
   if(content?.locator?.storageKey!==key||typeof detail.originalName!=="string"||detail.originalName.length>128||typeof detail.sourceKind!=="string"||detail.sourceKind.length>32||detail.sizeBytes!==media.sizeBytes)throw new Error("The artifact content and detail do not agree.");
   return {requestedWorkspaceId:workspaceId,storageKey:key,originalName:detail.originalName,sourceKind:detail.sourceKind,sizeBytes:media.sizeBytes,sha256:media.sha256,contentAvailable:content.availability==="available",hasImportedBacking:Boolean(metadata?.importedSourceBacking),hasPublishedBacking:Boolean(metadata?.publishedBacking)};
 }

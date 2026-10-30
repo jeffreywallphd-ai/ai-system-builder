@@ -161,6 +161,10 @@ test("checks the current repository map against original scope and actual source
   assert(managedFacts.facts.cases.some(c=>c.name==="missing, unconfirmed or mismatched managed metadata denies without starting or repairing"));
   assert.equal(managedFacts.facts.sha256,managedFacts.committed_sha256);
   assert(map.scenarios.find(s=>s.id==="image-generation-recovery").behavior_links[2].assertion_sources.includes(managedStart));
+  const providerDesktop=map.sources.find(s=>s.path===training),providerThin=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts");
+  assert(providerDesktop.facts.cases.some(c=>c.name==="packaged desktop provider source registers an exact reference and optional localized bytes"));
+  assert(providerDesktop.facts.cases.some(c=>c.name==="packaged desktop private artifact publication records local branch and remote commit"));
+  assert(providerThin.facts.cases.some(c=>c.name==="thin client provider source registers an exact reference and optional localized bytes"));
   const cleanup=map.sources.find(s=>s.path==="dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts");
   assert(cleanup.facts.cases.some(c=>c.name==="admits a live real-worker shape through its launcher before closing the app"));
   assert(cleanup.facts.cases.some(c=>c.name==="does not downgrade refused live native admission to a PID-absence pass"));
@@ -178,5 +182,7 @@ test("checks the current repository map against original scope and actual source
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_READY"));
     assert(text.includes("qualifyArtifactLifecycleHostJourney"));
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT"));
+    assert(text.includes("qualifyProviderSourceHostJourney"));
+    assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE"));
   }
 });

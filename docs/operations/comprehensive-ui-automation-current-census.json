@@ -8235,8 +8235,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "a90c9344004a8662947f01a15690378e50499a588ffc95c3ce5836262314dfc8",
-    "bytes": 12279,
+    "sha256": "2c20479d9514a2b43db87b242cd59210b3d0eee1d9eb86a33a3d6db2e92f9985",
+    "bytes": 15099,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8257,17 +8257,29 @@
      {
       "name": "packaged desktop artifact local lifecycle preserves actual bytes and scope",
       "line": 133
+     },
+     {
+      "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
+      "line": 160
+     },
+     {
+      "name": "packaged desktop private artifact publication records local branch and remote commit",
+      "line": 165
      }
     ],
-    "dynamicCases": 7,
+    "dynamicCases": 9,
     "functions": [
      {
       "name": "runOperationalDesktop",
       "line": 21
+     },
+     {
+      "name": "runProviderDesktopCase",
+      "line": 149
      }
     ],
-    "assertionCount": 5,
-    "assertionDigest": "8b4a6a842c8559a26e59e385c8cfb4ee3c28674d2d52b8a352b7a91c5427216f",
+    "assertionCount": 7,
+    "assertionDigest": "ceebf4cfd0f3e540188e7e6f44c35b4ef8f1cf48be74b789de041b1060684e16",
     "assertionExamples": [
      {
       "line": 28,
@@ -8309,6 +8321,14 @@
      },
      {
       "line": 135,
+      "kind": "skip"
+     },
+     {
+      "line": 161,
+      "kind": "skip"
+     },
+     {
+      "line": 166,
       "kind": "skip"
      }
     ]
@@ -8954,8 +8974,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "2f354b3cbcd254e58dc7db3315a0eb3a81081c904fd042d0d395933d732b18ef",
-    "bytes": 9007,
+    "sha256": "98b66cd156a1338528280d03ae76c00e039108d00f6934a8df0840ce0024db7f",
+    "bytes": 10775,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
@@ -8980,9 +9000,13 @@
      {
       "name": "thin client model reference searches, saves and survives reload and workspace changes",
       "line": 105
+     },
+     {
+      "name": "thin client provider source registers an exact reference and optional localized bytes",
+      "line": 130
      }
     ],
-    "dynamicCases": 7,
+    "dynamicCases": 8,
     "functions": [
      {
       "name": "operationalBrowserConfiguration",
@@ -8993,8 +9017,8 @@
       "line": 18
      }
     ],
-    "assertionCount": 8,
-    "assertionDigest": "12cb70ab3519abaf1a0e7a1328465945bada625f07f3d3336727f66410537abf",
+    "assertionCount": 9,
+    "assertionDigest": "19d984c92caa26353c8df9c41b7c39a52df9299eec230ae3f422e5f1cfc61b74",
     "assertionExamples": [
      {
       "line": 21,
@@ -9032,6 +9056,10 @@
      },
      {
       "line": 120,
+      "kind": "skip"
+     },
+     {
+      "line": 131,
       "kind": "skip"
      }
     ]
@@ -13231,99 +13259,99 @@
   {
    "path": "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
    "facts": {
-    "sha256": "cfb0b106e0d223fdce15c70a005eeb592eb64e67e8c246743880aff8a0354a46",
-    "bytes": 16134,
+    "sha256": "7f6138e3527b881adfabd3ecc5dc017214c2c33bb1b2f675ee8920e630b5d7c1",
+    "bytes": 17110,
     "cases": [
      {
       "name": "retains the successful owned identity and disposal checks",
-      "line": 72
+      "line": 75
      },
      {
       "name": "accepts the genuine same-process launch shape with root-bound native observation",
-      "line": 85
+      "line": 88
      },
      {
       "name": "retains a falsy app-close failure %#",
-      "line": 90
+      "line": 93
      },
      {
       "name": "preserves close, observer disposal and attachment failures in order",
-      "line": 97
+      "line": 100
      },
      {
       "name": "retains both failed storage attempts without overwriting an unknown file",
-      "line": 104
+      "line": 107
      },
      {
       "name": "does not invoke or serialize exception name getters",
-      "line": 110
+      "line": 113
      },
      {
       "name": "admits a live real-worker shape through its launcher before closing the app",
-      "line": 125
+      "line": 128
      },
      {
       "name": "a confirmed native exit is not overridden by an unrelated process reusing that number",
-      "line": 132
+      "line": 135
      },
      {
       "name": "a refused native exit remains failed without a numeric-PID polling fallback",
-      "line": 138
+      "line": 141
      },
      {
       "name": "rejects a marker whose immediate parent disagrees with native observation, without rewriting it",
-      "line": 145
+      "line": 148
      },
      {
       "name": "does not downgrade refused live native admission to a PID-absence pass",
-      "line": 152
+      "line": 155
      },
      {
       "name": "keeps an already-exited nested worker unqualified because its ancestry cannot be observed",
-      "line": 167
+      "line": 170
      },
      {
       "name": "import cleanup rejects unsupported host, mode and stage before any app or file effects",
-      "line": 173
+      "line": 176
      },
      {
       "name": "cleanup persistence refuses private types and unknown stage values",
-      "line": 181
+      "line": 184
      },
      {
       "name": "refuses an unlisted slot before observing or closing an app",
-      "line": 190
+      "line": 193
      },
      {
       "name": "refuses a foreign journey stage before app effects",
-      "line": 194
+      "line": 197
      },
      {
       "name": "functional cleanup rejects another case stage before any app or file effect",
-      "line": 200
+      "line": 203
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "app",
-      "line": 42
+      "line": 43
      },
      {
       "name": "info",
-      "line": 47
+      "line": 48
      },
      {
       "name": "caught",
-      "line": 52
+      "line": 53
      },
      {
       "name": "liveWorker",
-      "line": 119
+      "line": 122
      }
     ],
-    "assertionCount": 97,
-    "assertionDigest": "74eac9ae29a7a4a414ec8eb6271f414ecf9c6e564a8e7ad75d4c293aa5c4fe57",
+    "assertionCount": 99,
+    "assertionDigest": "0917ba208e35a488f6e01bce98c258b8d0f0633131d04f229b4261be9bc5e7fc",
     "assertionExamples": [
      {
       "line": 20,
@@ -13331,17 +13359,17 @@
       "sha256": "4e3f2b6a547285a681e5c4ea582cf8bc983ceb317a8230c20669f3cc53d91bf3"
      },
      {
-      "line": 73,
+      "line": 76,
       "kind": "expect",
       "sha256": "42315d8a088de76c6b15791c6373ded3f76bf6597f3bf70686184fa4d6f0e7c5"
      },
      {
-      "line": 73,
+      "line": 76,
       "kind": "expect",
       "sha256": "b05d2c348719ca3dc5a239e18c3f60520eca33cef83ea5c59f7f211e1ded34b0"
      },
      {
-      "line": 74,
+      "line": 77,
       "kind": "expect",
       "sha256": "a6638f8e5ae296f0653d8d53ee1f453a23cd4b9b4965cb97a54f609dcf135baf"
      }

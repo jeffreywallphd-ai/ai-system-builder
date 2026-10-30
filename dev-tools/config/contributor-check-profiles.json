@@ -2130,7 +2130,15 @@
         "dev-tools/scripts/qualification/tests/functional-publication-denial.unit.test.ts",
         "dev-tools/scripts/qualification/tests/artifact-browser-desktop.ui.test.tsx",
         "dev-tools/scripts/qualification/tests/artifact-browser-http.ui.test.tsx",
-        "modules/application/use-cases/tests/delete-registered-artifact.use-case.unit.test.ts"
+        "modules/application/use-cases/tests/delete-registered-artifact.use-case.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-private-provider-fixture.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-witness.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
+        "modules/application/use-cases/tests/localize-artifact-from-repo.use-case.unit.test.ts",
+        "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
@@ -2187,7 +2195,26 @@
         "modules/adapters/transport/api-express/security/createExpressSecurityMiddleware.ts",
         "modules/adapters/security/lan/createLanBearerTokenVerifierAdapter.ts",
         "modules/adapters/transport/api-express/artifact-repo/registerArtifactRepoApiRoutes.ts",
-        "modules/application/use-cases/publish-artifact-to-repo.use-case.ts"
+        "modules/application/use-cases/publish-artifact-to-repo.use-case.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-provider-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/functional-provider-plan.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/functional-private-provider-fixture.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-provider-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/private-publication-host-journey.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-plan.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/functional-private-provider-fixture.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-witness.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-oracles.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/functional-provider-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/fixtures/functional-provider-loader-proof.mjs",
+        "dev-tools/config/playwright.functional-provider-desktop.config.ts",
+        "dev-tools/config/playwright.functional-provider-thin.config.ts",
+        "docs/security/data-management-threat-model.md",
+        "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
+        "modules/application/use-cases/tests/localize-artifact-from-repo.use-case.unit.test.ts",
+        "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts",
+        "modules/hosts/shared/huggingFaceTokenConfigStore.ts"
       ]
     }
   }

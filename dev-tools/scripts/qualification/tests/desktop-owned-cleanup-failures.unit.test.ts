@@ -38,6 +38,7 @@ const cache=path.resolve("artifacts/qualification/visual-composer/d/synthetic-cl
 const imageCache=path.join(cache,"image-create-register");
 const settingsCache=path.join(cache,"settings-secret-defaults");
 const functionalCache=path.join(cache,"functional-model-reference"),artifactCache=path.join(cache,"functional-artifact-local");
+const providerSourceCache=path.join(cache,"functional-provider-source"),providerPublicationCache=path.join(cache,"functional-provider-publication");
 const attachments:string[]=[];
 function app():ElectronApplication {
   return {process:()=>({pid:io.sameMainRoot?401:301}),evaluate:async(_callback:unknown,argument?:unknown)=>{
@@ -51,7 +52,7 @@ function info():TestInfo {
 }
 async function caught(action:()=>Promise<unknown>){try{await action();return undefined;}catch(error){return error;}}
 beforeEach(()=>{
-  io.files.clear();io.directories.clear();io.directories.add(cache);io.directories.add(imageCache);io.directories.add(settingsCache);io.directories.add(functionalCache);io.directories.add(artifactCache);io.writes=[];io.closeErrors=[];io.observerErrors=[];io.attachErrors=[];io.writeErrors=[];
+  io.files.clear();io.directories.clear();io.directories.add(cache);io.directories.add(imageCache);io.directories.add(settingsCache);io.directories.add(functionalCache);io.directories.add(artifactCache);io.directories.add(providerSourceCache);io.directories.add(providerPublicationCache);io.writes=[];io.closeErrors=[];io.observerErrors=[];io.attachErrors=[];io.writeErrors=[];
   io.ack="";io.closed=false;io.closes=io.disposed=io.evaluations=io.reads=0;attachments.length=0;
   io.nativeErrors=[];io.workerOutcomeErrors=[];io.nativeCalls=[];io.nativeWorkerParent=401;io.sameMainRoot=false;
   io.files.set(path.join(cache,"qualification-worker-identity-501.json"),JSON.stringify({pid:501,parentPid:401}));
@@ -61,6 +62,8 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllEnvs();});
 const variants=[
+  {name:"provider source main cleanup",message:"Owned functional desktop main shutdown failed.",run:()=>closeFunctionalDesktop(app(),providerSourceCache,info(),"complete")},
+  {name:"provider publication main cleanup",message:"Owned functional desktop main shutdown failed.",run:()=>closeFunctionalDesktop(app(),providerPublicationCache,info(),"complete")},
   {name:"artifact main cleanup",message:"Owned functional desktop main shutdown failed.",run:()=>closeFunctionalDesktop(app(),artifactCache,info(),"complete")},
   {name:"functional main cleanup",message:"Owned functional desktop main shutdown failed.",run:()=>closeFunctionalDesktop(app(),functionalCache,info(),"complete")},
   {name:"Settings main cleanup",message:"Owned Settings desktop main shutdown failed.",run:()=>closeSettingsDesktop(app(),settingsCache,info(),"complete")},
@@ -74,7 +77,7 @@ for(const variant of variants)describe(variant.name,()=>{
     expect(io.writes).toHaveLength(1);const report=JSON.parse(io.writes[0]!);
     expect(report.status).toBe("passed");expect(report.mainPid).toBe(401);expect(report.launchedPid).toBe(301);
     expect(report.willQuitAcknowledged).toBe(true);
-    if(variant.name==="artifact main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.schemaVersion).toBe("real-functional-desktop-main-shutdown-v1");}
+    if(variant.name==="artifact main cleanup"||variant.name==="provider source main cleanup"||variant.name==="provider publication main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.schemaVersion).toBe("real-functional-desktop-main-shutdown-v1");}
     if(variant.name==="functional main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-functional-desktop-main-shutdown-v1");}
     if(variant.name==="Settings main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-settings-desktop-main-shutdown-v1");}
     if(variant.name==="image main cleanup"){expect(report.modelWorkers).toBe("not-qualified");expect(report.scope).toContain("remain unqualified");expect(report.schemaVersion).toBe("real-image-desktop-main-shutdown-v1");}
@@ -200,5 +203,7 @@ describe("Settings main-only admission",()=>{
 it("functional cleanup rejects another case stage before any app or file effect",async()=>{
   await expect(closeFunctionalDesktop(app(),artifactCache,info(),"models")).rejects.toThrow("Unsupported functional cleanup stage.");
   await expect(closeFunctionalDesktop(app(),functionalCache,info(),"artifacts")).rejects.toThrow("Unsupported functional cleanup stage.");
+  await expect(closeFunctionalDesktop(app(),providerSourceCache,info(),"models")).rejects.toThrow("Unsupported functional cleanup stage.");
+  await expect(closeFunctionalDesktop(app(),providerPublicationCache,info(),"models")).rejects.toThrow("Unsupported functional cleanup stage.");
   expect(io.closes).toBe(0);expect(io.evaluations).toBe(0);expect(io.writes).toEqual([]);
 });

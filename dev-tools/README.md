@@ -1101,3 +1101,79 @@ unknown and incomplete impact fallbacks and the Operational bounds are retained.
 Provider import, real private publication, actual-host execution, full worker
 retirement and the final combined campaign remain pending. Accepted model
 accuracy stays closed.
+
+
+### Provider source and private artifact UI journeys
+
+The dedicated `playwright.functional-provider-*` configs define two Desktop
+journeys and one Thin Client journey. They use actual app controls. No test
+injects a provider success or enters a provider credential in a browser.
+Collection and inactive setup read no credential and make no provider request.
+The executing MJS loader uses the installed public `tsx/esm/api` entry. Its
+synthetic proof also verifies the production token-file format and retirement.
+
+Actual execution requires `VISUAL_COMPOSER_FUNCTIONAL_HOST=1`, the relevant
+`VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE=1` or
+`VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION=1`, and
+`VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG` naming an explicit ignored test
+manifest. Private cases reject mixed model/local-artifact flags. Thin Client
+has a source journey; its product has no publication or export control.
+The manifest records inputs; it grants no credential or publication authority.
+
+The manifest has this structure. Replace every placeholder with a separately
+prepared, authorized synthetic fixture before execution:
+
+```json
+{
+  "schema_version": "functional-private-provider-v1",
+  "repository": "OpenFinAL/ai-system-builder-test",
+  "credential_file": ".local-codex/provider-test-inputs/credential.json",
+  "source_file": {
+    "path": "data/train-00000-of-00001.parquet",
+    "revision": "<full immutable converted-Parquet commit>",
+    "size_bytes": 1024,
+    "sha256": "<exact 64-character content hash>",
+    "localize": false
+  }
+}
+```
+
+The credential reference must identify an explicit test-only input with the
+existing production `{ "token": "..." }` shape. The helper does not discover
+or copy saved profiles, read ambient provider variables, migrate credentials,
+or print the token, its suffix or its hash. Public planning omits the reference.
+The source file must already exist in the supported converted-Parquet listing.
+These tests do not create a dataset, request conversion or substitute a source.
+The source declaration can be omitted for a publication-only run.
+
+The source journey registers the exact selected immutable reference, checks
+unavailable local content, reloads and checks workspace isolation. Registration
+does not download bytes or create a raw/readable pair. `localize: true` adds a
+separately authorized download capped at 4 KiB with exact-byte checks. Localized
+catalog size can remain absent; a separate media-only read measures actual
+bytes. Existing strict local-upload checks remain intact.
+
+Publication uses only the existing authorized private repository, an absent
+unique run path and tiny owned inventory. Repository creation stays unchecked.
+A bounded Node-only read checks privacy before the UI action and again after it.
+The local published backing records its actual `main` branch. A separate
+authenticated immutable-commit read verifies the exact remote bytes. No remote
+deletion, public visibility, blind write retry or new repository is permitted.
+Reads refuse redirects, uncertain/private metadata, malformed UTF8 and response
+overflow; request, stream and cleanup waits share the finite deadline.
+
+Only a fresh opaque admission created before identity seeding can install the
+test credential in the exact run/case production store. Desktop cleanup binds
+the known launcher to the separately observed main PID, fresh canonical stop
+report and acknowledgement. Server cleanup uses the actual owned shutdown
+protocol. Uncertain stop or changed file identity retains the file and fails;
+independent cleanup still runs. The operator input remains untouched. This is
+cooperative test isolation, not secure erasure, Windows ACL/DPAPI protection,
+hostile-race resistance, complete worker shutdown or managed OIDC qualification.
+
+The finite `functional-host-ui` group includes the new contract, loader, file,
+bounded-reader and actual source-oracle checks plus related existing provider
+UI/use-case tests. The Operational bounds and generic unknown/incomplete
+fallbacks are unchanged. Source construction, selected builds/types and named
+collection do not qualify actual provider/app execution or the full campaign.
+Accepted model accuracy remains closed. Final coverage linking is separate.

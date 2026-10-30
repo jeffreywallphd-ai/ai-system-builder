@@ -1617,3 +1617,37 @@ transport/storage fixtures re-open original/source bytes and catalog/bindings
 and require explicit review/save of a separate source-pack successor. The
 earlier fresh-session display finding is repaired locally; physical app/native
 qualification remains pending and no accepted model test is reopened.
+
+
+### Opt-in private provider UI test fixtures
+
+The fixed contributor fixture protects the explicitly supplied test credential,
+the already authorized private repository, workspace references and qualification
+integrity. Pure declaration/collection paths perform no credential or provider
+I/O. Executing paths use only an explicit bounded ignored input, the production
+store in a physically checked fresh run/case, and fixed authorized HTTPS reads.
+No secret enters Page, browser storage, arguments, environment, launch records,
+captures, raw errors or evidence; neither token hashes nor masked suffixes are
+recorded. Configuration supplies no authority or ambient credential fallback.
+
+Opaque admission requires the derived root absent before identity seeding.
+Existing destinations, links, path escape, multiple links, malformed/oversized
+input and stale stop reports deny. Exact owned credential retirement requires
+known consumer exit and its canonical acknowledgement. Desktop main and launcher
+PIDs can differ; the fresh canonical main-exit report binds both. Server uses its
+actual bounded shutdown acknowledgement. Identity/stop uncertainty retains data
+and fails. The source input is preserved, and independent cleanup failures remain
+visible. Plaintext production-store behavior is unchanged: these controls grant
+no secure erasure, DPAPI/ACL, hostile native race, full-job or managed-tenant proof.
+
+Provider reference registration and optional bounded localization are distinct.
+Catalog size can be absent after localization, so exact bytes use a separate
+bounded media read. Private publication requires a live private-state observation
+and absent unique path, disables creation, retains its real local branch and
+obtains a separate immutable remote-commit byte witness. Redirects, uncertain
+visibility, auth/404 confusion, changed content, malformed UTF8 and stream/request
+exhaustion fail closed under fixed budgets and sanitized reason codes. No test
+creates another dataset/repository, changes visibility/conversion or deletes
+remote data. Concurrent remote administration is outside this cooperative proof.
+Source/loader/contract tests and collection grant no actual app/provider/native,
+full-suite, parent or accepted-model-accuracy qualification.

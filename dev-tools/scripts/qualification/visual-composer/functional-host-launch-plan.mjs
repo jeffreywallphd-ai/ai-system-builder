@@ -5,7 +5,7 @@ import {createSettingsHostEnvironment,createSettingsHostLaunchPlan,settingsHostL
 // wrapper supplies its own truthful purpose, case slot and shutdown entry.
 export const functionalHostLayout=settingsHostLayout;
 export function createFunctionalHostEnvironment(input,repoRoot,runId,sourceRevision,target,caseId){
-  if(caseId!==undefined&&!["model-reference","artifact-local"].includes(caseId)||target==="thin-chrome"&&caseId!==undefined)throw new Error("Unsupported functional host case.");
+  if(caseId!==undefined&&!["model-reference","artifact-local","provider-source","provider-publication"].includes(caseId)||target==="thin-chrome"&&caseId!==undefined)throw new Error("Unsupported functional host case.");
   const env=createSettingsHostEnvironment(input,repoRoot,runId,sourceRevision,target);
   if(caseId)env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT=path.join(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT,`functional-${caseId}`);
   // All cache roots must follow this case's actual data root.

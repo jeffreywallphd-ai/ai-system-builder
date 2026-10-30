@@ -10,6 +10,13 @@ import {resolveVisualComposerQualificationEnvironment} from "./visual-composer-q
 import {prepareFunctionalArtifactReadIdentity} from "./functional-artifact-read-identity.mjs";
 import {observeOwnedHostShutdown} from "./owned-host-shutdown.mjs";
 import {readAssetSystemSourceIdentity,assertAssetSystemSourceIdentity} from "../asset-system-source-identity.mjs";
+import {providerFixtureIdentity,providerFixtureReference} from "./functional-provider-plan.mjs";
+
+/** Explicit public loader API, exercised by an inert MJS proof without ambient hooks. */
+export async function loadFunctionalPrivateProviderFixture(){
+  const {tsImport}=await import("tsx/esm/api");
+  return tsImport("./functional-private-provider-fixture.ts",import.meta.url);
+}
 
 /** Cooperative fresh-root check. This is not a native retained-tree capability. */
 export async function assertFreshFunctionalHostRoots(repoRoot,runId,sourceRevision){
@@ -29,9 +36,14 @@ export async function assertFreshFunctionalHostRoots(repoRoot,runId,sourceRevisi
 /** Dedicated source-bound opt-in; collection or a stale flag grants no launch. */
 export default async function functionalHostSetup(config){
   delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
-  if(process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST!=="1"||(process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1"&&process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT!=="1")||process.platform!=="win32")return async()=>{};
+  const providerSource=process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE==="1",providerPublication=process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION==="1",providerRequested=providerSource||providerPublication;
+  if(process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST!=="1"||(process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1"&&process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT!=="1"&&!providerRequested)||process.platform!=="win32")return async()=>{};
   const target=config.projects[0]?.name;
   if(config.projects.length!==1||!["packaged-desktop","thin-chrome"].includes(target))throw new Error("Functional qualification needs exactly one fixed host.");
+  if(providerRequested){
+    if(process.env.VISUAL_COMPOSER_FUNCTIONAL_METADATA==="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT==="1"||target==="thin-chrome"&&providerPublication)throw new Error("Private provider cases require their dedicated host profile.");
+    providerFixtureReference(process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG);
+  }
   const repoRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../../.."),runId=process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID??createVisualComposerQualificationRunId();
   const source=await readAssetSystemSourceIdentity(repoRoot);
   await assertFreshFunctionalHostRoots(repoRoot,runId,source);
@@ -42,22 +54,34 @@ export default async function functionalHostSetup(config){
     process.env.VISUAL_COMPOSER_FUNCTIONAL_READY="1";
     return async()=>{delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;await assertAssetSystemSourceIdentity(repoRoot,source);};
   }
+  let providerCapsule,providerAdmission,providerCredential,providerLaunchAttempted=false;
+  if(providerSource){
+    const helper=await loadFunctionalPrivateProviderFixture(),bound=providerFixtureIdentity(runId,source,target,"provider-source");
+    providerAdmission=helper.beginProviderFixtureAdmission(repoRoot,bound);
+    providerCapsule=helper.openExecutingProviderFixture({repoRoot,manifestRef:process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG,identity:bound,executing:true});
+    await providerCapsule.observePrivateRepository();
+  }
   const identity=prepareThinClientQualificationIdentity(plan,"functional-data");let observer,lifecycle;
   const failures=[];
   async function teardown(){
     delete process.env.VISUAL_COMPOSER_FUNCTIONAL_READY;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
-    if(observer)try{await observer.stop();}catch(error){failures.push(error);}
+    let stopAck;
+    if(observer)try{stopAck=await observer.stop();}catch(error){failures.push(error);}
     if(lifecycle)try{await lifecycle.stop();}catch(error){failures.push(error);}
+    if(providerCredential)try{if(providerLaunchAttempted)providerCredential.retireServerAfterStop(stopAck);else providerCredential.retireBeforeLaunch();}catch(error){failures.push(error);}
     try{await rm(identity.credentialPath);}catch(error){failures.push(error);}
     delete process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER;
     try{await assertAssetSystemSourceIdentity(repoRoot,source);}catch(error){failures.push(error);}
     if(failures.length)throw new AggregateError(failures,"Functional host setup or owned shutdown remains unqualified.");
   }
   try{
+    if(providerCapsule)providerCredential=providerCapsule.seedCredential(providerAdmission);
     if(process.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT==="1")process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_READ_BEARER=prepareFunctionalArtifactReadIdentity(plan,identity,source).bearerToken;
     lifecycle=await startVisualComposerHostLifecycle({launchPlan:plan,spawnProcess:(command,args,options)=>{
       const server=command===plan.server.command&&JSON.stringify(args)===JSON.stringify(plan.server.args);
+      if(server&&providerCredential){providerLaunchAttempted=true;providerCredential.markConsumerLaunch();}
       const child=spawn(command,args,server?{...options,stdio:["pipe","pipe","pipe"]}:options);
+      if(server&&providerCredential)providerCredential.bindConsumer(child);
       if(server){if(observer)throw new Error("Only one owned Functional Server is allowed.");observer=observeOwnedHostShutdown("functional-data",child,runId,source);}return child;
     }});
     process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN=lifecycle.thinClientOrigin.origin;

@@ -21,7 +21,7 @@ async function closeOwnedMainDesktop(app: ElectronApplication, dataRoot: string,
   if (image && !["image-create-register","image-task-recovery"].includes(path.basename(dataRoot))) throw new Error("Unsupported image cleanup slot.");
   if (settings && !["settings-public-values","settings-secret-defaults"].includes(path.basename(dataRoot))) throw new Error("Unsupported Settings cleanup slot.");
   if (functional) {
-    const slot=path.basename(dataRoot);if (!["functional-model-reference","functional-artifact-local"].includes(slot)) throw new Error("Unsupported functional cleanup slot.");
+    const slot=path.basename(dataRoot);if (!["functional-model-reference","functional-artifact-local","functional-provider-source","functional-provider-publication"].includes(slot)) throw new Error("Unsupported functional cleanup slot.");
     if(journeyStage!=="startup"&&journeyStage!=="complete"&&journeyStage!==(slot==="functional-model-reference"?"models":"artifacts")) throw new Error("Unsupported functional cleanup stage.");
   }
   const errors: unknown[] = [];
