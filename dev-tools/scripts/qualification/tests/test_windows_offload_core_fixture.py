@@ -470,6 +470,30 @@ class ControllerTests(unittest.TestCase):
 
 
 class FixtureOracleTests(unittest.TestCase):
+    def test_component_dispatch_error_types_and_failure_labels_are_mode_specific(self):
+        class JournalError(Exception): pass
+        class ReadError(Exception): pass
+        journal = SimpleNamespace(JournalFixtureError=JournalError)
+        read = SimpleNamespace(ReadBindingFixtureError=ReadError)
+        with patch.object(subject, '_journal_fixture', return_value=journal) as j, \
+             patch.object(subject, '_read_fixture', return_value=read) as r:
+            self.assertIsNone(subject._component(subject._CORE_PROFILE, {}))
+            j.assert_not_called(); r.assert_not_called()
+            self.assertIs(subject._component(subject._JOURNAL_PROFILE, {}), journal)
+            self.assertIs(subject._component(subject._READ_PROFILE, {}), read)
+        for profile, component, own, wrong, label in (
+                (subject._JOURNAL_PROFILE, journal, JournalError(), ReadError(), 'journal-operation'),
+                (subject._READ_PROFILE, read, ReadError(), JournalError(), 'read-binding-operation')):
+            self.assertTrue(subject._component_error(profile, component, own))
+            self.assertFalse(subject._component_error(profile, component, wrong))
+            self.assertEqual(subject._component_failure(profile), label)
+        self.assertFalse(subject._component_error(subject._CORE_PROFILE, None, ReadError()))
+        self.assertEqual(subject._component_failure(subject._CORE_PROFILE), 'core-operation')
+        for profile in (copy.copy(subject._CORE_PROFILE), copy.copy(subject._JOURNAL_PROFILE),
+                        copy.copy(subject._READ_PROFILE), None):
+            with self.subTest(profile=profile), self.assertRaises(subject.FixtureError):
+                subject._component(profile, {})
+
     def test_exact_case_facts_remain_distinct_from_native_qualification(self):
         for case in subject.CASES:
             value = child(case)

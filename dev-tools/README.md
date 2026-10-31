@@ -1,5 +1,16 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+## Unused Windows cache-binding check
+
+The fixed `scripts/qualification/qualify_windows_offload_read_binding.py` entry
+prints a plan by default. Its separate native mode checks only a timer control
+and unused read-chain retirement, using the existing isolated Job harness.
+Source checks do not run Windows effects. Run native mode only after a separate
+review of the committed source and exact effect plan. It uses a fresh empty
+cache, retains its fixture and reports, and cannot prove preservation of existing
+file contents. It does not start a model or rerun accuracy or OCR checks.
+Production execution, accounting, fencing and recovery remain pending.
+
 # Developer tools
 
 Saved-version full-app test support is described in

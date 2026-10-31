@@ -1891,6 +1891,27 @@ is an API-level acknowledgement under the supported filesystem assumptions;
 it is not universal hardware/power-loss durability or an NTFS volume quota.
 
 
+### Unused read-binding diagnostic boundary
+
+Assets are exact native handle custody, retained data, accounting credit and
+source/report integrity. A third canonical diagnostic profile uses the existing
+source-bound Job/handshake/timer controller; copied or cross-mode profiles deny.
+The check opens the read-only metadata chain from the drive through the ancestors
+to the fresh empty cache; it does not access old staging, history or file contents. Before retirement, observers retain exact
+original chain rows, containers, handle slots and generations. Retirement has
+its own identity/close ledger and cannot count preparation identities. Base API
+results and close acknowledgements remain mandatory; unknown results stop
+effects and retain the owner, with no cleanup retry or credit.
+
+The strict bounded report separates child Core closure from parent exit and
+handle retirement. A late borrow is a software refusal with zero receiver/native
+calls, not a Windows permission denial. No existing-file content preservation
+claim follows from an empty cache. Source tests provide no actual Windows,
+production finite owner, stable fence, shared accounting, writer/crash/retained
+recovery, model resource or parent qualification. Native effects require a
+later exact committed-source review. Old fixtures are neither inspected nor
+cleaned, and accepted model quality/OCR are not rerun.
+
 ### Journal API diagnostic boundary
 
 The dedicated journal diagnostic is a dev-tools consumer of the original adapter

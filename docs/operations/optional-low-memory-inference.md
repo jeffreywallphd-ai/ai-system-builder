@@ -13,6 +13,27 @@ exact `dataset-preparation.offload-v1` capability before staging or starting wor
 The UI refreshes capability information every five seconds and rejects stale
 capacity snapshots. An old worker cannot silently ignore the new setting.
 
+## Check unused cache-binding cleanup
+
+Agent task: finish the Windows check for unused read-chain retirement. The fixed
+`qualify_windows_offload_read_binding.py` plan defines two cases: a delivered
+deadline control and closure of an unused binding in a fresh empty cache. The
+check observes the actual Core and base Windows API: all original identities
+before the first close, reverse original-only closes, close acknowledgements,
+custody release and a software refusal to reuse the retired binding.
+
+The source tests use synthetic native replies. They are not a Windows pass. A
+separate committed-source effect review must precede actual execution. The
+512 MiB child ceiling and 120-second limit bound this model-free diagnostic;
+they are not a model policy or a production guardian lifetime. Parent process
+exit and parent handle closure are separate observations from Core retirement.
+This check creates no staging, journal, disk allowance, worker or model. It
+cannot establish preservation of existing file contents from an empty cache.
+Production finite execution, stable fencing, aggregate accounting, exact writer
+exit/crash and retained recovery, and measured offload resources remain pending.
+No user action is needed for this agent task. Accepted accuracy and OCR checks
+stay closed; full system testing remains deferred.
+
 ## Supported initial profile
 
 Choose CPU or CUDA and an explicit float32, float16 or bfloat16 precision. The

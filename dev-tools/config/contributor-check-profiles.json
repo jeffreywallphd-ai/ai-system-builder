@@ -13,7 +13,9 @@
         "dev-tools/scripts/qualification/tests/test_windows_offload_core_fixture.py",
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_binding_fixture.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_binding_qualification.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
@@ -49,7 +51,11 @@
         "dev-tools/scripts/qualification/qualify_windows_offload_journal.py",
         "dev-tools/scripts/qualification/windows_offload_journal_fixture.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py",
+        "dev-tools/scripts/qualification/qualify_windows_offload_read_binding.py",
+        "dev-tools/scripts/qualification/windows_offload_read_binding_fixture.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_binding_fixture.py",
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_binding_qualification.py"
       ]
     },
     "model-qualification-scheduling": {

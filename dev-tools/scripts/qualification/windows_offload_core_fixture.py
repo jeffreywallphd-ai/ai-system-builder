@@ -63,11 +63,18 @@ _JOURNAL_PROFILE = _FixtureProfile(
     ('dev-tools/scripts/qualification/qualify_windows_offload_journal.py', TOOL_FILES[1],
      'dev-tools/scripts/qualification/windows_offload_journal_fixture.py'),
     ROOT / '.local-codex/windows-offload-journal-native-v1')
+_READ_PROFILE = _FixtureProfile(
+    ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_read_binding.py',
+    '_standalone_windows_read_binding_engine', 'windows-offload-read-binding-native-v1',
+    ('deadline-control', 'unused-read-binding'), TASK_FILES,
+    ('dev-tools/scripts/qualification/qualify_windows_offload_read_binding.py', TOOL_FILES[1],
+     'dev-tools/scripts/qualification/windows_offload_read_binding_fixture.py'),
+    ROOT / '.local-codex/windows-offload-read-binding-native-v1')
 
 
 def _canonical_profile(profile):
     require(type(profile) is _FixtureProfile
-            and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE), 'fixture-profile')
+            and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE or profile is _READ_PROFILE), 'fixture-profile')
     return profile
 
 
@@ -277,6 +284,36 @@ def _private_core_package(expected, profile=_CORE_PROFILE):
 def _journal_fixture(hashes):
     path = _JOURNAL_PROFILE.tool_files[2]
     return _load_file('_fixed_windows_journal_component', ROOT / path, hashes[path])
+
+
+def _read_fixture(hashes):
+    path = _READ_PROFILE.tool_files[2]
+    return _load_file('_fixed_windows_read_binding_component', ROOT / path, hashes[path])
+
+
+def _component(profile, hashes):
+    profile = _canonical_profile(profile)
+    if profile is _CORE_PROFILE: return None
+    if profile is _JOURNAL_PROFILE: return _journal_fixture(hashes)
+    if profile is _READ_PROFILE: return _read_fixture(hashes)
+    raise FixtureError('fixture-profile')
+
+
+def _component_error(profile, component, error):
+    profile = _canonical_profile(profile)
+    if isinstance(error, FixtureError): return True
+    if component is None: return False
+    if profile is _JOURNAL_PROFILE: return type(error) is component.JournalFixtureError
+    if profile is _READ_PROFILE: return type(error) is component.ReadBindingFixtureError
+    return False
+
+
+def _component_failure(profile):
+    profile = _canonical_profile(profile)
+    if profile is _CORE_PROFILE: return 'core-operation'
+    if profile is _JOURNAL_PROFILE: return 'journal-operation'
+    if profile is _READ_PROFILE: return 'read-binding-operation'
+    raise FixtureError('fixture-profile')
 
 
 class _Handle:
@@ -618,7 +655,8 @@ def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report, profi
             'exec(compile(b,p,"exec",dont_inherit=True),m.__dict__)\n'
             'm._LOADED_SOURCE_SHA256=' + repr(expected) + '\n'
             'm._owned_child(' + ','.join(repr(x) for x in (run_id, case, hashes, deadline_ns, ready, dispatch, report))
-            + ',m.' + ('_CORE_PROFILE' if profile is _CORE_PROFILE else '_JOURNAL_PROFILE') + ')\n')
+            + ',m.' + {id(_CORE_PROFILE): '_CORE_PROFILE', id(_JOURNAL_PROFILE): '_JOURNAL_PROFILE',
+                       id(_READ_PROFILE): '_READ_PROFILE'}[id(profile)] + ')\n')
     require(len(code.encode()) <= 16384, 'bootstrap-size')
     return code
 
@@ -916,7 +954,7 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
         require(native.wait(dispatch, 8000), 'child-dispatch-timeout')
         _child_readback(native)
         require(_all_hashes(native) == hashes, 'source-drift')
-        component = _journal_fixture(hashes) if profile is _JOURNAL_PROFILE else None
+        component = _component(profile, hashes)
         value = (component.base_report(case, source, started) if component is not None
                  else _base_report(case, source, started))
         if case == 'deadline-control':
@@ -949,9 +987,8 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
             # uncertain cleanup. If controller custody is intact, record only
             # allowlisted codes; otherwise the empty report remains a failure.
             if value is not None and report is not None and not native.uncertain:
-                value['failure_stage'] = (error.stage if isinstance(error, FixtureError)
-                    or component is not None and type(error) is component.JournalFixtureError
-                    else 'journal-operation' if profile is _JOURNAL_PROFILE else 'core-operation')
+                value['failure_stage'] = (error.stage if _component_error(profile, component, error)
+                                          else _component_failure(profile))
                 value['elapsed_ns'] = max(1, time.monotonic_ns() - started)
                 try: _write_report(native, report, value)
                 except BaseException: pass
@@ -977,7 +1014,7 @@ def _safe_failure(value):
 def _collect(native, run_id, hashes, folder, rows):
     require(type(rows) is list and not rows, 'collector-initial-state')
     profile = _profile_for(native)
-    component = _journal_fixture(hashes) if profile is _JOURNAL_PROFILE else None
+    component = _component(profile, hashes)
     for case in profile.cases:
         native.live()
         case_folder = folder / case
@@ -997,8 +1034,7 @@ def _collect(native, run_id, hashes, folder, rows):
                 if component is None: validate_child_report(child, case, source_digest(hashes))
                 else: component.validate_child_report(child, case, source_digest(hashes))
             except BaseException as error:
-                if not (isinstance(error, FixtureError)
-                        or component is not None and type(error) is component.JournalFixtureError): raise
+                if not _component_error(profile, component, error): raise
                 row['diagnostics'] = (_safe_failure(child) if component is None
                                       else component.failure_diagnostics(child))
                 row['failure_stage'] = error.stage
@@ -1023,6 +1059,11 @@ def standalone_native():
 def standalone_native_journal():
     """Dedicated Journal entry; not a mutable switch on the Core entry."""
     return _standalone_native(_JOURNAL_PROFILE)
+
+
+def standalone_native_read_binding():
+    """Dedicated read-binding entry; no caller-selected execution profile."""
+    return _standalone_native(_READ_PROFILE)
 
 
 def _standalone_native(profile):

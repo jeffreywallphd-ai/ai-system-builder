@@ -1,3 +1,16 @@
+## Read-binding diagnostic boundary
+
+The fixed developer-only `qualify_windows_offload_read_binding.py` entry reuses
+the closed native diagnostic controller to exercise the real private unused
+read-chain retirement. It has a distinct profile, source closure, two-case
+schema and strict oracle. Observer state retains the original Core, API, chain,
+handle slots and generations before effects. Preparation identities cannot
+satisfy the separate retirement ledger. Failed observations retain custody;
+they never authorize a retry or disk credit. Source tests use synthetic ABI
+replies. Actual Windows execution requires a later exact effect review. This
+is not a production finite execution port or qualified domain/fence/writer
+recovery. It preserves the existing default factory and model memory policy.
+
 # Python Runtime Worker
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
