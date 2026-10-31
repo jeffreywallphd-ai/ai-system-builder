@@ -4,11 +4,34 @@ import fs from "node:fs";
 import path from "node:path";
 import {tmpdir} from "node:os";
 import {createHash} from "node:crypto";
+import {execFileSync} from "node:child_process";
 import {CENSUS_LIMITS, REQUIRED_CENSUS_INVENTORIES, censusPath, sourceFacts, literalInventory, validateCensus, repositoryReader} from "../ui_coverage_census.mjs";
 const file = "dev-tools/example.unit.test.ts", host = "dev-tools/scripts/qualification/visual-composer/e2e/example.e2e.spec.ts";
 const code = Buffer.from('import {test,expect} from "fixture"; test("retains scoped records",()=>{expect(1).toBe(1)});');
 const inventoryFile = "modules/contracts/example.ts", inventory = Buffer.from('export const TYPES = ["first", "second"] as const;');
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
+const pendingReviewSiteDefinition = Object.freeze({
+  source: "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+  baseline: "79379e6d8618548c03c8eb45bf816c1be9c87080",
+  committed: "e03398d6787cde22df737cfb9ba4baf48d4bf01e12a2646365e48ae0e9438a41",
+  candidate: "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487",
+  facts: "4009c77b0cab40280b350dcd33637a376e32f74ae8e1d353ab66949ce174fe18",
+});
+function assertCurrentReviewSiteDrift(map, result) {
+  const pending = pendingReviewSiteDefinition;
+  const source = map.sources.find(row => row.path === pending.source); assert(source);
+  assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
+  const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.source}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
+  assert.equal(source.committed_sha256, sha(committed), "The recorded committed pin must be a real blob at the declared baseline.");
+  const expected = source.facts.sha256 === source.committed_sha256 ? [] : [{ kind: "unreviewed-source-drift", source: pending.source }];
+  assert.deepEqual(result.gaps.filter(g => g.kind === "unreviewed-source-drift"), expected, "Only the exact pending review-source definition may retain a drift gap.");
+  if (expected.length) {
+    assert.equal(map.source_baseline, pending.baseline);
+    assert.equal(source.committed_sha256, pending.committed);
+    assert.equal(source.facts.sha256, pending.candidate);
+    assert.equal(sha(Buffer.from(JSON.stringify(source.facts))), pending.facts, "Future definition changes cannot inherit this pending binding.");
+  }
+}
 function fixture() {
   const scenarios = Array.from({length:39}, (_, index) => ({id:`family-${index}`, hosts:["desktop"], required_behavior:["Preserve exact state."], actual_host_qualification:"pending"}));
   const ledger = {schema_version:"comprehensive-ui-coverage-v1", full_testing_status:"deferred-by-user", scenarios, surface_census:{routes:["home"]}};
@@ -126,7 +149,8 @@ test("checks the current repository map against original scope and actual source
       assert(row.behavior_links.every(link=>link.assertion_sources.includes(source.path)));
     }
   }
-  assert(!result.gaps.some(g=>["host-definition-not-mapped","unreviewed-source-drift"].includes(g.kind)));
+  assert(!result.gaps.some(g=>g.kind==="host-definition-not-mapped"));
+  assertCurrentReviewSiteDrift(map,result);
   assert.equal(result.gaps.filter(g=>g.kind==="actual-host-not-run-by-census").length,39);
   assert.equal(result.actual_host_pass,false);
   assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
@@ -204,6 +228,25 @@ test("checks the current repository map against original scope and actual source
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT"));
     assert(text.includes("qualifyProviderSourceHostJourney"));
     assert(text.includes("VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE"));
+  }
+});
+
+test("pending review-source binding rejects forged commit pins, future facts and missing or extra drift",()=>{
+  const pending = pendingReviewSiteDefinition;
+  const map = { source_baseline: pending.baseline, sources: [{ path: pending.source,
+    facts: sourceFacts(pending.source, fs.readFileSync(pending.source)), committed_sha256: pending.committed }] };
+  const result = { gaps: [{ kind: "unreviewed-source-drift", source: pending.source }] };
+  assert.doesNotThrow(()=>assertCurrentReviewSiteDrift(map,result));
+  for (const mutate of [
+    (m,r)=>{m.sources[0].committed_sha256=pending.candidate;},
+    (m,r)=>{m.sources[0].facts.sha256="0".repeat(64);},
+    (m,r)=>{m.sources[0].facts.assertionCount++;},
+    (m,r)=>{r.gaps=[];},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign.test.mjs"});},
+    (m,r)=>{m.source_baseline="44232975e63b9d90144f4555d42a93ec5676978e";},
+  ]) {
+    const copy=structuredClone(map), observation=structuredClone(result);mutate(copy,observation);
+    assert.throws(()=>assertCurrentReviewSiteDrift(copy,observation));
   }
 });
 

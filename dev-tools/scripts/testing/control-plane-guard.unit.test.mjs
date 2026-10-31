@@ -71,7 +71,7 @@ test("JSON review UI refreshes, navigates and renders hostile text inertly", asy
   await pause();
   assert.equal(window.document.querySelectorAll("img").length, 0);
   assert.equal(window.document.querySelector(".card-heading h3").textContent, "<img src=x onerror=alert(1)>");
-  assert.equal(window.document.querySelector(".increment").open, true);
+  assert.equal(window.document.querySelector(".increment").open, false);
   response.source_digest = "updated-fingerprint";
   response.roadmaps[0].title = "Updated JSON outcome";
   window.document.querySelector("#refresh").click();
@@ -85,6 +85,164 @@ test("JSON review UI refreshes, navigates and renders hostile text inertly", asy
   assert.equal(window.document.querySelector("#error").hidden, false);
   assert.doesNotMatch(window.document.body.textContent, /synthetic-private-detail/);
   window.close();
+});
+
+test("review increments default closed and preserve manual choices through polling and navigation", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const increment = id => ({ id, number: 1, title: id, objective: "Inspect requirements", status: "verifying", chunks_complete: 0, chunks_planned: 0, criteria: [] });
+  const response = { schema_version: "development-review-v1", repository_id: "repository-a", source_digest: "disclosure-one", roadmaps: [
+    { id: "first", title: "First", status: "executing", current_increment: "one", increments: [increment("one"), increment("two")] },
+    { id: "second", title: "Second", status: "executing", current_increment: "one", increments: [increment("one")] },
+  ], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  const panels = () => [...window.document.querySelectorAll("details.increment")];
+  async function refresh() { response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause(); }
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.deepEqual(panels().map(p => p.open), [false, false, false], "saved current pointers are not active source work");
+    panels()[1].querySelector("summary").click(); await pause();
+    assert.deepEqual(panels().map(p => p.open), [false, true, false]);
+    await refresh();
+    assert.deepEqual(panels().map(p => p.open), [false, true, false]);
+    window.document.querySelector('[data-view="work_items"]').click();
+    window.document.querySelector('[data-view="roadmaps"]').click();
+    assert.deepEqual(panels().map(p => p.open), [false, true, false]);
+    panels()[1].querySelector("summary").click(); await pause(); await refresh();
+    assert.deepEqual(panels().map(p => p.open), [false, false, false]);
+    panels()[0].querySelector("summary").click(); await pause();
+    assert.equal(panels()[0].open, true);
+    response.repository_id = "repository-b"; await refresh();
+    assert.deepEqual(panels().map(p => p.open), [false, false, false]);
+  } finally { window.close(); }
+});
+
+test("review increments autoopen only exact active work and collapse on release unless manually opened", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const response = { schema_version: "development-review-v1", repository_id: "active-repository", source_digest: "active-one", roadmaps: ["first", "second"].map(id => ({
+    id, title: id, status: "executing", current_increment: "same", increments: [{ id: "same", number: 1, title: "Shared increment label", status: "verifying", actively_worked: id === "first", chunks_complete: 0, chunks_planned: 0, criteria: [] }],
+  })), work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  const panels = () => [...window.document.querySelectorAll("details.increment")];
+  async function refresh() { response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause(); }
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.deepEqual(panels().map(p => p.open), [true, false]);
+    // Let the browser's initial programmatic toggle event settle. It must not
+    // turn the automatic open into an enduring user-open preference.
+    await new Promise(resolve => setTimeout(resolve, 10));
+    response.roadmaps[0].increments[0].actively_worked = false; await refresh();
+    assert.deepEqual(panels().map(p => p.open), [false, false]);
+    panels()[0].querySelector("summary").click(); await pause();
+    response.roadmaps[1].increments[0].actively_worked = true; await refresh();
+    assert.deepEqual(panels().map(p => p.open), [true, true]);
+    panels()[1].querySelector("summary").click(); await pause(); await refresh();
+    assert.deepEqual(panels().map(p => p.open), [true, false], "manual close wins over automatic activity");
+    response.roadmaps[1].increments[0].actively_worked = false; await refresh();
+    assert.deepEqual(panels().map(p => p.open), [true, false]);
+  } finally { window.close(); }
+});
+
+test("review increments linked navigation opens only its exact roadmap and retains that user choice", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const response = { schema_version: "development-review-v1", repository_id: "navigation-repository", source_digest: "navigation-one", roadmaps: ["first", "first-copy"].map(id => ({
+    id, title: id, status: "ready", current_increment: "same", increments: [{ id: "same", number: 1, title: "Target", status: "pending", chunks_complete: 0, chunks_planned: 0, criteria: [] }],
+  })), work_items: [{ id: "chunk", source: "roadmap-chunk", roadmap_id: "first", increment_id: "same", title: "Work", criteria: [], criteria_ids: [] }], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    window.document.querySelector('[data-view="work_items"]').click();
+    [...window.document.querySelectorAll("button")].find(b => b.textContent === "View parent increment").click();
+    assert.deepEqual([...window.document.querySelectorAll("details.increment")].map(p => p.open), [true, false]);
+    window.document.querySelector('[data-view="roadmaps"]').click();
+    assert.deepEqual([...window.document.querySelectorAll("details.increment")].map(p => p.open), [true, false]);
+    const previous = window.document.querySelector("details.increment");
+    previous.querySelector("summary").click();
+    window.document.querySelector('[data-view="work_items"]').click();
+    [...window.document.querySelectorAll("button")].find(b => b.textContent === "View parent increment").click();
+    previous.dispatchEvent(new window.Event("toggle"));
+    response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause();
+    assert.deepEqual([...window.document.querySelectorAll("details.increment")].map(p => p.open), [true, false], "new explicit navigation wins over a detached panel's queued toggle");
+  } finally { window.close(); }
+});
+
+test("review increments in merged history retain manual choices without inferred activity", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const increment = { id: "same", number: 1, title: "Historical increment", status: "verifying", actively_worked: true, criteria: [], chunks: [] };
+  const response = { schema_version: "development-review-v1", repository_id: "history-repository", source_digest: "history-one", roadmaps: [{
+    id: "owner", title: "Owner", status: "executing", increments: [], merged_history: [{ id: "history", title: "Archived roadmap", summary: "History only", increments: [increment], criterion_owners: [] }],
+  }], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  async function refresh() { response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause(); }
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.equal(window.document.querySelector(".merged-history").open, false);
+    assert.equal(window.document.querySelector("details.increment").open, false, "history does not infer current activity");
+    window.document.querySelector(".merged-history > summary").click();
+    window.document.querySelector("details.increment > summary").click(); await pause(); await refresh();
+    assert.equal(window.document.querySelector(".merged-history").open, true);
+    assert.equal(window.document.querySelector("details.increment").open, true);
+    window.document.querySelector("details.increment > summary").click(); await pause(); await refresh();
+    assert.equal(window.document.querySelector(".merged-history").open, true);
+    assert.equal(window.document.querySelector("details.increment").open, false);
+    response.roadmaps[0].merged_history[0].id = "different-history"; await refresh();
+    assert.equal(window.document.querySelector(".merged-history").open, false);
+    assert.equal(window.document.querySelector("details.increment").open, false);
+  } finally { window.close(); }
+});
+
+test("review increments do not share remembered choices across ambiguous public identities", async t => {
+  for (const kind of ["duplicate increments", "normalized public IDs", "duplicate roadmaps", "duplicate history"]) {
+    await t.test(kind, async () => {
+      const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+      const { window } = dom;
+      const id = kind === "normalized public IDs" ? "x".repeat(80) : "same";
+      const increment = title => ({ id, number: 1, title, status: "pending", chunks_complete: 0, chunks_planned: 0, criteria: [] });
+      let roadmaps = [{ id: "owner", title: "Owner", status: "ready", increments: [increment("First"), increment("Second")] }];
+      if (kind === "duplicate roadmaps") roadmaps = ["First", "Second"].map(title => ({ id: "owner", title, status: "ready", increments: [increment(title)] }));
+      if (kind === "duplicate history") roadmaps = [{ id: "owner", title: "Owner", status: "ready", increments: [], merged_history: ["First", "Second"].map(title => ({ id: "history", title, summary: "History only", increments: [increment(title)], criterion_owners: [] })) }];
+      const response = { schema_version: "development-review-v1", repository_id: "ambiguous-repository", source_digest: "ambiguous-one", roadmaps, work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+      window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+      const panels = () => [...window.document.querySelectorAll("details.increment")];
+      try {
+        window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+        if (kind === "duplicate history") window.document.querySelector(".merged-history > summary").click();
+        panels()[0].querySelector("summary").click(); await pause();
+        assert.deepEqual(panels().map(p => p.open), [true, false], "one user gesture opens only that actual row");
+        response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause();
+        assert.deepEqual(panels().map(p => p.open), [false, false], "an ambiguous key cannot transfer a remembered open to another row");
+        if (kind === "duplicate history") assert.deepEqual([...window.document.querySelectorAll(".merged-history")].map(p => p.open), [false, false]);
+      } finally { window.close(); }
+    });
+  }
+});
+
+test("review increments discard saved choices and navigation focus when an identity becomes ambiguous", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const increment = { id: "same", number: 1, title: "Target", status: "pending", chunks_complete: 0, chunks_planned: 0, criteria: [] };
+  const response = { schema_version: "development-review-v1", repository_id: "changed-identity-repository", source_digest: "unique-one", roadmaps: [{ id: "owner", title: "Owner", status: "ready", increments: [increment] }], work_items: [{ id: "chunk", source: "roadmap-chunk", roadmap_id: "owner", increment_id: "same", title: "Work", criteria: [], criteria_ids: [] }], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  const panels = () => [...window.document.querySelectorAll("details.increment")];
+  async function refresh() { response.source_digest += "x"; window.document.querySelector("#refresh").click(); await pause(); }
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    panels()[0].querySelector("summary").click(); await pause(); await refresh();
+    assert.equal(panels()[0].open, true);
+    response.roadmaps[0].increments.push({ ...increment, title: "Ambiguous duplicate", actively_worked: true }); await refresh();
+    assert.deepEqual(panels().map(p => p.open), [false, false]);
+    window.document.querySelector('[data-view="work_items"]').click();
+    [...window.document.querySelectorAll("button")].find(b => b.textContent === "View parent increment").click();
+    assert.deepEqual(panels().map(p => p.open), [false, false], "navigation cannot pick an ambiguous target");
+    response.roadmaps[0].increments.pop(); await refresh();
+    assert.equal(panels()[0].open, false, "the earlier choice is not resurrected after ambiguity disappears");
+    panels()[0].querySelector("summary").click(); await pause(); await refresh();
+    assert.equal(panels()[0].open, true, "unique identities retain new manual choices normally");
+  } finally { window.close(); }
 });
 
 test("review work items expose chunk progress, criterion links and parent navigation", async () => {

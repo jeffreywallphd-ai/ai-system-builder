@@ -69,6 +69,25 @@ summaries, with the same redaction and inert text rendering as criteria. It
 preserves the distinction between historical declarations and execution records;
 showing a roadmap chunk cannot manufacture a receipt or reviewer identity.
 
+The advisory `actively_worked` display bit requires one active, unexpired roadmap
+source claim and an exact, unambiguous canonical state-path/increment match.
+It exposes no private claim or invocation identity or path. Missing, malformed,
+expired, released, completed, overall, foreign and ambiguous inputs do not select
+a panel. This is cooperative activity indication, not authenticated presence,
+approval, current-candidate qualification or execution authority. Browser-local
+disclosure choices are bounded to the current repository's displayed records;
+they are not persisted or sent to a mutation route. Existing inert text rendering,
+loopback, CSP, response bounds and canonical acceptance controls remain unchanged.
+Activity requires unique public-safe increment identities across all source rows,
+including completed rows. A source beyond the 100-row display bound supplies no
+activity indication. Changed-by-presentation identities cannot select a target.
+These refusals preserve canonical history rather than deduplicating or hiding it.
+The browser separately counts full public disclosure keys before view filtering.
+Duplicate keys cannot receive stored manual state, automatic opening or linked
+focus. An ambiguous row may be toggled in its current DOM only. If a previously
+unique key becomes ambiguous, its saved choice is removed and cannot reappear
+when the duplicate later disappears. Canonical records remain unchanged.
+
 ## Trust boundaries and controls
 
 | Boundary and failure | Owning control | Evidence |

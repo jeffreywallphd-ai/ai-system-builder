@@ -2,7 +2,10 @@
 let data = null;
 let view = "roadmaps";
 let lastDigest = "";
-let focusedIncrement = null;
+let disclosureRepository = null;
+const incrementChoices = new Map();
+let incrementIdentities = new Map();
+const incrementKey = (roadmap, increment, history = null) => JSON.stringify([data.repository_id || "", roadmap, history, increment]);
 const names = { roadmaps: "Roadmaps", work_items: "Work items", evaluations: "Evaluations", feedback: "Feedback" };
 const themePreferenceKey = "aisb-review-theme-v1";
 function applyTheme(theme) {
@@ -32,10 +35,38 @@ const textLength = value => Array.from(value).length;
 const badge = status => el("span", readable(["complete", "final-approved"].includes(status) ? "completed" : status), `status ${["completed", "complete", "final-approved", "passed", "accepted"].includes(status) ? "good" : ["failed", "blocked", "rejected", "changes-requested"].includes(status) ? "bad" : ""}`);
 function metric(value, label) { const n = el("div", undefined, "metric"); n.append(el("strong", value), el("span", label)); return n; }
 function selectView(next, query = "", increment = null) {
-  view = next; focusedIncrement = increment;
+  view = next;
+  if (next === "roadmaps" && increment !== null) {
+    const key = incrementKey(query, increment);
+    if (incrementIdentities.get(key) === 1) incrementChoices.set(key, true);
+  }
   document.querySelector("#search").value = query;
   document.querySelectorAll(".nav").forEach(b => { b.classList.toggle("active", b.dataset.view === next); b.setAttribute("aria-current", b.dataset.view === next ? "page" : "false"); });
   render();
+}
+function disclosure(key, className, automatic = false) {
+  const details = el("details", undefined, className);
+  const unique = incrementIdentities.get(key) === 1;
+  details.open = unique && (incrementChoices.has(key) ? incrementChoices.get(key) : automatic);
+  let observed = details.open;
+  details.addEventListener("toggle", () => {
+    // Setting open during rendering can queue a browser toggle event. It is
+    // not a user choice and must not pin an automatically opened panel open.
+    if (unique && details.isConnected && details.open !== observed) {
+      observed = details.open;
+      incrementChoices.set(key, observed);
+    }
+  });
+  // Native summary activation also covers keyboard use. Retain intent even
+  // when rapid activations coalesce into one toggle event.
+  details.addEventListener("click", event => {
+    if (unique && details.isConnected && event.target.closest?.("summary")?.parentElement === details && !event.defaultPrevented)
+      incrementChoices.set(key, !details.open);
+  });
+  return details;
+}
+function incrementDisclosure(roadmap, increment, history = null) {
+  return disclosure(incrementKey(roadmap, increment.id, history), "increment", history === null && increment.actively_worked === true);
 }
 function action(label, run) { const button = el("button", label, "link-button"); button.type = "button"; button.addEventListener("click", run); return button; }
 function qualificationBadge(criterion) {
@@ -315,6 +346,22 @@ function roadmapSections(parent, records, query) {
 }
 function render() {
   if (!data) return;
+  if (disclosureRepository !== (data.repository_id || "")) {
+    incrementChoices.clear();
+    disclosureRepository = data.repository_id || "";
+  }
+  incrementIdentities = new Map();
+  const countIdentity = key => incrementIdentities.set(key, (incrementIdentities.get(key) || 0) + 1);
+  for (const roadmap of data.roadmaps) {
+    for (const increment of roadmap.increments || []) countIdentity(incrementKey(roadmap.id, increment.id));
+    for (const history of roadmap.merged_history || []) {
+      countIdentity(incrementKey(roadmap.id, null, history.id));
+      for (const increment of history.increments || []) countIdentity(incrementKey(roadmap.id, increment.id, history.id));
+    }
+  }
+  // Use the complete incoming view, before search or section filtering. An
+  // ambiguous identity cannot inherit another row's manual choice or focus.
+  for (const key of incrementChoices.keys()) if (incrementIdentities.get(key) !== 1) incrementChoices.delete(key);
   for (const key of Object.keys(names)) document.querySelector(`#count-${key}`).textContent = data[key].length;
   document.querySelector("#heading").textContent = names[view];
   const all = data[view];
@@ -341,12 +388,12 @@ function render() {
       card.append(el("p", item.evidence_policy === "control-plane-v1" ? "Receipt-backed completion policy" : "Historical roadmap · declarative evidence", "small"));
       if (item.successor) card.append(el("p", item.successor.summary, "small"), action("View active successor roadmap", () => selectView("roadmaps", item.successor.id)));
       for (const legacy of item.merged_history || []) {
-        const archive = el("details", undefined, "merged-history");
+        const archive = disclosure(incrementKey(item.id, null, legacy.id), "merged-history");
         archive.append(el("summary", `Merged history: ${legacy.title}`), el("p", data.presentation_view ? legacy.objective : legacy.summary, "small"),
           el("p", "Historical evidence preserved. Remaining execution belongs to this roadmap; no legacy or current qualification pass is inferred.", "small"));
         appendScope(archive, legacy);
         for (const increment of legacy.increments || []) {
-          const detail = el("details", undefined, "increment");
+          const detail = incrementDisclosure(item.id, increment, legacy.id);
           const heading = el("summary"); heading.append(el("span", `${increment.number}. ${increment.title}`), badge(increment.status === "blocked" ? "archived-pending" : increment.status));
           detail.append(heading);
           if (data.presentation_view) detail.append(el("p", increment.objective));
@@ -366,7 +413,7 @@ function render() {
       const progressLabel = `${progress} of ${item.increments.length} increments complete`;
       card.append(el("p", progressLabel, "small")); const meter = el("progress"); meter.max = item.increments.length || 1; meter.value = progress; meter.setAttribute("aria-label", progressLabel); card.append(meter);
       for (const i of item.increments) {
-        const details = el("details", undefined, "increment"); if (item.current_increment === i.id || focusedIncrement === i.id) details.open = true;
+        const details = incrementDisclosure(item.id, i);
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
         appendScope(details, i);
         const planning = i.chunk_plan_pending_approval ? "Implementation chunk plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation chunk plan is created when this increment starts" : null;

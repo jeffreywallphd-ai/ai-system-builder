@@ -89,6 +89,26 @@ def creation_time(value):
         return None
 
 
+def active_increment_binding(work, current_time):
+    """Advisory display only: disclose no claim identity, path or authority."""
+    claim = work.get("claim")
+    spec = work.get("spec", {})
+    binding = spec.get("roadmap")
+    if (work.get("status") not in ("active", "verifying") or spec.get("kind") != "roadmap"
+            or not isinstance(claim, dict) or not isinstance(binding, dict)
+            or set(binding) != {"state_path", "increment_id"}
+            or not all(isinstance(binding[k], str) for k in binding)
+            or binding["increment_id"] == "overall"
+            or not all(isinstance(claim.get(k), str) and claim[k]
+                       for k in ("claim_id", "invocation_id"))
+            or type(claim.get("fence")) is not int or claim["fence"] < 1):
+        return None
+    expires = creation_time(claim.get("expires_at"))
+    if not current_time or not expires or expires <= current_time:
+        return None
+    return binding["state_path"], binding["increment_id"]
+
+
 def increment_proposal(increment):
     """Public, bounded proposal content only; never research/authority or execution."""
     def strings(key, limit=1600):
@@ -131,7 +151,7 @@ def open_blocker_details(state):
 
 
 def project(root: Path) -> dict:
-    roadmaps, diagnostics, blocker_sources = [], [], {}
+    roadmaps, diagnostics, blocker_sources, increment_targets = [], [], {}, {}
     base = confined_path(root, ".implementation-roadmaps")
     if base.is_dir():
         for path in sorted(base.glob("*/state.json"))[:200]:
@@ -168,6 +188,22 @@ def project(root: Path) -> dict:
                         chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100] if k not in transferred_ids], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
                     increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "proposal": increment_proposal(i), "chunk_plan_pending_approval": s.get("status") == "roadmap-review" and not s.get("roadmapApproval") and i.get("status") == "pending" and not i.get("plan") and not chunks, "chunk_plan_pending_start": bool(s.get("roadmapApproval")) and i.get("status") == "pending" and not i.get("plan") and not chunks, "criteria": criteria, "offline_acceptance": offline, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
                 roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blockers": open_blocker_details(s), "blocker_count": sum(b.get("status") == "open" and b.get("actionOwner") == "human" for b in s.get("blockers", [])), "pending_work_count": sum(b.get("status") == "open" and b.get("actionOwner") == "agent" for b in s.get("blockers", []))})
+                # Count every displayed identity before filtering completed or
+                # otherwise ineligible rows. If the source exceeds the display
+                # bound, uniqueness is unknown: do not infer any activity.
+                identities = {}
+                if len(s["increments"]) <= 100:
+                    for increment in increments:
+                        identity = increment["id"]
+                        identities[identity] = identities.get(identity, 0) + 1
+                for source, increment in zip(s["increments"][:100], increments):
+                    increment["actively_worked"] = False
+                    if (relative_path == f".implementation-roadmaps/{s['slug']}/state.json"
+                            and isinstance(source["id"], str) and source["id"] == increment["id"]
+                            and identities.get(increment["id"]) == 1
+                            and s["status"] not in {"completed", "complete", "final-approved"}
+                            and source["status"] not in {"completed", "complete", "final-approved"}):
+                        increment_targets[relative_path, source["id"]] = increment
             except (ControlError, ValueError, KeyError, TypeError):
                 diagnostics.append({"code": "projection.roadmap-unavailable"})
     # Stable identifiers break equal-date ties; unknown creation dates stay last.
@@ -178,6 +214,13 @@ def project(root: Path) -> dict:
     except ControlError:
         state = Records.empty()
         diagnostics.append({"code": "projection.local-state-unavailable"})
+    current_time = creation_time(now())
+    bindings = [binding for work in state["work_items"].values()
+                if (binding := active_increment_binding(work, current_time)) is not None]
+    # The contributor store permits one source-writing claim per checkout.
+    # Activity is an advisory boolean, never a fresh approval or execution pass.
+    if len(bindings) == 1 and (target := increment_targets.get(bindings[0])) is not None:
+        target["actively_worked"] = True
     apply_presentations(root, roadmaps, diagnostics)
     enrich(root, roadmaps, state, diagnostics)
     apply_blocker_presentations(root, roadmaps, blocker_sources, diagnostics)

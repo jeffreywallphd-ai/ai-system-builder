@@ -187,6 +187,28 @@ it never creates local execution authority from historical plans. Parent/child
 navigation follows roadmap/increment/chunk identities. Criterion qualification
 and chunk completion remain independent dimensions.
 
+Increment disclosure defaults to closed. The JSON projection adds only an
+`actively_worked` boolean, mapped from one active, unexpired roadmap source claim
+to its exact canonical state path and increment identity. Missing, malformed,
+expired, released, completed, overall, foreign or ambiguous targets cannot select
+an increment. Saved current-increment pointers and workflow status do not imply
+live work. This advisory field exposes no claim IDs, invocation IDs or state paths
+and grants no authority. Expiry changes the public digest on the next poll.
+Identity uniqueness includes completed rows and public text normalization. If a
+source exceeds the 100-increment display bound, all advisory activity stays false;
+the projection does not scan beyond its bound or assume the hidden rows are unique.
+The browser keeps explicit disclosure choices in memory, keyed by repository,
+roadmap, history and increment. Choices survive polling, filtering and navigation;
+linked parent navigation records an explicit open. Automatic-only opening ends
+with activity. A manual close overrides activity. Reload resets these choices,
+repository changes clear them, and removed records are pruned. Merged history
+uses manual disclosure only. Programmatic render events cannot become user choices.
+Before filtering the page, the browser counts all disclosure keys in the complete
+incoming view, including history containers. Only unique keys can retain manual
+choices, automatic opening or linked navigation focus. Removed or ambiguous keys
+are pruned. Ambiguous rows can be toggled locally, but no remembered choice can
+open another row after refresh. This changes no canonical identity or history.
+
 The projection orders roadmaps and work items by normalized creation time,
 descending. The Roadmaps view partitions that order into Open Roadmaps first,
 then Completed Roadmaps, using only top-level completion. The canonical roadmap

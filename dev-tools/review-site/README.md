@@ -55,6 +55,25 @@ the Work items tab, or "View parent increment" to navigate back. Criterion
 qualification and chunk completion are tracked independently; legacy chunk
 declarations do not acquire execution receipts.
 
+Increments start collapsed. Only an increment with a current, unexpired roadmap
+work claim opens automatically. A saved current-increment pointer or an In progress
+label is not enough. Automatic opening ends when that claim ends or expires.
+Your explicit open and close choices survive polling, filtering and tab changes
+for this browser page and repository. A linked parent-increment action is an
+explicit open choice. A page reload starts fresh. Merged history never infers
+active work; its panels retain your manual choices during the same page visit.
+These display choices change no roadmap, acceptance result or execution authority.
+Only unique public record identities retain choices across refreshes. Ambiguous
+rows start collapsed and can be toggled in the current view, but they do not
+share remembered choices or receive automatic opening or linked focus.
+
+When contributor assertion definitions change, refresh their exact source-facts
+row in `docs/operations/comprehensive-ui-automation-current-census.json`. Keep the
+real committed pin at its recorded Git baseline and an explicit pending drift
+until the reviewed source is committed. Then bind the actual new commit in a
+separate metadata checkpoint. A definition inventory never supplies a host test
+or parent qualification pass.
+
 Criteria show parent qualification separately from reviewed local supporting
 work. The fixed JSON map in `docs/operations/roadmap-supporting-work.json` links
 actual completed receipt/review lineages without granting current qualification

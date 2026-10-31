@@ -18,10 +18,162 @@ from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection,
 from control_plane.records import Records
 from control_plane import site
 from control_plane.storage import canonical_bytes
+from control_plane.work import Work
 
 spec = importlib.util.spec_from_file_location("review_server_test", HELPERS.parent / "review-site/server.py")
 server_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server_module)
+
+
+class IncrementActivityTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="cp-activity-")
+        self.root = Path(self.temp.name)
+        self.addCleanup(self.temp.cleanup)
+        for slug in ("first", "second"):
+            p = self.root / f".implementation-roadmaps/{slug}/state.json"
+            p.parent.mkdir(parents=True)
+            p.write_text(json.dumps({"schemaVersion": 1, "slug": slug, "name": slug,
+                "objective": "Review work", "status": "executing", "currentIncrementId": "same",
+                "increments": [{"id": "same", "number": 1, "title": "Shared label", "objective": "Deliver work",
+                    "status": "verifying", "acceptanceCriteria": []}]}))
+
+    def work(self, binding=None, claim=None, status="active", kind="roadmap"):
+        return {"spec": {"work_id": "activity-work", "title": "Activity work", "kind": kind,
+                "outcome": {}, "roadmap": binding if binding is not None else {
+                    "state_path": ".implementation-roadmaps/first/state.json", "increment_id": "same"}},
+            "status": status, "claim": claim if claim is not None else {
+                "invocation_id": "opaque-private-invocation", "claim_id": "opaque-private-claim",
+                "expires_at": "2026-10-31T13:01:00-04:00", "fence": 1},
+            "events": [{"at": "2026-10-31T16:00:00Z", "code": "work.started"}], "receipts": [], "reviews": []}
+
+    def projection(self, work, at="2026-10-31T17:00:00Z"):
+        state = Records.empty()
+        if work is not None: state["work_items"]["activity-work"] = work
+        with patch.object(Records, "load", return_value=state), patch("control_plane.projection.now", return_value=at):
+            return project(self.root)
+
+    def flags(self, value):
+        return {r["id"]: r["increments"][0].get("actively_worked", False) for r in value["roadmaps"]}
+
+    def test_only_exact_current_unexpired_roadmap_claim_marks_advisory_activity(self):
+        value = self.projection(self.work())
+        self.assertEqual(self.flags(value), {"first": True, "second": False})
+        public = json.dumps(value)
+        for private in ("opaque-private-claim", "opaque-private-invocation", ".implementation-roadmaps/"):
+            self.assertNotIn(private, public)
+        expired = self.projection(self.work(), "2026-10-31T17:01:00Z")
+        self.assertEqual(self.flags(expired), {"first": False, "second": False})
+        self.assertNotEqual(value["source_digest"], expired["source_digest"])
+
+    def test_live_claim_stays_active_during_successful_and_failed_verification_until_release(self):
+        service = Work(self.root)
+        spec = {"schema_version": "development-work-v1", "work_id": "activity-work",
+            "kind": "roadmap", "title": "Verify claimed work", "authority_ref": "fixture-request",
+            "outcome": {"problem": "Keep current work visible", "success": "The claimed increment stays open",
+                "quality": "Preserve exact ownership", "internal_rationale": "Contributor lifecycle fixture"},
+            "roadmap": {"state_path": ".implementation-roadmaps/first/state.json", "increment_id": "same"},
+            "write_scope": ["docs/result.md"],
+            "acceptance": [{"id": "result", "description": "Claimed work remains visible", "check_ids": ["documentation"]}]}
+        baseline = {"schema_version": "source-snapshot-v1", "head": "0" * 40, "files": {}, "source_digest": digest({})}
+        plan = {"selected": [{"id": "documentation"}], "changed_paths": [], "plan_digest": digest("fixture-plan")}
+        # Stub external authority/check execution; use real Work and persisted Records for lifecycle transitions.
+        with patch("control_plane.work.roadmap_authority", return_value=digest("fixture-authority")), \
+                patch("control_plane.work.snapshot", return_value=baseline), \
+                patch("control_plane.work.catalog.plan", return_value=plan):
+            claim = service.start(spec, "lifecycle-fixture-run")["claim"]
+            self.assertEqual(self.flags(project(self.root)), {"first": True, "second": False})
+            for status, exit_code in (("passed", 0), ("failed", 1)):
+                with self.subTest(check_status=status):
+                    attempt = {"check_id": "documentation", "status": status, "exit_code": exit_code,
+                        "duration_ms": 0.0, "output": {}, "command_digest": digest("fixture-check")}
+                    with patch("control_plane.work.execute", return_value=attempt):
+                        service.verify("activity-work", "lifecycle-fixture-run", claim["claim_id"])
+                    work = service.records.load()["work_items"]["activity-work"]
+                    self.assertEqual(work["status"], "verifying")
+                    self.assertEqual(work["claim"], claim)
+                    self.assertEqual(self.flags(project(self.root)), {"first": True, "second": False})
+            service.claim("activity-work", "lifecycle-fixture-run", claim["claim_id"], action="release")
+        self.assertEqual(self.flags(project(self.root)), {"first": False, "second": False})
+        public = json.dumps(project(self.root))
+        self.assertNotIn(claim["claim_id"], public)
+        self.assertNotIn("lifecycle-fixture-run", public)
+
+    def test_unknown_or_terminal_status_and_invalid_verifying_claim_stay_closed(self):
+        for status in ("complete", "pending", "unknown", None):
+            with self.subTest(status=status):
+                self.assertEqual(self.flags(self.projection(self.work(status=status))), {"first": False, "second": False})
+        work = self.work(status="verifying")
+        for claim in (None, {}, {**work["claim"], "expires_at": "2026-10-31T17:00:00Z"},
+                {**work["claim"], "expires_at": "invalid"}, {**work["claim"], "fence": False}):
+            with self.subTest(claim=claim):
+                fixture = {**work, "claim": claim}
+                self.assertEqual(self.flags(self.projection(fixture)), {"first": False, "second": False})
+
+    def test_inactive_invalid_foreign_and_overall_claims_cannot_open_an_increment(self):
+        valid = self.work()
+        fixtures = [None, self.work(status="complete"), self.work(claim={}), self.work(kind="lightweight"),
+            self.work(binding={"state_path": ".implementation-roadmaps/second-copy/state.json", "increment_id": "same"}),
+            self.work(binding={"state_path": ".implementation-roadmaps/first/state.json", "increment_id": "overall"}),
+            self.work(binding={"state_path": ".implementation-roadmaps/first/state.json", "increment_id": "other"}),
+            self.work(binding={"state_path": ".implementation-roadmaps/first/state.json", "increment_id": "same", "extra": True})]
+        for expires in (None, "invalid", "2026-10-31T17:01:00", "2026-10-31T16:59:00Z"):
+            fixtures.append(self.work(claim={**valid["claim"], "expires_at": expires}))
+        for invalid in ({"fence": True}, {"fence": 0}, {"claim_id": ""}, {"invocation_id": None}):
+            fixtures.append(self.work(claim={**valid["claim"], **invalid}))
+        for work in fixtures:
+            with self.subTest(work=work):
+                self.assertEqual(self.flags(self.projection(work)), {"first": False, "second": False})
+        released = self.work();released["claim"] = None
+        self.assertEqual(self.flags(self.projection(released)), {"first": False, "second": False})
+
+    def test_completed_ambiguous_or_misbound_targets_never_show_as_active(self):
+        path = self.root / ".implementation-roadmaps/first/state.json"
+        original = json.loads(path.read_text())
+        for field, status in (("roadmap", "completed"), ("increment", "completed"), ("increment", "complete"), ("increment", "final-approved"), ("slug", "different-slug"), ("duplicate", None)):
+            state = json.loads(json.dumps(original))
+            if field == "roadmap": state["status"] = status
+            elif field == "increment": state["increments"][0]["status"] = status
+            elif field == "slug": state["slug"] = status
+            else: state["increments"].append(dict(state["increments"][0]))
+            path.write_text(json.dumps(state))
+            value = self.projection(self.work())
+            self.assertFalse(any(i["actively_worked"] for r in value["roadmaps"] for i in r["increments"]))
+        path.write_text(json.dumps(original))
+        state = Records.empty()
+        state["work_items"]["first"] = self.work()
+        state["work_items"]["second"] = self.work(binding={"state_path": ".implementation-roadmaps/second/state.json", "increment_id": "same"})
+        with patch.object(Records, "load", return_value=state), patch("control_plane.projection.now", return_value="2026-10-31T17:00:00Z"):
+            self.assertEqual(self.flags(project(self.root)), {"first": False, "second": False})
+
+    def test_all_source_identities_count_before_status_or_display_eligibility(self):
+        path = self.root / ".implementation-roadmaps/first/state.json"
+        original = json.loads(path.read_text())
+        live = original["increments"][0]
+        fixtures = []
+        for status in ("completed", "complete", "final-approved"):
+            closed = {**live, "status": status}
+            fixtures.extend((([live, closed], "same"), ([closed, live], "same")))
+        fillers = [{**live, "id": f"different-{i}"} for i in range(99)]
+        fixtures.append(([live, *fillers, {**live, "status": "completed"}], "same"))
+        long_id = "x" * 80
+        fixtures.append(([{**live, "id": long_id}, {**live, "id": long_id + "-alias", "status": "completed"}], long_id))
+        for rows, target in fixtures:
+            with self.subTest(statuses=[row["status"] for row in rows[:2]], count=len(rows), target_length=len(target)):
+                state = {**original, "currentIncrementId": target, "increments": rows}
+                path.write_text(json.dumps(state))
+                work = self.work(binding={"state_path": ".implementation-roadmaps/first/state.json", "increment_id": target})
+                value = self.projection(work)
+                self.assertFalse(any(i["actively_worked"] for r in value["roadmaps"] for i in r["increments"]))
+
+    def test_reserved_overall_claim_never_targets_an_increment_named_overall(self):
+        path = self.root / ".implementation-roadmaps/first/state.json"
+        state = json.loads(path.read_text())
+        state["currentIncrementId"] = "overall"
+        state["increments"][0]["id"] = "overall"
+        path.write_text(json.dumps(state))
+        work = self.work(binding={"state_path": ".implementation-roadmaps/first/state.json", "increment_id": "overall"})
+        self.assertEqual(self.flags(self.projection(work)), {"first": False, "second": False})
 
 
 class SiteTests(unittest.TestCase):

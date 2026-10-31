@@ -9242,8 +9242,8 @@
   {
    "path": "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
    "facts": {
-    "sha256": "e03398d6787cde22df737cfb9ba4baf48d4bf01e12a2646365e48ae0e9438a41",
-    "bytes": 53702,
+    "sha256": "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487",
+    "bytes": 67524,
     "cases": [
      {
       "name": "contributor control plane passes focused behavioral qualification",
@@ -9258,71 +9258,111 @@
       "line": 62
      },
      {
-      "name": "review work items expose chunk progress, criterion links and parent navigation",
+      "name": "review increments default closed and preserve manual choices through polling and navigation",
       "line": 90
      },
      {
+      "name": "review increments autoopen only exact active work and collapse on release unless manually opened",
+      "line": 121
+     },
+     {
+      "name": "review increments linked navigation opens only its exact roadmap and retains that user choice",
+      "line": 148
+     },
+     {
+      "name": "review increments in merged history retain manual choices without inferred activity",
+      "line": 172
+     },
+     {
+      "name": "review increments do not share remembered choices across ambiguous public identities",
+      "line": 198
+     },
+     {
+      "name": "review increments discard saved choices and navigation focus when an identity becomes ambiguous",
+      "line": 224
+     },
+     {
+      "name": "review work items expose chunk progress, criterion links and parent navigation",
+      "line": 248
+     },
+     {
       "name": "review support stays separate from qualification and navigates safely",
-      "line": 142
+      "line": 300
      },
      {
       "name": "review groups roadmaps by top-level completion while preserving original creation order",
-      "line": 204
+      "line": 362
      },
      {
       "name": "roadmap section filtering and empty states preserve navigation and dynamic refresh",
-      "line": 254
+      "line": 412
      },
      {
       "name": "review defaults dark and remembers only a valid explicit color preference",
-      "line": 297
+      "line": 455
      },
      {
       "name": "review theme storage failure leaves theme action and live navigation usable",
-      "line": 329
+      "line": 487
      },
      {
       "name": "consolidated security history stays inspectable and searchable without a duplicate execution card",
-      "line": 349
+      "line": 507
      },
      {
       "name": "review color tokens preserve text and control contrast in both themes",
-      "line": 386
+      "line": 544
      },
      {
       "name": "review requirement bullets retain shared context, one qualification and canonical fallback",
-      "line": 405
+      "line": 563
      },
      {
       "name": "review shows full proposal details and honest preapproval or queued chunk planning",
-      "line": 461
+      "line": 619
      },
      {
       "name": "roadmap labels distinguish queued pending, in-progress, approval and actual blockers",
-      "line": 512
+      "line": 670
      },
      {
       "name": "review assigns agent work and human blockers clearly without displaying technical source text",
-      "line": 553
+      "line": 711
      },
      {
       "name": "review presents plain requirement bullets and actions without a technical accordion or outcome change",
-      "line": 603
+      "line": 761
      },
      {
       "name": "nested review controller honors approved progress and preserves bounded refusal",
-      "line": 652
+      "line": 810
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "refresh",
+      "line": 101
+     },
+     {
+      "name": "refresh",
+      "line": 129
+     },
+     {
+      "name": "refresh",
+      "line": 180
+     },
+     {
+      "name": "refresh",
+      "line": 231
+     },
+     {
       "name": "exercise",
-      "line": 691
+      "line": 849
      }
     ],
-    "assertionCount": 202,
-    "assertionDigest": "b1ccfc64e65806b2521a3174d22779f1382fd976e0435e21b33e9733d9d213b7",
+    "assertionCount": 233,
+    "assertionDigest": "c665b3f8f459846ad13535eebb06bb9e845ee3a38a02133e673c22c80bc75c00",
     "assertionExamples": [
      {
       "line": 17,
