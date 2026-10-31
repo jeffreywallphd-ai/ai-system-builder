@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "79379e6d8618548c03c8eb45bf816c1be9c87080",
+ "source_baseline": "068cbc118349ede9bb28f508264eab36626f3440",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -9387,7 +9387,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "e03398d6787cde22df737cfb9ba4baf48d4bf01e12a2646365e48ae0e9438a41"
+   "committed_sha256": "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487"
   },
   {
    "path": "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
