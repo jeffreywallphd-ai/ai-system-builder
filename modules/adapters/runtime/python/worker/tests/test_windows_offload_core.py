@@ -138,6 +138,23 @@ def fresh_core():
     return value
 
 
+class SyntheticAnchorReceiver(c._JournalAnchorReceiver):
+    """Fake independent duplicate; never a native journal or release proof."""
+    def __init__(self, fail=None):
+        self.fail, self.calls, self.anchor = fail, 0, None
+
+    def _accept_core_anchor(self, binding, handle, identity):
+        binding.assert_borrow_callback(self)
+        self.calls += 1
+        self.borrowed = handle
+        self.anchor = SimpleNamespace(identity=identity, closed=False)
+        if self.fail == 'interrupt': raise KeyboardInterrupt()
+        if self.fail == 'reentry':
+            try: binding.borrow_anchor(self)
+            except c.OffloadAdmissionError: pass
+        return True if self.fail == 'bool' else None
+
+
 class CoreTests(unittest.TestCase):
     def setUp(self):
         # Synthetic test process only; restore the previous table on exit.
@@ -160,6 +177,85 @@ class CoreTests(unittest.TestCase):
         self.assertIsNone(core._api)
         with self.assertRaises(TypeError): c._NativeExecutionPort()
         with self.assertRaises(c.OffloadAdmissionError): c.WindowsOffloadCore(Path.cwd(), _execution={})
+
+    def test_accounting_binding_construction_is_effect_free_and_unprepared_borrow_denies(self):
+        factory = Mock(side_effect=AssertionError('No native factory expected'))
+        core = c.WindowsOffloadCore(Path.cwd(), _api_factory=factory)
+        binding = core._journal_accounting_binding()
+        self.assertIs(binding, core._journal_accounting_binding())
+        receiver = SyntheticAnchorReceiver()
+        with self.assertRaises(c.OffloadAdmissionError): binding.borrow_anchor(receiver)
+        factory.assert_not_called()
+        self.assertEqual(receiver.calls, 0)
+
+    def test_independent_journal_anchor_survives_exact_core_retirement(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); handles = list(core._handles)
+        binding.borrow_anchor(receiver)
+        self.assertEqual(core._handles, handles)
+        self.assertEqual(receiver.calls, 1)
+        with self.assertRaises(c.OffloadAdmissionError): binding.assert_borrow_callback(receiver)
+        with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        core.create_staging(4096); core.seal_staging(); core.retire_fresh_staging()
+        steps = list(core._api.steps)
+        witness = binding.retired_witness(receiver, core)
+        binding.assert_retired_witness(receiver, core, witness)
+        self.assertIs(witness, binding.retired_witness(receiver, core))
+        self.assertEqual(core._api.steps, steps)  # No closed-handle native query.
+        self.assertTrue(receiver.borrowed.closed)
+        self.assertFalse(receiver.anchor.closed)
+        marker = object()
+        self.assertIs(binding.execute(receiver, lambda: marker, retired=True), marker)
+
+    def test_binding_receiver_core_and_witness_copies_do_not_grant_authority(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); clone = copy.copy(binding)
+        steps = list(core._api.steps)
+        with self.assertRaises(c.OffloadAdmissionError): clone.borrow_anchor(receiver)
+        self.assertEqual(receiver.calls, 0)
+        self.assertEqual(core._api.steps, steps)
+        self.assertFalse(core._uncertain)
+        binding.borrow_anchor(receiver)
+        for foreign in (SyntheticAnchorReceiver(), copy.copy(receiver)):
+            with self.assertRaises(c.OffloadAdmissionError): binding.assert_consumer(foreign, core)
+        other = fresh_core()
+        self.assertEqual(core._chain[-1][1], other._chain[-1][1])
+        with self.assertRaises(c.OffloadAdmissionError): binding.assert_consumer(receiver, other)
+        core.create_staging(4096); core.seal_staging(); core.retire_fresh_staging()
+        witness = binding.retired_witness(receiver, core)
+        for foreign in (copy.copy(witness), {'retired': True}, True):
+            with self.assertRaises(c.OffloadAdmissionError): binding.assert_retired_witness(receiver, core, foreign)
+
+    def test_unknown_borrow_ack_or_hidden_reentry_retains_receiver_and_prevents_retry(self):
+        for mode in ('bool', 'interrupt', 'reentry'):
+            core = fresh_core(); binding = core._journal_accounting_binding()
+            receiver = SyntheticAnchorReceiver(mode)
+            with self.subTest(mode=mode), self.assertRaises(BaseException): binding.borrow_anchor(receiver)
+            self.assertTrue(core._uncertain and binding._uncertain)
+            self.assertIs(binding._receiver, receiver)
+            self.assertIs(c._CUSTODY[id(core)], core)
+            steps = list(core._api.steps)
+            with self.assertRaises(c.OffloadAdmissionError): binding.borrow_anchor(receiver)
+            self.assertEqual(receiver.calls, 1)
+            self.assertEqual(core._api.steps, steps)
+            self.assertNotIn('delete', steps)
+            self.assertNotIn('close', steps)
+
+    def test_retired_boolean_is_insufficient_after_lost_execution_ack(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); binding.borrow_anchor(receiver)
+        core.create_staging(4096); core.seal_staging()
+        original = core._execution.execute
+        def lost_ack(bound, operation):
+            original(bound, operation)
+            return object()
+        core._execution.execute = lost_ack
+        with self.assertRaises(c.OffloadAdmissionError): core.retire_fresh_staging()
+        self.assertTrue(core._retired and all(h.closed for h in core._handles))
+        self.assertTrue(core._uncertain)
+        steps = list(core._api.steps)
+        with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        self.assertEqual(core._api.steps, steps)
 
     def test_execution_producer_cannot_skip_return_early_or_hide_double_dispatch(self):
         for mode in ('skip', 'early', 'double'):

@@ -690,7 +690,7 @@ Missing producers deny before file effects. Source tests use explicitly syntheti
 new-domain producers, not JSON proof or a production admission switch. Standard,
 ordinary empty-root leases, existing guards and accepted accuracy stay unchanged.
 
-The finite `offload-resource-lifecycle` profile has eight model-free test files.
+The finite `offload-resource-lifecycle` profile has nine model-free test files.
 The additional declaration prints the native checks still needed:
 
 ```text
@@ -748,3 +748,37 @@ the source fix does not supply that result. Timer configuration is different
 from proving that a timeout ended a process. Production offload, durable disk
 accounting, worker restart, retained-file protection and real resources remain
 separate work. Accepted model accuracy and OCR results stay closed.
+
+
+## Fresh protected accounting source and remaining work
+
+No action needed. The agent is adding saved disk accounting for low-memory
+mode. Temporary space must stay reserved after an interrupted run. Space can
+be credited only after the exact worker has exited, staging cleanup has been
+confirmed, and the credit record has been saved and checked.
+
+The private Windows journal has a concrete native API, an independent anchor
+and five fixed records. It charges 128 KiB for its complete bounded data-file
+history within the existing 12 GiB domain. It checks allocation-unit and free
+space facts before creating its fixed sibling namespace/file. Each transition
+requires exact IO completion, a successful file flush and exact readback from
+the held file. Unknown or partial results stop later effects and retain the
+original owner/charge. The accounting history is preserved after handles close.
+
+The source requires a real shared-domain owner and stable mutable protection
+before any bootstrap mutation. No such producer is selected. An absent file,
+new cache, different process, numeric counter or valid record cannot establish
+a fresh zero balance. Unknown retained usage still reserves all 12 GiB, including
+the space a new journal would need. Do not inspect or change old slots to make a
+component test pass. Journal byte accounting is not an NTFS volume quota or a
+claim about every filesystem metadata/physical-sector byte.
+
+The current nine-file source profile uses explicitly synthetic domain/fence,
+native IO, finite-execution and worker ports with the real journal/backend/lease.
+Those tests do not qualify actual Windows mutation protection, durable crash
+replay, the production finite owner, exact worker recovery or model offload.
+The earlier four-case Windows result remains bound to the exact source in
+`windows-offload-component-qualification.json`; it does not qualify this later
+journal or accounting-binding change. Keep real resources and the final shared
+campaign pending. Do not rerun accepted model accuracy or OCR. No model hard
+Job limit is selected or changed by this component.

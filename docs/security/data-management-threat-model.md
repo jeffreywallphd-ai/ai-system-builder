@@ -1818,3 +1818,46 @@ stay immutable, with the erroneous Core timer field excluded from historical
 qualification. Timer configuration still proves no callback delivery, native
 exit or physical cleanup. No execution authority, resource limit, model policy,
 production factory or parent qualification changes in this reporting repair.
+
+
+### Fresh protected accounting: provenance and pending controls
+
+The journal's protected assets are its shared-domain charge, temporary-file
+ownership, original safe weights and live native argument/IRP lifetime. Only
+trusted private composition can supply the real domain and finite owner; no
+user payload, parsed frame, numeric balance, fresh name or boolean is admitted
+as a capability. Default construction/composition remains unavailable before
+native/model effects. The shared-domain/mutable-fence producer is not supplied.
+
+The concrete API uses a fixed sibling FILE_CREATE namespace/file, independent
+Core-anchor duplication, exact native identity/type/private-descriptor checks,
+bounded preallocation and same-held-file protection. It retains every output
+slot, callback, buffer and IO record before dispatch. Completion status and
+exact byte count, separate successful flush, bounded exact readback and current
+metadata/guard checks all precede a record acknowledgement. A pending request
+or cancel request is never completion; unknown IO/close cannot release custody.
+The mutation-fence dependency must be established before first mutation and
+remain live across writes. Before/after checks or directory RH alone do not
+fence mutable size/timestamp/security changes. Native controls remain unqualified.
+
+The five-record sequence is bounded and replay/generation/root/padding checked.
+Its checksums provide integrity diagnostics, not ownership or malicious-writer
+isolation. Journal overhead is precharged within the same12GiB; unknown old
+ownership consumes the full ceiling and denies bootstrap. The first slice does
+not reopen, truncate, repair, compact or delete prior accounting names. Successful
+credit preserves history and its overhead; no new root/process restores zero.
+
+The exact canonical Core witness is unavailable after copied, unfinished or
+uncertain retirement. Journal resources never enter Core's close collections.
+Worker reference release is not native exit. Credit follows exact worker/Core
+retirement, durable journal acknowledgement and confirmed journal-native closes;
+lost acknowledgements retain uncertainty. Original old slots, historical failed
+fixtures and model weights are not accessed or changed by this source work.
+
+Synthetic domain/fence/IO/worker fixtures exercise the real journal and backend.
+They qualify no actual Windows protection, shared domain, crash recovery, finite
+native deadline, resource delivery or parent roadmap. The prior schema2 Core
+evidence remains bound to its recorded source. No model Job policy, privilege,
+supplier, default capability or accepted accuracy/OCR result changes. File flush
+is an API-level acknowledgement under the supported filesystem assumptions;
+it is not universal hardware/power-loss durability or an NTFS volume quota.

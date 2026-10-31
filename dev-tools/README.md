@@ -1485,7 +1485,7 @@ or parent qualification. Without `--plan` it reports pending and exits3. Unsuppo
 arguments or unexpected gate failures refuse with fixed safe copy. Accepted accuracy
 is never rescheduled.
 
-The fixed `offload-resource-lifecycle` profile runs four model-free files for the
+The fixed `offload-resource-lifecycle` profile runs nine model-free files for the
 real guarded lease/loader/cache, ordinary compatibility and resource entry. Native
 backend, protected journal, owned-worker retirement and actual resource delivery
 remain pending. Unknown or explicitly generic impact keeps normal test fallback.
@@ -1493,7 +1493,7 @@ remain pending. Unknown or explicitly generic impact keeps normal test fallback.
 
 ## Fresh Windows staging feature checks
 
-`offload-resource-lifecycle` includes eight fixed model-free files. The new Core
+`offload-resource-lifecycle` includes nine fixed model-free files. The new Core
 and concrete backend tests use synthetic native, journal and standalone-worker
 facts through the real guarded lease. They do not start a model or native worker.
 Unknown, incomplete and explicit generic impact keeps its fallback checks.
@@ -1520,7 +1520,7 @@ The output-slot event API is [NtCreateEvent](https://learn.microsoft.com/en-us/w
 
 `windows_offload_core_fixture.py` supports four fixed standalone cases: an actual
 timer-delivery/exit control, empty stage, one two-byte index and fresh namespace
-collision refusal. No model or existing fixture is read. The eight-file portable
+collision refusal. No model or existing fixture is read. The nine-file portable
 profile executes synthetic controller/ABI tests only. `--plan`, default and
 imported entry calls cannot start this runner. Actual execution requires separate
 review of the exact source and effect plan, then direct base Python with
@@ -1569,3 +1569,30 @@ history; the erroneous Core-case timer field is excluded from qualification.
 Do not read version 1 as version 2 or infer missing Core-case timers from that
 old field. The source correction alone is not a new native run. Configured
 timers never replace actual callback delivery, exit or cleanup observations.
+
+
+## Protected journal feature checks
+
+The existing `offload-resource-lifecycle` profile retains its eight earlier
+files and adds `test_windows_offload_journal.py`. Its exact new source/test
+rules retain unknown, incomplete and explicitly requested generic coverage.
+The real journal, Core binding and backend/lease are exercised with explicit
+synthetic domain/fence/IO/finite/worker facts. No Windows fixture, provider, model
+or old cache is started/read by this portable profile.
+
+The journal has real typed file creation, write/completion/flush/readback and
+retirement code with independent native custody. It requires actual shared
+accounting, mutable protection and finite execution producers; none is supplied
+by numeric fixtures or parsed records. Default runtime admission stays denied.
+Five fixed frames and the128KiB journal reservation stay within unchanged12GiB;
+unknown old usage still prevents even bootstrap. Actual native protection,
+worker/crash and offload resources remain pending. Earlier schema2 Core evidence
+is stored in `docs/operations/windows-offload-component-qualification.json` and
+does not qualify this later source. Accepted accuracy/OCR stay closed.
+
+The relevant controller/HTTP checks need the host's permitted loopback execution
+environment on a restricted workstation. Preserve any failed sandbox receipt;
+use a narrow same-source HTTP diagnostic to establish the environment problem,
+then rerun the unchanged source-bound checks through the documented host route.
+Do not weaken network/host security controls or relabel the failed receipt.
+The combined software/system campaign remains deferred until feature catch-up.

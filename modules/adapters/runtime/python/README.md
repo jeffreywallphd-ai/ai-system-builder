@@ -227,3 +227,20 @@ does not start the application, managed worker, model or normal tasks package.
 Portable tests exercise its failure controls with synthetic ABI responses only.
 Native fixture evidence, production execution/journal/worker composition, real
 resources and final combined qualification remain distinct requirements.
+
+
+## Protected accounting component
+
+The worker's concrete journal is an adapter-private consumer of the existing
+backend port. It owns its native resources independently of Core and requires
+the exact Core binding and settled retirement witness. No runtime code imports
+dev-tools. The five-record file stays separate from Core's index-only inventory.
+
+An authoritative shared domain and stable mutable-file/namespace fence are
+required; no producer is selected here. A numeric snapshot, fresh namespace or
+valid record cannot replace those live owners. Unknown usage reserves the full
+12 GiB and prevents even journal bootstrap writes. The mandatory finite owner
+and standalone-worker recovery also remain pending. The default factory stays
+backendless; Standard loading, model guards, accepted accuracy/OCR and old data
+are unchanged. See the worker README and operations guide for source tests and
+separate native qualification.

@@ -960,8 +960,9 @@ are source evidence, not actual Windows or resource qualification.
 
 The initial implementation supports only its new protected-current-user namespace
 and optional index file. It refuses unsupported inherited/retained trees; unknown
-old staging retains the full12GiB charge. Protected journal, worker/crash and real
-model delivery remain pending. No model-specific hard Job ceiling is chosen.
+old staging retains the full12GiB charge. Production accounting/domain/fence
+composition, worker/crash and real model delivery remain pending. No model-specific
+hard Job ceiling is chosen.
 
 
 A mandatory private finite-execution producer also gates Core preparation and
@@ -989,3 +990,42 @@ from child Core cleanup. Expected collision retains Core custody. Timer delivery
 needs the GIL/host scheduler and does not prove suspend or stuck kernel-I/O bounds.
 The current factory stays backendless. No production finite owner, model Job
 quota, protected durable journal, retained-tree or worker/crash readiness follows.
+
+
+### Independent protected journal ownership
+
+The Python journal implements `_ProtectedJournalPort` in the same adapter layer.
+It reuses Core's typed Windows primitives with its own retained resources and a
+source-fixed sibling namespace, never Core's sealed namespace/index inventory.
+The canonical Core binding admits one anchor borrower during Core dispatch.
+Borrowed handles are not closed by the journal; its independent duplicate and
+native custody survive Core retirement. A release witness is an original live
+object backed by fully settled Core cleanup, not a path, identity byte string,
+retired boolean or serialized certificate.
+
+The bounded append-only protocol has five 512-byte frames, strict sequence,
+generation/root binding, previous digest and padding checks. Checksums detect
+corruption and are not authority. Complete native IO, separate flush and exact
+held-object readback precede acknowledgement. Record/IO bookkeeping failures
+are terminal; valid prefixes cannot repair or reopen old journals. Journal
+history and its charged overhead remain after successful handle retirement.
+
+The authoritative shared domain covers unknown and all other owned charges plus
+the complete 128 KiB journal reservation within unchanged12GiB. It also must own
+a stable mutable-file/namespace fence throughout bootstrap and transitions.
+The journal API's DACL/sharing/file-RH checks and before/after metadata checks do
+not create that missing authority. No shared-domain/fence producer is selected.
+Unknown12GiB refuses even bootstrap writes; no fresh flag, new root/process or
+numeric view resets capacity. Finite execution and exact worker producers remain
+required. The production factory is still backendless and never advertises a
+new success from source fixtures.
+
+Core and journal dispatches stay separate. Reservation precedes Core creation;
+worker quiescence precedes Core seal and durable journal seal. Reference release
+never means process exit. Exact worker retirement, acknowledged Core cleanup,
+durable credit and journal-native retirement are distinct; credit cannot query
+Core's closed handles or hide an uncertain operation. Source fixtures use the
+real consumer and explicit synthetic dependencies only. The earlier native Core
+result, this source work, actual journal/worker/resource qualification and final
+combined tests remain separate. Accepted accuracy/OCR and all model limits stay
+unchanged.

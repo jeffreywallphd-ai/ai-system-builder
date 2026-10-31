@@ -160,6 +160,125 @@ class _ExecutionCall:
         self.thread = self.value = None
 
 
+class _JournalAnchorReceiver(ABC):
+    """Private accounting consumer; its native custody stays outside Core."""
+    @abstractmethod
+    def _accept_core_anchor(self, binding, handle, identity):
+        raise NotImplementedError
+
+
+class _JournalRetirementWitness:
+    """Origin-bound observation, never a serialized release certificate."""
+    __slots__ = ('__origin', '__binding')
+
+    def __init__(self, binding):
+        self.__origin, self.__binding = self, binding
+
+    def _assert_origin(self, binding):
+        _require(type(self) is _JournalRetirementWitness
+                 and self.__origin is self and self.__binding is binding)
+
+
+class _JournalCoreBinding:
+    """One independent journal may borrow the prepared anchor exactly once.
+
+    The receiver duplicates into its own retained native output slot during the
+    Core dispatch. It must not put journal handles/buffers into Core collections.
+    Later journal execution uses the same trusted finite owner with its own
+    callback custody, including after Core's handles have actually retired.
+    """
+    def __init__(self, core):
+        self.__origin, self._core = self, core
+        self._receiver = self._borrowing_thread = None
+        self._borrow_started = self._borrowed = self._uncertain = False
+        self._witness = _JournalRetirementWitness(self)
+
+    def _assert_origin(self):
+        _require(type(self) is _JournalCoreBinding
+                 and getattr(self, '_JournalCoreBinding__origin', None) is self)
+        self._core._assert_origin()
+        _require(self._core._accounting is self and not self._uncertain
+                 and not self._core._uncertain)
+        self._witness._assert_origin(self)
+
+    def _retain_failure(self):
+        # A valid dispatched binding keeps both objects reachable. Copied
+        # bindings fail origin checks before this method can affect the owner.
+        self._uncertain = True
+        self._core.retain_failure()
+
+    def _settled_core(self):
+        self._assert_origin()
+        core = self._core
+        _require(core._api is not None and core._chain and not core._busy
+                 and core._dispatch is None and not core._execution_calls)
+
+    def borrow_anchor(self, receiver):
+        self._assert_origin()
+        _require(isinstance(receiver, _JournalAnchorReceiver))
+        if self._borrow_started:
+            self._retain_failure()
+            raise OffloadAdmissionError()
+        self._receiver, self._borrow_started = receiver, True
+        self._core._retain()  # Pin the receiver/binding before any callback.
+        try:
+            def borrow():
+                self._assert_origin()
+                _require(not self._core._retired)
+                self._core._check_bound()
+                handle, identity = self._core._chain[-1]
+                self._borrowing_thread = get_ident()
+                _require(receiver._accept_core_anchor(self, handle, identity) is None)
+                self.assert_borrow_callback(receiver)
+                self._borrowing_thread = None
+            self._core._run(borrow)
+            self._settled_core()
+            self._borrowed = True
+        except BaseException as error:
+            self._retain_failure()
+            if isinstance(error, Exception):
+                raise OffloadAdmissionError() from None
+            raise
+
+    def assert_borrow_callback(self, receiver):
+        self._assert_origin()
+        core = self._core
+        call = core._dispatch
+        _require(receiver is self._receiver and self._borrow_started and not self._borrowed
+                 and self._borrowing_thread == get_ident() and core._busy
+                 and type(call) is _ExecutionCall and call.started and not call.finished
+                 and call.thread == get_ident() and core._pending is None
+                 and not core._retired)
+
+    def assert_consumer(self, receiver, core, *, retired=False):
+        self._settled_core()
+        _require(type(retired) is bool and receiver is self._receiver
+                 and core is self._core and self._borrowed
+                 and self._borrowing_thread is None
+                 and (retired or not core._retired))
+
+    def execute(self, receiver, operation, *, retired=False):
+        """Private dispatch only; receiver must validate its own exact callback."""
+        self.assert_consumer(receiver, self._core, retired=retired)
+        _require(callable(operation) and isinstance(self._core._execution, _NativeExecutionPort))
+        owner = self._core._execution
+        _require(owner.assert_bound(self._core) is None)
+        result = owner.execute(self._core, operation)
+        _require(owner.assert_bound(self._core) is None)
+        self.assert_consumer(receiver, self._core, retired=retired)
+        return result
+
+    def retired_witness(self, receiver, core):
+        self.assert_consumer(receiver, core, retired=True)
+        _require(core._retired and not core._allocations
+                 and all(handle.closed for handle in core._handles))
+        return self._witness
+
+    def assert_retired_witness(self, receiver, core, witness):
+        _require(witness is self.retired_witness(receiver, core))
+        witness._assert_origin(self)
+
+
 class _WindowsApi:
     """Narrow actual OS implementation; Core retains every call and output slot."""
     def __init__(self, owner):
@@ -427,6 +546,13 @@ class WindowsOffloadCore:
         self._protected = self._sealed = None
         self._reservation = None
         self._leaf = uuid.uuid4().hex
+        self._accounting = _JournalCoreBinding(self)
+
+    def _journal_accounting_binding(self):
+        """Effect-free private identity; preparation still needs actual owners."""
+        self._assert_origin()
+        self._accounting._assert_origin()
+        return self._accounting
 
     def _assert_origin(self):
         _require(type(self) is WindowsOffloadCore and getattr(self, '_WindowsOffloadCore__origin', None) is self)

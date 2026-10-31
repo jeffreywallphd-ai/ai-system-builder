@@ -543,7 +543,7 @@ owned exit, readers/IRPs, closes and durable charge removal. It cannot stop the
 shared worker or infer exit from a task result. Unknown outcomes stay retained.
 
 No production native backend is composed. The fixed `offload-resource-lifecycle`
-profile uses four model-free unit files and explicitly synthetic fresh-domain
+profile uses nine model-free unit files and explicitly synthetic fresh-domain
 ports. It neither qualifies native protection nor reruns accepted accuracy.
 
 
@@ -599,8 +599,36 @@ the four exact adapter source files in a private package without importing the
 ordinary framework package. This is component evidence only; it does not qualify
 normal managed-runtime startup or supply a production finite-execution producer.
 
-The initial native cases cover empty and two-byte-index cleanup plus exclusive
-namespace denial. The collision case deliberately retains its Core owner and
-files; native process exit is not explicit Core cleanup. Actual Windows results
-remain uncollected until separate reviewed execution. Accepted accuracy, current
-backendless factory, retained-data charge and all model limits are unchanged.
+The versioned `docs/operations/windows-offload-component-qualification.json`
+records four actual schema2 cases on its exact earlier source. Empty/index
+cleanup and timer-control exit were observed; the created collision folder was
+retained. This does not qualify the later accounting binding, journal or
+production recovery. Accepted accuracy/OCR, the backendless factory, retained
+data charge and all model limits are unchanged.
+
+
+## Fresh protected accounting source
+
+`tasks/windows_offload_journal.py` implements the private journal port with a
+real Windows API and a fixed sibling accounting namespace. It reuses Core's
+native primitives with independent handle, allocation, call and IRP custody.
+An exact Core binding permits one anchor duplicate during the Core dispatch.
+Its canonical retirement witness requires settled, acknowledged Core cleanup;
+the journal can then credit through its own surviving anchor.
+
+Five fixed 512-byte records cover genesis, reserve, seal, reference release and
+credit. The domain must precharge the complete 128 KiB journal bound within the
+same 12 GiB limit. Supported allocation units are checked before file creation.
+Write completion, a separate flush and exact held-file readback precede each
+acknowledgement. Pending IO, short transfers, changed guards, unknown closes or
+lost acknowledgements retain custody and charge. History files remain after
+handle retirement; a new root/process or a parsed prefix cannot grant capacity.
+
+The real shared-domain and stable mutable-fence producer is not supplied.
+Before/after metadata checks alone are not that fence. Finite native execution
+and exact worker/crash composition remain mandatory and unqualified. Default
+construction and the production factory stay unavailable without file/model
+effects. Explicit synthetic domain, IO and worker fixtures exercise the real
+journal/backend/lease; they are source evidence only. The nine-file model-free
+profile keeps actual native, retained-tree, resource and final combined checks
+separate. Accepted model accuracy and OCR stay closed.
