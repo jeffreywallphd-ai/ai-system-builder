@@ -1961,3 +1961,43 @@ worker termination is available. Fixed record pools reserve terminal metadata
 before effects. No staging, accounting credit, retained-tree access, model writer
 or production backend authority follows. Synthetic ABI failure tests exercise
 the concrete producer and Core; real Windows and later composition stay pending.
+
+
+## Failed private read-worker lifetime
+
+The terminal path accepts no caller command, PID, root, callable or budget. Its
+authority is the canonical original read-session API, handle generations,
+per-request effect-path exits and full lifetime native ledger. Partial/unknown
+acquisition, late creation/resume, copied origins, mutated slots or lost close
+publication deny release before any replacement.
+
+One fixed-generation reaper requests cancellation only on the original CRT
+controller, wakes only its exact pending idle wait into refusal, and terminates
+only the already-owned inert IO Job. A successful cancel, NOT_FOUND or Job stop
+request cannot certify completion. Every original/terminal call and callback
+remains retained until actual controller/process/reaper exit, Job active zero
+and one-attempt close acknowledgements establish the final local proof.
+No native primitive or join holds a state or ledger lock. Bounded reserved
+records and one cleanup budget prevent polling, repeated effects or renewal.
+
+Known normal/aborted/error native return is distinct from task success. Core
+read retirement, terminal process cleanup and storage credit are separate facts.
+Only a fully published original final proof permits pure registry reconciliation
+after interruption, with no effect on a newer owner. Unknown native state keeps
+the complete graph and admission slot; it cannot authorize fresh staging.
+
+Synthetic ABI fault/race tests are not actual Windows, retained-file, stable
+fence, durable-accounting or model-writer/resource qualification. Production
+composition remains unavailable; unknown storage still consumes all 12 GiB.
+Rollback withdraws this private operation while retaining the stronger denial.
+No model guard, accepted accuracy, OCR or shared-worker policy changes.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.

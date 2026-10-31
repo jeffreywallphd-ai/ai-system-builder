@@ -1082,3 +1082,44 @@ the four operations. No unconditional GIL, scheduler or stuck-kernel deadline is
 claimed. This read-only source supplies no journal/domain fence, writer, capacity
 credit, restart adoption or production readiness. Native qualification remains
 separate from the fifteen-file model-free source profile.
+
+
+### Failed owned read-session retirement
+
+The private execution owner separates immutable native-return settlement from
+normal operation acknowledgement and records each caller's exit from its
+effectful path. This is not application-thread termination. All lifetime intents
+remain canonical after active-list pruning. An unsettled creation, resume,
+acquisition or close denies terminal admission; partial startup is not adopted.
+
+A fully observed fenced IO session may start one retained CRT reaper using a
+single 120-second budget and the existing bounded normal/reserved ledger. Its
+fixed actions target only original controller IO, the captured idle event into
+fenced refusal, and the original private IO Job. Cancellation acknowledgement
+or NOT_FOUND does not settle the original IO. Original thread/process exit,
+Job active zero, native settlement and one-attempt original closes precede
+reaper body completion. Actual reaper exit and its own acknowledged closes
+precede the final proof and registry release. The reaper thread signal is its
+completion observation; a body-done flag alone cannot release custody.
+
+The caller's reaper-exit wait may overlap an exact retained original close
+intent; it neither consumes that intent nor treats it as successful. Native
+functions execute outside state/ledger locks. Failed or interrupted native
+publication retains the entire original plus terminal graph. A completely
+published final proof allows pure idempotent registry reconciliation only.
+
+Successful cleanup yields a failed-but-retired session and preserves actual
+Core read acknowledgements independently. It supplies no disk credit, writer
+authority, model cancellation, factory readiness or unconditional OS/GIL/kernel
+time guarantee. Actual Windows failure/crash/managed-runtime and offload resource
+qualification remains separate from synthetic source tests.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.

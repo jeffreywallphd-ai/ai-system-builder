@@ -899,3 +899,28 @@ remain separate technical work. The default factory still refuses unfinished
 offload. Old temporary data, unknown 12 GiB charges and all model guards remain
 unchanged. Accepted model accuracy and OCR stay closed. Full tests stay deferred
 until the cross-roadmap implementation catch-up is complete.
+
+
+## Owned read-worker failure cleanup
+
+The private read-worker source now has an explicit failed-session cleanup path.
+It starts only after the original operation's effectful caller path has ended
+and startup and handle ownership are known. One owned cleanup thread requests
+stop and checks actual thread/process exit and every pending call and close.
+A stop request or a thread's body-done flag is not completion. Unknown results
+keep the existing ownership and prevent replacement.
+
+Confirmed cleanup keeps the operation failed. It does not invent a Core read
+acknowledgement or release any disk reservation. Pure registry bookkeeping may
+finish from a completely published final proof after interruption; no native
+effect or deadline is repeated. The source tests use simulated Windows replies.
+Actual Windows failure paths, shared disk accounting and stable file protection,
+model-writer recovery and real offload resource/delivery measurements still need
+qualification before production use. Accepted accuracy/OCR remain closed, and
+the final combined campaign remains deferred until feature catch-up.
+
+Request setup failures prevent another normal operation. Query checks use
+values copied from the exact original result buffers; replacement buffers cannot
+supply a successful result. These source controls still need native qualification.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.

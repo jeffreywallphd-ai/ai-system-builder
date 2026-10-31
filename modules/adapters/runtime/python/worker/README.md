@@ -715,3 +715,47 @@ They use synthetic Windows replies and the real Core/port methods. They do not
 qualify actual Windows execution. Default offload stays unavailable until shared
 accounting, stable mutation protection, model-worker/crash recovery and resources
 qualify. No old fixture, model, staging data, guard or accepted accuracy changes.
+
+
+## Failed read-session retirement
+
+The private `retire_failed()` operation can drain only a fully observed owned IO
+session after its ordinary effectful caller paths have exited. It never retries
+the failed request. Missing startup, handle-generation, return or close facts
+retain the original session and deny a new cleanup generation.
+
+A canonical lifetime ledger separates a known native normal/error/abort return
+from the normal success acknowledgement. Pruning the active list loses no intent.
+Late creation, resume or close intents prevent terminal admission. Only an exact
+original controller pipe operation or idle wait may remain outstanding.
+
+One retained CRT reaper has a fixed 120-second cleanup budget and two additional
+parent handles. Closed action labels request original-thread IO cancellation,
+one original idle-event wake into refusal when needed, and termination of the
+original private IO Job. Cancellation or termination request success is not exit
+evidence. The caller waits for actual reaper exit; no native call or join runs
+under state or ledger locks. All intents fit the existing reserved metadata.
+
+Release requires original controller/process exit, Job active zero, every
+original and terminal native settlement, reaper exit and all one-attempt close
+acknowledgements. The result is `failed-retired`, never a normal task success.
+The actual Core read-retirement fact stays separate. A completely published
+final proof permits only idempotent registry bookkeeping after interruption;
+it cannot start another reaper, renew time or affect a newer owner.
+
+Native admission, the GIL, scheduler and stuck-kernel behavior have no hard
+wall-clock guarantee. Any unconfirmed resource retains its original graph and
+admission slot. Current synthetic ABI regressions are source evidence; actual
+Windows failure/cancel/crash and model-worker qualification remain separate.
+This operation grants no disk credit, staging effect, shared-worker stop, model
+quota or production offload readiness. Accepted accuracy and OCR stay closed.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.

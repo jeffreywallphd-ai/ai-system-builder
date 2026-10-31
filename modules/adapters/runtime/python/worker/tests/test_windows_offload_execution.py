@@ -56,6 +56,136 @@ class LaunchKernel:
     def CloseHandle(self,h):self.closed.append(h);return 1
 
 
+class RetirementKernel(LaunchKernel):
+    """Owned test threads and synthetic handles; no native process or file IO."""
+    def __init__(self,owner):
+        super().__init__(owner)
+        self.effects=[];self.errors={};self.threads={};self.codes={};self.tids={}
+        self.process_finished=False;self.fail_close=None;self.begin_failure=None
+        self.bad_active=self.bad_total=False;self.controller_code=9
+        self.force_reaper_timeout=False;self.body_returned=Event();self.reaper_exit=Event();self.reaper_exit.set()
+        self.io_ready=Event();self.io_release=Event();self.cancel_not_found=False
+        self.release_on_cancel=self.release_on_kill=True
+        self.controller_mode=None;self.return_io_success=False;self.force_controller_timeout=False
+        self.block_close=None;self.close_entered=Event();self.close_release=Event();self.close_release.set()
+        self.caller_wait_started=Event();self.signal_pending_at_close=False
+        # ctypes DLL functions are cached objects. Preserve that identity in
+        # this synthetic ABI rather than manufacturing fresh bound methods.
+        for name in ('CreateEventW','WaitForMultipleObjects','WaitForSingleObject','SetEvent','GetCurrentThreadId',
+                     'CancelSynchronousIo','TerminateJobObject','GetExitCodeThread','GetExitCodeProcess',
+                     'QueryInformationJobObject','CloseHandle','ReadFile','WriteFile'):
+            setattr(self,name,getattr(self,name))
+
+    def begin(self,sa,size,callback,arg,flags,out):
+        self.effects.append('begin')
+        if self.begin_failure=='zero':return 0
+        number=self.handle();out._obj.value=42
+        def run():
+            self.tids[get_ident()]=42
+            try:self.codes[number]=callback(arg)
+            finally:self.body_returned.set();self.reaper_exit.wait(2)
+        thread=Thread(target=run,daemon=True);self.threads[number]=thread;thread.start()
+        if self.begin_failure=='interrupt':raise KeyboardInterrupt()
+        return number
+
+    def WaitForMultipleObjects(self,count,handles,all_,timeout):
+        numbers=tuple(handles[:count]);owner=self.owner
+        if count==2 and owner.terminal is None:
+            if self.controller_mode:
+                request=owner.active
+                if self.controller_mode=='idle':
+                    request.started=request.returned=request.published=request.signal_ack=True
+                    request.result='initialized'
+                self.start_original_controller(request)
+                if not self.io_ready.wait(1):return 258
+                return 0 if self.controller_mode=='idle' else 258
+            return 258
+        number=numbers[0]
+        if number in self.threads:
+            if number==owner.controller._number and self.force_controller_timeout:return 258
+            reaper=getattr(owner.terminal,'reaper',None)
+            if reaper is not None and number==reaper._number:self.caller_wait_started.set()
+            if self.force_reaper_timeout:self.body_returned.wait(1);return 258
+            self.threads[number].join(min(timeout/1000,1))
+            return 258 if self.threads[number].is_alive() else 0
+        if owner.controller is not None and number==owner.controller._number:return 0 if self.process_finished else 258
+        if owner.process is not None and number==owner.process._number:return 0 if self.process_finished else 258
+        if owner.channels.get('ready') is not None and number==owner.channels['ready']._number:return 0
+        return 0 if self.events[number].wait(min(timeout/1000,1)) else 258
+
+    def WaitForSingleObject(self,number,timeout):
+        self.io_ready.set()
+        return 0 if self.events[number].wait(1) else 258
+
+    def SetEvent(self,number):
+        if self.owner.terminal is not None:self.effects.append(('signal',number))
+        result=super().SetEvent(number)
+        if (self.owner.terminal is not None and number==self.owner.terminal.start._number
+                and self.block_close is not None):self.close_entered.wait(1)
+        return result
+
+    def start_original_controller(self,request):
+        owner=self.owner;number=owner.controller._number
+        def run():
+            owner.controller_ident=get_ident();self.tids[get_ident()]=17
+            try:
+                if self.controller_mode=='idle':owner.api.idle_wait(request)
+                else:
+                    h=owner.channels['response-read'];data=C.create_string_buffer(1);count=x._U32()
+                    owner.buffers.extend((data,count))
+                    owner.api.call(self.ReadFile,h.value,C.byref(data),1,C.byref(count),None,keep=(h,data,count))
+                owner._live(request)  # A late return cannot resume source work.
+            except BaseException:pass
+            finally:self.codes[number]=9
+        thread=Thread(target=run,daemon=True);self.threads[number]=thread;thread.start()
+
+    def GetCurrentThreadId(self):return self.tids.get(get_ident(),17)
+
+    def CancelSynchronousIo(self,number):
+        self.effects.append(('cancel',number))
+        if self.release_on_cancel:self.io_release.set()
+        self.errors[get_ident()]=1168 if self.cancel_not_found else 0
+        return 0 if self.cancel_not_found else 1
+
+    def TerminateJobObject(self,number,code):
+        self.effects.append(('terminate',number,code));self.process_finished=True
+        if self.release_on_kill:self.io_release.set()
+        return 1
+
+    def GetExitCodeThread(self,number,out):
+        out._obj.value=self.codes.get(number,self.controller_code if self.process_finished else 259);return 1
+
+    def GetExitCodeProcess(self,number,out):out._obj.value=9 if self.process_finished else 259;return 1
+
+    def QueryInformationJobObject(self,job,kind,out,size,returned):
+        if kind==9:return super().QueryInformationJobObject(job,kind,out,size,returned)
+        out._obj.active=1 if self.bad_active or not self.process_finished else 0
+        out._obj.total=2 if self.bad_total else 1
+        return 1
+
+    def CloseHandle(self,number):
+        if self.owner.terminal is not None:self.effects.append(('close',number))
+        if self.owner.terminal is not None and number==self.block_close:
+            self.signal_pending_at_close=not self.owner.terminal.used['signal-start'].returned
+            self.close_entered.set();self.close_release.wait(2)
+        if number==self.fail_close:return 0
+        return super().CloseHandle(number)
+
+    def ReadFile(self,handle,buffer,size,count,overlapped):
+        self.io_ready.set();self.io_release.wait(2)
+        if self.return_io_success:
+            C.memmove(buffer,b'x',1);count._obj.value=1;self.errors[get_ident()]=0;return 1
+        count._obj.value=0;self.errors[get_ident()]=995;return 0
+
+    def WriteFile(self,*args):return self.ReadFile(*args)
+
+    def finish_test_threads(self):
+        self.io_release.set();self.reaper_exit.set()
+        self.close_release.set()
+        for event in self.events.values():event.set()
+        for thread in self.threads.values():thread.join(2)
+
+
 class SessionTests(unittest.TestCase):
     def setUp(self):
         p=patch.dict(x._OWNERS,{},clear=True);p.start();self.addCleanup(p.stop)
@@ -78,6 +208,506 @@ class SessionTests(unittest.TestCase):
 
     def handle(self,owner,name,number):
         h=x._Handle(owner,name);owner.handles.append(h);h.slot.value=number;h.acknowledge();return h
+
+    def failed_retirement_session(self,controller_mode=None):
+        owner=self.session();a=self.api(owner);owner.requests.clear();owner.active=None
+        k=RetirementKernel(owner);a.k=k;a.thread_callback=lambda fn:fn;a.begin=k.begin
+        k.controller_mode=controller_mode
+        for scope in (patch.object(x,'_runtime_image',return_value=(k.runtime,hashlib.sha256(k.image).hexdigest())),
+                      patch.object(x,'_read_source',return_value=k.image),
+                      patch.object(C,'get_last_error',side_effect=lambda:k.errors.get(get_ident(),k.error),create=True)):
+            scope.start();self.addCleanup(scope.stop)
+        self.addCleanup(k.finish_test_threads)
+        def start(request):
+            owner.controller_ident=17;owner.thread_id.value=17
+            for field in ('start_event','request_event','completion_event','controller'):
+                setattr(owner,field,a.acquire(field,k.CreateEventW,None,1,0,None))
+            # The production launch/handle/Job/attribute implementation runs;
+            # only its OS ABI is synthetic. The caller then observes timeout.
+            owner._launch(request)
+        with patch.object(owner,'_start',side_effect=start):
+            if controller_mode=='idle':owner.prepare();owner._fence()
+            else:
+                with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        self.assertTrue(owner.launch_complete and owner.uncertain)
+        self.assertEqual(len(owner.handles),13)
+        return owner,a,k
+
+    def test_terminal_retirement_closes_only_the_original_failed_session(self):
+        owner,a,k=self.failed_retirement_session();request=owner.requests[-1]
+        self.assertIsNone(owner.retire_failed())
+        self.assertEqual(owner.state,'failed-retired')
+        self.assertTrue(owner.session_retired and owner.terminal_retired)
+        self.assertFalse(owner.core_retired or request.consumed)
+        self.assertTrue(request.expired);self.assertNotIn(id(owner),x._OWNERS)
+        self.assertEqual(len(owner.handles),15);self.assertTrue(all(h.closed for h in owner.handles))
+        self.assertEqual(k.effects.count(('terminate',owner.job._number,9)),1)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='cancel' for v in k.effects))
+        self.assertLessEqual(len(owner.terminal.calls),48)
+        self.assertTrue(all(row.acknowledged for row in owner.terminal.calls))
+        next_owner=self.session();before=list(k.effects)
+        self.assertIsNone(owner.retire_failed())
+        self.assertIs(x._OWNERS[id(next_owner)],next_owner);self.assertEqual(k.effects,before)
+
+    def test_missing_effect_exit_or_partial_launch_denies_before_a_terminal_attempt(self):
+        owner,a,k=self.failed_retirement_session();request=owner.requests[-1]
+        entry=owner._effect_exits[id(request)];owner._effect_exits[id(request)]=(*entry[:3],False)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
+        owner._effect_exits[id(request)]=entry;owner.launch_complete=False
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
+
+    def test_lost_original_slot_generation_denies_before_terminal_effects(self):
+        owner,a,k=self.failed_retirement_session();owner.job.slot=x._PTR(owner.job._number)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
+
+    def test_reaper_start_failure_is_retained_and_never_reissued(self):
+        owner,a,k=self.failed_retirement_session();k.begin_failure='zero'
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIs(x._OWNERS[id(owner)],owner);self.assertFalse(owner.session_retired)
+        self.assertEqual(k.effects,['begin']);before=list(k.effects)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(k.effects,before)
+
+    def test_actual_reaper_exit_is_required_even_after_its_body_finishes(self):
+        owner,a,k=self.failed_retirement_session();k.force_reaper_timeout=True;k.reaper_exit.clear()
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertTrue(owner.terminal.body_done)
+        self.assertFalse(owner.terminal.reaper.closed or owner.session_retired)
+        self.assertIs(x._OWNERS[id(owner)],owner)
+
+    def test_unconfirmed_original_close_is_never_retried_or_released(self):
+        owner,a,k=self.failed_retirement_session();k.fail_close=owner.start_event._number
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertTrue(owner.start_event.close_started);self.assertFalse(owner.start_event.closed)
+        self.assertIs(x._OWNERS[id(owner)],owner);before=list(k.effects)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(k.effects,before)
+
+    def test_job_active_or_wrong_lifetime_count_prevents_every_original_close(self):
+        for field in ('bad_active','bad_total'):
+            with self.subTest(field=field),patch.dict(x._OWNERS,{},clear=True):
+                owner,a,k=self.failed_retirement_session();setattr(k,field,True)
+                with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+                self.assertFalse(any(isinstance(v,tuple) and v[0]=='close' for v in k.effects))
+                self.assertFalse(owner.session_retired);k.finish_test_threads()
+
+    def test_canceled_io_settles_before_close_without_passing_the_failed_request(self):
+        owner,a,k=self.failed_retirement_session('io');request=owner.requests[-1]
+        pending=next(row for row in owner.ledger.rows if row.started and not row.returned)
+        self.assertIs(pending.function,k.ReadFile)
+        self.assertIsNone(owner.retire_failed())
+        self.assertEqual(owner.ledger.settled(pending,a)[1:3],(0,995))
+        self.assertFalse(pending.acknowledged or request.consumed or owner.core_retired)
+        self.assertEqual(k.effects.count(('cancel',owner.controller._number)),1)
+        self.assertTrue(owner.terminal_retired and all(h.closed for h in owner.handles))
+
+    def test_not_found_cancel_and_normal_io_return_do_not_invent_an_abort_or_task_pass(self):
+        owner,a,k=self.failed_retirement_session('io');k.cancel_not_found=True;k.return_io_success=True
+        request=owner.requests[-1];pending=next(row for row in owner.ledger.rows if row.started and not row.returned)
+        self.assertIsNone(owner.retire_failed())
+        self.assertEqual(owner.ledger.settled(pending,a)[1:3],(1,0));self.assertTrue(pending.acknowledged)
+        cancel=owner.terminal.used['cancel-io'];self.assertEqual(owner.ledger.settled(cancel,a)[1:3],(0,1168))
+        self.assertFalse(request.consumed);self.assertEqual(owner.state,'failed-retired')
+
+    def test_cancel_and_job_requests_without_original_io_exit_cannot_release_or_close(self):
+        owner,a,k=self.failed_retirement_session('io')
+        k.release_on_cancel=k.release_on_kill=False;k.force_controller_timeout=True
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertFalse(owner.session_retired)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='close' for v in k.effects))
+        self.assertIs(x._OWNERS[id(owner)],owner);before=list(k.effects)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(k.effects,before)
+
+    def test_consumed_idle_wait_gets_one_refusal_wake_and_no_io_cancel(self):
+        owner,a,k=self.failed_retirement_session('idle');request=owner.requests[-1]
+        self.assertTrue(request.consumed and request.idle_intent.started and not request.idle_intent.returned)
+        self.assertIsNone(owner.retire_failed())
+        self.assertEqual(k.effects.count(('signal',owner.request_event._number)),1)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='cancel' for v in k.effects))
+        self.assertTrue(request.consumed and owner.terminal_retired)
+        self.assertEqual(owner.ledger.settled(request.idle_intent,a)[1],0)
+
+    def test_pruned_active_list_does_not_hide_the_original_lifetime_io_intent(self):
+        owner,a,k=self.failed_retirement_session('io')
+        pending=next(row for row in owner.ledger.rows if row.started and not row.returned)
+        owner.calls.remove(pending)
+        self.assertIsNone(owner.retire_failed())
+        self.assertIs(owner.terminal.pending[0][0],pending)
+        self.assertEqual(k.effects.count(('cancel',owner.controller._number)),1)
+        self.assertTrue(pending.returned and owner.terminal_retired)
+
+    def test_late_committed_creation_in_the_lifetime_pool_prevents_job_termination(self):
+        owner,a,k=self.failed_retirement_session();owner.controller_ident=get_ident()
+        row=owner.ledger.reserve(owner.calls,k.CreateProcessW,(1,),lambda _:True,(),False)
+        owner.ledger.commit(row,a,owner.requests[-1],'operation')
+        owner.calls.remove(row)  # Active-list pruning cannot erase the intent.
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertFalse(row.started);self.assertEqual(k.effects,[])
+
+    def test_lost_reaper_start_return_keeps_callback_output_and_every_original_owner(self):
+        owner,a,k=self.failed_retirement_session();k.begin_failure='interrupt'
+        with self.assertRaises(KeyboardInterrupt):owner.retire_failed()
+        attempt=owner.terminal;row=attempt.used['begin']
+        self.assertTrue(row.started);self.assertFalse(row.returned)
+        self.assertIsNone(attempt.reaper.slot.value)
+        self.assertIn(attempt.callback,owner.buffers);self.assertIn(attempt.thread_id,owner.buffers)
+        self.assertIs(x._OWNERS[id(owner)],owner)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='terminate' for v in k.effects))
+
+    def test_expired_terminal_budget_dispatches_nothing_and_cannot_be_renewed(self):
+        owner,a,k=self.failed_retirement_session()
+        with patch.object(x.time,'monotonic_ns',side_effect=[100,x._BUDGET_NS+101]),self.assertRaises(x.OffloadAdmissionError):
+            owner.retire_failed()
+        self.assertEqual(owner.terminal.used,{})
+        self.assertIsNone(owner.terminal.start.slot.value);self.assertEqual(k.effects,[])
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(k.effects,[])
+
+    def test_committed_native_return_after_deadline_stays_known_without_fresh_dispatch(self):
+        owner,a,k=self.failed_retirement_session();base=x.time.monotonic_ns();clock=[base]
+        perform=a._perform
+        def delayed(row):
+            if owner.terminal is not None and row.function is k.CreateEventW:clock[0]=base+x._BUDGET_NS+1
+            return perform(row)
+        before=len(k.events)
+        with patch.object(x.time,'monotonic_ns',side_effect=lambda:clock[0]),patch.object(a,'_perform',side_effect=delayed),self.assertRaises(x.OffloadAdmissionError):
+            owner.retire_failed()
+        attempt=owner.terminal;row=attempt.used['create-start']
+        self.assertTrue(row.returned and row.acknowledged)
+        self.assertGreater(owner.ledger.settled(row,a)[1],0)
+        self.assertEqual(len(k.events),before+1);self.assertEqual(set(attempt.used),{'create-start'})
+        self.assertIsNone(attempt.start.slot.value);self.assertIs(x._OWNERS[id(owner)],owner)
+
+    def test_reserved_capacity_denial_has_no_new_terminal_metadata_or_effect(self):
+        owner,a,k=self.failed_retirement_session();owner.ledger.used=x._MAX_CALLS;owner.ledger.terminal_used=17
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
+
+    def test_copied_owner_and_callback_replay_do_not_poison_the_original_retirement(self):
+        owner,a,k=self.failed_retirement_session();clone=copy.copy(owner)
+        with self.assertRaises(x.OffloadAdmissionError):clone.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
+        owner.retire_failed();attempt=owner.terminal;before=list(k.effects)
+        self.assertEqual(copy.copy(attempt)._entry(None),9)
+        self.assertEqual(attempt._entry(None),9)
+        self.assertFalse(attempt.failed or owner.uncertain)
+        with self.assertRaises(x.OffloadAdmissionError):copy.copy(owner).retire_failed()
+        self.assertEqual(k.effects,before)
+
+    def test_known_terminal_registry_handoff_interruption_reconciles_without_native_retry(self):
+        class InterruptedPop(dict):
+            def pop(self,key):super().pop(key);raise KeyboardInterrupt()
+        owner,a,k=self.failed_retirement_session()
+        with patch.object(x,'_OWNERS',InterruptedPop(x._OWNERS)):
+            with self.assertRaises(KeyboardInterrupt):owner.retire_failed()
+            self.assertTrue(owner.terminal.has_final_proof() and owner.session_retired)
+            next_owner=self.session();before=list(k.effects)
+            self.assertIsNone(owner.retire_failed())
+            self.assertIs(x._OWNERS[id(next_owner)],next_owner);self.assertEqual(k.effects,before)
+
+    def test_original_core_ack_is_preserved_separately_from_terminal_process_exit(self):
+        owner,a,k=self.failed_retirement_session();owner.core_retired=True
+        self.assertIsNone(owner.retire_failed());self.assertTrue(owner.core_retired)
+        self.assertFalse(owner.requests[-1].consumed)
+
+    def test_wrong_controller_exit_cannot_be_reinterpreted_as_normal_completion(self):
+        owner,a,k=self.failed_retirement_session();k.controller_code=0
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertFalse(owner.controller_finished or owner.session_retired)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='close' for v in k.effects))
+
+    def test_terminal_slot_substitution_after_commit_cannot_dispatch_job_termination(self):
+        owner,a,k=self.failed_retirement_session();perform=a._perform
+        def substitute(row):
+            if owner.terminal is not None and row.function is k.TerminateJobObject:
+                owner.job.slot=x._PTR(owner.job._number)
+            return perform(row)
+        with patch.object(a,'_perform',side_effect=substitute),self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        row=owner.terminal.used['terminate-job']
+        self.assertFalse(row.started);self.assertTrue(row.integrity_lost)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='terminate' for v in k.effects))
+        self.assertIs(x._OWNERS[id(owner)],owner)
+
+    def test_caller_wait_may_commit_while_reaper_retains_an_exact_original_close(self):
+        owner,a,k=self.failed_retirement_session();k.block_close=owner.start_event._number;k.close_release.clear()
+        observed=[]
+        def release():
+            observed.append(k.close_entered.wait(1))
+            observed.append(k.caller_wait_started.wait(1))
+            k.close_release.set()
+        thread=Thread(target=release,daemon=True);thread.start();self.addCleanup(lambda:thread.join(2))
+        self.assertIsNone(owner.retire_failed());thread.join(1)
+        self.assertEqual(observed,[True,True]);self.assertTrue(k.signal_pending_at_close)
+        self.assertTrue(owner.session_retired and all(h.closed for h in owner.handles))
+
+    def test_nonconcurrent_normal_callers_may_use_different_application_threads(self):
+        owner=self.session();ready=Event();finish=Event();outcomes=[];errors=[]
+        owner.controller=self.handle(owner,'controller',30)
+        owner.completion_event=self.handle(owner,'completion',31)
+        owner.request_event=self.handle(owner,'request',32)
+        def wait(handles,deadline):
+            request=owner.active;request.started=request.returned=request.published=request.signal_ack=True
+            request.result=x._STATES[request.seq];return 0
+        api=SimpleNamespace(wait=wait,call=lambda fn,*a,**k:fn(*a),
+                            k=SimpleNamespace(ResetEvent=lambda n:1,SetEvent=lambda n:1))
+        def first():
+            try:
+                with patch.object(owner,'_start',side_effect=lambda request:setattr(owner,'api',api)):owner.prepare()
+                outcomes.append('first')
+            except BaseException as error:errors.append(type(error).__name__)
+            finally:ready.set();finish.wait(2)
+        def second():
+            try:
+                ready.wait(1);owner.bind_read();outcomes.append('second')
+            except BaseException as error:errors.append(type(error).__name__)
+            finally:finish.set()
+        a=Thread(target=first,daemon=True);b=Thread(target=second,daemon=True);a.start();b.start();a.join(2);b.join(2)
+        self.assertFalse(a.is_alive() or b.is_alive());self.assertEqual(errors,[]);self.assertEqual(outcomes,['first','second'])
+        entries=list(owner._effect_exits.values());self.assertEqual(len(entries),2)
+        self.assertNotEqual(entries[0][2],entries[1][2]);self.assertTrue(all(v[3] is True for v in entries))
+
+    def test_substituted_job_query_buffer_cannot_supply_favorable_retirement_facts(self):
+        owner,a,k=self.failed_retirement_session();original=k.QueryInformationJobObject
+        def substitute(job,kind,out,size,returned):
+            result=original(job,kind,out,size,returned)
+            if kind==1:
+                out._obj.active=1;out._obj.total=2
+                favorable=x._Accounting();favorable.active=0;favorable.total=1
+                owner.terminal.accounting=favorable
+            return result
+        k.QueryInformationJobObject=substitute
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertFalse(owner.session_retired)
+        self.assertFalse(any(isinstance(v,tuple) and v[0]=='close' for v in k.effects))
+        self.assertIs(x._OWNERS[id(owner)],owner)
+
+    def test_substituted_exit_code_buffers_cannot_replace_original_native_outputs(self):
+        for kind in ('controller','process','reaper'):
+            with self.subTest(kind=kind),patch.dict(x._OWNERS,{},clear=True):
+                owner,a,k=self.failed_retirement_session();thread=k.GetExitCodeThread;process=k.GetExitCodeProcess
+                def thread_code(number,out):
+                    result=thread(number,out);attempt=owner.terminal
+                    if kind=='controller' and number==owner.controller._number:
+                        out._obj.value=259;attempt.controller_code=x._U32(9)
+                    if kind=='reaper' and number==attempt.reaper._number:
+                        out._obj.value=259;attempt.reaper_code=x._U32(0)
+                    return result
+                def process_code(number,out):
+                    result=process(number,out)
+                    if kind=='process':out._obj.value=259;owner.terminal.process_code=x._U32(9)
+                    return result
+                k.GetExitCodeThread=thread_code;k.GetExitCodeProcess=process_code
+                with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+                self.assertFalse(owner.session_retired);self.assertIs(x._OWNERS[id(owner)],owner)
+                if kind=='reaper':self.assertFalse(owner.terminal.reaper.closed or owner.terminal.start.closed)
+                else:self.assertFalse(any(isinstance(v,tuple) and v[0]=='close' for v in k.effects))
+                before=list(k.effects)
+                with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+                self.assertEqual(k.effects,before);k.finish_test_threads()
+
+    def test_interrupted_request_list_or_exit_map_admission_is_fenced_and_bounded(self):
+        for family in ('list','map'):
+            for after in (False,True):
+                for error in (MemoryError,KeyboardInterrupt):
+                    with self.subTest(family=family,after=after,error=error.__name__),patch.dict(x._OWNERS,{},clear=True):
+                        owner=self.session()
+                        class FaultList(list):
+                            def append(self,value):
+                                if after:super().append(value)
+                                raise error()
+                        class FaultMap(dict):
+                            def __setitem__(self,key,value):
+                                if after:super().__setitem__(key,value)
+                                raise error()
+                        if family=='list':owner.requests=FaultList()
+                        else:owner._effect_exits=FaultMap()
+                        with patch.object(owner,'_start') as start:
+                            for _ in range(10):
+                                try:owner.prepare()
+                                except BaseException:pass
+                            start.assert_not_called()
+                        self.assertTrue(owner.uncertain and owner.stop_requested)
+                        self.assertLessEqual(len(owner.requests),1);self.assertLessEqual(len(owner._effect_exits),1)
+                        self.assertIs(x._OWNERS[id(owner)],owner)
+
+    def test_interrupted_active_or_busy_publication_cannot_leave_retryable_admission(self):
+        for field in ('active','busy'):
+            with self.subTest(field=field),patch.dict(x._OWNERS,{},clear=True):
+                owner=self.session();setattr_original=object.__setattr__
+                def interrupted(value,name,data):
+                    setattr_original(value,name,data)
+                    if value is owner and name==field and (type(data) is x._Request if field=='active' else data is True):
+                        raise KeyboardInterrupt()
+                with patch.object(x._WindowsOffloadIoSession,'__setattr__',interrupted),patch.object(owner,'_start') as start:
+                    with self.assertRaises(KeyboardInterrupt):owner.prepare()
+                    start.assert_not_called()
+                self.assertTrue(owner.uncertain and owner.stop_requested)
+                before=(len(owner.requests),len(owner._effect_exits))
+                with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+                self.assertEqual((len(owner.requests),len(owner._effect_exits)),before)
+
+    def test_pure_replay_or_concurrent_denial_does_not_fence_a_healthy_owner(self):
+        owner=self.session()
+        with self.assertRaises(x.OffloadAdmissionError):owner.bind_read()
+        self.assertFalse(owner.uncertain or owner.stop_requested);self.assertEqual(owner.requests,[])
+        owner.busy=True
+        with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        self.assertFalse(owner.uncertain or owner.stop_requested);self.assertEqual(owner._effect_exits,{})
+
+    def test_request_allocation_failure_fences_before_any_native_entry_or_retry(self):
+        owner=self.session()
+        with patch.object(x,'_Request',side_effect=MemoryError) as allocate,patch.object(owner,'_start') as start:
+            for _ in range(10):
+                with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+            self.assertEqual(allocate.call_count,1);start.assert_not_called()
+        self.assertTrue(owner.uncertain and owner.stop_requested)
+        self.assertEqual(owner.requests,[]);self.assertEqual(owner._effect_exits,{})
+
+    def call_fixture(self,finish=False):
+        owner=self.session();dispatch=[]
+        for i,field in enumerate(('controller','start_event','request_event','completion_event')):
+            setattr(owner,field,self.handle(owner,field,30+i))
+        def wait(handles,deadline):
+            request=owner.active;request.started=request.returned=request.published=request.signal_ack=True
+            request.result=x._STATES[request.seq];return 0
+        def call(fn,*args,**kwargs):dispatch.append(fn);return fn(*args)
+        api=SimpleNamespace(wait=wait,call=call,
+                            k=SimpleNamespace(ResetEvent=lambda n:1,SetEvent=lambda n:1,
+                                              GetExitCodeThread=lambda n,out:setattr(out._obj,'value',0) or 1),
+                            close=lambda h:setattr(h,'closed',True))
+        owner.api=api
+        if finish:owner.state='read-retired';owner.core_retired=owner.controller_finished=True
+        return owner,api,dispatch
+
+    def test_exit_marker_publication_failure_fences_before_any_next_native_dispatch(self):
+        for after in (False,True):
+            for error in (MemoryError,KeyboardInterrupt):
+                with self.subTest(after=after,error=error.__name__),patch.dict(x._OWNERS,{},clear=True):
+                    owner,api,dispatch=self.call_fixture();observed=[]
+                    class FaultMap(dict):
+                        def __setitem__(self,key,value):
+                            if value[3] is True:
+                                observed.append((owner.busy,owner.active is value[0]))
+                                if after:super().__setitem__(key,value)
+                                raise error()
+                            super().__setitem__(key,value)
+                    owner._effect_exits=FaultMap()
+                    expected=x.OffloadAdmissionError if error is MemoryError else KeyboardInterrupt
+                    with patch.object(owner,'_start'),self.assertRaises(expected):owner.prepare()
+                    self.assertTrue(owner.uncertain and owner.stop_requested)
+                    self.assertEqual(observed,[(True,True)])
+                    before=list(dispatch)
+                    with self.assertRaises(x.OffloadAdmissionError):owner.bind_read()
+                    self.assertEqual(dispatch,before);self.assertEqual(len(owner.requests),1)
+
+    def test_exit_marker_validation_loss_denies_next_dispatch(self):
+        owner,api,dispatch=self.call_fixture()
+        class LostEntry(dict):
+            def get(self,key):return None
+        owner._effect_exits=LostEntry()
+        with patch.object(owner,'_start'),self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        self.assertTrue(owner.uncertain and owner.stop_requested)
+        before=list(dispatch)
+        with self.assertRaises(x.OffloadAdmissionError):owner.bind_read()
+        self.assertEqual(dispatch,before)
+
+    def test_exit_marker_failure_is_fenced_before_the_same_state_gate_releases(self):
+        owner,api,dispatch=self.call_fixture();lock=owner._state_lock;failed=[False];exits=[]
+        class ObservedLock:
+            def acquire(self,*args,**kwargs):return lock.acquire(*args,**kwargs)
+            def release(self):return lock.release()
+            def __enter__(self):lock.acquire();return self
+            def __exit__(self,*args):
+                if failed[0]:exits.append(owner.uncertain and owner.stop_requested)
+                lock.release()
+        class FaultMap(dict):
+            def __setitem__(self,key,value):
+                if value[3] is True:failed[0]=True;raise MemoryError()
+                super().__setitem__(key,value)
+        owner._state_lock=ObservedLock();owner._effect_exits=FaultMap()
+        with patch.object(owner,'_start'),self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        self.assertTrue(exits and all(exits))
+
+    def test_exit_marker_lock_entry_interruption_is_fenced_without_masking_error(self):
+        owner,api,dispatch=self.call_fixture();lock=owner._state_lock;armed=[False]
+        class InterruptedLock:
+            def acquire(self,*args,**kwargs):return lock.acquire(*args,**kwargs)
+            def release(self):return lock.release()
+            def __enter__(self):
+                if armed[0]:armed[0]=False;raise KeyboardInterrupt()
+                lock.acquire();return self
+            def __exit__(self,*args):lock.release()
+        owner._state_lock=InterruptedLock();wait=api.wait
+        def arm(*args):value=wait(*args);armed[0]=True;return value
+        api.wait=arm
+        with patch.object(owner,'_start'),self.assertRaises(KeyboardInterrupt):owner.prepare()
+        self.assertTrue(owner.uncertain and owner.stop_requested)
+        self.assertTrue(next(iter(owner._effect_exits.values()))[3])
+        before=list(dispatch)
+        with self.assertRaises(x.OffloadAdmissionError):owner.bind_read()
+        self.assertEqual(dispatch,before)
+
+    def test_exit_marker_failure_does_not_replace_the_original_effect_exception(self):
+        for original,secondary in ((KeyboardInterrupt,MemoryError),(ValueError,KeyboardInterrupt)):
+            with self.subTest(original=original.__name__),patch.dict(x._OWNERS,{},clear=True):
+                owner,api,dispatch=self.call_fixture()
+                class FaultMap(dict):
+                    def __setitem__(self,key,value):
+                        if value[3] is True:raise secondary()
+                        super().__setitem__(key,value)
+                owner._effect_exits=FaultMap()
+                expected=KeyboardInterrupt if original is KeyboardInterrupt else x.OffloadAdmissionError
+                caught=None
+                with patch.object(owner,'_start',side_effect=original):
+                    try:owner.prepare()
+                    except BaseException as error:caught=error
+                self.assertIsInstance(caught,expected)
+                self.assertTrue(owner.uncertain and owner.stop_requested)
+                self.assertEqual(dispatch,[])
+
+    def test_finish_marker_failure_preserves_retirement_and_a_new_owner(self):
+        for after in (False,True):
+            with self.subTest(after=after),patch.dict(x._OWNERS,{},clear=True):
+                owner,api,dispatch=self.call_fixture(finish=True);new=[]
+                class FaultMap(dict):
+                    def __setitem__(self,key,value):
+                        if value[3] is True:
+                            self_outer.assertTrue(owner.session_retired)
+                            new.append(self_outer.session())
+                            if after:super().__setitem__(key,value)
+                            raise KeyboardInterrupt()
+                        super().__setitem__(key,value)
+                self_outer=self;owner._effect_exits=FaultMap()
+                with self.assertRaises(KeyboardInterrupt):owner.finish()
+                self.assertTrue(owner.session_retired and owner.core_retired)
+                self.assertFalse(owner.uncertain or owner.stop_requested or owner.busy)
+                self.assertNotIn(id(owner),x._OWNERS);self.assertIs(x._OWNERS[id(new[0])],new[0])
+                self.assertFalse(new[0].uncertain or new[0].stop_requested)
+                before=list(dispatch)
+                with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+                self.assertEqual(dispatch,before)
+
+    def test_expiry_after_final_settlement_validation_never_supplies_a_timely_pass(self):
+        owner,a,k=self.failed_retirement_session();base=x.time.monotonic_ns();clock=[base];armed=[False]
+        snapshot=x._TerminalRetirement._snapshot;settled=owner.ledger.settled
+        def after_snapshot(attempt):
+            snapshot(attempt)
+            if all(h.closed for h in owner.handles):armed[0]=True
+        def final_settlement(row,api):
+            value=settled(row,api)
+            if armed[0] and row is owner.terminal.calls[-1]:clock[0]=owner.terminal.deadline+1
+            return value
+        with patch.object(x.time,'monotonic_ns',side_effect=lambda:clock[0]), \
+             patch.object(x._TerminalRetirement,'_snapshot',after_snapshot), \
+             patch.object(owner.ledger,'settled',side_effect=final_settlement),self.assertRaises(x.OffloadAdmissionError):
+            owner.retire_failed()
+        self.assertTrue(all(h.closed for h in owner.handles)) # Known closure is not a timing pass.
+        self.assertFalse(owner.terminal.has_final_proof() or owner.session_retired)
+        self.assertIs(x._OWNERS[id(owner)],owner)
 
     def test_explicit_configuration_precedence_is_frozen_without_framework_or_files(self):
         with patch.dict(x.os.environ,{'HF_HUB_CACHE':'C:\\first','TRANSFORMERS_CACHE':'C:\\second','HF_HOME':'C:\\third'},clear=True), \
@@ -159,6 +789,44 @@ class SessionTests(unittest.TestCase):
         called=[]
         with self.assertRaises(x.OffloadAdmissionError):a.call(lambda:called.append(True) or 1)
         self.assertFalse(called)
+
+    def test_native_error_is_known_settlement_without_success_or_reissued_effect(self):
+        owner=self.session();a=self.api(owner);calls=[]
+        def aborted():calls.append('read');return 0
+        with patch.object(C,'get_last_error',return_value=995),self.assertRaises(x.OffloadAdmissionError):
+            a.call(aborted)
+        row=owner.calls[-1];value=owner.ledger.settled(row,a)
+        self.assertEqual(value[1:3],(0,995))
+        self.assertTrue(row.returned);self.assertFalse(row.acknowledged)
+        self.assertTrue(owner.uncertain and owner.stop_requested)
+        with self.assertRaises(x.OffloadAdmissionError):a.call(aborted)
+        self.assertEqual(calls,['read'])
+        with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(copy.copy(row),a)
+        self.assertFalse(row.integrity_lost)
+        self.assertIs(owner.ledger.settled(row,a),value)
+
+    def test_native_completion_identity_loss_is_sticky_without_repeating_the_call(self):
+        owner=self.session();a=self.api(owner);calls=[]
+        self.assertEqual(a.call(lambda:calls.append('once') or 1),1)
+        row=owner.calls[-1];original=row.completion
+        row.completion=tuple(list(original))
+        with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(row,a)
+        self.assertTrue(row.integrity_lost)
+        row.completion=original
+        with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(row,a)
+        self.assertEqual(calls,['once'])
+
+    def test_failed_call_publishes_only_its_effectful_path_exit_not_native_success(self):
+        owner=self.session()
+        def start(request):
+            owner.controller=owner.completion_event=object()
+            owner.api=SimpleNamespace(wait=lambda *_:258)
+        with patch.object(owner,'_start',side_effect=start),self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        request=owner.requests[-1];entry=owner._effect_exits[id(request)]
+        self.assertIs(entry[0],request);self.assertIs(entry[1],request.effect_token)
+        self.assertEqual(entry[2],get_ident());self.assertIs(entry[3],True)
+        self.assertFalse(request.returned or request.consumed)
+        self.assertTrue(request.expired and owner.uncertain)
 
     def test_caller_timeout_retains_controller_and_performs_no_inline_cleanup(self):
         owner=self.session();events=[]

@@ -261,3 +261,30 @@ accounting, stable mutation protection, actual model-worker recovery and resourc
 evidence remain technical work. Standard behavior, all model limits, accepted
 accuracy and OCR remain unchanged. See the worker README for exact ownership,
 timer, protocol and fixed-record limits.
+
+
+## Private IO failure recovery
+
+The Windows read-session adapter now includes one exact-original failed-session
+retirement path. Its canonical native-return records and per-request effect-path
+exit latches distinguish known error completion from successful operation. A
+retained CRT reaper owns cancellation, idle refusal wake and original-Job stop;
+all original and terminal calls, exits and closes must settle before release.
+
+Unknown startup, late admission, slot substitution, close loss or incomplete
+process/thread proof stays pinned without a new generation. Confirmed retirement
+preserves the failed request and separate Core read acknowledgement. Pure final
+registry reconciliation does not repeat native effects. Existing normal protocol,
+512 MiB inert-child role, model resource policy and unavailable production
+backend remain unchanged. Synthetic ABI tests do not qualify actual Windows
+failure, shared disk accounting, protection, model-worker recovery or resources.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.

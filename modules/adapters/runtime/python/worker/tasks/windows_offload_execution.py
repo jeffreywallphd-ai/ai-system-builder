@@ -176,10 +176,14 @@ class _Handle:
         self.owner, self.name, self.slot = owner, name, _PTR()
         self._original_slot=self.slot;self._number=None
         self.close_started = self.closed = False
+        self.close_record = None
     def acknowledge(self):
         _need(self._number is None and self.slot is self._original_slot
               and type(self.slot.value) is int and 0<self.slot.value<C.c_void_p(-1).value)
         self._number=self.slot.value
+        if type(self.owner) is _WindowsOffloadIoSession:
+            _need(id(self) not in self.owner._handle_bindings)
+            self.owner._handle_bindings[id(self)] = (self, self.slot, self._number)
     @property
     def value(self):
         _need(type(self) is _Handle and getattr(self,'_Handle__origin',None) is self
@@ -199,6 +203,7 @@ class _Call:
         self.pool=self.index=self.payload=None
         self.committed=False
         self.integrity_lost=False
+        self.native_thread=self.completion=None
 
 
 class _IntentChanged(OffloadAdmissionError):pass
@@ -214,6 +219,7 @@ class _Ledger:
         self.used = self.terminal_used = 0
         self.rows=tuple(self.normal)+tuple(self.terminal)
         self.bindings=[None]*len(self.rows)
+        self.completions=[None]*len(self.rows)
         for index,row in enumerate(self.rows):row.pool=self;row.index=index
 
     def reserve(self, rows, function, args, valid, keep, terminal):
@@ -254,14 +260,15 @@ class _Ledger:
                 row.args=(*row.args[:-1],_remaining(effective))
             tick=time.monotonic_ns()
             if request is not None and kind!='idle-consumed':_need(0<request.deadline-tick<=_BUDGET_NS)
-            binding=(row.function,row.args,row.valid,row.keep,api,request,kind,tick,tuple(facts))
+            binding=(row.function,row.args,row.valid,row.keep,api,request,kind,tick,tuple(facts),get_ident())
             self.bindings[row.index]=binding;row.payload=binding;row.committed=True
 
     def claim(self,row,api):
         with self.lock:
             self.member(row);binding=self.bindings[row.index]
             _need(type(binding) is tuple and binding[4] is api and api.owner is self.owner
-                  and row.committed and not row.started and not row.integrity_lost)
+                  and row.committed and not row.started and not row.integrity_lost
+                  and len(binding)==10 and binding[9]==get_ident())
             try:
                 _need(row.payload is binding and not row.returned and not row.acknowledged
                       and row.function is binding[0] and row.args is binding[1]
@@ -275,8 +282,43 @@ class _Ledger:
             except BaseException:
                 row.integrity_lost=True
                 raise _IntentChanged() from None
-            row.started=True
+            row.native_thread=get_ident();row.started=True
             return binding
+
+    def returned_native(self,row,api,result,error):
+        """Publish a known return, independently of normal success validation."""
+        with self.lock:
+            self.member(row);binding=self.bindings[row.index]
+            _need(type(binding) is tuple and len(binding)==10 and binding[4] is api and row.started
+                  and row.native_thread==get_ident() and self.completions[row.index] is None
+                  and row.completion is None and not row.returned and not row.integrity_lost
+                  and row.payload is binding and row.function is binding[0]
+                  and row.args is binding[1] and row.valid is binding[2] and row.keep is binding[3]
+                  and type(result) in (int,type(None)) and type(error) is int and 0<=error<2**32)
+            completion=(binding,result,error,row.native_thread)
+            # An interruption anywhere in publication leaves the exact row
+            # retained. Both canonical references and all values must agree.
+            self.completions[row.index]=completion
+            row.completion=completion;row.result=result;row.error=error;row.returned=True
+
+    def settled(self,row,api):
+        """Known native completion is not a successful request or close ACK."""
+        with self.lock:
+            self.member(row);binding=self.bindings[row.index]
+            try:
+                value=self.completions[row.index]
+                _need(type(binding) is tuple and len(binding)==10
+                      and type(value) is tuple and len(value)==4 and value is row.completion
+                      and value[0] is binding and binding[4] is api
+                      and row.payload is binding and row.function is binding[0]
+                      and row.args is binding[1] and row.valid is binding[2] and row.keep is binding[3]
+                      and row.started and row.returned and not row.integrity_lost
+                      and row.result is value[1] and row.error is value[2]
+                      and type(row.native_thread) is int and row.native_thread==value[3]==binding[9])
+                return value
+            except BaseException:
+                row.integrity_lost=True
+                raise
 
 
 class _Native:
@@ -300,6 +342,7 @@ class _Native:
             ('WaitForSingleObject',[ptr,u32],u32),('WaitForMultipleObjects',[u32,C.POINTER(ptr),i32,u32],u32),
             ('GetCurrentProcess',[],ptr),('GetCurrentThreadId',[],u32),('GetProcessId',[ptr],u32),
             ('GetExitCodeProcess',[ptr,C.POINTER(u32)],i32),('GetExitCodeThread',[ptr,C.POINTER(u32)],i32),
+            ('CancelSynchronousIo',[ptr],i32),
             ('QueryFullProcessImageNameW',[ptr,u32,C.c_wchar_p,C.POINTER(u32)],i32),
             ('CreateJobObjectW',[ptr,C.c_wchar_p],ptr),('SetInformationJobObject',[ptr,i32,ptr,u32],i32),
             ('QueryInformationJobObject',[ptr,i32,ptr,u32,C.POINTER(u32)],i32),('IsProcessInJob',[ptr,ptr,C.POINTER(i32)],i32),
@@ -336,7 +379,7 @@ class _Native:
         n=self.call(function,text,len(text),valid=lambda n:type(n) is int and 0<n<len(text),keep=(text,))
         _need(n==len(text.value));return _root(text.value)
 
-    def call(self, function, *args, valid=lambda v:type(v) is int and v!=0, keep=(), terminal=False, _wait_deadline=None):
+    def _call_row(self, function, *args, valid=lambda v:type(v) is int and v!=0, keep=(), terminal=False, _wait_deadline=None):
         self.origin();owner=self.owner
         if type(owner) is _WindowsOffloadIoSession:
             with owner._state_lock:
@@ -347,7 +390,10 @@ class _Native:
         else:
             row=owner.ledger.reserve(owner.calls,function,args,valid,keep,terminal)
             owner.ledger.commit(row,self,None,'child',_wait_deadline)
-        return self._perform(row)
+        return row
+
+    def call(self, function, *args, **kwargs):
+        return self._perform(self._call_row(function,*args,**kwargs))
 
     def _perform(self,row):
         self.origin();owner=self.owner
@@ -357,8 +403,11 @@ class _Native:
             else:owner.uncertain=True
             raise
         try:
-            row.result=binding[0](*binding[1]);row.returned=True
-            row.error=C.get_last_error()
+            result=binding[0](*binding[1]);error=C.get_last_error()
+            if type(owner) is _WindowsOffloadIoSession:
+                owner.ledger.returned_native(row,self,result,error)
+            else:
+                row.result=result;row.error=error;row.returned=True
             _need(binding[2](row.result));row.acknowledged=True
             return row.result
         except BaseException:
@@ -399,8 +448,9 @@ class _Native:
         self.origin()
         _need(type(h) is _Handle and h.owner is self.owner and not h.close_started and not h.closed)
         value=h.value;h.close_started=True
-        self.call(self.k.CloseHandle,value,keep=(h,h.slot),terminal=True)
-        h.closed=True
+        row=self._call_row(self.k.CloseHandle,value,keep=(h,h.slot),terminal=True)
+        self._perform(row)
+        h.close_record=row;h.closed=True
 
     def wait(self, handles, deadline):
         self.origin()
@@ -436,6 +486,7 @@ class _Request:
         self.expired=False
         self.signal_ack=False
         self.idle_intent=None
+        self.effect_token=None
 
     def origin(self,owner):
         _need(type(self) is _Request and getattr(self,'_Request__origin',None) is self
@@ -491,7 +542,8 @@ class _WindowsOffloadIoSession:
         try:
             _need(not _OWNERS);_OWNERS[id(self)]=self
         finally:_LOCK.release()
-        self.api=None;self.buffers=[];self.calls=[];self.handles=[];self.ledger=_Ledger(self)
+        self.api=None;self.buffers=[];self.calls=[];self.handles=[]
+        self._handle_bindings={};self._effect_exits={};self.ledger=_Ledger(self)
         self.state='new';self.uncertain=self.busy=self.stop_requested=False
         self.session_retired=False
         self.acquisition_started=False;self.core_retired=False
@@ -502,6 +554,7 @@ class _WindowsOffloadIoSession:
         self.process_info=_Process();self.attributes=None;self.attribute_started=self.attribute_retired=False
         self.job=self.process=self.primary_thread=None
         self.channels={};self.source_values=self.source_hashes=self.source_digest=None
+        self.launch_complete=False;self.terminal=None;self.terminal_retired=False
         self.runtime=None;self.runtime_hash=None
         self._state_lock=RLock()
         self.initialized=True
@@ -626,6 +679,7 @@ class _WindowsOffloadIoSession:
         _need(a.wait((self.channels['ready'],),request.deadline)==0)
         self._live(request);self._job_readback()
         self._native_intent(request,a.k.SetEvent,self.channels['dispatch'].value,keep=(self.channels['dispatch'],))
+        self._live(request);self.launch_complete=True
 
     def _write(self,handle,raw,request):
         _need(type(raw) is bytes and 0<len(raw)<=_FRAME_BYTES+4)
@@ -702,12 +756,43 @@ class _WindowsOffloadIoSession:
     def _call(self,seq):
         self.origin()
         _need(self._state_lock.acquire(blocking=False))
+        admission_started=False
         try:
             _need(not self.uncertain and not self.busy and self.active is None)
             next_state=_edge(self.state,seq)
-            _need(len(self.requests)<4)
-            request=_Request(self,seq);self.requests.append(request);self.active=request;self.busy=True
+            _need(len(self.requests)<4 and len(self._effect_exits)<4)
+            admission_started=True
+            request=_Request(self,seq);request.effect_token=object()
+            self.requests.append(request)
+            self._effect_exits[id(request)]=(request,request.effect_token,get_ident(),False)
+            self.active=request;self.busy=True
+        except BaseException as error:
+            # Pure precondition denial does not poison a healthy owner. Once
+            # metadata admission begins, an incomplete list/map/publication is
+            # retained and fenced before any retry or native dispatch.
+            if admission_started:self._fence()
+            if isinstance(error,Exception):raise OffloadAdmissionError() from None
+            raise
         finally:self._state_lock.release()
+        exit_attempted=False
+        def publish_exit():
+            # Called only under the state gate. Retain a failed publication;
+            # never retry it or let a second error replace the original one.
+            nonlocal exit_attempted
+            exit_attempted=True
+            try:
+                entry=self._effect_exits.get(id(request))
+                _need(type(entry) is tuple and len(entry)==4 and entry[0] is request
+                      and entry[1] is request.effect_token and entry[2]==get_ident()
+                      and entry[3] is False)
+                self._effect_exits[id(request)]=(*entry[:3],True)
+            except BaseException:
+                # Fence before releasing this gate: even the original idle
+                # controller must not commit another healthy native intent.
+                if not self.session_retired:
+                    try:self._fence()
+                    except BaseException:pass
+                raise
         try:
             if seq==0:self._start(request)
             else:
@@ -731,20 +816,33 @@ class _WindowsOffloadIoSession:
                 for h in (self.controller,self.start_event,self.request_event,self.completion_event):
                     self._live(request);self.api.close(h)
             with self._state_lock:
-                self._live(request);request.consumed=True;self.state=next_state;self.active=None;self.busy=False
+                self._live(request)
                 if seq==3:
                     # Native exit and every original close have already ACKed.
                     # Later bookkeeping interruption cannot invent live work.
+                    request.consumed=True;self.state=next_state;self.active=None;self.busy=False
                     self.session_retired=True
                     with _LOCK:_need(_OWNERS.pop(id(self)) is self)
+                    publish_exit()
                 else:
+                    # Publish the effect frontier before allowing another call.
+                    # No native work follows it; it does not assert caller exit.
+                    publish_exit()
                     # Keep the exact idle dispatcher wait; only completed rows
                     # can be pruned while that known native wait is outstanding.
                     self.calls[:]=[c for c in self.calls if not c.acknowledged]
+                    request.consumed=True;self.state=next_state;self.active=None;self.busy=False
             return None
         except BaseException as error:
-            if not self.session_retired:
-                self._fence()
+            try:
+                with self._state_lock:
+                    if not self.session_retired:self._fence()
+                    if not exit_attempted:publish_exit()
+            except BaseException:
+                # Keep the original failure. An interrupted entry/publication
+                # cannot clear the still-active admission or its earlier fence.
+                # An actually retired owner must never be fenced or resurrected.
+                pass
             # No inline blocking terminate/readback/close/join or source reset.
             if isinstance(error,Exception):raise OffloadAdmissionError() from None
             raise
@@ -753,6 +851,345 @@ class _WindowsOffloadIoSession:
     def bind_read(self):return self._call(1)
     def retire_unused_read(self):return self._call(2)
     def finish(self):return self._call(3)
+
+    def retire_failed(self):
+        """One explicit owned-IO drain; never retry the failed operation."""
+        _need(type(self) is _WindowsOffloadIoSession
+              and getattr(self,'_WindowsOffloadIoSession__origin',None) is self)
+        value=getattr(self,'terminal',None)
+        if type(value) is _TerminalRetirement and value.has_final_proof():
+            _need(value.owner is self)
+            return value.release_known()
+        self.origin()
+        _need(self._state_lock.acquire(blocking=False))
+        try:
+            _need(self.terminal is None)
+            frontier=_terminal_frontier(self)
+            value=object.__new__(_TerminalRetirement)
+            self.terminal=value  # Retain before metadata/startup can fail.
+            _TerminalRetirement.__init__(value,self,frontier)
+        finally:self._state_lock.release()
+        return value.run()
+
+
+def _known_handle(owner,handle):
+    _need(type(handle) is _Handle and getattr(handle,'_Handle__origin',None) is handle
+          and handle.owner is owner and handle.slot is handle._original_slot
+          and type(handle.slot) is _PTR and type(handle._number) is int
+          and 0<handle._number<C.c_void_p(-1).value and handle.slot.value==handle._number)
+    generation=owner._handle_bindings.get(id(handle))
+    _need(type(generation) is tuple and len(generation)==3 and generation[0] is handle
+          and generation[1] is handle.slot and generation[2]==handle._number)
+    if handle.closed:
+        _need(handle.close_started and type(handle.close_record) is _Call)
+        row=handle.close_record;value=owner.ledger.settled(row,owner.api)
+        _need(row.acknowledged and value[0][0] is owner.api.k.CloseHandle
+              and value[0][1]==(handle._number,) and value[0][3][0] is handle)
+    else:_need(not handle.close_started and handle.close_record is None)
+    return generation
+
+
+def _terminal_frontier(owner):
+    """Pure preadmission. Unknown construction or late admission stays pinned."""
+    owner.origin();a=owner.api
+    _need(owner.uncertain and owner.stop_requested and not owner.session_retired
+          and owner.launch_complete and owner.attribute_started and owner.attribute_retired
+          and type(a) is _Native and type(owner.controller_ident) is int
+          and len(owner.handles)==13 and len({id(h) for h in owner.handles})==13
+          and len(owner._handle_bindings)==13)
+    a.origin()
+    generations=tuple(_known_handle(owner,h) for h in owner.handles)
+    for h in (owner.controller,owner.process,owner.job,owner.request_event):
+        _need(any(h is old for old in owner.handles) and not h.closed)
+    _need(owner.process._number==owner.process_info.process
+          and owner.primary_thread._number==owner.process_info.thread)
+    _need(len(owner._effect_exits)==len(owner.requests) and 1<=len(owner.requests)<=4)
+    exits=[]
+    for request in owner.requests:
+        request.origin(owner);entry=owner._effect_exits.get(id(request))
+        _need(type(entry) is tuple and len(entry)==4 and entry[0] is request
+              and entry[1] is request.effect_token and entry[1] is not None
+              and type(entry[2]) is int and entry[3] is True)
+        exits.append(entry)
+    pending=[];ledger=owner.ledger
+    with ledger.lock:
+        _need(0<=ledger.used<=_MAX_CALLS and 0<=ledger.terminal_used<=_TERMINAL_CALLS
+              and _MAX_CALLS-ledger.used+_TERMINAL_CALLS-ledger.terminal_used>=48)
+        rows=tuple(ledger.normal[:ledger.used])+tuple(ledger.terminal[:ledger.terminal_used])
+        for row in rows:
+            ledger.member(row);binding=ledger.bindings[row.index]
+            _need(row.committed and type(binding) is tuple and len(binding)==10
+                  and binding[4] is a and row.payload is binding and not row.integrity_lost
+                  and row.function is binding[0] and row.args is binding[1]
+                  and row.valid is binding[2] and row.keep is binding[3])
+            if row.returned or row.completion is not None or ledger.completions[row.index] is not None:
+                ledger.settled(row,a);continue
+            _need(not row.acknowledged and row.result is None and row.error is None
+                  and binding[9]==owner.controller_ident
+                  and (row.native_thread==binding[9] if row.started else row.native_thread is None))
+            request=binding[5];request.origin(owner)
+            if binding[0] is a.k.WaitForSingleObject:
+                h=owner.request_event
+                _need(binding[6] in ('idle-live','idle-consumed') and request.idle_intent is row
+                      and binding[1]==(h._number,0xffffffff) and binding[3]==(request,h,h.slot))
+                kind='idle'
+            else:
+                _need(binding[6]=='operation' and len(binding[3])==3)
+                h=binding[3][0]
+                _need((binding[0] is a.k.ReadFile and h is owner.channels['response-read'])
+                      or (binding[0] is a.k.WriteFile and h is owner.channels['request-write']))
+                _need(binding[1][0]==h._number and not h.closed);kind='io'
+            pending.append((row,kind))
+        _need(len(pending)<=1)
+    return (tuple(owner.handles),generations,rows,tuple(exits),tuple(pending))
+
+
+class _TerminalRetirement:
+    """Closed one-generation retirement of the original private IO session."""
+    def __init__(self,owner,frontier):
+        self.__origin=self;self.initialized=False;self.owner=owner;self.api=owner.api
+        self.original,self.generations,self.original_rows,self.exits,self.pending=frontier
+        self.deadline=time.monotonic_ns()+_BUDGET_NS
+        self._original_deadline=self.deadline
+        self.caller_ident=get_ident();self.reaper_ident=None
+        self._caller_ident=self.caller_ident
+        self.failed=self.body_done=False;self.proof=self._canonical_proof=None
+        self.used={};self.calls=[];self.new_generations={}
+        self.closed={id(h) for h in self.original if h.closed}
+        self.start=_Handle(owner,'retirement-start');self.reaper=_Handle(owner,'retirement-thread')
+        owner.handles.extend((self.start,self.reaper))
+        self.thread_id=_U32();self.thread_output=C.byref(self.thread_id)
+        self.controller_code=_U32(259);self.process_code=_U32(259);self.reaper_code=_U32(259)
+        self.accounting=_Accounting();self.accounting.active=self.accounting.total=0xffffffff
+        self.query_outputs=(self.controller_code,self.process_code,self.reaper_code,self.accounting)
+        self._canonical_outputs=self.query_outputs
+        names=('CreateEventW','WaitForMultipleObjects','WaitForSingleObject','ReadFile','WriteFile',
+               'SetEvent','GetCurrentThreadId','CancelSynchronousIo',
+               'TerminateJobObject','GetExitCodeThread','GetExitCodeProcess','QueryInformationJobObject','CloseHandle')
+        self.native_functions=tuple((name,getattr(self.api.k,name)) for name in names)
+        self._canonical_functions=self.native_functions
+        self.begin_function=self.api.begin;self.callback_factory=self.api.thread_callback
+        self.callback=self.api.thread_callback(self._entry)
+        self._canonical_callback=self.callback
+        owner.buffers.extend((self,self.thread_id,self.thread_output,self.controller_code,self.process_code,
+                              self.reaper_code,self.accounting,self.callback,self.start,self.reaper))
+        self.initialized=True
+
+    def origin(self):
+        _need(type(self) is _TerminalRetirement and getattr(self,'_TerminalRetirement__origin',None) is self
+              and self.initialized and self.owner.terminal is self and self.owner.api is self.api)
+        self.owner.origin();self.api.origin()
+        _need(self.deadline==self._original_deadline and self.caller_ident==self._caller_ident
+              and self.native_functions is self._canonical_functions
+              and self.callback is self._canonical_callback and self.api.begin is self.begin_function
+              and self.api.thread_callback is self.callback_factory
+              and self.query_outputs is self._canonical_outputs
+              and self.controller_code is self.query_outputs[0] and self.process_code is self.query_outputs[1]
+              and self.reaper_code is self.query_outputs[2] and self.accounting is self.query_outputs[3])
+        for name,function in self.native_functions:_need(getattr(self.api.k,name) is function)
+
+    def _snapshot(self):
+        owner=self.owner
+        _need(tuple(owner.handles)==self.original+(self.start,self.reaper)
+              and owner.uncertain and owner.stop_requested and not owner.session_retired)
+        for generation in self.generations:
+            h,slot,number=generation
+            _need(owner._handle_bindings.get(id(h)) is generation and h.slot is slot
+                  and h._original_slot is slot and h.slot.value==number and h._number==number
+                  and h.closed is (id(h) in self.closed))
+            if h.closed:_known_handle(owner,h)
+            elif h.close_started:
+                # The caller can begin its reaper-exit wait while the reaper
+                # owns an original close in flight. Keep that exact intent;
+                # never interpret it as a close ACK or reuse this handle.
+                candidates=[row for label,row in self.used.items() if label.startswith('close-original-')
+                            and row.keep and row.keep[0] is h]
+                _need(len(candidates)==1 and h.close_record is None)
+                row=candidates[0];owner.ledger.member(row)
+                binding=owner.ledger.bindings[row.index]
+                _need(row.committed and type(binding) is tuple and row.payload is binding
+                      and binding[4] is self.api and binding[5] is self
+                      and binding[0] is self.api.k.CloseHandle and binding[1]==(number,)
+                      and binding[3][0] is h and not row.integrity_lost)
+            else:_need(h.close_record is None)
+        expected={id(h) for h in self.original}
+        for h in (self.start,self.reaper):
+            generation=self.new_generations.get(id(h))
+            if generation is None:
+                _need(h._number is None and h.slot is h._original_slot and h.slot.value is None
+                      and not h.close_started and not h.closed and h.close_record is None)
+            else:
+                _need(owner._handle_bindings.get(id(h)) is generation)
+                _known_handle(owner,h);expected.add(id(h))
+        _need(set(owner._handle_bindings)==expected)
+        for entry in self.exits:_need(owner._effect_exits.get(id(entry[0])) is entry)
+
+    def _action(self,label):
+        a=self.api;owner=self.owner
+        boolean=lambda v:type(v) is int and v!=0
+        closing=None;wait=False
+        if label=='create-start':
+            spec=(a.k.CreateEventW,(None,1,0,None),lambda v:type(v) is int and 0<v<C.c_void_p(-1).value,(self.start,))
+        elif label=='begin':
+            spec=(a.begin,(None,0,self.callback,None,0,self.thread_output),
+                  lambda v:type(v) is int and 0<v<C.c_void_p(-1).value,(self.callback,self.thread_id,self.reaper))
+        elif label in ('wait-start','wait-controller','wait-process','wait-reaper'):
+            h={'wait-start':self.start,'wait-controller':owner.controller,'wait-process':owner.process,'wait-reaper':self.reaper}[label]
+            values=(_PTR*1)(h.value);owner.buffers.append(values)
+            spec=(a.k.WaitForMultipleObjects,(1,values,0,0),lambda v:type(v) is int and v==0,(h,values));wait=True
+        elif label in ('signal-start','wake-idle'):
+            h=self.start if label=='signal-start' else owner.request_event
+            spec=(a.k.SetEvent,(h.value,),boolean,(h,))
+        elif label=='thread-id':
+            spec=(a.k.GetCurrentThreadId,(),lambda v:type(v) is int and v==self.thread_id.value,(self.thread_id,))
+        elif label=='cancel-io':
+            def cancel_result(v):
+                return type(v) is int and (v!=0 or self.owner.ledger.settled(self.used[label],a)[2]==1168)
+            spec=(a.k.CancelSynchronousIo,(owner.controller.value,),cancel_result,(owner.controller,))
+        elif label=='terminate-job':
+            spec=(a.k.TerminateJobObject,(owner.job.value,9),boolean,(owner.job,))
+        elif label in ('controller-code','process-code','reaper-code'):
+            h,code,fn={'controller-code':(owner.controller,self.query_outputs[0],a.k.GetExitCodeThread),
+                       'process-code':(owner.process,self.query_outputs[1],a.k.GetExitCodeProcess),
+                       'reaper-code':(self.reaper,self.query_outputs[2],a.k.GetExitCodeThread)}[label]
+            spec=(fn,(h.value,C.byref(code)),boolean,(h,code))
+        elif label=='job-empty':
+            accounting=self.query_outputs[3]
+            spec=(a.k.QueryInformationJobObject,(owner.job.value,1,C.byref(accounting),C.sizeof(accounting),None),
+                  boolean,(owner.job,accounting))
+        elif label in ('close-reaper','close-start') or label.startswith('close-original-'):
+            if label=='close-reaper':h=self.reaper
+            elif label=='close-start':h=self.start
+            else:
+                suffix=label.removeprefix('close-original-')
+                _need(suffix.isascii() and suffix.isdecimal() and str(int(suffix))==suffix and 0<=int(suffix)<len(self.original))
+                h=self.original[int(suffix)]
+            spec=(a.k.CloseHandle,(h.value,),boolean,(h,h.slot));closing=h
+        else:raise OffloadAdmissionError()
+        return spec,closing,wait
+
+    def issue(self,label):
+        self.origin();owner=self.owner
+        with owner._state_lock:
+            _need(not self.failed and self.proof is None and type(label) is str
+                  and 1<=len(label)<=64 and label not in self.used and len(self.used)<48)
+            caller=label in ('create-start','begin','signal-start','wait-reaper','reaper-code','close-reaper','close-start')
+            _need(get_ident()==(self.caller_ident if caller else self.reaper_ident))
+            self._snapshot();_remaining(self.deadline)
+            (function,args,valid,keep),closing,wait=self._action(label)
+            output_index={'controller-code':0,'process-code':1,'reaper-code':2,'job-empty':3}.get(label)
+            output=None if output_index is None else self.query_outputs[output_index]
+            if closing is not None:closing.close_started=True
+            row=owner.ledger.reserve(self.calls,function,args,valid,keep,True)
+            self.used[label]=row
+            owner.ledger.commit(row,self.api,self,'retirement',self.deadline if wait else None)
+        # Retain committed exact intent over foreign execution, never a lock.
+        result=self.api._perform(row)
+        if output is not None:
+            with owner._state_lock:
+                self.origin()
+                _need(output is self.query_outputs[output_index] and any(item is output for item in row.keep)
+                      and row.acknowledged)
+                owner.ledger.settled(row,self.api)
+                if output_index==3:
+                    _need(type(output) is _Accounting);scalars=(output.active,output.total)
+                else:
+                    _need(type(output) is _U32);scalars=(output.value,)
+                _need(all(type(value) is int and 0<=value<2**32 for value in scalars))
+                # Return observations from the exact native row/output object,
+                # never a later reread of replaceable instance attributes.
+                return (label,row,output,scalars)
+        if closing is not None:
+            with owner._state_lock:
+                _need(row.acknowledged and closing.slot is closing._original_slot
+                      and closing.slot.value==closing._number and not closing.closed and closing.close_started)
+                owner.ledger.settled(row,self.api)
+                closing.close_record=row;closing.closed=True;self.closed.add(id(closing))
+        return result
+
+    def _bind(self,h,number):
+        with self.owner._state_lock:
+            self.origin();_remaining(self.deadline)
+            _need(not self.failed and h in (self.start,self.reaper) and h._number is None)
+            h.slot.value=number;h.acknowledge()
+            self.new_generations[id(h)]=self.owner._handle_bindings[id(h)]
+
+    def _entry(self,_argument):
+        admitted=False
+        try:
+            self.origin()
+            with self.owner._state_lock:
+                _need(self.reaper_ident is None and not self.failed and self.proof is None)
+                self.reaper_ident=get_ident();admitted=True
+            self.issue('wait-start');self.issue('thread-id')
+            if self.pending and self.pending[0][1]=='io':self.issue('cancel-io')
+            if self.pending and self.pending[0][1]=='idle':self.issue('wake-idle')
+            self.issue('terminate-job')
+            self.issue('wait-controller');controller=self.issue('controller-code')[3][0]
+            _need(controller==9 or controller==0 and self.owner.controller_finished)
+            self.issue('wait-process');process=self.issue('process-code')[3][0];_need(process!=259)
+            accounting=self.issue('job-empty')[3];_need(accounting==(0,1))
+            for row in self.original_rows:self.owner.ledger.settled(row,self.api)
+            for i,h in enumerate(self.original):
+                if not h.closed:self.issue('close-original-'+str(i))
+            _need(all(h.closed for h in self.original))
+            self.body_done=True;return 0
+        except BaseException:
+            # Copied/foreign callbacks cannot poison the canonical attempt.
+            try:
+                owner=getattr(self,'owner',None)
+                if (admitted and type(self) is _TerminalRetirement and getattr(self,'_TerminalRetirement__origin',None) is self
+                        and type(owner) is _WindowsOffloadIoSession and getattr(owner,'terminal',None) is self):
+                    self.failed=True;owner._fence()
+            except BaseException:pass
+            return 9
+
+    def has_final_proof(self):
+        return (type(self) is _TerminalRetirement and getattr(self,'_TerminalRetirement__origin',None) is self
+                and getattr(self,'proof',None) is not None
+                and self.proof is getattr(self,'_canonical_proof',None))
+
+    def release_known(self):
+        # Pure idempotent bookkeeping only. No old/new Native dispatch or quota
+        # reset follows an interruption after the complete final proof.
+        _need(self.has_final_proof() and self.owner.terminal is self
+              and getattr(self.owner,'_WindowsOffloadIoSession__origin',None) is self.owner
+              and self.proof[0] is self and self.proof[1] is self.owner)
+        owner=self.owner
+        with owner._state_lock:
+            owner.terminal_retired=owner.session_retired=True
+            owner.state='failed-retired';owner.active=None;owner.busy=False
+            owner.uncertain=False;owner.stop_requested=True
+            with _LOCK:
+                if _OWNERS.get(id(owner)) is owner:_need(_OWNERS.pop(id(owner)) is owner)
+        return None
+
+    def run(self):
+        self.origin();_need(get_ident()==self.caller_ident)
+        try:
+            self._bind(self.start,self.issue('create-start'))
+            self._bind(self.reaper,self.issue('begin'))
+            _need(0<self.thread_id.value<2**32)
+            self.issue('signal-start');self.issue('wait-reaper');reaper=self.issue('reaper-code')[3][0]
+            _need(self.body_done and not self.failed and reaper==0)
+            self.issue('close-reaper');self.issue('close-start')
+            with self.owner._state_lock:
+                self._snapshot();_remaining(self.deadline)
+                _need(all(h.closed for h in self.owner.handles))
+                for row in self.original_rows:self.owner.ledger.settled(row,self.api)
+                for row in self.calls:
+                    self.owner.ledger.settled(row,self.api);_need(row.acknowledged)
+                _remaining(self.deadline)
+                proof=(self,self.owner,self.original_rows,tuple(self.calls),tuple(self.owner.handles))
+                self.proof=proof;self._canonical_proof=proof
+            return self.release_known()
+        except BaseException as error:
+            if not self.has_final_proof():
+                self.failed=True
+                try:self.owner._fence()
+                except BaseException:pass
+            if isinstance(error,Exception):raise OffloadAdmissionError() from None
+            raise
 
 
 def _managed_read_session():
