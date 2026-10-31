@@ -13387,16 +13387,6 @@
     },
     {
       "kind": "support-scope",
-      "source_text_sha256": "574e4afe0dd48cf79d64844374f3e0c0b018998eddab28970bf011d4ed1561da",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "No action needed. The agent added a separate worker for read access. Its source tests cover startup, deadlines, message checks and uncertain results. All 58 focused tests and required contributor checks passed. The source received independent review and was committed. Actual Windows testing and full offload integration remain pending."
-        ]
-      }
-    },
-    {
-      "kind": "support-scope",
       "source_text_sha256": "a509461ebbe9978d8ea67e106a94108c05868e81a09a71e2d437a08aa29a86a2",
       "user_description": {
         "owner": "agent",
@@ -13406,12 +13396,22 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "e6616611c67f38ff2e5b00e8fd1bf9cfdef1361a8b62fbc3951e7cbe1bbb4383",
+      "kind": "support-scope",
+      "source_text_sha256": "36a0005ec69fb18622c2eee9a00f0ea5b5125fec5677bff13e4ee47b39c94f42",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "No action needed. The agent must test the new worker on Windows, finish shared disk accounting and file protection, and prove model-worker shutdown, crash recovery, restart and resource use. Unknown usage still reserves the full 12 GiB. Read access and source tests provide no extra disk capacity. Model accuracy and OCR stay closed. Full system testing stays pending until feature catch-up."
+          "No action needed. The separate read worker passed its first Windows check. It opened the test folder, stayed ready for more than two minutes, then closed its read access and shut down. A second start-and-close check also passed. Each test confirmed that the worker had stopped and the main program had closed all 13 of its handles. An independent agent checked the source and results. This small check does not enable low-memory model use."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "528467e602f504810777f7e1618ab59b62efc58b4a95aa0bcfaabecac6fc3d01",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must still test worker failures and finish shared disk accounting, file protection, model-worker shutdown, crash recovery, restart and actual offload resource use. Unknown usage still reserves the full 12 GiB. Closing read access gives no disk-capacity credit. Model accuracy and OCR stay closed. Full system testing waits until feature catch-up. These results allow no extra run or file cleanup."
         ]
       }
     }

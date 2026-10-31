@@ -1,0 +1,124 @@
+{
+  "schema_version": "windows-offload-persistent-session-component-evidence-v1",
+  "status": "two-positive-native-component-cases-passed",
+  "scope": "Read-only owned worker integration with one new synthetic marker. Supporting evidence only; no parent or production qualification.",
+  "code_commit": "c72e08d81877c75b58670b9a1ba57d5e4097edce",
+  "observation_commit": "d3bc6bce6a9ed23d09b27d3699f6a42b0ead58a5",
+  "observation_candidate": "00968cde72d3327c4c1cf85550a43fdf7feef37d1d85b73f6b79691d0f79b4f6",
+  "run_id": "59dbb010973a4dc0be53d3e5f1681899",
+  "actual_root_exit_code": 0,
+  "elapsed_ns": 126568425200,
+  "idle_seconds": 125,
+  "call_count_scope": "Parent/session native ledger records, not child Core native-call counts.",
+  "native_report_schema": "persistent-read-session-native-observation-v1",
+  "cases": [
+    {
+      "case": "read-session-and-idle",
+      "steps": [
+        "initialize",
+        "bind-read",
+        "idle",
+        "retire-unused-read",
+        "finish"
+      ],
+      "state": "finished",
+      "core_read_retirement_observed": true,
+      "session_retired": true,
+      "controller_exit_observed": true,
+      "owned_handles": 13,
+      "closed_handles": 13,
+      "committed_native_calls": 96,
+      "acknowledged_native_calls": 96,
+      "consumed_requests": 4,
+      "pending_native_calls": 0,
+      "uncertain": false,
+      "marker_preserved": true,
+      "model_started": false
+    },
+    {
+      "case": "initialize-finish-shortcut",
+      "steps": [
+        "initialize",
+        "finish"
+      ],
+      "state": "finished",
+      "core_read_retirement_observed": false,
+      "session_retired": true,
+      "controller_exit_observed": true,
+      "owned_handles": 13,
+      "closed_handles": 13,
+      "committed_native_calls": 80,
+      "acknowledged_native_calls": 80,
+      "consumed_requests": 2,
+      "pending_native_calls": 0,
+      "uncertain": false,
+      "marker_preserved": true,
+      "model_started": false
+    }
+  ],
+  "repository_source_bindings": {
+    "modules/adapters/runtime/python/worker/tasks/local_model_offload.py": {
+      "raw_sha256": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f",
+      "committed_LF_sha256": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f"
+    },
+    "modules/adapters/runtime/python/worker/tasks/offload_recovery.py": {
+      "raw_sha256": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+      "committed_LF_sha256": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_core.py": {
+      "raw_sha256": "fd2a7263b2499a1d65bdc0d6c50a5b93f8ef4282d9d73f0df0f6d3c941a83580",
+      "committed_LF_sha256": "fd2a7263b2499a1d65bdc0d6c50a5b93f8ef4282d9d73f0df0f6d3c941a83580"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_backend.py": {
+      "raw_sha256": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+      "committed_LF_sha256": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_execution.py": {
+      "raw_sha256": "fe315351a742103087bd610258a9148631fb40d783e0697b1aee7341effa4ec5",
+      "committed_LF_sha256": "fe315351a742103087bd610258a9148631fb40d783e0697b1aee7341effa4ec5"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_execution_child.py": {
+      "raw_sha256": "8c2c26db29df9d1cd59b23a22f95089f0c6f71f1464f1d9802d96c47bdfd95c7",
+      "committed_LF_sha256": "8c2c26db29df9d1cd59b23a22f95089f0c6f71f1464f1d9802d96c47bdfd95c7"
+    }
+  },
+  "runtime_bindings": {
+    "base_image_sha256": "cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b",
+    "base_runtime_sha256": "1ac15e2224581fc678bbd17728b9aa538d47b891b72c76499ef07e54cd74f151"
+  },
+  "source_work": {
+    "work_id": "persistent-windows-offload-read-session",
+    "receipt": "71e30cac90be0e140b4ff27523558db73ff817a2b4f47bb6ebebafe63193b754",
+    "review": "234f0c8353c874cb065c087544ee20d4a98b9a844024722888267725a107d1b1",
+    "format_work": "normalize-owned-read-session-source-ending",
+    "format_receipt": "c089380457843f17059c12738a7638772c7b64cde08ee34ce445b73533d03421",
+    "format_review": "84b158d86059e49a18ddcb574cd83538d8e7f448d5d4c03b9bd6c92feb22bfff"
+  },
+  "native_review": {
+    "effect_plan_sha256": "91a96dbaf1f8bbaf8530e769168f659151839a8d11eefd973b22489633d8869a",
+    "effect_reference_sha256": "276cabc1bc343d6b099578f25c7b601e3aa3b06c78593356852321fbd6e020f8",
+    "result_reference_sha256": "d419c4e1fa4d1133fe562e90299c31503ef2a989af028e08f2380f84b66ab6bb",
+    "result_audit_sha256": "45ed6047652598d0e77c954fdc4940f3d9bf2bec4cf1964553db6e54e492c87a",
+    "summary_sha256": "05d297fd1cab0839349d6251a30aeeab55ff1be0c49e5b27d4cfa24b64f23f09",
+    "events_sha256": "9f3e2a0de16577bdcacd3b3d8aa752cde5691acee092adfd2568804dd3ef396a",
+    "actual_tool_capture_sha256": "5cd635d14c8e88cddfaadeb91b0c00efa700f4e3f5571f08ac27c67fc27aa377",
+    "launch_tool": "9e691c",
+    "completion_tool": "eef85f",
+    "separate_stderr_byte_count_recorded": false
+  },
+  "one_shot_consumed": true,
+  "additional_execution_authorized": false,
+  "old_data_accessed": false,
+  "model_started": false,
+  "accuracy_executed": false,
+  "production_composed": false,
+  "parent_qualification_granted": false,
+  "limits": [
+    "One installed CPython 3.14.3 AMD64 Windows read-only component run. No managed-model, packaged-host or general-platform qualification.",
+    "Positive normal flow, a 125-second idle and the no-Core shortcut do not qualify actual timeouts, hung IO, races, crashes, unknown recovery or unconditional wall-clock termination.",
+    "Production shared disk accounting, a stable file and namespace security fence, exact model-writer shutdown, crash and retained restart, and optional offload resource and delivery measurements remain pending.",
+    "Unknown staging usage still reserves the full unchanged 12 GiB. Read-handle or process retirement grants no disk-capacity credit and enables no production offload.",
+    "Accepted model accuracy and OCR remain closed. Full software and system testing remains deferred until cross-roadmap feature catch-up. No further native run, old-data access or cleanup authority follows from this evidence."
+  ],
+  "handle_count_scope": "Original parent/session handles. Child Core read handles are separate. All 13 are confirmed closed at completion; their closes occur at different lifecycle stages."
+}

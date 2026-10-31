@@ -8448,10 +8448,10 @@
       ],
       "receipt_digest": "71e30cac90be0e140b4ff27523558db73ff817a2b4f47bb6ebebafe63193b754",
       "review_digest": "234f0c8353c874cb065c087544ee20d4a98b9a844024722888267725a107d1b1",
-      "scope": "The private persistent Windows read-session source is committed in c72e08d81. It keeps the real read-only Core child-local, owns CRT startup and fixed channels, validates source/session/deadline frames, serializes terminal/consume/native intents, reserves immutable exact call records and separates Core from process/thread retirement.58focused synthetic-ABI tests, lifecycle routing, six related checks and independent source review passed. This is source support; it enables no production offload.",
+      "scope": "Committed c72e08d81 passed 58 source tests, related checks and source review. One actual Windows run passed read-only Core use, at least 125 seconds idle and the no-Core shortcut. Both cases observed process/controller exit and confirmed all 13 parent handles closed. Parent/session ledgers recorded 96 and 80 acknowledged calls; these are not child Core counts. The result audit binds exit, source/runtime and marker preservation. No production offload or parent pass.",
       "limitations": [
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
-        "The committed private read-session source still needs actual Windows execution qualification. Production shared disk accounting, stable file/namespace/security protection, model-worker shutdown/crash/retained recovery and offload resource measurements remain pending. Unknown usage reserves the unchanged12GiB ceiling; source tests and read retirement grant no capacity. Accepted model accuracy/OCR stay closed. Full software/system testing waits for cross-roadmap feature catch-up."
+        "This installed-runtime positive component check does not qualify actual timeout, hung-IO, race, crash or recovery paths. Production shared disk accounting, stable file/namespace/security protection, exact model-worker shutdown/crash/retained restart and offload resource/delivery measurements remain pending. Unknown usage reserves all12GiB; read-session retirement grants no disk credit. Accepted accuracy/OCR stay closed. Full system testing waits for feature catch-up. No additional run, old-data access or cleanup authority is granted."
       ]
     },
     {
@@ -8468,7 +8468,7 @@
       "scope": "The same c72e08d81 checkpoint includes the separately reviewed final-newline correction. Each of two source files lost one trailing LF; complete Python ASTs including locations stayed equal. Current lifecycle/architecture checks and separate correction review passed. The other11accepted selected files stayed unchanged.",
       "limitations": [
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
-        "The committed private read-session source still needs actual Windows execution qualification. Production shared disk accounting, stable file/namespace/security protection, model-worker shutdown/crash/retained recovery and offload resource measurements remain pending. Unknown usage reserves the unchanged12GiB ceiling; source tests and read retirement grant no capacity. Accepted model accuracy/OCR stay closed. Full software/system testing waits for cross-roadmap feature catch-up."
+        "This installed-runtime positive component check does not qualify actual timeout, hung-IO, race, crash or recovery paths. Production shared disk accounting, stable file/namespace/security protection, exact model-worker shutdown/crash/retained restart and offload resource/delivery measurements remain pending. Unknown usage reserves all12GiB; read-session retirement grants no disk credit. Accepted accuracy/OCR stay closed. Full system testing waits for feature catch-up. No additional run, old-data access or cleanup authority is granted."
       ]
     }
   ]
