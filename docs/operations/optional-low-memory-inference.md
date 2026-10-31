@@ -690,7 +690,7 @@ Missing producers deny before file effects. Source tests use explicitly syntheti
 new-domain producers, not JSON proof or a production admission switch. Standard,
 ordinary empty-root leases, existing guards and accepted accuracy stay unchanged.
 
-The finite `offload-resource-lifecycle` profile has nine model-free test files.
+The finite `offload-resource-lifecycle` profile has eleven model-free test files.
 The additional declaration prints the native checks still needed:
 
 ```text
@@ -773,7 +773,7 @@ the space a new journal would need. Do not inspect or change old slots to make a
 component test pass. Journal byte accounting is not an NTFS volume quota or a
 claim about every filesystem metadata/physical-sector byte.
 
-The current nine-file source profile uses explicitly synthetic domain/fence,
+The current eleven-file source profile uses explicitly synthetic domain/fence,
 native IO, finite-execution and worker ports with the real journal/backend/lease.
 Those tests do not qualify actual Windows mutation protection, durable crash
 replay, the production finite owner, exact worker recovery or model offload.
@@ -782,3 +782,31 @@ The earlier four-case Windows result remains bound to the exact source in
 journal or accounting-binding change. Keep real resources and the final shared
 campaign pending. Do not rerun accepted model accuracy or OCR. No model hard
 Job limit is selected or changed by this component.
+
+
+## Journal API component qualification
+
+No action needed. The agent is preparing a small Windows test of the actual
+journal file API. The dedicated plan command is effect-free:
+
+```text
+python -B dev-tools/scripts/qualification/qualify_windows_offload_journal.py --plan
+```
+
+The separate diagnostic profile keeps the original Core entry and history. It
+uses only new tiny fixtures, five 512-byte frames and eight repeated reads, with
+the existing one-child 512 MiB/120-second controls and4,096 API calls. These limits
+are neither upfront memory allocation nor a model Job policy. A real native run
+needs its own exact committed-source effect review before execution.
+
+The fixture-only owner exercises the original native path walk, anchor, writer,
+allocation, permission, guard, write completion, flush, exact readback and strict
+retirement predicates. It creates no fake shared-domain owner or production
+lease. Uncertain API work remains retained. Parent exit does not prove successful
+API cleanup; successful API retirement intentionally retains history and grants
+no production capacity. Source tests alone establish no actual Windows outcome.
+
+Real shared accounting, stable namespace/security fencing, production finite
+execution, worker/crash/retained recovery and model offload still need evidence.
+Unknown production usage continues to reserve all 12 GiB. Keep accepted accuracy
+and OCR closed and defer the full combined campaign.

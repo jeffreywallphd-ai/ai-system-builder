@@ -28,6 +28,8 @@ TESTS = [
     "dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py",
     "dev-tools/scripts/qualification/tests/test_windows_offload_core_fixture.py",
     "modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py",
 ]
 
 
@@ -41,7 +43,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             path.write_bytes((ROOT / name).read_bytes())
         (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {PROFILE: profile}}))
 
-    def test_fixed_profile_executes_only_nine_model_free_files(self):
+    def test_fixed_profile_executes_only_eleven_model_free_files(self):
         self.assertEqual(self.profile()["test_paths"], TESTS)
         expected = [run_focused_checks.python_test_command(ROOT, name) for name in sorted(TESTS)]
         self.assertEqual(run_focused_checks.profile_commands(ROOT, PROFILE), expected)
@@ -64,6 +66,10 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                 (["modules/adapters/runtime/python/worker/tests/test_windows_offload_backend.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/qualify_windows_offload_journal.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/windows_offload_journal_fixture.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py"], ["focused-tests"], True, True),
                 (["dev-tools/scripts/qualification/qualify_windows_offload_core.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_windows_offload_core_qualification.py"], ["documentation"], True, False),
@@ -78,7 +84,9 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                     self.assertEqual("focused-tests" in ids, generic)
 
     def test_missing_source_declaration_does_not_suppress_generic_gate(self):
-        for source in (CORE, "modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py"):
+        for source in (CORE, "modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py",
+                       "dev-tools/scripts/qualification/qualify_windows_offload_journal.py",
+                       "dev-tools/scripts/qualification/windows_offload_journal_fixture.py"):
             with self.subTest(source=source), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory); profile = copy.deepcopy(self.profile())
                 profile["source_paths"].remove(source); self.fixture(root, profile)
@@ -86,13 +94,15 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                 self.assertIn(PROFILE, ids); self.assertIn("focused-tests", ids)
 
     def test_missing_new_test_declaration_keeps_generic_coverage(self):
-        test = "modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py"
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); profile = copy.deepcopy(self.profile())
-            profile["source_paths"].remove(test); profile["test_paths"].remove(test)
-            self.fixture(root, profile)
-            ids = {row["id"] for row in catalog.plan(root, [test], ["documentation"], "synthetic")["selected"]}
-            self.assertIn(PROFILE, ids); self.assertIn("focused-tests", ids)
+        for test in ("modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py",
+                     "dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py",
+                     "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py"):
+            with self.subTest(test=test), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); profile = copy.deepcopy(self.profile())
+                profile["source_paths"].remove(test); profile["test_paths"].remove(test)
+                self.fixture(root, profile)
+                ids = {row["id"] for row in catalog.plan(root, [test], ["documentation"], "synthetic")["selected"]}
+                self.assertIn(PROFILE, ids); self.assertIn("focused-tests", ids)
 
     def test_borrowed_quality_and_native_sources_do_not_trigger_lifecycle_execution(self):
         for name in ("dev-tools/scripts/qualification/run_model_blocker_tests.py", "dev-tools/scripts/native/probe_windows_guarded_tree.py", "dev-tools/scripts/qualification/offload_guarded_restart.py"):

@@ -1861,3 +1861,29 @@ evidence remains bound to its recorded source. No model Job policy, privilege,
 supplier, default capability or accepted accuracy/OCR result changes. File flush
 is an API-level acknowledgement under the supported filesystem assumptions;
 it is not universal hardware/power-loss durability or an NTFS volume quota.
+
+
+### Journal API diagnostic boundary
+
+The dedicated journal diagnostic is a dev-tools consumer of the original adapter
+API. Its code-owned immutable profile binds the exact entry, module, sources,
+cases and separate report schema. The existing Core entry retains its case and
+schema semantics. Neither JSON nor an imported call selects a native command,
+root, budget, process or proof. Actual execution requires separate committed
+source and effect review, one bounded owned child and the existing handshake,
+Job, timer, source-buffer and output controls.
+
+The fixture context is pinned before API construction. It retains native
+arguments, buffers, IRPs and handles before dispatch, including partial
+construction, post-call predicate and bookkeeping failures. Only real terminal
+completion and acknowledged close permit IO/event retirement. It creates no
+JournalDomainPort, production phase owner, capacity credit or readiness claim.
+Collision uses only a namespace created by that fixed case, retains uncertainty
+and is last. Unknown API state has no cleanup or retry path.
+
+Reports separate API retirement, deliberately retained history, actual child
+exit and zero active processes and parent handle retirement. Source simulations cannot qualify
+Windows, and tiny API results cannot qualify production mutation fences, shared
+accounting, worker/crash/retained recovery, model resources or a parent roadmap.
+Unknown production usage remains 12 GiB. No existing slot, model, privilege,
+supplier, memory guard, accepted accuracy/OCR or full-suite policy changes.

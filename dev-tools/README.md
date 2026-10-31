@@ -1485,7 +1485,7 @@ or parent qualification. Without `--plan` it reports pending and exits3. Unsuppo
 arguments or unexpected gate failures refuse with fixed safe copy. Accepted accuracy
 is never rescheduled.
 
-The fixed `offload-resource-lifecycle` profile runs nine model-free files for the
+The fixed `offload-resource-lifecycle` profile runs eleven model-free files for the
 real guarded lease/loader/cache, ordinary compatibility and resource entry. Native
 backend, protected journal, owned-worker retirement and actual resource delivery
 remain pending. Unknown or explicitly generic impact keeps normal test fallback.
@@ -1493,7 +1493,7 @@ remain pending. Unknown or explicitly generic impact keeps normal test fallback.
 
 ## Fresh Windows staging feature checks
 
-`offload-resource-lifecycle` includes nine fixed model-free files. The new Core
+`offload-resource-lifecycle` includes eleven fixed model-free files. The new Core
 and concrete backend tests use synthetic native, journal and standalone-worker
 facts through the real guarded lease. They do not start a model or native worker.
 Unknown, incomplete and explicit generic impact keeps its fallback checks.
@@ -1520,7 +1520,7 @@ The output-slot event API is [NtCreateEvent](https://learn.microsoft.com/en-us/w
 
 `windows_offload_core_fixture.py` supports four fixed standalone cases: an actual
 timer-delivery/exit control, empty stage, one two-byte index and fresh namespace
-collision refusal. No model or existing fixture is read. The nine-file portable
+collision refusal. No model or existing fixture is read. The eleven-file portable
 profile executes synthetic controller/ABI tests only. `--plan`, default and
 imported entry calls cannot start this runner. Actual execution requires separate
 review of the exact source and effect plan, then direct base Python with
@@ -1596,3 +1596,37 @@ use a narrow same-source HTTP diagnostic to establish the environment problem,
 then rerun the unchanged source-bound checks through the documented host route.
 Do not weaken network/host security controls or relabel the failed receipt.
 The combined software/system campaign remains deferred until feature catch-up.
+
+
+### Small Windows journal API diagnostic
+
+The dedicated `qualify_windows_offload_journal.py --plan` entry is effect-free.
+Default execution reports pending and exits3. Imported native calls and arbitrary
+paths, commands, profiles, limits or proof flags are refused. Actual execution
+requires a separate review of the exact committed source and effect plan.
+
+The diagnostic reuses the Core runner's Job, source-buffer loader, timer and
+parent/child handshake through a separate immutable code-owned profile. The old
+four-case Core entry and schema2 reports retain their meaning. Journal reports
+have their own schema and namespace. Source checks append two files to the
+eleven-file lifecycle profile; they start no actual native case or model.
+
+The new cases are a three-second timer control, five 512-byte native frame writes
+with flush and exact readback plus eight repeated reads, and a final collision
+with a namespace created by that same case. Keep the one-child 512 MiB committed
+memory ceiling,120-second total and4,096 API-call bound. These are ceilings for
+inert tests, not upfront allocations or a model hard-cap policy. Timer delivery
+still has the existing GIL, scheduler, suspend and stuck-kernel limitations.
+
+A retained fixture owner drives the real journal API and base read-handle path.
+It creates no production domain or journal lease. Post-call predicates and
+bookkeeping failures keep the exact owner; uncertain API state permits no retry
+or cleanup. API IO/guard/handle retirement is separate from child exit and parent
+retirement. Successful handle closure intentionally leaves the small journal
+history; it grants no disk credit. Actual shared accounting, stable mutation
+protection, production execution, worker/retained recovery and model-resource
+qualification remain pending. Accepted model accuracy and OCR stay closed.
+
+Report IRP counts cover data reads and writes. Guard retirement is recorded
+separately. API-call counts cover dispatched adapter calls; the retained
+controller has its own unchanged call bound.

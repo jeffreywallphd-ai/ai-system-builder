@@ -10,12 +10,14 @@ import hashlib
 import json
 import re
 import ctypes as C
+from dataclasses import dataclass
 import importlib.util
 import os
 from pathlib import Path, PureWindowsPath
 import stat
 import subprocess
 import sys
+from threading import get_ident
 import time
 import types
 import uuid
@@ -38,6 +40,41 @@ TOOL_FILES = (
     'dev-tools/scripts/qualification/qualify_windows_offload_core.py',
     'dev-tools/scripts/qualification/windows_offload_core_fixture.py',
 )
+
+
+@dataclass(frozen=True, slots=True, eq=False)
+class _FixtureProfile:
+    entry: Path
+    module_name: str
+    schema: str
+    cases: tuple
+    task_files: tuple
+    tool_files: tuple
+    runs: Path
+
+
+_CORE_PROFILE = _FixtureProfile(ENTRY, '_standalone_windows_core_fixture', SCHEMA,
+                                CASES, TASK_FILES, TOOL_FILES, RUNS)
+_JOURNAL_PROFILE = _FixtureProfile(
+    ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_journal.py',
+    '_standalone_windows_journal_engine', 'windows-offload-journal-native-v1',
+    ('deadline-control', 'journal-roundtrip', 'journal-namespace-denied'),
+    TASK_FILES + ('modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py',),
+    ('dev-tools/scripts/qualification/qualify_windows_offload_journal.py', TOOL_FILES[1],
+     'dev-tools/scripts/qualification/windows_offload_journal_fixture.py'),
+    ROOT / '.local-codex/windows-offload-journal-native-v1')
+
+
+def _canonical_profile(profile):
+    require(type(profile) is _FixtureProfile
+            and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE), 'fixture-profile')
+    return profile
+
+
+def _profile_for(native):
+    # Real owners expose a read-only origin-bound profile. Explicit synthetic
+    # ABI fixtures retain the old Core default and confer no native authority.
+    return _canonical_profile(getattr(native, 'profile', _CORE_PROFILE))
 _NATIVE_OWNERS = []
 _HEX = re.compile('[a-f0-9]{64}')
 _PHASES = frozenset({
@@ -143,8 +180,10 @@ def validate_child_report(value, case, expected_source):
     return dict(value)
 
 
-def validate_parent_observation(value, case):
+def validate_parent_observation(value, case, profile=_CORE_PROFILE):
     """Validate observations collected by the actual owner, not a readiness API."""
+    profile = _canonical_profile(profile)
+    require(type(case) is str and case in profile.cases, 'parent-case')
     fields = {'case', 'process_exit_observed', 'exit_code', 'job_active_zero',
               'membership_read_back', 'limits_read_back', 'dispatch_after_ready',
               'parent_cleanup_confirmed', 'report_bytes', 'elapsed_ns'}
@@ -191,8 +230,9 @@ def _hash_file(path, maximum=2 * 1024**2):
     return value.hexdigest()
 
 
-def _repo_hashes():
-    values = {name: _hash_file(ROOT / name) for name in TASK_FILES + TOOL_FILES}
+def _repo_hashes(profile=_CORE_PROFILE):
+    profile = _canonical_profile(profile)
+    values = {name: _hash_file(ROOT / name) for name in profile.task_files + profile.tool_files}
     require(globals().get('_LOADED_SOURCE_SHA256') == values[TOOL_FILES[1]], 'fixture-loaded-source')
     return values
 
@@ -212,12 +252,14 @@ def _all_hashes(native):
         paths['runtime-' + module.__name__.replace('.', '-')] = Path(module.__file__)
         cached = getattr(module, '__cached__', None)
         if cached and Path(cached).is_file(): paths['cached-' + module.__name__.replace('.', '-')] = Path(cached)
-    return {**_repo_hashes(), **{name: _hash_file(path, 64 * 1024**2) for name, path in paths.items()}}
+    return {**_repo_hashes(_profile_for(native)), **{name: _hash_file(path, 64 * 1024**2) for name, path in paths.items()}}
 
 
-def _private_core_package(expected):
+def _private_core_package(expected, profile=_CORE_PROFILE):
     """Load the real four files; skip unrelated package/Pydantic startup only."""
-    require(_repo_hashes() == {n: expected[n] for n in TASK_FILES + TOOL_FILES}, 'source-drift')
+    profile = _canonical_profile(profile)
+    sources = profile.task_files + profile.tool_files
+    require(_repo_hashes(profile) == {n: expected[n] for n in sources}, 'source-drift')
     name = '_fixed_windows_staging_qualification_tasks'
     require(name not in sys.modules, 'source-package-reentry')
     package = types.ModuleType(name)
@@ -225,11 +267,16 @@ def _private_core_package(expected):
     package.__spec__ = importlib.util.spec_from_loader(name, loader=None, is_package=True)
     sys.modules[name] = package
     values = {}
-    for relative in TASK_FILES:
+    for relative in profile.task_files:
         leaf = Path(relative).stem
         values[leaf] = _load_file(name + '.' + leaf, ROOT / relative, expected[relative])
-    require(_repo_hashes() == {n: expected[n] for n in TASK_FILES + TOOL_FILES}, 'source-drift')
+    require(_repo_hashes(profile) == {n: expected[n] for n in sources}, 'source-drift')
     return values
+
+
+def _journal_fixture(hashes):
+    path = _JOURNAL_PROFILE.tool_files[2]
+    return _load_file('_fixed_windows_journal_component', ROOT / path, hashes[path])
 
 
 class _Handle:
@@ -323,7 +370,9 @@ _ABI = types.SimpleNamespace(Process=_Process, Accounting=_Accounting, Security=
 
 class _Native:
     """One standalone diagnostic. No caller process target or generic runner."""
-    def __init__(self, deadline_ns):
+    def __init__(self, deadline_ns, *, profile=_CORE_PROFILE):
+        self.__profile = _canonical_profile(profile)  # Before any native setup.
+        self.__component_thread = get_ident()
         require(os.name == 'nt' and C.sizeof(C.c_void_p) == 8 and sys.implementation.name == 'cpython', 'platform')
         require(type(deadline_ns) is int and 0 < deadline_ns - time.monotonic_ns() <= BUDGET_NS, 'native-budget')
         require(len(_NATIVE_OWNERS) < 8, 'native-owner-limit')
@@ -374,9 +423,19 @@ class _Native:
         for label, args, result in signatures:
             fn = getattr(self.k, label); fn.argtypes, fn.restype = args, result
 
+    @property
+    def profile(self):
+        return _canonical_profile(getattr(self, '_Native__profile', None))
+
+    @property
+    def component_thread(self):
+        self.origin()
+        return self.__component_thread
+
     def origin(self):
         require(type(self) is _Native and getattr(self, '_Native__origin', None) is self
                 and any(value is self for value in _NATIVE_OWNERS), 'native-owner-origin')
+        _canonical_profile(getattr(self, '_Native__profile', None))
 
     def live(self):
         self.origin()
@@ -521,9 +580,11 @@ def _read_report(native, entry):
     return bytes(data.raw[:size])
 
 
-def _fresh_directory(path):
+def _fresh_directory(path, profile=_CORE_PROFILE):
     """Known diagnostic namespace only; never list or adopt historical runs."""
-    require(ROOT.resolve() == ROOT and path.is_relative_to(RUNS) and path != RUNS, 'fixture-confinement')
+    profile = _canonical_profile(profile)
+    require(ROOT.resolve() == ROOT and path.is_relative_to(profile.runs)
+            and path != profile.runs, 'fixture-confinement')
     for current in (ROOT, *[ROOT.joinpath(*path.relative_to(ROOT).parts[:i])
                            for i in range(1, len(path.relative_to(ROOT).parts))]):
         if not current.exists() and not current.is_symlink():
@@ -539,8 +600,10 @@ def _fresh_directory(path):
     return info.st_dev, info.st_ino
 
 
-def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report):
-    require(type(run_id) is str and re.fullmatch('[a-f0-9]{32}', run_id) and case in CASES, 'bootstrap-case')
+def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report, profile=_CORE_PROFILE):
+    profile = _canonical_profile(profile)
+    require(type(run_id) is str and re.fullmatch('[a-f0-9]{32}', run_id)
+            and type(case) is str and case in profile.cases, 'bootstrap-case')
     require(all(type(h) is int and 0 < h < 2**64 - 1 for h in (ready, dispatch, report))
             and len({ready, dispatch, report}) == 3, 'bootstrap-handles')
     require(type(deadline_ns) is int and deadline_ns > 0, 'bootstrap-deadline')
@@ -554,7 +617,8 @@ def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report):
             'm=types.ModuleType("_fixed_core_child_bootstrap");m.__file__=p;sys.modules[m.__name__]=m\n'
             'exec(compile(b,p,"exec",dont_inherit=True),m.__dict__)\n'
             'm._LOADED_SOURCE_SHA256=' + repr(expected) + '\n'
-            'm._owned_child(' + ','.join(repr(x) for x in (run_id, case, hashes, deadline_ns, ready, dispatch, report)) + ')\n')
+            'm._owned_child(' + ','.join(repr(x) for x in (run_id, case, hashes, deadline_ns, ready, dispatch, report))
+            + ',m.' + ('_CORE_PROFILE' if profile is _CORE_PROFILE else '_JOURNAL_PROFILE') + ')\n')
     require(len(code.encode()) <= 16384, 'bootstrap-size')
     return code
 
@@ -563,6 +627,8 @@ class _Session:
     """Actual fixed parent-owned child; output slots exist before dispatch."""
     def __init__(self, native, run_id, case, hashes, folder):
         self.__origin = self
+        self.profile = _profile_for(native)
+        require(type(case) is str and case in self.profile.cases, 'session-case')
         self.n, self.case, self.folder = native, case, folder
         self.handles = {}
         self.info = native.job.Process(); native.buffers.append(self.info)
@@ -580,7 +646,8 @@ class _Session:
 
     def origin(self):
         require(type(self) is _Session and getattr(self, '_Session__origin', None) is self
-                and any(value is self for value in self.n.buffers), 'session-origin')
+                and any(value is self for value in self.n.buffers)
+                and _profile_for(self.n) is self.profile, 'session-origin')
 
     def acquire(self, name, function, *args):
         self.origin(); require(name not in self.handles, 'session-handle-duplicate')
@@ -641,7 +708,7 @@ class _Session:
         executable, windows = n.api.location(True), n.api.location(False)
         # Fixed source-owned bootstrap; no generic caller command API.
         argv = _worker_arguments(executable,
-                                 _bootstrap(run_id, self.case, hashes, n.deadline_ns, ready.value, dispatch.value, report_child.value),
+                                 _bootstrap(run_id, self.case, hashes, n.deadline_ns, ready.value, dispatch.value, report_child.value, self.profile),
                                  ready.value, dispatch.value)
         require(len(argv) == 8 and argv[1:5] == ['-I', '-S', '-B', '-c'], 'bootstrap-arguments')
         values = _isolated_environment(windows)
@@ -826,15 +893,18 @@ def _exercise_core(native, case, hashes, folder, value):
         raise
 
 
-def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value, report_value):
+def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value, report_value,
+                 profile=_CORE_PROFILE):
     """Fixed bootstrap only. Never exposed as a generic worker command."""
-    started = time.monotonic_ns(); native = report = value = None
+    started = time.monotonic_ns(); native = report = value = component = None
     try:
-        require(re.fullmatch('[a-f0-9]{32}', run_id) and case in CASES, 'child-request')
+        profile = _canonical_profile(profile)
+        require(type(run_id) is str and re.fullmatch('[a-f0-9]{32}', run_id)
+                and type(case) is str and case in profile.cases, 'child-request')
         require(sys.flags.isolated == sys.flags.no_site == 1 and sys.dont_write_bytecode
                 and sys.prefix == sys.base_prefix, 'isolated-base-runtime')
         source = source_digest(hashes)
-        native = _Native(deadline_ns)
+        native = _Native(deadline_ns, profile=profile)
         require(_all_hashes(native) == hashes, 'source-drift')
         ready = _inherited(native, 'ready', ready_value)
         dispatch = _inherited(native, 'dispatch', dispatch_value)
@@ -846,7 +916,9 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
         require(native.wait(dispatch, 8000), 'child-dispatch-timeout')
         _child_readback(native)
         require(_all_hashes(native) == hashes, 'source-drift')
-        value = _base_report(case, source, started)
+        component = _journal_fixture(hashes) if profile is _JOURNAL_PROFILE else None
+        value = (component.base_report(case, source, started) if component is not None
+                 else _base_report(case, source, started))
         if case == 'deadline-control':
             native.deadline_ns = min(deadline_ns, time.monotonic_ns() + CONTROL_NS)
         native.arm_deadline()
@@ -859,11 +931,15 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
             # releases the GIL. A marker or IsTimerSet result is not a pass.
             native.k.Sleep(0xffffffff)
             raise FixtureError('timer-returned')
-        folder = RUNS / run_id / case
-        _exercise_core(native, case, hashes, folder, value)
+        folder = profile.runs / run_id / case
+        if component is None:
+            _exercise_core(native, case, hashes, folder, value)
+        else:
+            component.exercise(sys.modules[__name__], native, case, hashes, folder, value)
         require(_all_hashes(native) == hashes, 'source-drift')
         value['elapsed_ns'] = max(1, time.monotonic_ns() - started)
-        validate_child_report(value, case, source)
+        if component is None: validate_child_report(value, case, source)
+        else: component.validate_child_report(value, case, source)
         _write_report(native, report, value)
         for entry in (ready, dispatch, report): native.close(entry)
         native.exit_self(0)
@@ -873,7 +949,9 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
             # uncertain cleanup. If controller custody is intact, record only
             # allowlisted codes; otherwise the empty report remains a failure.
             if value is not None and report is not None and not native.uncertain:
-                value['failure_stage'] = error.stage if isinstance(error, FixtureError) else 'core-operation'
+                value['failure_stage'] = (error.stage if isinstance(error, FixtureError)
+                    or component is not None and type(error) is component.JournalFixtureError
+                    else 'journal-operation' if profile is _JOURNAL_PROFILE else 'core-operation')
                 value['elapsed_ns'] = max(1, time.monotonic_ns() - started)
                 try: _write_report(native, report, value)
                 except BaseException: pass
@@ -898,10 +976,12 @@ def _safe_failure(value):
 
 def _collect(native, run_id, hashes, folder, rows):
     require(type(rows) is list and not rows, 'collector-initial-state')
-    for case in CASES:
+    profile = _profile_for(native)
+    component = _journal_fixture(hashes) if profile is _JOURNAL_PROFILE else None
+    for case in profile.cases:
         native.live()
         case_folder = folder / case
-        _fresh_directory(case_folder)
+        _fresh_directory(case_folder, profile)
         started = time.monotonic_ns()
         row = {'case': case, 'accepted': False, 'failure_stage': 'setup'}
         rows.append(row)
@@ -913,10 +993,14 @@ def _collect(native, run_id, hashes, folder, rows):
             child = decode_report(raw)
             row['parent'] = dict(session.observed)
             try:
-                validate_parent_observation(session.observed, case)
-                validate_child_report(child, case, source_digest(hashes))
-            except FixtureError as error:
-                row['diagnostics'] = _safe_failure(child)
+                validate_parent_observation(session.observed, case, profile)
+                if component is None: validate_child_report(child, case, source_digest(hashes))
+                else: component.validate_child_report(child, case, source_digest(hashes))
+            except BaseException as error:
+                if not (isinstance(error, FixtureError)
+                        or component is not None and type(error) is component.JournalFixtureError): raise
+                row['diagnostics'] = (_safe_failure(child) if component is None
+                                      else component.failure_diagnostics(child))
                 row['failure_stage'] = error.stage
                 return False
             row['child'] = child  # Only the complete admitted fixed schema.
@@ -933,24 +1017,34 @@ def _collect(native, run_id, hashes, folder, rows):
 
 def standalone_native():
     """Entry-owned process only; caller imports cannot reach native execution."""
-    require(__name__ == '_standalone_windows_core_fixture'
-            and Path(sys.argv[0]).absolute() == ENTRY and sys.argv[1:] == ['--native']
+    return _standalone_native(_CORE_PROFILE)
+
+
+def standalone_native_journal():
+    """Dedicated Journal entry; not a mutable switch on the Core entry."""
+    return _standalone_native(_JOURNAL_PROFILE)
+
+
+def _standalone_native(profile):
+    profile = _canonical_profile(profile)
+    require(__name__ == profile.module_name
+            and Path(sys.argv[0]).absolute() == profile.entry and sys.argv[1:] == ['--native']
             and Path.cwd() == ROOT and sys.flags.isolated == sys.flags.no_site == 1
             and sys.dont_write_bytecode and sys.prefix == sys.base_prefix, 'standalone-only')
     started = time.monotonic_ns(); native = None; folder = None; folder_identity = None
-    result = {'schema_version': SCHEMA, 'status': 'failed', 'cases': [], 'qualification_complete': False,
+    result = {'schema_version': profile.schema, 'status': 'failed', 'cases': [], 'qualification_complete': False,
               'parent_qualification_granted': False, 'production_composed': False,
               'model_started': False, 'quality_tests_executed': False,
               'old_staging_accessed': False, 'source_bindings': {}, 'failure_stage': 'initialization',
               'deadline_scope': 'Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Sleep/suspend and indefinitely stuck kernel I/O are not qualified.'}
     try:
-        native = _Native(started + BUDGET_NS)
+        native = _Native(started + BUDGET_NS, profile=profile)
         native.arm_deadline()  # Before any case/file/Job creation.
         hashes = _all_hashes(native)
         result['source_bindings'] = hashes
         run_id = uuid.uuid4().hex
-        candidate = RUNS / run_id
-        folder_identity = _fresh_directory(candidate)
+        candidate = profile.runs / run_id
+        folder_identity = _fresh_directory(candidate, profile)
         folder = candidate  # Ownership is latched only after exclusive success.
         result['run_id'] = run_id
         accepted = _collect(native, run_id, hashes, folder, result['cases'])

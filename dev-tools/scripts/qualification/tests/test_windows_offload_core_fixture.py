@@ -269,6 +269,7 @@ class ControllerTests(unittest.TestCase):
     def test_native_dispatch_retains_interrupted_call_and_rejects_copy_before_effect(self):
         native = object.__new__(subject._Native)
         native._Native__origin = native
+        native._Native__profile = subject._CORE_PROFILE
         native.uncertain = native.expired = False
         native.deadline_ns = time.monotonic_ns() + subject.BUDGET_NS
         native.calls, native.buffers, native.handles, native.pending = [], [], [], None
@@ -285,6 +286,54 @@ class ControllerTests(unittest.TestCase):
             self.assertTrue(native.pending['started']); self.assertFalse(native.pending['returned'])
             with self.assertRaises(subject.FixtureError): native.call('synthetic-retry', interrupted, argument)
             self.assertEqual(len(effects), 1)
+
+    def test_profiles_are_canonical_immutable_and_do_not_switch_core_constants(self):
+        core, journal = subject._CORE_PROFILE, subject._JOURNAL_PROFILE
+        self.assertIs(subject._canonical_profile(core), core)
+        self.assertIs(subject._canonical_profile(journal), journal)
+        self.assertEqual(core.cases, ('deadline-control', 'empty-stage', 'one-index', 'namespace-denied'))
+        self.assertEqual((subject.ENTRY, subject.CASES, subject.SCHEMA, subject.RUNS),
+                         (core.entry, core.cases, core.schema, core.runs))
+        self.assertNotEqual(core.entry, journal.entry)
+        self.assertNotEqual(core.schema, journal.schema)
+        for value in (copy.copy(core), copy.copy(journal), {'cases': journal.cases}, None):
+            with self.subTest(value=type(value).__name__), self.assertRaises(subject.FixtureError):
+                subject._canonical_profile(value)
+        with self.assertRaises(AttributeError): journal.entry = core.entry
+
+    def test_bootstrap_binds_literal_canonical_profile_and_refuses_cross_cases(self):
+        hashes = {subject.TOOL_FILES[1]: 'a' * 64}
+        for profile in (subject._CORE_PROFILE, subject._JOURNAL_PROFILE):
+            code = subject._bootstrap('a' * 32, profile.cases[1], hashes, 1, 10, 11, 12, profile)
+            expected = 'm._CORE_PROFILE' if profile is subject._CORE_PROFILE else 'm._JOURNAL_PROFILE'
+            self.assertIn(expected, code)
+            compile(code, '<synthetic-fixed-bootstrap>', 'exec')
+        for case, profile in (('journal-roundtrip', subject._CORE_PROFILE), ('empty-stage', subject._JOURNAL_PROFILE)):
+            with self.assertRaises(subject.FixtureError):
+                subject._bootstrap('a' * 32, case, hashes, 1, 10, 11, 12, profile)
+
+    def test_journal_mode_cannot_run_through_core_entry_or_imported_module(self):
+        with patch.object(subject, '__name__', subject._CORE_PROFILE.module_name), \
+             patch.object(sys, 'argv', [str(subject._JOURNAL_PROFILE.entry), '--native']), \
+             patch.object(subject, '_Native', side_effect=AssertionError('No native setup')) as native:
+            with self.assertRaises(subject.FixtureError): subject.standalone_native_journal()
+        native.assert_not_called()
+
+    def test_native_profile_is_required_before_dispatch_and_has_no_public_setter(self):
+        native = object.__new__(subject._Native); native._Native__origin = native
+        native.calls, native.buffers, native.handles = [], [], []
+        called = []
+        with patch.object(subject, '_NATIVE_OWNERS', [native]):
+            with self.assertRaises(subject.FixtureError): native.call('missing-profile', lambda: called.append(True))
+        self.assertEqual(called, [])
+        native._Native__profile = subject._CORE_PROFILE
+        with self.assertRaises(AttributeError): native.profile = subject._JOURNAL_PROFILE
+
+    def test_parent_oracle_refuses_cross_profile_case_without_rewriting_facts(self):
+        value = parent('empty-stage')
+        with self.assertRaises(subject.FixtureError):
+            subject.validate_parent_observation(value, 'empty-stage', subject._JOURNAL_PROFILE)
+        self.assertEqual(value, parent('empty-stage'))
 
     def test_timer_custody_and_one_shot_remaining_budget_use_only_self_exit(self):
         native = FakeNative()

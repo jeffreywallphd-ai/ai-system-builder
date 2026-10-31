@@ -543,7 +543,7 @@ owned exit, readers/IRPs, closes and durable charge removal. It cannot stop the
 shared worker or infer exit from a task result. Unknown outcomes stay retained.
 
 No production native backend is composed. The fixed `offload-resource-lifecycle`
-profile uses nine model-free unit files and explicitly synthetic fresh-domain
+profile uses eleven model-free unit files and explicitly synthetic fresh-domain
 ports. It neither qualifies native protection nor reruns accepted accuracy.
 
 
@@ -629,6 +629,23 @@ Before/after metadata checks alone are not that fence. Finite native execution
 and exact worker/crash composition remain mandatory and unqualified. Default
 construction and the production factory stay unavailable without file/model
 effects. Explicit synthetic domain, IO and worker fixtures exercise the real
-journal/backend/lease; they are source evidence only. The nine-file model-free
+journal/backend/lease; they are source evidence only. The eleven-file model-free
 profile keeps actual native, retained-tree, resource and final combined checks
 separate. Accepted model accuracy and OCR stay closed.
+
+
+### Journal diagnostic scope
+
+Dev-tools adds a separate exact-source low-level journal diagnostic to the
+eleven-file model-free lifecycle profile. It reuses the existing bounded
+standalone Job/source/timer controller, with its own immutable profile and strict
+reports. The old Core entry remains separate. No runtime code imports dev-tools.
+
+A fixture-only context owns the actual journal API, inherited read-chain and
+independent anchor; it cannot construct production accounting authority or a
+lease. Five small frames and eight repeated reads exercise write completion,
+flush/readback, unchanged guards and exact resource retirement. All uncertain
+state stays pinned. Source tests use explicit synthetic replies; an actual run
+requires a later committed-source effect review and independent result review.
+Production domain/fence/finite/worker/retained recovery and model outcomes remain
+pending. Existing defaults, guards, accepted accuracy and OCR are unchanged.
