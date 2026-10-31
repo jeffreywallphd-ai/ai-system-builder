@@ -8282,6 +8282,139 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "retire-unused-windows-cache-binding",
+      "work_criteria": [
+        "unshared-read-only-handle-retirement",
+        "acknowledged-custody-and-failure-denial",
+        "staging-only-witness-and-existing-compatibility",
+        "reviewed-owned-source-and-honest-scope"
+      ],
+      "receipt_digest": "e60f321681bc844b0a0aa8b324568f9c473a65eb8971d9998d5c2268957447c0",
+      "review_digest": "1f96ab18f058763b738b4eb7e85ec8a881c2ee20bf3ad73730126fceaf67e108",
+      "scope": "Unused Windows cache read bindings close only their original unshared handles. Fifty-one Core tests, related lifecycle checks and five check groups passed with independent source review. Unknown closes or lost acknowledgements retain captured custody. Completed-owner retry and caller interruption cannot overflow the 64-owner tables. Staging witnesses remain separate. The source is committed; this change enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
+      ]
     }
   ]
 }

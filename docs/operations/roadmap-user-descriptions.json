@@ -13344,6 +13344,26 @@
           "No action needed. The agent must finish and test shared disk accounting, stable file protection, operation time limits, worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. Accepted accuracy and OCR tests stay closed. The combined test campaign remains pending. No further test run or file cleanup is authorized by these results."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b6954950f69a4423216a5b17a18534aa02f5aa1db48332e257bb8893d0c8660a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added cleanup for cache folders opened only for checks. The tool closes its read access and keeps the files. All 51 Core tests, related checks and five check groups passed. An independent agent reviewed the code. The agent fixed a retry bug that could exceed the 64-record limit. Unconfirmed cleanup keeps its ownership record. Confirmed cleanup stays complete after a caller interruption. These tests use simulated Windows replies. Actual low-memory model use remains unavailable. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "682f713f403d6c3334cd03ec5655ec4dea074d41a04e373991f832fac9d5ed86",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must finish and test actual Windows execution, shared disk accounting, stable file protection, model-worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. Accepted accuracy and OCR checks stay closed. The combined test campaign remains pending. Closing read access gives no disk-capacity credit."
+        ]
+      }
     }
   ]
 }
