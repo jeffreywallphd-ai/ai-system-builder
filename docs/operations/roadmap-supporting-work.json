@@ -7638,6 +7638,384 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "No actual Windows staging, retained-tree protection, protected durable accounting, worker recovery or model-resource result is qualified by this source support. The full12GiB unknown charge and accepted model-quality closure remain unchanged. Final combined testing is deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "bounded-windows-core-fixture",
+      "work_criteria": [
+        "fixed-native-fixture-construction",
+        "owned-bounded-controller-and-evidence",
+        "preserve-defaults-and-scope"
+      ],
+      "receipt_digest": "76cc4daf352d34b9379ce60bcec8fac400015cf079a3d1e629a64f1c3b91a2bd",
+      "review_digest": "b907a33434435cb1275a884e445da74937ea28f985588d7de7536e45e6bbe603",
+      "scope": "Fixed standalone test source passed 23 fixture tests, related entry/routing tests and six check groups. It binds exact source buffers, retains native objects, owns one limited inert child and preserves uncertain files. This source work alone grants no actual native or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "truthful-child-timer-reporting",
+      "work_criteria": [
+        "truthful-child-timer-report",
+        "preserve-history-defaults-and-limits",
+        "focused-producer-oracle-and-security-review"
+      ],
+      "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+      "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+      "scope": "Schema2 timer-report source passed 26 fixture tests and three check groups. Three new producer branches failed against old source. Successful child reports require acknowledged timer configuration; unknown arm denies before Core. Earlier false timer fields remain excluded, with original observations preserved. This source work alone grants no new native pass.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "record-native-offload-component-evidence",
+      "work_criteria": [
+        "faithful-native-component-evidence",
+        "honest-scope-and-security-history",
+        "preserve-owned-source-and-roadmaps"
+      ],
+      "receipt_digest": "c3446c4ceaf13d33a2c5f104965b51e92507f7d7aff4925a6ec0ae7a00934660",
+      "review_digest": "9b4c9f612155029565ae29f1f2d1baf809fa44813cffd0a22ed41d886ed00209",
+      "scope": "Versioned native evidence passed independent result/provenance review and two metadata gates. All four schema2 cases passed: actual control exit after three seconds, empty and two-byte index cleanup, and expected namespace collision with Core uncertainty retained. All four acknowledged timer configuration; only control proves delivery. Parent retirement is separate from Core cleanup. This is tiny-file component evidence, not model or production qualification.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
     }
   ]
 }

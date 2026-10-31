@@ -13264,6 +13264,46 @@
           "No action needed. The agent must finish and test Windows operation time limits, protection for retained files, saved disk accounting, worker shutdown and actual low-memory use. Unknown retained files still reserve the full 12 GiB limit. Accepted model accuracy tests stay closed. The final combined test campaign remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a9026473069f09768027ee08f6d461a7eee2b77f03b23b61094e79410ce08939",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a Windows test tool. Its 23 fixture tests, related checks and six check groups passed. The tool checks the exact source, controls one small test process and keeps uncertain files. These code checks alone do not prove Windows behavior or model memory savings. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2d9423adcbfe010fc388cbc36fd6748a627e0fe16a181f0b0b57e539a28611ba",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed an incorrect timer flag in the test reports. All 26 fixture tests and three check groups passed. Three new regression cases fail against the old code. A report now requires confirmation that its timer is set. This does not prove the timer fired. Earlier incorrect flags stay excluded from the original results. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f85c651a90deb839d393564df78c615081d1a0c1b6af7756c93dcec51b39bef0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Four small Windows tests passed and an independent agent checked the results. The timeout test ended its process after three seconds. The empty-folder and two-byte-file tests removed their temporary staging folders. The tool refused a folder name that the test had already created and kept that folder. All four reports confirm that their timers were set; only the timeout test proves its timer fired. These tests do not establish safe production recovery or model memory savings. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3a46e4389e639d83d11646d7dbb6b9d5f2a7131425ce6f9d4ee371c1c02e76d0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must finish and test Windows operation time limits, protection for retained files, saved disk accounting, worker shutdown and crash recovery, and actual low-memory model use. Unknown retained files still reserve the full 12 GiB limit. Accepted model accuracy and OCR stay closed. The final combined test campaign remains pending."
+        ]
+      }
     }
   ]
 }
