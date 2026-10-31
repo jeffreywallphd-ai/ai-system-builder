@@ -1053,3 +1053,32 @@ real consumer and explicit synthetic dependencies only. The earlier native Core
 result, this source work, actual journal/worker/resource qualification and final
 combined tests remain separate. Accepted accuracy/OCR and all model limits stay
 unchanged.
+
+
+### Persistent Windows read-session source
+
+The private runtime execution producer keeps the real Core and execution port
+in one isolated, model-free child. An owned CRT controller performs blocking
+launch and anonymous-pipe IO. Creation-time Job and handle lists admit exactly
+request-read, response-write, ready-event and dispatch-event handles. The Job is
+parent-only, limits active processes to one and caps only the inert child at
+512 MiB. No ambient stdio, arbitrary command, model task or public root enters
+this role. Explicit host cache configuration is frozen once without discovery.
+
+Fixed source buffers and observed executable paths/image hashes bind the launch
+and child-local calls. These checks do not establish tamper protection for every
+installed runtime dependency. The allowed state graph is initialize/read-bind/
+read-retire/finish, with initialize/finish allowed only without a Core. One
+120-second operation budget includes cancellation and response work; there is no
+idle-session timer. Timer generation transitions are atomic. Callback retirement
+requires the original deletion-completion event and acknowledged close.
+
+Caller timeout performs no blocking cleanup. Unknown native outcomes retain the
+original graph and the single admission slot. Known Core read retirement remains
+a separate fact from timer, transport, process and controller retirement. Only
+actual thread exit and all original close acknowledgements permit successful
+session release. Fixed normal/terminal record pools bound parent metadata across
+the four operations. No unconditional GIL, scheduler or stuck-kernel deadline is
+claimed. This read-only source supplies no journal/domain fence, writer, capacity
+credit, restart adoption or production readiness. Native qualification remains
+separate from the fifteen-file model-free source profile.

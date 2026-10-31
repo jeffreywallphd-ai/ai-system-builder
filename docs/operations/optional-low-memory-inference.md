@@ -876,3 +876,26 @@ These results qualify only the fresh tiny-file API trial. They do not establish
 shared disk accounting, a stable mutation fence, production deadlines, crash
 recovery or actual model offload. Test record bytes grant no production capacity.
 The one reviewed run is consumed; another native run needs a new exact review.
+
+
+## Persistent read-session implementation
+
+No action needed. Agent work now supplies a private, model-free read session for
+the Windows Core. It is not enabled as production offload. Focused tests drive
+the actual child-local Core and check startup races, timer cancellation, strict
+messages and retained unknown results with synthetic Windows responses. Those
+tests do not establish a real Windows run.
+
+An owned controller does blocking startup and pipe work. The ordinary caller has
+one 120-second operation budget and performs no blocking cleanup on timeout.
+Idle has no lifetime timer. A 512 MiB limit applies only to the model-free child;
+it is not a model limit or an upfront RAM requirement. Parent call records have
+fixed separate normal and reserved terminal pools.
+
+Real execution of this new source still needs a committed-source effect review
+and independently reviewed native result. Shared disk accounting, stable file
+protection, actual model-worker shutdown/crash recovery and resource evidence
+remain separate technical work. The default factory still refuses unfinished
+offload. Old temporary data, unknown 12 GiB charges and all model guards remain
+unchanged. Accepted model accuracy and OCR stay closed. Full tests stay deferred
+until the cross-roadmap implementation catch-up is complete.

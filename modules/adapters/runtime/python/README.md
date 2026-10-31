@@ -244,3 +244,20 @@ and standalone-worker recovery also remain pending. The default factory stays
 backendless; Standard loading, model guards, accepted accuracy/OCR and old data
 are unchanged. See the worker README and operations guide for source tests and
 separate native qualification.
+
+
+## Owned read-session prerequisite
+
+The private worker execution modules now define a persistent, model-free Windows
+read session. Its retained CRT controller performs blocking launch and pipe work.
+The actual Core, API and execution callback stay together on the child request
+thread. A separate timer bounds admission for each operation; idle is not a model
+writer deadline. One 120-second budget includes retirement and publication.
+
+This source is a prerequisite, not the production offload factory. The factory
+stays backendless. Source tests use synthetic ABI responses; committed-source
+native execution requires separate effect and result review. Missing shared
+accounting, stable mutation protection, actual model-worker recovery and resource
+evidence remain technical work. Standard behavior, all model limits, accepted
+accuracy and OCR remain unchanged. See the worker README for exact ownership,
+timer, protocol and fixed-record limits.

@@ -685,3 +685,33 @@ state stays pinned. Source tests use explicit synthetic replies; an actual run
 requires a later committed-source effect review and independent result review.
 Production domain/fence/finite/worker/retained recovery and model outcomes remain
 pending. Existing defaults, guards, accepted accuracy and OCR are unchanged.
+
+
+## Persistent read-only IO session
+
+`windows_offload_execution.py` owns one private model-free Windows session.
+The exact Core and execution port live together in the isolated child. An owned
+CRT controller handles process startup and pipe IO. The ordinary caller observes
+one remaining 120-second operation budget; timeout retains unknown custody and
+issues no inline termination, close or join. Idle has no lifetime timer.
+
+The fixed protocol permits initialize, bind read access, retire that unused read
+access, then finish. Initialize may go directly to finish when no Core exists.
+No caller supplies a command, process, callable, limit or operation-selected root.
+Only explicit host cache configuration is captured, without framework discovery.
+Source bytes, the owned child image path and current interpreter image hash are
+checked; these observations are not a mutation fence for installed software.
+
+Timer completion and expiry use one generation lock. Native cancellation requires
+its exact completion event before callback release. Unknown exit acknowledgement
+parks only the original isolated child; it cannot stop or park the shared worker.
+Native records are preallocated: 16,384 normal rows and 64 reserved terminal rows
+per session lifetime. Completed rows may leave the active list; their fixed pool
+retains the original metadata. The 512 MiB Job/process ceiling covers only this
+inert child. Parent records have separate fixed bounds.
+
+The two model-free execution test files extend the lifecycle profile to fifteen.
+They use synthetic Windows replies and the real Core/port methods. They do not
+qualify actual Windows execution. Default offload stays unavailable until shared
+accounting, stable mutation protection, model-worker/crash recovery and resources
+qualify. No old fixture, model, staging data, guard or accepted accuracy changes.

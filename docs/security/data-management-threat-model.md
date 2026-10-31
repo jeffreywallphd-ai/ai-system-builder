@@ -1936,3 +1936,28 @@ Windows, and tiny API results cannot qualify production mutation fences, shared
 accounting, worker/crash/retained recovery, model resources or a parent roadmap.
 Unknown production usage remains 12 GiB. No existing slot, model, privilege,
 supplier, memory guard, accepted accuracy/OCR or full-suite policy changes.
+
+
+### Private persistent IO execution boundary
+
+The read-only execution source admits one canonical session and preserves its
+original native slots, callback functions, buffers and call records before any
+effect. A creation-time one-process Job and exact four-handle allowlist separate
+the isolated child from the shared worker. A retained CRT controller handles
+blocking launch and IO; caller timeout never performs inline termination, close
+or join. Unknown results retain the single slot and permit no source/root reset.
+
+Exact source/session/operation/deadline frames reject replay, extra fields,
+invalid types, deep JSON, duplicate keys and oversized data. The actual Core and
+API remain child-local on the exact port thread. Observed image paths and hashes
+are checked, but do not replace installed-runtime integrity or a stable mutation
+fence. The root comes only from explicit host configuration, once.
+
+One timer generation arbitrates completion and expiry before native deletion.
+The original completion event must acknowledge callback retirement. A copied or
+stale callback cannot poison the canonical child or stop later work. Unknown exit
+acknowledgement uses one child-only exit attempt and retained parking; no shared
+worker termination is available. Fixed record pools reserve terminal metadata
+before effects. No staging, accounting credit, retained-tree access, model writer
+or production backend authority follows. Synthetic ABI failure tests exercise
+the concrete producer and Core; real Windows and later composition stay pending.

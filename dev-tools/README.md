@@ -1641,3 +1641,20 @@ qualification remain pending. Accepted model accuracy and OCR stay closed.
 Report IRP counts cover data reads and writes. Guard retirement is recorded
 separately. API-call counts cover dispatched adapter calls; the retained
 controller has its own unchanged call bound.
+
+
+### Persistent read-session source tests
+
+The fixed `offload-resource-lifecycle` profile now contains fifteen model-free
+test files. Its two execution files exercise the concrete CRT/controller,
+child-local Core/port, timer and strict protocol with synthetic ABI replies.
+The four exact source/test routes preserve generic checks for unknown or
+incomplete coverage. No native case, model, OCR or accuracy run is implicit.
+
+The private runtime source exposes no ordinary CLI or production factory. Native
+execution needs a later exact committed-source effect review and result review.
+The one-process 512 MiB Job applies only to the model-free child. Its per-operation
+120-second budget is not an idle lifetime or a model runtime expectation. Parent
+normal/terminal native records have separate preallocated bounds. Production
+shared accounting, stable mutation protection, model-worker/retained recovery and
+resource checks stay pending. Keep full suites for the later shared campaign.
