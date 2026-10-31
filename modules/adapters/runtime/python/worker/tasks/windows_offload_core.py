@@ -14,11 +14,13 @@ from pathlib import Path
 import re
 import struct
 from threading import RLock, get_ident
+from types import MethodType
 import uuid
 
 from .local_model_offload import OffloadAdmissionError, STAGING_LIMIT
 
 _CUSTODY = {}
+_READ_RETIREMENTS = {}
 _CUSTODY_LOCK = RLock()
 _MAX_OWNERS = 64
 _MAX_DEPTH = 128
@@ -215,7 +217,8 @@ class _JournalCoreBinding:
 
     def borrow_anchor(self, receiver):
         self._assert_origin()
-        _require(isinstance(receiver, _JournalAnchorReceiver))
+        _require(isinstance(receiver, _JournalAnchorReceiver)
+                 and self._core._retired is False and self._core._uncertain is False)
         if self._borrow_started:
             self._retain_failure()
             raise OffloadAdmissionError()
@@ -270,13 +273,138 @@ class _JournalCoreBinding:
 
     def retired_witness(self, receiver, core):
         self.assert_consumer(receiver, core, retired=True)
-        _require(core._retired and not core._allocations
+        _require(core._retired and type(core._retirement_kind) is str
+                 and core._retirement_kind == 'staging' and not core._allocations
                  and all(handle.closed for handle in core._handles))
         return self._witness
 
     def assert_retired_witness(self, receiver, core, witness):
         _require(witness is self.retired_witness(receiver, core))
         witness._assert_origin(self)
+
+
+class _ReadBindingRetirement:
+    """Captured custody for one unused read-chain close, never a credit proof."""
+    def __init__(self, core):
+        self.core, self.api, self.factory = core, core._api, core._factory
+        self.execution, self.binding = core._execution, core._accounting
+        self.root, self.chain, self.handles = core.cache_root, core._chain, core._handles
+        self.guards, self.allocations = core._guards, core._allocations
+        self.calls = core._execution_calls
+        self.call = self.thread = None
+        self.request_thread = get_ident()
+        self.closed = 0
+        self._released = False
+        _require(type(self.chain) is tuple and 1 <= len(self.chain) <= _MAX_DEPTH
+                 and type(self.handles) is list and len(self.handles) == len(self.chain)
+                 and type(self.guards) is list and not self.guards
+                 and type(self.allocations) is list and not self.allocations
+                 and type(self.calls) is list and not self.calls
+                 and core._busy is False and core._dispatch is None
+                 and core._read_retirement is None)
+        entries = []
+        for position, row in enumerate(self.chain):
+            _require(type(row) is tuple and len(row) == 2)
+            handle, identity = row
+            _require(type(handle) is _Handle and self.handles[position] is handle
+                     and type(handle.slot) is _PTR
+                     and type(identity) is bytes and len(identity) == 24
+                     and any(identity[:8]) and any(identity[8:]))
+            number = handle.slot.value
+            _require(type(number) is int and 0 < number < C.c_void_p(-1).value
+                     and all(old[1] is not handle and old[3] != number for old in entries))
+            entries.append((row, handle, handle.slot, number, identity))
+        self.entries = tuple(entries)
+
+    @property
+    def released(self):
+        return self._released is True
+
+    def check(self, phase):
+        core = self.core
+        core._assert_origin()
+        _require(_CUSTODY.get(id(core)) is core and _READ_RETIREMENTS.get(id(core)) is self
+                 and self._released is False and core._read_retirement is self
+                 and core._api is self.api and core._factory is self.factory
+                 and core._execution is self.execution and core._accounting is self.binding
+                 and core.cache_root is self.root and core._chain is self.chain
+                 and core._handles is self.handles and len(self.handles) == len(self.entries)
+                 and core._guards is self.guards and not self.guards
+                 and core._allocations is self.allocations and not self.allocations
+                 and core._execution_calls is self.calls and core._pending is None
+                 and core._uncertain is False)
+        binding = self.binding
+        _require(type(binding) is _JournalCoreBinding and binding._core is core)
+        binding._assert_origin()
+        _require(binding._receiver is None and binding._borrow_started is False
+                 and binding._borrowed is False and binding._borrowing_thread is None
+                 and binding._uncertain is False
+                 and core._namespace is None and core._stage is None and core._index is None
+                 and core._reservation is None and core._protected is None and core._sealed is None)
+        for position, (row, handle, slot, number, _) in enumerate(self.entries):
+            closed = position >= len(self.entries) - self.closed
+            _require(self.chain[position] is row and self.handles[position] is handle
+                     and handle.slot is slot and slot.value == number
+                     and handle.closed is closed and handle.close_started is closed
+                     and handle.delete_started is False)
+        call = self.call
+        _require(type(call) is _ExecutionCall
+                 and call.thread == self.thread == self.request_thread == get_ident()
+                 and call.started is True and call.value is None)
+        if phase == 'dispatch':
+            _require(core._retired is False and core._retirement_kind is None
+                     and core._busy is True and core._dispatch is call
+                     and len(self.calls) == 1 and self.calls[0] is call
+                     and call.finished is False)
+        else:
+            _require(phase in ('acknowledged', 'published') and self.closed == len(self.entries)
+                     and core._retired is True and core._busy is False
+                     and core._dispatch is None and not self.calls and call.finished is True)
+            expected = None if phase == 'acknowledged' else 'read-binding'
+            _require(core._retirement_kind is None if expected is None else
+                     type(core._retirement_kind) is str and core._retirement_kind == expected)
+
+    def retire(self):
+        _require(self.call is None and self.thread is None and self.closed == 0)
+        self.call, self.thread = self.core._dispatch, get_ident()
+        self.check('dispatch')
+        # Validate the entire chain before closing even its first handle.
+        for _, handle, _, _, identity in self.entries:
+            observed = self.api.identity(handle)
+            self.check('dispatch')
+            _require(type(observed) is bytes and observed == identity)
+        for _, handle, _, _, identity in reversed(self.entries):
+            # A closed handle is never queried or dispatched again.
+            observed = self.api.identity(handle)
+            self.check('dispatch')
+            _require(type(observed) is bytes and observed == identity)
+            _require(self.api.close(handle) is None
+                     and handle.close_started is True and handle.closed is True)
+            self.closed += 1
+            self.check('dispatch')
+        self.core._retired = True
+
+    def release(self):
+        self.check('published')
+        core = self.core
+        with _CUSTODY_LOCK:
+            try:
+                _require(_READ_RETIREMENTS.get(id(core)) is self
+                         and _CUSTODY.get(id(core)) is core and self.released is False)
+                _require(_CUSTODY.pop(id(core)) is core)
+                _require(_READ_RETIREMENTS.pop(id(core)) is self)
+                # This is the release commit. Later caller interruption cannot
+                # resurrect a completed owner or invent unknown native work.
+                self._released = True
+            except BaseException:
+                if not self.released:
+                    # Restore the reserved slot before another admission can
+                    # observe it as free, including an interrupted dict pop.
+                    core._uncertain = True
+                    core._read_retirement = self
+                    _CUSTODY[id(core)] = core
+                    _READ_RETIREMENTS[id(core)] = self
+                raise
 
 
 class _WindowsApi:
@@ -539,6 +667,8 @@ class WindowsOffloadCore:
         self._dispatch = None
         self._lock = RLock()
         self._busy = self._uncertain = self._retired = False
+        self._retirement_kind = None
+        self._read_retirement = None
         self._pending = None
         self._handles, self._guards, self._chain = [], [], ()
         self._allocations = []
@@ -585,11 +715,17 @@ class WindowsOffloadCore:
 
     def _run(self, function):
         self._assert_origin()
-        _require(isinstance(self._execution, _NativeExecutionPort))
+        _require(isinstance(self._execution, _NativeExecutionPort)
+                 and self._retired is False and self._uncertain is False)
         self._retain()  # Before lock entry and every callback/acquisition.
         try:
             with self._lock:
                 _require(not self._uncertain and not self._retired and not self._busy)
+                retirement = _READ_RETIREMENTS.get(id(self))
+                if retirement is not None:
+                    _require(type(function) is MethodType and function.__self__ is retirement
+                             and function.__func__ is _ReadBindingRetirement.retire
+                             and self._read_retirement is retirement)
                 self._busy = True
             call = _ExecutionCall()
             self._execution_calls.append(call)
@@ -638,6 +774,56 @@ class WindowsOffloadCore:
 
     def assert_bound(self):
         return self._run(self._check_bound)
+
+    def _retire_unused_read_binding(self):
+        """Close only an unused, never-shared read chain; no staging credit."""
+        self._assert_origin()  # Invalid copies cannot poison another owner.
+        _require(self._api is not None and isinstance(self._execution, _NativeExecutionPort)
+                 and type(self._accounting) is _JournalCoreBinding
+                 and self._accounting._core is self
+                 and self._retired is False and self._uncertain is False)
+        self._accounting._assert_origin()
+        retirement = None
+        admitted = False
+        try:
+            with self._lock:
+                _require(self._retired is False and self._uncertain is False)
+                with _CUSTODY_LOCK:
+                    # Closing an existing prepared binding never creates a new
+                    # custody admission, even after a rejected/retired retry.
+                    _require(_CUSTODY.get(id(self)) is self)
+                    admitted = True
+                    try:
+                        _require(id(self) not in _READ_RETIREMENTS
+                                 and len(_READ_RETIREMENTS) < _MAX_OWNERS)
+                        retirement = _ReadBindingRetirement(self)
+                        self._read_retirement = retirement
+                        _READ_RETIREMENTS[id(self)] = retirement
+                    except BaseException:
+                        self._uncertain = True
+                        _CUSTODY[id(self)] = self
+                        if retirement is not None:
+                            self._read_retirement = retirement
+                            _READ_RETIREMENTS[id(self)] = retirement
+                        raise
+            _require(self._run(retirement.retire) is None)
+            retirement.check('acknowledged')
+            self._retirement_kind = 'read-binding'
+            retirement.check('published')
+            retirement.release()
+        except BaseException as error:
+            if admitted and not (retirement is not None and retirement.released):
+                # Only a genuine admitted, uncommitted operation can retain its
+                # reserved slot. The snapshot survives swapped Core fields.
+                self._uncertain = True
+                with _CUSTODY_LOCK:
+                    _CUSTODY[id(self)] = self
+                    if retirement is not None:
+                        self._read_retirement = retirement
+                        _READ_RETIREMENTS[id(self)] = retirement
+            if isinstance(error, Exception):
+                raise OffloadAdmissionError() from None
+            raise
 
     def create_staging(self, reservation):
         def create():
@@ -744,6 +930,7 @@ class WindowsOffloadCore:
             for handle, _ in reversed(self._chain):
                 self._api.close(handle)
             _require(not self._allocations and all(handle.closed for handle in self._handles))
+            self._retirement_kind = 'staging'
             self._retired = True
             with _CUSTODY_LOCK:
                 _CUSTODY.pop(id(self), None)

@@ -785,6 +785,28 @@ campaign pending. Do not rerun accepted model accuracy or OCR. No model hard
 Job limit is selected or changed by this component.
 
 
+## Closing an unused read-only cache binding
+
+No action needed. Private source code can now close a cache binding opened only
+for checks. It closes the exact original read handles without creating or
+deleting files or changing permissions. A started journal borrow, model staging,
+reservation, guard or pending native work prevents this cleanup.
+
+Closing these read handles is separate from retiring model staging. It supplies
+no journal witness or disk-capacity credit. The execution owner must acknowledge
+the exact result before custody is released. Cleanup requires its original
+active ownership record. Completed or unregistered bindings cannot add entries
+when a table is full. Failed closes and interrupted, unconfirmed record removal
+keep the original records and refuse another close attempt. Once both removals
+are confirmed, a later caller interruption leaves the closed binding complete
+and out of the tables. Its saved closed facts grant no disk-capacity credit. Focused tests
+use the real Core and close bookkeeping with simulated Windows replies. Actual
+Windows qualification, the production finite owner, shared accounting and file
+protection, worker/restart handling and offload measurements remain pending.
+Earlier Windows results stay bound to their original code. Accepted model
+accuracy and OCR checks stay closed; the combined campaign is deferred.
+
+
 ## Journal API component qualification
 
 No action needed. Three small Windows journal API checks passed on the committed

@@ -992,6 +992,30 @@ The current factory stays backendless. No production finite owner, model Job
 quota, protected durable journal, retained-tree or worker/crash readiness follows.
 
 
+### Unused read-binding retirement
+
+The adapter Core has a separate private retirement path for an unused prepared
+read chain. It requires the canonical accounting binding to have no receiver or
+started/completed borrow, and refuses every staging/reservation/protection/guard
+state. Exact original containers, handle records, native slot generations and
+all identities are captured and checked before the first close. Callback changes
+or unknown closure retain that snapshot; closed handles are never queried again.
+
+Read-binding retirement is not staging retirement. The existing live journal
+witness additionally requires the private staging fact and the exact borrowed
+consumer. No serialized proof, capacity credit, journal frame or production
+admission follows from closing read handles. Custody release follows exact
+execution acknowledgement. Admission uses only canonical prepared owners, with
+shared-lock membership/capacity/snapshot publication. Interrupted removal restores
+both reserved entries before that lock releases. Both acknowledged removals form
+an explicit release commit. A later caller interruption cannot re-admit the
+completed owner or invent unknown native work; the terminal Core retains its
+closed snapshot. Ordinary Core dispatch also denies terminal reuse before
+custody insertion.
+The finite process owner, shared accounting/fence and worker/resource composition
+remain pending. Source fixtures are not current native or parent qualification.
+
+
 ### Independent protected journal ownership
 
 The Python journal implements `_ProtectedJournalPort` in the same adapter layer.

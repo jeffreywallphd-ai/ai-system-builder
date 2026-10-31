@@ -1766,6 +1766,34 @@ keeps the watch, owner and charge retained. The original failed source and causa
 regression remain history; no actual Windows failure or parent pass is invented.
 
 
+### Unused read-chain custody and credit separation
+
+The private read-binding retirement method has no caller path, amount, handle,
+receiver or policy argument. It refuses unprepared, copied/foreign, borrowed,
+staged or malformed ownership before a close. Its independent bounded snapshot
+pins the original API/factory/execution/binding, chain/container and native slot
+generations through callbacks and interrupted final bookkeeping. Active and uncertain custody uses
+the existing 64-owner ceiling. A completed or unregistered object cannot mint
+admission after rejection. Exact native identities are checked before the
+first close; only held original read handles close through the existing
+one-attempt ledger, without directory enumeration, deletion or ACL mutation.
+
+The source distinguishes read-binding and staging retirement. Only the latter
+can satisfy the existing canonical borrowed journal witness. No charge is
+credited by read cleanup. After the exact finite-dispatch acknowledgement,
+custody may be released under an outer BaseException fence. A partial/unknown
+close, callback swap/reentry or wrong result retains the original snapshot and
+denies retry. Interrupted uncommitted removals restore both entries while the
+shared lock still reserves capacity. After acknowledged removal commit, caller
+interruption leaves the confirmed closed owner complete and unregistered; its
+closed snapshot remains on the Core. Full-table retries and competing admission
+regressions cover this distinction. A reserved read-retirement operation excludes
+other Core dispatch before the first callback. Simulated native fault tests
+qualify these source predicates only. Real finite execution, shared domain/fence,
+worker/crash/retained recovery and actual offload resources remain pending; old
+native results retain their original source bindings and are not rerun here.
+
+
 ### Fresh Core diagnostic authority and lifetime
 
 The new explicit standalone component runner accepts no caller command, root,

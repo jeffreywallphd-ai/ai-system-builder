@@ -590,6 +590,29 @@ completion; a raced successful break remains pending and cannot authorize deleti
 The fixed1500ms guard wait does not bound synchronous native calls by itself.
 
 
+### Unused read-binding retirement
+
+The private `_retire_unused_read_binding()` closes a prepared read-only chain
+only if no journal borrow has started and no staging, reservation, guards or
+allocations exist. It captures the exact API, chain, container, native slots and
+accounting binding before callbacks. All chain identities are checked before the
+first close. Only the original read handles close, once, in reverse order.
+There is no new path access, deletion, permission change or capacity credit.
+
+Read-binding and staging retirement have separate private facts. The existing
+journal witness requires the staging fact and its original borrowed receiver.
+Admission requires the original active custody entry; completed or unregistered
+owners deny before callbacks. Custody is released only after the finite execution
+owner acknowledges the exact result. Failed closes, callback changes, lost
+acknowledgements and interrupted uncommitted removals retain the original
+snapshot and deny reuse. Shared-lock admission and restoration preserve the
+64-owner bound. After both registry removals commit, a caller interruption leaves
+that owner complete and unregistered. Its closed facts remain on the Core; they
+grant no staging credit.
+Tests drive the real Core and base close ledger with simulated native replies.
+They do not provide a production finite owner or new Windows/offload evidence.
+
+
 ### Separate fresh Core diagnostic
 
 The qualification helper under dev-tools now constructs an isolated fixed
