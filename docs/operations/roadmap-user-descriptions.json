@@ -13304,6 +13304,26 @@
           "No action needed. The agent must finish and test Windows operation time limits, protection for retained files, saved disk accounting, worker shutdown and crash recovery, and actual low-memory model use. Unknown retained files still reserve the full 12 GiB limit. Accepted model accuracy and OCR stay closed. The final combined test campaign remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8ef1be25993163e9ab414cef2da81160fe5fdef2941f26cba8363f043382974e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added saved disk accounting for low-memory mode. All 27 journal tests, related checks and six check groups passed. An independent agent reviewed the code. The agent also fixed memory growth during repeated file reads. These tests use simulated Windows replies. Actual Windows protection, safe recovery and low-memory model use still need testing. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f88f2f82c645547b01c6921247950be77f5b34881c41431571a07180b5c4617c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must connect and test shared disk accounting, stable file protection, operation time limits, worker shutdown and crash recovery. Retained files and actual low-memory model use still need evidence. Unknown usage continues to reserve the full 12 GiB. Accepted model accuracy and OCR stay closed. The final combined test campaign remains pending."
+        ]
+      }
     }
   ]
 }

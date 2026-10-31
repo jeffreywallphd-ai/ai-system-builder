@@ -8016,6 +8016,146 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Production finite execution, retained/inherited trees, protected durable accounting, exact worker/crash recovery and actual model offload remain pending. The full 12 GiB unknown charge is unchanged. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "windows-protected-offload-journal",
+      "work_criteria": [
+        "concrete-native-journal-and-custody",
+        "canonical-binding-domain-and-lifecycle",
+        "uncertainty-and-failure-denials",
+        "preserve-defaults-and-qualification-gaps",
+        "focused-checks-and-owning-guidance"
+      ],
+      "receipt_digest": "86707dbc2600d70c73dad9f546b0496c5abb3480fd140f7d0608a019916e8737",
+      "review_digest": "f080fc2d9bba1339d2db70e1f52884894139b5b801070d5c7cc70c077ea49e82",
+      "scope": "Protected Windows accounting source is committed after 27 journal tests, related lifecycle checks, six check groups and independent review. The journal reserves its bounded overhead, confirms write/flush/readback, keeps uncertain ownership and credits only acknowledged retirement. A repeated-read memory leak was reproduced and fixed. Synthetic tests do not qualify actual shared accounting, file protection, worker recovery or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
+      ]
     }
   ]
 }
