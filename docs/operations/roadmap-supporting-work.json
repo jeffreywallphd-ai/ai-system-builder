@@ -8156,6 +8156,132 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Actual shared accounting and stable file protection, finite execution, worker/crash recovery, retained trees and model offload remain pending. Unknown usage still reserves the full 12 GiB. Accepted model accuracy and OCR stay closed; the final combined campaign is deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "record-native-journal-component-evidence",
+      "work_criteria": [
+        "faithful-native-journal-evidence",
+        "preserved-security-scope-and-history",
+        "exact-owned-evidence-checkpoint"
+      ],
+      "receipt_digest": "fa3e48d5f3939ff419b1e88566fd877630109729bd6cf1515762f5b417f5bf82",
+      "review_digest": "f77c47cf2f510fedcd86020db9685a7b7c41a1f7f715695c14314fafe3f84555",
+      "scope": "Three actual Windows journal checks passed with independent result review: timer exit, five exact saved records and eight reads with confirmed API retirement, plus expected duplicate-name refusal. Reports bind 21 source/runtime inputs. The refusal retained uncertain API ownership; parent exit was checked separately. Exact evidence is committed. This tiny-file trial does not qualify production accounting or model offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Real aggregate accounting and stable file protection, production finite execution, worker/crash recovery, retained trees and actual offload resources remain pending. Unknown usage still reserves all 12 GiB. Accepted model accuracy and OCR stay closed; the combined campaign is deferred. The consumed diagnostic run grants no retry or cleanup authority."
+      ]
     }
   ]
 }

@@ -13324,6 +13324,26 @@
           "No action needed. The agent must connect and test shared disk accounting, stable file protection, operation time limits, worker shutdown and crash recovery. Retained files and actual low-memory model use still need evidence. Unknown usage continues to reserve the full 12 GiB. Accepted model accuracy and OCR stay closed. The final combined test campaign remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a49046c6371de4ac33051c7a178b9fc46583edee62654947d54b0071ce0586eb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Three small Windows journal checks passed. An independent agent reviewed the actual results. The timer ended its test process. Five saved records read back correctly through eight repeated reads. The tool then closed the files used by that test. The tool refused to create a folder name that the test had already used and kept the test files. Process exit was checked separately. The evidence is committed. These results do not enable model offload. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "86fd9de2e9d5af34a14f17bd51c100e6cb9412e1e5ee0e7e761d436af955b5ce",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must finish and test shared disk accounting, stable file protection, operation time limits, worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. Accepted accuracy and OCR tests stay closed. The combined test campaign remains pending. No further test run or file cleanup is authorized by these results."
+        ]
+      }
     }
   ]
 }
