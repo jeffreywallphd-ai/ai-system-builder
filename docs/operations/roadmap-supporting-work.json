@@ -8434,6 +8434,42 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Production finite execution, shared accounting and stable fencing, exact model-writer shutdown/crash/retained recovery and offload resources remain pending. Unknown usage reserves all12GiB. An empty cache proves no existing-file preservation. Closing read handles grants no disk credit. Accepted accuracy/OCR stay closed; combined testing waits for feature catch-up."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "persistent-windows-offload-read-session",
+      "work_criteria": [
+        "real-owned-persistent-read-session",
+        "bounded-callback-protocol-and-lifetime",
+        "honest-unknown-retirement-and-defaults",
+        "reviewed-failure-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "71e30cac90be0e140b4ff27523558db73ff817a2b4f47bb6ebebafe63193b754",
+      "review_digest": "234f0c8353c874cb065c087544ee20d4a98b9a844024722888267725a107d1b1",
+      "scope": "The private persistent Windows read-session source is committed in c72e08d81. It keeps the real read-only Core child-local, owns CRT startup and fixed channels, validates source/session/deadline frames, serializes terminal/consume/native intents, reserves immutable exact call records and separates Core from process/thread retirement.58focused synthetic-ABI tests, lifecycle routing, six related checks and independent source review passed. This is source support; it enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "The committed private read-session source still needs actual Windows execution qualification. Production shared disk accounting, stable file/namespace/security protection, model-worker shutdown/crash/retained recovery and offload resource measurements remain pending. Unknown usage reserves the unchanged12GiB ceiling; source tests and read retirement grant no capacity. Accepted model accuracy/OCR stay closed. Full software/system testing waits for cross-roadmap feature catch-up."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "normalize-owned-read-session-source-ending",
+      "work_criteria": [
+        "newline-only-source-equivalence",
+        "reviewed-exact-checkpoint-correction"
+      ],
+      "receipt_digest": "c089380457843f17059c12738a7638772c7b64cde08ee34ce445b73533d03421",
+      "review_digest": "84b158d86059e49a18ddcb574cd83538d8e7f448d5d4c03b9bd6c92feb22bfff",
+      "scope": "The same c72e08d81 checkpoint includes the separately reviewed final-newline correction. Each of two source files lost one trailing LF; complete Python ASTs including locations stayed equal. Current lifecycle/architecture checks and separate correction review passed. The other11accepted selected files stayed unchanged.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "The committed private read-session source still needs actual Windows execution qualification. Production shared disk accounting, stable file/namespace/security protection, model-worker shutdown/crash/retained recovery and offload resource measurements remain pending. Unknown usage reserves the unchanged12GiB ceiling; source tests and read retirement grant no capacity. Accepted model accuracy/OCR stay closed. Full software/system testing waits for cross-roadmap feature catch-up."
+      ]
     }
   ]
 }

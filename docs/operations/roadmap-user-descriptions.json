@@ -13384,6 +13384,36 @@
           "No action needed. The agent must finish safe worker execution, shared disk accounting, stable file protection, model-worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. This empty-cache check proves no existing-file preservation and gives no disk-capacity credit. Accepted accuracy and OCR stay closed. Full system testing remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "574e4afe0dd48cf79d64844374f3e0c0b018998eddab28970bf011d4ed1561da",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent added a separate worker for read access. Its source tests cover startup, deadlines, message checks and uncertain results. All 58 focused tests and required contributor checks passed. The source received independent review and was committed. Actual Windows testing and full offload integration remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a509461ebbe9978d8ea67e106a94108c05868e81a09a71e2d437a08aa29a86a2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent also checked the final source formatting. The parsed program stayed unchanged. This correction and the worker source are included in the same commit."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e6616611c67f38ff2e5b00e8fd1bf9cfdef1361a8b62fbc3951e7cbe1bbb4383",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must test the new worker on Windows, finish shared disk accounting and file protection, and prove model-worker shutdown, crash recovery, restart and resource use. Unknown usage still reserves the full 12 GiB. Read access and source tests provide no extra disk capacity. Model accuracy and OCR stay closed. Full system testing stays pending until feature catch-up."
+        ]
+      }
     }
   ]
 }
