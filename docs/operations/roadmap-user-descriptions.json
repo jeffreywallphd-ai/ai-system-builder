@@ -13364,6 +13364,26 @@
           "No action needed. The agent must finish and test actual Windows execution, shared disk accounting, stable file protection, model-worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. Accepted accuracy and OCR checks stay closed. The combined test campaign remains pending. Closing read access gives no disk-capacity credit."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f7ad7778197594e0299c1b32b9619915707778a4f2a83d73e793a581c1d6ee5c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The Windows check closed all 11 read-only folder handles in the correct order. It checked folder identity before closing them and refused reuse afterward without extra native calls. The deadline control and separate test-process shutdown passed. The source and actual results received independent review. This is a small component check. Actual low-memory model use remains unavailable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7914f9e8447df401e52abb6166fdf624738b821a55f952a6d459e298ab3045be",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed. The agent must finish safe worker execution, shared disk accounting, stable file protection, model-worker shutdown, crash recovery and retained-file handling. Actual low-memory model use still needs resource measurements. Unknown usage reserves the full 12 GiB. This empty-cache check proves no existing-file preservation and gives no disk-capacity credit. Accepted accuracy and OCR stay closed. Full system testing remains pending."
+        ]
+      }
     }
   ]
 }

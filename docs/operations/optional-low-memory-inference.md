@@ -15,7 +15,14 @@ capacity snapshots. An old worker cannot silently ignore the new setting.
 
 ## Check unused cache-binding cleanup
 
-Agent task: finish the Windows check for unused read-chain retirement. The fixed
+The fixed Windows check passed on commit `66a69afee`. It confirmed all 11
+original read handles, 22 retirement identity checks, 11 acknowledged reverse
+closes and a software refusal to reuse the retired binding with zero calls.
+The deadline control and separate parent process/Job/handle retirement passed.
+See [the versioned component results](windows-offload-read-binding-qualification.json).
+This does not enable model offload or complete the parent criterion.
+
+The fixed
 `qualify_windows_offload_read_binding.py` plan defines two cases: a delivered
 deadline control and closure of an unused binding in a fresh empty cache. The
 check observes the actual Core and base Windows API: all original identities
@@ -27,7 +34,7 @@ separate committed-source effect review must precede actual execution. The
 512 MiB child ceiling and 120-second limit bound this model-free diagnostic;
 they are not a model policy or a production guardian lifetime. Parent process
 exit and parent handle closure are separate observations from Core retirement.
-This check creates no staging, journal, disk allowance, worker or model. It
+This check creates no model staging, journal, disk allowance or model worker. It
 cannot establish preservation of existing file contents from an empty cache.
 Production finite execution, stable fencing, aggregate accounting, exact writer
 exit/crash and retained recovery, and measured offload resources remain pending.

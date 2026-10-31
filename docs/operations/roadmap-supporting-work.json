@@ -8415,6 +8415,25 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Actual current-source read-binding/process qualification, shared accounting and stable fencing, owned writer/crash/retained recovery and offload resources remain pending. Unknown usage reserves all 12 GiB. Accepted model accuracy and OCR stay closed; combined testing waits for feature catch-up. Closing read handles grants no disk credit or current parent pass."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "bounded-windows-read-binding-fixture",
+      "work_criteria": [
+        "closed-three-mode-controller",
+        "actual-read-retirement-producer",
+        "bounded-failure-evidence-and-routing",
+        "reviewed-source-only-checkpoint"
+      ],
+      "receipt_digest": "2074a8707a7d3fbd4a9e2f1aa04b7e7401f87de89624b79f2bd9ca8c44b5f51c",
+      "review_digest": "358b6a0e657c36c28e58274a643d3a085293de6f96ecae4cb0cd6af89fe06d55",
+      "scope": "The fixed Windows unused-read check passed on commit66a69afee. It confirmed11original read handles,22retirement identities,11reverse acknowledged closes, delivered deadline control and software late-borrow refusal with zero calls. Source checks and independent source/result reviews passed. Parent process/Job/handle retirement was checked separately. This enables no production offload.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Production finite execution, shared accounting and stable fencing, exact model-writer shutdown/crash/retained recovery and offload resources remain pending. Unknown usage reserves all12GiB. An empty cache proves no existing-file preservation. Closing read handles grants no disk credit. Accepted accuracy/OCR stay closed; combined testing waits for feature catch-up."
+      ]
     }
   ]
 }
