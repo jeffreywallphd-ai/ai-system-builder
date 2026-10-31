@@ -743,8 +743,9 @@ field does not count as evidence. The agent corrected the report producer and
 its checks in version 2. Configuration must be confirmed for every successful
 child. An unknown result stops the test before folder operations.
 
-No user action is needed. Version 2 still needs its separate reviewed native run;
-the source fix does not supply that result. Timer configuration is different
+No user action is needed. The separate version 2 native run passed its four
+component checks and independent review. Its exact results are recorded in
+`windows-offload-component-qualification.json`. Timer configuration is different
 from proving that a timeout ended a process. Production offload, durable disk
 accounting, worker restart, retained-file protection and real resources remain
 separate work. Accepted model accuracy and OCR results stay closed.
@@ -786,8 +787,10 @@ Job limit is selected or changed by this component.
 
 ## Journal API component qualification
 
-No action needed. The agent is preparing a small Windows test of the actual
-journal file API. The dedicated plan command is effect-free:
+No action needed. Three small Windows journal API checks passed on the committed
+source and received an independent result review. Exact results are recorded in
+`windows-offload-journal-qualification.json`. The dedicated plan command remains
+effect-free:
 
 ```text
 python -B dev-tools/scripts/qualification/qualify_windows_offload_journal.py --plan
@@ -810,3 +813,16 @@ Real shared accounting, stable namespace/security fencing, production finite
 execution, worker/crash/retained recovery and model offload still need evidence.
 Unknown production usage continues to reserve all 12 GiB. Keep accepted accuracy
 and OCR closed and defer the full combined campaign.
+
+The actual timer control ended its child after about 3.32 seconds. The journal
+case wrote, flushed and read back five 512-byte records. Eight repeated reads
+left no live data IO requests or unretired handle records. The API confirmed
+guard and handle retirement and deliberately kept its small journal history.
+The duplicate-name case refused the folder created by that same test. It kept
+uncertain API ownership and did not claim cleanup. Parent process exit was
+confirmed separately in all three cases.
+
+These results qualify only the fresh tiny-file API trial. They do not establish
+shared disk accounting, a stable mutation fence, production deadlines, crash
+recovery or actual model offload. Test record bytes grant no production capacity.
+The one reviewed run is consumed; another native run needs a new exact review.
