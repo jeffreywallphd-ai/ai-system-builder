@@ -13681,6 +13681,43 @@
           "The combined full-system test effort will follow feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0d9009c4ca0f2fff3604cafd6134de3b35bea190e7351cc3dd8743a03d1047c2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The small training test input has its own name and identity.",
+          "The checks for the original model files stay the same.",
+          "All 40 focused training checks and 29 checks of the test-coverage list passed.",
+          "Four groups of related checks also passed.",
+          "Another agent reviewed and accepted this code change.",
+          "The 179 entries in the test-coverage list now point to real committed files.",
+          "No model input files were created for this source change.",
+          "The agent did not run a training test in the application or its Windows launcher."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7e1b6cd4f4c6aff44eab2ef8c2da44427e42128903ba9c262aed7d93486c2366",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers test definitions and lightweight checks.",
+          "The agent must finish and prove the Windows launcher that starts and closes the test processes.",
+          "Then the agent must run the Desktop training journey.",
+          "That journey must train, show a private review, save the output, reopen it and confirm cleanup.",
+          "These results do not qualify the current application or complete any roadmap requirement.",
+          "They supply no new results for model accuracy, resource use, provider access or recovery in low-memory mode.",
+          "Earlier failed results remain in the history.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "The combined full-system test effort will follow all planned feature work."
+        ]
+      }
     }
   ]
 }

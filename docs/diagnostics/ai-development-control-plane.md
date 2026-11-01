@@ -1579,3 +1579,12 @@ and obtain current checks/review before committing. Never backdate a start.
 Restart the verified owned review server onto the reviewed reader before a new
 physical format is published. Check its live historical support and pending
 status afterward; browser polling does not reload a Python server's imports.
+
+
+### Reviewed tiny Desktop training-input definitions
+
+The [source qualification summary](../operations/desktop-training-input-qualification.json)
+records the committed input definitions, focused checks and separate review.
+The current coverage inventory uses real commit pins. Actual input creation,
+the native launcher and the Desktop train/review/Save/reopen journey remain
+agent work. This source result does not grant a parent or model-quality pass.

@@ -8600,6 +8600,24 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Collection, fake regressions and command planning only. The entire functionality profile and full host journeys did not execute here. Native compatibility remains pinned to its earlier source; no current Native/resource/production/parent pass, extra effect, lease, credit or old-data authority. Existing quality/OCR closures and real Native/domain/worker/crash/retained-restart/offload-resource gaps remain. Full testing follows feature completion."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "finish-tiny-training-inputs-and-census",
+      "work_criteria": [
+        "bounded-generated-input-contract",
+        "real-training-consumers-and-legacy-compatibility",
+        "security-and-owned-checkpoint"
+      ],
+      "receipt_digest": "92f074724bb987722c0b5f500bc0e73ac37f0a1ed953f25faab1b46e86c8af81",
+      "review_digest": "d75751506ffca513bdeef31ea138daedefa4955064196c5a9118ef856a8bb581",
+      "scope": "Commit 93bc9e61c adds a separately named generated tiny training-input definition and preserves the original model verifier. It passed 40 focused training tests, 29 coverage-inventory checks, four registered feature groups and independent review. All 179 coverage sources now bind to an actual existing commit. This is test construction support; no model input was created and no application or native training run occurred.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Source definitions and model-free checks only. The agent must still prove the native launcher and execute the real Desktop train, private review, Save and reopen journey with owned cleanup. No model quality, resource, provider, low-memory recovery, current parent-candidate or roadmap pass is granted. Earlier failures remain history. Completed accuracy and OCR checks stay closed; combined full-system testing remains deferred until feature work is complete."
+      ]
     }
   ]
 }
