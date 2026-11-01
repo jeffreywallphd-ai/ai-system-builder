@@ -8507,6 +8507,24 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Direct competing-mutation/ACL/owner denial, unknown preopened rights, hung IO/cancellation, guardian/model-worker crash recovery, shared durable 12 GiB accounting, retained restart and actual offload resource/delivery/cleanup remain pending. Unknown usage reserves all 12 GiB. This grants no new run, lease, disk credit or production mode. Accuracy/OCR stay closed; full-system tests remain deferred. Raw stdout/stderr lack independent capture; audited summary and observed tool facts are separate."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "define-fixed-journal-mutation-denial-controls",
+      "work_criteria": [
+        "closed-versioned-mutation-control-definition",
+        "exact-denial-and-finite-owned-failure-evidence",
+        "reviewed-source-history-and-owned-checkpoint"
+      ],
+      "receipt_digest": "5f0062b21a309802ac7032604a9f45a0eb5dce951ad180cfca8b59839af8c9fa",
+      "review_digest": "0a7eeddb70f5a9ce446977bfec4866bd11b6731eaea83509422ab28a14a4c657",
+      "scope": "Commit c059947e0 passed 72 focused tests, three related groups and independent review. One Windows run accepted three earlier cases but failed the new mutation case: delete access to the accounting folder was granted. Original identities, permissions and bytes were read before failure. Writer retirement stayed separate from 14 uncertain probe records. Child exit and parent cleanup were observed. Captured stdout matched the guarded new summary. This is partial component evidence.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Deletion protection failed. Later permission, child/stream, parent-right and resize checks were not reached. Parent rights are a likely cause, not a measured grant. Owned-parent and anchor protection need work. Existing handles, stalled IO, shared durable 12 GiB accounting, worker/crash/restart and actual offload resources/delivery/cleanup stay pending. Unknown usage charges 12 GiB. No lease, credit, old-file access or new run. Accuracy/OCR closed; full tests deferred."
+      ]
     }
   ]
 }

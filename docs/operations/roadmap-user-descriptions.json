@@ -13490,6 +13490,46 @@
           "The audit checked the saved summary and observed tool results; it did not compare separate raw output captures."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f4c586f55712d3bd3509a363e844ee699152190cc2c64339e39a13d416c8cefb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The new test code passed 72 focused tests, three related check groups and independent review.",
+          "The Windows run passed the three earlier component checks.",
+          "The new check failed because Windows granted delete access to the accounting folder.",
+          "The test read the original file identities, permissions and bytes before that failure.",
+          "Writer retirement and 14 uncertain test-handle records are separate facts.",
+          "The child process exited, and its controller cleanup was confirmed.",
+          "The captured output matched the saved result from this new run.",
+          "These are partial component results."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a0e32743f2b69bd182bbc2e75185814e5efdec7eb401fc40433a0aacaa3bc38d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must fix deletion protection for the accounting folder.",
+          "The parent folder permissions are a likely cause; that separate check did not run.",
+          "Later permission changes, new child files, extra data streams and resizing still need tests.",
+          "The agent must establish ownership and protection of the immediate parent and keep its location stable.",
+          "Earlier open handles and stalled file operations still need protection checks.",
+          "All processes and runs must share a disk limit of 12 GiB that survives a restart.",
+          "Worker shutdown, crashes and safe restart still need work.",
+          "Actual low-memory runs must measure resource use, output delivery and cleanup.",
+          "Unknown temporary files still count against the full 12 GiB limit.",
+          "This result enables no production lease, disk credit, old-file access or extra test run.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "Full-system tests will run after feature work."
+        ]
+      }
     }
   ]
 }
