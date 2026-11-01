@@ -31,7 +31,8 @@ _ACL_CONTROL = 0x150c
 _PRIVATE_CONTROL = 0x1004
 _WRITE_MASK = 0xD0156
 _OWNER_RIGHTS = b'\x01\x01\0\0\0\0\0\x03\x04\0\0\0'
-_MAX_PROTECTIONS = 2
+_MAX_PROTECTIONS = 3  # Core's two fixed objects; Journal adds its owned parent.
+_MAX_DIRECTORY_CREATIONS = 2
 _WORLD = b'\x01\x01\0\0\0\0\0\x01\0\0\0\0'
 _LEAF = re.compile(r'[A-Za-z0-9_. -]{1,255}')
 _DIRECTORY_ROW = struct.Struct('<II6qIIII16s')
@@ -427,6 +428,59 @@ class _ReadBindingRetirement:
                 raise
 
 
+class _DirectoryCreation:
+    """Original exclusive creation, never a private-ACL lookalike or path proof."""
+    def __init__(self, api, parent, name):
+        _require(type(parent) is _Handle and type(parent.slot) is _PTR
+                 and type(api.owner._handles) is list
+                 and all(type(h) is _Handle for h in api.owner._handles)
+                 and parent in api.owner._handles
+                 and parent.closed is False and parent.close_started is False
+                 and parent.delete_started is False)
+        self.origin, self.api, self.owner, self.thread = self, api, api.owner, get_ident()
+        self.generation, self.handles = api._construction_generation, api.owner._handles
+        self.parent, self.parent_slot, self.parent_number = parent, parent.slot, parent.value
+        self.name = _name(name)
+        self.handle = self.slot = self.number = self.original = self.principal = self.identity = None
+        self.completed = False
+
+    def assert_origin(self, api):
+        _require(type(self) is _DirectoryCreation)
+        _require(type(self.thread) is int and type(self.generation) is object
+                 and type(self.handles) is list and all(type(h) is _Handle for h in self.handles)
+                 and type(self.parent) is _Handle and type(self.parent_slot) is _PTR
+                 and type(self.parent_number) is int and self.parent_number > 0
+                 and type(self.parent.closed) is bool and type(self.parent.close_started) is bool
+                 and type(self.parent.delete_started) is bool and type(self.name) is str
+                 and type(self.completed) is bool)
+        _require(self.origin is self and self.api is api and self.owner is api.owner
+                 and self.owner._api is api and self.thread == get_ident()
+                 and self.generation is api._construction_generation
+                 and self.handles is self.owner._handles
+                 and self.handles.count(self.parent) == 1
+                 and self.parent.slot is self.parent_slot and self.parent_slot.value == self.parent_number
+                 and self.parent.value == self.parent_number
+                 and self.parent.closed is self.parent.close_started is self.parent.delete_started is False)
+        _name(self.name)
+        if self.handle is not None:
+            _require(type(self.handle) is _Handle and type(self.slot) is _PTR
+                     and type(self.number) is int and self.number > 0
+                     and type(self.handle.closed) is bool and type(self.handle.close_started) is bool
+                     and type(self.handle.delete_started) is bool
+                     and self.handles.count(self.handle) == 1 and self.handle.slot is self.slot
+                     and self.slot.value == self.number and self.handle.value == self.number
+                     and self.handle.closed is self.handle.close_started is self.handle.delete_started is False)
+        else:
+            _require(self.slot is self.number is None and self.completed is False)
+        if self.completed:
+            _require(type(self.original) is tuple and len(self.original) == 2
+                     and type(self.original[0]) is bytes and type(self.original[1]) is int
+                     and type(self.principal) is bytes and type(self.identity) is bytes
+                     and len(self.identity) == 24 and any(self.identity[:8]) and any(self.identity[8:])
+                     and self.original[1] == _PRIVATE_CONTROL
+                     and self.principal == _private_sid(self.original[0]))
+
+
 class _Protection:
     """Original native seal attempt; no serialized or caller-issued authority."""
     def __init__(self, api, handle, original):
@@ -475,6 +529,10 @@ class _WindowsApi:
         self._protection_origin = self
         self._protections = []
         self._protection_rows = self._protections
+        self._construction_origin = self
+        self._construction_generation = self._construction_generation_origin = object()
+        self._directory_creations = []
+        self._directory_creation_rows = self._directory_creations
         self.k = C.WinDLL('kernel32', use_last_error=True)
         self.a = C.WinDLL('advapi32', use_last_error=True)
         self.n = C.WinDLL('ntdll', use_last_error=True)
@@ -609,12 +667,49 @@ class _WindowsApi:
         return struct.pack('<BBHHH', 2, 0, 8 + len(ace), 1, 0) + ace
 
     def create_directory(self, parent, name):
+        _WindowsApi._construction_state(self)
+        _require(len(self._directory_creations) < _MAX_DIRECTORY_CREATIONS)
+        row = _DirectoryCreation(self, parent, name)
+        self._directory_creations.append(row)  # Before descriptor/open acquisition.
         acl = self._private_acl()
         principal = _private_sid(acl)
         descriptor = self._descriptor(acl, principal=principal)
-        handle = self.open(parent, name, 0x700a1, create=True, share=0, security=descriptor)
+        # Canonical exclusive open validates FILE_CREATED, not an overridden callback.
+        handle = _WindowsApi.open(self, parent, name, 0x700a1, create=True, share=0, security=descriptor)
+        row.handle, row.slot, row.number = handle, handle.slot, handle.value
+        _DirectoryCreation.assert_origin(row, self)
+        _require(row.number != row.parent_number)
+        for other in self._directory_creations:
+            _require(type(other) is _DirectoryCreation)
+            _DirectoryCreation.assert_origin(other, self)
+            _require(other is row or (other.completed is True and other.number != row.number))
         _require(self.security(handle) == (acl, _PRIVATE_CONTROL, principal))
-        return handle, self.identity(handle), acl
+        identity = self.identity(handle)
+        _require(type(identity) is bytes and len(identity) == 24 and any(identity[:8]) and any(identity[8:]))
+        _require(all(other is row or other.identity != identity for other in self._directory_creations))
+        row.original, row.principal, row.identity = (acl, _PRIVATE_CONTROL), principal, identity
+        row.completed = True
+        _DirectoryCreation.assert_origin(row, self)
+        return handle, identity, acl
+
+    def _construction_state(self):
+        _require(getattr(self, '_construction_origin', None) is self and self.owner._api is self
+                 and type(self._directory_creations) is list
+                 and self._directory_creations is self._directory_creation_rows
+                 and len(self._directory_creations) <= _MAX_DIRECTORY_CREATIONS
+                 and type(self._construction_generation) is object
+                 and self._construction_generation is self._construction_generation_origin)
+        for row in self._directory_creations:
+            _require(type(row) is _DirectoryCreation)
+            _DirectoryCreation.assert_origin(row, self)
+            _require(row.completed is True)
+
+    def directory_creation(self, handle):
+        _WindowsApi._construction_state(self)
+        rows = [row for row in self._directory_creations if row.handle is handle]
+        _require(len(rows) == 1)
+        _DirectoryCreation.assert_origin(rows[0], self)
+        return rows[0]
 
     def security(self, handle):
         acl, principal, descriptor, control, revision = _PTR(), _PTR(), _PTR(), _U16(), _U32()

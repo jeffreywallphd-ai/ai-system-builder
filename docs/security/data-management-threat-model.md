@@ -2006,8 +2006,9 @@ Normal nonfinal requests publish their effect-exit marker before releasing busy 
 ## Fresh fixed accounting security boundary
 
 New fixed journal objects use an explicit current-token principal owner and a
-private construction descriptor. All fixed children are created before the
-permanent file-then-container deny. The sealed descriptor denies data/namespace
+private construction descriptor. Their immediate parent also comes from the
+Journal-owned native creation path. Fixed children precede the permanent
+file-then-namespace-then-parent deny. The sealed descriptor denies data/namespace
 mutation, delete, WRITE_DAC and WRITE_OWNER; explicit OWNER RIGHTS admits only
 READ_CONTROL. Original privately held control/writer handles remain authoritative
 and must never be exported to an untrusted supplier or caller. Descriptor reads
@@ -2028,3 +2029,29 @@ durable accounting, model-worker shutdown/crash proof, retained restart and
 actual optional-offload resources remain pending. The missing domain/bootstrap
 gates, unavailable production factory and full 12 GiB unknown reservation remain.
 Rollback withdraws this private operation and retains the existing denial.
+
+## Immediate-parent construction and deletion delta
+
+The v2 Windows diagnostic observed granted delete access to the accounting
+namespace. Parent delete-child permission is a likely alternative described by
+[Windows delete access](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-deletefilew);
+that separate probe was not reached. Preserve the failed result and strict oracle.
+
+Journal bootstrap now owns a fresh fixed parent, namespace and file. It creates
+them only after trusted domain charge/binding/fence admission, then seals file,
+namespace and parent before data writes. The original creation record comes only
+from the canonical exclusive directory-create path and keeps its generation,
+private owner/security, identity and original handle custody. Imported roots,
+matching ACL bytes, JSON and copied or incomplete records supply no authority.
+The parent capability binds the actual third canonical protection attempt;
+primitive validation precedes comparisons, callbacks and native observations.
+
+The source bounds remain two directory records and three fixed protection rows
+per API; Core still uses its original two objects. Check, write and flush refuse
+missing or altered parent authority and retain failed/partial output custody.
+There is no existing-parent ACL rewrite, historical adoption, cleanup or quota
+reset. Unknown usage still charges 12 GiB. The mandatory domain fence remains:
+ancestor/new-anchor rename or deletion, unknown preopened rights, guardian/crash
+lifetime, shared accounting, worker/restart and resource qualification are pending.
+New fixture definitions require separate source/effect review before execution.
+Rollback retains unavailable production admission and all earlier evidence.

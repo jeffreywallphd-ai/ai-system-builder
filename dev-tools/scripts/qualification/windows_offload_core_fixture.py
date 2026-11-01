@@ -57,12 +57,12 @@ _CORE_PROFILE = _FixtureProfile(ENTRY, '_standalone_windows_core_fixture', SCHEM
                                 CASES, TASK_FILES, TOOL_FILES, RUNS)
 _JOURNAL_PROFILE = _FixtureProfile(
     ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_journal.py',
-    '_standalone_windows_journal_engine', 'windows-offload-journal-native-v2',
-    ('deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'),
+    '_standalone_windows_journal_engine', 'windows-offload-journal-native-v3',
+    ('deadline-control', 'journal-roundtrip', 'journal-parent-denied', 'journal-mutation-denied'),
     TASK_FILES + ('modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py',),
     ('dev-tools/scripts/qualification/qualify_windows_offload_journal.py', TOOL_FILES[1],
      'dev-tools/scripts/qualification/windows_offload_journal_fixture.py'),
-    ROOT / '.local-codex/windows-offload-journal-native-v2')
+    ROOT / '.local-codex/windows-offload-journal-native-v3')
 _READ_PROFILE = _FixtureProfile(
     ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_read_binding.py',
     '_standalone_windows_read_binding_engine', 'windows-offload-read-binding-native-v1',

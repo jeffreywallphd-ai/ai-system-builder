@@ -319,11 +319,11 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaises(subject.FixtureError): subject.standalone_native_journal()
         native.assert_not_called()
 
-    def test_journal_v2_extension_keeps_core_and_read_profiles_and_resource_limits(self):
-        self.assertEqual(subject._JOURNAL_PROFILE.schema, 'windows-offload-journal-native-v2')
+    def test_journal_v3_extension_keeps_core_and_read_profiles_and_resource_limits(self):
+        self.assertEqual(subject._JOURNAL_PROFILE.schema, 'windows-offload-journal-native-v3')
         self.assertEqual(subject._JOURNAL_PROFILE.cases, ('deadline-control', 'journal-roundtrip',
-            'journal-namespace-denied', 'journal-mutation-denied'))
-        self.assertEqual(subject._JOURNAL_PROFILE.runs.name, 'windows-offload-journal-native-v2')
+            'journal-parent-denied', 'journal-mutation-denied'))
+        self.assertEqual(subject._JOURNAL_PROFILE.runs.name, 'windows-offload-journal-native-v3')
         self.assertEqual(subject._CORE_PROFILE.schema, 'windows-offload-core-native-v2')
         self.assertEqual(subject._CORE_PROFILE.cases, ('deadline-control', 'empty-stage', 'one-index', 'namespace-denied'))
         self.assertEqual(subject._READ_PROFILE.schema, 'windows-offload-read-binding-native-v1')

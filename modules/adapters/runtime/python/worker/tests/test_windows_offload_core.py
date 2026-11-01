@@ -898,6 +898,106 @@ class CoreTests(unittest.TestCase):
 
 
 
+class DirectoryConstructionTests(unittest.TestCase):
+    """Actual create/open methods with explicit typed synthetic native replies."""
+    def setUp(self):
+        self.enterContext(patch.dict(c._CUSTODY, {}, clear=True))
+
+    def test_core_keeps_its_existing_two_directory_and_protection_targets(self):
+        core = fresh_core(); core.create_staging(8192); core.seal_staging()
+        self.assertEqual(core._api.steps.count('protect'), 2)
+        self.assertEqual(len(core._protected), 2)
+        created = [v for v in core._api.nodes.values() if v['parent'] is not None]
+        self.assertEqual(len(created), 2)
+        self.assertEqual({v['name'] for v in created}, {'.aisb-offload-v1', core._leaf})
+
+    def kernel(self, *, status=0, information=2, changed_security=False):
+        core, api = raw_api_core()
+        api._construction_origin = api
+        api._construction_generation = api._construction_generation_origin = object()
+        api._directory_creations = []; api._directory_creation_rows = api._directory_creations
+        acl = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + c._WORLD
+        parent = api.handle(); parent.slot.value = 901
+        api._private_acl = Mock(return_value=acl)
+        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'inert', descriptor, None))
+        api.kind = Mock(); api.identity = Mock(side_effect=lambda h: b'ownedvol' + h.value.to_bytes(16, 'little'))
+        api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, b'x' if changed_security else c._WORLD))
+        def create(output, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
+            self.assertEqual((share, disposition), (0, 2))
+            self.assertIsNotNone(core._pending)
+            self.assertIs(core._pending[3][0], core._handles[-1])
+            self.assertIn(len(api._directory_creations), (1, 2))
+            self.assertFalse(api._directory_creations[-1].completed)
+            output._obj.value = 901 + len(api._directory_creations); io._obj.information = information
+            return status
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create))
+        return core, api, parent, acl
+
+    def test_only_exclusive_actual_directory_creation_mints_original_receipt(self):
+        core, api, parent, acl = self.kernel()
+        result = core._run(lambda: api.create_directory(parent, 'owned'))
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[1:], (b'ownedvol' + (902).to_bytes(16, 'little'), acl))
+        receipt = api.directory_creation(result[0])
+        self.assertIs(type(receipt), c._DirectoryCreation)
+        self.assertTrue(receipt.completed)
+        self.assertIs(receipt.handle, result[0]); self.assertIs(receipt.parent, parent)
+        self.assertIsNone(c._DirectoryCreation.assert_origin(receipt, api))
+        api._descriptor.assert_called_once_with(acl, principal=c._WORLD)
+
+    def test_pending_open_existing_readback_and_security_failure_leave_only_incomplete_receipt(self):
+        for values in ({'status': 0x103}, {'information': 1}, {'changed_security': True}):
+            with self.subTest(values=values):
+                core, api, parent, acl = self.kernel(**values)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.create_directory(parent, 'owned'))
+                self.assertTrue(core._uncertain); self.assertEqual(len(api._directory_creations), 1)
+                self.assertFalse(api._directory_creations[0].completed)
+                before = api.n.NtCreateFile.call_count
+                with self.assertRaises(c.OffloadAdmissionError): api.directory_creation(core._handles[-1])
+                self.assertEqual(api.n.NtCreateFile.call_count, before)
+
+    def test_copied_missing_or_closed_construction_cannot_become_parent_authority(self):
+        for mode in ('copy', 'missing', 'closed', 'slot', 'generation', 'foreign-api'):
+            with self.subTest(mode=mode):
+                core, api, parent, acl = self.kernel()
+                value = core._run(lambda: api.create_directory(parent, 'owned'))
+                target = api
+                if mode == 'copy': api._directory_creations[0] = copy.copy(api._directory_creations[0])
+                if mode == 'missing': api._directory_creations.clear()
+                if mode == 'closed': value[0].closed = True
+                if mode == 'slot': value[0].slot = c._PTR(902)
+                if mode == 'generation': api._construction_generation = object()
+                if mode == 'foreign-api': target = copy.copy(api)
+                before = (api.identity.call_count, api.security.call_count)
+                with self.assertRaises(c.OffloadAdmissionError): target.directory_creation(value[0])
+                self.assertEqual((api.identity.call_count, api.security.call_count), before)
+
+    def test_two_directory_receipts_allow_no_third_native_creation(self):
+        core, api, parent, acl = self.kernel()
+        first = core._run(lambda: api.create_directory(parent, 'first'))
+        second = core._run(lambda: api.create_directory(first[0], 'second'))
+        self.assertEqual(len(api._directory_creations), 2)
+        self.assertIs(api.directory_creation(second[0]), api._directory_creations[1])
+        before = api.n.NtCreateFile.call_count
+        with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.create_directory(second[0], 'third'))
+        self.assertEqual(api.n.NtCreateFile.call_count, before)
+
+    def test_construction_primitive_substitutions_refuse_before_callbacks_or_native_queries(self):
+        class Trap:
+            def __getattribute__(self, name): raise AssertionError('No foreign attribute')
+            def __eq__(self, other): raise AssertionError('No foreign equality')
+            def __bool__(self): raise AssertionError('No foreign truth')
+        for field in ('thread', 'generation', 'handles', 'parent', 'parent_slot', 'parent_number',
+                      'name', 'handle', 'slot', 'number', 'original', 'principal', 'identity', 'completed'):
+            with self.subTest(field=field):
+                core, api, parent, acl = self.kernel()
+                result = core._run(lambda: api.create_directory(parent, 'owned'))
+                setattr(api._directory_creations[0], field, Trap())
+                before = (api.identity.call_count, api.security.call_count)
+                with self.assertRaises(c.OffloadAdmissionError): api.directory_creation(result[0])
+                self.assertEqual((api.identity.call_count, api.security.call_count), before)
+
+
 class FixedProtectionTests(unittest.TestCase):
     """Actual protection/security methods with typed synthetic replies only."""
     def setUp(self):
@@ -1018,7 +1118,10 @@ class FixedProtectionTests(unittest.TestCase):
 
     def test_new_directory_descriptor_retains_exact_explicit_owner_until_create(self):
         core, api = raw_api_core(); acl, principal = self.acl()
-        parent, child = api.handle(), api.handle(); parent.slot.value, child.slot.value = 910, 911
+        api._construction_origin = api
+        api._construction_generation = api._construction_generation_origin = object()
+        api._directory_creations = []; api._directory_creation_rows = api._directory_creations
+        parent = api.handle(); parent.slot.value = 910
         trace = []
         def owner(descriptor, sid, defaulted):
             trace.append('owner')
@@ -1027,21 +1130,25 @@ class FixedProtectionTests(unittest.TestCase):
             descriptor._obj.owner = C.cast(sid, c._PTR).value
             self.assertIn(sid, core._pending[3])
             return 1
-        def create(p, name, access, **kwargs):
+        def create(output, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
             trace.append('create')
-            self.assertIs(p, parent); self.assertEqual((name, access), ('fixed', 0x700a1))
-            self.assertIs(kwargs['create'], True); self.assertEqual(kwargs['share'], 0)
-            buffers = kwargs['security']; self.assertEqual(len(buffers), 3)
+            self.assertEqual((attributes._obj.root, access, share, disposition), (parent.value, 0x700a1, 0, 2))
+            buffers = core._pending[3][5]; self.assertEqual(len(buffers), 3)
             self.assertEqual(C.string_at(buffers[1].owner, len(principal)), principal)
             self.assertIsNotNone(buffers[2])
-            return child
+            output._obj.value = 911; io._obj.information = 2
+            return 0
         api.a = SimpleNamespace(IsValidAcl=Mock(return_value=1), InitializeSecurityDescriptor=Mock(return_value=1),
             SetSecurityDescriptorDacl=Mock(return_value=1), SetSecurityDescriptorControl=Mock(return_value=1),
             IsValidSid=Mock(return_value=1), SetSecurityDescriptorOwner=Mock(side_effect=owner),
             IsValidSecurityDescriptor=Mock(return_value=1))
-        api._private_acl = Mock(return_value=acl); api.open = Mock(side_effect=create)
+        api._private_acl = Mock(return_value=acl)
+        api.open = Mock(side_effect=AssertionError('Canonical creation cannot use a substituted open'))
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create)); api.kind = Mock()
         api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, principal)); api.identity = Mock(return_value=b'c' * 24)
-        self.assertEqual(core._run(lambda: api.create_directory(parent, 'fixed')), (child, b'c' * 24, acl))
+        result = core._run(lambda: api.create_directory(parent, 'fixed'))
+        self.assertEqual(result, (core._handles[-1], b'c' * 24, acl))
+        api.open.assert_not_called(); self.assertTrue(api.directory_creation(result[0]).completed)
         self.assertEqual(trace, ['owner', 'create'])
 
 

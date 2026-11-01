@@ -11,8 +11,8 @@ from threading import get_ident
 import time
 import uuid
 
-SCHEMA = 'windows-offload-journal-native-v2'
-CASES = ('deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied')
+SCHEMA = 'windows-offload-journal-native-v3'
+CASES = ('deadline-control', 'journal-roundtrip', 'journal-parent-denied', 'journal-mutation-denied')
 REPEATED_READS = 8
 MAX_CALLS, MAX_HANDLES = 4096, 136
 # label, exact target, one desired right, FILE_CREATE, directory. No caller input.
@@ -54,7 +54,7 @@ _PHASES = frozenset({
 })
 _FLAGS = ('expected_refusal', 'api_created', 'api_cleanup_confirmed', 'api_handles_closed',
           'api_uncertainty_retained', 'guard_retirement_confirmed',
-          'history_intentionally_retained', 'collision_namespace_created',
+          'history_intentionally_retained', 'collision_parent_created',
           'timer_configured', 'model_started', 'production_composed', 'shared_domain_qualified')
 _COUNTS = ('journal_frames', 'journal_data_bytes', 'allocated_bytes', 'repeated_reads',
            'peak_live_data_irps', 'live_data_irps_after', 'unretired_handle_records', 'native_call_count')
@@ -141,7 +141,7 @@ def validate_child_report(value, case, source):
               and value['api_cleanup_confirmed'] and value['api_handles_closed']
               and value['guard_retirement_confirmed'] and value['history_intentionally_retained']
               and not value['expected_refusal'] and not value['api_uncertainty_retained']
-              and not value['collision_namespace_created']
+              and not value['collision_parent_created']
               and value['journal_frames'] == 5 and value['journal_data_bytes'] == 2560
               and 2560 <= value['allocated_bytes'] <= 65536
               and value['repeated_reads'] == REPEATED_READS and value['peak_live_data_irps'] == 1
@@ -150,7 +150,7 @@ def validate_child_report(value, case, source):
               and value['last_native_return_code'] not in (None, 0), 'journal-report-roundtrip')
     else:
         _need(value['outcome'] == 'expected-denial' and value['expected_refusal']
-              and value['collision_namespace_created'] and value['api_uncertainty_retained']
+              and value['collision_parent_created'] and value['api_uncertainty_retained']
               and not any(value[n] for n in ('api_created', 'api_cleanup_confirmed', 'api_handles_closed',
                                             'guard_retirement_confirmed', 'history_intentionally_retained'))
               and not any(value[n] for n in ('journal_frames', 'journal_data_bytes', 'allocated_bytes',
@@ -206,7 +206,7 @@ def failure_diagnostics(value):
         item = value.get(name)
         maximum = MAX_CALLS if name.endswith('call_count') else MAX_HANDLES if name.endswith('handle_records') else 0xffffffff
         if item is None or type(item) is int and 0 <= item <= maximum: result[name] = item
-    for name in ('api_created', 'api_uncertainty_retained', 'collision_namespace_created',
+    for name in ('api_created', 'api_uncertainty_retained', 'collision_parent_created',
                  *_PROBE_FLAGS):
         if type(value.get(name)) is bool: result[name] = value[name]
     label = value.get('probe_last_label')
@@ -322,8 +322,8 @@ def _deny_open(api, w, j, definition, chain):
     label, target, access, create, directory = definition
     parent, name = {
         'file': (api.namespace[0], j._FILE),
-        'namespace': (chain[-1][0], j._NAMESPACE),
-        'parent': (chain[-2][0], 'cache'),
+        'namespace': (api.parent[0], j._NAMESPACE),
+        'parent': (chain[-1][0], j._PARENT),
         'child': (api.namespace[0], 'denied-child.bin'),
         'stream': (api.namespace[0], j._FILE + ':denied-stream'),
     }[target]
@@ -375,13 +375,16 @@ def _mutation_checks(engine, native, j, w, hashes, cache, original, history, val
         chain = owner.run(lambda: _probe_chain(api, w, cache))
         _need(tuple(item[1] for item in chain) == original[0], 'journal-probe-identity')
         def open_objects():
-            namespace = api.open(chain[-1][0], j._NAMESPACE, 0x200a1, share=7)
+            parent = api.open(chain[-1][0], j._PARENT, 0x200a1, share=7)
+            api.parent = parent, api.identity(parent), None
+            namespace = api.open(parent, j._NAMESPACE, 0x200a1, share=7)
             api.namespace = namespace, api.identity(namespace), None
             file = api.open(namespace, j._FILE, 0x20081, directory=False, share=7)
             api.file = file, api.identity(file), None
         owner.run(open_objects)
         def positive():
-            _need(api.namespace[1] == original[1] and api.file[1] == original[3]
+            _need(api.parent[1] == original[6] and api.security(api.parent[0]) == original[7]
+                  and api.namespace[1] == original[1] and api.file[1] == original[3]
                   and api.security(api.namespace[0]) == original[2]
                   and api.security(api.file[0]) == original[4]
                   and api.file_facts(api.file[0]) == original[5], 'journal-probe-identity')
@@ -418,9 +421,9 @@ def exercise(engine, native, case, hashes, folder, value):
     j = modules['windows_offload_journal']; w = modules['windows_offload_core']
     cache = folder / 'cache'
     engine._fresh_directory(cache, engine._JOURNAL_PROFILE)
-    if case == 'journal-namespace-denied':
-        engine._fresh_directory(cache / j._NAMESPACE, engine._JOURNAL_PROFILE)
-        value['collision_namespace_created'] = True
+    if case == 'journal-parent-denied':
+        engine._fresh_directory(cache / j._PARENT, engine._JOURNAL_PROFILE)
+        value['collision_parent_created'] = True
     owner = object.__new__(_ApiOwner)  # Exact output reference before __init__.
     try:
         _ApiOwner.__init__(owner, engine, native, j, hashes, value)
@@ -428,10 +431,11 @@ def exercise(engine, native, case, hashes, folder, value):
         chain = owner.run(lambda: w._WindowsApi.prepare(api, cache))
         _need(type(chain) is tuple and 1 <= len(chain) <= 128, 'journal-read-chain')
         owner.run(lambda: _void(api.duplicate_anchor, chain[-1][0], chain[-1][1]))
-        if case == 'journal-namespace-denied':
+        if case == 'journal-parent-denied':
             try: owner.run(lambda: _void(api.prepare))
             except (j.OffloadAdmissionError, JournalFixtureError):
-                _need(owner._uncertain and owner._pending is not None and api.namespace is None
+                _need(owner._uncertain and owner._pending is not None and api.parent is None
+                      and api.namespace is None and api._parent_witness is None
                       and owner._pending['function'] is api.n.NtCreateFile
                       and owner._pending['returned'] and not owner._pending['acknowledged']
                       and type(owner._pending['result']) is int
@@ -475,7 +479,8 @@ def exercise(engine, native, case, hashes, folder, value):
         if case == 'journal-mutation-denied':
             original = owner.run(lambda: (tuple(item[1] for item in chain),
                 api.namespace[1], api.security(api.namespace[0]), api.file[1],
-                api.security(api.file[0]), api.file_facts(api.file[0])))
+                api.security(api.file[0]), api.file_facts(api.file[0]),
+                api.parent[1], api.security(api.parent[0])))
         owner.run(lambda: _void(api.retire))
         _need(not owner._uncertain and not owner._irps and owner._retiring_io is None
               and not owner._allocations and all(h.closed for h in owner._handles)

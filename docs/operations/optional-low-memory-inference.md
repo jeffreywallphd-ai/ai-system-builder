@@ -948,7 +948,7 @@ at the full limit. No old files are inspected or changed, no production lease
 is enabled and accepted accuracy/OCR tests stay closed. Full testing is deferred
 until feature work across the open roadmaps is ready.
 
-## Direct journal permission checks: current test definition
+## Direct journal permission checks: historical v2 definition
 
 Version 2 of the small Windows journal diagnostic adds direct competing-access
 checks. Version 1's three accepted component observations remain valid within
@@ -973,3 +973,25 @@ one 512 MiB inert child, 4,096 API records and 16,384 controller records remain
 fixed. It starts no model and reopens no completed accuracy or OCR work. Shared
 12 GiB accounting, retained-tree restart protection, model-worker retirement,
 actual offload resources and final combined qualification remain separate.
+
+## Owned accounting parent: source implementation and next check
+
+The Journal now creates and protects its own immediate parent. It does this only
+after the existing domain charge, binding and mutation-fence checks. The original
+exclusive directory-creation record is required. Matching permissions on an
+existing folder do not prove ownership. The file, namespace and parent must all
+be sealed before the first journal write; check, write and flush recheck the same
+live parent capability. Core's borrowed anchor and two-object lifecycle remain.
+
+The current v3 diagnostic definition checks this actual runtime path, its fresh
+parent collision and the updated read-only competing-access matrix. The previous
+v2 namespace-delete grant remains a failed observation. Current source tests do
+not qualify the Windows fix. Another separately reviewed run is still needed.
+
+A private parent alone is not a complete restart solution. Its own and its
+ancestors' rename/delete stability, guardian/crash lifetime, shared durable disk
+accounting, model-worker shutdown/restart and actual offload resources/delivery
+and cleanup remain pending. The default factory stays unavailable. Unknown usage
+still charges 12 GiB. The 3/3.5 GiB admission guards and 4 GiB sampled model RSS
+abort are unchanged. Completed accuracy/OCR and deferred full-system testing stay
+as recorded. No old files or existing parent permissions are changed.

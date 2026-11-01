@@ -2,7 +2,7 @@
 import argparse
 import json
 
-SCHEMA = 'windows-offload-journal-qualification-v2'
+SCHEMA = 'windows-offload-journal-qualification-v3'
 
 
 class _Parser(argparse.ArgumentParser):
@@ -14,9 +14,12 @@ def current_plan():
         'schema_version': SCHEMA, 'status': 'technical-check-pending',
         'action_owner': 'agent', 'user_action': 'No action needed.',
         'component': 'fresh-windows-journal-native-api',
-        'report_schema_version': 'windows-offload-journal-native-v2',
-        'historical_report_schema_version': 'windows-offload-journal-native-v1',
-        'cases': ['deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'],
+        'report_schema_version': 'windows-offload-journal-native-v3',
+        'historical_report_schema_versions': ['windows-offload-journal-native-v1', 'windows-offload-journal-native-v2'],
+        'cases': ['deadline-control', 'journal-roundtrip', 'journal-parent-denied', 'journal-mutation-denied'],
+        'fresh_parent_requires_original_directory_creation': True,
+        'fixed_protected_objects': 3, 'directory_creation_receipts_per_api': 2,
+        'ancestor_and_guardian_lifetime_qualified': False,
         'fixed_frames': 5, 'frame_bytes': 512, 'repeated_reads': 8,
         'maximum_seconds': 120, 'maximum_active_children': 1,
         'inert_child_commit_ceiling_bytes': 512 * 1024**2,
@@ -28,11 +31,11 @@ def current_plan():
         'ceiling_is_not_upfront_allocation_or_model_policy': True,
         'required_native_checks': [
             'actual-job-handshake-timer-and-owned-exit',
-            'exclusive-fresh-fixed-journal-and-held-writer',
+            'exclusive-owned-parent-and-fixed-journal-with-held-writer',
             'actual-write-completion-flush-and-exact-readback',
             'unchanged-permission-allocation-and-oplock-predicates',
             'bounded-live-io-and-acknowledged-handle-retirement',
-            'known-fresh-namespace-collision-and-retained-uncertainty',
+            'known-fresh-parent-collision-and-retained-uncertainty',
             'retired-writer-then-share7-readback-of-original-identities-and-security',
             'exact-per-right-access-denied-with-separate-parent-delete-child-and-resize-controls',
         ],

@@ -40,7 +40,7 @@ def report(case):
                                for row in subject._PROBES])
     else:
         value.update(outcome='expected-denial', expected_refusal=True,
-                     collision_namespace_created=True, api_uncertainty_retained=True,
+                     collision_parent_created=True, api_uncertainty_retained=True,
                      unretired_handle_records=5, native_call_count=40,
                      last_native_phase='NtCreateFile', last_native_return_code=0xc0000035,
                      last_os_error_code=0)
@@ -68,7 +68,8 @@ class FixtureTests(unittest.TestCase):
                 return value
             def __init__(self, owner):
                 self.owner = owner
-                self.anchor = self.namespace = self.file = None
+                self.anchor = self.parent = self.namespace = self.file = None
+                self._parent_witness = None
                 self.data = b''
                 self.n = SimpleNamespace(NtCreateFile=function('NtCreateFile',
                     0xc0000035 if failure == 'collision' else 0xc0000022 if failure == 'wrong-collision' else 0))
@@ -84,6 +85,7 @@ class FixtureTests(unittest.TestCase):
                 if failure=='void-duplicate':return True
             def prepare(self):
                 self.owner._native_call(self.n.NtCreateFile, (), lambda v: type(v) is int and v == 0, (self,))
+                self.parent = self.handle(), b'o' * 24
                 self.namespace = self.handle(), b'n' * 24
                 self.file = self.handle(), b'f' * 24
                 self.owner._guards.append({'retired': False})
@@ -113,7 +115,7 @@ class FixtureTests(unittest.TestCase):
                 for h in self.owner._handles: h.closed = True
                 for g in self.owner._guards: g['retired'] = True
                 if failure=='void-retire':return True
-        journal = SimpleNamespace(_WindowsJournalApi=Api, _NAMESPACE=codec._NAMESPACE,
+        journal = SimpleNamespace(_WindowsJournalApi=Api, _PARENT=codec._PARENT, _NAMESPACE=codec._NAMESPACE,
             _FrameData=codec._FrameData, _encode_frame=codec._encode_frame,
             _validate_prefix=codec._validate_prefix, PHASES=codec.PHASES,
             JOURNAL_CHARGE=codec.JOURNAL_CHARGE, OffloadAdmissionError=codec.OffloadAdmissionError)
@@ -151,12 +153,12 @@ class FixtureTests(unittest.TestCase):
     def test_core_schema_and_wrong_collision_cannot_qualify_journal(self):
         with self.assertRaises(subject.JournalFixtureError):
             subject.validate_child_report(existing.child('empty-stage'),'journal-roundtrip','a'*64)
-        value=report('journal-namespace-denied');value['last_native_return_code']=0xc0000022
+        value=report('journal-parent-denied');value['last_native_return_code']=0xc0000022
         with self.assertRaises(subject.JournalFixtureError):
-            subject.validate_child_report(value,'journal-namespace-denied',engine.source_digest(HASHES))
-        value=report('journal-namespace-denied');value['api_cleanup_confirmed']=True
+            subject.validate_child_report(value,'journal-parent-denied',engine.source_digest(HASHES))
+        value=report('journal-parent-denied');value['api_cleanup_confirmed']=True
         with self.assertRaises(subject.JournalFixtureError):
-            subject.validate_child_report(value,'journal-namespace-denied',engine.source_digest(HASHES))
+            subject.validate_child_report(value,'journal-parent-denied',engine.source_digest(HASHES))
 
     def test_failure_diagnostics_never_echo_unknown_fields_or_private_stages(self):
         value=report('journal-roundtrip');value.update(failure_stage='synthetic-private-detail',
@@ -201,13 +203,13 @@ class FixtureTests(unittest.TestCase):
 
     def test_collision_accepts_only_exact_return_and_retains_without_retirement(self):
         native,journal,trace=self.context(failure='collision')
-        value=subject.base_report('journal-namespace-denied',engine.source_digest(HASHES),0)
+        value=subject.base_report('journal-parent-denied',engine.source_digest(HASHES),0)
         value.update(timer_configured=True,elapsed_ns=100000)
-        subject.exercise(engine,native,'journal-namespace-denied',HASHES,engine._JOURNAL_PROFILE.runs/'synthetic',value)
+        subject.exercise(engine,native,'journal-parent-denied',HASHES,engine._JOURNAL_PROFILE.runs/'synthetic',value)
         owner=next(x for x in native.buffers if type(x) is subject._ApiOwner)
         self.assertTrue(owner._uncertain);self.assertIs(owner._pending['function'],owner._api.n.NtCreateFile)
         self.assertNotIn('retire',trace)
-        subject.validate_child_report(value,'journal-namespace-denied',engine.source_digest(HASHES))
+        subject.validate_child_report(value,'journal-parent-denied',engine.source_digest(HASHES))
 
     def test_constructor_interruption_pins_partial_api_before_return(self):
         native,journal,trace=self.context(failure='constructor')
@@ -368,8 +370,8 @@ class FixtureTests(unittest.TestCase):
 
 
     def test_mutation_report_uses_new_schema_and_distinct_probe_custody_fields(self):
-        self.assertEqual(subject.SCHEMA, 'windows-offload-journal-native-v2')
-        self.assertEqual(subject.CASES, ('deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'))
+        self.assertEqual(subject.SCHEMA, 'windows-offload-journal-native-v3')
+        self.assertEqual(subject.CASES, ('deadline-control', 'journal-roundtrip', 'journal-parent-denied', 'journal-mutation-denied'))
         value = subject.base_report('journal-mutation-denied', engine.source_digest(HASHES), 0)
         self.assertEqual(value['probe_results'], [])
         self.assertEqual(value['probe_native_call_count'], 0)
@@ -424,6 +426,7 @@ class FixtureTests(unittest.TestCase):
         api.call = lambda function, *args, valid, keep: owner._native_call(function, args, valid, keep)
         api.namespace = (SimpleNamespace(value=111), b'n' * 24, None)
         api.file = (SimpleNamespace(value=112), b'f' * 24, None)
+        api.parent = (SimpleNamespace(value=115), b'o' * 24, None)
         chain = ((SimpleNamespace(value=113), b'p' * 24), (SimpleNamespace(value=114), b'v' * 24))
         calls = []
         def create(slot, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
@@ -445,7 +448,8 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([call[0] for call in calls], [row[2] for row in subject._PROBES])
         self.assertEqual([call[1] for call in calls], [7] * 14)
         self.assertEqual([call[2] for call in calls], [1] * 11 + [2, 2, 1])
-        self.assertEqual(calls[-1][-1], chain[-2][0].value)
+        self.assertEqual(calls[-1][-1], chain[-1][0].value)
+        self.assertEqual(calls[8][-1], api.parent[0].value)
         self.assertTrue(value['parent_delete_child_denied'])
         self.assertEqual(len(owner._probe_attempts), 14); self.assertFalse(owner._uncertain)
         self.assertEqual(value['probe_results'], report('journal-mutation-denied')['probe_results'])
@@ -518,6 +522,7 @@ class FixtureTests(unittest.TestCase):
         api_class = journal._WindowsJournalApi
         original_init = api_class.__init__
         identities = {'\\??\\C:\\': b'r' * 24, 'fixture': b'p' * 24, 'cache': b'v' * 24,
+                      codec._PARENT: b'o' * 24,
                       codec._NAMESPACE: b'n' * 24, codec._FILE: b'f' * 24}
         acl = (b'fixed-acl', 0x1004, b'fixed-owner'); history = b'f' * 2560
         def function(name, callback):
@@ -558,7 +563,8 @@ class FixtureTests(unittest.TestCase):
                 api.call(api.k.CloseHandle, handle.value, keep=(handle,))
                 handle.closed = True
         replacements = {'__init__': initialize, 'call': call, 'open': open_read,
-            'identity': lambda api, handle: b'x' * 24 if failure == 'identity' else identities[handle.name],
+            'identity': lambda api, handle: b'x' * 24 if failure == 'identity'
+                or failure == 'parent-identity' and handle.name == codec._PARENT else identities[handle.name],
             'security': security, 'read': read, 'file_facts': lambda api, handle: (b'f' * 24, 2560, 4096),
             'retire': retire}
         for name, replacement in replacements.items():
@@ -566,7 +572,7 @@ class FixtureTests(unittest.TestCase):
         self.enterContext(patch.object(subject.C, 'get_last_error', return_value=5, create=True))
         self.enterContext(patch.object(subject.C, 'set_last_error', create=True))
         original = ((b'r' * 24, b'p' * 24, b'v' * 24), b'n' * 24, acl, b'f' * 24, acl,
-                    (b'f' * 24, 2560, 4096))
+                    (b'f' * 24, 2560, 4096), b'o' * 24, acl)
         value = report('journal-roundtrip'); value['case'] = 'journal-mutation-denied'
         return native, journal, original, history, value, trace
 
@@ -619,6 +625,20 @@ class FixtureTests(unittest.TestCase):
         with self.assertRaises(subject.JournalFixtureError):
             owner.run(lambda: owner._api.retire())
         self.assertNotIn('probe-retire', trace)
+
+    def test_new_private_parent_identity_is_required_before_any_mutation_probe(self):
+        native, journal, original, history, value, trace = self.probe_producer_context('parent-identity')
+        with self.assertRaises(subject.JournalFixtureError):
+            subject._mutation_checks(engine, native, journal, codec.w, HASHES,
+                PureWindowsPath('C:/fixture/cache'), original, history, value)
+        self.assertEqual(value['probe_results'], []); self.assertFalse(value['probe_identity_readback'])
+        self.assertTrue(value['probe_uncertainty_retained']); self.assertNotIn('probe-retire', trace)
+
+    def test_schema1_and_schema2_reports_remain_history_not_current_parent_proof(self):
+        for version in ('windows-offload-journal-native-v1', 'windows-offload-journal-native-v2'):
+            value = report('journal-roundtrip'); value['schema_version'] = version
+            with self.subTest(version=version), self.assertRaises(subject.JournalFixtureError):
+                subject.validate_child_report(value, 'journal-roundtrip', engine.source_digest(HASHES))
 
 
 if __name__=='__main__':unittest.main()

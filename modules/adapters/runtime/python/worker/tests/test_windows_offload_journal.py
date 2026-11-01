@@ -383,6 +383,9 @@ class FrameTests(unittest.TestCase):
 class NativeIoTests(JournalTableTestCase):
     """Invoke real API methods against typed synthetic function replies only."""
     def kernel(self, journal, *, reply=0x103, wait=0, short=False, status=None, close=1):
+        # These tests isolate IRP settlement/call budgets. Concrete parent
+        # admission and its mandatory write/flush paths are tested below.
+        self.enterContext(patch.object(j._WindowsJournalApi, '_check_parent', return_value=None))
         api = journal._api
         api.observed_irps = []  # Test observations are not runtime custody.
         def event(output, *_):
@@ -590,36 +593,146 @@ class NativeIoTests(JournalTableTestCase):
 
 
 class FixedJournalConstructionTests(JournalTableTestCase):
-    """Real journal construction order with explicit synthetic protection ports."""
-    def test_actual_prepare_creates_fixed_file_then_protects_file_before_namespace(self):
-        core, journal, domain, trace = prepared(); api = journal._api
+    """Actual construction/protection/witness methods, synthetic native facts."""
+    def kernel(self, *, fail_parent_seal=False):
+        core, journal, domain, trace = prepared(); previous = journal._api
+        api = object.__new__(j._WindowsJournalApi); api.owner = journal; journal._api = api
+        api.anchor = previous.anchor
+        api.parent = api.namespace = api.file = api.protected = None
+        api._parent_witness = api._parent_witness_origin = None
+        api._construction_origin = api
+        api._construction_generation = api._construction_generation_origin = object()
+        api._directory_creations = []; api._directory_creation_rows = api._directory_creations
+        api._protection_origin = api; api._protections = []; api._protection_rows = api._protections
         acl = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + c._WORLD
-        namespace = api.new(); events = []
-        api.namespace = api.file = api.protected = None
+        events, nodes, descriptors = [], {}, {}
+        nodes[api.anchor[0].value] = {'name': 'existing-anchor', 'identity': api.anchor[1], 'directory': True, 'acl': acl}
         api._allocation_bound = Mock(return_value=4096)
-        api.create_directory = Mock(return_value=(namespace, b'n' * 24, acl))
         api._private_acl = Mock(return_value=acl)
-        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'inert', descriptor, None))
-        def create(output, access, attributes, io, *_):
+        def descriptor(value, *, principal=None):
+            record = c._Descriptor(); descriptors[id(record)] = value
+            return value, record, principal
+        api._descriptor = Mock(side_effect=descriptor)
+        def create(output, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
+            self.assertEqual((share, disposition), (0, 2))
             self.assertIs(journal._pending[3][0], journal._handles[-1])
-            self.assertEqual(access, 0x17019f)
-            output._obj.value = 7654; io._obj.information = 2
-            events.append('file-created')
+            string = attributes._obj.name.contents; name = C.wstring_at(string.buffer, string.length // 2)
+            self.assertIn(name, (j._PARENT, j._NAMESPACE, j._FILE))
+            value = 2000 + len(nodes); output._obj.value = value; io._obj.information = 2
+            nodes[value] = {'name': name, 'identity': b'ownedvol' + value.to_bytes(16, 'little'),
+                            'directory': name != j._FILE, 'acl': acl}
+            events.append('created:' + name)
             return 0
-        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create))
-        api.kind = Mock(); api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, c._WORLD))
-        api.identity = Mock(return_value=b'f' * 24)
-        def protect(handle, original):
-            events.append('namespace-protected' if handle is namespace else 'file-protected')
-            self.assertIsNotNone(api.file)
-            return c._acl(original[0], deny=True), c._PRIVATE_CONTROL
-        api.protect = Mock(side_effect=protect); api.guard = Mock(); api.check = Mock()
+        def protect(number, info, value):
+            self.assertEqual(info, 4); self.assertIsNotNone(api.file)
+            node = nodes[number]; events.append('protected:' + node['name'])
+            if fail_parent_seal and node['name'] == j._PARENT: return 0xc0000022
+            node['acl'] = descriptors[id(value._obj)]
+            return 0
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create), NtSetSecurityObject=Mock(side_effect=protect))
+        api.kind = Mock(side_effect=lambda handle, directory: self.assertIs(nodes[handle.value]['directory'], directory))
+        api.security = Mock(side_effect=lambda handle: (nodes[handle.value]['acl'], c._PRIVATE_CONTROL, c._WORLD))
+        api.identity = Mock(side_effect=lambda handle: nodes[handle.value]['identity'])
+        api.guard = Mock(); api.check = Mock(); api._io = Mock(side_effect=lambda data, offset, *, writing: data)
+        api.k = SimpleNamespace(FlushFileBuffers=Mock(return_value=1))
+        return core, journal, domain, trace, api, events, nodes
+
+    def test_actual_prepare_creates_fixed_file_then_protects_file_namespace_and_owned_parent(self):
+        core, journal, domain, trace, api, events, nodes = self.kernel()
         self.assertIsNone(journal._run(lambda: j._WindowsJournalApi.prepare(api)))
-        self.assertEqual(events, ['file-created', 'file-protected', 'namespace-protected'])
-        api._descriptor.assert_called_once_with(acl, principal=c._WORLD)
-        self.assertEqual(api.protected, ((c._acl(acl, deny=True), c._PRIVATE_CONTROL),) * 2)
+        self.assertEqual(events, ['created:' + j._PARENT, 'created:' + j._NAMESPACE, 'created:' + j._FILE,
+            'protected:' + j._FILE, 'protected:' + j._NAMESPACE, 'protected:' + j._PARENT])
+        self.assertEqual(len(api._directory_creations), 2); self.assertEqual(len(api._protections), 3)
+        witness = api._parent_witness
+        self.assertIs(type(witness), j._ParentWitness); self.assertEqual(witness.phase, 'sealed')
+        self.assertIs(witness.creation, api.directory_creation(api.parent[0]))
+        self.assertIs(witness.protection, api._protections[2])
+        self.assertIsNone(journal._run(lambda: j._WindowsJournalApi._check_parent(api)))
         api.guard.assert_called_once_with(api.file[0]); api.check.assert_called_once_with(0)
         self.assertFalse(domain.credited)
+
+    def test_same_sealed_original_parent_is_required_before_write_or_flush_dispatch(self):
+        for action in ('write', 'flush'):
+            for change in ('missing', 'copy', 'incomplete', 'foreign-row', 'creation-copy', 'slot', 'closed'):
+                with self.subTest(action=action, change=change):
+                    core, journal, domain, trace, api, events, nodes = self.kernel()
+                    journal._run(lambda: api.prepare())
+                    if change == 'missing': api._parent_witness = None
+                    if change == 'copy': api._parent_witness = copy.copy(api._parent_witness)
+                    if change == 'incomplete': api._protections[2].completed = False
+                    if change == 'foreign-row': api._protections[2] = copy.copy(api._protections[2])
+                    if change == 'creation-copy': api._directory_creations[0] = copy.copy(api._directory_creations[0])
+                    if change == 'slot': api.parent[0].slot = c._PTR(api.parent[0].value)
+                    if change == 'closed': api.parent[0].closed = True
+                    before = (api.security.call_count, api.identity.call_count)
+                    with self.assertRaises(OffloadAdmissionError):
+                        journal._run(lambda: api.write(b'f' * 512, 0) if action == 'write' else api.flush())
+                    api._io.assert_not_called(); api.k.FlushFileBuffers.assert_not_called()
+                    self.assertEqual((api.security.call_count, api.identity.call_count), before)
+                    self.assertTrue(journal._uncertain and domain.frozen)
+
+    def test_parent_seal_failure_retains_original_records_and_cannot_write(self):
+        core, journal, domain, trace, api, events, nodes = self.kernel(fail_parent_seal=True)
+        with self.assertRaises(OffloadAdmissionError): journal._run(lambda: api.prepare())
+        self.assertEqual(len(api._protections), 3); self.assertFalse(api._protections[2].completed)
+        self.assertEqual(api._parent_witness.phase, 'constructing')
+        api.guard.assert_not_called(); api.check.assert_not_called(); api._io.assert_not_called()
+        before = api.n.NtSetSecurityObject.call_count
+        with self.assertRaises(OffloadAdmissionError): journal._run(lambda: api.write(b'f' * 512, 0))
+        self.assertEqual(api.n.NtSetSecurityObject.call_count, before); api._io.assert_not_called()
+
+    def test_three_fixed_rows_permit_no_fourth_or_duplicate_target_or_existing_root_receipt(self):
+        core, journal, domain, trace, api, events, nodes = self.kernel()
+        journal._run(lambda: api.prepare())
+        self.assertEqual(c._MAX_PROTECTIONS, 3); self.assertEqual(c._MAX_DIRECTORY_CREATIONS, 2)
+        before = api.security.call_count
+        with self.assertRaises(OffloadAdmissionError): api.directory_creation(api.anchor[0])
+        with self.assertRaises(OffloadAdmissionError): api.protect(api.parent[0], api._parent_witness.creation.original)
+        extra = api.handle(); extra.slot.value = 99999
+        with self.assertRaises(OffloadAdmissionError): api.protect(extra, api._parent_witness.creation.original)
+        self.assertEqual(api.security.call_count, before)
+
+    def test_parent_witness_primitive_replacements_cannot_invoke_foreign_code_or_query(self):
+        class Trap:
+            def __getattribute__(self, name): raise AssertionError('No foreign attribute')
+            def __eq__(self, other): raise AssertionError('No foreign equality')
+            def __bool__(self): raise AssertionError('No foreign truth')
+        for field in ('api', 'owner', 'thread', 'parent', 'anchor', 'creation', 'generation', 'protection', 'phase'):
+            with self.subTest(field=field):
+                core, journal, domain, trace, api, events, nodes = self.kernel()
+                journal._run(lambda: api.prepare())
+                setattr(api._parent_witness, field, Trap())
+                before = (api.security.call_count, api.identity.call_count)
+                with self.assertRaises(OffloadAdmissionError):
+                    journal._run(lambda: j._WindowsJournalApi._check_parent(api))
+                self.assertEqual((api.security.call_count, api.identity.call_count), before)
+
+    def inventory(self, api, *, wrong_parent=False):
+        api.check_guard = Mock()
+        api.file_facts = Mock(return_value=(api.file[1], 0, 4096))
+        def rows(handle):
+            if handle is api.parent[0]:
+                return (('.', api.parent[1][8:], 0, 0, True),
+                    ('..', api.anchor[1][8:], 0, 0, True),
+                    (j._NAMESPACE, api.namespace[1][8:], 0, 0, True))
+            self.assertIs(handle, api.namespace[0])
+            parent = api.anchor[1] if wrong_parent else api.parent[1]
+            return (('.', api.namespace[1][8:], 0, 0, True), ('..', parent[8:], 0, 0, True),
+                    (j._FILE, api.file[1][8:], 0, 4096, False))
+        api.entries = Mock(side_effect=rows)
+
+    def test_real_inventory_check_accepts_distinct_anchor_parent_and_namespace_identities(self):
+        core, journal, domain, trace, api, events, nodes = self.kernel()
+        journal._run(lambda: api.prepare()); self.inventory(api)
+        self.assertEqual(len({api.anchor[1], api.parent[1], api.namespace[1]}), 3)
+        self.assertIsNone(journal._run(lambda: j._WindowsJournalApi.check(api, 0)))
+
+    def test_real_inventory_check_rejects_anchor_as_namespace_parent(self):
+        core, journal, domain, trace, api, events, nodes = self.kernel()
+        journal._run(lambda: api.prepare()); self.inventory(api, wrong_parent=True)
+        with self.assertRaises(OffloadAdmissionError):
+            journal._run(lambda: j._WindowsJournalApi.check(api, 0))
+        self.assertTrue(journal._uncertain and domain.frozen)
 
 
 if __name__ == '__main__': unittest.main()

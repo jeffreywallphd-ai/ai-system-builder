@@ -763,8 +763,8 @@ Normal nonfinal requests publish their effect-exit marker before releasing busy 
 
 ## Fixed fresh journal protection
 
-The private native source creates its fixed journal objects before installing
-permanent leaf-then-container protection. Specific mutation, delete, DACL and
+The private native source creates a fresh private immediate parent, namespace
+and ledger before installing file-then-namespace-then-parent protection. Specific mutation, delete, DACL and
 owner-change rights are denied; explicit OWNER RIGHTS preserves read-control
 without implicit owner DACL-write authority. Only the original retained writer
 continues writing. Canonical protection attempts bind the original API, owner,
@@ -779,3 +779,25 @@ The closed Core and Journal diagnostic phase lists recognize exactly the new
 GetSecurityDescriptorLength and SetSecurityDescriptorOwner calls. Unknown names
 still fail before dispatch. Recognizing a failure phase never supplies the
 required handle-retirement or positive-case facts.
+
+## Construction-owned accounting parent
+
+The concrete Journal API creates a fixed private parent during bootstrap, after
+the existing domain charge, binding and mutation-fence checks. The Core borrow
+callback only duplicates its anchor. Journal resources stay in Journal custody.
+Two bounded directory-creation records preserve exclusive FILE_CREATE,
+FILE_CREATED, original owner/private descriptor, identity and handle generation.
+An existing root with matching permissions cannot mint a construction record.
+
+The parent capability consumes that original record and the third canonical
+protection attempt. The finite protection limit is three fixed Journal objects;
+Core retains its original two targets. File, namespace and parent sealing precede
+the first journal record. Check, write and flush reject missing, copied, partial,
+closed, swapped or foreign parent evidence before data dispatch.
+
+The v3 Native definition uses the actual producer and fresh share7 read-only
+contenders. It is not an executed Windows pass. The observed v2 delete-access
+failure remains in versioned results. Parent/ancestor rename and deletion,
+guardian/crash lifetime, shared durable accounting and actual model offload still
+need qualification. The production factory remains unavailable; unknown usage
+reserves 12 GiB. Existing parent ACLs and retained files are not changed.

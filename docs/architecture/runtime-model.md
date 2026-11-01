@@ -1131,8 +1131,8 @@ The private Windows Journal/Core source admits explicit current-principal owners
 on newly created fixed objects. It retains finite original protection attempts
 before native queries or DACL setters. The final descriptor denies specific
 mutation, delete, WRITE_DAC and WRITE_OWNER rights and includes explicit OWNER
-RIGHTS for READ_CONTROL. The fixed journal creates its ledger first, then seals
-the file and container before genesis. Core post-quiescence sealing proceeds
+RIGHTS for READ_CONTROL. The journal creates its own fixed parent and children,
+then seals the file, namespace and immediate parent before genesis. Core post-quiescence sealing proceeds
 leaf first while retaining its existing namespace/stage result order.
 
 Later charge-sensitive checks consume the exact API-owned protection attempt,
@@ -1149,3 +1149,26 @@ shared domain or production factory is selected. Typed synthetic tests establish
 source behavior only. Actual NTFS denial/original-writer controls, shared durable
 accounting, model-worker/crash recovery, retained restart and resource/delivery
 qualification remain pending. Unknown storage still reserves all 12 GiB.
+
+### Construction-owned immediate parent
+
+Journal bootstrap creates its own fixed private parent only after the existing
+shared-domain precharge, binding and mutation-fence assertions. The Core borrow
+callback remains read/duplicate-only. An API-local, original directory-creation
+record binds exclusive creation, FILE_CREATED, current-token owner/private ACL,
+identity, thread, handle slot/value and generation. Two records per API cover
+Core's two directories or Journal's parent and namespace. Existing path reads,
+ACL lookalikes, copied records and incomplete creation cannot supply this record.
+
+The Journal parent capability consumes the same construction record and original
+third canonical protection row. Its three fixed targets are file, namespace and
+parent; Core still protects exactly its two existing targets. All fixed children
+precede final parent sealing. Check, write and flush consume the same sealed
+capability and exact owner/security/identity readback. Directory inventory binds
+each '..' entry to its actual immediate parent, not the earlier cache ancestor.
+
+This adds no production domain, capacity credit or default readiness. A new
+private parent alone cannot prove ancestor stability, guardian/crash lifetime,
+shared durable 12 GiB accounting, retained restart or model-worker resources.
+Those remain separate pending requirements. Source tests and v3 fixture
+definitions do not supersede the actual failed v2 Windows observation.

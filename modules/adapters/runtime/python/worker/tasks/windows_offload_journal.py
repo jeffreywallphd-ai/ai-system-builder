@@ -20,6 +20,7 @@ FRAME_BYTES = 512
 PHASES = ('genesis', 'reserved', 'sealed', 'references-released', 'credited')
 CAPACITY_BYTES = FRAME_BYTES * len(PHASES)
 JOURNAL_CHARGE = 128 * 1024
+_PARENT = '.aisb-offload-accounting-parent-v1'
 _NAMESPACE = '.aisb-offload-accounting-v1'
 _FILE = 'ledger.bin'
 _HEADER = struct.Struct('<8sBBH16s24sQQQ32s')
@@ -152,6 +153,71 @@ class _FsSize(C.Structure):
                 ('sectors', C.c_uint32), ('sector_bytes', C.c_uint32)]
 
 
+class _ParentWitness:
+    """One live, construction-owned immediate parent; not a global tree fence."""
+    def __init__(self, api, parent, creation):
+        self.origin, self.api, self.owner, self.thread = self, api, api.owner, get_ident()
+        self.parent, self.anchor = parent, api.anchor
+        self.creation, self.generation = creation, api._construction_generation
+        self.protection, self.phase = None, 'constructing'
+        _ParentWitness._check(self, api, 'constructing')
+
+    def _check(self, api, phase):
+        _need(type(self) is _ParentWitness and type(api) is _WindowsJournalApi
+              and type(phase) is str and phase in ('constructing', 'sealed')
+              and type(self.phase) is str and type(self.thread) is int
+              and type(self.parent) is tuple and len(self.parent) == 3
+              and type(self.parent[0]) is w._Handle and type(self.parent[1]) is bytes
+              and len(self.parent[1]) == 24 and type(self.parent[2]) is bytes
+              and type(self.anchor) is tuple and len(self.anchor) == 2
+              and type(self.anchor[0]) is w._Handle and type(self.anchor[1]) is bytes
+              and len(self.anchor[1]) == 24 and type(self.generation) is object
+              and type(self.creation) is w._DirectoryCreation)
+        _need(self.origin is self and self.api is api and self.owner is api.owner
+              and self.owner._api is api and self.thread == get_ident() and self.phase == phase
+              and api.parent is self.parent and api.anchor is self.anchor
+              and api._parent_witness is self and api._parent_witness_origin is self
+              and self.generation is api._construction_generation)
+        creation = w._WindowsApi.directory_creation(api, self.parent[0])
+        _need(creation is self.creation and creation.completed is True
+              and creation.parent is self.anchor[0] and creation.name == _PARENT
+              and creation.identity == self.parent[1]
+              and creation.original == (self.parent[2], w._PRIVATE_CONTROL))
+        w._WindowsApi._protection_state(api)
+        if phase == 'constructing':
+            _need(self.protection is None and len(api._protections) <= 2)
+        else:
+            _need(type(self.protection) is w._Protection and len(api._protections) == 3
+                  and api._protections[2] is self.protection and self.protection.completed is True
+                  and type(api.namespace) is tuple and len(api.namespace) == 3
+                  and type(api.file) is tuple and len(api.file) == 3
+                  and api._protections[0].handle is api.file[0]
+                  and api._protections[1].handle is api.namespace[0]
+                  and self.protection.handle is self.parent[0])
+            w._Protection.assert_origin(self.protection, api)
+            _need(self.protection.identity == creation.identity
+                  and self.protection.original == creation.original
+                  and self.protection.principal == creation.principal)
+
+    def seal(self, api):
+        _ParentWitness._check(self, api, 'constructing')
+        _need(len(api._protections) == 2 and type(api.namespace) is tuple and len(api.namespace) == 3
+              and type(api.file) is tuple and len(api.file) == 3
+              and api._protections[0].handle is api.file[0]
+              and api._protections[1].handle is api.namespace[0])
+        w._WindowsApi.protect(api, self.parent[0], self.creation.original)
+        self.protection = api._protections[2]
+        self.phase = 'sealed'
+        _ParentWitness.assert_sealed(self, api)
+
+    def assert_sealed(self, api):
+        _ParentWitness._check(self, api, 'sealed')
+        w._WindowsApi.assert_protected(api, self.parent[0], self.protection.expected)
+        api.kind(self.parent[0], True)
+        _need(api.identity(self.parent[0]) == self.creation.identity)
+        _ParentWitness._check(self, api, 'sealed')
+
+
 class _WindowsJournalApi(w._WindowsApi):
     """Real typed native calls, with journal-owned Core-compatible primitives."""
     def __new__(cls, owner):
@@ -171,7 +237,8 @@ class _WindowsJournalApi(w._WindowsApi):
         signatures += [(self.n, name, io_args, w._I32) for name in ('NtReadFile', 'NtWriteFile')]
         for library, name, args, result in signatures:
             function = getattr(library, name); function.argtypes, function.restype = args, result
-        self.anchor = self.namespace = self.file = self.protected = None
+        self.anchor = self.parent = self.namespace = self.file = self.protected = None
+        self._parent_witness = self._parent_witness_origin = None
         self.allocation = None
 
     def duplicate_anchor(self, source, expected_identity):
@@ -200,9 +267,15 @@ class _WindowsJournalApi(w._WindowsApi):
         return allocation
 
     def prepare(self):
-        _need(self.anchor is not None and self.namespace is None and self.file is None)
+        _need(self.anchor is not None and self.parent is None and self.namespace is None
+              and self.file is None and self._parent_witness is None)
         self.allocation = self._allocation_bound()
-        self.namespace = self.create_directory(self.anchor[0], _NAMESPACE)
+        self.parent = w._WindowsApi.create_directory(self, self.anchor[0], _PARENT)
+        witness = object.__new__(_ParentWitness)
+        self._parent_witness = self._parent_witness_origin = witness  # Before validation.
+        _ParentWitness.__init__(witness, self, self.parent,
+                               w._WindowsApi.directory_creation(self, self.parent[0]))
+        self.namespace = w._WindowsApi.create_directory(self, self.parent[0], _NAMESPACE)
         acl = self._private_acl(); principal = w._private_sid(acl)
         security = self._descriptor(acl, principal=principal)
         handle, text, io = self.handle(), C.create_unicode_buffer(_FILE), w._Io()
@@ -221,6 +294,7 @@ class _WindowsJournalApi(w._WindowsApi):
         file_protection = self.protect(handle, (acl, w._PRIVATE_CONTROL))
         namespace_protection = self.protect(self.namespace[0], (self.namespace[2], w._PRIVATE_CONTROL))
         self.protected = namespace_protection, file_protection
+        _ParentWitness.seal(witness, self)
         # This is the same held writer/file object. A separate required domain
         # fence covers mutable namespace/security growth; no directory RH watch
         # is claimed to survive our own size/timestamp updates.
@@ -231,6 +305,7 @@ class _WindowsJournalApi(w._WindowsApi):
         _need(type(expected_size) is int and 0 <= expected_size <= CAPACITY_BYTES
               and self.anchor is not None and self.namespace is not None
               and self.file is not None and self.protected is not None)
+        _WindowsJournalApi._check_parent(self)
         _need(len(self.owner._guards) == 1)
         self.check_guard(self.owner._guards[0])
         _need(self.identity(self.anchor[0]) == self.anchor[1])
@@ -238,10 +313,18 @@ class _WindowsJournalApi(w._WindowsApi):
             self.kind(item[0], index == 0)
             _need(self.identity(item[0]) == item[1] and self.permissions(item[0]) == self.protected[index])
             self.assert_protected(item[0], self.protected[index])
+        parent_rows = []
+        for row in self.entries(self.parent[0]):
+            if row[0] in ('.', '..'):
+                identity = self.parent[1] if row[0] == '.' else self.anchor[1]
+                _need(row[4] and row[2] == 0 and row[1] == identity[8:])
+            else: parent_rows.append(row)
+        _need(len(parent_rows) == 1 and parent_rows[0][0] == _NAMESPACE
+              and parent_rows[0][1] == self.namespace[1][8:] and parent_rows[0][4])
         rows = []
         for row in self.entries(self.namespace[0]):
             if row[0] in ('.', '..'):
-                identity = self.namespace[1] if row[0] == '.' else self.anchor[1]
+                identity = self.namespace[1] if row[0] == '.' else self.parent[1]
                 _need(row[4] and row[2] == 0 and row[1] == identity[8:])
             else:
                 rows.append(row)
@@ -252,6 +335,10 @@ class _WindowsJournalApi(w._WindowsApi):
               and rows[0][2:4] == (size, allocated)
               and 0 <= allocated <= self.allocation and size + allocated <= JOURNAL_CHARGE)
         self.check_guard(self.owner._guards[0])
+
+    def _check_parent(self):
+        _need(type(self) is _WindowsJournalApi and type(self._parent_witness) is _ParentWitness)
+        _ParentWitness.assert_sealed(self._parent_witness, self)
 
     def _io(self, data, offset, *, writing):
         _need(type(data) is bytes and 0 < len(data) <= CAPACITY_BYTES
@@ -283,9 +370,11 @@ class _WindowsJournalApi(w._WindowsApi):
         return bytes(buffer)
 
     def write(self, raw, offset):
+        _WindowsJournalApi._check_parent(self)
         _need(self._io(raw, offset, writing=True) == raw)
 
     def flush(self):
+        _WindowsJournalApi._check_parent(self)
         self.call(self.k.FlushFileBuffers, self.file[0].value, keep=(self.file,))
 
     def read(self, size):

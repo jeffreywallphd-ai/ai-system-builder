@@ -1659,9 +1659,9 @@ normal/terminal native records have separate preallocated bounds. Production
 shared accounting, stable mutation protection, model-worker/retained recovery and
 resource checks stay pending. Keep full suites for the later shared campaign.
 
-## Current fixed journal mutation-test definition
+## Historical fixed journal mutation-test definition (v2)
 
-The current `qualify_windows_offload_journal.py --plan` declaration is version 2.
+The version 2 declaration describes the earlier fixed journal test definition.
 It retains the earlier timer, journal read/write and namespace-collision cases,
 and adds `journal-mutation-denied`. Version 1 results remain historical evidence;
 they do not satisfy this added case. The Core and unused-read profiles are unchanged.
@@ -1684,3 +1684,25 @@ one inert child capped at 512 MiB, 4,096 API call records per owner and 16,384
 controller call records. The child cap does not change model admission or memory
 policy. Source tests do not execute this Native case. A committed source review
 and a separate one-shot effect review are required before an actual run.
+
+## Current owned-parent journal definition (v3)
+
+`qualify_windows_offload_journal.py --plan` now declares version 3. The four fixed
+cases are deadline control, journal roundtrip, fresh-parent collision and competing
+mutation denial. Version 1 and 2 results retain their original meaning. Version 2's
+namespace-delete grant remains a genuine failed finding, not a new pass.
+
+The actual Journal producer creates a private immediate parent and fixed children,
+then seals all three before writing. Original creator handles retire before the
+fresh share7 competitor opens parent, namespace and ledger. Readback binds all
+three original identities and owner/security values. Parent delete-child probes
+now target that actual immediate parent. Namespace inventory uses its new parent
+identity. Exact C0000022/null-output denial and the separate resize0/error5 control
+remain required; a sharing conflict or unexpected grant still stops the case.
+
+Two creation records and three protection records are fixed source bounds, not
+caller options. The one-child 512 MiB inert ceiling, 120-second owner, three-second
+timer control, 4,096 API and 16,384 controller call-record limits stay unchanged.
+No model or accuracy check runs from this source definition. A separate committed
+source and one-shot effect review must precede Windows execution. Ancestor/anchor,
+guardian/crash, shared accounting and actual offload qualification remain pending.

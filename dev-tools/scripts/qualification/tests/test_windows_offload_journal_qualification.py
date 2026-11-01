@@ -75,9 +75,9 @@ class JournalDeclarationTests(unittest.TestCase):
 
     def test_current_definition_has_exact_four_cases_and_versioned_mutation_controls(self):
         value = subject.current_plan()
-        self.assertEqual(value['schema_version'], 'windows-offload-journal-qualification-v2')
-        self.assertEqual(value['report_schema_version'], 'windows-offload-journal-native-v2')
-        self.assertEqual(value['cases'], ['deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'])
+        self.assertEqual(value['schema_version'], 'windows-offload-journal-qualification-v3')
+        self.assertEqual(value['report_schema_version'], 'windows-offload-journal-native-v3')
+        self.assertEqual(value['cases'], ['deadline-control', 'journal-roundtrip', 'journal-parent-denied', 'journal-mutation-denied'])
         self.assertEqual(value['maximum_seconds'], 120)
         self.assertEqual(value['maximum_active_children'], 1)
         self.assertEqual(value['inert_child_commit_ceiling_bytes'], 512 * 1024**2)
@@ -87,6 +87,17 @@ class JournalDeclarationTests(unittest.TestCase):
         self.assertFalse(value['sharing_failure_qualifies_acl_denial'])
         self.assertFalse(value['resize_handle_control_qualifies_acl_denial'])
         self.assertFalse(value['parent_qualification_granted'])
+
+    def test_private_parent_definition_retains_limits_and_prior_evidence_versions(self):
+        value = subject.current_plan()
+        self.assertEqual(value['historical_report_schema_versions'],
+            ['windows-offload-journal-native-v1', 'windows-offload-journal-native-v2'])
+        self.assertTrue(value['fresh_parent_requires_original_directory_creation'])
+        self.assertEqual(value['fixed_protected_objects'], 3)
+        self.assertEqual(value['directory_creation_receipts_per_api'], 2)
+        self.assertFalse(value['ancestor_and_guardian_lifetime_qualified'])
+        self.assertEqual(value['maximum_seconds'], 120)
+        self.assertEqual(value['cases'][2], 'journal-parent-denied')
 
 
 if __name__ == '__main__': unittest.main()
