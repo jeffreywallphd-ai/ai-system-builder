@@ -1539,3 +1539,43 @@ They do not import Torch, create weights or open an app. The actual input, nativ
 launcher and one real train/review/save/reopen test require separate owned-run
 evidence. Keep accepted accuracy and OCR tests closed; a tiny training fixture
 is software-workflow evidence, not model quality or parent qualification.
+
+## Archive completed local work without losing history
+
+Use the bounded `archive-completed --from .local-codex/<request>.json` action when
+the local record index is near capacity. Requests use
+`completed-work-archive-request-v1`, `work_ids`, `expected_revision`,
+`expected_state_digest` and `authority_ref`. The expected digest covers the full
+logical state, including its existing integrity field, as the index and journal
+already do. Inspect the intended IDs and predecessor before running the action.
+Only completed unclaimed work is eligible. All inner values and digests remain.
+The action does not grant approval, qualify a parent or delete history.
+
+The physical storage envelope and its digest are separate from the unchanged
+logical state API. Missing, changed, linked, oversized, misbound or incomplete
+archive objects deny full loading. Normal mutation cannot edit archived work.
+Legacy state and journals remain readable. New recovery matches aligned physical
+and logical predecessors and verifies the final index. It retains unfinished
+journals and harmless unreferenced objects instead of deleting them. Per-file and
+journal limits remain 8 MiB; archive input is capped at 8 MiB and 1,024 objects,
+with at most 128 IDs per request and 64 archive audit entries.
+
+If capacity prevents even a repair work record, do not raise the limit, delete
+records, invent a claim or reuse an unrelated work item. Prepare a narrow
+one-shot bootstrap manifest with exact before-source, store, index, branch and
+roadmap identities. Independently review it before creating an exclusive local
+recovery marker or changing source. Normal writers stay fenced by the marker.
+Test the repair on isolated repositories, then independently review its exact
+source and a separate migration effect plan. Recheck exact post-archive hot and
+journal sizes and headroom for actual repair receipts before consuming its
+one-use effect. Preserve the original store and all previous failed attempts.
+
+The trusted private bootstrap composition is separate from the normal archive
+CLI. It supplies the reviewed marker identity; this is cooperative coordination,
+not authenticated authority. Prove every logical work object and inner digest
+survives migration. Retire only the exact owned marker while preserving its
+bytes, then start genuine normal work with explicit adopted-bootstrap provenance
+and obtain current checks/review before committing. Never backdate a start.
+Restart the verified owned review server onto the reviewed reader before a new
+physical format is published. Check its live historical support and pending
+status afterward; browser polling does not reload a Python server's imports.

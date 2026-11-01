@@ -47,6 +47,8 @@ def parser():
     for command in ("record-run", "open-feedback"):
         c = sub.add_parser(command)
         c.add_argument("--from", dest="input", required=True)
+    archive = sub.add_parser("archive-completed")
+    archive.add_argument("--from", dest="input", required=True)
     close = sub.add_parser("close-feedback")
     close.add_argument("feedback_id")
     compare = sub.add_parser("compare-trials")
@@ -81,6 +83,10 @@ def main(argv=None):
         elif args.command == "review-site":
             from control_plane.site import ensure, status, stop
             result = {"start": lambda: ensure(root, args.port), "status": lambda: status(root), "stop": lambda: stop(root)}[args.action]()
+        elif args.command == "archive-completed":
+            if not args.input.startswith(".local-codex/"):
+                raise ControlError("archive.private-input", "Archive requests belong in ignored local storage.", {}, [])
+            result = work.records.archive_completed(read_json(confined_path(root, relative(args.input))))
         elif args.command in {"prepare-trial", "grade-trial", "record-run", "compare-trials"}:
             from control_plane.evaluations import Trials
             trials = Trials(root)

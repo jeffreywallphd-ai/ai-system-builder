@@ -1777,3 +1777,26 @@ results or a trained adapter. Reports identify the input profile. A successful
 tiny journey proves software behavior only. Native ownership, real model
 resource limits, accuracy and parent-roadmap qualification remain separate.
 The original approved-model admission and device behavior are unchanged.
+
+### Completed contributor-work storage
+
+The control plane can archive exact completed local work objects through
+`archive-completed --from .local-codex/<request>.json`. The request names work IDs,
+the expected revision and full logical-state digest, and a bounded authority
+reference. It accepts no execution path, command, quota or bootstrap override.
+Active, pending, claimed, changed or missing records are refused.
+
+Archival preserves every work ID, event, receipt, review and completion value.
+Content-addressed objects publish before journaled references. The logical
+`Records.load()` API stays unchanged; a physical envelope has its own integrity
+digest. Individual JSON documents and journals retain their 8 MiB limit. Archive
+input is also limited to 8 MiB in total and 1,024 objects; full loading reads at
+most 8 MiB of hot input plus 8 MiB of archive input. This is an input-size bound,
+not a claim about measured process memory. No model or runtime limit changes.
+
+A full store cannot register its own repair. Such recovery needs an explicit
+owned bootstrap plan, original source/store/index backups, an exclusive marker,
+isolated tests and independent source review before a separately reviewed
+one-use migration. It must then register genuine normal work with the original
+before-source provenance and run current checks and separate review. A bootstrap
+marker coordinates cooperative work; it is not a normal claim or approval.

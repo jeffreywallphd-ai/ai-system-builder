@@ -399,3 +399,38 @@ parent-level v1/v2 run fences prevent admission. The v1 failure remains failed.
 A successful v2 import and accelerator query qualifies only this diagnostic;
 production dependency preparation, both app journeys, model quality, retained
 offload recovery and parent roadmap qualification require separate evidence.
+
+## Completed-work archival representation
+
+Exact completed unclaimed work can move from the hot wire representation to
+immutable content-addressed objects. This is storage externalization within the
+existing cooperative local model, not retention deletion or new qualification.
+Specs, events, receipts, reviews, completion facts and baseline representations
+stay unchanged. Active and pending work remains inline. `Records.load()` returns
+the same complete logical v1 state and historical work objects.
+
+A closed `development-state-storage-v1` envelope binds the physical representation
+with `storage_digest`. Its state retains the original logical integrity field: a
+digest of the logical object excluding that field. The existing index/journal
+identity remains the digest of the entire logical state including its integrity
+field. These identities have different purposes and are not interchangeable.
+Archive references bind an exact work ID and canonical object digest beneath one
+fixed private root. Normal mutation cannot change archived work.
+
+Publication preserves the existing lock and predecessor check. Objects publish
+before their references. A v2 journal binds aligned full-logical and physical
+predecessor identities; recovery accepts only the exact predecessor pair or
+already-published successor pair, and checks the index before and after repair.
+Legacy v1 state/journals remain supported. All physical JSON/journal bounds stay
+8 MiB. Archive input has its own aggregate 8 MiB and 1,024-object bound, so full
+loading has at most 16 MiB of encoded input across both tiers. Requests cap at
+128 IDs and audit history at 64 events. Missing or invalid history fails closed.
+
+A capacity bootstrap is a disclosed exceptional recovery, not a fabricated normal
+work claim. It requires exact before-source/store/index/branch/roadmap proof, an
+exclusive cooperative marker, isolated failure/interruption tests and independent
+review before source/migration steps. A separately reviewed one-use effect must
+prove lossless history and adequate next-work headroom. Genuine normal admission,
+current checks, separate review and owned commit follow. No source/parent approval,
+release, model/native resource policy or destructive cleanup authority changes.
+The long-lived review server must load the new reader before physical migration.

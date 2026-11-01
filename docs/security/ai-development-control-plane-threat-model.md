@@ -512,3 +512,43 @@ tests cover interruptions after journal and state writes; capacity and corruptio
 denials preserve existing records. Oversized retained journals are not silently
 normalized or deleted. Real store capacity and physical filesystem guarantees
 remain separate constraints; this fix grants no roadmap or native qualification.
+
+### Lossless completed-work archive and capacity bootstrap
+
+The archive is an integrity and availability boundary for contributor evidence.
+Only explicit completed unclaimed IDs can be externalized. Preserve exact work
+objects and all inner digests. Use fixed-root content-addressed files, closed
+reference/envelope schemas, bounded regular single-link reads and canonical
+content hashes. Reject missing, changed, extra-field, escaping, misbound, active
+or claimed objects. Normal transitions cannot edit an archived object.
+
+Physical envelope integrity is separate from both existing logical digest
+contracts. The new reader supports legacy v1 state and journal formats. A v2 journal binds the
+aligned physical/logical predecessor pair; logical equality cannot authorize a
+substituted physical reference index. Check the declared before/after index and
+verify the recovered full logical state. Publish objects before references and
+preflight exact hot/journal bytes first. Failed archive writes may leave harmless
+unreferenced objects; never auto-delete them or clear an uncertain journal.
+
+Retain 8 MiB per document/hot index/journal and cap aggregate archive input at
+8 MiB, archive count at 1,024, IDs per action at 128 and audit entries at 64. Full
+load input is bounded by both tiers together; no exact process-RSS claim follows.
+No model, offload, disk, native, provider, privilege or parent gate is relaxed.
+The archive action cannot execute commands or accept arbitrary storage paths.
+
+A full-store repair must disclose its bootstrap exception. Bind original source,
+store, index, Git and canonical-roadmap identities in a reviewed plan. An
+exclusive marker fences ordinary writers; it does not authenticate the agent or
+grant authority. Inert compatibility and denial/interruption evidence precedes
+independent source review and a separate exact one-use migration plan. Keep raw
+backups and failed attempts. Prove all historical work/receipt/review identities
+remain and that the next real work and its receipts fit. Then retire only the
+exact owned marker with its bytes retained and obtain genuine normal admission,
+current checks and separate review with truthful adopted-source provenance.
+
+Restart the verified owned review process onto the reviewed reader before changing
+the physical format, and verify its full historical support/pending view after.
+Rollback cannot silently restore an old reader or stale store after later writes;
+it needs an independently reviewed exact-revision recovery. Same-user hostile
+filesystem/ACL isolation remains outside this cooperative store, and no native
+security or product qualification follows from archival success.
