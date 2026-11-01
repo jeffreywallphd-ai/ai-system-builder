@@ -1626,3 +1626,20 @@ dependency readiness, offline packaging and the Desktop training journey
 remain pending. No model fit, native file protection, offload restart or
 parent-roadmap qualification follows. Completed accuracy and OCR checks
 stay closed; combined full-system testing follows feature implementation.
+
+
+### Fresh generated training-input metadata
+
+The [first actual tiny-input report](../operations/desktop-training-host-qualification.json)
+records a failed input stage with confirmed process and handle retirement. The
+pinned tokenizer serializer saved `PreTrainedTokenizer`; the strict inspector
+required `PreTrainedTokenizerFast`. That failed run and its bytes remain unchanged.
+
+The creator now normalizes the known label only in its newly created slot before
+manifest hashing. It preserves the strict inspector, original model verifier and
+existing/interrupted-slot refusal. Model-free regression fixtures reproduce the
+supplier shape and check write failures, malformed metadata, links and redaction.
+Failure JSON identifies a fixed source stage and allowlisted error type without
+raw exceptions, paths or traceback text. A fresh physical attempt needs a separate
+exact-source review. Completed accuracy/OCR checks stay closed, and full-system
+testing remains deferred until feature implementation is complete.

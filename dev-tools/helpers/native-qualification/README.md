@@ -214,3 +214,23 @@ outcome, retained restart or parent roadmap. Each actual stage needs a separate
 current-source effect review, one-use execution evidence and exact owned cleanup.
 Unknown owners/fences and historical failures remain; there is no reset or retry
 authority. Completed model accuracy and OCR checks stay closed.
+
+
+## Fresh tiny-input tokenizer metadata
+
+The fixed creator normalizes the pinned serializer's known generic tokenizer
+label to its actual explicit fast class only inside the slot that this invocation
+just created. Normalization precedes manifest hashes. The strict input inspector
+still accepts only `PreTrainedTokenizerFast`; existing and interrupted slots are
+not normalized, adopted or retried. Unknown classes, `auto_map`, duplicate or
+oversized JSON, linked files and detected identity/content drift deny before a
+rewrite. Already-explicit bytes stay unchanged; a write failure keeps its original
+exception and leaves the partial slot for review. Ordinary file checks here do
+not establish Native hostile-filesystem custody.
+
+CLI failure JSON adds a fixed source-stage and an allowlisted exception type. It
+retains the unavailable status, exit 1 and no-launch/no-accuracy facts. Raw exception
+messages, paths and traceback text are excluded. Success schemas, legacy model
+admission, installed dependencies, Native budgets and effect-review requirements
+remain unchanged. Model-free regressions cover the actual supplier-shaped label;
+they do not qualify a new physical input, model, app or parent roadmap.

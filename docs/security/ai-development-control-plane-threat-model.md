@@ -592,3 +592,25 @@ behavior, package writes, UI output and owned cleanup require separate reviewed
 effects. Retain failed evidence and unknown fences. Completed accuracy/OCR results
 stay closed, with real resource/native/parent gaps and the later full campaign
 still pending.
+
+
+## Fresh producer-owned tokenizer metadata
+
+The tiny test-input creator can canonicalize the pinned serializer's known base
+label to the explicit fast class only after its exclusive new-slot creation. The
+strict admission inspector is unchanged. No existing acquisition or retained
+failed slot gains write, adoption or retry authority. Before a rewrite, bounded
+regular-file reads reject reparse and multiple-link objects, malformed or
+duplicate JSON, unknown tokenizer classes, `auto_map`, oversized content and
+observed identity/content drift. Same-file writes do not truncate on open; failure
+retains the original exception and partial data without a manifest or automatic
+retry. This cooperative fresh-output correction is not a Native filesystem fence
+or a production model-file capability.
+
+Failure diagnostics expose only a fixed source-stage label and an allowlisted
+exception name. Exception messages, paths, traceback text and unknown class names
+never become diagnostic fields. Existing failure status/exit and success schemas
+remain authoritative. Supplier-shaped fake regressions and controlled file-denial
+tests are source evidence only; actual input, training, crash, file-protection,
+offload and parent qualifications remain separate. No dependency, Native limit,
+standard memory guard, disk budget, lease or old-data authority changes.

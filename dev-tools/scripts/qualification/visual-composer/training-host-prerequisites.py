@@ -237,6 +237,54 @@ def create_tiny(root, acquisition):
             deny()
     directory.mkdir(exist_ok=False)
     _generate_tiny(directory)
+
+    def normalize_new_tokenizer():
+        # This closure is reached only after this invocation exclusively created
+        # the slot. Never normalize an existing acquisition or relax inspection.
+        relative = (directory / "tokenizer_config.json").relative_to(root).as_posix()
+        target, before = regular(root, relative, 64 * 1024)
+        identity = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_nlink)
+        with target.open("rb") as stream:
+            opened = os.fstat(stream.fileno())
+            original = stream.read(64 * 1024 + 1)
+            after = os.fstat(stream.fileno())
+        _, named = regular(root, relative, 64 * 1024)
+        if (len(original) > 64 * 1024 or len(original) != before.st_size or
+                identity(before) != identity(opened) or identity(opened) != identity(after) or
+                identity(after) != identity(named) or opened.st_ctime_ns != after.st_ctime_ns or
+                before.st_ctime_ns != named.st_ctime_ns):
+            deny()
+        configuration = strict_json(original)
+        if (not isinstance(configuration, dict) or "auto_map" in configuration or
+                configuration.get("tokenizer_class") not in ("PreTrainedTokenizer", "PreTrainedTokenizerFast")):
+            deny()
+        if configuration["tokenizer_class"] == "PreTrainedTokenizerFast":
+            return  # Preserve already-explicit supplier bytes exactly.
+        # The pinned serializer strips Fast even for the generic fast-only
+        # tokenizer. Keep the producer's actual explicit class in its own output.
+        configuration["tokenizer_class"] = "PreTrainedTokenizerFast"
+        payload = (json.dumps(configuration, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        if len(payload) > 64 * 1024:
+            deny()
+        # r+b does not truncate on open. Reject drift before any write, then bind
+        # the final manifest to the newly written bytes. This is not Native custody.
+        with target.open("r+b") as stream:
+            opened = os.fstat(stream.fileno())
+            current = stream.read(64 * 1024 + 1)
+            after = os.fstat(stream.fileno())
+            _, named = regular(root, relative, 64 * 1024)
+            if (identity(before) != identity(opened) or identity(opened) != identity(after) or
+                    identity(after) != identity(named) or current != original or
+                    opened.st_ctime_ns != after.st_ctime_ns or before.st_ctime_ns != named.st_ctime_ns):
+                deny()
+            stream.seek(0)
+            if stream.write(payload) != len(payload):
+                raise OSError("The fixed training metadata write did not complete.")
+            stream.truncate(len(payload))
+            stream.flush()
+            os.fsync(stream.fileno())
+
+    normalize_new_tokenizer()
     rows = {}
     for name in TINY_FILES:
         digest, size = digest_regular(root, (directory / name).relative_to(root).as_posix(), 512 * 1024 if name == "model.safetensors" else 64 * 1024)
@@ -251,6 +299,28 @@ def create_tiny(root, acquisition):
         stream.write(raw)
     expected = hashlib.sha256(raw).hexdigest()
     return inspect_tiny(root, acquisition, expected)
+
+
+def failure_details(error):
+    """Fixed diagnostic facts only; no exception text, paths or traceback text."""
+    types = {"ValueError", "TypeError", "KeyError", "RuntimeError", "OSError", "MemoryError",
+             "ImportError", "ModuleNotFoundError", "FileNotFoundError", "FileExistsError",
+             "PermissionError", "JSONDecodeError"}
+    stages = {"main": "entry-admission", "inspect": "inspect-local-inputs", "fixed_model": "inspect-model-pins",
+              "verify_model": "verify-existing-model", "regular": "verify-local-file", "digest_regular": "verify-local-file",
+              "create_tiny": "create-tiny-inputs", "_generate_tiny": "generate-tiny-model",
+              "normalize_new_tokenizer": "normalize-tokenizer-metadata", "inspect_tiny": "verify-generated-inputs"}
+    stage = "entry-admission"
+    frame = error.__traceback__
+    for _ in range(64):
+        if frame is None:
+            break
+        code = frame.tb_frame.f_code
+        if code.co_filename == __file__ and code.co_name in stages:
+            stage = stages[code.co_name]
+        frame = frame.tb_next
+    error_type = type(error).__name__
+    return {"stage": stage, "errorType": error_type if error_type in types else "UnhandledError"}
 
 
 def inspect(root, acquisition, manifest_hash=None):
@@ -288,6 +358,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        print(json.dumps({"schemaVersion": "training-local-inputs-v1", "status": "unavailable", "reason": "fixed-input-prerequisites", "accuracyExecuted": False, "launchAuthorized": False}))
+    except Exception as error:
+        print(json.dumps({"schemaVersion": "training-local-inputs-v1", "status": "unavailable", "reason": "fixed-input-prerequisites", "accuracyExecuted": False, "launchAuthorized": False, "diagnostics": failure_details(error)}))
         raise SystemExit(1) from None

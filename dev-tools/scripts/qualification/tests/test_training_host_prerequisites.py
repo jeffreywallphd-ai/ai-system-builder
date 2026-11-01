@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -175,6 +176,130 @@ class GeneratedTrainingInputTests(unittest.TestCase):
             facts = MODULE.inspect(self.root, TINY_ACQUISITION, result["manifestSha256"])
         self.assertEqual(facts["schemaVersion"], "training-local-inputs-v2")
         self.assertFalse(facts["accuracyExecuted"]); self.assertFalse(facts["launchAuthorized"])
+
+    def test_fresh_generation_canonicalizes_supplier_slow_save_alias_without_relaxing_inspection(self):
+        def supplier_shaped_generator(directory):
+            self.fake_generator(directory)
+            configuration = {"tokenizer_class": "PreTrainedTokenizer", "model_max_length": 128,
+                             "added_tokens_decoder": {"0": {"content": "[PAD]", "special": True}}}
+            (directory / "tokenizer_config.json").write_text(json.dumps(configuration), encoding="utf-8")
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", supplier_shaped_generator):
+            result = MODULE.create_tiny(self.root, TINY_ACQUISITION)
+        manifest = self.root / TINY_ACQUISITION
+        tokenizer = manifest.parent / "tokenizer_config.json"
+        configuration = json.loads(tokenizer.read_bytes())
+        self.assertEqual(configuration, {"tokenizer_class": "PreTrainedTokenizerFast", "model_max_length": 128,
+                                         "added_tokens_decoder": {"0": {"content": "[PAD]", "special": True}}})
+        self.assertEqual(MODULE.inspect_tiny(self.root, TINY_ACQUISITION, result["manifestSha256"]), result)
+        # Existing bytes cannot gain admission by using the supplier's alias,
+        # even when their manifest hashes are updated by a caller.
+        configuration["tokenizer_class"] = "PreTrainedTokenizer"
+        tokenizer.write_text(json.dumps(configuration), encoding="utf-8")
+        expected = self.rewrite(lambda value: value["files"]["tokenizer_config.json"].update(
+            sha256=hashlib.sha256(tokenizer.read_bytes()).hexdigest(), bytes=tokenizer.stat().st_size))
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, expected)
+        before = tokenizer.read_bytes()
+        with self.assertRaises(FileExistsError): self.create()
+        self.assertEqual(tokenizer.read_bytes(), before)
+
+    def test_already_explicit_fast_metadata_is_not_rewritten(self):
+        self.create()
+        self.assertEqual((self.root / TINY_ACQUISITION).parent.joinpath("tokenizer_config.json").read_bytes(),
+                         b'{"tokenizer_class":"PreTrainedTokenizerFast"}')
+
+    def test_invalid_generated_tokenizer_metadata_is_rejected_before_rewrite(self):
+        cases = [b'{"tokenizer_class":"UnapprovedTokenizer"}', b'{"tokenizer_class":true}', b'[]',
+                 b'{"tokenizer_class":"PreTrainedTokenizer","auto_map":{"AutoTokenizer":"untrusted.code"}}',
+                 b'{"tokenizer_class":"PreTrainedTokenizer","tokenizer_class":"PreTrainedTokenizerFast"}',
+                 b'{"tokenizer_class":"PreTrainedTokenizer"}' + b" " * (64 * 1024)]
+        for index, original in enumerate(cases, 1):
+            acquisition = TINY_ACQUISITION.replace("01234567-", f"{index:08x}-")
+            def invalid(directory, raw=original):
+                self.fake_generator(directory)
+                (directory / "tokenizer_config.json").write_bytes(raw)
+            with self.subTest(index=index), patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", invalid):
+                with self.assertRaises(ValueError): MODULE.create_tiny(self.root, acquisition)
+            self.assertEqual((self.root / acquisition).parent.joinpath("tokenizer_config.json").read_bytes(), original)
+            self.assertFalse((self.root / acquisition).exists())
+
+    def test_linked_generated_tokenizer_is_rejected_without_writing_or_manifest(self):
+        original = b'{"tokenizer_class":"PreTrainedTokenizer"}'
+        def linked(directory):
+            self.fake_generator(directory)
+            target = directory / "tokenizer_config.json"
+            target.write_bytes(original)
+            os.link(target, self.root / "owned-unit-tokenizer-link.json")
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", linked):
+            with self.assertRaises(ValueError): MODULE.create_tiny(self.root, TINY_ACQUISITION)
+        self.assertEqual((self.root / "owned-unit-tokenizer-link.json").read_bytes(), original)
+        self.assertFalse((self.root / TINY_ACQUISITION).exists())
+
+    def test_failed_metadata_write_keeps_original_exception_and_does_not_adopt_slot(self):
+        original = b'{"tokenizer_class":"PreTrainedTokenizer"}'
+        def producer(directory):
+            self.fake_generator(directory)
+            (directory / "tokenizer_config.json").write_bytes(original)
+        original_open = Path.open
+        class RefusedWrite:
+            def __init__(self, stream): self.stream = stream
+            def __enter__(self): return self
+            def __exit__(self, *args): return self.stream.__exit__(*args)
+            def __getattr__(self, name): return getattr(self.stream, name)
+            def write(self, value): raise OSError("synthetic-private-write-detail")
+        def open_file(target, *args, **kwargs):
+            stream = original_open(target, *args, **kwargs)
+            return RefusedWrite(stream) if target.name == "tokenizer_config.json" and args and args[0] == "r+b" else stream
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", producer), patch.object(Path, "open", open_file):
+            with self.assertRaises(OSError) as raised: MODULE.create_tiny(self.root, TINY_ACQUISITION)
+        self.assertEqual(MODULE.failure_details(raised.exception)["errorType"], "OSError")
+        self.assertEqual((self.root / TINY_ACQUISITION).parent.joinpath("tokenizer_config.json").read_bytes(), original)
+        self.assertFalse((self.root / TINY_ACQUISITION).exists())
+        with self.assertRaises(FileExistsError): self.create()
+
+    def test_tokenizer_change_before_write_is_not_overwritten_or_manifested(self):
+        original = b'{"tokenizer_class":"PreTrainedTokenizer"}'
+        changed = b'{"tokenizer_class":"PreTrainedTokenizer","changed":true}'
+        def producer(directory):
+            self.fake_generator(directory)
+            (directory / "tokenizer_config.json").write_bytes(original)
+        original_open = Path.open
+        def open_file(target, *args, **kwargs):
+            stream = original_open(target, *args, **kwargs)
+            if target.name == "tokenizer_config.json" and args and args[0] == "r+b":
+                stream.write(changed); stream.truncate(); stream.flush(); stream.seek(0)
+            return stream
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", producer), patch.object(Path, "open", open_file):
+            with self.assertRaises(ValueError): MODULE.create_tiny(self.root, TINY_ACQUISITION)
+        self.assertEqual((self.root / TINY_ACQUISITION).parent.joinpath("tokenizer_config.json").read_bytes(), changed)
+        self.assertFalse((self.root / TINY_ACQUISITION).exists())
+
+    def test_failure_facts_keep_stage_and_type_without_messages_paths_or_unknown_type_names(self):
+        marker = "hf_synthetic_secret C:\\private\\test-user-data.json"
+        def failed_generation(directory): raise RuntimeError(marker)
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", failed_generation):
+            try:
+                MODULE.create_tiny(self.root, TINY_ACQUISITION)
+            except RuntimeError as error:
+                facts = MODULE.failure_details(error)
+            else:
+                self.fail("The synthetic generation failure must propagate.")
+        self.assertEqual(facts, {"stage": "create-tiny-inputs", "errorType": "RuntimeError"})
+        self.assertNotIn(marker, json.dumps(facts))
+        unknown = type("SyntheticPrivateTypeName", (Exception,), {})(marker)
+        self.assertEqual(MODULE.failure_details(unknown), {"stage": "entry-admission", "errorType": "UnhandledError"})
+
+    def test_invalid_argument_cli_has_bounded_useful_json_and_no_model_effect(self):
+        result = subprocess.run([sys.executable, "-I", "-B", str(SCRIPT), "--invalid"], cwd=self.root,
+                                stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, b"")
+        self.assertLess(len(result.stdout), 4096)
+        facts = json.loads(result.stdout)
+        self.assertEqual(facts["status"], "unavailable")
+        self.assertFalse(facts["accuracyExecuted"]); self.assertFalse(facts["launchAuthorized"])
+        self.assertEqual(facts["diagnostics"], {"stage": "entry-admission", "errorType": "ValueError"})
+        self.assertNotIn(str(self.root), result.stdout.decode())
+        self.assertNotIn("Traceback", result.stdout.decode())
 
     def test_existing_and_interrupted_directories_are_never_adopted_retried_or_removed(self):
         result = self.create(); before = (self.root / TINY_ACQUISITION).read_bytes()
