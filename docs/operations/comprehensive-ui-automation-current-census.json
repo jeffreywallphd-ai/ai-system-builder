@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "75aa85b70bbcc0fa457fe8a2eb1b044f94486328",
+ "source_baseline": "dfdd7345e5d9f0dd645e936c74d9cc9ebc30891c",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -8273,7 +8273,7 @@
      }
     ]
    },
-   "committed_sha256": "2c20479d9514a2b43db87b242cd59210b3d0eee1d9eb86a33a3d6db2e92f9985"
+   "committed_sha256": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
