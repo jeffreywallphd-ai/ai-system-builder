@@ -8525,6 +8525,25 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Deletion protection failed. Later permission, child/stream, parent-right and resize checks were not reached. Parent rights are a likely cause, not a measured grant. Owned-parent and anchor protection need work. Existing handles, stalled IO, shared durable 12 GiB accounting, worker/crash/restart and actual offload resources/delivery/cleanup stay pending. Unknown usage charges 12 GiB. No lease, credit, old-file access or new run. Accuracy/OCR closed; full tests deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "construct-owned-protected-journal-parent",
+      "work_criteria": [
+        "genuine-original-directory-construction",
+        "sealed-owned-parent-before-journal-writes",
+        "versioned-real-fixture-and-regression-definition",
+        "reviewed-owned-source-with-genuine-parent-gaps"
+      ],
+      "receipt_digest": "516e10b1e58dba9ebf9df20f11b222a963d213cdf548b096451350f6c493cf17",
+      "review_digest": "3fedeed9302a7c900b2048b86df63a9d79844d1bf50f76bee539326e5046650f",
+      "scope": "Commit 24328fc71 passed 177 focused tests, five related groups and review. Four Windows cases passed. The mutation case used fresh read-only handles after creator retirement and observed 14 exact denials, including namespace delete and parent delete-child. Resize returned 0/error 5. Its original/probe handles retired and child exit/parent cleanup passed. Collision uncertainty stayed retained. Raw stdout matched the guarded new summary. The earlier failed run remains failed history.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Only the fresh journal component is qualified. New-parent/ancestor rename or deletion, preopened rights, stalled IO, guardian/model-worker crash/restart, shared durable 12 GiB accounting and actual offload resources/delivery/cleanup remain pending. Unknown usage reserves 12 GiB; production stays unavailable. No lease, credit, old-file access or extra run. Accuracy/OCR stay closed; full tests deferred."
+      ]
     }
   ]
 }

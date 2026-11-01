@@ -983,10 +983,12 @@ existing folder do not prove ownership. The file, namespace and parent must all
 be sealed before the first journal write; check, write and flush recheck the same
 live parent capability. Core's borrowed anchor and two-object lifecycle remain.
 
-The current v3 diagnostic definition checks this actual runtime path, its fresh
-parent collision and the updated read-only competing-access matrix. The previous
-v2 namespace-delete grant remains a failed observation. Current source tests do
-not qualify the Windows fix. Another separately reviewed run is still needed.
+The current v3 Windows run passed the actual runtime path, fresh-parent
+collision and all 14 strict competing-access denials, with a separate resize
+control and original/probe/process retirement. See the
+[versioned owned-parent results](windows-offload-owned-parent-qualification.json).
+This independently reviewed run qualifies the fresh journal component only.
+The earlier v2 namespace-delete grant remains failed history.
 
 A private parent alone is not a complete restart solution. Its own and its
 ancestors' rename/delete stability, guardian/crash lifetime, shared durable disk

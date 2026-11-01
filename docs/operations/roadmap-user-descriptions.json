@@ -13530,6 +13530,47 @@
           "Full-system tests will run after feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6b3eb3d19cdeb2bae62e482c3f86fd025270a6eb66740e179bdcf06ce4851fef",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The new runtime code passed 177 focused tests, five related check groups and independent review.",
+          "All four Windows component cases passed.",
+          "After the original creator handles closed, fresh read-only handles confirmed the original files and permissions.",
+          "All 14 competing access requests were refused, including accounting-folder deletion and its parent delete-child right.",
+          "The separate resize check was refused with Windows error 5.",
+          "The successful mutation check retired its original and probe handles.",
+          "Its child process exited, and controller cleanup was confirmed.",
+          "The name-collision check kept its uncertain API records; its process also exited.",
+          "The captured output matched the saved result from this new run.",
+          "The earlier failed run remains failed history."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b930f30a9a8d6b9a19b3ba370a6e3f6b8422b9d16302e64474226bab2a6ac659",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Only the fresh accounting-file component is qualified.",
+          "The agent must still protect the new parent folder itself and its ancestors from moves and deletion.",
+          "Earlier open handles and stalled file operations still need protection checks.",
+          "Guardian and model-worker shutdown, crashes and safe restart still need work.",
+          "All processes and runs must share a disk limit of 12 GiB that survives a restart.",
+          "Actual low-memory runs must measure resource use, output delivery and cleanup.",
+          "Unknown temporary files still count against the full 12 GiB limit.",
+          "Production low-memory mode remains unavailable.",
+          "This result grants no lease, disk credit, old-file access or extra test run.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "Full-system tests will run after feature work."
+        ]
+      }
     }
   ]
 }
