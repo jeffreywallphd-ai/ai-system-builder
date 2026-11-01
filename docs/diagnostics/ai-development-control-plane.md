@@ -1621,17 +1621,17 @@ The [Windows budget observation](../operations/desktop-training-native-budget-qu
 records one actual inert child, the existing 2 GiB process and 4 GiB total
 limits, successful exit and confirmed owned-process and handle retirement.
 A separate agent reviewed the result. This direct-owner check did not run
-a model, application, timeout or guardian-crash case. Input creation, real
-dependency readiness, offline packaging and the Desktop training journey
-remain pending. No model fit, native file protection, offload restart or
+a model, application, timeout or guardian-crash case. It supplies no input,
+dependency, package or Desktop training result. The separate training feature
+report records those stages. No model fit, native file protection, offload restart or
 parent-roadmap qualification follows. Completed accuracy and OCR checks
 stay closed; combined full-system testing follows feature implementation.
 
 
 ### Fresh generated training-input metadata
 
-The [first actual tiny-input report](../operations/desktop-training-host-qualification.json)
-records a failed input stage with confirmed process and handle retirement. The
+The [training feature report](../operations/desktop-training-host-qualification.json)
+preserves the first failed input stage with confirmed process and handle retirement. The
 pinned tokenizer serializer saved `PreTrainedTokenizer`; the strict inspector
 required `PreTrainedTokenizerFast`. That failed run and its bytes remain unchanged.
 
@@ -1641,5 +1641,29 @@ existing/interrupted-slot refusal. Model-free regression fixtures reproduce the
 supplier shape and check write failures, malformed metadata, links and redaction.
 Failure JSON identifies a fixed source stage and allowlisted error type without
 raw exceptions, paths or traceback text. A fresh physical attempt needs a separate
-exact-source review. Completed accuracy/OCR checks stay closed, and full-system
+exact-source review. A separately reviewed fresh input has now passed; the earlier
+failure remains in the report's complete history. Completed accuracy/OCR checks stay closed, and full-system
 testing remains deferred until feature implementation is complete.
+
+### Training dependency startup after inventory failure
+
+The actual read-only readiness stage found an inventory/runtime disagreement.
+The inventory query failed, while the installed Torch probe reported available
+CUDA. The captured fixed output was independently matched by bytes and digest.
+The old CPU fallback rejected that CUDA build and reached a network-probe request,
+which the read-only adapter refused before dispatch. No network or installation
+subprocess ran. The failed readiness result and its evidence remain failed.
+
+Startup now uses an available installed accelerator to refine only that CPU
+fallback, then runs the existing real backend verification. It does not treat
+availability as a model workload result. The trusted training delegate also
+normalizes physical CRLF/CR in fixed source probes to JavaScript template-literal
+LF semantics; exact no-install argument checks stay intact. Focused source tests
+use mocked dependency commands and the actual Context callback. A fresh physical
+readiness run, offline package and one-app training journey remain separate
+qualification. Old effect plans are consumed or source-stale and cannot be reused.
+The launch-plan test loads its TypeScript fixtures explicitly through the existing
+scoped loader API. It also runs alone without an ambient command-line loader.
+The task-progress regression keeps the real cancellation callback in its
+synthetic delegate. It synchronizes on published progress and settles its owned
+future before fixture cleanup. Production cancellation behavior stays intact.

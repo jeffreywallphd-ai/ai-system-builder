@@ -16,13 +16,14 @@ import { createTrainingCaseEnvironment, TRAINING_PYTHON_RELATIVE, trainingAcquis
 
 const fail = () => { throw new Error("Training qualification prerequisites are unavailable."); };
 const repoRoot = path.resolve(__dirname, "../../../..");
-function literalProbe(source: string, name: string): string {
+export function trainingDependencyProbe(source: string, name: string): string {
   const marker = `const ${name} = `;
   const offset = source.indexOf(marker);
   if (offset < 0 || source.indexOf(marker, offset + 1) >= 0) return fail();
   const value = source.slice(offset + marker.length).match(/^`([\s\S]*?)`\.trim\(\);/);
   if (!value) return fail();
-  return value[1]!.trim();
+  // Match JavaScript's evaluated template literal on Windows and Unix sources.
+  return value[1]!.replace(/\r\n?/gu, "\n").trim();
 }
 export function trainingReadOnlyArguments(args: readonly string[], probes: ReadonlySet<string>): boolean {
   return (args.length === 3 && args[0] === "-m" && args[1] === "pip" && args[2] === "--version") ||
@@ -32,9 +33,9 @@ export function trainingReadOnlyArguments(args: readonly string[], probes: Reado
 export async function inspectTrainingDependencies(environment: NodeJS.ProcessEnv): Promise<void> {
   const workerSource = readFileSync(path.join(repoRoot, "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts"), "utf8");
   const contextSource = readFileSync(path.join(repoRoot, "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts"), "utf8");
-  const probes = new Set(["ENV_INSPECTION_SCRIPT", "WORKER_DEPENDENCY_PROBE_SCRIPT", "MODEL_TRAINING_DEPENDENCY_PROBE_SCRIPT", "TORCH_INSTALL_PROBE_SCRIPT"].map(name => literalProbe(workerSource, name)));
-  probes.add(literalProbe(contextSource, "CONTEXT_DEPENDENCY_PROBE_SCRIPT"));
-  for (const backend of ["cpu", "cuda", "rocm"]) probes.add(literalProbe(workerSource, "verificationScript").replace('${JSON.stringify(backend)}', JSON.stringify(backend)));
+  const probes = new Set(["ENV_INSPECTION_SCRIPT", "WORKER_DEPENDENCY_PROBE_SCRIPT", "MODEL_TRAINING_DEPENDENCY_PROBE_SCRIPT", "TORCH_INSTALL_PROBE_SCRIPT"].map(name => trainingDependencyProbe(workerSource, name)));
+  probes.add(trainingDependencyProbe(contextSource, "CONTEXT_DEPENDENCY_PROBE_SCRIPT"));
+  for (const backend of ["cpu", "cuda", "rocm"]) probes.add(trainingDependencyProbe(workerSource, "verificationScript").replace('${JSON.stringify(backend)}', JSON.stringify(backend)));
   const python = path.join(repoRoot, TRAINING_PYTHON_RELATIVE);
   const readonlySpawn: typeof spawnSync = ((command: string, args: readonly string[]) => {
     // Preserve the production preparer's real backend discovery. Do not invent

@@ -1,7 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
+import { readFileSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { tsImport } from "tsx/esm/api";
 import trainingHostSetup from "../visual-composer/training-host-global-setup.mjs";
+
+// This .mjs file also runs alone without the catalog's optional --import loader.
+const fixtureModule = await tsImport("../visual-composer/training-host-fixture.ts", import.meta.url);
+const { trainingDependencyProbe, trainingReadOnlyArguments } = fixtureModule.default ?? fixtureModule;
+
+test("fixed dependency probe literals match JavaScript template newline semantics", () => {
+  for (const newline of ["\n", "\r\n", "\r"]) {
+    const source = `const PROBE = \`${newline}line1${newline}line2${newline}\`.trim();`;
+    assert.equal(trainingDependencyProbe(source, "PROBE"), "line1\nline2");
+  }
+  for (const source of ["", 'const PROBE = "unknown";', 'const PROBE = `a`.trim(); const PROBE = `b`.trim();'])
+    assert.throws(() => trainingDependencyProbe(source, "PROBE"));
+});
+
+test("the actual Context preparer passes its exact evaluated probe to the no-install delegate", async () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const location = path.join(root, "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts");
+  const imported = await tsImport(pathToFileURL(location).href, import.meta.url);
+  const context = imported.default ?? imported;
+  const probes = new Set([trainingDependencyProbe(readFileSync(location, "utf8"), "CONTEXT_DEPENDENCY_PROBE_SCRIPT")]);
+  let calls = 0;
+  const result = await context.ensurePythonRuntimeContextDependencies({
+    command: "synthetic-readonly-python", platform: "win32",
+    execFileImplementation: (command, args, _options, callback) => {
+      calls += 1;
+      assert.equal(command, "synthetic-readonly-python");
+      assert.equal(trainingReadOnlyArguments(args, probes), true);
+      callback(null, "ASB_CONTEXT_DEPENDENCY_READY\n", "");
+    },
+  });
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { installed: false, version: "0.34.0" });
+  assert.equal(trainingReadOnlyArguments(["-m", "pip", "install", "lancedb"], probes), false);
+  assert.equal(trainingReadOnlyArguments(["-c", "unknown-probe"], probes), false);
+});
 
 test("missing declared inputs return a pending profile before package or app startup", async () => {
   const previous = process.env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION, ready = process.env.VISUAL_COMPOSER_TRAINING_READY;

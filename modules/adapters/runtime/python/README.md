@@ -133,6 +133,15 @@ operation summaries, deeply immutable and session-only. A trusted
 and retention require separate qualification. No automatic temporary files are
 created; security audit remains separate.
 
+When inventory utilities find no accelerator, dependency setup also checks the
+installed Torch runtime. An exactly available, installed CUDA build on Windows or
+Linux, or ROCm build on Linux, can refine that CPU fallback. Missing, malformed,
+unavailable or conflicting build fields cannot promote a backend. The selected
+backend must still pass the existing real Torch verification before readiness
+succeeds. This avoids replacing a usable installed build after an inventory-tool
+failure. It does not prove model fit or change dependency versions, installation
+authority, memory admission or task execution controls.
+
 Context embeddings accept optional `cpu`/`cuda`/`auto` placement. CPU remains the
 omitted default, and explicit CUDA fails if unavailable or exhausted. Weight and
 token tensors move together; GPU tensors/cache are released without cross-request

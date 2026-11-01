@@ -614,3 +614,20 @@ remain authoritative. Supplier-shaped fake regressions and controlled file-denia
 tests are source evidence only; actual input, training, crash, file-protection,
 offload and parent qualifications remain separate. No dependency, Native limit,
 standard memory guard, disk budget, lease or old-data authority changes.
+
+## Installed runtime selection after inventory failure
+
+External inventory failure cannot by itself require replacing an installed
+accelerator runtime. Only exact installed/available booleans and one unambiguous
+supported CUDA or ROCm version field can refine the detector's CPU fallback.
+Host support and the original real backend verification still gate readiness.
+Malformed, unavailable, conflicting and failed verification paths cannot supply a
+pass. Existing dependency installation, credential, process and diagnostic
+controls remain authoritative; no package or version is changed by this repair.
+
+The test delegate canonicalizes only physical line endings inside fixed admitted
+source probe literals. Its argument allowlist still refuses installations,
+network probes and unknown scripts before spawning. Model-free actual-port
+regressions establish argument equality and refusal, not a model/runtime or Native
+qualification. Prior failed observations, accepted accuracy/OCR, original memory
+and disk guards, unknown retained data and pending full-system coverage remain.

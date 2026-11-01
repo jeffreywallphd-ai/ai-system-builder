@@ -487,6 +487,20 @@ function torchMatchesTarget(
   return !probe.cudaVersion && !probe.hipVersion;
 }
 
+function availableInstalledAccelerator(
+  probe: TorchInstallationProbeResult,
+  platform: NodeJS.Platform,
+): "cuda" | "rocm" | undefined {
+  if (probe.installed !== true || probe.cudaAvailable !== true) return undefined;
+  const versions = [probe.cudaVersion, probe.hipVersion];
+  if (versions.some(value => value != null && (typeof value !== "string" || !value.trim()))) return undefined;
+  const cuda = typeof probe.cudaVersion === "string" && probe.cudaVersion.trim().length > 0;
+  const rocm = typeof probe.hipVersion === "string" && probe.hipVersion.trim().length > 0;
+  if (cuda && !rocm && (platform === "win32" || platform === "linux")) return "cuda";
+  if (rocm && !cuda && platform === "linux") return "rocm";
+  return undefined;
+}
+
 function ensureNetworkReachabilityForIndex(
   spawnSyncImplementation: typeof spawnSync,
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
@@ -919,7 +933,7 @@ export function ensurePythonRuntimeWorkerDependencies(
       options,
       diagnostics,
     );
-    const target = resolveInstallTarget(detectedBackend, options);
+    let target = resolveInstallTarget(detectedBackend, options);
     diagnostics.selectedBackend = target.backend;
 
     const currentTorch = probeTorchInstallation(
@@ -927,6 +941,16 @@ export function ensurePythonRuntimeWorkerDependencies(
       options,
       diagnostics,
     );
+    // Inventory tools can fail even when the installed runtime can use its GPU.
+    // Refine only their CPU fallback, then retain the real verification below.
+    const installedBackend = detectedBackend === "cpu"
+      ? availableInstalledAccelerator(currentTorch, options.platform ?? runtimePlatform())
+      : undefined;
+    if (installedBackend) {
+      target = resolveInstallTarget(installedBackend, options);
+      diagnostics.detectedAccelerator = installedBackend;
+      diagnostics.selectedBackend = installedBackend;
+    }
     if (torchMatchesTarget(currentTorch, target)) {
       const verification = verifyTorchInstallation(
         spawnSyncImplementation,

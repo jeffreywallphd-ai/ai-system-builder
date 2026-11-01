@@ -225,6 +225,69 @@ if decoder_supported:
 `.trim();
 
 describe("ensurePythonRuntimeWorkerDependencies", () => {
+  function unavailableInventory(torch: Record<string, unknown>, verificationStatus = 0) {
+    return createSpawnSyncImplementation((command, args) => {
+      if (command === "nvidia-smi") return createSpawnSyncResult({ status: 255 });
+      if (command === "rocminfo") return createSpawnSyncResult({ status: 1 });
+      if (command !== "python") throw new Error("Unexpected test command");
+      if (args.join(" ") === "-m pip --version") return createSpawnSyncResult({ stdout: "synthetic pip" });
+      const script = args[1] ?? "";
+      if (args[0] === "-c" && script.includes("asb:python-env-inspect")) return createSpawnSyncResult({ stdout: createEnvironmentInspectionJson("3.12.8") });
+      if (args[0] === "-c" && script === workerDependencyProbeScript) return createSpawnSyncResult();
+      if (args[0] === "-c" && script.includes("asb:torch-install-probe")) return createSpawnSyncResult({ stdout: JSON.stringify(torch) });
+      if (args[0] === "-c" && script.includes("asb:torch-verification")) return createSpawnSyncResult({ status: verificationStatus, stdout: JSON.stringify({ ok: verificationStatus === 0 }) });
+      if (args[0] === "-c" && script.includes("asb:torch-network-probe")) return createSpawnSyncResult({ status: 1, stderr: "synthetic network refusal" });
+      throw new Error("Unexpected test command");
+    });
+  }
+
+  for (const backend of ["cuda", "rocm"] as const) {
+    it(`reuses an available installed ${backend} runtime when inventory utilities fail`, () => {
+      const spawn = unavailableInventory({ installed: true, version: "synthetic", cudaAvailable: true,
+        cudaVersion: backend === "cuda" ? "12.6" : null, hipVersion: backend === "rocm" ? "6.2" : null });
+      ensurePythonRuntimeWorkerDependencies({ command: "python", platform: backend === "cuda" ? "win32" : "linux", spawnSyncImplementation: spawn as any });
+      const scripts = spawn.mock.calls.map(call => call[1]?.[1] ?? "");
+      assert.ok(scripts.some(script => script.includes("asb:torch-verification") && script.includes(`expected = "${backend}"`)));
+      assert.ok(!scripts.some(script => script.includes("asb:torch-network-probe")));
+      assert.ok(!spawn.mock.calls.some(call => call[1]?.includes("install")));
+      const outcome = readPythonRuntimeDependencySessionOutcomes().find(value => value.operation === "worker")!;
+      assert.equal(outcome.selectedBackend, backend);
+      assert.equal(outcome.verificationResult?.success, true);
+    });
+  }
+
+  for (const [name, change, platform] of [
+    ["unavailable", { cudaAvailable: false }, "win32"],
+    ["unknown availability", { cudaAvailable: undefined }, "win32"],
+    ["truthy string", { cudaAvailable: "true" }, "win32"],
+    ["missing installation", { installed: false }, "win32"],
+    ["truthy installation", { installed: "true" }, "win32"],
+    ["conflicting builds", { hipVersion: "6.2" }, "linux"],
+    ["malformed version", { cudaVersion: 12.6 }, "win32"],
+    ["malformed other version", { hipVersion: 6.2 }, "win32"],
+    ["empty version", { cudaVersion: " " }, "win32"],
+    ["unsupported CUDA host", {}, "darwin"],
+    ["unsupported ROCm host", { cudaVersion: null, hipVersion: "6.2" }, "win32"],
+  ] as const) {
+    it(`does not promote ${name} accelerator evidence after inventory failure`, () => {
+      const spawn = unavailableInventory({ installed: true, cudaAvailable: true, cudaVersion: "12.6", hipVersion: null, ...change });
+      expect(() => ensurePythonRuntimeWorkerDependencies({ command: "python", platform, spawnSyncImplementation: spawn as any })).toThrow(/Network check failed/);
+      assert.ok(!spawn.mock.calls.some(call => call[1]?.[1]?.includes('expected = "cuda"') || call[1]?.[1]?.includes('expected = "rocm"')));
+      assert.ok(!spawn.mock.calls.some(call => call[1]?.includes("install")));
+      assert.equal(readPythonRuntimeDependencySessionOutcomes().find(value => value.operation === "worker")!.success, false);
+    });
+  }
+
+  it("retains real verification failure after installed capability refines the inventory fallback", () => {
+    const spawn = unavailableInventory({ installed: true, cudaAvailable: true, cudaVersion: "12.6", hipVersion: null }, 1);
+    expect(() => ensurePythonRuntimeWorkerDependencies({ command: "python", platform: "win32", spawnSyncImplementation: spawn as any })).toThrow(/Network check failed/);
+    const outcome = readPythonRuntimeDependencySessionOutcomes().find(value => value.operation === "worker")!;
+    assert.equal(outcome.selectedBackend, "cuda");
+    assert.equal(outcome.verificationResult?.success, false);
+    assert.equal(outcome.success, false);
+    assert.ok(!spawn.mock.calls.some(call => call[1]?.includes("install")));
+  });
+
   it("keeps existing torch installation when already matching selected CPU target", () => {
     const spawnSyncImplementation = createSpawnSyncImplementation(
       (command, args) => {
