@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyDesktopTrainingJourney, readTrainingHostInventory } from "../visual-composer/e2e/model-training-journey";
-import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, TRAINING_HOST_PHASES, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
 import { trainingReadOnlyArguments } from "../visual-composer/training-host-fixture";
 
 test("the no-install delegate admits only exact declared read-only probes and pip version", () => {
@@ -22,6 +22,18 @@ test("captures only the fixed current training declaration and detaches its data
   const v = fixture(), result = captureTrainingHostFixture(encode(v), run, source)!;
   assert.deepEqual(result, v); assert(Object.isFrozen(result)); assert(Object.isFrozen(result.datasetArtifactIds));
   v.datasetArtifactIds[0] = "changed"; assert.equal(result.datasetArtifactIds[0], trainingDatasetIds(run)[0]);
+});
+
+test("generated input has an explicit versioned fixture and its report never claims model accuracy", () => {
+  const v = { ...fixture(), schemaVersion: "training-host-fixture-v2", inputProfile: "generated-tiny-qwen2-v1" };
+  const captured = captureTrainingHostFixture(encode(v), run, source)!;
+  assert.deepEqual(captured, v); assert.equal(trainingBaseName(captured), "Generated tiny training input");
+  assert.equal(trainingBaseName(captureTrainingHostFixture(encode(fixture()), run, source)!), "Qualified Qwen 0.5B input");
+  for (const change of [{ inputProfile: undefined }, { inputProfile: "other" }, { schemaVersion: "training-host-fixture-v1" }, { extra: true }]) assert.throws(() => captureTrainingHostFixture(encode({ ...v, ...change }), run, source));
+  const report = trainingHostReport(TRAINING_HOST_PHASES, false, "generated-tiny-qwen2-v1");
+  assert.equal(report.status, "passed"); assert.equal(report.inputProfile, "generated-tiny-qwen2-v1"); assert.equal(report.parentQualificationGranted, false);
+  assert.match(report.scope, /No accuracy/);
+  assert.equal(trainingHostReport(TRAINING_HOST_PHASES, true, "generated-tiny-qwen2-v1").status, "failed");
 });
 test("rejects stale or foreign source, workspace, base and dataset declarations", () => {
   for (const change of [
@@ -94,6 +106,14 @@ test("real read-only inventory projection returns only IDs and exact base/task-o
     assert(!encode(result).includes("private")); assert(!encode(result).includes("localPath"));
   });
   assert.deepEqual(calls, [{ workspaceId: input.workspaceId }, { workspaceId: input.workspaceId }]);
+});
+
+test("the real inventory projection accepts only the declared generated input label without exposing paths", async () => {
+  const input = { ...readInput(), baseName: "Generated tiny training input" }, row = { ...baseRow(), displayName: "Generated tiny training input" };
+  await withInventoryPort(async () => ({ ok: true, value: { models: [row] } }), async () => {
+    assert.deepEqual(await readTrainingHostInventory(input), { baseModelRecordId: input.baseModelRecordId, generatedRecordIds: [] });
+    await assert.rejects(readTrainingHostInventory(readInput()), /could not be confirmed/);
+  });
 });
 test("inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows", async () => {
   let release!: (value: unknown) => void, settled = false;

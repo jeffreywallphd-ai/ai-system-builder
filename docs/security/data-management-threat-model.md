@@ -2072,3 +2072,30 @@ production admission or resource evidence. Old staging is not accessed and unkno
 usage still consumes the full 12 GiB limit. Original-reference/ancestor protection,
 real model-worker/crash ownership, shared durable accounting and retained restart
 remain pending.
+
+### Generated input for the fixed Desktop training journey
+
+The additive generated-input profile separates a tiny local software fixture
+from the approved Qwen model. Trusted test composition must bind an exact fresh
+input manifest, its expected hash and current generator source. Inspect exactly
+six regular single-link input files under the declared new root, with bounded
+bytes, stable read identities and fixed model/tokenizer configuration. Reject
+duplicate manifest fields, remote-code mappings, changed or extra files and
+partial inputs. Inspection imports no model library. An interrupted creation
+retains its slot and cannot be retried or adopted. No old model/cache/staging
+root is searched, adopted, moved, deleted or credited.
+
+The local input uses a distinct synthetic identifier and unknown provider.
+Qualification removes inherited provider secrets, fixes the generated profile's
+CUDA/HIP visibility and keeps real read-only dependency probes. The unchanged
+production training task runs at most once; failures remain failures, downloads
+are denied, private review precedes explicit Save and the UI checks reopening.
+A seed contains only model and dataset inputs, never a trained adapter or result.
+
+These are cooperative local input checks, not hostile Windows path or native
+ownership protection. Actual input generation, optimizer execution, process/job
+cleanup and resource evidence require a separate current reviewed effect plan.
+No new effect, limit, model download, provider publication, offload lease, disk
+credit, quality result or roadmap pass follows from source tests. Secure rollback
+removes this additive profile and retains the existing offline approved-model
+path and all product security controls.

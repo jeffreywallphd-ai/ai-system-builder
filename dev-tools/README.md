@@ -1752,3 +1752,28 @@ modules as source/evidence triggers. Registry and command-planning tests enforce
 this split without running generated commands. Actual native compatibility still
 requires its separately reviewed bounded execution. Existing accepted accuracy
 results and pending production/resource qualification are unchanged.
+
+### Tiny generated input for the Desktop training test
+
+The training profile also accepts a separate `generated-tiny-qwen2-v1` input.
+It uses a locally generated, seeded Qwen2 model and a WordLevel tokenizer. This
+input has its own test identity and the `unknown` provider. It is not the
+authorized Qwen 0.5B model and does not measure answer quality.
+
+The trusted test plan must declare a fresh
+`.local-codex/training-inputs/tiny-<UUID>/input.json` and its SHA-256 through
+`VISUAL_COMPOSER_TRAINING_INPUT_SHA256`. The fixed prerequisite helper inspects
+exactly six bounded input files and checks their hashes, configuration and
+generator identity. Inspection imports no model library. It rejects old, partial,
+changed or extra files. Input creation never overwrites or removes an old slot.
+A real creation or app run still needs its own reviewed, owned native test plan.
+The ordinary source checks do not create a model or start an application.
+
+The generated profile fixes CUDA visibility to device 0 and hides HIP devices;
+it retains the production backend probes and makes no CPU portability claim.
+It uses the unchanged real training task, one optimizer step and the public
+private-review, explicit Save and reopen journey. It seeds only inputs, not task
+results or a trained adapter. Reports identify the input profile. A successful
+tiny journey proves software behavior only. Native ownership, real model
+resource limits, accuracy and parent-roadmap qualification remain separate.
+The original approved-model admission and device behavior are unchanged.

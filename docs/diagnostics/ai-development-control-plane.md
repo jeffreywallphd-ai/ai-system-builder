@@ -1531,3 +1531,11 @@ Functionality outcome checks use the fake suite while both original modules rema
 in `source_paths`; source responsibility is not a grant to execute native code.
 The regression checks real command generation without executing those commands.
 A routing pass is not model, production, resource or parent-roadmap qualification.
+
+The dedicated Desktop training definition also admits a separately named tiny
+generated input with an exact expected manifest hash. Existing operational
+source checks cover its inert manifest, dispatch, launch and UI-oracle tests.
+They do not import Torch, create weights or open an app. The actual input, native
+launcher and one real train/review/save/reopen test require separate owned-run
+evidence. Keep accepted accuracy and OCR tests closed; a tiny training fixture
+is software-workflow evidence, not model quality or parent qualification.

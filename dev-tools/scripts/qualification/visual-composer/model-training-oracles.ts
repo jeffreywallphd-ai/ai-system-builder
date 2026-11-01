@@ -39,7 +39,8 @@ export function trainingDatasetIds(run: unknown): readonly [string, string] {
     `workspaces/${workspace}/artifacts/files/training-host-validation.jsonl`]);
 }
 export interface TrainingHostFixture {
-  readonly schemaVersion: "training-host-fixture-v1";
+  readonly schemaVersion: "training-host-fixture-v1" | "training-host-fixture-v2";
+  readonly inputProfile?: "generated-tiny-qwen2-v1";
   readonly runId: string;
   readonly sourceRevision: string;
   readonly workspaceId: string;
@@ -56,21 +57,25 @@ export function captureTrainingHostFixture(input: unknown, run: unknown, source:
   let raw: unknown;
   try { raw = JSON.parse(input); } catch { throw invalid(); }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalid();
-  const keys = ["schemaVersion", "runId", "sourceRevision", "workspaceId", "baseModelRecordId", "datasetArtifactIds", "outputName", "displayName"];
+  const v = raw as Record<string, unknown>, tiny = v.schemaVersion === "training-host-fixture-v2";
+  const keys = ["schemaVersion", "runId", "sourceRevision", "workspaceId", "baseModelRecordId", "datasetArtifactIds", "outputName", "displayName", ...(tiny ? ["inputProfile"] : [])];
   if (Object.keys(raw).length !== keys.length || keys.some(key => !Object.prototype.hasOwnProperty.call(raw, key))) throw invalid();
-  const v = raw as Record<string, unknown>, datasets = denseStrings(v.datasetArtifactIds, 2);
+  const datasets = denseStrings(v.datasetArtifactIds, 2);
   const expectedDatasets = trainingDatasetIds(run);
-  if (v.schemaVersion !== "training-host-fixture-v1" || v.runId !== run || v.sourceRevision !== source ||
+  if ((!tiny && v.schemaVersion !== "training-host-fixture-v1") || (tiny && v.inputProfile !== "generated-tiny-qwen2-v1") || v.runId !== run || v.sourceRevision !== source ||
       v.workspaceId !== trainingWorkspaceId(run) ||
       datasets.length !== 2 || datasets.some((value, index) => value !== expectedDatasets[index]) || v.outputName !== TRAINING_OUTPUT_NAME || v.displayName !== TRAINING_DISPLAY_NAME) throw invalid();
   const base = trainingPublicId(v.baseModelRecordId);
-  return Object.freeze({ schemaVersion: "training-host-fixture-v1", runId: run, sourceRevision: source, workspaceId: trainingWorkspaceId(run),
+  return Object.freeze({ schemaVersion: tiny ? "training-host-fixture-v2" : "training-host-fixture-v1", ...(tiny ? { inputProfile: "generated-tiny-qwen2-v1" as const } : {}), runId: run, sourceRevision: source, workspaceId: trainingWorkspaceId(run),
     baseModelRecordId: base, datasetArtifactIds: Object.freeze(datasets), outputName: TRAINING_OUTPUT_NAME, displayName: TRAINING_DISPLAY_NAME });
 }
-export function trainingHostReport(phases: readonly string[], failed: boolean) {
+export function trainingBaseName(fixture: Readonly<TrainingHostFixture>): "Qualified Qwen 0.5B input" | "Generated tiny training input" {
+  return fixture.schemaVersion === "training-host-fixture-v2" ? "Generated tiny training input" : "Qualified Qwen 0.5B input";
+}
+export function trainingHostReport(phases: readonly string[], failed: boolean, inputProfile: "approved-qwen05" | "generated-tiny-qwen2-v1" = "approved-qwen05") {
   const captured = denseStrings(phases, TRAINING_HOST_PHASES.length);
-  if (typeof failed !== "boolean" || captured.some((phase, i) => phase !== TRAINING_HOST_PHASES[i])) throw invalid();
+  if (typeof failed !== "boolean" || !["approved-qwen05", "generated-tiny-qwen2-v1"].includes(inputProfile) || captured.some((phase, i) => phase !== TRAINING_HOST_PHASES[i])) throw invalid();
   return { schemaVersion: "training-host-ui-outcome-v1", host: "packaged-desktop", status: !failed && captured.length === TRAINING_HOST_PHASES.length ? "passed" : "failed",
-    phases: captured, nextPhase: TRAINING_HOST_PHASES[captured.length] ?? "complete", parentQualificationGranted: false,
+    inputProfile, phases: captured, nextPhase: TRAINING_HOST_PHASES[captured.length] ?? "complete", parentQualificationGranted: false,
     scope: "Actual Train, private review, explicit Save and reopened record. No accuracy, native race, resource-budget or parent qualification." };
 }

@@ -32,6 +32,48 @@ function assertCurrentReviewSiteDrift(map, result) {
     assert.equal(sha(Buffer.from(JSON.stringify(source.facts))), pending.facts, "Future definition changes cannot inherit this pending binding.");
   }
 }
+const pendingTrainingDefinitions = Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+    "baseline": "068cbc118349ede9bb28f508264eab36626f3440",
+    "committed": "57a4fd8182dff345d2a1afca48493258cc95c18f52ad6879e537a37b2a0b5852",
+    "candidate": "3f905b4d9b9a59e301957dc4874f2e2ed6250a4c1f29338694d0a39d7baa2fe7",
+    "facts_sha256": "f64da585e9b6fd0baf7f906984446975ca42dcd3592eaebdbffd9b64bb373f0c"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+    "baseline": "068cbc118349ede9bb28f508264eab36626f3440",
+    "committed": "30067058d5b86324686a1a5c918d88a6101224bed5243704fc51d89f247274b2",
+    "candidate": "de04843392e4c5de4f096d1ed30072e4f3a47046cc898fb9a9b76e6de2a0d163",
+    "facts_sha256": "5b1eaa9517361c55479e6e23adbf6ca0e903dc943afce5f31898bf3aee3a5190"
+  }
+].map(Object.freeze));
+
+// A current definition can be tested before its real commit exists. These two
+// exact prospective bindings retain the actual older Git blobs, not invented
+// committed hashes. The generic validator still checks all actual source facts.
+function assertCurrentSourceDrift(map, result) {
+  const expected = [];
+  for (const pending of pendingTrainingDefinitions) {
+    const source = map.sources.find(row => row.path === pending.path); assert(source);
+    assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
+    const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.path}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
+    assert.equal(source.committed_sha256, sha(committed), "Training commit pins must reference real Git blobs.");
+    if (source.facts.sha256 !== source.committed_sha256) {
+      assert.equal(map.source_baseline, pending.baseline);
+      assert.equal(source.committed_sha256, pending.committed);
+      assert.equal(source.facts.sha256, pending.candidate);
+      assert.equal(sha(JSON.stringify(source.facts)), pending.facts_sha256, "Future training facts cannot inherit this pending binding.");
+      expected.push({kind: "unreviewed-source-drift", source: pending.path});
+    }
+  }
+  const paths = new Set(pendingTrainingDefinitions.map(pending => pending.path));
+  const trainingGaps = result.gaps.filter(g => g.kind === "unreviewed-source-drift" && paths.has(g.source));
+  const ordered = rows => [...rows].sort((a,b) => a.source.localeCompare(b.source));
+  assert.deepEqual(ordered(trainingGaps), ordered(expected), "Missing, duplicate or extra training drift is refused.");
+  assertCurrentReviewSiteDrift(map, {...result, gaps: result.gaps.filter(g => !(g.kind === "unreviewed-source-drift" && paths.has(g.source)))});
+}
+
 function fixture() {
   const scenarios = Array.from({length:39}, (_, index) => ({id:`family-${index}`, hosts:["desktop"], required_behavior:["Preserve exact state."], actual_host_qualification:"pending"}));
   const ledger = {schema_version:"comprehensive-ui-coverage-v1", full_testing_status:"deferred-by-user", scenarios, surface_census:{routes:["home"]}};
@@ -150,7 +192,7 @@ test("checks the current repository map against original scope and actual source
     }
   }
   assert(!result.gaps.some(g=>g.kind==="host-definition-not-mapped"));
-  assertCurrentReviewSiteDrift(map,result);
+  assertCurrentSourceDrift(map,result);
   assert.equal(result.gaps.filter(g=>g.kind==="actual-host-not-run-by-census").length,39);
   assert.equal(result.actual_host_pass,false);
   assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
@@ -183,7 +225,13 @@ test("checks the current repository map against original scope and actual source
   }
   for(const [id,stem] of [["contributor-review-site","review-site"],["website-acquisition-refresh","website-acquisition"],["desktop-model-training","model-training"]]) {
     const source=`dev-tools/scripts/qualification/tests/${stem}-oracles.unit.test.ts`;
-    const row=map.sources.find(s=>s.path===source);assert(row&&row.facts.assertionCount>0);assert.equal(row.facts.sha256,row.committed_sha256);
+    const row=map.sources.find(s=>s.path===source);assert(row&&row.facts.assertionCount>0);
+    if (row.facts.sha256 !== row.committed_sha256) {
+      // The composed exact SHA/full-facts/Git guard above admits this one
+      // prospective oracle definition; a pathname alone never exempts drift.
+      assert(pendingTrainingDefinitions.some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
+      assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===source));
+    } else assert.equal(row.facts.sha256,row.committed_sha256);
     assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));
   }
   for(const id of ["image-generation-create-and-register","image-generation-recovery"]){
@@ -250,6 +298,32 @@ test("pending review-source binding rejects forged commit pins, future facts and
   }
 });
 
+
+
+test("pending tiny-training bindings reject forged, future, missing and unrelated source drift",()=>{
+  const current = JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const paths = [...pendingTrainingDefinitions.map(p=>p.path), pendingReviewSiteDefinition.source];
+  const map = {source_baseline: pendingTrainingDefinitions[0].baseline, sources: current.sources.filter(row=>paths.includes(row.path)).map(row=>{
+    const pending=pendingTrainingDefinitions.find(p=>p.path===row.path);
+    return pending?{...row,committed_sha256:pending.committed}:row;
+  })};
+  // This fixture declares exactly the inspected current facts. It does not
+  // execute the training journey, change its status or grant a parent pass.
+  const result = {gaps: map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
+  const target = m=>m.sources.find(row=>row.path===pendingTrainingDefinitions[0].path);
+  const mutations = [
+    (m,r)=>{target(m).committed_sha256=pendingTrainingDefinitions[0].candidate;},
+    (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+    (m,r)=>{target(m).facts.assertionCount++;},
+    (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pendingTrainingDefinitions[0].path);r.gaps.push({kind:"unreviewed-source-drift",source:pendingTrainingDefinitions[0].path});r.gaps.push({kind:"unreviewed-source-drift",source:pendingTrainingDefinitions[0].path});},
+    (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pendingTrainingDefinitions[0].path);},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign.test.mjs"});},
+    (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pendingTrainingDefinitions[0].path);},
+    (m,r)=>{m.source_baseline="6e8ef9d191fdd73f2d79c3b3744f17cf80f3757e";},
+  ];
+  for(const mutate of mutations){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
+});
 
 test("preserves exact historical rows outside current coverage and aggregate budgets",()=>{
   const read=repositoryReader(process.cwd()),map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));

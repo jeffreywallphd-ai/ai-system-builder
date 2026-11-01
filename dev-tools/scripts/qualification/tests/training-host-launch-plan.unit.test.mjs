@@ -17,7 +17,7 @@ test("missing declared inputs return a pending profile before package or app sta
   }
 });
 import { createVisualComposerHostLaunchPlan } from "../visual-composer/visual-composer-host-lifecycle.mjs";
-import { createTrainingHostLaunchPlan, createTrainingCaseEnvironment, trainingAcquisition, TRAINING_PYTHON_RELATIVE, TRAINING_WORKER_ARGS } from "../visual-composer/training-host-launch-plan.mjs";
+import { createTrainingHostLaunchPlan, createTrainingCaseEnvironment, trainingAcquisition, trainingInputIdentity, TRAINING_PYTHON_RELATIVE, TRAINING_WORKER_ARGS } from "../visual-composer/training-host-launch-plan.mjs";
 
 const repoRoot = path.resolve("synthetic training repository with spaces"), runId = "synthetic-training-host-run-0123456789";
 const acquisition = ".local-codex/model-qualification/qwen-01234567-89ab-cdef-0123-456789abcdef/acquisition.json";
@@ -52,4 +52,30 @@ test("caller paths and other model families cannot become a launch selector", ()
     assert.throws(() => createTrainingHostLaunchPlan({ repoRoot, runId, acquisition: value }));
   }
   for (const value of [path.resolve(".local-codex/private/training"), path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/other"), "relative/training", `${repoRoot}\n`]) assert.throws(() => createTrainingCaseEnvironment(environment, repoRoot, value, acquisition));
+});
+
+const tinyAcquisition = ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json", manifestHash = "a".repeat(64);
+test("generated inputs require an explicit frozen manifest hash and distinct local identity", () => {
+  const identity = trainingInputIdentity(tinyAcquisition, manifestHash);
+  assert.deepEqual(identity, { profile: "generated-tiny-qwen2-v1", modelId: "aisb-testing/tiny-qwen2-v1", provider: "unknown", displayName: "Generated tiny training input", manifestHash });
+  assert(Object.isFrozen(identity)); assert.equal(trainingAcquisition(tinyAcquisition), tinyAcquisition);
+  for (const value of [undefined, "", "0".repeat(63), "A".repeat(64), manifestHash + "\n", {}]) assert.throws(() => trainingInputIdentity(tinyAcquisition, value));
+  assert.throws(() => trainingInputIdentity(acquisition, manifestHash));
+  for (const value of [tinyAcquisition.replace("tiny-", "other-"), tinyAcquisition.replace("input.json", "acquisition.json"), tinyAcquisition.replace("01234567-89ab", "0123456789ab"), `${tinyAcquisition}\n`]) assert.throws(() => trainingAcquisition(value));
+});
+
+test("only the generated profile fixes device visibility and carries the declared hash into its isolated case", async () => {
+  const dirty = { ...environment, CUDA_VISIBLE_DEVICES: "9", hip_visible_devices: "untrusted", visual_composer_training_input_sha256: "untrusted" };
+  const plan = await createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition: tinyAcquisition, manifestHash });
+  for (const env of [plan.desktop.env, plan.desktop.seed.env]) {
+    assert.equal(env.CUDA_VISIBLE_DEVICES, "0"); assert.equal(env.HIP_VISIBLE_DEVICES, "");
+    assert.equal(env.VISUAL_COMPOSER_TRAINING_INPUT_SHA256, manifestHash);
+    assert(!("hip_visible_devices" in env)); assert(!("visual_composer_training_input_sha256" in env)); assert(!("HF_TOKEN" in env));
+  }
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  const child = createTrainingCaseEnvironment(plan.desktop.env, repoRoot, dataRoot, tinyAcquisition);
+  assert.equal(child.VISUAL_COMPOSER_TRAINING_INPUT_SHA256, manifestHash);
+  assert.equal(child.CUDA_VISIBLE_DEVICES, "0"); assert.equal(child.HIP_VISIBLE_DEVICES, "");
+  assert.equal(child.TEMP, path.join(dataRoot, "training-temp"));
+  assert.throws(() => createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition: tinyAcquisition }));
 });

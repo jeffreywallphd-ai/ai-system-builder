@@ -14,6 +14,7 @@ import stat
 import sys
 
 MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+TINY_MODEL_ID = "aisb-testing/tiny-qwen2-v1"
 OUTPUT_NAME = "training-host-support-adapter"
 DATA_BYTES = b'{"instruction":"What does the help panel show?","output":"The help panel shows guidance for the current feature."}\n{"instruction":"Where are task updates?","output":"Task updates are in the notification center."}\n'
 
@@ -65,8 +66,11 @@ def validate_training_request(request, fixture, model_directory, temp_directory,
     base, common, output, validation = (payload.get(key) for key in ("baseModel", "commonParameters", "output", "validation"))
     if any(not isinstance(item, dict) for item in (base, common, output, validation)):
         deny()
-    if (base.get("modelRecordId") != fixture["baseModelRecordId"] or base.get("modelId") != MODEL_ID or
-            base.get("provider") != "huggingface" or base.get("inferenceMode") != "causal" or
+    tiny = fixture.get("schemaVersion") == "training-host-fixture-v2"
+    if tiny and fixture.get("inputProfile") != "generated-tiny-qwen2-v1":
+        deny()
+    if (base.get("modelRecordId") != fixture["baseModelRecordId"] or base.get("modelId") != (TINY_MODEL_ID if tiny else MODEL_ID) or
+            base.get("provider") != ("unknown" if tiny else "huggingface") or base.get("inferenceMode") != "causal" or
             base.get("localPath") != str(model_directory)):
         deny()
     exact_options(common, {"numEpochs": 1, "maxSteps": 1, "batchSize": 1, "learningRate": .0002, "maxSequenceLength": 64, "seed": 7}, ("weightDecay",))
@@ -123,8 +127,13 @@ def main():
     if not re.fullmatch(r"[a-z0-9-]{20,80}", run) or not re.fullmatch(r"source\.[a-f0-9]{64}", source) or len(raw_fixture.encode("utf-8")) > 4096:
         deny()
     fixture = json.loads(raw_fixture)
-    if (not isinstance(fixture, dict) or fixture.get("schemaVersion") != "training-host-fixture-v1" or
+    if (not isinstance(fixture, dict) or fixture.get("schemaVersion") not in ("training-host-fixture-v1", "training-host-fixture-v2") or
             fixture.get("runId") != run or fixture.get("sourceRevision") != source):
+        deny()
+    tiny = fixture["schemaVersion"] == "training-host-fixture-v2"
+    if (set(fixture) != {"schemaVersion", "runId", "sourceRevision", "workspaceId", "baseModelRecordId", "datasetArtifactIds", "outputName", "displayName"} | ({"inputProfile"} if tiny else set()) or
+            tiny and fixture.get("inputProfile") != "generated-tiny-qwen2-v1" or
+            fixture.get("outputName") != OUTPUT_NAME or fixture.get("displayName") != "Training host support adapter"):
         deny()
     workspace = "workspace.training-host." + hashlib.sha256((run + "\0training-host-v1").encode()).hexdigest()[:16]
     if (fixture.get("workspaceId") != workspace or fixture.get("datasetArtifactIds") != [f"workspaces/{workspace}/artifacts/files/training-host-{role}.jsonl" for role in ("train", "validation")] or
@@ -143,7 +152,9 @@ def main():
     spec = importlib.util.spec_from_file_location("training_input_prerequisites", Path(__file__).with_name("training-host-prerequisites.py"))
     prerequisites = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(prerequisites)
-    inputs = prerequisites.inspect(root, os.getenv("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION"))
+    inputs = prerequisites.inspect(root, os.getenv("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION"), os.getenv("VISUAL_COMPOSER_TRAINING_INPUT_SHA256"))
+    if tiny != (inputs.get("inputProfile") == "generated-tiny-qwen2-v1"):
+        deny()
     model = root / inputs["modelRelativeDirectory"]
     spec = importlib.util.spec_from_file_location("aisb_training_qualification_main", worker / "main.py")
     module = importlib.util.module_from_spec(spec)

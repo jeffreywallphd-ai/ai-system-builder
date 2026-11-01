@@ -76,5 +76,23 @@ class TrainingQualificationWorkerTests(unittest.TestCase):
         with self.assertRaises(ValueError): dispatch(self.request)
         self.assertEqual(self.calls, [])
 
+    def test_generated_profile_preserves_real_delegate_and_cannot_impersonate_official_model(self):
+        self.fixture.update(schemaVersion="training-host-fixture-v2", inputProfile="generated-tiny-qwen2-v1")
+        self.request.payload["baseModel"].update(modelId=worker.TINY_MODEL_ID, provider="unknown")
+        dispatch = self.dispatch()
+        self.assertEqual(dispatch(self.request), "original-result")
+        self.assertIs(self.calls[0], self.request)
+        with self.assertRaises(ValueError): dispatch(self.request)
+        for key, value in (("modelId", worker.MODEL_ID), ("provider", "huggingface"), ("localPath", "/foreign/model")):
+            candidate = copy.deepcopy(self.request); candidate.payload["baseModel"][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError): self.dispatch()(candidate)
+        self.fixture["inputProfile"] = "other-model"
+        with self.assertRaises(ValueError): self.dispatch()(self.request)
+
+    def test_generated_identity_cannot_be_used_with_the_legacy_fixture(self):
+        self.request.payload["baseModel"].update(modelId=worker.TINY_MODEL_ID, provider="unknown")
+        with self.assertRaises(ValueError): self.dispatch()(self.request)
+        self.assertEqual(self.calls, [])
+
 
 if __name__ == "__main__": unittest.main()

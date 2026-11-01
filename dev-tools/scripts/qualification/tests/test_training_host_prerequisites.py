@@ -127,5 +127,126 @@ class TrainingPrerequisiteTests(unittest.TestCase):
         self.assertEqual(facts, {"next": 10, "names": 9, "closed": True})
 
 
+TINY_ACQUISITION = ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json"
+
+
+class GeneratedTrainingInputTests(unittest.TestCase):
+    """Only newly allocated fake input bytes. No Torch or model execution."""
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="tiny-training-input-")
+        self.root = Path(self.temporary.name).resolve()
+        self.addCleanup(self.temporary.cleanup)
+        relative = SCRIPT.relative_to(MODULE.ROOT)
+        target = self.root / relative
+        target.parent.mkdir(parents=True)
+        target.write_bytes(SCRIPT.read_bytes())
+        self.environment = {key: "1" for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "PIP_NO_INDEX")}
+        self.environment["PYTHON_RUNTIME_QUALIFICATION_SCENARIO"] = "training-model-host"
+
+    def fake_generator(self, directory):
+        self.assertFalse(any(name in sys.modules for name in ("torch", "transformers", "tokenizers")))
+        for name in MODULE.TINY_FILES:
+            value = b"inert unit fixture, not executable or real weights"
+            if name == "config.json":
+                value = json.dumps({**MODULE.TINY_CONFIGURATION, "model_type": "qwen2", "architectures": ["Qwen2ForCausalLM"]}).encode()
+            if name == "tokenizer_config.json":
+                value = b'{"tokenizer_class":"PreTrainedTokenizerFast"}'
+            (directory / name).write_bytes(value)
+
+    def create(self):
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", self.fake_generator):
+            return MODULE.create_tiny(self.root, TINY_ACQUISITION)
+
+    def rewrite(self, mutate):
+        manifest = self.root / TINY_ACQUISITION
+        value = json.loads(manifest.read_bytes()); mutate(value)
+        raw = json.dumps(value).encode(); manifest.write_bytes(raw)
+        return hashlib.sha256(raw).hexdigest()
+
+    def test_fresh_input_has_distinct_local_identity_hash_and_no_launch_or_accuracy_authority(self):
+        result = self.create()
+        self.assertEqual((result["modelId"], result["provider"], result["displayName"]), (MODULE.TINY_MODEL_ID, "unknown", "Generated tiny training input"))
+        self.assertEqual(result["modelFiles"], 6)
+        self.assertLess(result["modelBytes"], 1024 * 1024)
+        self.assertEqual(MODULE.inspect_tiny(self.root, TINY_ACQUISITION, result["manifestSha256"]), result)
+        executable = self.root / MODULE.PYTHON_RELATIVE
+        executable.parent.mkdir(parents=True); executable.write_bytes(b"inert interpreter")
+        with patch.object(sys, "executable", str(executable)), patch.object(sys, "version_info", (3, 12, 0)):
+            facts = MODULE.inspect(self.root, TINY_ACQUISITION, result["manifestSha256"])
+        self.assertEqual(facts["schemaVersion"], "training-local-inputs-v2")
+        self.assertFalse(facts["accuracyExecuted"]); self.assertFalse(facts["launchAuthorized"])
+
+    def test_existing_and_interrupted_directories_are_never_adopted_retried_or_removed(self):
+        result = self.create(); before = (self.root / TINY_ACQUISITION).read_bytes()
+        with self.assertRaises(FileExistsError): self.create()
+        self.assertEqual((self.root / TINY_ACQUISITION).read_bytes(), before)
+        other = TINY_ACQUISITION.replace("01234567-", "11234567-")
+        def partial(directory):
+            (directory / "model.safetensors").write_bytes(b"retained partial fixture")
+            raise RuntimeError("synthetic generation failure")
+        with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny", partial):
+            with self.assertRaises(RuntimeError): MODULE.create_tiny(self.root, other)
+            with self.assertRaises(FileExistsError): MODULE.create_tiny(self.root, other)
+        self.assertEqual((self.root / other).parent.joinpath("model.safetensors").read_bytes(), b"retained partial fixture")
+        self.assertFalse((self.root / other).exists())
+        self.assertEqual(MODULE.inspect_tiny(self.root, TINY_ACQUISITION, result["manifestSha256"])["modelFiles"], 6)
+
+    def test_missing_wrong_hash_partial_extra_changed_or_linked_files_are_rejected(self):
+        result = self.create(); digest = result["manifestSha256"]
+        for bad in (None, "", "0" * 64, digest + "\n", True):
+            with self.subTest(bad=bad), self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, bad)
+        file = (self.root / TINY_ACQUISITION).parent / "model.safetensors"
+        original = file.read_bytes(); file.write_bytes(original + b"changed")
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+        file.write_bytes(original)
+        extra = file.with_name("model.bin"); extra.write_bytes(b"pickle must not load")
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+        extra.unlink()
+        link = self.root / "inert-weight-link"; os.link(file, link)
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+        link.unlink(); file.unlink()
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+
+    def test_even_a_rehashed_manifest_cannot_change_fixed_model_provider_seed_or_bounds(self):
+        self.create(); original = (self.root / TINY_ACQUISITION).read_bytes()
+        mutations = [lambda v: v.update(provider="huggingface"), lambda v: v.update(modelId=MODEL),
+                     lambda v: v.update(displayName="Qualified Qwen 0.5B input"), lambda v: v.update(seed=True),
+                     lambda v: v.update(extra="private"), lambda v: v["configuration"].update(hidden_size=1024),
+                     lambda v: v.update(generatorSha256="0" * 64), lambda v: v["files"].pop("config.json"),
+                     lambda v: v["files"]["model.safetensors"].update(bytes=True)]
+        for mutate in mutations:
+            (self.root / TINY_ACQUISITION).write_bytes(original)
+            expected = self.rewrite(mutate)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, expected)
+
+    def test_duplicate_manifest_members_and_unsafe_configuration_are_rejected(self):
+        self.create(); manifest = self.root / TINY_ACQUISITION
+        raw = manifest.read_bytes().replace(b'"seed":13', b'"seed":13,"seed":13')
+        self.assertIn(b'"seed":13,"seed":13', raw); manifest.write_bytes(raw)
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, hashlib.sha256(raw).hexdigest())
+        # A syntactically valid model manifest still cannot enable remote code.
+        raw = raw.replace(b'"seed":13,"seed":13', b'"seed":13'); manifest.write_bytes(raw)
+        config = manifest.parent / "config.json"; value = json.loads(config.read_bytes()); value["auto_map"] = {"AutoModel": "untrusted.code"}; config.write_text(json.dumps(value))
+        digest = self.rewrite(lambda v: v["files"]["config.json"].update(sha256=hashlib.sha256(config.read_bytes()).hexdigest(), bytes=config.stat().st_size))
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+
+    def test_rehashed_oversized_weight_file_is_still_denied(self):
+        self.create(); file = (self.root / TINY_ACQUISITION).parent / "model.safetensors"
+        file.write_bytes(b"x" * (512 * 1024 + 1))
+        digest = self.rewrite(lambda v: v["files"]["model.safetensors"].update(sha256=hashlib.sha256(file.read_bytes()).hexdigest(), bytes=file.stat().st_size))
+        with self.assertRaises(ValueError): MODULE.inspect_tiny(self.root, TINY_ACQUISITION, digest)
+
+    def test_invalid_selector_and_offline_flags_fail_before_directory_or_heavy_import(self):
+        for selector in (None, "../private", TINY_ACQUISITION.replace("tiny-", "other-"), TINY_ACQUISITION.replace("input.json", "model.py"), TINY_ACQUISITION.replace("/", "\\"), TINY_ACQUISITION + "\n"):
+            with patch.dict(os.environ, self.environment, clear=True), patch.object(MODULE, "_generate_tiny") as generate:
+                with self.assertRaises(ValueError): MODULE.create_tiny(self.root, selector)
+                generate.assert_not_called()
+        for key in self.environment:
+            with patch.dict(os.environ, {**self.environment, key: "wrong"}, clear=True), patch.object(MODULE, "_generate_tiny") as generate:
+                with self.assertRaises(ValueError): MODULE.create_tiny(self.root, TINY_ACQUISITION)
+                generate.assert_not_called()
+        self.assertFalse((self.root / ".local-codex").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

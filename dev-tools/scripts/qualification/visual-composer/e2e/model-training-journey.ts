@@ -1,5 +1,5 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME } from "../model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME } from "../model-training-oracles";
 
 /** Serialized into the owned renderer. Return only admitted IDs, never paths or metadata. */
 export async function readTrainingHostInventory(input: { workspaceId: string; baseModelRecordId: string; baseName: string; displayName: string; requestId: string }) {
@@ -16,7 +16,7 @@ export async function readTrainingHostInventory(input: { workspaceId: string; ba
       return value;
     };
     if (typeof input.workspaceId !== "string" || !/^workspace\.training-host\.[a-f0-9]{16}$/.test(input.workspaceId) ||
-        input.baseName !== "Qualified Qwen 0.5B input" || input.displayName !== "Training host support adapter" ||
+        !["Qualified Qwen 0.5B input", "Generated tiny training input"].includes(input.baseName) || input.displayName !== "Training host support adapter" ||
         typeof input.requestId !== "string" || input.requestId !== "" && id(input.requestId) !== input.requestId) throw invalid();
     id(input.baseModelRecordId);
     const api = (window as unknown as { desktopApi?: { listModels(request: { workspaceId: string }): Promise<unknown> } }).desktopApi;
@@ -68,7 +68,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
     const savedCard = page.getByRole("region", { name: "Managed models", exact: true }).locator("article").filter({ has: page.getByText(fixture.displayName, { exact: true }) });
     let requestId = "", savedId = "";
     const readRegistry = () => page.evaluate(readTrainingHostInventory, { workspaceId: fixture!.workspaceId,
-      baseModelRecordId: fixture!.baseModelRecordId, baseName: "Qualified Qwen 0.5B input", displayName: fixture!.displayName, requestId });
+      baseModelRecordId: fixture!.baseModelRecordId, baseName: trainingBaseName(fixture!), displayName: fixture!.displayName, requestId });
     async function dismissNotifications() {
       const center = page.getByRole("dialog", { name: "Notifications", exact: true });
       if (await center.isVisible()) await center.getByRole("button", { name: "Close notifications", exact: true }).click();
@@ -82,7 +82,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
       await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       await expect(refresh).toBeEnabled({ timeout: TRAINING_HOST_PHASE_TIMEOUT_MS });
       await expect(switcher).toHaveValue(fixture!.workspaceId);
-      const baseCard = page.getByRole("region", { name: "Managed models", exact: true }).locator("article").filter({ has: page.getByText("Qualified Qwen 0.5B input", { exact: true }) });
+      const baseCard = page.getByRole("region", { name: "Managed models", exact: true }).locator("article").filter({ has: page.getByText(trainingBaseName(fixture!), { exact: true }) });
       await expect(baseCard).toHaveCount(1);
     }
     await step("workspace-and-inputs-visible", async () => {
@@ -167,7 +167,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
       expect(await readSavedRecord()).toBe(savedId);
     });
   } catch { failed = true; }
-  const report = trainingHostReport(phases, failed), body = JSON.stringify(report);
+  const report = trainingHostReport(phases, failed, fixture.inputProfile ?? "approved-qwen05"), body = JSON.stringify(report);
   if (Buffer.byteLength(body) > 4096) throw new Error("The training host report exceeded its fixed bound.");
   try { await info.attach("training-host-ui", { body, contentType: "application/json" }); }
   catch { throw new Error(`Training host report unavailable; last phase: ${report.nextPhase}.`); }

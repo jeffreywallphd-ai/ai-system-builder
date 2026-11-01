@@ -12,7 +12,7 @@ import { createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorag
 import { createStoreArtifactRequest } from "../../../../modules/contracts/storage";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { captureTrainingHostFixture, trainingDatasetIds, trainingWorkspaceId, TRAINING_WORKSPACE_NAME, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "./model-training-oracles";
-import { createTrainingCaseEnvironment, TRAINING_PYTHON_RELATIVE, trainingAcquisition } from "./training-host-launch-plan.mjs";
+import { createTrainingCaseEnvironment, TRAINING_PYTHON_RELATIVE, trainingAcquisition, trainingInputIdentity } from "./training-host-launch-plan.mjs";
 
 const fail = () => { throw new Error("Training qualification prerequisites are unavailable."); };
 const repoRoot = path.resolve(__dirname, "../../../..");
@@ -54,16 +54,19 @@ export async function inspectTrainingDependencies(environment: NodeJS.ProcessEnv
     return execFile(python, ["-I", "-B", ...args], { cwd: repoRoot, env: environment, windowsHide: true, encoding: "utf8", timeout: 60_000, maxBuffer: 64 * 1024 }, callback);
   } });
 }
-export function inspectTrainingInputs(environment: NodeJS.ProcessEnv): { modelRelativeDirectory: string; modelId: string } {
+export function inspectTrainingInputs(environment: NodeJS.ProcessEnv): { modelRelativeDirectory: string; modelId: string; provider: "huggingface" | "unknown"; displayName: string; profile: "approved-qwen05" | "generated-tiny-qwen2-v1" } {
   const acquisition = trainingAcquisition(environment.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION);
+  const identity = trainingInputIdentity(acquisition, environment.VISUAL_COMPOSER_TRAINING_INPUT_SHA256);
   const result = spawnSync(path.join(repoRoot, TRAINING_PYTHON_RELATIVE), ["-I", "-B", path.join(__dirname, "training-host-prerequisites.py"), "--inspect"], {
     cwd: repoRoot, env: { ...environment, VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION: acquisition }, windowsHide: true, encoding: "utf8", timeout: 120_000, maxBuffer: 8192,
   });
   if (result.status !== 0 || result.error || Buffer.byteLength(result.stdout ?? "") > 4096) return fail();
   const input = JSON.parse(result.stdout);
-  if (input.schemaVersion !== "training-local-inputs-v1" || input.status !== "verified-inputs-only" || input.accuracyExecuted !== false || input.launchAuthorized !== false ||
-      input.pythonRelative !== TRAINING_PYTHON_RELATIVE || input.modelId !== "Qwen/Qwen2.5-0.5B-Instruct" || input.modelRelativeDirectory !== acquisition.slice(0, -"/acquisition.json".length) || input.modelFiles !== 8) return fail();
-  return { modelRelativeDirectory: input.modelRelativeDirectory, modelId: input.modelId };
+  const tiny = identity.profile === "generated-tiny-qwen2-v1";
+  if (input.schemaVersion !== (tiny ? "training-local-inputs-v2" : "training-local-inputs-v1") || input.status !== "verified-inputs-only" || input.accuracyExecuted !== false || input.launchAuthorized !== false ||
+      input.pythonRelative !== TRAINING_PYTHON_RELATIVE || input.modelId !== identity.modelId || input.modelRelativeDirectory !== acquisition.slice(0, -(tiny ? "/input.json" : "/acquisition.json").length) || input.modelFiles !== (tiny ? 6 : 8) ||
+      tiny && (input.inputProfile !== identity.profile || input.provider !== identity.provider || input.displayName !== identity.displayName || input.manifestSha256 !== identity.manifestHash)) return fail();
+  return { modelRelativeDirectory: input.modelRelativeDirectory, modelId: identity.modelId, provider: identity.provider, displayName: identity.displayName, profile: identity.profile };
 }
 function requireOwnedCase(environment: NodeJS.ProcessEnv): string {
   const root = environment.VISUAL_COMPOSER_DESKTOP_DATA_ROOT ?? "";
@@ -84,8 +87,8 @@ export async function seedTrainingInputs(environment: NodeJS.ProcessEnv): Promis
   const source = environment.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION;
   const workspaceId = createWorkspaceId(trainingWorkspaceId(run));
   const inputs = inspectTrainingInputs(environment);
-  // No copy of the gigabyte of immutable weights; registration points at the
-  // exact verified original local input. Only fresh tiny input records are made.
+  // Registration points at exact admitted input bytes. No task, result or
+  // trained adapter is seeded, and the original approved input is never copied.
   for (const leaf of ["training-temp", "controlled-model-cache"]) mkdirSync(path.join(dataRoot, leaf));
   const database = await openLocalSqliteDatabase({ policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: dataRoot }) });
   try {
@@ -96,7 +99,7 @@ export async function seedTrainingInputs(environment: NodeJS.ProcessEnv): Promis
     const created = await composition.workspaceUseCases.createWorkspace.execute({ command: { displayName: TRAINING_WORKSPACE_NAME }, organizationId: identity.organizationId, generateWorkspaceId: () => workspaceId, selectAfterCreate: true });
     if (created.status !== "created" || created.workspace?.workspaceId !== workspaceId) return fail();
     const registry = createLocalModelRegistryAdapter({ filePath: path.join(dataRoot, "model-registry/models.json"), rootDirectory: dataRoot, documents, discovery: { enabled: false } });
-    const base = await registry.registerDownloadedModel({ workspaceId, displayName: "Qualified Qwen 0.5B input", source: "local", provider: "huggingface", modelId: inputs.modelId, localPath: path.join(repoRoot, inputs.modelRelativeDirectory), artifactForm: "full-model", inferenceMode: "causal", serializationFormat: "safetensors" });
+    const base = await registry.registerDownloadedModel({ workspaceId, displayName: inputs.displayName, source: "local", provider: inputs.provider, modelId: inputs.modelId, localPath: path.join(repoRoot, inputs.modelRelativeDirectory), artifactForm: "full-model", inferenceMode: "causal", serializationFormat: "safetensors" });
     const catalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: dataRoot, documents });
     const bindings = createLocalArtifactStorageBindingAdapter({ rootDirectory: dataRoot, documents });
     const storage = createFilesystemArtifactObjectStorageAdapter({ rootDirectory: dataRoot, host: "desktop", artifactCatalogAppend: catalog, artifactBindingWrite: bindings });
@@ -109,7 +112,9 @@ export async function seedTrainingInputs(environment: NodeJS.ProcessEnv): Promis
       const stored = await storage.storeArtifact(createStoreArtifactRequest(content, { descriptor: { key, mediaType: "application/jsonl", metadata: { originalFileName: path.basename(key) } } }), context);
       if (!stored.ok || stored.value.key !== key) return fail();
     }
-    const fixture = JSON.stringify({ schemaVersion: "training-host-fixture-v1", runId: run, sourceRevision: source, workspaceId, baseModelRecordId: base.model.modelRecordId, datasetArtifactIds: datasets, outputName: TRAINING_OUTPUT_NAME, displayName: TRAINING_DISPLAY_NAME });
+    const fixture = JSON.stringify({ schemaVersion: inputs.profile === "generated-tiny-qwen2-v1" ? "training-host-fixture-v2" : "training-host-fixture-v1",
+      ...(inputs.profile === "generated-tiny-qwen2-v1" ? { inputProfile: inputs.profile } : {}),
+      runId: run, sourceRevision: source, workspaceId, baseModelRecordId: base.model.modelRecordId, datasetArtifactIds: datasets, outputName: TRAINING_OUTPUT_NAME, displayName: TRAINING_DISPLAY_NAME });
     if (!captureTrainingHostFixture(fixture, run, source)) return fail();
     return fixture;
   } finally { database.close(); }

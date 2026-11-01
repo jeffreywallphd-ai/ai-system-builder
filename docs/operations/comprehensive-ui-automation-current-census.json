@@ -12641,8 +12641,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
    "facts": {
-    "sha256": "57a4fd8182dff345d2a1afca48493258cc95c18f52ad6879e537a37b2a0b5852",
-    "bytes": 13336,
+    "sha256": "3f905b4d9b9a59e301957dc4874f2e2ed6250a4c1f29338694d0a39d7baa2fe7",
+    "bytes": 13437,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -12702,8 +12702,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
    "facts": {
-    "sha256": "30067058d5b86324686a1a5c918d88a6101224bed5243704fc51d89f247274b2",
-    "bytes": 10928,
+    "sha256": "de04843392e4c5de4f096d1ed30072e4f3a47046cc898fb9a9b76e6de2a0d163",
+    "bytes": 12722,
     "cases": [
      {
       "name": "the no-install delegate admits only exact declared read-only probes and pip version",
@@ -12714,47 +12714,55 @@
       "line": 20
      },
      {
-      "name": "rejects stale or foreign source, workspace, base and dataset declarations",
-      "line": 26
+      "name": "generated input has an explicit versioned fixture and its report never claims model accuracy",
+      "line": 27
      },
      {
-      "name": "closed public identities cannot contain paths, queries or coercion hooks",
+      "name": "rejects stale or foreign source, workspace, base and dataset declarations",
       "line": 38
      },
      {
+      "name": "closed public identities cannot contain paths, queries or coercion hooks",
+      "line": 50
+     },
+     {
       "name": "only a dense ordered complete phase list can pass; failure never grants parent qualification",
-      "line": 44
+      "line": 56
      },
      {
       "name": "unknown prerequisites cannot enter Page ports or disclose the declaration",
-      "line": 57
+      "line": 69
      },
      {
       "name": "initial Page and attachment failures retain a fixed training phase without raw private errors",
-      "line": 64
+      "line": 76
      },
      {
       "name": "real read-only inventory projection returns only IDs and exact base/task-owned output facts",
-      "line": 89
+      "line": 101
+     },
+     {
+      "name": "the real inventory projection accepts only the declared generated input label without exposing paths",
+      "line": 111
      },
      {
       "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
-      "line": 98
+      "line": 118
      },
      {
       "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
-      "line": 110
+      "line": 130
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "withInventoryPort",
-      "line": 84
+      "line": 96
      }
     ],
-    "assertionCount": 38,
-    "assertionDigest": "0c6af1fd8ed87c730241164f6fb12a0dbdeb27bd912de4b4835549721dd0231f",
+    "assertionCount": 49,
+    "assertionDigest": "94c1dfb203804f7528dc71a62a3112f1d1be52d9b13ac59d4be15db755c738be",
     "assertionExamples": [
      {
       "line": 10,
