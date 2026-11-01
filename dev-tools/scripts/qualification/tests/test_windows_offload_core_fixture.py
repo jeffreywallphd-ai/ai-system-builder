@@ -332,6 +332,20 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(subject.CONTROL_NS, 3 * 10**9)
         self.assertEqual(subject.MEMORY_BYTES, 512 * 1024**2)
 
+    def test_execution_profile_is_closed_and_cannot_use_nested_child_bootstrap(self):
+        p=subject._EXECUTION_PROFILE
+        self.assertIs(subject._canonical_profile(p),p)
+        self.assertEqual(p.cases,('stalled-response-cancellation','owned-child-exit-during-response'))
+        self.assertEqual(p.schema,'windows-offload-read-session-native-v1')
+        self.assertEqual(p.runs.name,p.schema)
+        self.assertEqual(len(p.task_files),6);self.assertEqual(len(p.tool_files),3)
+        with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
+        with self.assertRaises(subject.FixtureError):subject._component(p,{})
+        with self.assertRaises(subject.FixtureError):subject._bootstrap('a'*32,p.cases[0],{},1,10,11,12,p)
+        with patch.object(subject,'_Native',side_effect=AssertionError('No native constructor')) as native:
+            with self.assertRaises(subject.FixtureError):subject.standalone_native_read_session()
+        native.assert_not_called()
+
     def test_native_profile_is_required_before_dispatch_and_has_no_public_setter(self):
         native = object.__new__(subject._Native); native._Native__origin = native
         native.calls, native.buffers, native.handles = [], [], []

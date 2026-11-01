@@ -1706,3 +1706,22 @@ timer control, 4,096 API and 16,384 controller call-record limits stay unchanged
 No model or accuracy check runs from this source definition. A separate committed
 source and one-shot effect review must precede Windows execution. Ancestor/anchor,
 guardian/crash, shared accounting and actual offload qualification remain pending.
+
+## Owned read-session failure qualification
+
+`qualification/qualify_windows_offload_read_session.py --plan` is effect-free.
+The separately reviewed isolated `--native` entry creates only a new empty test
+cache and the real model-free reader. It checks a stalled IPC response and an
+owned child exit. Fault controls target only original newly owned handles; there
+are no caller paths, PIDs, commands, limits or runtime fault controls. The real
+reader remains the sole child under its unchanged 512 MiB Job. A fixed 120-second
+wrapper timer retains callback custody through self-exit; delivery still needs
+the Python GIL and host scheduling. The parent has no hard memory ceiling.
+
+Cancellation requires an actual nonzero request and settled original ReadFile
+error 995, followed by real caller/controller/reaper/child exit, an empty Job and
+every original close. Error 109 is a separate child-exit result. Not-found, normal
+completion, a timed wait or cancellation acknowledgement alone cannot pass the
+cancellation check. No model, accuracy, OCR, old staging or full-system test runs.
+Global accounting, retained restart, model workers, indefinitely hung kernel calls
+and actual model resources remain separate qualification.

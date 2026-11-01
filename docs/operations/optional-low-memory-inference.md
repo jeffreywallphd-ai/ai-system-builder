@@ -997,3 +997,30 @@ and cleanup remain pending. The default factory stays unavailable. Unknown usage
 still charges 12 GiB. The 3/3.5 GiB admission guards and 4 GiB sampled model RSS
 abort are unchanged. Completed accuracy/OCR and deferred full-system testing stay
 as recorded. No old files or existing parent permissions are changed.
+
+## Stalled response and child-exit qualification
+
+The fixed read-session qualifier adds two agent-executable checks to the existing
+worker-retirement work. Its default and `--plan` modes have no native effects.
+A separately reviewed isolated native run suspends only the newly created inert
+child's original thread after membership, readiness and fixed Job-limit checks.
+It observes the original controller response-read intent, fences the session and
+signals only its original completion event. The actual caller must fail and exit
+before the existing terminal retirement can begin. No effect-exit flag, request
+deadline or production API is replaced.
+
+The cancellation case needs nonzero CancelSynchronousIo and the exact original
+ReadFile failure 995, plus controller/reaper/process exit, Job count zero and all
+closes. The child-exit case instead needs its original Job stop and ReadFile
+failure 109. An acknowledgement without the read completion is insufficient; see
+[Microsoft's cancellation contract](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio).
+[SuspendThread](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-suspendthread)
+is confined to diagnostic fault control. Recovery acquires no child-held shared
+lock and never resumes an uncertain child.
+
+The unchanged 512 MiB ceiling applies only to the inert child. The wrapper has a
+fixed 120-second timer, with GIL and host-scheduling limitations. These checks do
+not qualify actual 120-second timeout delivery, indefinitely hung kernel calls,
+model IO, model-worker crash recovery, shared durable accounting, retained staging
+restart or model resources. A new test namespace grants no disk credit. Accepted
+accuracy and OCR checks remain closed.

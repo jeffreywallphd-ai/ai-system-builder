@@ -70,11 +70,21 @@ _READ_PROFILE = _FixtureProfile(
     ('dev-tools/scripts/qualification/qualify_windows_offload_read_binding.py', TOOL_FILES[1],
      'dev-tools/scripts/qualification/windows_offload_read_binding_fixture.py'),
     ROOT / '.local-codex/windows-offload-read-binding-native-v1')
+_EXECUTION_PROFILE = _FixtureProfile(
+    ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_read_session.py',
+    '_standalone_windows_read_session_engine', 'windows-offload-read-session-native-v1',
+    ('stalled-response-cancellation', 'owned-child-exit-during-response'),
+    TASK_FILES + ('modules/adapters/runtime/python/worker/tasks/windows_offload_execution.py',
+                  'modules/adapters/runtime/python/worker/tasks/windows_offload_execution_child.py'),
+    ('dev-tools/scripts/qualification/qualify_windows_offload_read_session.py', TOOL_FILES[1],
+     'dev-tools/scripts/qualification/windows_offload_read_session_fixture.py'),
+    ROOT / '.local-codex/windows-offload-read-session-native-v1')
 
 
 def _canonical_profile(profile):
     require(type(profile) is _FixtureProfile
-            and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE or profile is _READ_PROFILE), 'fixture-profile')
+            and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE or profile is _READ_PROFILE
+                 or profile is _EXECUTION_PROFILE), 'fixture-profile')
     return profile
 
 
@@ -640,6 +650,7 @@ def _fresh_directory(path, profile=_CORE_PROFILE):
 
 def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report, profile=_CORE_PROFILE):
     profile = _canonical_profile(profile)
+    require(profile is not _EXECUTION_PROFILE, 'fixture-profile')
     require(type(run_id) is str and re.fullmatch('[a-f0-9]{32}', run_id)
             and type(case) is str and case in profile.cases, 'bootstrap-case')
     require(all(type(h) is int and 0 < h < 2**64 - 1 for h in (ready, dispatch, report))
@@ -1067,6 +1078,11 @@ def standalone_native_read_binding():
     return _standalone_native(_READ_PROFILE)
 
 
+def standalone_native_read_session():
+    """The real reader creates its own sole child; no nested fixture Job."""
+    return _standalone_native(_EXECUTION_PROFILE)
+
+
 def _standalone_native(profile):
     profile = _canonical_profile(profile)
     require(__name__ == profile.module_name
@@ -1078,7 +1094,7 @@ def _standalone_native(profile):
               'parent_qualification_granted': False, 'production_composed': False,
               'model_started': False, 'quality_tests_executed': False,
               'old_staging_accessed': False, 'source_bindings': {}, 'failure_stage': 'initialization',
-              'deadline_scope': 'Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Sleep/suspend and indefinitely stuck kernel I/O are not qualified.'}
+              'deadline_scope': 'Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Host sleep/system suspend and indefinitely stuck kernel I/O are not qualified.'}
     try:
         native = _Native(started + BUDGET_NS, profile=profile)
         native.arm_deadline()  # Before any case/file/Job creation.
@@ -1089,7 +1105,13 @@ def _standalone_native(profile):
         folder_identity = _fresh_directory(candidate, profile)
         folder = candidate  # Ownership is latched only after exclusive success.
         result['run_id'] = run_id
-        accepted = _collect(native, run_id, hashes, folder, result['cases'])
+        if profile is _EXECUTION_PROFILE:
+            path = profile.tool_files[2]
+            component = _load_file('_fixed_windows_read_session_component', ROOT / path, hashes[path])
+            native.buffers.append(component)
+            accepted = component.collect(native, sys.modules[__name__], hashes, folder, result['cases'])
+        else:
+            accepted = _collect(native, run_id, hashes, folder, result['cases'])
         require(_all_hashes(native) == hashes, 'source-drift')
         if accepted:
             result.update(status='evidence-collected-review-required', failure_stage='none')

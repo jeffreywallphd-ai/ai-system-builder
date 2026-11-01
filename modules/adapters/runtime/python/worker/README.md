@@ -801,3 +801,11 @@ failure remains in versioned results. Parent/ancestor rename and deletion,
 guardian/crash lifetime, shared durable accounting and actual model offload still
 need qualification. The production factory remains unavailable; unknown usage
 reserves 12 GiB. Existing parent ACLs and retained files are not changed.
+
+The contributor read-session qualifier lives under
+`dev-tools/scripts/qualification/`; the runtime never imports it. Its closed
+fault controls use only a new model-free reader's original handles. Actual caller
+exit remains mandatory before terminal retirement. Stalled IPC cancellation needs
+a settled original ReadFile error 995 as well as cancellation acknowledgement;
+child-exit error 109 is tracked separately. The diagnostic changes no runtime
+request deadline, model-memory policy, production availability or disk charge.

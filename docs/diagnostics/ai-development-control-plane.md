@@ -1500,3 +1500,12 @@ loading, retained-file access, deletion, a fresh lease or offload recovery.
 Preserve an earlier failed receipt and diagnose its narrow failing feature;
 a later observer test does not convert that receipt or a parent criterion to a
 pass. No user action is needed for this agent-owned compatibility repair.
+
+The `offload-resource-lifecycle` profile also owns the fixed read-session entry,
+fixture and two ordinary synthetic test files. Its seventeen fixed files test
+closed planning, original-generation fault control and strict cancellation/exit
+oracles. The ordinary profile never invokes `--native`, Windows APIs, a real
+worker, a model or accuracy. Exact standalone Windows effects require their own
+source-bound plan and independent review. Unknown source impact and an explicit
+generic focused request retain the generic gate. No component result grants
+shared-domain, production, resource or parent-roadmap qualification.
