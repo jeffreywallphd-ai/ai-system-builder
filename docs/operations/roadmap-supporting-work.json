@@ -8470,6 +8470,25 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "This installed-runtime positive component check does not qualify actual timeout, hung-IO, race, crash or recovery paths. Production shared disk accounting, stable file/namespace/security protection, exact model-worker shutdown/crash/retained restart and offload resource/delivery measurements remain pending. Unknown usage reserves all12GiB; read-session retirement grants no disk credit. Accepted accuracy/OCR stay closed. Full system testing waits for feature catch-up. No additional run, old-data access or cleanup authority is granted."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "retire-failed-owned-read-session",
+      "work_criteria": [
+        "known-native-settlement-without-success",
+        "one-original-owned-terminal-attempt",
+        "proven-retirement-or-retained-uncertainty",
+        "reviewed-regressions-and-owned-checkpoint"
+      ],
+      "receipt_digest": "438a787f8bd30ebf09f03b51969f9fba830615edc625b6985c73e2bb3cf52ea3",
+      "review_digest": "5191e13ab861f1e34837dea8c4ac3e4325256ea36fb690850cc942ba6e719df6",
+      "scope": "Committed 44232975e passed 98 focused worker tests, five related groups and independent review. One Windows run then passed an idle-event retirement case and an exact owned-child failure case. Each closed 15 parent/session handles. The failed exchange stayed failed after confirmed child exit (WriteFile error 232). The result audit binds source, runtime and tool evidence. This supports cleanup only.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Only two fresh-file Windows cases are qualified. Hung IO/cancellation races, guardian/model-worker crash recovery, file protection, shared durable disk accounting, retained restart and actual offload resource/delivery checks remain pending. Unknown usage reserves all12GiB; cleanup grants no capacity or production lease. Accuracy/OCR stay closed. Full-system tests remain deferred. No extra run or old-file cleanup is authorized."
+      ]
     }
   ]
 }

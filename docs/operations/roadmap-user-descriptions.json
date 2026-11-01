@@ -13414,6 +13414,41 @@
           "No action needed. The agent must still test worker failures and finish shared disk accounting, file protection, model-worker shutdown, crash recovery, restart and actual offload resource use. Unknown usage still reserves the full 12 GiB. Closing read access gives no disk-capacity credit. Model accuracy and OCR stay closed. Full system testing waits until feature catch-up. These results allow no extra run or file cleanup."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4c56563e1dec20ebecd5b4db285fb594855919389b1fc0a6430c12cfd1e0b580",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The read worker passed two Windows cleanup tests.",
+          "One test woke an idle worker and closed it.",
+          "The other stopped its own test child and confirmed the expected write failure.",
+          "Both tests released their tracked worker resources.",
+          "These results cover worker cleanup only."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cd02fd6bfd137c9360d55ccb970d29025f1da0f55cc58800a66eb3daf2fc53a3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must test stalled reads and cancellation races.",
+          "The agent must test background-worker shutdown and crash recovery.",
+          "The agent must finish and test file protection before a safe restart.",
+          "The agent must make all temporary model files use the same disk limit.",
+          "The agent must finish model-worker recovery and measure memory and disk use during low-memory model runs.",
+          "Unknown temporary files still count against the full 12 GiB limit.",
+          "This evidence does not allow another test, free disk capacity or enable low-memory mode.",
+          "Model accuracy and OCR are already complete.",
+          "Full-system tests will run after the feature work.",
+          "The agent will keep earlier test files unchanged."
+        ]
+      }
     }
   ]
 }

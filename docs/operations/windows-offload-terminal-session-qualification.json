@@ -1,0 +1,120 @@
+{
+  "schema_version": "windows-offload-terminal-session-component-evidence-v1",
+  "status": "two-native-terminal-component-cases-passed",
+  "scope": "Fresh synthetic read-worker failure/retirement components only. No production offload or parent qualification.",
+  "code_commit": "44232975e63b9d90144f4555d42a93ec5676978e",
+  "repository_candidate_at_run": "5193fe1bc6218ab2ceb7455c08d3468dc56fc3e596cf7c9477e69b874871ee79",
+  "protocol_source_digest": "e342e8e4b6ab1a4dc90dc498654647f7b4800427dc021965547a7a6941288b58",
+  "run_id": "81ea84b5f3d44592afa32d70580a3141",
+  "actual_root_exit_code": 0,
+  "elapsed_ns": 3319271100,
+  "call_count_scope": "Parent/session Native ledger records, not child Core counts.",
+  "native_report_schema": "terminal-read-session-native-observation-v1",
+  "cases": [
+    {
+      "case": "explicit-fenced-idle-session",
+      "state": "failed-retired",
+      "failure_injection": "explicit-idle-fence",
+      "session_retired": true,
+      "terminal_final_proof": true,
+      "owned_handles": 15,
+      "closed_handles": 15,
+      "original_settled_native_rows": 65,
+      "original_success_acknowledgements": 65,
+      "terminal_acknowledged_native_rows": 27,
+      "failed_request_preserved": null,
+      "failed_original_exchange_io": null,
+      "original_stop_acknowledged": null,
+      "original_process_exit_before_exchange": null,
+      "core_read_retirement_observed": false,
+      "replayed_retirement_native_dispatches": 0,
+      "marker_preserved": true,
+      "model_started": false
+    },
+    {
+      "case": "owned-child-failure-before-read-binding",
+      "state": "failed-retired",
+      "failure_injection": "exact-new-original-job-stop",
+      "session_retired": true,
+      "terminal_final_proof": true,
+      "owned_handles": 15,
+      "closed_handles": 15,
+      "original_settled_native_rows": 63,
+      "original_success_acknowledgements": 62,
+      "terminal_acknowledged_native_rows": 26,
+      "failed_request_preserved": true,
+      "failed_original_exchange_io": {
+        "operation": "WriteFile",
+        "result": 0,
+        "windows_error": 232,
+        "success_acknowledged": false
+      },
+      "original_stop_acknowledged": true,
+      "original_process_exit_before_exchange": true,
+      "core_read_retirement_observed": false,
+      "replayed_retirement_native_dispatches": 0,
+      "marker_preserved": true,
+      "model_started": false
+    }
+  ],
+  "repository_source_bindings": {
+    "modules/adapters/runtime/python/worker/tasks/local_model_offload.py": {
+      "raw_sha256": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f",
+      "committed_LF_sha256": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f"
+    },
+    "modules/adapters/runtime/python/worker/tasks/offload_recovery.py": {
+      "raw_sha256": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+      "committed_LF_sha256": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_core.py": {
+      "raw_sha256": "fd2a7263b2499a1d65bdc0d6c50a5b93f8ef4282d9d73f0df0f6d3c941a83580",
+      "committed_LF_sha256": "fd2a7263b2499a1d65bdc0d6c50a5b93f8ef4282d9d73f0df0f6d3c941a83580"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_backend.py": {
+      "raw_sha256": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+      "committed_LF_sha256": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_execution.py": {
+      "raw_sha256": "d589cd9314d68399052edd4c6d3ad2bbb6f6df8037eaeca97b26ba45919811d1",
+      "committed_LF_sha256": "d589cd9314d68399052edd4c6d3ad2bbb6f6df8037eaeca97b26ba45919811d1"
+    },
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_execution_child.py": {
+      "raw_sha256": "8c2c26db29df9d1cd59b23a22f95089f0c6f71f1464f1d9802d96c47bdfd95c7",
+      "committed_LF_sha256": "8c2c26db29df9d1cd59b23a22f95089f0c6f71f1464f1d9802d96c47bdfd95c7"
+    }
+  },
+  "runtime_bindings": {
+    "base_image_sha256": "cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b",
+    "base_runtime_sha256": "1ac15e2224581fc678bbd17728b9aa538d47b891b72c76499ef07e54cd74f151"
+  },
+  "source_work": {
+    "work_id": "retire-failed-owned-read-session",
+    "receipt": "438a787f8bd30ebf09f03b51969f9fba830615edc625b6985c73e2bb3cf52ea3",
+    "review": "5191e13ab861f1e34837dea8c4ac3e4325256ea36fb690850cc942ba6e719df6"
+  },
+  "native_review": {
+    "effect_plan_sha256": "2204e18821c173ec6e2060ff1a218b7fe8a59b0fa291ca26ea86ec7d4993d09a",
+    "effect_reference_sha256": "b13c7906da064e7ebb9f29cb968dbf8e56c54b6482f825699749e51d9d97fda8",
+    "result_reference_sha256": "a595f5c509213be20c59a8f50eec9c3be205273c32a302ac8d36bd6f3549b253",
+    "result_audit_sha256": "14a6b90cfde6e633e282ff657039d431888f265aca64f104a079ecb4d36c8139",
+    "summary_sha256": "fbd3fdda41bd97a7f511f72016bd15e99e71357e339a22c475d7e69eb1c835ce",
+    "events_sha256": "d007e32dcd899550b2b082eb0b501ac43078efa6833365e95e7d56fb45b63d53",
+    "actual_tool_capture_sha256": "bf85e0e461ff7166b93a7db2588037cd8617c651adfcf3c8f8037e4bac213c60",
+    "actual_tool_chunk": "febdaa",
+    "separate_stderr_byte_count_recorded": false
+  },
+  "one_shot_consumed": true,
+  "additional_execution_authorized": false,
+  "old_data_accessed": false,
+  "model_started": false,
+  "accuracy_executed": false,
+  "production_composed": false,
+  "disk_credit_granted": false,
+  "parent_qualification_granted": false,
+  "limits": [
+    "One installed CPython3.14.3 AMD64 Windows read-only component run, not packaged-host or managed-model qualification.",
+    "Only two fresh-file Windows cases are qualified. Hung IO/cancellation races, guardian/model-worker crash recovery, file protection, shared durable disk accounting, retained restart and actual offload resource/delivery checks remain pending. Unknown usage reserves all12GiB; cleanup grants no capacity or production lease. Accuracy/OCR stay closed. Full-system tests remain deferred. No extra run or old-file cleanup is authorized.",
+    "These are parent/session Native ledger counts, not child Core counts or a model performance benchmark. The idle case proves a committed idle intent and event wake, not a kernel-blocked duration or synchronous-cancellation race.",
+    "The reviewer first used plain reads for these exact new reports. Acceptance used subsequent parent-first bounded stable copies; root guarded reads preceded review. Full procedure limits remain in the independent audit."
+  ]
+}
