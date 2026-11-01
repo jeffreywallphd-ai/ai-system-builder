@@ -8653,6 +8653,80 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "This direct-owner happy-path readback did not allocate the ceilings, load a model or launch an app. The eight seconds is the configured child deadline, not whole-validation elapsed time. Missing Windows limit notifications never prove that no limit was hit. No timeout or guardian-crash, model/application fit, native filesystem, retained restart, offload or parent qualification is supplied. Input creation, real dependency readiness, offline packaging and the Desktop training journey remain agent work. Earlier failures and unknown data remain unchanged; no retry, lease, disk credit or old-data access follows. Completed accuracy/OCR checks stay closed; full-system testing remains deferred until feature completion."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-generated-training-tokenizer-and-diagnostics",
+      "work_criteria": [
+        "fresh-only-explicit-fast-tokenizer-metadata",
+        "bounded-useful-cli-failure-facts",
+        "reviewed-source-docs-and-owned-checkpoint"
+      ],
+      "receipt_digest": "ae0e0e0c940ce8af1da22ffed837631df7fb063c664cbdef73790b8a8a38d349",
+      "review_digest": "409aeebd61b43b5d8458d559228c78c10c910e4102ea86a9c4769bcdc95d6104",
+      "scope": "Commit 2f29db6d1 fixes the tokenizer label only in newly created test input, before file hashes are recorded. The strict input inspector and existing files stay unchanged. It adds safe failure details and passed 22 focused regression tests, four check groups and an independent review.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "These were source and simulated-input checks. The later input-generation result provides the real generated-file evidence. This entry does not qualify model quality, training in the app, low-memory recovery or roadmap completion.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-corrected-desktop-training-feature",
+      "work_criteria": [
+        "truthful-isolated-training-stage-evidence",
+        "sanitized-feature-report-and-checkpoint"
+      ],
+      "receipt_digest": "a213bdd74750b35262cc17ec8fa20564abcefe1314fb26a07ca33fd0c69c5385",
+      "review_digest": "c238491397db6b9b9e761202ed7d343afda21a22c0568a3343112d69033c5277",
+      "scope": "Commit 82230e7f records a successful fresh test input and the earlier failed startup check. The test processes and handles closed cleanly. The report keeps the earlier failure and all input files. Four focused check groups and an independent review passed.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "That startup attempt failed. Its result remains history. The later startup repair and passing check have separate records. Building the Desktop package and testing training in the app remain pending.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-training-startup-and-task-progress",
+      "work_criteria": [
+        "verified-installed-backend-reuse",
+        "exact-template-probes-and-safe-checkpoint",
+        "owned-task-progress-cancellation-regression"
+      ],
+      "receipt_digest": "2c5eee631c419ba6ea4b5fdb51b61c31b0c461e1de24f94f9bd66c24cbef3039",
+      "review_digest": "4e5a1e5e65281644463e03a91424af0212b84f1d13cd64eb076cb8690cf89b96",
+      "scope": "Commit 3bc0b0309 fixes startup when the GPU inventory command fails but the installed runtime can use CUDA. It also fixes Windows probe matching and stabilizes the task-progress regression test. Six focused check groups and an independent review passed.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "These checks used simulated dependency commands. The separately recorded startup check supplies the real runtime result. Packaging, training in the app, native file protection, disk accounting, worker recovery and low-memory resource checks remain pending.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-training-readiness-after-startup-fix",
+      "work_criteria": [
+        "actual-readonly-readiness-and-retirement",
+        "safe-current-stage-report-and-checkpoint"
+      ],
+      "receipt_digest": "cfa0d51e0e79babef2a7db021dab8fa644a695ca43e70f65c9120db543d9383d",
+      "review_digest": "6a3dee5c249e65262527afc9dbd6f329f9f80539022c126857298a72b9a1e6b1",
+      "scope": "Commit 813af2ff6 records the real startup check passing in 28.6 seconds. Worker, training and Context dependencies passed without package installation. Peak total committed memory was about 806 MiB. All test processes and handles closed. Four focused check groups and an independent review passed.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This result covers startup only. The offline Desktop package and the train, review, save and reopen test remain pending. Low-memory file protection, disk accounting, worker recovery, restart and resource checks stay open. Earlier failed results remain in the report.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed."
+      ]
     }
   ]
 }

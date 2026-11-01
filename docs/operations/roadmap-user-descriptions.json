@@ -13799,6 +13799,125 @@
           "Full-system testing will follow feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "11ec7cc06d36cd4d5b14b21dc607b29bcc9c35121d4f5d04506dcebe2dc6e3f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Commit 2f29db6d1 fixes the tokenizer name in newly created test input.",
+          "The creator records file hashes after this correction.",
+          "The input inspector keeps its strict checks. Existing files stay unchanged.",
+          "The change adds safe failure details.",
+          "Twenty-two focused regression tests, four check groups and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4b74a317b01481c2ae20c3e5793c1c212d9447af70f25947e27b86474ef90dd4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "These checks covered source code and simulated input.",
+          "The later input-generation record supplies the real generated-file result.",
+          "This result does not qualify model accuracy, training in the app, low-memory recovery or roadmap completion."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0977fa66ed01e3607722be1ab79a6483457ef5428fc907e5589da602cc89197b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Completed model accuracy and text-recognition checks stay closed.",
+          "The agent will run the combined full-system tests after the requested feature work is finished."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "326ee02c93f2dbe176360f98c8124ea47225d6d49b83ea6855cafecaf0ea9eda",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Commit 82230e7f records a successful new test input and an earlier failed startup check.",
+          "All test processes and handles closed cleanly.",
+          "The report keeps the earlier failure and all input files.",
+          "Four focused check groups and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "74a952756dd98c1583660b9a5e77c8f5975385a32ecae2ce81611698d83d6537",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The earlier startup attempt failed. Its failed result remains in history.",
+          "The later startup repair and passing check have separate records.",
+          "The agent still needs to build the Desktop package and test training in the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "842b3720755f152a571474659a9d16040624c6410966fdd426a6dce3030962ff",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Commit 3bc0b0309 fixes the dependency check when GPU inventory fails but the installed runtime can use CUDA.",
+          "It also fixes Windows probe matching and the task-progress regression test.",
+          "Six focused check groups and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "65a7eda20ac897aa32c469b4f85955d11f5b4079abc4fdc51b64a29d61ed6ec1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "These checks used simulated dependency commands.",
+          "The separate startup check supplies the real runtime result.",
+          "The agent still needs to build the package and test training in the app.",
+          "File protection, disk accounting, worker recovery and low-memory resource checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7bbeb6ddc1816522ad22314281c90068b4b871a51ab101cae103676a6495ebd3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Commit 813af2ff6 records the real startup check passing in 28.6 seconds.",
+          "Worker, training and Context dependencies passed without package installation.",
+          "Peak total committed memory was about 806 MiB.",
+          "All test processes and handles closed cleanly.",
+          "Four focused check groups and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bfe5ec710b90de465b45d798af77785c720c701b592bae3e7aab23fdcf1b4c2f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers startup only.",
+          "The agent still needs to build the offline Desktop package and run the train, review, save and reopen test.",
+          "Low-memory file protection, disk accounting, worker recovery, restart and resource checks remain pending.",
+          "Earlier failed results remain in the report."
+        ]
+      }
     }
   ]
 }
