@@ -1,0 +1,98 @@
+{
+  "schema_version": "desktop-training-host-qualification-v1",
+  "scope": "failed-tiny-input-stage-before-desktop-training",
+  "status": "source-fix-required",
+  "source": {
+    "commit": "05de2fe85a6f9233ad8a1fb384cfd225e60d3784",
+    "source_digest": "6a76e5ceb3489936234739db8826c1d41138ae35f6094f07880ae13b4f995e19",
+    "generator_sha256": "25ed3b9a3b29ed23b2130fd94c511332ea681cf1dfe26cdb6d130aec51d8a795",
+    "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
+  },
+  "stages": [
+    {
+      "id": "input-generation",
+      "status": "failed",
+      "actual_parent_invocations": 1,
+      "actual_native_job_attempts": 1,
+      "root_exit_code": 1,
+      "total_created_processes": 1,
+      "remaining_active_processes": 0,
+      "limits": {
+        "flags": 8968,
+        "process_bytes": 2147483648,
+        "job_bytes": 4294967296,
+        "active_limit": 32
+      },
+      "configured_child_deadline_seconds": 120,
+      "observed_peak_commit_bytes": {
+        "process_commit_bytes": 774365184,
+        "job_commit_bytes": 774365184
+      },
+      "stdout_bytes": 165,
+      "stderr_bytes": 108,
+      "cleanup_confirmed": true,
+      "all_owned_handles_close_acknowledged": true,
+      "forced_owned_job_termination": false,
+      "observed_limit_notifications": 0,
+      "missing_notifications_prove_no_limit_hit": false,
+      "created_safe_model_files": 6,
+      "created_safe_model_file_bytes": 24556,
+      "created_manifest_bytes": 1217,
+      "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas.",
+      "input_qualification_pass": false
+    },
+    {
+      "id": "read-only-dependency-readiness",
+      "status": "pending",
+      "reason": "The input source fix and separately reviewed phase consumer are pending."
+    },
+    {
+      "id": "offline-desktop-package",
+      "status": "pending",
+      "reason": "The input and readiness stages and separately reviewed offline package consumer are pending."
+    },
+    {
+      "id": "desktop-train-review-save-reopen",
+      "status": "pending",
+      "reason": "The prerequisite stages and separately reviewed single-app setup are pending."
+    }
+  ],
+  "diagnosis": {
+    "status": "independently-confirmed-source-mismatch",
+    "saved_tokenizer_class": "PreTrainedTokenizer",
+    "required_tokenizer_class": "PreTrainedTokenizerFast",
+    "cause": "The installed pinned tokenizer serializer removes the Fast suffix when its slow-save property is true. The generated-input inspector requires the explicit Fast class.",
+    "confirmation": "Read-only inspection reached the strict tokenizer-class denial after all six file hashes, the fixed configuration, seed and model identity matched.",
+    "warning_is_not_proven_cause": true,
+    "planned_repair": "Normalize only fresh generated tokenizer metadata to the explicit expected Fast class before the manifest. Keep the strict inspector unchanged. Add supplier-shaped regression and bounded failure-stage/type diagnostics.",
+    "source_fix_implemented": false
+  },
+  "evidence_digests": {
+    "effect_plan_sha256": "1b08bbea4988c8b4c8fd305399ce852ba445620cd73530dfa67ccf586ce3027e",
+    "effect_reference_sha256": "17b80797fec697970824aaabea5ab7b5d1e3639123f0499b3bcdecd7df31eb7f",
+    "attempt_sha256": "b5110c0eee7a369f915b73804066f3de1ec65dd4b7d49be92a322b83cb179175",
+    "native_observation_sha256": "ffb9895f37cd15d9a60a3f305e557284f5e3acadd64108b032f0a8f9d89f929f",
+    "failure_sha256": "1f8b5b8a79fea8070cbddd53a6f491302126e55923e1465d8095006674257f0d",
+    "root_tool_observation_sha256": "70f6df0a78b4934119acfdd8e2a34cc41408e16604d346f477617a85c7a01eae",
+    "read_only_denial_diagnostic_sha256": "68c00de51888803a443bbece073ffbbadfdeb4f24c0accfd744d3f2c859e7114",
+    "independent_failed_result_reference_sha256": "3e86c35b5063c689d5c8830d8075281a6868f45b507e427f3dbb45d1a24b4da6",
+    "exact_marker_retirement_sha256": "51b7e2bf8252df4d97bb097e454bed0c00c348cb24a5573df17320d3d0e87fd5"
+  },
+  "scope_limits": [
+    "The child created a random tiny test fixture and then failed its input inspection. This is not a passing input, training or application result.",
+    "Native process and handle retirement were confirmed. Acceptance of the failed-result audit does not turn command exit 1 into a pass.",
+    "The old failed files and every earlier failure remain unchanged. Only the exact new active-run marker was preserved and retired after separate audit.",
+    "No dependency, engine, memory guard, native limit or disk policy changed. The existing 2 GiB process and 4 GiB total ceilings were not reservations.",
+    "No inference, model accuracy, OCR, readiness consumer, package or application test ran in this attempt.",
+    "A source fix, focused regression checks and a fresh separately reviewed attempt remain agent work. No retry or successor effect is granted by this report.",
+    "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource/delivery/cleanup remain separate pending work.",
+    "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows feature implementation."
+  ],
+  "actual_training_qualification": false,
+  "accuracy_executed": false,
+  "ocr_executed": false,
+  "failed_input_bytes_preserved": true,
+  "history_preserved": true,
+  "remaining_native_effect_allowance": 0,
+  "parent_pass": false
+}
