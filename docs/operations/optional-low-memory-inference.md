@@ -947,3 +947,29 @@ needed from the user for this source component. Unknown usage remains charged
 at the full limit. No old files are inspected or changed, no production lease
 is enabled and accepted accuracy/OCR tests stay closed. Full testing is deferred
 until feature work across the open roadmaps is ready.
+
+## Direct journal permission checks: current test definition
+
+Version 2 of the small Windows journal diagnostic adds direct competing-access
+checks. Version 1's three accepted component observations remain valid within
+their original scope. They do not qualify the new mutation case.
+
+The new case first retires the original journal writer, guards and I/O. A separate
+read-only API owner then opens the same fresh objects with all sharing allowed,
+checks original identities and owner/permission bytes, and reads the exact data.
+It requests each mutation right separately. File and namespace deletion,
+permission/owner changes, child creation, extra-stream creation and the cache
+parent's delete-child right each require exact native access denied. A read-only
+resize attempt separately requires Windows error 5. Sharing violations, missing
+objects, unknown statuses and unexpected grants cannot pass. The parent-right
+check is last, after the other access and resize checks. An unexpected grant
+retains its exact output slot and stops further dispatch; it grants no cleanup
+or accounting credit. Reports distinguish original, probe and controller custody.
+No delete, rename, parent ACL change or old staging access is performed.
+
+This is a source-level test definition. Its actual Windows execution still needs
+separate review and evidence. The 120-second owner, three-second timer control,
+one 512 MiB inert child, 4,096 API records and 16,384 controller records remain
+fixed. It starts no model and reopens no completed accuracy or OCR work. Shared
+12 GiB accounting, retained-tree restart protection, model-worker retirement,
+actual offload resources and final combined qualification remain separate.

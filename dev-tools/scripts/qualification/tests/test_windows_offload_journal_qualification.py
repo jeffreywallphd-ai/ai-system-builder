@@ -27,7 +27,7 @@ class JournalDeclarationTests(unittest.TestCase):
             self.assertEqual(value['user_action'], 'No action needed.')
             self.assertEqual(value['repeated_reads'], 8)
             self.assertEqual(value['fixed_frames'] * value['frame_bytes'], 2560)
-            self.assertEqual(len(value['required_native_checks']), 6)
+            self.assertEqual(len(value['required_native_checks']), 8)
             for field in ('qualification_complete', 'native_tests_executed', 'native_effects',
                           'old_staging_accessed', 'model_or_worker_started', 'quality_tests_executed',
                           'shared_domain_qualified', 'production_composed', 'parent_qualification_granted'):
@@ -71,6 +71,22 @@ class JournalDeclarationTests(unittest.TestCase):
                 self.assertEqual(subject.main(['--plan']), 2)
             self.assertNotIn('synthetic-private-detail', output.getvalue())
             self.assertFalse(json.loads(output.getvalue())['qualification_complete'])
+
+
+    def test_current_definition_has_exact_four_cases_and_versioned_mutation_controls(self):
+        value = subject.current_plan()
+        self.assertEqual(value['schema_version'], 'windows-offload-journal-qualification-v2')
+        self.assertEqual(value['report_schema_version'], 'windows-offload-journal-native-v2')
+        self.assertEqual(value['cases'], ['deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'])
+        self.assertEqual(value['maximum_seconds'], 120)
+        self.assertEqual(value['maximum_active_children'], 1)
+        self.assertEqual(value['inert_child_commit_ceiling_bytes'], 512 * 1024**2)
+        self.assertEqual(value['journal_api_call_records_per_owner'], 4096)
+        self.assertEqual(value['controller_call_records_per_owner'], 16384)
+        self.assertTrue(value['mutation_controls_require_exact_access_denied'])
+        self.assertFalse(value['sharing_failure_qualifies_acl_denial'])
+        self.assertFalse(value['resize_handle_control_qualifies_acl_denial'])
+        self.assertFalse(value['parent_qualification_granted'])
 
 
 if __name__ == '__main__': unittest.main()

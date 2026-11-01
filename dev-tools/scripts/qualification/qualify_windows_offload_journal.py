@@ -2,7 +2,7 @@
 import argparse
 import json
 
-SCHEMA = 'windows-offload-journal-qualification-v1'
+SCHEMA = 'windows-offload-journal-qualification-v2'
 
 
 class _Parser(argparse.ArgumentParser):
@@ -14,10 +14,17 @@ def current_plan():
         'schema_version': SCHEMA, 'status': 'technical-check-pending',
         'action_owner': 'agent', 'user_action': 'No action needed.',
         'component': 'fresh-windows-journal-native-api',
-        'cases': ['deadline-control', 'journal-roundtrip', 'journal-namespace-denied'],
+        'report_schema_version': 'windows-offload-journal-native-v2',
+        'historical_report_schema_version': 'windows-offload-journal-native-v1',
+        'cases': ['deadline-control', 'journal-roundtrip', 'journal-namespace-denied', 'journal-mutation-denied'],
         'fixed_frames': 5, 'frame_bytes': 512, 'repeated_reads': 8,
         'maximum_seconds': 120, 'maximum_active_children': 1,
         'inert_child_commit_ceiling_bytes': 512 * 1024**2,
+        'journal_api_call_records_per_owner': 4096,
+        'controller_call_records_per_owner': 16384,
+        'mutation_controls_require_exact_access_denied': True,
+        'sharing_failure_qualifies_acl_denial': False,
+        'resize_handle_control_qualifies_acl_denial': False,
         'ceiling_is_not_upfront_allocation_or_model_policy': True,
         'required_native_checks': [
             'actual-job-handshake-timer-and-owned-exit',
@@ -26,6 +33,8 @@ def current_plan():
             'unchanged-permission-allocation-and-oplock-predicates',
             'bounded-live-io-and-acknowledged-handle-retirement',
             'known-fresh-namespace-collision-and-retained-uncertainty',
+            'retired-writer-then-share7-readback-of-original-identities-and-security',
+            'exact-per-right-access-denied-with-separate-parent-delete-child-and-resize-controls',
         ],
         'qualification_complete': False, 'native_tests_executed': False,
         'native_effects': False, 'old_staging_accessed': False,

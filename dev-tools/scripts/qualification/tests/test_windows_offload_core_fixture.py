@@ -319,6 +319,19 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaises(subject.FixtureError): subject.standalone_native_journal()
         native.assert_not_called()
 
+    def test_journal_v2_extension_keeps_core_and_read_profiles_and_resource_limits(self):
+        self.assertEqual(subject._JOURNAL_PROFILE.schema, 'windows-offload-journal-native-v2')
+        self.assertEqual(subject._JOURNAL_PROFILE.cases, ('deadline-control', 'journal-roundtrip',
+            'journal-namespace-denied', 'journal-mutation-denied'))
+        self.assertEqual(subject._JOURNAL_PROFILE.runs.name, 'windows-offload-journal-native-v2')
+        self.assertEqual(subject._CORE_PROFILE.schema, 'windows-offload-core-native-v2')
+        self.assertEqual(subject._CORE_PROFILE.cases, ('deadline-control', 'empty-stage', 'one-index', 'namespace-denied'))
+        self.assertEqual(subject._READ_PROFILE.schema, 'windows-offload-read-binding-native-v1')
+        self.assertEqual(subject._READ_PROFILE.cases, ('deadline-control', 'unused-read-binding'))
+        self.assertEqual(subject.BUDGET_NS, 120 * 10**9)
+        self.assertEqual(subject.CONTROL_NS, 3 * 10**9)
+        self.assertEqual(subject.MEMORY_BYTES, 512 * 1024**2)
+
     def test_native_profile_is_required_before_dispatch_and_has_no_public_setter(self):
         native = object.__new__(subject._Native); native._Native__origin = native
         native.calls, native.buffers, native.handles = [], [], []

@@ -1658,3 +1658,29 @@ The one-process 512 MiB Job applies only to the model-free child. Its per-operat
 normal/terminal native records have separate preallocated bounds. Production
 shared accounting, stable mutation protection, model-worker/retained recovery and
 resource checks stay pending. Keep full suites for the later shared campaign.
+
+## Current fixed journal mutation-test definition
+
+The current `qualify_windows_offload_journal.py --plan` declaration is version 2.
+It retains the earlier timer, journal read/write and namespace-collision cases,
+and adds `journal-mutation-denied`. Version 1 results remain historical evidence;
+they do not satisfy this added case. The Core and unused-read profiles are unchanged.
+
+The added case closes the original writer and its guards before opening fresh
+read-only handles with all sharing allowed. It checks the original object IDs,
+owner, permissions, bytes, size and sole data stream. Fourteen fixed access
+requests separately test file writes, deletion, permission changes, new children,
+an extra stream and the parent folder's delete-child right. Only exact native
+access denied qualifies. Sharing conflicts and unexpected grants fail the check.
+The resize attempt is a separate read-only-handle control. It requires return 0
+and Windows error 5, and supplies no independent permission proof. The parent
+check runs last; an unexpected grant retains its handle slot and stops the case.
+No delete, rename or parent-permission change is attempted.
+
+Original API, probe API and controller custody stay separate. Failure output
+includes bounded probe labels, return codes, resize error and retained-handle
+counts. The limits remain 120 seconds overall, a three-second timer control,
+one inert child capped at 512 MiB, 4,096 API call records per owner and 16,384
+controller call records. The child cap does not change model admission or memory
+policy. Source tests do not execute this Native case. A committed source review
+and a separate one-shot effect review are required before an actual run.
