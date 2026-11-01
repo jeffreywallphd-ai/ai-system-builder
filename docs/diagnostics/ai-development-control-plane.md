@@ -1588,3 +1588,28 @@ records the committed input definitions, focused checks and separate review.
 The current coverage inventory uses real commit pins. Actual input creation,
 the native launcher and the Desktop train/review/Save/reopen journey remain
 agent work. This source result does not grant a parent or model-quality pass.
+
+### Isolated Desktop training execution definition
+
+The [native helper guide](../../dev-tools/helpers/native-qualification/README.md#closed-desktop-training-roles)
+defines separate private input, readiness, package and one-journey roles. They
+retain the existing 2 GiB process and 4 GiB Job ceilings with literal deadlines.
+The inert new budget role is separate from the unchanged default selftest matrix.
+Ordinary `native-host-policy` and `operational-ui` checks test definitions and
+denials only. Do not infer actual model, native, app or roadmap qualification.
+
+For a later controlled run, first bind the exact installed runtime, source,
+consumers and new owned roots. Use a fresh source-only candidate with its own
+empty regular `node_modules` cache directory, copied configs, explicit offline
+Electron ZIP and separate output/temp paths. The trusted readiness adapter must
+keep real read-only dependency probes in their owned phase directory. Only the
+generated tiny profile may use the declared fresh package worker context. Both
+launchers verify that context; the wrapper checks the worker main against source.
+The fixed target uses a computed relative argument because the existing runtime
+parser splits on spaces. The production parser and legacy launch remain unchanged.
+
+Review each physical effect before execution, retain earlier failures, and prove
+the original process/Job/pipe/guardian retirement contract. Do not rerun completed
+accuracy or OCR checks, reuse an old unknown tree, release disk credit, install a
+dependency, or turn this definition into a parent pass. Full-system testing stays
+deferred until the requested feature work is complete.

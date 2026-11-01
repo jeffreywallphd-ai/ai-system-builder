@@ -79,3 +79,36 @@ test("only the generated profile fixes device visibility and carries the declare
   assert.equal(child.TEMP, path.join(dataRoot, "training-temp"));
   assert.throws(() => createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition: tinyAcquisition }));
 });
+
+const packagedRoot = path.join(repoRoot, ".local-codex/q/abc123ef/o/ai-system-builder-win32-x64");
+test("a declared tiny training package keeps the wrapper in the original source even with repository spaces", async () => {
+  const plan = await createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition: tinyAcquisition, manifestHash, packagedRoot });
+  const worker = path.join(packagedRoot, "resources/worker");
+  for (const env of [plan.desktop.env, plan.desktop.seed.env]) {
+    assert.equal(env.PYTHON_RUNTIME_WORKER_DIR, worker);
+    assert.equal(env.VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT, packagedRoot);
+    const args = env.PYTHON_RUNTIME_ARGS.split(" ");
+    assert.deepEqual(args.slice(0, 2), ["-I", "-B"]); assert.equal(args.length, 3);
+    assert(!/[\s"'\x00-\x1f]/u.test(args[2])); assert(!path.isAbsolute(args[2]));
+    assert.equal(path.resolve(worker, args[2]), path.join(repoRoot, "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py"));
+  }
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  const child = createTrainingCaseEnvironment(plan.desktop.env, repoRoot, dataRoot, tinyAcquisition);
+  assert.equal(child.PYTHON_RUNTIME_WORKER_DIR, worker);
+  assert.equal(child.PYTHON_RUNTIME_ARGS, plan.desktop.env.PYTHON_RUNTIME_ARGS);
+});
+test("fresh package context cannot select a foreign root or extend the original model profile", async () => {
+  for (const value of ["", "relative/package", path.join(repoRoot, "out/ai-system-builder-win32-x64"), packagedRoot.replace("abc123ef", "abc123ef0"), path.join(repoRoot, ".local-codex/q/abc123ef/c/ai-system-builder-win32-x64"), packagedRoot + "\n", path.join(repoRoot, ".local-codex/q/abc123ef/o/other")]) {
+    await assert.rejects(async () => createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition: tinyAcquisition, manifestHash, packagedRoot: value }));
+  }
+  await assert.rejects(async () => createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition, packagedRoot }));
+});
+test("ambient package hints do not change ordinary training and declared tiny context is checked again for the case", async () => {
+  const dirty = { ...environment, VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT: "/foreign/package", visual_composer_training_packaged_root: "/other/package" };
+  const ordinary = await createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition });
+  assert.equal(ordinary.desktop.env.PYTHON_RUNTIME_ARGS, TRAINING_WORKER_ARGS);
+  assert.equal(ordinary.desktop.env.PYTHON_RUNTIME_WORKER_DIR, path.join(repoRoot, "out/ai-system-builder-win32-x64/resources/worker"));
+  assert(!Object.keys(ordinary.desktop.env).some(key => key.toUpperCase() === "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT"));
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  assert.throws(() => createTrainingCaseEnvironment({ ...dirty, VISUAL_COMPOSER_TRAINING_INPUT_SHA256: manifestHash }, repoRoot, dataRoot, tinyAcquisition));
+});

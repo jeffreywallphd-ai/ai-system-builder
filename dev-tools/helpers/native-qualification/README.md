@@ -2,8 +2,8 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
-This helper owns only newly created model-free qualification trees on Windows
-x64. The public CLI exposes `--native-selftest`; it has no caller command, PID,
+This helper owns newly created qualification trees on Windows x64. Its public
+selftests remain model-free. The public CLI exposes `--native-selftest`; it has no caller command, PID,
 working-directory, shell or JSON execution option. Private child roles are fixed.
 Normal portable tests leave physical qualification explicitly skipped/pending.
 
@@ -161,3 +161,56 @@ execution authority. These portable command, limit-selection and injected-owner
 checks do not qualify new native readback, actual apps or memory savings. The
 earlier 1 GiB process-limit failure remains failed; reducing overlap need not
 resolve that single-process limit. Existing old-run and offload guards remain.
+
+## Closed Desktop training roles
+
+The separate private `_reviewed_training_intent` composes only generated tiny
+training-input creation, read-only dependency readiness, offline packaging and
+one Desktop train/private-review/Save/reopen journey. It has no public execution
+route, caller command, working-directory, environment or quota option. Installed
+Node identity is a reviewed trusted-host witness, as in the earlier private
+factory. Python comes from the fixed existing managed environment and its actual
+base interpreter. Its config, interpreter, DLL and seven package metadata inputs
+must match the declared bounded witnesses. Missing inputs deny; nothing installs.
+
+Literal role deadlines are 120, 300, 420 and 690 seconds respectively. A separate
+eight-second `training-budget` intent has an inert internal child. It is outside
+`_FIXTURES` and the unchanged nine-case default selftest. Only exact issued
+training intents select the existing 2 GiB per-process and 4 GiB aggregate Job
+grade; count, handle inheritance, atomic assignment, guardian and retirement
+controls stay unchanged. These ceilings do not reserve RAM or prove model fit.
+
+Every consumer/source/runtime witness is checked before issuance and again
+before native preparation. Reference reads are bounded and reject reparse,
+identity, size, time or hash drift; they grant no supplier ownership or deletion.
+Windows named and descriptor queries can report different change-time values.
+Compare change time within each API, while retaining cross-API identity, size,
+modification-time and content checks. The original generic factories and budgets
+retain their existing checks.
+
+Input/readiness work uses its owned phase directory. The reviewed readiness
+adapter must call the real dependency ports through a read-only spawn adapter
+with that directory. Package work uses a fresh source-only descendant candidate.
+Its regular `node_modules` starts empty and is checked before native preparation;
+Vite can then write its temporary configuration cache there and resolve unchanged
+installed dependencies from ancestors. Copy the actual configs and their relative
+resource helpers; using the original configs would select shared output paths.
+The later reviewed consumer must bind the full candidate/resource manifest,
+offline Electron ZIP, output/temp roots and expected write surfaces. No dependency
+or Python runtime copy, junction, download or shared `.vite`/`out` write is needed.
+
+Only declared generated inputs can use the exact fresh package worker directory.
+Node computes a space-free relative argument to the fixed original wrapper,
+verifies its absolute target and retains the legacy argument constant otherwise.
+The Python wrapper independently checks the generated context and the packaged
+main file against current source before importing it. UI issuance also binds the
+fresh application and worker-main hashes; it selects one exact test name.
+
+All environments are constructed from minimal Windows fields and fixed offline
+settings, with owned home/temp roots and no inherited credentials. A Job is not a
+network sandbox. Reviewed consumers must retain the existing no-install and
+no-download paths. Source tests do not qualify a native Job, model, app, resource
+outcome, retained restart or parent roadmap. Each actual stage needs a separate
+current-source effect review, one-use execution evidence and exact owned cleanup.
+Unknown owners/fences and historical failures remain; there is no reset or retry
+authority. Completed model accuracy and OCR checks stay closed.

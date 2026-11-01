@@ -1,9 +1,11 @@
-"""Closed model-free native qualification and private reviewed host composition.
+"""Closed native qualification and private reviewed host composition.
 
 Public CLI: --native-selftest only. Internal child roles are fixed. No command,
 PID, cwd, shell or caller JSON execution interface exists. Cooperative reviewed
 Python composition may issue only fixed package/UI forms for synthetic dataset
 delivery or real Windows OCR with synthetic generation.
+Separate private training roles require reviewed runtime and source witnesses;
+ordinary selftests remain model-free and grant no training effect authority.
 """
 from __future__ import annotations
 import argparse
@@ -16,6 +18,7 @@ import os
 from pathlib import Path
 import queue
 import re
+import stat
 import subprocess
 import sys
 import threading
@@ -37,6 +40,21 @@ _HOST_UI_PROJECTS={
     "ui-thin":("thin-chrome",),
     "ui-desktop":("packaged-desktop",),
 }
+_TRAINING_DEADLINES=MappingProxyType({
+    "training-input-create":120, "training-readiness":300,
+    "training-package":420, "training-ui":690, "training-budget":8,
+})
+_TRAINING_SOURCES=(
+    "dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py",
+    "dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts",
+    "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs",
+    "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+    "node_modules/@playwright/test/cli.js",
+    "modules/adapters/runtime/python/worker/main.py",
+)
+_TRAINING_PACKAGES=(("torch","2.6.0+cu126"),("transformers","4.51.3"),
+    ("accelerate","1.14.0"),("safetensors","0.5.2"),("pydantic","2.10.6"),
+    ("datasets","5.0.1"),("peft","0.15.2"))
 _OCR_IMPORT_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v1/runs"
 _OCR_IMPORT_V2_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v2/runs"
 _OCR_IMPORT_PYTHON_SHA="1c4e9fbd9259294528031a567cef76b0a45254b66d612cf58de267928d1defbb"
@@ -219,6 +237,154 @@ def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,fold
     return _remember(_Intent(phase,argv,candidate,MappingProxyType(env),420,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
 
 
+def _training_file_limit(path):
+    name=path.name.lower()
+    if name=="ai-system-builder.exe":return 256*1024**2
+    if name in ("node", "node.exe", "python.exe"):return 128*1024**2
+    if name=="python312.dll":return 16*1024**2
+    if name=="metadata":return 2*1024**2
+    if name in ("pyvenv.cfg", "input.json"):return 8192
+    need(path.suffix.lower() in (".mjs", ".js", ".py", ".ts"),"unknown-training-source-kind")
+    return 512*1024
+
+
+def _training_file(path, expected):
+    """Stable bounded reference reads; never supplier ownership or deletion."""
+    need(isinstance(path,Path) and path.is_absolute() and path.resolve()==path and
+         type(expected) is str and re.fullmatch(r"[a-f0-9]{64}",expected),"training-file-witness")
+    _regular_directory(path.parent,Path(path.anchor))
+    limit=_training_file_limit(path);before=path.lstat()
+    valid=lambda value:stat.S_ISREG(value.st_mode) and value.st_nlink>=1 and not(getattr(value,"st_file_attributes",0)&0x400) and 0<value.st_size<=limit
+    identity=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_nlink)
+    need(valid(before) and not path.is_symlink(),"training-file-kind-or-bound")
+    h=hashlib.sha256();count=0
+    with path.open("rb") as stream:
+        opened=os.fstat(stream.fileno());need(valid(opened) and identity(opened)==identity(before),"training-file-open-drift")
+        while chunk:=stream.read(min(65536,limit+1-count)):
+            count+=len(chunk);need(count<=limit,"training-file-overflow");h.update(chunk)
+        after=os.fstat(stream.fileno())
+    named=path.lstat()
+    # Named and descriptor queries can expose different Windows ctime values.
+    # Keep identity/size/mtime cross-checks and compare ctime within each API.
+    need(valid(named) and not path.is_symlink() and identity(opened)==identity(after)==identity(named) and
+         before.st_ctime_ns==named.st_ctime_ns and opened.st_ctime_ns==after.st_ctime_ns and
+         count==opened.st_size and h.hexdigest()==expected,"training-file-drift")
+    return count
+
+
+def _training_run(phase,run,folder,review_digest):
+    need(type(phase) is str and phase in _TRAINING_DEADLINES,"unknown-fixed-training-role")
+    _assert_no_pending()
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}",review_digest),"training-review-witness")
+    family=_REPO/".local-codex/native-training-host-v1"
+    need(isinstance(run,Path) and isinstance(folder,Path) and run.parent==family/"runs" and
+         re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-training-run")
+    _prior_family_clear(family);_prior_family_clear(run)
+    _regular_directory(folder,_REPO)
+    return _REPO/".local-codex/q"/run.name[:8]
+
+
+def _training_budget_intent(*,run,folder,review_digest):
+    """One inert new-role readback, separate from the nine legacy selftests."""
+    phase="training-budget";_training_run(phase,run,folder,review_digest)
+    python=Path(sys.executable).resolve();expected=_digest(python);_training_file(python,expected)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    return _remember(_Intent(phase,(str(python),"-I","-S","-B",str(_MODULE),"--fixture","training-budget"),
+        _MODULE.parent,MappingProxyType(env),_TRAINING_DEADLINES[phase],folder,
+        MappingProxyType(_implementation_hashes()),MappingProxyType({str(python):expected})))
+
+
+def _training_empty_cache(short):
+    cache=short/"c/node_modules";_regular_directory(cache,_REPO)
+    with os.scandir(cache) as entries:
+        need(next(entries,None) is None,"training-candidate-cache-not-empty")
+
+
+def _reviewed_training_intent(phase,*,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes=None):
+    """Literal private roles; the separate effect review still grants authority.
+
+    Node identity is a trusted host witness, as in the legacy private factory.
+    It is never accepted from a public command/JSON execution interface. Python,
+    cwd, source/consumer names, environment and limits have no caller selectors.
+    """
+    need(type(phase) is str and phase in _TRAINING_DEADLINES and phase!="training-budget","unknown-fixed-training-role")
+    if phase!="training-ui":need(package_hashes is None,"unexpected-training-package-witness")
+    short=_training_run(phase,run,folder,review_digest)
+    need(isinstance(node_executable,Path) and node_executable.name.lower() in ("node","node.exe"),"training-node-identity")
+    _training_file(node_executable,node_sha256)
+    base=Path(sys._base_executable).resolve();prefix=_REPO/"artifacts/tmp/lancedb-python312-ai-runtime"
+    python=prefix/"Scripts/python.exe";config=prefix/"pyvenv.cfg"
+    need(base.name.lower()=="python.exe","training-base-identity")
+    runtime=[python,config,base,base.parent/"python312.dll"]
+    runtime.extend(base.parent/"Lib/site-packages"/f"{name}-{version}.dist-info/METADATA" for name,version in _TRAINING_PACKAGES)
+    need(type(runtime_file_hashes) is dict and set(runtime_file_hashes)=={str(file) for file in runtime},"training-runtime-witness")
+    need(sum(_training_file(file,runtime_file_hashes[str(file)]) for file in runtime)<=32*1024**2,"training-runtime-input-bound")
+    with config.open("rb") as stream:raw=stream.read(8193)
+    need(len(raw)<=8192 and hashlib.sha256(raw).hexdigest()==runtime_file_hashes[str(config)],"training-runtime-config-drift")
+    settings={}
+    for line in raw.decode("utf8").splitlines():
+        key,separator,value=line.partition("=")
+        if separator:
+            key=key.strip().lower();need(key not in settings,"training-runtime-config-duplicate");settings[key]=value.strip()
+    need(Path(settings.get("home",""))==base.parent and settings.get("include-system-site-packages","").lower()=="true" and
+         settings.get("version")=="3.12.8","training-runtime-context")
+    helpers=_REPO/".local-codex/native-training-host-operator/v1"
+    files={name:helpers/name for name in _CONSUMER_FILES}
+    files.update({name:_REPO/name for name in _TRAINING_SOURCES})
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(files),"training-source-witness")
+    for name,file in files.items():_training_file(file,reviewed_file_hashes[name])
+    acquisition=f".local-codex/training-inputs/tiny-{uuid.UUID(hex=run.name)}/input.json"
+    manifest=_REPO/acquisition;_regular_directory(manifest.parent.parent,_REPO)
+    bindings={str(file):reviewed_file_hashes[name] for name,file in files.items()}
+    bindings.update(runtime_file_hashes);bindings[str(node_executable)]=node_sha256
+    if phase=="training-input-create":
+        need(input_manifest_sha256 is None,"training-input-create-witness")
+        try:manifest.parent.lstat()
+        except FileNotFoundError:pass
+        else:raise NativeFailure("training-input-slot-already-exists")
+    else:
+        _training_file(manifest,input_manifest_sha256);bindings[str(manifest)]=input_manifest_sha256
+    for directory in (short/"t",short/"h",short/"h/AppData/Local",short/"h/AppData/Roaming"):_regular_directory(directory,_REPO)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute() and
+         Path(env.get("WINDIR",env["SystemRoot"]))==Path(env["SystemRoot"]),"training-system-environment")
+    env.update({"PATH":os.pathsep.join((str(node_executable.parent),str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+        "NODE_OPTIONS":"","HOME":str(short/"h"),"USERPROFILE":str(short/"h"),
+        "LOCALAPPDATA":str(short/"h/AppData/Local"),"APPDATA":str(short/"h/AppData/Roaming"),
+        "TEMP":str(short/"t"),"TMP":str(short/"t"),"PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1",
+        "__PYVENV_LAUNCHER__":str(python),"PYTHON_RUNTIME_COMMAND":str(python),
+        "PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"training-model-host",
+        "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","HF_DATASETS_OFFLINE":"1",
+        "PIP_NO_INDEX":"1","PIP_REQUIRE_HASHES":"1","PIP_DISABLE_PIP_VERSION_CHECK":"1","PIP_CONFIG_FILE":os.devnull,
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1","ELECTRON_SKIP_BINARY_DOWNLOAD":"1",
+        "CUDA_VISIBLE_DEVICES":"0","HIP_VISIBLE_DEVICES":"","OMP_NUM_THREADS":"1","MKL_NUM_THREADS":"1",
+        "AISB_LOCAL_TRAINING_UI_RUN":str(run),"VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION":acquisition,
+        "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT":str(short/"o/ai-system-builder-win32-x64")})
+    if input_manifest_sha256 is not None:env["VISUAL_COMPOSER_TRAINING_INPUT_SHA256"]=input_manifest_sha256
+    cwd=folder
+    if phase=="training-input-create":argv=(str(base),"-I","-B",str(_REPO/_TRAINING_SOURCES[0]),"--create-tiny-input")
+    # This reviewed adapter calls the real dependency ports with a bounded
+    # read-only spawn adapter rooted in this phase, not the shared checkout.
+    elif phase=="training-readiness":argv=(str(node_executable),"--import","tsx",str(helpers/"global-setup.mjs"),"--inspect-prerequisites")
+    elif phase=="training-package":
+        _training_empty_cache(short);cwd=short/"c"
+        argv=(str(node_executable),str(helpers/"offline-package.mjs"))
+    else:
+        cwd=_REPO  # Existing public-UI helpers resolve their declared repo here.
+        package=short/"o/ai-system-builder-win32-x64"
+        _regular_directory(package/"resources/worker",_REPO)
+        need(type(package_hashes) is dict and set(package_hashes)=={"application_sha256","worker_main_sha256"} and
+             package_hashes["worker_main_sha256"]==reviewed_file_hashes[_TRAINING_SOURCES[5]],"training-package-witness")
+        for file,expected in ((package/"ai-system-builder.exe",package_hashes["application_sha256"]),
+                              (package/"resources/worker/main.py",package_hashes["worker_main_sha256"])):
+            _training_file(file,expected);bindings[str(file)]=expected
+        argv=(str(node_executable),str(_REPO/_TRAINING_SOURCES[4]),"test","--config",str(helpers/"playwright.config.mjs"),
+              "--project=packaged-desktop","--grep","packaged desktop trains one local adapter, reviews privately, saves and reopens it$")
+    return _remember(_Intent(phase,argv,cwd,MappingProxyType(env),_TRAINING_DEADLINES[phase],folder,
+        MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
 def _reviewed_ocr_runtime_import_intent(*,run,folder,review_digest):
     """One closed diagnostic, not the production dependency preparer or a model run.
 
@@ -291,7 +457,12 @@ def _validate_intent(intent,folder):
     _assert_no_pending()
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent and folder==intent.folder,"external-intent-denied")
     need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
-    need(all(_digest(Path(name))==value for name,value in intent.consumer_hashes.items()),"reviewed-consumer-drift")
+    if intent.phase in _TRAINING_DEADLINES:
+        for name,value in intent.consumer_hashes.items():_training_file(Path(name),value)
+        if intent.phase=="training-package":
+            _training_empty_cache(_REPO/".local-codex/q"/intent.folder.parent.name[:8])
+    else:
+        need(all(_digest(Path(name))==value for name,value in intent.consumer_hashes.items()),"reviewed-consumer-drift")
     _regular_directory(folder,_REPO)
 
 
@@ -300,7 +471,8 @@ def _memory_limits(intent):
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2") or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2") or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    if phase in _TRAINING_DEADLINES:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
     ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or ((phase=="package" or phase in _HOST_UI_PROJECTS) and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
     if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
     return PROCESS_BYTES,UI_JOB_BYTES if phase in _HOST_UI_PROJECTS or phase=="fixture:ui-budget" else JOB_BYTES
@@ -701,6 +873,8 @@ def bounded_eof(stream,seconds,maximum):
 
 
 def fixture(role):
+    if role=="training-budget":
+        os.write(1,b"fixed-native-training-budget\n");return 0
     if role=="ui-budget":
         os.write(1,b"fixed-native-ui-budget\n");return 0
     if role=="ocr-budget":
@@ -900,7 +1074,7 @@ def _parser():
     parser=argparse.ArgumentParser(description=__doc__)
     group=parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--native-selftest",action="store_true")
-    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget","ocr-budget"),help=argparse.SUPPRESS)
+    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget","ocr-budget","training-budget"),help=argparse.SUPPRESS)
     group.add_argument("--guardian",choices=("before-resume","after-descendant"),help=argparse.SUPPRESS)
     return parser
 

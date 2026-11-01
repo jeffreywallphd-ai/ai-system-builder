@@ -552,3 +552,43 @@ Rollback cannot silently restore an old reader or stale store after later writes
 it needs an independently reviewed exact-revision recovery. Same-user hostile
 filesystem/ACL isolation remains outside this cooperative store, and no native
 security or product qualification follows from archival success.
+
+## Closed training qualification threat/control delta
+
+Protected assets are native process ownership, installed runtime/source integrity,
+the user's app/build/cache roots, private credentials and truthful qualification.
+The new private issuer accepts only named training roles and reviewed fixed-file
+witnesses. It exposes no public command, cwd, environment, numeric quota or cleanup
+selector. Node is a trusted host identity input; Python, source/consumer paths and
+role commands are fixed. Wrong role, slot, runtime context, source, package or hash
+denies before native preparation. Issued immutable identity is required for the
+existing 2 GiB/4 GiB grade. Generic roles and all Job/handle/guardian/retirement
+controls retain their prior behavior; an inert budget child supplies no model fit.
+
+Minimal constructed offline environments exclude inherited credentials. Each
+phase owns its writable roots. Input/readiness have a phase cwd; real readiness
+ports need a read-only spawn adapter there. Package has a fresh copied source tree
+and an empty regular dependency-cache directory checked before preparation. This
+prevents local dependency shadowing and the initial Vite temp-cache fallback into
+the original dependency tree. Consumers must use copied configs, an explicit
+offline ZIP and declared new outputs; no supplier tree/runtime is copied or linked.
+Offline flags and reviewed consumers are not an OS network sandbox or external
+publication authority.
+
+The generated-only package context cannot redirect legacy models. The fixed
+wrapper argument rejects absolute/drive/whitespace/quote/control substitutions
+and must resolve to the actual source wrapper. Python also checks the exact new
+worker root and bounded stable current-main bytes before import. Reference reads
+retain file identity, size, modification time, regular/reparse state and digest
+checks. Change time is compared within named and descriptor APIs separately to
+avoid their observed Windows mismatch, while still denying changes during reads.
+These cooperative reference checks grant no hostile-filesystem custody, deletion,
+legacy adoption, offload lease, disk credit or supplier-completeness claim.
+
+Focused tests cover role and quota substitution, input reuse, source/runtime/
+package tampering, missing witnesses, pending owners, cache shadowing, post-issue
+growth, time drift and repository spaces. Actual native readback, runtime/model
+behavior, package writes, UI output and owned cleanup require separate reviewed
+effects. Retain failed evidence and unknown fences. Completed accuracy/OCR results
+stay closed, with real resource/native/parent gaps and the later full campaign
+still pending.

@@ -23,6 +23,54 @@ def deny():
     raise ValueError("The fixed training qualification request is unavailable.")
 
 
+def _source_identity_bytes(root, target):
+    """Bound two exact current source files; not a native custody capability."""
+    regular_under(root, target, 64 * 1024)
+    before = target.lstat()
+    identity = lambda value: (value.st_dev, value.st_ino, value.st_size,
+                              value.st_mtime_ns, value.st_nlink)
+    with target.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if identity(before) != identity(opened):
+            deny()
+        payload = stream.read(64 * 1024 + 1)
+        after = os.fstat(stream.fileno())
+    named = target.lstat()
+    if (not 0 < len(payload) <= 64 * 1024 or len(payload) != opened.st_size or
+            identity(opened) != identity(after) or identity(after) != identity(named) or
+            before.st_ctime_ns != named.st_ctime_ns or opened.st_ctime_ns != after.st_ctime_ns or
+            not stat.S_ISREG(named.st_mode) or named.st_nlink != 1 or
+            target.is_symlink() or getattr(named, "st_file_attributes", 0) & 0x400):
+        deny()
+    return payload
+
+
+def training_worker_directory(root, environment):
+    package = environment.get("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT")
+    if package is None:
+        return root / "out/ai-system-builder-win32-x64/resources/worker"
+    acquisition = environment.get("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION", "")
+    expected_hash = environment.get("VISUAL_COMPOSER_TRAINING_INPUT_SHA256", "")
+    if (not isinstance(package, str) or not isinstance(acquisition, str) or
+            not isinstance(expected_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", expected_hash) or
+            not re.fullmatch(r"\.local-codex/training-inputs/tiny-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/input\.json", acquisition)):
+        deny()
+    target = Path(package)
+    if not target.is_absolute() or not target.is_relative_to(root):
+        deny()
+    if not re.fullmatch(r"\.local-codex/q/[a-f0-9]{8}/o/ai-system-builder-win32-x64", target.relative_to(root).as_posix()):
+        deny()
+    worker = target / "resources/worker"
+    try:
+        if (worker.resolve() != worker or
+                _source_identity_bytes(root, worker / "main.py") !=
+                _source_identity_bytes(root, root / "modules/adapters/runtime/python/worker/main.py")):
+            deny()
+    except OSError:
+        deny()
+    return worker
+
+
 def regular_under(root, target, maximum):
     if not root.is_absolute() or root.resolve() != root or not target.is_relative_to(root):
         deny()
@@ -118,7 +166,7 @@ def main():
             ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "PIP_NO_INDEX")):
         deny()
     root = Path(__file__).resolve().parents[4]
-    worker = root / "out/ai-system-builder-win32-x64/resources/worker"
+    worker = training_worker_directory(root, os.environ)
     if Path.cwd() != worker or worker.resolve() != worker:
         deny()
     run = os.getenv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID", "")
@@ -131,6 +179,8 @@ def main():
             fixture.get("runId") != run or fixture.get("sourceRevision") != source):
         deny()
     tiny = fixture["schemaVersion"] == "training-host-fixture-v2"
+    if os.getenv("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT") is not None and not tiny:
+        deny()
     if (set(fixture) != {"schemaVersion", "runId", "sourceRevision", "workspaceId", "baseModelRecordId", "datasetArtifactIds", "outputName", "displayName"} | ({"inputProfile"} if tiny else set()) or
             tiny and fixture.get("inputProfile") != "generated-tiny-qwen2-v1" or
             fixture.get("outputName") != OUTPUT_NAME or fixture.get("displayName") != "Training host support adapter"):

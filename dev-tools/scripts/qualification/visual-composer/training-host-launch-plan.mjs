@@ -8,6 +8,7 @@ const runtimeKeys = new Set([
   "VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION", "VISUAL_COMPOSER_TRAINING_INPUT_SHA256", "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE",
   "PIP_NO_INDEX", "PIP_REQUIRE_HASHES", "PIP_DISABLE_PIP_VERSION_CHECK", "PIP_CONFIG_FILE", "CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES",
   "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+  "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT",
 ]);
 const secrets = new Set(["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACEHUB_API_TOKEN", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]);
 export function trainingAcquisition(input) {
@@ -28,8 +29,23 @@ function root(value) {
   if (typeof value !== "string" || !path.isAbsolute(value) || /[\0\r\n]/.test(value) || path.resolve(value) !== value) deny();
   return value;
 }
-function runtimeEnvironment(environment, repoRoot, acquisition, manifestHash) {
+function workerLaunch(repoRoot, identity, packagedRoot) {
+  if (packagedRoot === undefined) return { directory: path.join(repoRoot, "out/ai-system-builder-win32-x64/resources/worker"), args: TRAINING_WORKER_ARGS };
+  if (identity.profile !== "generated-tiny-qwen2-v1") deny();
+  root(packagedRoot);
+  const relativePackage = path.relative(repoRoot, packagedRoot).split(path.sep).join("/");
+  if (!/^\.local-codex\/q\/[a-f0-9]{8}\/o\/ai-system-builder-win32-x64$/.test(relativePackage)) deny();
+  const directory = path.join(packagedRoot, "resources/worker");
+  const wrapper = path.join(repoRoot, "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py");
+  const script = path.relative(directory, wrapper).replaceAll("\\", "/");
+  // The production host splits this setting on spaces. Common repository
+  // prefixes cancel; never quote a pathname that that parser cannot decode.
+  if (!script || path.isAbsolute(script) || /[\s"'\x00-\x1f:]/u.test(script) || path.resolve(directory, script) !== wrapper) deny();
+  return { directory, args: `-I -B ${script}`, packagedRoot };
+}
+function runtimeEnvironment(environment, repoRoot, acquisition, manifestHash, packagedRoot) {
   const identity = trainingInputIdentity(acquisition, manifestHash);
+  const worker = workerLaunch(repoRoot, identity, packagedRoot);
   const result = {};
   for (const [key, value] of Object.entries(environment)) {
     if (typeof value === "string" && !runtimeKeys.has(key.toUpperCase()) && !secrets.has(key.toUpperCase())) result[key] = value;
@@ -38,10 +54,11 @@ function runtimeEnvironment(environment, repoRoot, acquisition, manifestHash) {
     VISUAL_COMPOSER_TRAINING_INPUT_SHA256: identity.manifestHash,
     CUDA_VISIBLE_DEVICES: "0", HIP_VISIBLE_DEVICES: "",
   });
+  if (worker.packagedRoot !== undefined) result.VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT = worker.packagedRoot;
   return Object.assign(result, {
     PYTHON_RUNTIME_COMMAND: path.join(repoRoot, TRAINING_PYTHON_RELATIVE),
-    PYTHON_RUNTIME_ARGS: TRAINING_WORKER_ARGS,
-    PYTHON_RUNTIME_WORKER_DIR: path.join(repoRoot, "out/ai-system-builder-win32-x64/resources/worker"),
+    PYTHON_RUNTIME_ARGS: worker.args,
+    PYTHON_RUNTIME_WORKER_DIR: worker.directory,
     PYTHON_RUNTIME_QUALIFICATION_SCENARIO: "training-model-host",
     VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION: trainingAcquisition(acquisition),
     HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1", PIP_REQUIRE_HASHES: "1",
@@ -50,14 +67,14 @@ function runtimeEnvironment(environment, repoRoot, acquisition, manifestHash) {
   });
 }
 /** Trusted qualification composition only. Input admission and dependency probes run separately. */
-export function createTrainingHostLaunchPlan({ acquisition, manifestHash, ...options }) {
+export function createTrainingHostLaunchPlan({ acquisition, manifestHash, packagedRoot, ...options }) {
   trainingInputIdentity(acquisition, manifestHash);
   // Loading pure case bindings in Playwright's CommonJS collector must not load
   // the ESM lifecycle's import.meta entry point. Only trusted setup needs it.
   return import("./visual-composer-host-lifecycle.mjs").then(({ createVisualComposerHostLaunchPlan }) => {
     const plan = createVisualComposerHostLaunchPlan(options), repoRoot = root(plan.repoRoot);
-    plan.desktop.env = runtimeEnvironment(plan.desktop.env, repoRoot, acquisition, manifestHash);
-    plan.desktop.seed.env = runtimeEnvironment(plan.desktop.seed.env, repoRoot, acquisition, manifestHash);
+    plan.desktop.env = runtimeEnvironment(plan.desktop.env, repoRoot, acquisition, manifestHash, packagedRoot);
+    plan.desktop.seed.env = runtimeEnvironment(plan.desktop.seed.env, repoRoot, acquisition, manifestHash, packagedRoot);
     return plan;
   });
 }
@@ -67,7 +84,8 @@ export function createTrainingCaseEnvironment(environment, repoRoot, dataRoot, a
   if (!relative || path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`) || path.basename(dataRoot) !== "training" || relative.split(path.sep).length > 5) deny();
   const cache = path.join(dataRoot, "controlled-model-cache"), temp = path.join(dataRoot, "training-temp");
   const roots = new Set(["HF_HUB_CACHE", "HF_HOME", "HF_DATASETS_CACHE", "TRANSFORMERS_CACHE", "TORCH_HOME", "TORCHINDUCTOR_CACHE_DIR", "TRITON_CACHE_DIR", "XDG_CACHE_HOME", "TEMP", "TMP"]);
-  const base = runtimeEnvironment(environment, repoRoot, acquisition, manifestHash);
+  const packageRoot = trainingInputIdentity(acquisition, manifestHash).profile === "generated-tiny-qwen2-v1" ? environment.VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT : undefined;
+  const base = runtimeEnvironment(environment, repoRoot, acquisition, manifestHash, packageRoot);
   for (const key of Object.keys(base)) if (roots.has(key.toUpperCase())) delete base[key];
   return Object.assign(base, {
     VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot, HF_HUB_CACHE: cache, HF_HOME: path.join(cache, "hf-home"),

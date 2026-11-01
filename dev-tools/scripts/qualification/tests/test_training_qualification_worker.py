@@ -4,6 +4,9 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+import tempfile
+import os
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("training_worker", Path(__file__).parents[1] / "visual-composer/training-qualification-worker.py")
 worker = importlib.util.module_from_spec(spec)
@@ -93,6 +96,55 @@ class TrainingQualificationWorkerTests(unittest.TestCase):
         self.request.payload["baseModel"].update(modelId=worker.TINY_MODEL_ID, provider="unknown")
         with self.assertRaises(ValueError): self.dispatch()(self.request)
         self.assertEqual(self.calls, [])
+
+    def test_fresh_worker_requires_declared_tiny_context_and_exact_original_main_bytes(self):
+        with tempfile.TemporaryDirectory(prefix="training source with spaces ") as folder:
+            root = Path(folder).resolve()
+            package = root / ".local-codex/q/abc123ef/o/ai-system-builder-win32-x64"
+            target = package / "resources/worker/main.py"
+            source = root / "modules/adapters/runtime/python/worker/main.py"
+            for path in (target, source):
+                path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(b"inert source identity only\n")
+            env = {"VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT": str(package),
+                   "VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION": ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json",
+                   "VISUAL_COMPOSER_TRAINING_INPUT_SHA256": "a" * 64}
+            self.assertEqual(worker.training_worker_directory(root, env), target.parent)
+            target.write_bytes(b"changed source must not import\n")
+            with self.assertRaises(ValueError): worker.training_worker_directory(root, env)
+
+    def test_fresh_worker_rejects_foreign_paths_profiles_and_missing_hash_before_file_access(self):
+        root = Path(tempfile.gettempdir()).resolve() / "inert-nonexistent-training-source"
+        package = root / ".local-codex/q/abc123ef/o/ai-system-builder-win32-x64"
+        env = {"VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT": str(package),
+               "VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION": ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json",
+               "VISUAL_COMPOSER_TRAINING_INPUT_SHA256": "a" * 64}
+        for key, value in (("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT", str(root / "out/ai-system-builder-win32-x64")),
+                           ("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT", str(package) + "\n"),
+                           ("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION", ".local-codex/model-qualification/qwen-01234567-89ab-cdef-0123-456789abcdef/acquisition.json"),
+                           ("VISUAL_COMPOSER_TRAINING_INPUT_SHA256", ""),
+                           ("VISUAL_COMPOSER_TRAINING_INPUT_SHA256", None),
+                           ("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION", {}),
+                           ("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT", [])):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                worker.training_worker_directory(root, {**env, key: value})
+
+    def test_legacy_worker_location_needs_no_fresh_package_or_extra_identity(self):
+        root = Path(tempfile.gettempdir()).resolve() / "inert legacy source with spaces"
+        self.assertEqual(worker.training_worker_directory(root, {}), root / "out/ai-system-builder-win32-x64/resources/worker")
+
+    def test_source_identity_keeps_stable_per_api_times_and_rejects_read_time_changes(self):
+        with tempfile.TemporaryDirectory(prefix="training source identity ") as folder:
+            root=Path(folder).resolve();file=root/"main.py";file.write_bytes(b"inert source identity\n")
+            stamp=file.lstat().st_ctime_ns;original=os.fstat
+            def observed(fd,offset):
+                info=original(fd)
+                values={key:getattr(info,key) for key in ("st_dev","st_ino","st_size","st_mtime_ns","st_nlink","st_mode")}
+                return SimpleNamespace(**values,st_ctime_ns=stamp+offset,st_file_attributes=getattr(info,"st_file_attributes",0))
+            with patch.object(worker.os,"fstat",side_effect=lambda fd:observed(fd,100)):
+                self.assertEqual(worker._source_identity_bytes(root,file),b"inert source identity\n")
+            offsets=iter((100,200))
+            with patch.object(worker.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(ValueError):
+                worker._source_identity_bytes(root,file)
 
 
 if __name__ == "__main__": unittest.main()

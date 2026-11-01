@@ -434,3 +434,32 @@ prove lossless history and adequate next-work headroom. Genuine normal admission
 current checks, separate review and owned commit follow. No source/parent approval,
 release, model/native resource policy or destructive cleanup authority changes.
 The long-lived review server must load the new reader before physical migration.
+
+### Private training qualification composition
+
+The existing native executor adds literal private training roles alongside its
+unchanged generic dataset/OCR forms and default selftests. Private host witnesses
+bind installed Node, the fixed managed Python/base context, exact source and
+consumer files, generated input and fresh package identities. They are cooperative
+trusted-source attestations, not authenticated identities or public JSON execution
+capabilities. Commands, working directories, environment, deadlines and the
+existing 2 GiB process/4 GiB Job grade are fixed by the issued role. Atomic Job and
+handle assignment, guardian, exit/drain/zero-count and retirement remain shared.
+
+Source-only descendant packaging reuses installed dependencies through ancestry.
+A fresh empty regular candidate `node_modules` prevents Vite's temporary config
+cache from selecting the original dependency directory. Copied configs and their
+relative resource helpers, an explicit offline ZIP and fresh output/temp roots
+are required. Input/readiness use owned phase directories; the readiness adapter
+reuses production dependency ports with a read-only spawn adapter. UI keeps its
+existing repository resolution while actual runtime work uses the fresh package.
+
+Only explicit generated-tiny qualification context selects the fresh worker root.
+The fixed original wrapper identity is represented by a verified relative argument
+so repository spaces work with the existing host parser. Node validates the exact
+root/argument, and Python independently validates profile, manifest-hash shape and
+bounded stable worker-main/source equality before imports. Default model paths,
+the legacy argument constant and real single-training dispatch remain unchanged.
+Bounded reference hashes do not replace native filesystem custody or supplier
+ownership. Physical input/readiness/package/UI outcomes and complete owned cleanup
+need their own reviewed execution evidence; no source pass supplies them.

@@ -516,6 +516,151 @@ class PortableNativePolicyTests(unittest.TestCase):
             self.assertEqual({p.name for p in helpers.iterdir()},set(job._CONSUMER_FILES))
             self.assertTrue(all(not list((run/phase).iterdir()) for phase in ("ui-thin","ui-desktop")))
 
+    @contextlib.contextmanager
+    def training_policy_fixture(self):
+        """Inert reference bytes only; no interpreter, model or command runs."""
+        with tempfile.TemporaryDirectory(prefix="training policy with spaces ") as directory:
+            root=Path(directory).resolve();run=root/".local-codex/native-training-host-v1/runs"/("a"*32)
+            short=root/".local-codex/q"/("a"*8);base=root/"installed/Python312/python.exe"
+            node=root/"tools/node.exe";prefix=root/"artifacts/tmp/lancedb-python312-ai-runtime"
+            def put(file,content):
+                file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(content);return file
+            put(base,b"inert interpreter identity; never executed");put(node,b"inert Node identity; never executed")
+            put(prefix/"Scripts/python.exe",b"inert redirector identity")
+            put(prefix/"pyvenv.cfg",f"home = {base.parent}\ninclude-system-site-packages = true\nversion = 3.12.8\n".encode())
+            runtime=[prefix/"Scripts/python.exe",prefix/"pyvenv.cfg",base,put(base.parent/"python312.dll",b"inert DLL identity")]
+            for name,version in job._TRAINING_PACKAGES:
+                runtime.append(put(base.parent/"Lib/site-packages"/f"{name}-{version}.dist-info/METADATA",f"Name: {name}\nVersion: {version}\n".encode()))
+            helpers=root/".local-codex/native-training-host-operator/v1"
+            files={name:put(helpers/name,b"inert reviewed consumer identity\n") for name in job._CONSUMER_FILES}
+            files.update({name:put(root/name,b"inert reviewed source identity\n") for name in job._TRAINING_SOURCES})
+            for phase in job._TRAINING_DEADLINES:(run/phase).mkdir(parents=True)
+            for folder in (short/"t",short/"h/AppData/Local",short/"h/AppData/Roaming",short/"c/node_modules"):
+                folder.mkdir(parents=True,exist_ok=True)
+            package=short/"o/ai-system-builder-win32-x64"
+            app=put(package/"ai-system-builder.exe",b"inert packaged application identity")
+            main=put(package/"resources/worker/main.py",files[job._TRAINING_SOURCES[5]].read_bytes())
+            (root/".local-codex/training-inputs").mkdir(parents=True)
+            manifest=root/".local-codex/training-inputs/tiny-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/input.json"
+            kwargs={"node_executable":node,"node_sha256":job._digest(node),"run":run,
+                "reviewed_file_hashes":{name:job._digest(file) for name,file in files.items()},
+                "runtime_file_hashes":{str(file):job._digest(file) for file in runtime},"review_digest":"b"*64}
+            package_hashes={"application_sha256":job._digest(app),"worker_main_sha256":job._digest(main)}
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)),patch.object(job.sys,"executable",str(base)),patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"WINDIR":str(root/"Windows"),"HF_TOKEN":"synthetic-private-never-inherited","OPENAI_API_KEY":"synthetic-private-never-inherited"}):
+                yield root,kwargs,manifest,package_hashes
+
+    def test_training_roles_fix_commands_environment_deadlines_and_existing_budget(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];base=Path(job.sys._base_executable)
+            created=job._reviewed_training_intent("training-input-create",**kwargs,folder=run/"training-input-create",input_manifest_sha256=None)
+            self.assertEqual(created.argv,(str(base),"-I","-B",str(root/job._TRAINING_SOURCES[0]),"--create-tiny-input"))
+            manifest.parent.mkdir();manifest.write_bytes(b'{"inert_manifest_identity_only":true}\n');manifest_hash=job._digest(manifest)
+            issued=[created]
+            for phase,seconds in (("training-readiness",300),("training-package",420),("training-ui",690)):
+                extra={"package_hashes":package_hashes} if phase=="training-ui" else {}
+                intent=job._reviewed_training_intent(phase,**kwargs,folder=run/phase,input_manifest_sha256=manifest_hash,**extra)
+                issued.append(intent);self.assertEqual(intent.seconds,seconds)
+                self.assertEqual(intent.cwd,run/phase if phase=="training-readiness" else root/".local-codex/q/aaaaaaaa/c" if phase=="training-package" else root)
+                job._validate_intent(intent,run/phase)
+                self.assertEqual(intent.environment["PYTHON_RUNTIME_QUALIFICATION_SCENARIO"],"training-model-host")
+                self.assertEqual(intent.environment["VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION"],manifest.relative_to(root).as_posix())
+                self.assertEqual(intent.environment["VISUAL_COMPOSER_TRAINING_INPUT_SHA256"],manifest_hash)
+                self.assertNotIn("HF_TOKEN",intent.environment);self.assertNotIn("OPENAI_API_KEY",intent.environment)
+                self.assertEqual(intent.environment["HOME"],str(root/".local-codex/q/aaaaaaaa/h"))
+                self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+                with self.assertRaises(TypeError):intent.environment["NODE_OPTIONS"]="--require untrusted.js"
+                self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+                if phase=="training-readiness":self.assertEqual(intent.argv[-1],"--inspect-prerequisites")
+                if phase=="training-package":self.assertEqual(intent.argv,(str(kwargs["node_executable"]),str(root/".local-codex/native-training-host-operator/v1/offline-package.mjs")))
+                if phase=="training-ui":
+                    self.assertEqual(intent.argv[-3],"--project=packaged-desktop")
+                    self.assertEqual(intent.argv[-2:],("--grep","packaged desktop trains one local adapter, reviews privately, saves and reopens it$"))
+            self.assertEqual(created.seconds,120)
+            self.assertEqual(created.cwd,run/"training-input-create")
+            budget=job._training_budget_intent(run=run,folder=run/"training-budget",review_digest="b"*64)
+            self.assertEqual(budget.argv[-2:],("--fixture","training-budget"));self.assertEqual(budget.seconds,8)
+            self.assertEqual(job._memory_limits(budget),(2*1024**3,4*1024**3))
+            self.assertNotIn("training-budget",job._FIXTURES)
+            with self.assertRaises(job.NativeFailure):job._fixture_intent("training-budget",run/"training-budget")
+            unissued=job._Intent(budget.phase,budget.argv,budget.cwd,budget.environment,budget.seconds,budget.folder,budget.source_hashes,budget.consumer_hashes)
+            with self.assertRaises(job.NativeFailure):job._memory_limits(unissued)
+            native.assert_not_called()
+
+    def test_training_unknown_roles_and_caller_execution_or_quota_selectors_are_denied(self):
+        for phase in (None,True,[],{},"shell","ui","training-ui --grep other","training-budget"):
+            with self.subTest(phase=phase),patch.object(job,"_training_file",side_effect=AssertionError("file read after unknown role")),self.assertRaises(job.NativeFailure):
+                job._reviewed_training_intent(phase,node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},runtime_file_hashes={},input_manifest_sha256=None,review_digest="")
+        with self.training_policy_fixture() as (_root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            for key,value in (("command","other.exe"),("cwd",Path("foreign")),("seconds",999999),("environment",{"NODE_OPTIONS":"--require other.js"}),("job_bytes",99),("base_executable",Path("other.exe"))):
+                with self.subTest(key=key),self.assertRaises(TypeError):
+                    job._reviewed_training_intent("training-ui",**kwargs,folder=kwargs["run"]/"training-ui",input_manifest_sha256=job._digest(manifest),package_hashes=package_hashes,**{key:value})
+            native.assert_not_called()
+
+    def test_training_witness_substitutions_and_reused_input_slot_never_reach_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n");h=job._digest(manifest)
+            for override in ({"node_sha256":"0"*64},{"runtime_file_hashes":{}},{"reviewed_file_hashes":{}},
+                             {"folder":run/"training-readiness"},{"input_manifest_sha256":"0"*64},
+                             {"package_hashes":{**package_hashes,"worker_main_sha256":"0"*64}},
+                             {"package_hashes":{**package_hashes,"application_sha256":"0"*64}},
+                             {"package_hashes":{**package_hashes,"extra_selector":"unknown"}}):
+                values={**kwargs,"folder":run/"training-ui","input_manifest_sha256":h,"package_hashes":package_hashes,**override}
+                with self.subTest(override=list(override)),self.assertRaises(job.NativeFailure):job._reviewed_training_intent("training-ui",**values)
+            with self.assertRaisesRegex(job.NativeFailure,"training-input-slot-already-exists"):
+                job._reviewed_training_intent("training-input-create",**kwargs,folder=run/"training-input-create",input_manifest_sha256=None)
+            config=root/"artifacts/tmp/lancedb-python312-ai-runtime/pyvenv.cfg";original=config.read_bytes()
+            for replacement in (original.replace(b"version = 3.12.8",b"version = 3.14.0"),original.replace(b"include-system-site-packages = true",b"include-system-site-packages = false"),original+b"home = duplicate\n"):
+                config.write_bytes(replacement);hashes={**kwargs["runtime_file_hashes"],str(config):job._digest(config)}
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_training_intent("training-ui",**{**kwargs,"runtime_file_hashes":hashes},folder=run/"training-ui",input_manifest_sha256=h,package_hashes=package_hashes)
+            config.write_bytes(original)
+            marker=object();job._PENDING[id(marker)]=marker
+            with patch.object(job,"_training_file",side_effect=AssertionError("identity access after pending owner")),self.assertRaises(job.NativeFailure):
+                job._reviewed_training_intent("training-ui",**kwargs,folder=run/"training-ui",input_manifest_sha256=h,package_hashes=package_hashes)
+            job._PENDING.pop(id(marker));native.assert_not_called()
+
+    def test_training_issued_sources_and_package_are_bounded_and_checked_again_before_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            intent=job._reviewed_training_intent("training-ui",**kwargs,folder=run/"training-ui",input_manifest_sha256=job._digest(manifest),package_hashes=package_hashes)
+            for file in (manifest,kwargs["node_executable"],root/".local-codex/native-training-host-operator/v1/global-setup.mjs",root/".local-codex/q/aaaaaaaa/o/ai-system-builder-win32-x64/resources/worker/main.py"):
+                original=file.read_bytes();file.write_bytes(b"changed source witness\n")
+                with self.assertRaises(job.NativeFailure):job._validate_intent(intent,run/"training-ui")
+                file.write_bytes(original);job._validate_intent(intent,run/"training-ui")
+            helper=root/".local-codex/native-training-host-operator/v1/global-setup.mjs"
+            helper.write_bytes(b"x"*(512*1024+1))
+            with self.assertRaisesRegex(job.NativeFailure,"training-file-kind-or-bound"):job._validate_intent(intent,run/"training-ui")
+            native.assert_not_called()
+
+    def test_training_reference_times_use_each_windows_api_and_still_detect_change(self):
+        with self.training_policy_fixture() as (_root,kwargs,_manifest,_package),patch.object(job,"_Win") as native:
+            file=kwargs["node_executable"];stamp=file.lstat().st_ctime_ns;original=os.fstat
+            def observed(fd,offset):
+                info=original(fd)
+                values={key:getattr(info,key) for key in ("st_dev","st_ino","st_size","st_mtime_ns","st_nlink","st_mode")}
+                return SimpleNamespace(**values,st_ctime_ns=stamp+offset,st_file_attributes=getattr(info,"st_file_attributes",0))
+            # Windows named stat can expose a different ctime meaning from
+            # descriptor stat. Both observations must remain stable themselves.
+            with patch.object(job.os,"fstat",side_effect=lambda fd:observed(fd,100)):
+                self.assertEqual(job._training_file(file,kwargs["node_sha256"]),file.stat().st_size)
+            offsets=iter((100,200))
+            with patch.object(job.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(job.NativeFailure):
+                job._training_file(file,kwargs["node_sha256"])
+            native.assert_not_called()
+
+    def test_training_package_cache_cannot_shadow_dependencies_before_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,_package),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            intent=job._reviewed_training_intent("training-package",**kwargs,folder=run/"training-package",input_manifest_sha256=job._digest(manifest))
+            job._validate_intent(intent,run/"training-package")
+            cache=root/".local-codex/q/aaaaaaaa/c/node_modules";foreign=cache/"unreviewed.js";foreign.write_bytes(b"never imported\n")
+            with self.assertRaisesRegex(job.NativeFailure,"training-candidate-cache-not-empty"):
+                job._reviewed_training_intent("training-package",**kwargs,folder=run/"training-package",input_manifest_sha256=job._digest(manifest))
+            with self.assertRaisesRegex(job.NativeFailure,"training-candidate-cache-not-empty"):
+                job._validate_intent(intent,run/"training-package")
+            native.assert_not_called()
+
     def test_single_host_successor_requires_the_previous_owner_to_retire(self):
         native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
         with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native) as create:
