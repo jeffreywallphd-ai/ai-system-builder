@@ -13449,6 +13449,47 @@
           "The agent will keep earlier test files unchanged."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ed3f926613bdf170d348d289a036b3eaed50f4eb5a7b484fbdbb6b3c24bb412b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The new accounting-file code passed 144 focused tests and five related check groups.",
+          "On Windows, it wrote five journal records and read them back eight times.",
+          "The successful write test closed its tracked file handles and pending file operations.",
+          "Separate tests confirmed deadline shutdown and safe refusal of an existing name.",
+          "The refusal test kept uncertain file records separate from confirmed process exit.",
+          "An independent review checked the source, runtime, actual exit and results.",
+          "These checks cover the accounting-file component only."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5355fb18a919d6860a7dfb84b025bd5cc776366f5504800c0dc213c280d05f03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must test that competing file changes, resizing, extra data streams, new child files and deletion are refused.",
+          "Changes to file permissions and ownership still need denial tests.",
+          "Earlier open file handles still need separate protection checks.",
+          "Stalled reads, cancellation and background-worker crash recovery still need tests.",
+          "The agent must make all runs and processes share the same 12 GiB disk limit.",
+          "That accounting must survive a restart.",
+          "Safe restart and model-worker recovery still need tests.",
+          "Actual low-memory model runs must measure memory, disk use, output delivery and cleanup.",
+          "Unknown temporary files still count against the full 12 GiB limit.",
+          "This evidence does not enable low-memory mode or free disk capacity.",
+          "Further Windows tests need their own reviewed plan.",
+          "Model accuracy and OCR tests stay closed.",
+          "Full-system tests will run after feature work.",
+          "The audit checked the saved summary and observed tool results; it did not compare separate raw output captures."
+        ]
+      }
     }
   ]
 }

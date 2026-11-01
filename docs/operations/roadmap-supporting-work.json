@@ -8489,6 +8489,24 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Only two fresh-file Windows cases are qualified. Hung IO/cancellation races, guardian/model-worker crash recovery, file protection, shared durable disk accounting, retained restart and actual offload resource/delivery checks remain pending. Unknown usage reserves all12GiB; cleanup grants no capacity or production lease. Accuracy/OCR stay closed. Full-system tests remain deferred. No extra run or old-file cleanup is authorized."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "seal-fixed-journal-with-compatible-native-fixtures",
+      "work_criteria": [
+        "concrete-fixed-journal-mutation-fence",
+        "bounded-failure-custody-and-focused-regression",
+        "exact-reviewed-source-checkpoint-with-pending-production"
+      ],
+      "receipt_digest": "a395499f228909a871c0ee7deb1a3b8ea6c84350ae88044d942eaf27a8a4c21e",
+      "review_digest": "726f77848271e0d8c97725e40d06d4abcccd690137af017fb353d89758bd609d",
+      "scope": "Commit 69d9ae7b2 passed 144 focused tests, five related groups and independent review. One Windows run passed deadline control, held-writer journal IO and a fresh-name collision. The writer stored five frames and completed eight readbacks; its API handles, guards and IO records retired. Collision uncertainty stayed separate from observed child exit. Source, runtime, actual exit and the limited result audit are bound. This is component evidence.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Direct competing-mutation/ACL/owner denial, unknown preopened rights, hung IO/cancellation, guardian/model-worker crash recovery, shared durable 12 GiB accounting, retained restart and actual offload resource/delivery/cleanup remain pending. Unknown usage reserves all 12 GiB. This grants no new run, lease, disk credit or production mode. Accuracy/OCR stay closed; full-system tests remain deferred. Raw stdout/stderr lack independent capture; audited summary and observed tool facts are separate."
+      ]
     }
   ]
 }
