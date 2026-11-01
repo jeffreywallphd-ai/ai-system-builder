@@ -900,6 +900,11 @@ collects the definition without running a model or opening the app. A collected
 case is not a successful host test. Outputs and caches use a fresh training slot;
 existing slots and original model files are retained.
 
+The training profile keeps `.mjs` helpers in their native Node module format.
+A small regression uses a real Playwright setup and worker with synthetic inputs.
+It opens no app and loads no model. It catches import failures that `--list`
+alone cannot detect.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

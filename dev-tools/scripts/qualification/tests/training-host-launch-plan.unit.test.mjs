@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tsImport } from "tsx/esm/api";
 import trainingHostSetup from "../visual-composer/training-host-global-setup.mjs";
@@ -149,4 +150,62 @@ test("ambient package hints do not change ordinary training and declared tiny co
   assert(!Object.keys(ordinary.desktop.env).some(key => key.toUpperCase() === "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT"));
   const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
   assert.throws(() => createTrainingCaseEnvironment({ ...dirty, VISUAL_COMPOSER_TRAINING_INPUT_SHA256: manifestHash }, repoRoot, dataRoot, tinyAcquisition));
+});
+
+test("the real training profile loads its helper in a worker after ESM setup preloading", async t => {
+  const actualRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const imported = await tsImport(pathToFileURL(path.join(actualRoot, "dev-tools/config/playwright.training-host.config.ts")).href, import.meta.url);
+  const config = imported.default?.default ?? imported.default ?? imported;
+  assert.equal(config.globalSetup, path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs"));
+  const parent = path.join(actualRoot, ".local-codex/t");
+  mkdirSync(parent, { recursive: true });
+  assert.equal(realpathSync(parent), parent);
+  const fixture = mkdtempSync(path.join(parent, "training-loader-"));
+  t.after(() => {
+    assert.equal(path.resolve(fixture), fixture);
+    assert.equal(realpathSync(fixture), fixture);
+    assert.equal(path.dirname(fixture), parent);
+    assert(path.basename(fixture).startsWith("training-loader-"));
+    assert.equal(path.relative(actualRoot, fixture).startsWith(`.local-codex${path.sep}t${path.sep}`), true);
+    rmSync(fixture, { recursive: true, force: false });
+  });
+  for (const name of ["tmp", "home"]) mkdirSync(path.join(fixture, name));
+  const helper = path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs");
+  const pureSetup = `export default async function setup() {
+    const training = await import(${JSON.stringify(pathToFileURL(helper).href)});
+    await training.createTrainingHostLaunchPlan(${JSON.stringify({ repoRoot: actualRoot, runId: "synthetic-training-loader-run-0123456789", environment: {}, acquisition: tinyAcquisition, manifestHash })});
+    await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs")).href)});
+    await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs")).href)});
+  }\n`;
+  // This setup only constructs a plan and imports modules. It never inspects
+  // dependencies, seeds an app, sets READY, starts a model or opens a window.
+  writeFileSync(path.join(fixture, "setup.mjs"), pureSetup, { flag: "wx" });
+  writeFileSync(path.join(fixture, "pure-import.spec.ts"), `
+    import { test, expect } from "@playwright/test";
+    import { trainingAcquisition } from ${JSON.stringify(helper.replaceAll("\\", "/"))};
+    test("training helper remains executable after setup preload", () => {
+      expect(trainingAcquisition(${JSON.stringify(tinyAcquisition)})).toBe(${JSON.stringify(tinyAcquisition)});
+    });\n`, { flag: "wx" });
+  const report = path.join(fixture, "result.json"), configPath = path.join(fixture, "playwright.config.mjs");
+  writeFileSync(configPath, `export default ${JSON.stringify({
+    build: config.build, testDir: fixture, testMatch: "pure-import.spec.ts", globalSetup: path.join(fixture, "setup.mjs"),
+    outputDir: path.join(fixture, "output"), workers: 1, retries: 0, timeout: 10_000,
+    use: { screenshot: "off", trace: "off", video: "off" }, reporter: [["json", { outputFile: report }]],
+  })};\n`, { flag: "wx" });
+  const env = Object.fromEntries(["SystemRoot", "WINDIR"].filter(key => typeof process.env[key] === "string").map(key => [key, process.env[key]]));
+  Object.assign(env, {
+    PATH: [path.dirname(process.execPath), ...(process.env.SystemRoot ? [path.join(process.env.SystemRoot, "System32")] : [])].join(path.delimiter),
+    TEMP: path.join(fixture, "tmp"), TMP: path.join(fixture, "tmp"), HOME: path.join(fixture, "home"), USERPROFILE: path.join(fixture, "home"),
+    NODE_OPTIONS: "", PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1", ELECTRON_SKIP_BINARY_DOWNLOAD: "1", HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", PIP_NO_INDEX: "1",
+  });
+  const result = spawnSync(process.execPath, [path.join(actualRoot, "node_modules/@playwright/test/cli.js"), "test", "--config", configPath], {
+    cwd: actualRoot, env, windowsHide: true, encoding: "utf8", timeout: 30_000, maxBuffer: 8192,
+  });
+  const diagnostic = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.replaceAll(actualRoot, "<repo>");
+  assert.equal(result.error, undefined, diagnostic);
+  assert.equal(result.status, 0, diagnostic);
+  assert(statSync(report).size <= 128 * 1024);
+  const observed = JSON.parse(readFileSync(report, "utf8"));
+  assert.deepEqual(Object.fromEntries(["expected", "skipped", "unexpected", "flaky"].map(key => [key, observed.stats[key]])), { expected: 1, skipped: 0, unexpected: 0, flaky: 0 });
+  assert.deepEqual(observed.errors, []);
 });

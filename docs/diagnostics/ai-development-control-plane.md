@@ -1672,3 +1672,35 @@ scoped loader API. It also runs alone without an ambient command-line loader.
 The task-progress regression keeps the real cancellation callback in its
 synthetic delegate. It synchronizes on published progress and settles its owned
 future before fixture cleanup. Production cancellation behavior stays intact.
+
+### Training test loading after setup
+
+The first reused-package training run passed all 12 prerequisite probes, then
+failed while the test worker collected its definition. No training UI case ran.
+The original Windows Job retired all 50 processes and closed its owned handles
+and streams without forced termination or a limit notification. The
+[training feature report](../operations/desktop-training-host-qualification.json)
+preserves that failed attempt and the complete previous report.
+
+A model-free comparison reproduced the failure only after setup imported the
+actual JavaScript training helpers. The same setup and worker passed when the
+dedicated training profile used Playwright's existing `build.external` option
+for `**/*.mjs`. Node loads those existing ESM files directly. Dependency versions,
+package type, runtime controls and the actual training assertions stay unchanged.
+
+The focused regression reads the real profile setting and runs a real
+Playwright setup and worker against the actual pure helpers. It constructs only
+a synthetic plan: no prerequisite probe, app seed, model, provider or window.
+It requires one passed test, zero skips and zero retries, then removes only its
+verified, newly created workspace-local fixture. Run it with:
+
+```sh
+node --test dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs
+```
+
+Successful collection or this pure regression does not qualify the Desktop
+training journey. A fresh separately reviewed owned-host attempt must still
+complete Train, private review, explicit Save, reopened record and cleanup.
+The failed run, its files and the earlier input/readiness/package evidence stay
+preserved. Completed model-accuracy and OCR checks stay closed; shared full-system
+testing remains deferred until feature implementation is complete.
