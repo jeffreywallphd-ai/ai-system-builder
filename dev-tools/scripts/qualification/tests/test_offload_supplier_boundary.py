@@ -1,7 +1,8 @@
 """Fake-only supplier and lease regressions; no model libraries are imported.
 
-Reuse only the existing fake loader case class. Its optional native sibling
-classes are not collected here. Actual tiny-model compatibility stays explicit.
+Reuse the fake loader class and explicit library-free limit/alias methods.
+Native and Accelerate methods stay in controlled modules and are not collected
+here. Actual tiny-model compatibility stays explicit.
 """
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,6 +13,27 @@ from modules.adapters.runtime.python.worker.tests import test_bounded_model_load
 from modules.adapters.runtime.python.worker.tasks import bounded_model_loader as loader
 from modules.adapters.runtime.python.worker.tasks import offload_recovery
 from modules.adapters.runtime.python.worker.tasks.local_model_offload import OffloadAdmissionError
+
+
+class GenerationBoundaryTests(unittest.TestCase):
+    """Explicit reuse of the five committed, library-free limit checks."""
+    fake_model = fixtures.GenerationBoundsTests.fake_model
+    test_capability_requires_the_reviewed_supplier_versions_without_importing_models = fixtures.GenerationBoundsTests.test_capability_requires_the_reviewed_supplier_versions_without_importing_models
+    test_full_prompt_and_token_boundary_is_inclusive = fixtures.GenerationBoundsTests.test_full_prompt_and_token_boundary_is_inclusive
+    test_batch_prompt_generation_and_configuration_expansion_deny = fixtures.GenerationBoundsTests.test_batch_prompt_generation_and_configuration_expansion_deny
+    test_named_last_token_logits_capability_is_required = fixtures.GenerationBoundsTests.test_named_last_token_logits_capability_is_required
+    test_unsupported_profile_combinations_deny_before_framework_import = fixtures.GenerationBoundsTests.test_unsupported_profile_combinations_deny_before_framework_import
+
+
+class SafeAliasBoundaryTests(unittest.TestCase):
+    """Select only pure cases; the native-capable class is not a base class."""
+    setUp = fixtures.SafeDiskAliasTests.setUp
+    bind = fixtures.SafeDiskAliasTests.bind
+    test_missing_tied_head_gets_a_separate_exact_canonical_safe_reference = fixtures.SafeDiskAliasTests.test_missing_tied_head_gets_a_separate_exact_canonical_safe_reference
+    test_source_path_weight_dtype_coverage_and_supplier_shape_denials = fixtures.SafeDiskAliasTests.test_source_path_weight_dtype_coverage_and_supplier_shape_denials
+    test_split_group_or_noncanonical_serialized_alias_denies = fixtures.SafeDiskAliasTests.test_split_group_or_noncanonical_serialized_alias_denies
+    test_separately_serialized_tied_head_is_not_replaced_by_an_alias = fixtures.SafeDiskAliasTests.test_separately_serialized_tied_head_is_not_replaced_by_an_alias
+    test_loaded_shape_precision_and_parameter_name_drift_deny = fixtures.SafeDiskAliasTests.test_loaded_shape_precision_and_parameter_name_drift_deny
 
 
 class SupplierBoundaryTests(fixtures.PinnedLoaderBoundaryTests):

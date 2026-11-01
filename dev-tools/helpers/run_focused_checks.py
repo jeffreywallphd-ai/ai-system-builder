@@ -22,6 +22,7 @@ CONTROLLED_PYTHON_TESTS = frozenset({
     "test_context_generation_ai_e2e.py",
     "test_model_training_task_matrix_e2e.py",
     "test_bounded_model_loader_native.py",
+    "test_bounded_model_loader.py",
 })
 
 

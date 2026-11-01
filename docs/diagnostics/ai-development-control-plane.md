@@ -1518,3 +1518,16 @@ profile test. Its controlled filename is excluded from ordinary owner selection
 and denied by exact/profile selection. An explicitly bounded offline fixture run
 is separate evidence; it cannot qualify real model accuracy, production admission,
 retained restart, shared accounting or model resources.
+
+### Keep native library checks explicit
+
+The dedicated native loader fixture and its older mixed test module are excluded
+from ordinary owner, exact and profile collection. The fake supplier suite retains
+all nineteen legacy pure generation, loader and alias/shape cases through explicit
+method selection. Its native-capable alias class is not a base class.
+
+Every registered profile must exclude controlled filenames from `test_paths`.
+Functionality outcome checks use the fake suite while both original modules remain
+in `source_paths`; source responsibility is not a grant to execute native code.
+The regression checks real command generation without executing those commands.
+A routing pass is not model, production, resource or parent-roadmap qualification.

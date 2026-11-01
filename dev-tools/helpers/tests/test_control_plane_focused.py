@@ -47,7 +47,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
     def test_bounded_owner_selection_keeps_all_controlled_python_files_excluded(self):
         names = [self.put('modules/adapters/example/' + name, 'def test_value(): pass\n') for name in (
             'test_normal.py', 'test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
-            'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py')]
+            'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py', 'test_bounded_model_loader.py')]
         foreign = self.put('modules/adapters/foreign/test_other.py', 'def test_value(): pass\n')
         with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*names, foreign], 'fixture')}):
             commands = focused.commands(self.root, [names[0]])
@@ -58,7 +58,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         import json
         from control_plane.contracts import ControlError
         for name in ('test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
-                     'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py'):
+                     'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py', 'test_bounded_model_loader.py'):
             path = self.put('modules/adapters/example/' + name, 'def test_value(): pass\n')
             self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
                 'schema_version': 'contributor-check-profiles-v1',
@@ -74,6 +74,53 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         result = focused.pytest_environment(source)
         self.assertEqual(result, {'PATH': 'fixture', 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'})
         self.assertIn('PYTEST_ADDOPTS', source)
+
+    def test_registered_profiles_exclude_every_controlled_python_test(self):
+        import json
+        root = Path(__file__).resolve().parents[3]
+        profiles = json.loads((root / 'dev-tools/config/contributor-check-profiles.json').read_bytes())['profiles']
+        violations = [(name, path) for name, profile in profiles.items() for path in profile['test_paths']
+                      if Path(path).name in focused.CONTROLLED_PYTHON_TESTS]
+        self.assertEqual(violations, [])
+
+    def test_functionality_profile_plans_fake_coverage_and_keeps_native_source_responsibility(self):
+        import json
+        root = Path(__file__).resolve().parents[3]
+        profile = json.loads((root / 'dev-tools/config/contributor-check-profiles.json').read_bytes())['profiles']['functionality-outcomes']
+        pure = 'dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py'
+        native = ['modules/adapters/runtime/python/worker/tests/test_bounded_model_loader.py',
+                  'modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py']
+        self.assertIn(pure, profile['test_paths'])
+        self.assertIn(pure, profile['source_paths'])
+        for path in native:
+            self.assertIn(path, profile['source_paths'])
+            self.assertNotIn(path, profile['test_paths'])
+        # Planning inspects source and returns commands; it does not execute them.
+        commands = focused.profile_commands(root, 'functionality-outcomes')
+        self.assertIn(focused.python_test_command(root, pure), commands)
+        self.assertTrue(all(path not in command for command in commands for path in native))
+
+    def test_fake_supplier_suite_retains_every_legacy_pure_case_without_native_collection(self):
+        import importlib.util
+        root = Path(__file__).resolve().parents[3]
+        spec = importlib.util.spec_from_file_location('fake_supplier_collection_probe',
+            root / 'dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        loader = unittest.defaultTestLoader
+        expected = set(loader.getTestCaseNames(module.fixtures.GenerationBoundsTests))
+        expected.update(loader.getTestCaseNames(module.fixtures.PinnedLoaderBoundaryTests))
+        native = {'test_pinned_supplier_exact_alias_lookup_reads_the_canonical_tensor',
+                  'test_meta_tie_sentinel_is_removed_without_touching_real_tied_storage'}
+        expected.update(set(loader.getTestCaseNames(module.fixtures.SafeDiskAliasTests)) - native)
+        def cases(suite):
+            for item in suite:
+                if isinstance(item, unittest.TestSuite): yield from cases(item)
+                else: yield item._testMethodName
+        actual = set(cases(loader.loadTestsFromModule(module)))
+        self.assertEqual(len(expected), 19)
+        self.assertTrue(expected <= actual, sorted(expected - actual))
+        self.assertTrue(actual.isdisjoint(native))
 
     def test_optimized_parent_is_refused_before_planning_or_execution(self):
         with patch.object(focused.sys, 'flags', SimpleNamespace(optimize=1)), patch.object(focused, 'commands') as commands, patch.object(focused.subprocess, 'run') as run:

@@ -893,7 +893,8 @@
         "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
         "modules/adapters/runtime/python/tests/runtime-start-shutdown-races.unit.test.ts",
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
-        "dev-tools/scripts/qualification/tests/sanitized-qualification-reporter.unit.test.mjs"
+        "dev-tools/scripts/qualification/tests/sanitized-qualification-reporter.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -936,7 +937,10 @@
         "dev-tools/scripts/qualification/tests/sanitized-qualification-reporter.unit.test.mjs",
         "dev-tools/scripts/qualification/asset-system-source-identity.mjs",
         "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs",
-        "dev-tools/scripts/qualification/tests/asset-system-source-identity.unit.test.mjs"
+        "dev-tools/scripts/qualification/tests/asset-system-source-identity.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py"
       ]
     },
     "security-runtime": {

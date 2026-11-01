@@ -1738,3 +1738,17 @@ exact and profile focused selection refuse to execute it. Source changes to the
 fixture select the ordinary lifecycle checks without importing model libraries.
 A separately reviewed fixed offline run may check its tiny CPU supplier fixture;
 it does not repeat model accuracy or qualify production resources or recovery.
+
+## Explicit native model tests
+
+Ordinary profiles must not collect either the dedicated native loader fixture or
+the older mixed loader module. Both filenames are controlled. The fake supplier
+suite retains all nineteen legacy pure cases: five generation limits, nine fake
+loader boundaries and five alias/shape denials. It selects the pure methods
+explicitly and cannot inherit the two native/Accelerate methods.
+
+The functionality-outcomes profile uses this fake suite and keeps both original
+modules as source/evidence triggers. Registry and command-planning tests enforce
+this split without running generated commands. Actual native compatibility still
+requires its separately reviewed bounded execution. Existing accepted accuracy
+results and pending production/resource qualification are unchanged.
