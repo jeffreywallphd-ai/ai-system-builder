@@ -13612,6 +13612,75 @@
           "Full-system tests will run after feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7a628f877c93f2d08b96a212dc2c15e7cb44e76136839f28c964cdb7039c3c03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The model loader no longer asks a library to create an unnecessary folder.",
+          "Existing memory checks, local temporary-file checks, safe-file checks and cleanup remain.",
+          "The change passed 33 focused tests, six related check groups and independent review.",
+          "A separate test with a tiny generated model passed repeated output and cleanup checks.",
+          "The corrected test checked the identity of the process doing the work before it loaded model libraries.",
+          "That process used about 547 MiB at its observed peak and exited successfully.",
+          "The earlier test that measured a wrapper process remains recorded as incomplete supervision."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0c3d5180118e358ac853960a3b7a3ce3c2fd28884cb678dd0981ced187aa114c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers the loader change and the small library test.",
+          "The earlier run measured a wrapper process and does not provide valid model-process memory evidence.",
+          "The agent must still finish model-file and parent-folder protection, disk accounting shared across runs, worker crash recovery and safe restart.",
+          "Real low-memory resource use, output delivery and cleanup still need qualification.",
+          "Unknown temporary-file usage still counts against the full 12 GiB limit.",
+          "Production low-memory mode remains unavailable.",
+          "This result does not allow another test run, a new temporary model slot, release of reserved space or access to old files.",
+          "Completed model accuracy and OCR tests stay closed.",
+          "Full-system tests will run after feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "33061e5b2a9492bc893292a227e80d045ff3c1ff1338de1096dfdba58da4c59e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Routine checks exclude the mixed loader test module and the dedicated native test file.",
+          "The fake-only suite retains all 19 earlier lightweight cases and five added regressions.",
+          "The configured outcome profile creates test commands with the fake suite and keeps both original files in its source list.",
+          "The planning checks did not execute those commands.",
+          "The change passed 46 focused tests, four related check groups and independent review.",
+          "No model or native compatibility test ran for this change."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "395d9e31b0919f3bb2a47a8dae83d52e63b6f600d9b3bcf1b600a94c879638c6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers test collection, lightweight regressions and command planning.",
+          "The complete outcome profile and full application journeys were not run.",
+          "Earlier native compatibility evidence stays tied to its exact tested source.",
+          "The agent must still complete model-file and parent-folder protection, shared disk accounting, worker crash recovery, safe restart and real low-memory resource checks.",
+          "This routing result does not complete a roadmap criterion or permit another test, a new temporary model slot, reserved-space release or access to old files.",
+          "Completed model accuracy and OCR tests stay closed.",
+          "The combined full-system test effort will follow feature work."
+        ]
+      }
     }
   ]
 }

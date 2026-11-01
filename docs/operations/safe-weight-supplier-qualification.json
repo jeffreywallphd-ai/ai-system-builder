@@ -1,0 +1,119 @@
+{
+  "schema_version": "safe-weight-supplier-evidence-v1",
+  "status": "reviewed-component-support",
+  "source_work": [
+    {
+      "work_id": "finish-safe-weight-supplier-boundary",
+      "commit": "806727c6e15dc796f3032ad2a03e55dd18f2c52b",
+      "source_digest": "64573678097d6235817f0d506bbbafc49ce72a996441d66d5a1212ee3b6e39d0",
+      "receipt_digest": "1a77176007481325a964e6a9f06bfbc9c67843fb0960ae0a605011192e0ef255",
+      "review_digest": "bfd1d718df108bd983bf579ac47b8add372806acfce7f7949bb13050e407f858",
+      "focused_cases": 33,
+      "check_ids": [
+        "offload-resource-lifecycle",
+        "dataset-semantic-curation",
+        "documentation",
+        "agent-support",
+        "control-plane",
+        "architecture"
+      ],
+      "source_stable": true,
+      "parent_qualification": false
+    },
+    {
+      "work_id": "isolate-native-tests-in-ordinary-profiles",
+      "commit": "da652b47c6b743b42119547ada06ce059d405993",
+      "source_digest": "8ec2bfaa3b618f158bfefdb617073dbce6043a47ef2c232221dd0a90ebd3582f",
+      "receipt_digest": "5e7daf90defe561e5215dcd0a183db3d818dbf66474b727f94cca7a9b0a0060f",
+      "review_digest": "dffee4fda959f85471768a999b359c3f9f73081dff0acf1f894e7ee1acbd7732",
+      "focused_cases": 46,
+      "check_ids": [
+        "offload-resource-lifecycle",
+        "documentation",
+        "agent-support",
+        "control-plane"
+      ],
+      "source_stable": true,
+      "parent_qualification": false
+    }
+  ],
+  "loader_change": "Omit only redundant supplier offload_folder; keep positive reservation, owner-marker staging, safe index/source/dtype validation, guarded readiness, reference ownership and cleanup. This is not zero-staging.",
+  "test_isolation": {
+    "controlled_loader_modules": [
+      "test_bounded_model_loader.py",
+      "test_bounded_model_loader_native.py"
+    ],
+    "ordinary_supplier_suite": "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+    "legacy_pure_cases_retained": 19,
+    "additional_boundary_cases": 5,
+    "collection_and_command_planning_only": true,
+    "native_source_responsibility_retained": true,
+    "complete_functionality_profile_executed": false
+  },
+  "tiny_cpu_compatibility": {
+    "source_digest": "64573678097d6235817f0d506bbbafc49ce72a996441d66d5a1212ee3b6e39d0",
+    "fixture": "Generated Qwen2, two layers, hidden size8, vocabulary32, seed13; two repeated tensor forwards. No acquired model or accuracy corpus.",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "repeated_tensor_parity_and_cleanup": true,
+    "direct_engine_identity_before_framework": true,
+    "actual_engine_and_outer_exit_code": 0,
+    "actual_tool_launch": "641467",
+    "actual_tool_completion": "ebc71f",
+    "elapsed_seconds": 11.732896399917081,
+    "observed_peak_direct_engine_rss_bytes": 573714432,
+    "sampled_rss_abort_bytes": 4294967296,
+    "sampled_limit_is_not_a_hard_os_quota": true,
+    "stdout_bytes": 240,
+    "stderr_bytes": 634,
+    "stdout_sha256": "1c454c4dc0533013ca89ce15a46a8c107272d893679cd71173b0314ba2ee4768",
+    "stderr_sha256": "4d63979f3ac194080baf22ea924b87a40e0bd0f264372382eed67aad036f23ac",
+    "effect_reference_sha256": "65ba1aaf35d828742f7f1d3a9baa76ead8cb81beb61985307800ad2a7263e311",
+    "result_reference_sha256": "66773e248158f860bf7f93d6a8ba90c15aba45986eb7e1e5712215cf3df8b1bc",
+    "result_audit_sha256": "80e5db8793a9503b2f5df6b61635f4bde0bd8d0551fedbafbebc7f669266d7ef",
+    "remaining_effect_allowance": 0,
+    "model_accuracy_or_resource_qualification": false,
+    "current_native_candidate_qualification": false
+  },
+  "preserved_history": {
+    "predecessor_failed_receipt": "9d1f470b734ce098903f71406e65b9c15a1de44d550ccd35dec3f00e3650a4c6",
+    "predecessor_failure": "Obsolete guarded-consumer assertion expected offload_folder; corrected without weakening its positive-lease or parent-retirement checks. Other five groups passed.",
+    "earlier_tiny_03": {
+      "unit_compatibility": "passed",
+      "framework_supervision": "not-qualified",
+      "observed_launcher_rss_bytes": 4300800,
+      "reason": "The Windows virtual-environment redirector launched a separate interpreter; the original Popen handle measured the wrapper.",
+      "result_reference_sha256": "b8df2975928fa6290e283da31854ac046218d88b5bd165bf1df7546281eddec3",
+      "remaining_effect_allowance": 0
+    },
+    "helper_failures_retained": true,
+    "unexecuted_proposals_and_scope_predecessors_retained": true
+  },
+  "unchanged_guards": {
+    "standard_admission_gib": {
+      "small_model": 3.0,
+      "larger_model": 3.5
+    },
+    "model_sampled_rss_abort_gib": 4.0,
+    "unknown_staging_charge_gib": 12,
+    "production_guarded_backend": "unavailable"
+  },
+  "pending": [
+    "Actual source and ancestor protection",
+    "Shared durable disk accounting across roots and processes",
+    "Owned model-worker and guardian crash/exit proof",
+    "Safe retained-file restart",
+    "Actual offload resource use, delivery and cleanup",
+    "Combined full-system campaign after feature completion"
+  ],
+  "closed_checks_not_repeated": [
+    "Accepted model output quality",
+    "OCR"
+  ],
+  "authority_limits": [
+    "Reviewed local component snapshots only; no current parent or controlled-environment qualification",
+    "No new Native/model run, offload lease, disk credit, old-data access, production enabling or parent pass"
+  ]
+}

@@ -8563,6 +8563,43 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Only fresh, model-free IPC response reads are qualified. Actual 120-second timeouts, hung kernel calls, model IO, guardian/model-worker crash lifetime, ancestor protection, shared durable 12 GiB accounting, retained restart and offload resources/delivery/cleanup remain pending. Unknown usage charges 12 GiB; production stays unavailable. No lease, disk credit, old-data access or extra run. Accuracy/OCR stay closed; full tests deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "finish-safe-weight-supplier-boundary",
+      "work_criteria": [
+        "no-unnecessary-supplier-directory-request",
+        "same-positive-lease-and-failure-ownership",
+        "explicit-bounded-supplier-compatibility-and-routing",
+        "reviewed-docs-and-owned-checkpoint"
+      ],
+      "receipt_digest": "1a77176007481325a964e6a9f06bfbc9c67843fb0960ae0a605011192e0ef255",
+      "review_digest": "bfd1d718df108bd983bf579ac47b8add372806acfce7f7949bb13050e407f858",
+      "scope": "Commit 806727c6e omits the redundant supplier folder argument while retaining positive staging, safe-file validation, guarded readiness and cleanup. It passed 33 focused tests, six groups and independent review. A separately reviewed tiny CPU fixture passed repeated tensor parity and cleanup. Its direct engine identity and exit were verified; observed peak RSS was 573,714,432 bytes. Earlier launcher-only supervision remains unqualified history.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Library compatibility and this tiny process only; no production Native/source/ancestor, shared durable accounting, model-worker/crash, retained restart or actual offload resource/delivery/cleanup qualification. Unknown staging still charges 12 GiB and production stays unavailable. No new lease, credit, old-data access or extra effect. Earlier launcher-only observation remains unqualified. Accuracy/OCR stay closed; full testing follows feature completion."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "isolate-native-tests-in-ordinary-profiles",
+      "work_criteria": [
+        "ordinary-profile-native-isolation",
+        "guarded-command-generation-and-ownership",
+        "reviewed-focused-checkpoint"
+      ],
+      "receipt_digest": "5e7daf90defe561e5215dcd0a183db3d818dbf66474b727f94cca7a9b0a0060f",
+      "review_digest": "dffee4fda959f85471768a999b359c3f9f73081dff0acf1f894e7ee1acbd7732",
+      "scope": "Commit da652b47c isolates both native-capable loader modules from ordinary owner/exact/profile execution. The model-free supplier suite retains all 19 legacy pure cases plus five new regressions. Registry and real command-planning checks deny controlled test collection while retaining native source responsibility. It passed 46 focused tests, four groups and independent review; no model or Native run occurred.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Collection, fake regressions and command planning only. The entire functionality profile and full host journeys did not execute here. Native compatibility remains pinned to its earlier source; no current Native/resource/production/parent pass, extra effect, lease, credit or old-data authority. Existing quality/OCR closures and real Native/domain/worker/crash/retained-restart/offload-resource gaps remain. Full testing follows feature completion."
+      ]
     }
   ]
 }

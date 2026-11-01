@@ -1050,3 +1050,18 @@ fixture checks compatibility and cleanup only. Production low-memory admission,
 retained-file protection, shared durable accounting, original-reference and
 ancestor protection, worker crash recovery and real resource measurements remain
 pending. The existing memory limits and the 12 GiB staging limit do not change.
+
+## Reviewed supplier and test-isolation results
+
+The loader fix and ordinary-profile isolation are committed, tested and
+independently reviewed. The corrected tiny CPU compatibility run verified the
+actual interpreter before library import, repeated tensor parity, cleanup and
+confirmed exit; its observed peak was 573,714,432 bytes. Earlier wrapper-only
+memory observation remains unqualified history. See the versioned
+[supplier and isolation evidence](safe-weight-supplier-qualification.json).
+
+These are local component results. Production low-memory mode remains
+unavailable pending native/source/ancestor protection, shared durable accounting,
+model-worker/crash and retained-restart proof, and actual offload resources,
+delivery and cleanup. Unknown usage still consumes 12 GiB. Accepted model
+accuracy and OCR stay closed. Full-system tests follow feature implementation.
