@@ -12,7 +12,7 @@ import time
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'windows_offload_core_fixture.py'
 SPEC = importlib.util.spec_from_file_location('core_native_fixture_subject', SCRIPT)
@@ -554,6 +554,36 @@ class FixtureOracleTests(unittest.TestCase):
                          subject.source_digest({'b.py': 'b' * 64, 'a.py': 'a' * 64}))
         for value in ({'/private': 'a' * 64}, {'../private': 'a' * 64}, {'a.py': True}, {}):
             with self.assertRaises(subject.FixtureError): subject.source_digest(value)
+
+
+    def test_closed_core_native_owner_accepts_exact_descriptor_calls_and_denies_unknown_before_effect(self):
+        effects = []
+        class BaseApi:
+            def call(self, function, *args, valid=lambda value: bool(value), keep=()):
+                result = function(*args)
+                if not valid(result): raise subject.FixtureError('synthetic-native-result')
+                return result
+        for phase in ('GetSecurityDescriptorLength', 'SetSecurityDescriptorOwner'):
+            with self.subTest(phase=phase):
+                diagnostics = {'native_call_count': 0}; native = SimpleNamespace(live=Mock())
+                api = subject._tracked_api(SimpleNamespace(_WindowsApi=BaseApi), native, diagnostics)()
+                function = Mock(return_value=64 if phase.endswith('Length') else 1); function.__name__ = phase
+                with patch.object(C, 'get_last_error', return_value=0, create=True):
+                    result = api.call(function, valid=lambda value: type(value) is int and value > 0, keep=('synthetic',))
+                self.assertGreater(result, 0); function.assert_called_once()
+                self.assertEqual(diagnostics['native_call_count'], 1)
+                self.assertEqual(diagnostics['last_native_phase'], phase)
+                unknown = Mock(return_value=1); unknown.__name__ = phase + 'Unexpected'
+                with self.assertRaises(subject.FixtureError): api.call(unknown)
+                unknown.assert_not_called(); self.assertEqual(diagnostics['native_call_count'], 1)
+
+    def test_descriptor_phase_diagnostics_do_not_supply_core_retirement_success(self):
+        for phase in ('GetSecurityDescriptorLength', 'SetSecurityDescriptorOwner'):
+            with self.subTest(phase=phase):
+                value = child('empty-stage'); value['last_native_phase'] = phase
+                self.assertEqual(subject._safe_failure(value)['last_native_phase'], phase)
+                with self.assertRaises(subject.FixtureError): subject.validate_child_report(value, 'empty-stage', 'a' * 64)
+        self.assertNotIn('last_native_phase', subject._safe_failure({'last_native_phase': 'unknown-private-label'}))
 
 
 if __name__ == '__main__': unittest.main()

@@ -62,6 +62,11 @@ class SyntheticApi:
         self.nodes[handle]['permissions'] = result
         return result
 
+    def assert_protected(self, handle, expected):
+        # Deliberate synthetic enforcement only; never Native proof.
+        self.step('assert-protected')
+        c._require(self.permissions(handle) == expected)
+
     def entries(self, handle):
         self.step('entries')
         rows = [(n['name'], n['identity'][8:], n['size'], n['allocated'], n['directory'])
@@ -890,6 +895,220 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(c._directory_page(page())[0][0], 'index.json')
         for raw in (b'', page('../escape'), page(attrs=0x480), page(length=511), page(following=8)):
             with self.subTest(size=len(raw)), self.assertRaises(c.OffloadAdmissionError): c._directory_page(raw)
+
+
+
+class FixedProtectionTests(unittest.TestCase):
+    """Actual protection/security methods with typed synthetic replies only."""
+    def setUp(self):
+        scope = patch.dict(c._CUSTODY, {}, clear=True); scope.start(); self.addCleanup(scope.stop)
+
+    def acl(self):
+        principal = b'\x01\x01\0\0\0\0\0\x05\x15\0\0\0'
+        raw = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + principal
+        return raw, principal
+
+    def protection_kernel(self, *, setter=0, changed_owner=False, changed_identity=False):
+        core, api = raw_api_core()
+        api._protection_origin = api; api._protections = []; api._protection_rows = api._protections
+        handle = api.handle(); handle.slot.value = 900
+        acl, principal = self.acl(); expected = c._acl(acl, deny=True), c._PRIVATE_CONTROL
+        state = {'set': False, 'queries': 0}
+        def security(h):
+            self.assertIs(h, handle); state['queries'] += 1
+            return (*(expected if state['set'] else (acl, c._PRIVATE_CONTROL)),
+                    principal if not state['set'] or not changed_owner else c._WORLD)
+        def change(h, info, descriptor):
+            self.assertEqual((h, info), (900, 4))
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertEqual(len(api._protections), 1)
+            self.assertFalse(api._protections[0].completed)
+            self.assertIs(core._pending[3][-1], api._protections[0])
+            state['set'] = setter == 0
+            return setter
+        api.security = Mock(side_effect=security)
+        api.identity = Mock(side_effect=lambda h: (b'b' if state['set'] and changed_identity else b'a') * 24)
+        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'only-inert-fixture', descriptor, None))
+        api.n = SimpleNamespace(NtSetSecurityObject=Mock(side_effect=change))
+        return core, api, handle, acl, principal, expected, state
+
+    def security_kernel(self, *, bad=None):
+        core, api = raw_api_core(); handle = api.handle(); handle.slot.value = 901
+        acl, principal = self.acl(); buffer = C.create_string_buffer(128); base = C.addressof(buffer)
+        C.memmove(base + 32, principal, len(principal)); C.memmove(base + 64, acl, len(acl))
+        if bad == 'sid': C.memmove(base + 33, b'\xff', 1)
+        if bad == 'acl': C.memmove(base + 66, struct.pack('<H', 65535), 2)
+        def get_info(h, kind, info, owner, group, dacl, sacl, descriptor):
+            self.assertEqual((h, kind, info), (901, 1, 5))
+            self.assertTrue(core._allocations); self.assertIsNotNone(core._pending)
+            owner._obj.value = (base + 127 if bad == 'owner-range' else base + 32)
+            dacl._obj.value = (base + 127 if bad == 'acl-range' else base + 64)
+            descriptor._obj.value = base
+            return 0
+        def control(_descriptor, output, revision):
+            output._obj.value = c._PRIVATE_CONTROL | 0x8000; revision._obj.value = 1
+            return 1
+        def free(_descriptor):
+            self.assertTrue(core._allocations); self.assertEqual(_descriptor.value, base)
+            return 1 if bad == 'free' else None
+        api.a = SimpleNamespace(GetSecurityInfo=Mock(side_effect=get_info),
+            IsValidSecurityDescriptor=Mock(return_value=0 if bad == 'descriptor' else 1),
+            GetSecurityDescriptorLength=Mock(return_value=131073 if bad == 'length' else 128),
+            IsValidAcl=Mock(return_value=1), IsValidSid=Mock(return_value=1),
+            GetSecurityDescriptorControl=Mock(side_effect=control))
+        api.k = SimpleNamespace(LocalFree=Mock(side_effect=free))
+        api._test_only_allocation = buffer  # Fixture memory stays live; not runtime proof.
+        return core, api, handle, acl, principal
+
+    def test_final_acl_denies_mutation_and_security_with_explicit_owner_rights(self):
+        acl, principal = self.acl(); raw = c._acl(acl, deny=True)
+        self.assertEqual(struct.unpack('<BBHHH', raw[:8]), (2, 0, 68, 3, 0))
+        self.assertEqual(struct.unpack_from('<BBHI', raw, 8), (1, 0, 20, 0xd0156))
+        self.assertEqual(raw[16:28], c._WORLD)
+        self.assertEqual(struct.unpack_from('<BBHI', raw, 28), (0, 0, 20, 0x20000))
+        self.assertEqual(raw[36:48], b'\x01\x01\0\0\0\0\0\x03\x04\0\0\0')
+        self.assertEqual(raw[48:], acl[8:]); self.assertEqual(c._private_sid(acl), principal)
+        for invalid in (b'', acl[:-1], raw, acl[:8] + b'\x01' + acl[9:]):
+            with self.subTest(invalid=len(invalid)), self.assertRaises(c.OffloadAdmissionError): c._private_sid(invalid)
+
+    def test_exact_native_protection_is_retained_before_set_and_required_afterward(self):
+        core, api, handle, acl, principal, expected, state = self.protection_kernel()
+        self.assertEqual(core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL))), expected)
+        self.assertEqual(len(api._protections), 1); self.assertTrue(api._protections[0].completed)
+        self.assertEqual(state['queries'], 3)
+        self.assertIsNone(core._run(lambda: api.assert_protected(handle, expected)))
+        calls = api.n.NtSetSecurityObject.call_count
+        with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+        self.assertEqual(api.n.NtSetSecurityObject.call_count, calls)
+
+    def test_failed_set_owner_or_identity_readback_never_supplies_completed_protection(self):
+        for settings in ({'setter': 1}, {'changed_owner': True}, {'changed_identity': True}):
+            with self.subTest(settings=settings):
+                core, api, handle, acl, _, _, _ = self.protection_kernel(**settings)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                self.assertTrue(core._uncertain); self.assertIs(c._CUSTODY[id(core)], core)
+                self.assertEqual(len(api._protections), 1); self.assertFalse(api._protections[0].completed)
+                self.assertEqual(api.n.NtSetSecurityObject.call_count, 1)
+
+    def test_copied_proof_or_slot_substitution_cannot_replace_original_generation(self):
+        for mode in ('copy', 'slot', 'api'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, _, expected, _ = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                before = api.security.call_count
+                if mode == 'copy': api._protections[0] = copy.copy(api._protections[0])
+                if mode == 'slot': handle.slot = c._PTR(900)
+                target = copy.copy(api) if mode == 'api' else api
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: target.assert_protected(handle, expected))
+                self.assertEqual(api.security.call_count, before)
+
+    def test_security_query_bounds_outputs_and_releases_only_its_acknowledged_allocation(self):
+        core, api, handle, acl, principal = self.security_kernel()
+        self.assertEqual(core._run(lambda: api.security(handle)), (acl, c._PRIVATE_CONTROL, principal))
+        self.assertEqual(core._allocations, []); api.k.LocalFree.assert_called_once()
+        self.assertIsNone(core._pending)
+
+    def test_unknown_security_outputs_or_failed_free_retain_allocation_and_fail_closed(self):
+        for mode in ('owner-range', 'acl-range', 'sid', 'acl', 'descriptor', 'length', 'free'):
+            with self.subTest(mode=mode):
+                core, api, handle, _, _ = self.security_kernel(bad=mode)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.security(handle))
+                self.assertTrue(core._uncertain); self.assertEqual(len(core._allocations), 1)
+                self.assertEqual(api.k.LocalFree.call_count, 1 if mode == 'free' else 0)
+
+    def test_new_directory_descriptor_retains_exact_explicit_owner_until_create(self):
+        core, api = raw_api_core(); acl, principal = self.acl()
+        parent, child = api.handle(), api.handle(); parent.slot.value, child.slot.value = 910, 911
+        trace = []
+        def owner(descriptor, sid, defaulted):
+            trace.append('owner')
+            self.assertEqual(C.string_at(sid, len(principal)), principal)
+            self.assertEqual(defaulted, 0)
+            descriptor._obj.owner = C.cast(sid, c._PTR).value
+            self.assertIn(sid, core._pending[3])
+            return 1
+        def create(p, name, access, **kwargs):
+            trace.append('create')
+            self.assertIs(p, parent); self.assertEqual((name, access), ('fixed', 0x700a1))
+            self.assertIs(kwargs['create'], True); self.assertEqual(kwargs['share'], 0)
+            buffers = kwargs['security']; self.assertEqual(len(buffers), 3)
+            self.assertEqual(C.string_at(buffers[1].owner, len(principal)), principal)
+            self.assertIsNotNone(buffers[2])
+            return child
+        api.a = SimpleNamespace(IsValidAcl=Mock(return_value=1), InitializeSecurityDescriptor=Mock(return_value=1),
+            SetSecurityDescriptorDacl=Mock(return_value=1), SetSecurityDescriptorControl=Mock(return_value=1),
+            IsValidSid=Mock(return_value=1), SetSecurityDescriptorOwner=Mock(side_effect=owner),
+            IsValidSecurityDescriptor=Mock(return_value=1))
+        api._private_acl = Mock(return_value=acl); api.open = Mock(side_effect=create)
+        api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, principal)); api.identity = Mock(return_value=b'c' * 24)
+        self.assertEqual(core._run(lambda: api.create_directory(parent, 'fixed')), (child, b'c' * 24, acl))
+        self.assertEqual(trace, ['owner', 'create'])
+
+
+    def test_foreign_protection_row_cannot_invoke_a_callback_or_admit_an_unsealed_acl(self):
+        core, api, handle, acl, principal, _expected, _state = self.protection_kernel()
+        callback = Mock(return_value=None)
+        forged = SimpleNamespace(assert_origin=callback, handle=handle, completed=True,
+            expected=(acl, c._PRIVATE_CONTROL), principal=principal, identity=b'a' * 24)
+        api._protections.append(forged)
+        with self.assertRaises(c.OffloadAdmissionError):
+            core._run(lambda: api.assert_protected(handle, (acl, c._PRIVATE_CONTROL)))
+        callback.assert_not_called(); api.security.assert_not_called()
+        api.n.NtSetSecurityObject.assert_not_called()
+
+    def test_changed_canonical_protection_fields_deny_before_later_native_observation(self):
+        for mode in ('expected', 'original', 'completed', 'principal'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, principal, expected, state = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                row = api._protections[0]
+                if mode == 'expected':
+                    row.expected = acl, c._PRIVATE_CONTROL; state['set'] = False
+                if mode == 'original': row.original = acl, 0
+                if mode == 'completed': row.completed = 1
+                if mode == 'principal': row.principal = c._WORLD
+                calls = api.security.call_count
+                with self.assertRaises(c.OffloadAdmissionError):
+                    core._run(lambda: api.assert_protected(handle, row.expected))
+                self.assertEqual(api.security.call_count, calls)
+                self.assertEqual(api.n.NtSetSecurityObject.call_count, 1)
+
+
+    def test_replaced_canonical_bound_validator_cannot_admit_a_weakened_acl(self):
+        core, api, handle, acl, _principal, _expected, state = self.protection_kernel()
+        core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+        row = api._protections[0]; callback = Mock(return_value=None)
+        row.assert_origin = callback
+        row.expected = acl, c._PRIVATE_CONTROL
+        state['set'] = False
+        calls = api.security.call_count
+        with self.assertRaises(c.OffloadAdmissionError):
+            core._run(lambda: api.assert_protected(handle, row.expected))
+        callback.assert_not_called(); self.assertEqual(api.security.call_count, calls)
+
+
+    def test_protection_record_field_proxies_deny_before_comparison_or_property_callbacks(self):
+        for mode in ('expected', 'expected-acl', 'expected-control', 'principal', 'identity', 'thread', 'number', 'slot'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, _principal, expected, state = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                callback = Mock()
+                class Proxy:
+                    def __eq__(self, other): callback('equal'); return True
+                    @property
+                    def value(self): callback('value'); return 900
+                proxy = Proxy(); row = api._protections[0]; argument = expected
+                if mode == 'expected':
+                    row.expected = proxy; argument = acl, c._PRIVATE_CONTROL; state['set'] = False
+                elif mode == 'expected-acl':
+                    row.expected = proxy, c._PRIVATE_CONTROL; argument = acl, c._PRIVATE_CONTROL; state['set'] = False
+                elif mode == 'expected-control': row.expected = expected[0], proxy
+                elif mode == 'slot': row.slot = handle.slot = proxy
+                else: setattr(row, mode, proxy)
+                queries = api.security.call_count
+                with self.assertRaises(c.OffloadAdmissionError):
+                    core._run(lambda: api.assert_protected(handle, argument))
+                callback.assert_not_called(); self.assertEqual(api.security.call_count, queries)
 
 
 if __name__ == '__main__': unittest.main()

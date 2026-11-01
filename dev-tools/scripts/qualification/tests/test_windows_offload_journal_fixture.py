@@ -330,4 +330,32 @@ class FixtureTests(unittest.TestCase):
         self.assertNotIn('private',json.dumps(rows))
 
 
+    def test_closed_journal_native_owner_accepts_descriptor_calls_and_denies_unknown_before_dispatch(self):
+        for phase in ('GetSecurityDescriptorLength', 'SetSecurityDescriptorOwner'):
+            with self.subTest(phase=phase):
+                native, journal, trace = self.context()
+                value = subject.base_report('journal-roundtrip', engine.source_digest(HASHES), 0)
+                owner = subject._ApiOwner(engine, native, journal, HASHES, value)
+                effect = Mock(return_value=64 if phase.endswith('Length') else 1); effect.__name__ = phase
+                with patch.object(subject.C, 'get_last_error', return_value=0, create=True):
+                    result = owner.run(lambda: owner._native_call(effect, (), lambda v: type(v) is int and v > 0, (effect,)))
+                self.assertGreater(result, 0); effect.assert_called_once()
+                self.assertEqual(value['last_native_phase'], phase)
+                self.assertEqual(value['native_call_count'], 1); self.assertTrue(owner._calls[0]['acknowledged'])
+                unknown = Mock(return_value=1); unknown.__name__ = phase + 'Unexpected'
+                with self.assertRaises(subject.JournalFixtureError):
+                    owner.run(lambda: owner._native_call(unknown, (), lambda v: True, (unknown,)))
+                unknown.assert_not_called(); self.assertTrue(owner._uncertain)
+                self.assertEqual(value['native_call_count'], 1); self.assertEqual(len(owner._calls), 1)
+
+    def test_new_descriptor_failure_diagnostics_cannot_qualify_journal_cleanup(self):
+        for phase in ('GetSecurityDescriptorLength', 'SetSecurityDescriptorOwner'):
+            with self.subTest(phase=phase):
+                value = report('journal-roundtrip'); value['last_native_phase'] = phase
+                self.assertEqual(subject.failure_diagnostics(value)['last_native_phase'], phase)
+                with self.assertRaises(subject.JournalFixtureError):
+                    subject.validate_child_report(value, 'journal-roundtrip', 'a' * 64)
+        self.assertNotIn('last_native_phase', subject.failure_diagnostics({'last_native_phase': 'unknown-private-label'}))
+
+
 if __name__=='__main__':unittest.main()

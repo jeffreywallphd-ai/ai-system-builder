@@ -2001,3 +2001,30 @@ Pure state, replay and concurrent-admission denial does not poison a healthy
 owner. Final budget observation is repeated after settlement validation.
 
 Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+## Fresh fixed accounting security boundary
+
+New fixed journal objects use an explicit current-token principal owner and a
+private construction descriptor. All fixed children are created before the
+permanent file-then-container deny. The sealed descriptor denies data/namespace
+mutation, delete, WRITE_DAC and WRITE_OWNER; explicit OWNER RIGHTS admits only
+READ_CONTROL. Original privately held control/writer handles remain authoritative
+and must never be exported to an untrusted supplier or caller. Descriptor reads
+are bounded to one validated self-relative allocation; SID/ACL bytes stay private.
+
+Each concrete protection attempt is retained before its first query/set and
+binds the canonical API, owner, thread and original handle slot/value/identity.
+Copies, incomplete attempts, changed generations or mismatched owner/security
+readback cannot supply the later protection check. Failure retains the exact
+allocation, output slots, ownership and charge; it never credits or retries an
+uncertain native effect. Directory notifications remain supplementary signals.
+
+Trusted, unexposed fresh construction precedes sealed admission. ACL changes do
+not revoke preopened rights, and this source does not claim hostile same-user
+race protection or safe adoption of old files. Actual NTFS enforcement and
+original-writer behavior need separately reviewed fresh native controls. Shared
+durable accounting, model-worker shutdown/crash proof, retained restart and
+actual optional-offload resources remain pending. The missing domain/bootstrap
+gates, unavailable production factory and full 12 GiB unknown reservation remain.
+Rollback withdraws this private operation and retains the existing denial.

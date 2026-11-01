@@ -29,7 +29,9 @@ _PAGE_BYTES = 65536
 _WAIT_MS = 1500
 _ACL_CONTROL = 0x150c
 _PRIVATE_CONTROL = 0x1004
-_WRITE_MASK = 0x156
+_WRITE_MASK = 0xD0156
+_OWNER_RIGHTS = b'\x01\x01\0\0\0\0\0\x03\x04\0\0\0'
+_MAX_PROTECTIONS = 2
 _WORLD = b'\x01\x01\0\0\0\0\0\x01\0\0\0\0'
 _LEAF = re.compile(r'[A-Za-z0-9_. -]{1,255}')
 _DIRECTORY_ROW = struct.Struct('<II6qIIII16s')
@@ -60,9 +62,27 @@ def _acl(acl, *, deny=False):
     _require(cursor == size)
     if not deny:
         return acl
-    ace = struct.pack('<BBHI', 1, 0, 20, _WRITE_MASK) + _WORLD
-    _require(size + len(ace) <= 65535 and count < 65535)
-    return struct.pack('<BBHHH', revision, 0, size + len(ace), count + 1, 0) + ace + acl[8:]
+    _private_sid(acl)
+    deny_ace = struct.pack('<BBHI', 1, 0, 20, _WRITE_MASK) + _WORLD
+    owner_ace = struct.pack('<BBHI', 0, 0, 20, 0x20000) + _OWNER_RIGHTS
+    extra = deny_ace + owner_ace
+    _require(size + len(extra) <= 65535 and count + 2 <= 65535)
+    return struct.pack('<BBHHH', revision, 0, size + len(extra), count + 2, 0) + extra + acl[8:]
+
+
+def _sid(raw):
+    _require(type(raw) is bytes and 8 <= len(raw) <= 68
+             and raw[0] == 1 and raw[1] <= 15 and len(raw) == 8 + 4 * raw[1])
+    return raw
+
+
+def _private_sid(acl):
+    _require(type(acl) is bytes and 24 <= len(acl) <= 84)
+    revision, zero, size, count, zero2 = struct.unpack('<BBHHH', acl[:8])
+    kind, flags, length, rights = struct.unpack_from('<BBHI', acl, 8)
+    _require(revision == 2 and zero == zero2 == 0 and count == 1 and size == len(acl)
+             and kind == flags == 0 and length == len(acl) - 8 and rights == 0x1701ff)
+    return _sid(acl[16:])
 
 
 def _directory_page(raw):
@@ -407,11 +427,54 @@ class _ReadBindingRetirement:
                 raise
 
 
+class _Protection:
+    """Original native seal attempt; no serialized or caller-issued authority."""
+    def __init__(self, api, handle, original):
+        _require(type(handle) is _Handle and type(handle.slot) is _PTR
+                 and handle in api.owner._handles and not handle.close_started
+                 and not handle.closed and not handle.delete_started)
+        self.origin, self.api, self.owner, self.thread = self, api, api.owner, get_ident()
+        self.handles, self.handle, self.slot, self.number = api.owner._handles, handle, handle.slot, handle.value
+        self.original, self.principal = original, _private_sid(original[0])
+        self.expected = (_acl(original[0], deny=True), _PRIVATE_CONTROL)
+        self.identity, self.completed = None, False
+
+    def assert_origin(self, api):
+        _require(type(self) is _Protection)
+        # Shape checks precede equality, iteration, property access and any
+        # Native observation. A substituted field cannot provide a callback.
+        _require(type(self.handle) is _Handle and type(self.slot) is _PTR
+                 and type(self.thread) is int and type(self.number) is int and self.number > 0
+                 and type(self.handles) is list and all(type(h) is _Handle for h in self.handles)
+                 and type(self.handle.closed) is bool and type(self.handle.close_started) is bool
+                 and type(self.handle.delete_started) is bool
+                 and type(self.completed) is bool and type(self.principal) is bytes
+                 and type(self.original) is tuple and len(self.original) == 2
+                 and type(self.original[1]) is int
+                 and type(self.expected) is tuple and len(self.expected) == 2
+                 and type(self.expected[0]) is bytes and type(self.expected[1]) is int
+                 and (self.identity is None or (type(self.identity) is bytes
+                      and len(self.identity) == 24 and any(self.identity[:8]) and any(self.identity[8:])))
+                 and (not self.completed or self.identity is not None))
+        _require(self.origin is self and self.api is api
+                 and self.owner is api.owner and self.owner._api is api
+                 and self.thread == get_ident() and self.handles is self.owner._handles
+                 and self.handles.count(self.handle) == 1 and self.handle.slot is self.slot
+                 and self.slot.value == self.number and self.handle.value == self.number
+                 and not self.handle.close_started and not self.handle.delete_started)
+        _require(self.original[1] == _PRIVATE_CONTROL
+                 and self.principal == _private_sid(self.original[0])
+                 and self.expected == (_acl(self.original[0], deny=True), _PRIVATE_CONTROL))
+
+
 class _WindowsApi:
     """Narrow actual OS implementation; Core retains every call and output slot."""
     def __init__(self, owner):
         _require(os.name == 'nt' and struct.calcsize('P') == 8)
         self.owner = owner
+        self._protection_origin = self
+        self._protections = []
+        self._protection_rows = self._protections
         self.k = C.WinDLL('kernel32', use_last_error=True)
         self.a = C.WinDLL('advapi32', use_last_error=True)
         self.n = C.WinDLL('ntdll', use_last_error=True)
@@ -435,6 +498,8 @@ class _WindowsApi:
             (self.a, 'IsValidSid', [_PTR], _I32),
             (self.a, 'GetSecurityInfo', [_PTR, _I32, _U32, _PTR, _PTR, C.POINTER(_PTR), _PTR, C.POINTER(_PTR)], _U32),
             (self.a, 'GetSecurityDescriptorControl', [_PTR, C.POINTER(_U16), C.POINTER(_U32)], _I32),
+            (self.a, 'GetSecurityDescriptorLength', [_PTR], _U32),
+            (self.a, 'SetSecurityDescriptorOwner', [_PTR, _PTR, _I32], _I32),
             (self.a, 'InitializeSecurityDescriptor', [_PTR, _U32], _I32),
             (self.a, 'SetSecurityDescriptorDacl', [_PTR, _I32, _PTR, _I32], _I32),
             (self.a, 'SetSecurityDescriptorControl', [_PTR, _U16, _U16], _I32),
@@ -509,14 +574,18 @@ class _WindowsApi:
             chain.append(self.open(chain[-1], part, access))
         return tuple((handle, self.identity(handle)) for handle in chain)
 
-    def _descriptor(self, acl):
+    def _descriptor(self, acl, *, principal=None):
         value, descriptor = C.create_string_buffer(_acl(acl)), _Descriptor()
-        self.call(self.a.IsValidAcl, value, keep=(value,))
-        self.call(self.a.InitializeSecurityDescriptor, C.byref(descriptor), 1, keep=(descriptor,))
-        self.call(self.a.SetSecurityDescriptorDacl, C.byref(descriptor), 1, value, 0, keep=(value, descriptor))
-        self.call(self.a.SetSecurityDescriptorControl, C.byref(descriptor), 0x1500, 0x1000, keep=(value, descriptor))
-        self.call(self.a.IsValidSecurityDescriptor, C.byref(descriptor), keep=(value, descriptor))
-        return value, descriptor
+        sid = C.create_string_buffer(_sid(principal)) if principal is not None else None
+        self.call(self.a.IsValidAcl, value, keep=(value, sid))
+        self.call(self.a.InitializeSecurityDescriptor, C.byref(descriptor), 1, keep=(descriptor, sid))
+        self.call(self.a.SetSecurityDescriptorDacl, C.byref(descriptor), 1, value, 0, keep=(value, descriptor, sid))
+        self.call(self.a.SetSecurityDescriptorControl, C.byref(descriptor), 0x1500, 0x1000, keep=(value, descriptor, sid))
+        if sid is not None:
+            self.call(self.a.IsValidSid, sid, keep=(sid, descriptor))
+            self.call(self.a.SetSecurityDescriptorOwner, C.byref(descriptor), sid, 0, keep=(value, descriptor, sid))
+        self.call(self.a.IsValidSecurityDescriptor, C.byref(descriptor), keep=(value, descriptor, sid))
+        return value, descriptor, sid
 
     def _private_acl(self):
         token = self.handle()
@@ -541,37 +610,84 @@ class _WindowsApi:
 
     def create_directory(self, parent, name):
         acl = self._private_acl()
-        descriptor = self._descriptor(acl)
+        principal = _private_sid(acl)
+        descriptor = self._descriptor(acl, principal=principal)
         handle = self.open(parent, name, 0x700a1, create=True, share=0, security=descriptor)
-        _require(self.permissions(handle) == (acl, _PRIVATE_CONTROL))
+        _require(self.security(handle) == (acl, _PRIVATE_CONTROL, principal))
         return handle, self.identity(handle), acl
 
-    def permissions(self, handle):
-        acl, descriptor, control, revision = _PTR(), _PTR(), _U16(), _U32()
-        allocation = (descriptor, acl)
+    def security(self, handle):
+        acl, principal, descriptor, control, revision = _PTR(), _PTR(), _PTR(), _U16(), _U32()
+        allocation = (descriptor, acl, principal)
         self.owner._allocations.append(allocation)
-        self.call(self.a.GetSecurityInfo, handle.value, 1, 4, None, None, C.byref(acl), None, C.byref(descriptor),
-                  valid=lambda code: type(code) is int and code == 0, keep=(handle, acl, descriptor, control, revision))
-        _require(acl.value and descriptor.value)
-        self.call(self.a.IsValidAcl, acl, keep=(descriptor, acl))
+        self.call(self.a.GetSecurityInfo, handle.value, 1, 5, C.byref(principal), None,
+                  C.byref(acl), None, C.byref(descriptor),
+                  valid=lambda code: type(code) is int and code == 0,
+                  keep=(handle, acl, principal, descriptor, control, revision))
+        _require(acl.value and principal.value and descriptor.value)
+        self.call(self.a.IsValidSecurityDescriptor, descriptor, keep=(allocation,))
+        self.call(self.a.GetSecurityDescriptorControl, descriptor, C.byref(control), C.byref(revision),
+                  keep=(allocation, control, revision))
+        _require(revision.value == 1 and control.value & 0x8000)
+        length = self.call(self.a.GetSecurityDescriptorLength, descriptor,
+                           valid=lambda size: type(size) is int and 20 <= size <= 131072,
+                           keep=(allocation,))
+        base, end = descriptor.value, descriptor.value + length
+        _require(base <= acl.value <= end - 8 and base <= principal.value <= end - 8)
         size = _U16.from_address(acl.value + 2).value
-        _require(8 <= size <= 65535)
-        self.call(self.a.GetSecurityDescriptorControl, descriptor, C.byref(control), C.byref(revision), keep=(descriptor, control, revision))
-        result = C.string_at(acl, size), control.value & _ACL_CONTROL
-        # LocalFree is one attempt. The pending call retains this exact pointer.
-        self.call(self.k.LocalFree, descriptor, valid=lambda result: result is None, keep=(descriptor, acl))
+        header = C.string_at(principal, 8)
+        sid_length = 8 + 4 * header[1]
+        _require(8 <= size <= 65535 and acl.value + size <= end
+                 and header[0] == 1 and header[1] <= 15 and principal.value + sid_length <= end)
+        self.call(self.a.IsValidAcl, acl, keep=(allocation,))
+        self.call(self.a.IsValidSid, principal, keep=(allocation,))
+        result = _acl(C.string_at(acl, size)), control.value & _ACL_CONTROL, _sid(C.string_at(principal, sid_length))
+        self.call(self.k.LocalFree, descriptor, valid=lambda result: result is None, keep=(allocation,))
         self.owner._allocations.remove(allocation)
         return result
 
+    def permissions(self, handle):
+        return self.security(handle)[:2]
+
+    def _protection_state(self):
+        _require(getattr(self, '_protection_origin', None) is self
+                 and self.owner._api is self and type(self._protections) is list
+                 and self._protections is self._protection_rows
+                 and len(self._protections) <= _MAX_PROTECTIONS)
+        for row in self._protections:
+            _require(type(row) is _Protection)
+            _Protection.assert_origin(row, self)
+            _require(row.completed)
+
     def protect(self, handle, original):
-        _require(type(original) is tuple and len(original) == 2 and original[1] == _PRIVATE_CONTROL)
-        _require(self.permissions(handle) == original)
-        replacement = _acl(original[0], deny=True)
-        buffers = self._descriptor(replacement)
+        self._protection_state()
+        _require(type(original) is tuple and len(original) == 2 and original[1] == _PRIVATE_CONTROL
+                 and len(self._protections) < _MAX_PROTECTIONS
+                 and not any(r.handle is handle or r.number == handle.value for r in self._protections))
+        row = _Protection(self, handle, original)
+        self._protections.append(row)  # Before query/set or any partial native result.
+        _Protection.assert_origin(row, self)
+        _require(self.security(handle) == (*original, row.principal))
+        row.identity = self.identity(handle)
+        buffers = self._descriptor(row.expected[0])
         self.call(self.n.NtSetSecurityObject, handle.value, 4, C.byref(buffers[1]),
-                  valid=lambda status: type(status) is int and status == 0, keep=(handle, buffers))
-        _require(self.permissions(handle) == (replacement, _PRIVATE_CONTROL))
-        return replacement, _PRIVATE_CONTROL
+                  valid=lambda status: type(status) is int and status == 0, keep=(handle, buffers, row))
+        _Protection.assert_origin(row, self)
+        _require(self.security(handle) == (*row.expected, row.principal)
+                 and self.identity(handle) == row.identity)
+        row.completed = True
+        self.assert_protected(handle, row.expected)
+        return row.expected
+
+    def assert_protected(self, handle, expected):
+        self._protection_state()
+        rows = [r for r in self._protections if r.handle is handle]
+        _require(len(rows) == 1)
+        row = rows[0]; _Protection.assert_origin(row, self)
+        _require(row.completed and row.expected == expected and row.identity is not None
+                 and self.security(handle) == (*expected, row.principal)
+                 and self.identity(handle) == row.identity)
+        _Protection.assert_origin(row, self)
 
     def entries(self, handle):
         rows, seen = [], set()
@@ -845,6 +961,8 @@ class WindowsOffloadCore:
             self._api.kind(handle, True)
             expected = self._protected[position] if self._protected else (acl, _PRIVATE_CONTROL)
             _require(self._api.permissions(handle) == expected)
+            if self._protected is not None:
+                self._api.assert_protected(handle, expected)
 
     def _inventory(self):
         namespace, stage = self._namespace, self._stage
@@ -886,7 +1004,9 @@ class WindowsOffloadCore:
             self._inventory()
             # Only these two exclusive, newly FILE_CREATED private objects.
             # Inherited/non-private descriptors are refused before this setter.
-            self._protected = tuple(self._api.protect(value[0], (value[2], _PRIVATE_CONTROL)) for value in (self._namespace, self._stage))
+            stage_protection = self._api.protect(self._stage[0], (self._stage[2], _PRIVATE_CONTROL))
+            namespace_protection = self._api.protect(self._namespace[0], (self._namespace[2], _PRIVATE_CONTROL))
+            self._protected = namespace_protection, stage_protection
             if self._index is not None:
                 self._api.guard(self._index)
             self._api.guard(self._stage[0])

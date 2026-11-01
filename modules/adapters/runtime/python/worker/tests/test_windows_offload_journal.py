@@ -4,6 +4,7 @@ No Windows DLL, file, process, model, historical cache or real domain is used.
 These fixtures are never production factories or native qualification evidence.
 """
 import copy
+import struct
 import ctypes as C
 from pathlib import Path
 from types import SimpleNamespace
@@ -585,6 +586,40 @@ class NativeIoTests(JournalTableTestCase):
                 with self.assertRaises(OffloadAdmissionError):
                     journal._run(lambda: j._WindowsJournalApi.read(api, len(api.data)))
                 self.assertEqual(api.n.NtReadFile.call_count, 1)
+
+
+
+class FixedJournalConstructionTests(JournalTableTestCase):
+    """Real journal construction order with explicit synthetic protection ports."""
+    def test_actual_prepare_creates_fixed_file_then_protects_file_before_namespace(self):
+        core, journal, domain, trace = prepared(); api = journal._api
+        acl = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + c._WORLD
+        namespace = api.new(); events = []
+        api.namespace = api.file = api.protected = None
+        api._allocation_bound = Mock(return_value=4096)
+        api.create_directory = Mock(return_value=(namespace, b'n' * 24, acl))
+        api._private_acl = Mock(return_value=acl)
+        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'inert', descriptor, None))
+        def create(output, access, attributes, io, *_):
+            self.assertIs(journal._pending[3][0], journal._handles[-1])
+            self.assertEqual(access, 0x17019f)
+            output._obj.value = 7654; io._obj.information = 2
+            events.append('file-created')
+            return 0
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create))
+        api.kind = Mock(); api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, c._WORLD))
+        api.identity = Mock(return_value=b'f' * 24)
+        def protect(handle, original):
+            events.append('namespace-protected' if handle is namespace else 'file-protected')
+            self.assertIsNotNone(api.file)
+            return c._acl(original[0], deny=True), c._PRIVATE_CONTROL
+        api.protect = Mock(side_effect=protect); api.guard = Mock(); api.check = Mock()
+        self.assertIsNone(journal._run(lambda: j._WindowsJournalApi.prepare(api)))
+        self.assertEqual(events, ['file-created', 'file-protected', 'namespace-protected'])
+        api._descriptor.assert_called_once_with(acl, principal=c._WORLD)
+        self.assertEqual(api.protected, ((c._acl(acl, deny=True), c._PRIVATE_CONTROL),) * 2)
+        api.guard.assert_called_once_with(api.file[0]); api.check.assert_called_once_with(0)
+        self.assertFalse(domain.credited)
 
 
 if __name__ == '__main__': unittest.main()

@@ -203,7 +203,8 @@ class _WindowsJournalApi(w._WindowsApi):
         _need(self.anchor is not None and self.namespace is None and self.file is None)
         self.allocation = self._allocation_bound()
         self.namespace = self.create_directory(self.anchor[0], _NAMESPACE)
-        acl = self._private_acl(); security = self._descriptor(acl)
+        acl = self._private_acl(); principal = w._private_sid(acl)
+        security = self._descriptor(acl, principal=principal)
         handle, text, io = self.handle(), C.create_unicode_buffer(_FILE), w._Io()
         name = w._Unicode(len(_FILE.encode('utf-16-le')), C.sizeof(text), C.cast(text, w._PTR))
         attributes = w._Attributes(C.sizeof(w._Attributes), self.namespace[0].value,
@@ -215,10 +216,11 @@ class _WindowsJournalApi(w._WindowsApi):
                   keep=(handle, text, name, attributes, io, security, allocation))
         _need(io.information == 2)
         self.kind(handle, False)
-        _need(self.permissions(handle) == (acl, w._PRIVATE_CONTROL))
+        _need(self.security(handle) == (acl, w._PRIVATE_CONTROL, principal))
         self.file = handle, self.identity(handle), acl
-        self.protected = (self.protect(self.namespace[0], (self.namespace[2], w._PRIVATE_CONTROL)),
-                          self.protect(handle, (acl, w._PRIVATE_CONTROL)))
+        file_protection = self.protect(handle, (acl, w._PRIVATE_CONTROL))
+        namespace_protection = self.protect(self.namespace[0], (self.namespace[2], w._PRIVATE_CONTROL))
+        self.protected = namespace_protection, file_protection
         # This is the same held writer/file object. A separate required domain
         # fence covers mutable namespace/security growth; no directory RH watch
         # is claimed to survive our own size/timestamp updates.
@@ -235,6 +237,7 @@ class _WindowsJournalApi(w._WindowsApi):
         for index, item in enumerate((self.namespace, self.file)):
             self.kind(item[0], index == 0)
             _need(self.identity(item[0]) == item[1] and self.permissions(item[0]) == self.protected[index])
+            self.assert_protected(item[0], self.protected[index])
         rows = []
         for row in self.entries(self.namespace[0]):
             if row[0] in ('.', '..'):

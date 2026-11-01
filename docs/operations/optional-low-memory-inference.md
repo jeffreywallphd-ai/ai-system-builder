@@ -924,3 +924,26 @@ values copied from the exact original result buffers; replacement buffers cannot
 supply a successful result. These source controls still need native qualification.
 
 Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+## Fixed journal protection source
+
+The agent has added private source for protecting a new fixed accounting file
+and its directory before journal use. It creates the fixed objects privately,
+keeps the original writer, seals the file before its directory and checks exact
+ownership, security and handle identity on later use. Model-free regressions
+exercise the actual API methods with typed synthetic replies and failure paths.
+
+This source is not actual Windows qualification or a working low-memory loader.
+Fresh NTFS tests must still show that new write, resize, extra-stream, delete,
+child-create, DACL and owner-change attempts are denied while the retained
+original writer can write, flush and read back. Construction is trusted and
+unexposed until sealed admission; existing handles are not revoked by an ACL.
+
+Shared durable 12 GiB accounting, existing-file protection, owned model-worker
+shutdown/crash recovery, safe retained restart and actual offload delivery,
+resource and cleanup measurements remain pending agent work. No action is
+needed from the user for this source component. Unknown usage remains charged
+at the full limit. No old files are inspected or changed, no production lease
+is enabled and accepted accuracy/OCR tests stay closed. Full testing is deferred
+until feature work across the open roadmaps is ready.

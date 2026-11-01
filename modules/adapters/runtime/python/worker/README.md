@@ -759,3 +759,23 @@ Pure state, replay and concurrent-admission denial does not poison a healthy
 owner. Final budget observation is repeated after settlement validation.
 
 Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+## Fixed fresh journal protection
+
+The private native source creates its fixed journal objects before installing
+permanent leaf-then-container protection. Specific mutation, delete, DACL and
+owner-change rights are denied; explicit OWNER RIGHTS preserves read-control
+without implicit owner DACL-write authority. Only the original retained writer
+continues writing. Canonical protection attempts bind the original API, owner,
+thread, handle slot, identity and exact private owner/security readback.
+
+Model-free tests use typed synthetic native replies. They do not qualify NTFS
+behavior, existing writable references, a shared accounting domain or model
+worker retirement. The production offload factory remains unavailable; unknown
+usage still reserves 12 GiB. Native controls need separate exact-source review.
+
+The closed Core and Journal diagnostic phase lists recognize exactly the new
+GetSecurityDescriptorLength and SetSecurityDescriptorOwner calls. Unknown names
+still fail before dispatch. Recognizing a failure phase never supplies the
+required handle-retirement or positive-case facts.

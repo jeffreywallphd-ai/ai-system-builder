@@ -288,3 +288,12 @@ Pure state, replay and concurrent-admission denial does not poison a healthy
 owner. Final budget observation is repeated after settlement validation.
 
 Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+The private Windows accounting component now has source for explicit-owner
+creation and fixed-object protection before journal genesis. It keeps original
+native writers and refuses incomplete, copied or changed protection attempts.
+This is an uncomposed native component. Synthetic focused tests do not qualify
+actual Windows enforcement, shared disk accounting, retained restart, model
+worker recovery or production offload. See the worker guide and owning runtime
+architecture for the remaining checks. Accepted model accuracy stays closed.

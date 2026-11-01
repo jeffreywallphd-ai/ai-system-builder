@@ -1123,3 +1123,29 @@ Pure state, replay and concurrent-admission denial does not poison a healthy
 owner. Final budget observation is repeated after settlement validation.
 
 Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+### Fixed journal object protection
+
+The private Windows Journal/Core source admits explicit current-principal owners
+on newly created fixed objects. It retains finite original protection attempts
+before native queries or DACL setters. The final descriptor denies specific
+mutation, delete, WRITE_DAC and WRITE_OWNER rights and includes explicit OWNER
+RIGHTS for READ_CONTROL. The fixed journal creates its ledger first, then seals
+the file and container before genesis. Core post-quiescence sealing proceeds
+leaf first while retaining its existing namespace/stage result order.
+
+Later charge-sensitive checks consume the exact API-owned protection attempt,
+original handle slot/value/identity and exact owner/DACL readback. Security
+queries retain their allocation outputs before dispatch and bound self-relative
+descriptor, ACL and SID reads. An interrupted or unknown result retains custody.
+The held original writer is distinct from a newly opened writable reference.
+No descriptor widening, child creation or supplier handoff is allowed after seal.
+
+This boundary begins at sealed admission after trusted private construction.
+It does not revoke unknown preopened writable handles or claim hostile same-user
+protection. Existing domain precharge/bootstrap checks remain mandatory; no real
+shared domain or production factory is selected. Typed synthetic tests establish
+source behavior only. Actual NTFS denial/original-writer controls, shared durable
+accounting, model-worker/crash recovery, retained restart and resource/delivery
+qualification remain pending. Unknown storage still reserves all 12 GiB.

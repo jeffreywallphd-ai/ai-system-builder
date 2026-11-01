@@ -90,7 +90,8 @@ _PHASES = frozenset({
     'SetFileInformationByHandle', 'DeviceIoControl', 'WaitForSingleObject',
     'CancelIoEx', 'GetOverlappedResult', 'LocalFree', 'GetDriveTypeW',
     'OpenProcessToken', 'GetTokenInformation', 'IsValidSid', 'GetSecurityInfo',
-    'GetSecurityDescriptorControl', 'InitializeSecurityDescriptor',
+    'GetSecurityDescriptorControl', 'GetSecurityDescriptorLength',
+    'SetSecurityDescriptorOwner', 'InitializeSecurityDescriptor',
     'SetSecurityDescriptorDacl', 'SetSecurityDescriptorControl',
     'IsValidSecurityDescriptor', 'IsValidAcl', 'directory-page-query',
 })
