@@ -1725,3 +1725,16 @@ completion, a timed wait or cancellation acknowledgement alone cannot pass the
 cancellation check. No model, accuracy, OCR, old staging or full-system test runs.
 Global accounting, retained restart, model workers, indefinitely hung kernel calls
 and actual model resources remain separate qualification.
+
+## Safe-weight supplier boundary tests
+
+The `offload-resource-lifecycle` profile contains eighteen fixed model-free files,
+including `qualification/tests/test_offload_supplier_boundary.py`. This suite
+reuses only the fake loader harness. It checks the omitted supplier folder, strict
+in-memory index validation, positive owned staging and guarded-readiness denial.
+
+`test_bounded_model_loader_native.py` is an explicit controlled fixture. Default,
+exact and profile focused selection refuse to execute it. Source changes to the
+fixture select the ordinary lifecycle checks without importing model libraries.
+A separately reviewed fixed offline run may check its tiny CPU supplier fixture;
+it does not repeat model accuracy or qualify production resources or recovery.

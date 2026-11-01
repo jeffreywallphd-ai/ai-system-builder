@@ -47,7 +47,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
     def test_bounded_owner_selection_keeps_all_controlled_python_files_excluded(self):
         names = [self.put('modules/adapters/example/' + name, 'def test_value(): pass\n') for name in (
             'test_normal.py', 'test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
-            'test_model_training_task_matrix_e2e.py')]
+            'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py')]
         foreign = self.put('modules/adapters/foreign/test_other.py', 'def test_value(): pass\n')
         with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*names, foreign], 'fixture')}):
             commands = focused.commands(self.root, [names[0]])
@@ -58,7 +58,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         import json
         from control_plane.contracts import ControlError
         for name in ('test_constrained_json_outlines_integration.py', 'test_context_generation_ai_e2e.py',
-                     'test_model_training_task_matrix_e2e.py'):
+                     'test_model_training_task_matrix_e2e.py', 'test_bounded_model_loader_native.py'):
             path = self.put('modules/adapters/example/' + name, 'def test_value(): pass\n')
             self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
                 'schema_version': 'contributor-check-profiles-v1',

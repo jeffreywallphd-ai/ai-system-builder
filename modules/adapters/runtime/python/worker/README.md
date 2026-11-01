@@ -809,3 +809,18 @@ exit remains mandatory before terminal retirement. Stalled IPC cancellation need
 a settled original ReadFile error 995 as well as cancellation acknowledgement;
 child-exit error 109 is tracked separately. The diagnostic changes no runtime
 request deadline, model-memory policy, production availability or disk charge.
+
+## Safe-weight supplier destination
+
+The bounded loader passes its verified safe-weight disk index in memory. It does
+not pass `offload_folder` to the pinned supplier. This avoids a redundant supplier
+directory request; it does not remove owned staging. Positive reservation, disk
+admission, the owner marker, seal/reference cleanup and guarded readiness remain
+required. Missing or noncanonical disk indexes still fail before dispatch.
+
+The fixed lifecycle profile includes the fake-only supplier boundary suite. The
+separate `test_bounded_model_loader_native.py` fixture is controlled: ordinary
+focused and profile commands cannot run it. An explicit bounded offline run of
+that tiny CPU fixture checks supplier compatibility, tied-weight forward parity,
+repeat use and cleanup. It does not qualify model accuracy, production admission,
+model resources, retained restart or shared disk accounting.

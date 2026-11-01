@@ -1172,3 +1172,17 @@ private parent alone cannot prove ancestor stability, guardian/crash lifetime,
 shared durable 12 GiB accounting, retained restart or model-worker resources.
 Those remain separate pending requirements. Source tests and v3 fixture
 definitions do not supersede the actual failed v2 Windows observation.
+
+### Safe-weight supplier directory boundary
+
+Within ADR-0045, the admitted safe-file route keeps the verified supplier disk
+index in memory and omits `offload_folder`. Transformers 4.51.3 and Accelerate
+1.14.0 support that index without a supplier directory destination. The exact
+version gate, safe-loading flags, original shard/path/dtype/name coverage and
+tied-alias validation remain in force; there is no unsafe fallback.
+
+The positive `OwnedOffloadLease` reservation, owner-marker staging, seal and
+reference-controlled release remain required. This change is not a reference-only
+or zero-staging lifecycle contract and does not enable an unavailable guarded
+backend. Existing native protection, global accounting, worker/crash, retained
+restart and model-resource qualification remain pending.

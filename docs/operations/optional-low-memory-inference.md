@@ -1035,3 +1035,18 @@ matched captured output. See the independently reviewed
 These are fresh model-free IPC controls only. Model file IO, actual timeout or
 hung-kernel delivery, guardian/model-worker crash lifetime, ancestor protection,
 shared accounting, retained restart and model resources remain pending.
+
+## Remove a redundant supplier directory request
+
+No action needed. The agent is checking the safe-weight loader without repeating
+completed model accuracy tests. The loader keeps its verified index in memory and
+omits the supplier folder argument. It still creates its owned staging marker
+and keeps the same positive reservation, disk checks and cleanup rules. This is
+not a mode with no file writes.
+
+The ordinary lifecycle profile now contains eighteen model-free test files. A
+separate tiny CPU supplier fixture needs an explicitly bounded offline run. That
+fixture checks compatibility and cleanup only. Production low-memory admission,
+retained-file protection, shared durable accounting, original-reference and
+ancestor protection, worker crash recovery and real resource measurements remain
+pending. The existing memory limits and the 12 GiB staging limit do not change.

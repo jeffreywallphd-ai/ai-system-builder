@@ -386,7 +386,10 @@ def _load_bounded_local_model(
                 str(reference), config=native_config, local_files_only=True,
                 trust_remote_code=False, use_safetensors=True, weights_only=True,
                 torch_dtype=dtype, low_cpu_mem_usage=True, device_map=device_map,
-                offload_folder=str(lease.path), offload_state_dict=False,
+                # The pinned safe-file loader returns its verified index in
+                # memory. A folder would request redundant supplier mkdirs.
+                # The positive owned lease and its guards remain required.
+                offload_state_dict=False,
                 offload_buffers=False, output_loading_info=True, ignore_mismatched_sizes=False,
             )
             permitted_missing = {name for group in tied for name in group if name not in {entry.name for entry in inventory.tensors}}

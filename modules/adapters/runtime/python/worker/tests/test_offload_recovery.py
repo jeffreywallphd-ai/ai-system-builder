@@ -262,7 +262,10 @@ class GuardedConsumerTests(unittest.TestCase):
                 owner = recovery._GuardedOffloadOwner(backend)
                 with patch.dict(sys.modules, fixture.modules), patch.object(loader, "offload_runtime_available", return_value=True):
                     bundle = loader.load_bounded_local_model(boundary.model_config(), {"max_new_tokens": 8}, reference=fixture.root, cache_root=fixture.cache, read_memory=lambda: SimpleNamespace(available_bytes=8 * 1024**3), read_cuda_memory=lambda: 0, _recovery=owner.worker_context)
-                self.assertEqual(fixture.calls[0][1]["offload_folder"], str(bundle.lease.path))
+                self.assertNotIn("offload_folder", fixture.calls[0][1])
+                self.assertGreater(bundle.lease.reservation, 0)
+                self.assertTrue(bundle.lease.path.is_dir())
+                self.assertFalse(bundle.lease.released)
                 self.assertIn("seal-and-protect", backend.steps)
                 with patch.object(loader, "validate_offload_config") as validate:
                     with self.assertRaises(offload.OffloadAdmissionError):

@@ -2055,3 +2055,20 @@ ancestor/new-anchor rename or deletion, unknown preopened rights, guardian/crash
 lifetime, shared accounting, worker/restart and resource qualification are pending.
 New fixture definitions require separate source/effect review before execution.
 Rollback retains unavailable production admission and all earlier evidence.
+
+### Redundant safe-weight supplier folder
+
+The admitted pinned safe-weight loader no longer supplies `offload_folder`. Its
+verified original-file disk index stays in memory. Safe format, local-only input,
+remote-code denial, exact supplier versions, explicit dtype and strict disk-index
+coverage remain mandatory. Missing or changed shard, weight or dtype bindings
+fail closed before dispatch; no directory or unsafe-format fallback is added.
+
+Positive staging reservation, owner-marker creation, disk admission, guarded
+readiness, sealing and retained-reference cleanup are unchanged. Fake-only tests
+cover the caller, index denials and readiness frontier. The separate tiny native
+fixture is excluded from ordinary collection and cannot supply model accuracy,
+production admission or resource evidence. Old staging is not accessed and unknown
+usage still consumes the full 12 GiB limit. Original-reference/ancestor protection,
+real model-worker/crash ownership, shared durable accounting and retained restart
+remain pending.

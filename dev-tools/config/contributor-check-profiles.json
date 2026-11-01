@@ -19,7 +19,8 @@
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_execution.py",
         "modules/adapters/runtime/python/worker/tests/test_windows_offload_execution_child.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_fixture.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py",
+        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
@@ -67,7 +68,9 @@
         "dev-tools/scripts/qualification/qualify_windows_offload_read_session.py",
         "dev-tools/scripts/qualification/windows_offload_read_session_fixture.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_fixture.py",
-        "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py"
+        "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py",
+        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py"
       ]
     },
     "model-qualification-scheduling": {
