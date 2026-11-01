@@ -8618,6 +8618,41 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Source definitions and model-free checks only. The agent must still prove the native launcher and execute the real Desktop train, private review, Save and reopen journey with owned cleanup. No model quality, resource, provider, low-memory recovery, current parent-candidate or roadmap pass is granted. Earlier failures remain history. Completed accuracy and OCR checks stay closed; combined full-system testing remains deferred until feature work is complete."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "add-closed-native-desktop-training-intents",
+      "work_criteria": [
+        "closed-training-native-role-policy",
+        "isolated-generated-training-worker-context",
+        "scoped-source-evidence-and-owned-checkpoint"
+      ],
+      "receipt_digest": "e525d73148051f68a58c739486d81dbe6b82530d9100a410246db63c83184357",
+      "review_digest": "8ee7ba5131fb87cb2397d9bba806460e1cb1e4a8c558284677887820431b6d27",
+      "scope": "Commit d387c41fd adds private input/readiness/package/one Desktop training roles with fixed deadlines, existing 2 GiB process/4 GiB Job limits, source/runtime witnesses and a generated-only fresh package path. A space-safe argument targets the fixed original wrapper; legacy launches/default tests stay unchanged. It passed 75 focused checks, five groups and independent review. This source chunk ran no actual native Job, model or app.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Source definitions and portable policy checks only. The separate inert budget result does not qualify the input, dependency readiness, offline package or real Desktop train/private-review/Save/reopen journey. No current parent candidate, roadmap criterion, model fit or accuracy, crash, native filesystem, provider or offload qualification is granted. No extra effect, retry, lease, disk credit or old-data access is authorized. Earlier failures remain history; completed accuracy/OCR checks stay closed and combined full-system testing follows feature completion."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "record-inert-windows-training-budget",
+      "work_criteria": [
+        "truthful-inert-budget-observation",
+        "sanitized-scoped-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "922966beb8ba7dae89524bc0bcff4f8ef7bfe99c060c2dbe51d4412a64ed1dc6",
+      "review_digest": "d1c6b886e30a35f1ccd4b089dfde0af5442f06c3c9f5a6edae8ed59db5292a80",
+      "scope": "Commit 5fe8fe61d records one audited inert Windows child at source d387c41fd: exact 2 GiB process/4 GiB Job/32-process limits, unchanged flags and eight-second child deadline; root exit0,total1,active0,exact29-byte output/empty errors,atomic membership,explicit inheritance,all handles closed,no forced stop; peak16,707,584 bytes. The active marker was preserved after separate result audit. The report passed three focused groups and independent review.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "This direct-owner happy-path readback did not allocate the ceilings, load a model or launch an app. The eight seconds is the configured child deadline, not whole-validation elapsed time. Missing Windows limit notifications never prove that no limit was hit. No timeout or guardian-crash, model/application fit, native filesystem, retained restart, offload or parent qualification is supplied. Input creation, real dependency readiness, offline packaging and the Desktop training journey remain agent work. Earlier failures and unknown data remain unchanged; no retry, lease, disk credit or old-data access follows. Completed accuracy/OCR checks stay closed; full-system testing remains deferred until feature completion."
+      ]
     }
   ]
 }

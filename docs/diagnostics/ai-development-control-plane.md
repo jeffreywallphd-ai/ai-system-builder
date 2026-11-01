@@ -1613,3 +1613,16 @@ the original process/Job/pipe/guardian retirement contract. Do not rerun complet
 accuracy or OCR checks, reuse an old unknown tree, release disk credit, install a
 dependency, or turn this definition into a parent pass. Full-system testing stays
 deferred until the requested feature work is complete.
+
+
+### Observed inert Windows training budget
+
+The [Windows budget observation](../operations/desktop-training-native-budget-qualification.json)
+records one actual inert child, the existing 2 GiB process and 4 GiB total
+limits, successful exit and confirmed owned-process and handle retirement.
+A separate agent reviewed the result. This direct-owner check did not run
+a model, application, timeout or guardian-crash case. Input creation, real
+dependency readiness, offline packaging and the Desktop training journey
+remain pending. No model fit, native file protection, offload restart or
+parent-roadmap qualification follows. Completed accuracy and OCR checks
+stay closed; combined full-system testing follows feature implementation.

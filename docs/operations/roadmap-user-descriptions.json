@@ -13718,6 +13718,87 @@
           "The combined full-system test effort will follow all planned feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fd1730b2c0f56122bf4831648dd47659791f15a38d9ac7c753214f97fa62c913",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The code now defines separate steps to create test inputs, check dependencies, build an offline Desktop package and run one training journey.",
+          "These steps retain the 2 GiB limit for each process and 4 GiB total limit, with fixed time limits.",
+          "The launcher checks that the source and installed runtime files match the reviewed versions before launch.",
+          "Only the generated tiny test model can use the declared new package folder.",
+          "The launcher keeps the original wrapper and handles spaces in the repository path.",
+          "Existing launch behavior and the default Windows test set remain unchanged.",
+          "All 75 focused checks and five related check groups passed.",
+          "Another agent accepted this code change.",
+          "This source change did not run the new Windows launcher, a model or the application."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e0cbdc4b65cc83446059aed1b9d91f0521b2067ea7fe03bd7c3bc2a570fbdc23",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers code definitions and lightweight policy checks.",
+          "The small Windows limit check is reported separately.",
+          "The agent must still create the test inputs, check the real dependencies, build the offline package and run the Desktop training journey.",
+          "The journey must train, show a private review, save the output and reopen it.",
+          "This result does not qualify the current application or complete a roadmap requirement.",
+          "It provides no new results for model fit, accuracy, crash recovery, file protection, provider access or low-memory operation.",
+          "It does not allow another test, a new temporary model slot, release of reserved space or access to old files.",
+          "Earlier failures remain in the history.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "The combined full-system test effort will follow feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "24ebd3070f595c93e8291699886354e8bdb75d62ab60134fee3c0a39ca73a085",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "One small Windows test process passed with the committed launcher.",
+          "Windows reported the expected 2 GiB limit for each process, 4 GiB total limit and maximum of 32 processes.",
+          "The existing Windows control flags stayed unchanged.",
+          "The child had a fixed eight-second time limit.",
+          "Exactly one process ran and it exited successfully. No owned process remained.",
+          "Its 29-byte output matched and its error output was empty.",
+          "Windows placed the child under its controls before execution and restricted the handles it could inherit.",
+          "All owned handles closed without a forced stop.",
+          "The observed peak committed memory was 16,707,584 bytes.",
+          "Another agent reviewed the result before the exact new active-run marker was preserved and retired.",
+          "The evidence report passed three related check groups and independent review."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0de4b6310dd4a0cac573f4fa747008ec6cd6322b9c67cc4d0eaec8c67732b9cf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This test ran one small child. It did not load a model or start the application.",
+          "The memory limits are ceilings. The test did not reserve or use all of that memory.",
+          "The eight-second value limits the child. It does not describe the time for all evidence checks.",
+          "A missing Windows warning does not prove that no limit was reached.",
+          "This test does not qualify timeout handling, crash recovery, model or application memory needs, file protection, safe restart or low-memory operation.",
+          "It does not qualify the current application or complete a roadmap requirement.",
+          "The agent must still create the inputs, check the real dependencies, build the offline package and run the Desktop training journey.",
+          "Earlier failures and unknown files remain unchanged.",
+          "This result does not allow another test, a new temporary model slot, release of reserved space or access to old files.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "Full-system testing will follow feature work."
+        ]
+      }
     }
   ]
 }
