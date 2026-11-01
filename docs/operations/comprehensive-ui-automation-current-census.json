@@ -8175,8 +8175,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "2c20479d9514a2b43db87b242cd59210b3d0eee1d9eb86a33a3d6db2e92f9985",
-    "bytes": 15099,
+    "sha256": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b",
+    "bytes": 15123,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",

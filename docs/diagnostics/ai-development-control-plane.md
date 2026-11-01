@@ -1608,6 +1608,11 @@ launchers verify that context; the wrapper checks the worker main against source
 The fixed target uses a computed relative argument because the existing runtime
 parser splits on spaces. The production parser and legacy launch remain unchanged.
 
+The training app uses its fresh case data directory as its working directory.
+The test runner and input seeds keep the repository working directory so their
+fixed source lookups still resolve. This directs relative runtime or driver
+files into the owned case; it does not provide a filesystem or network sandbox.
+
 Review each physical effect before execution, retain earlier failures, and prove
 the original process/Job/pipe/guardian retirement contract. Do not rerun completed
 accuracy or OCR checks, reuse an old unknown tree, release disk credit, install a

@@ -63,7 +63,7 @@ test("packaged desktop trains one local adapter, reviews privately, saves and re
   const fixture = seed.status === 0 && !seed.error ? captureTrainingHostFixture(seed.stdout.trim(), process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID, process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION) : undefined;
   if (!fixture) throw new Error("Training qualification input seed is unavailable.");
   env.VISUAL_COMPOSER_TRAINING_FIXTURE = JSON.stringify(fixture);
-  const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env, timeout: 60_000 });
+  const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, cwd: isolated.dataRoot, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env, timeout: 60_000 });
   await runOwnedRestartPhase(async () => {
     const page = await app.firstWindow({ timeout: 60_000 });
     await qualifyDesktopTrainingJourney(page, test.info(), JSON.stringify(fixture));

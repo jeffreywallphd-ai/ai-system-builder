@@ -575,6 +575,11 @@ offline ZIP and declared new outputs; no supplier tree/runtime is copied or link
 Offline flags and reviewed consumers are not an OS network sandbox or external
 publication authority.
 
+The one-case training app explicitly starts in its fresh admitted data directory.
+The runner and input-only seeds retain their repository working directory for
+fixed source resolution. This directs relative runtime or driver output to the
+owned app case. It does not add filesystem custody or constrain malicious writes.
+
 The generated-only package context cannot redirect legacy models. The fixed
 wrapper argument rejects absolute/drive/whitespace/quote/control substitutions
 and must resolve to the actual source wrapper. Python also checks the exact new

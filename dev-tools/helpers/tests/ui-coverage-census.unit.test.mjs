@@ -34,24 +34,18 @@ function assertCurrentReviewSiteDrift(map, result) {
 }
 const pendingTrainingDefinitions = Object.freeze([
   {
-    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
-    "baseline": "068cbc118349ede9bb28f508264eab36626f3440",
-    "committed": "57a4fd8182dff345d2a1afca48493258cc95c18f52ad6879e537a37b2a0b5852",
-    "candidate": "3f905b4d9b9a59e301957dc4874f2e2ed6250a4c1f29338694d0a39d7baa2fe7",
-    "facts_sha256": "f64da585e9b6fd0baf7f906984446975ca42dcd3592eaebdbffd9b64bb373f0c"
-  },
-  {
-    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
-    "baseline": "068cbc118349ede9bb28f508264eab36626f3440",
-    "committed": "30067058d5b86324686a1a5c918d88a6101224bed5243704fc51d89f247274b2",
-    "candidate": "de04843392e4c5de4f096d1ed30072e4f3a47046cc898fb9a9b76e6de2a0d163",
-    "facts_sha256": "5b1eaa9517361c55479e6e23adbf6ca0e903dc943afce5f31898bf3aee3a5190"
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "baseline": "75aa85b70bbcc0fa457fe8a2eb1b044f94486328",
+    "committed": "2c20479d9514a2b43db87b242cd59210b3d0eee1d9eb86a33a3d6db2e92f9985",
+    "candidate": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b",
+    "facts_sha256": "178ba822ec619b5e9f8b4214c1e4af6904827b1c9d15a61c2918ad2a7342f021"
   }
 ].map(Object.freeze));
 
-// A current definition can be tested before its real commit exists. These two
-// exact prospective bindings retain the actual older Git blobs, not invented
-// committed hashes. The generic validator still checks all actual source facts.
+// Earlier training definitions now have actual committed source pins.
+// Only this exact working-directory change remains prospective. Its baseline
+// pin is a real older Git blob; full candidate facts must match exactly.
+// The generic validator still checks every actual mapped source.
 function assertCurrentSourceDrift(map, result) {
   const expected = [];
   for (const pending of pendingTrainingDefinitions) {
