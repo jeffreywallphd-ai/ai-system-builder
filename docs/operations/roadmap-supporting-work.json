@@ -8544,6 +8544,25 @@
         "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
         "Only the fresh journal component is qualified. New-parent/ancestor rename or deletion, preopened rights, stalled IO, guardian/model-worker crash/restart, shared durable 12 GiB accounting and actual offload resources/delivery/cleanup remain pending. Unknown usage reserves 12 GiB; production stays unavailable. No lease, credit, old-file access or extra run. Accuracy/OCR stay closed; full tests deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "qualify-owned-read-session-cancellation",
+      "work_criteria": [
+        "pure-entry-and-fixed-native-scope",
+        "original-handle-fault-and-real-exit-frontier",
+        "strict-cancellation-and-retirement-evidence",
+        "focused-tests-docs-and-independent-checkpoint"
+      ],
+      "receipt_digest": "cdcc86f5949fd433007f230f1ba852611af8866e962aa1b0e459bdebe7f877ec",
+      "review_digest": "f3faa810cb7a7dfa667dc7491dc4846a35ea3ad1db46e932b464eccf06565165",
+      "scope": "Commit c58084095 passed 76 focused tests, six related groups and review. Two Windows reader cases passed separate result review. Cancellation returned 1 and the original read ended with error 995. Stopping the owned child ended its original read with error 109 and no cancellation. Each case confirmed caller failure, controller/reaper/child exit, an empty Job, all 15 closes and zero replay. Failed requests stayed failed. Captured output matched the new saved result.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "Only fresh, model-free IPC response reads are qualified. Actual 120-second timeouts, hung kernel calls, model IO, guardian/model-worker crash lifetime, ancestor protection, shared durable 12 GiB accounting, retained restart and offload resources/delivery/cleanup remain pending. Unknown usage charges 12 GiB; production stays unavailable. No lease, disk credit, old-data access or extra run. Accuracy/OCR stay closed; full tests deferred."
+      ]
     }
   ]
 }

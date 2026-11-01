@@ -1024,3 +1024,14 @@ not qualify actual 120-second timeout delivery, indefinitely hung kernel calls,
 model IO, model-worker crash recovery, shared durable accounting, retained staging
 restart or model resources. A new test namespace grants no disk credit. Accepted
 accuracy and OCR checks remain closed.
+
+The committed read-session qualifier passed both actual Windows cases on
+`c58084095`. Its original response read settled with cancellation error 995 in
+the first case and child-exit error 109 in the second. Both cases confirmed the
+failed caller frontier, controller/reaper/child exit, an empty Job, all 15 closes
+and zero Native calls on completed cleanup replay. The single-link new summary
+matched captured output. See the independently reviewed
+[versioned reader results](windows-offload-read-session-qualification.json).
+These are fresh model-free IPC controls only. Model file IO, actual timeout or
+hung-kernel delivery, guardian/model-worker crash lifetime, ancestor protection,
+shared accounting, retained restart and model resources remain pending.

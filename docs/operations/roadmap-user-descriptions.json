@@ -13571,6 +13571,47 @@
           "Full-system tests will run after feature work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "767d4a7f2b3eab844b7f816007c25e9885d43f210f445cc273adda7be75cf712",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The new test code passed 76 focused tests, six related check groups and independent review.",
+          "Both Windows worker-message checks passed a separate review of their actual results.",
+          "The cancellation check confirmed that the original read finished with cancellation before cleanup.",
+          "The child-exit check stopped only its own test child and confirmed that the original read ended.",
+          "These two checks use different failure paths.",
+          "Each case confirmed that its caller failed and its controller, cleanup thread and child process exited.",
+          "Each case confirmed that no child remained and that all 15 test resources were closed.",
+          "Rechecking completed cleanup did not repeat any Windows operations.",
+          "The original failed requests stayed failed.",
+          "The captured output matched the saved result from this new run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0123d79608ff5253dfe3ba4a5dd35ee6c7608f6e32d8d3f01766a7efb2de136c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Only message reads for a new test worker without a model are qualified.",
+          "The agent must still test actual 120-second timeouts and operations that remain stuck inside Windows.",
+          "Model file operations and crashes of the protection process or model worker still need checks.",
+          "The agent must still protect the parent folders and the folders above them.",
+          "All processes and runs must share a disk limit of 12 GiB that survives a restart.",
+          "Safe restart with retained files and actual low-memory resource use, output delivery and cleanup still need work.",
+          "Unknown temporary files still count against the full 12 GiB limit.",
+          "Production low-memory mode remains unavailable.",
+          "This result does not allow a new offload slot, release reserved disk space, give access to old files or authorize another test run.",
+          "Completed model accuracy and OCR checks stay closed.",
+          "Full-system tests will run after feature work."
+        ]
+      }
     }
   ]
 }
