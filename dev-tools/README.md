@@ -47,6 +47,12 @@ typechecks. Catalog and profile data are policy-bound; uncovered impact and an
 explicit `focused-tests` requirement retain the generic gate. This scoped UI
 result grants no whole-application, native, model or parent roadmap qualification.
 
+The focused helper uses one full source snapshot within each profile planning
+call. Every later planning call takes a fresh snapshot. The review-site profile
+also passes the helper's selected Python to its nested controller test. It does
+not use an ambient PYTHON value for that profile. Commands, test membership and
+time limits stay unchanged. These checks start no app or model.
+
 Repository-owned scripts live under `dev-tools/scripts`. Portable contributor
 helpers for recurring Codex and verification loops live under
 `dev-tools/helpers`; see its README for configuration and safety boundaries.

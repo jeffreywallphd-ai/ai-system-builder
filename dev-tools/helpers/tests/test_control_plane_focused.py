@@ -192,6 +192,83 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             ['control-plane'], 'fixture')
         self.assertIn('focused-tests', [row['id'] for row in other['selected']])
 
+    def test_profile_reuses_one_source_view_and_preserves_exact_commands(self):
+        import json
+        node = self.put('modules/adapters/example/owned.unit.test.mjs', "import test from 'node:test';\n")
+        python = self.put('modules/adapters/example/test_owned.py', 'import unittest\nclass Cases(unittest.TestCase): pass\n')
+        files = {node: 'fixture', python: 'fixture'}
+        self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
+            'schema_version': 'contributor-check-profiles-v1',
+            'profiles': {'owned': {'test_paths': [python, node], 'source_paths': [python, node]}}}))
+        with patch.object(focused, 'snapshot', return_value={'files': files}) as snapshots:
+            direct = focused.commands(self.root, [python, node], exact=True)
+            snapshots.assert_called_once_with(self.root)
+        with patch.object(focused, 'snapshot', return_value={'files': files}) as snapshots:
+            self.assertEqual(focused.profile_commands(self.root, 'owned'), direct)
+            snapshots.assert_called_once_with(self.root)
+
+    def test_profile_and_direct_planning_do_not_cache_across_calls(self):
+        import json
+        from control_plane.contracts import ControlError
+        node = self.put('modules/adapters/example/owned.unit.test.mjs', "import test from 'node:test';\n")
+        self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
+            'schema_version': 'contributor-check-profiles-v1',
+            'profiles': {'owned': {'test_paths': [node], 'source_paths': [node]}}}))
+        with patch.object(focused, 'snapshot', side_effect=[{'files': {node: 'fixture'}}, {'files': {}}, {'files': {}}]) as snapshots:
+            self.assertEqual(focused.profile_commands(self.root, 'owned'), [['node', '--test', '--', node]])
+            with self.assertRaises(ControlError): focused.profile_commands(self.root, 'owned')
+            with self.assertRaises(ControlError): focused.commands(self.root, [node], exact=True)
+            self.assertEqual(snapshots.call_args_list, [unittest.mock.call(self.root)] * 3)
+
+    def test_profile_single_view_still_rejects_ai_missing_and_escaping_tests(self):
+        import json
+        from control_plane.contracts import ControlError
+        ai = self.put('modules/adapters/example/ai.unit.test.mjs', '// @test-suite ai\n')
+        cases = [(ai, {ai: 'fixture'}), ('modules/adapters/example/missing.unit.test.mjs', {}),
+                 ('../escape.unit.test.mjs', {'../escape.unit.test.mjs': 'fixture'})]
+        for name, files in cases:
+            self.put('dev-tools/config/contributor-check-profiles.json', json.dumps({
+                'schema_version': 'contributor-check-profiles-v1',
+                'profiles': {'owned': {'test_paths': [name], 'source_paths': [name]}}}))
+            with self.subTest(name=name), patch.object(focused, 'snapshot', return_value={'files': files}) as snapshots:
+                with self.assertRaises(ControlError): focused.profile_commands(self.root, 'owned')
+                snapshots.assert_called_once_with(self.root)
+
+    def test_only_review_site_binds_nested_python_without_mutating_caller(self):
+        for profile in ('review-site', 'functionality-outcomes'):
+            for ambient in (None, 'synthetic-never-executed-python'):
+                source = {'PATH': 'synthetic-path', 'PYTHONOPTIMIZE': '2'}
+                if ambient is not None: source['PYTHON'] = ambient
+                command = ['node', '--test', '--', 'fixed.unit.test.mjs']
+                with self.subTest(profile=profile, ambient=ambient), patch.dict(focused.os.environ, source, clear=True), patch.object(sys, 'argv', ['focused', '--profile', profile]), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+                    self.assertEqual(focused.main(), 0)
+                    self.assertEqual(dict(focused.os.environ), source)
+                    self.assertEqual(run.call_args.args[0], command)
+                    child = run.call_args.kwargs['env']
+                    self.assertNotIn('PYTHONOPTIMIZE', child)
+                    self.assertEqual(child.get('PYTHON'), sys.executable if profile == 'review-site' else ambient)
+                    self.assertEqual(run.call_args.kwargs['timeout'], 630 if profile == 'review-site' else 270)
+
+    def test_review_site_python_binding_keeps_failure_exit_and_timeouts(self):
+        for code in (1, 5):
+            with self.subTest(code=code), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[['node', '--test', '--', 'fixed.unit.test.mjs']]), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=code)) as run:
+                self.assertEqual(focused.main(), code)
+                self.assertEqual(run.call_args.kwargs['env']['PYTHON'], sys.executable)
+                self.assertEqual(run.call_args.kwargs['timeout'], 630)
+
+
+    def test_review_site_pytest_environment_keeps_selected_python_and_controls(self):
+        source = {'PYTHON': 'synthetic-never-executed-python', 'PYTHONOPTIMIZE': '2',
+                  'PYTEST_ADDOPTS': '-p synthetic', 'PYTEST_PLUGINS': 'synthetic'}
+        command = [sys.executable, '-B', '-m', 'pytest', '--', 'fixed_test.py']
+        with patch.dict(focused.os.environ, source, clear=True), patch.object(sys, 'argv', ['focused', '--profile', 'review-site']), patch.object(focused, 'profile_commands', return_value=[command]), patch.object(focused, 'pytest_tooling_ready', return_value=True), patch.object(focused.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertEqual(focused.main(), 0)
+            self.assertEqual(run.call_args.args[0], command)
+            self.assertEqual(dict(focused.os.environ), source)
+            self.assertEqual(run.call_args.kwargs['env'], {'PYTHON': sys.executable, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'})
+            self.assertEqual(run.call_args.kwargs['timeout'], 630)
+
+
 
 if __name__ == '__main__':
     unittest.main()

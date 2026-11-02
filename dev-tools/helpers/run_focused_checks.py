@@ -76,7 +76,11 @@ def python_test_command(root, test):
 
 
 def commands(root, affected, *, exact=False):
-    files = snapshot(root)["files"]
+    return _commands_for_snapshot(root, affected, snapshot(root)["files"], exact=exact)
+
+
+def _commands_for_snapshot(root, affected, files, *, exact=False):
+    # Reuse only this invocation's source view; never cache across calls.
     owners = set()
     for path in affected:
         parts = relative(path).split("/")
@@ -136,7 +140,7 @@ def profile_commands(root, profile_id):
             refuse("verification.profile-path", "Profiles contain only available source-owned non-AI tests.")
         if re.search(r"(?m)^\s*//\s*@test-suite\s+ai\s*$", (root / path).read_text(encoding="utf-8")):
             refuse("verification.profile-ai", "Controlled AI qualification is reserved for the explicit AI suite.")
-    return commands(root, paths, exact=True)
+    return _commands_for_snapshot(root, paths, source, exact=True)
 
 
 def profile_command_timeout(profile):
@@ -167,6 +171,9 @@ def main():
                     print("Focused pytest tests require the exact developer tooling in dev-tools/helpers/requirements-tests.txt. Install it explicitly in the selected verification environment; the helper does not install packages.", file=sys.stderr)
                     return 1
                 env = pytest_environment(os.environ)
+            if args.profile == "review-site":
+                # The fixed Node guard runs Python tests in this selected environment.
+                env["PYTHON"] = sys.executable
             r = subprocess.run(argv, cwd=root, check=False, timeout=profile_command_timeout(args.profile), env=env)
             if r.returncode:
                 return r.returncode

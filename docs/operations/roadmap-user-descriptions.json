@@ -13918,6 +13918,165 @@
           "Earlier failed results remain in the report."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "22bda942fd7c85b780395314804b09965a63fb75b1fd8927c2423fc125901e78",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent built and checked an offline Desktop package.",
+          "That build included the Python worker files.",
+          "All 217 package files matched the recorded build.",
+          "Its owned test processes and handles closed cleanly."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e7d0fc00d15c11de8ec3c16547cb159dd9932e9ea0da0cb9868760263522aaca",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This result covers the recorded build only.",
+          "It does not prove that training, Save, reopen or physical worker shutdown work in the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a8411a31a690d5cea7b0556f2b53d6dc47ff64a7305e95c279afbdee7e071883",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7b7bf25f622431339fa9353fb4aca09384c1de94c91de627149fb311e4528278",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop training test starts the app in its own test folder.",
+          "Relative filenames resolve inside that folder.",
+          "The runner and input seed keep their required source folder.",
+          "The existing training and cleanup assertions stay in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ecf7cc90eac455a53a1c2241e48e17050362a438eea988a2fa143fc51b4a1dd2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The folder choice does not prevent all other file or network access.",
+          "The actual training workflow still needs to pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6399dfd4d744d6474ad91335fbd2c851ee7df15f66ea5e4b0b6055665e68b693",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent tied the working-folder test records to their actual reviewed source version.",
+          "The source facts and other coverage records stayed intact.",
+          "This changed evidence references and did not run the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a2dc6b6130319e9d5ac2caa6e2a8eff5da051e25fe732c2c6cc8b1074bdac7c1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "A source reference does not prove that the app workflow passes.",
+          "The later training check remains separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "416ca9c34b6607bbfb0d88931cf0a65e2906734b765047a30ee4f6fa9202bab1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed how the training test loads JavaScript helpers after setup.",
+          "A real test worker and all 12 focused checks passed.",
+          "Those checks opened no app and loaded no model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "67334cdc516297605e0849f58e08c13c2ec1832a4f9cb64ec6a0dcbe62b8d8e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This fixes test loading.",
+          "Training, private review, Save, reopen and physical worker cleanup still need a successful app test."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "12b903a280ef5ab2970b5d53a6a33ecceb1de8ee0644831bff2d2b643c872b63",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A future failed training test will name the setting it tried to change.",
+          "The diagnostic excludes field values, paths and private error text.",
+          "All 14 focused training checks and 30 coverage checks passed.",
+          "The report preserves the earlier failed app tests and their clean outer process shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2d36c1386afe99f6e7ed4b37e58d7fc0224839ada115baf3aa118af1a848e4a8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The real app test stopped while entering settings, before training started.",
+          "It observed no physical training worker, so that cleanup check did not pass.",
+          "The agent still needs to diagnose the specific setting and complete Train, private review, Save and reopen."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "33ace80b2df32a0d1a828dae2aeaa2fdb53278f5cb92ad2b0971045a514e8fae",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent checked all 180 coverage source records against the actual reviewed diagnostic commit.",
+          "Only the baseline and three source version references changed.",
+          "Older historical versions stay separate.",
+          "All 30 coverage checks passed without opening the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bd4fb14b0960e0324da774504027cd06a20d361ca426c1a4d0f3f92bf412db56",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "These records describe source coverage.",
+          "They do not grant a successful app, model, low-memory or complete-roadmap result."
+        ]
+      }
     }
   ]
 }

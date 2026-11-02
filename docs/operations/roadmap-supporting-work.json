@@ -8727,6 +8727,121 @@
         "This result covers startup only. The offline Desktop package and the train, review, save and reopen test remain pending. Low-memory file protection, disk accounting, worker recovery, restart and resource checks stay open. Earlier failed results remain in the report.",
         "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-offline-desktop-training-package",
+      "work_criteria": [
+        "actual-isolated-offline-package-and-retirement",
+        "security-truthful-history-and-owned-checkpoint"
+      ],
+      "receipt_digest": "131aec95955aca83979669d0b6d4975a25fc1a5791f9799472d534d45112e129",
+      "review_digest": "6e3810ff723ea653597db730b9c5870d19beefae47e3bb868b00e131feb1b6d0",
+      "scope": "The agent built and checked an offline Desktop package. That build included the Python worker files. All 217 package files matched the recorded build. Its owned test processes and handles closed cleanly.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. This result covers the recorded build only. It does not prove that training, Save, reopen or physical worker shutdown work in the app.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "isolate-training-cwd-with-current-census",
+      "work_criteria": [
+        "explicit-owned-training-app-cwd",
+        "exact-current-census-and-prospective-binding",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d192e115fc3c5ea7cb549a7f75b99bf701ef8a4de62d462047a25cc16513ce04",
+      "review_digest": "8bc09559fd40568bfcc2846c07fcd9664028d02706d9bfbc49366f3d9e43019b",
+      "scope": "The Desktop training test starts the app in its own test folder. Relative filenames resolve inside that folder. The runner and input seed keep their required source folder. The existing training and cleanup assertions stay in place.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. The folder choice does not prevent all other file or network access. The actual training workflow still needs to pass.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "bind-training-cwd-census-to-reviewed-source",
+      "work_criteria": [
+        "real-reviewed-source-binding",
+        "security-truthful-scope-and-owned-checkpoint"
+      ],
+      "receipt_digest": "fb645f1b4496661f4b0b17a37c2ec099295b46d99b4efefc10afb449122f0bc0",
+      "review_digest": "98d48213eaa8db9f7ab721949906d9f30fde7f870fe319a244170b5b84350820",
+      "scope": "The agent tied the working-folder test records to their actual reviewed source version. The source facts and other coverage records stayed intact. This changed evidence references and did not run the app.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. A source reference does not prove that the app workflow passes. The later training check remains separate.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-training-playwright-mjs-preload-boundary",
+      "work_criteria": [
+        "real-mjs-preload-worker-regression",
+        "truthful-failed-host-history-and-security"
+      ],
+      "receipt_digest": "f92be4489a4b4bf304bd23c8d73fc2cbbcfd8744750d164b9796534adb625851",
+      "review_digest": "ee14be86b7de8820b61a0affca3206a0bc386fd02511ec5fa1817b9d9a805d2f",
+      "scope": "The agent fixed how the training test loads JavaScript helpers after setup. A real test worker and all 12 focused checks passed. Those checks opened no app and loaded no model.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. This fixes test loading. Training, private review, Save, reopen and physical worker cleanup still need a successful app test.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "diagnose-desktop-training-configuration-actions",
+      "work_criteria": [
+        "closed-action-training-failure-diagnostics",
+        "current-census-and-truthful-failed-evidence"
+      ],
+      "receipt_digest": "72d3bc41dc645e0d09a85d063d383e0aeb479a6ff48a9f590dac2054ad838481",
+      "review_digest": "495d376669d508cdf03639a43440d98975f16944f68c3668aaadbdbc775a989d",
+      "scope": "A future failed training test will name the setting it tried to change. The diagnostic excludes field values, paths and private error text. All 14 focused training checks and 30 coverage checks passed. The report preserves the earlier failed app tests and their clean outer process shutdown.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. The real app test stopped while entering settings, before training started. It observed no physical training worker, so that cleanup check did not pass. The agent still needs to diagnose the specific setting and complete Train, private review, Save and reopen.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "bind-training-diagnostic-census-to-reviewed-source",
+      "work_criteria": [
+        "actual-reviewed-source-and-current-facts",
+        "owned-metadata-checkpoint-without-qualification"
+      ],
+      "receipt_digest": "abfda0a350408462c8cf2116511c9d948f4ab0cbeed67f440ad230b8f702d675",
+      "review_digest": "9ff6c1cfa7a4617e12d2d31020fd5b350c8667064ba731086b2450e6eaecf903",
+      "scope": "The agent checked all 180 coverage source records against the actual reviewed diagnostic commit. Only the baseline and three source version references changed. Older historical versions stay separate. All 30 coverage checks passed without opening the app.",
+      "limitations": [
+        "This is reviewed local support. It does not qualify the current parent candidate or complete a roadmap criterion.",
+        "No action needed. These records describe source coverage. They do not grant a successful app, model, low-memory or complete-roadmap result.",
+        "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
+        "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
+      ]
     }
   ]
 }

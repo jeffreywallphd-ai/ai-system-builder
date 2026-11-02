@@ -52,6 +52,17 @@ test child so plain assertions cannot be erased.
 Ordinary test code still runs with the contributor's authority. This isolation
 does not sandbox tests or qualify model accuracy, native offload or a roadmap.
 
+Profile planning validates its fixed test paths and builds commands from one
+full source snapshot for that call. Separate profile or direct planning calls
+still take fresh snapshots; there is no persistent source cache or caller-supplied
+source map. Command selection and controlled-AI exclusions are unchanged.
+
+For the exact review-site profile, the helper sets the child PYTHON value to its
+own selected interpreter. The fixed Node guard therefore runs the controller
+tests with the same installed test tools, even if PYTHON is missing or names
+another interpreter. Other profiles keep their existing environment behavior.
+The caller environment and the existing test and catalog time limits stay intact.
+
 ## Local configuration
 
 Copy `dev-tools/helpers/helpers.example.json` to an ignored location such as
