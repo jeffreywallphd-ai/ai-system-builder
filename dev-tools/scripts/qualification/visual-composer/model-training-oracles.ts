@@ -1,5 +1,6 @@
 import { types } from "node:util";
 import { createHash } from "node:crypto";
+import { safeQualificationFailureType } from "./qualification-reporting";
 
 export const TRAINING_HOST_TIMEOUT_MS = 10 * 60_000;
 export const TRAINING_HOST_PHASE_TIMEOUT_MS = 120_000;
@@ -11,7 +12,23 @@ export const TRAINING_HOST_PHASES = Object.freeze([
   "private-review-pending", "candidate-unregistered", "explicit-save-completed",
   "record-reopened", "renderer-reload-preserved-record",
 ] as const);
+export const TRAINING_CONFIGURATION_ACTIONS = Object.freeze([
+  "base-model-select", "base-model-value", "dataset-check", "training-task-select", "method-select",
+  "epochs", "max-steps", "batch-size", "sequence-length", "seed", "advanced-open",
+  "lora-rank", "lora-alpha", "grad-accumulation", "output-name", "display-name",
+  "store-local", "publish-disabled", "validation-disabled", "start-enabled",
+] as const);
+export type TrainingConfigurationAction = typeof TRAINING_CONFIGURATION_ACTIONS[number];
 const invalid = () => new Error("The fixed training host test input is unavailable or invalid.");
+
+/** Closed diagnostics only. Never inspect a locator, field value or raw error text. */
+export function trainingFailureDetails(phase: unknown, action: unknown, error: unknown) {
+  if (typeof phase !== "string" || !(TRAINING_HOST_PHASES as readonly string[]).includes(phase) ||
+      typeof action !== "string" || action !== "phase" && (phase !== "configuration-bounded" ||
+        !(TRAINING_CONFIGURATION_ACTIONS as readonly string[]).includes(action))) throw invalid();
+  return Object.freeze({ schemaVersion: "training-host-failure-v1", status: "failed", phase, action,
+    errorType: safeQualificationFailureType(error), parentQualificationGranted: false });
+}
 
 function denseStrings(input: unknown, maximum: number): string[] {
   if (types.isProxy(input) || !Array.isArray(input) || Object.getPrototypeOf(input) !== Array.prototype || input.length > maximum) throw invalid();

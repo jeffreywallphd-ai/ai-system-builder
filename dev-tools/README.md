@@ -905,6 +905,12 @@ A small regression uses a real Playwright setup and worker with synthetic inputs
 It opens no app and loads no model. It catches import failures that `--list`
 alone cannot detect.
 
+Failed training journeys attach a separate fixed phase/action/error-type report.
+For example, `base-model-select` identifies the attempted control without
+recording its value or raw error. The eight workflow phases and physical worker
+shutdown checks still need actual success. A clean outer Job exit alone is
+not a successful training or worker-cleanup result.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

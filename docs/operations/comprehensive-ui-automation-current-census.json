@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "dfdd7345e5d9f0dd645e936c74d9cc9ebc30891c",
+ "source_baseline": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -12641,8 +12641,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
    "facts": {
-    "sha256": "3f905b4d9b9a59e301957dc4874f2e2ed6250a4c1f29338694d0a39d7baa2fe7",
-    "bytes": 13437,
+    "sha256": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
+    "bytes": 14751,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -12656,41 +12656,45 @@
      },
      {
       "name": "step",
-      "line": 59
+      "line": 60
+     },
+     {
+      "name": "configure",
+      "line": 65
      },
      {
       "name": "dismissNotifications",
-      "line": 72
+      "line": 78
      },
      {
       "name": "refreshInventory",
-      "line": 76
+      "line": 82
      },
      {
       "name": "readSavedRecord",
-      "line": 150
+      "line": 156
      }
     ],
     "assertionCount": 31,
-    "assertionDigest": "f29a4fd21abba7e62877b35fe8905042b3d0becdb98470e54669a4f3b72f6497",
+    "assertionDigest": "78f05ac7d4917a4199c214d7981242783bd743f344fa325c07553e62b866ddb5",
     "assertionExamples": [
      {
-      "line": 79,
+      "line": 85,
       "kind": "expect",
       "sha256": "8b1a4e20ddbb3cb0e7d0eed8599954f90ec5225671ee4de2974c0ecd09e03710"
      },
      {
-      "line": 83,
+      "line": 89,
       "kind": "expect",
       "sha256": "3a369e3f6f97e53c268e617cdb4d3c7e929db54fa6713afe8a6bf4ee81efe9e0"
      },
      {
-      "line": 84,
+      "line": 90,
       "kind": "expect",
       "sha256": "3cdd520de6cd9d84d08d16a578748f6239fdb78389806ed9e938c127e32f7dac"
      },
      {
-      "line": 86,
+      "line": 92,
       "kind": "expect",
       "sha256": "9a6f81f56771d89dd1ff248930f2c7f4bbcfc0a6466ca03719b959255b1bf388"
      }
@@ -12702,8 +12706,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
    "facts": {
-    "sha256": "de04843392e4c5de4f096d1ed30072e4f3a47046cc898fb9a9b76e6de2a0d163",
-    "bytes": 12722,
+    "sha256": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f",
+    "bytes": 14998,
     "cases": [
      {
       "name": "the no-install delegate admits only exact declared read-only probes and pip version",
@@ -12738,31 +12742,39 @@
       "line": 76
      },
      {
+      "name": "training failure details retain closed action identity without reading private errors",
+      "line": 94
+     },
+     {
+      "name": "training failure details refuse foreign phase/action data without coercion",
+      "line": 110
+     },
+     {
       "name": "real read-only inventory projection returns only IDs and exact base/task-owned output facts",
-      "line": 101
+      "line": 128
      },
      {
       "name": "the real inventory projection accepts only the declared generated input label without exposing paths",
-      "line": 111
+      "line": 138
      },
      {
       "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
-      "line": 118
+      "line": 145
      },
      {
       "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
-      "line": 130
+      "line": 157
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "withInventoryPort",
-      "line": 96
+      "line": 123
      }
     ],
-    "assertionCount": 49,
-    "assertionDigest": "94c1dfb203804f7528dc71a62a3112f1d1be52d9b13ac59d4be15db755c738be",
+    "assertionCount": 61,
+    "assertionDigest": "ba4a13dd478a4830a08dbd9e879aef40349e5dc8d200cd93da5c4eef2255c7e4",
     "assertionExamples": [
      {
       "line": 10,
@@ -14162,6 +14174,54 @@
     "modifiers": []
    },
    "committed_sha256": "2b97945b631b4d33518cead037c5eab67bcd63d87caa081816f8d046ee83019c"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+   "facts": {
+    "sha256": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
+    "bytes": 7102,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "trainingFailureDetails",
+      "line": 25
+     },
+     {
+      "name": "denseStrings",
+      "line": 33
+     },
+     {
+      "name": "trainingPublicId",
+      "line": 45
+     },
+     {
+      "name": "trainingWorkspaceId",
+      "line": 49
+     },
+     {
+      "name": "trainingDatasetIds",
+      "line": 53
+     },
+     {
+      "name": "captureTrainingHostFixture",
+      "line": 70
+     },
+     {
+      "name": "trainingBaseName",
+      "line": 89
+     },
+     {
+      "name": "trainingHostReport",
+      "line": 92
+     }
+    ],
+    "assertionCount": 0,
+    "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "assertionExamples": [],
+    "modifiers": []
+   },
+   "committed_sha256": "9c127b81bd0b43bcd14cac38268b5def5a87212c637736c19a8b9f76102115db"
   }
  ],
  "scenarios": [
@@ -15320,7 +15380,8 @@
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
       "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
       "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
-      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
      ]
     },
     {
@@ -15329,7 +15390,8 @@
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
       "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
       "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
-      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
      ]
     },
     {
@@ -15338,7 +15400,8 @@
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
       "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
       "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
-      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
      ]
     },
     {
@@ -15347,7 +15410,8 @@
       "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
       "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
       "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
-      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
      ]
     }
    ],

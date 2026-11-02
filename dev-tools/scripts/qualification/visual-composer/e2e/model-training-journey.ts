@@ -1,5 +1,5 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME } from "../model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME, type TrainingConfigurationAction } from "../model-training-oracles";
 
 /** Serialized into the owned renderer. Return only admitted IDs, never paths or metadata. */
 export async function readTrainingHostInventory(input: { workspaceId: string; baseModelRecordId: string; baseName: string; displayName: string; requestId: string }) {
@@ -56,9 +56,15 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
   if (!fixture || info.project.name !== "packaged-desktop") throw new Error("The Desktop training prerequisites are invalid.");
   const phases: string[] = [];
   let failed = false;
+  let failure: unknown, currentAction: "phase" | TrainingConfigurationAction = "phase";
   async function step(phase: typeof TRAINING_HOST_PHASES[number], action: () => Promise<void>) {
     if (TRAINING_HOST_PHASES[phases.length] !== phase) throw new Error("Unexpected training host phase.");
+    currentAction = "phase";
     await action(); phases.push(phase);
+  }
+  async function configure(action: TrainingConfigurationAction, operation: () => Promise<unknown>) {
+    currentAction = action;
+    await operation();
   }
   try {
     const switcher = page.getByLabel("Select current workspace", { exact: true });
@@ -96,24 +102,24 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
       for (const id of fixture.datasetArtifactIds) await expect(workflow.locator(`input[name="training-dataset"][value="${id}"]`)).toHaveCount(1);
     });
     await step("configuration-bounded", async () => {
-      await workflow.getByRole("combobox", { name: /^Base model\b/ }).selectOption(fixture.baseModelRecordId);
-      await expect(workflow.getByRole("combobox", { name: /^Base model\b/ })).toHaveValue(fixture.baseModelRecordId);
-      for (const id of fixture.datasetArtifactIds) await workflow.locator(`input[name="training-dataset"][value="${id}"]`).check();
-      await workflow.getByRole("combobox", { name: /^Training task\b/ }).selectOption("llm-instruction");
-      await workflow.getByRole("combobox", { name: /^Method\b/ }).selectOption("lora");
-      for (const [name, value] of [["Epochs", "1"], ["Max steps", "1"], ["Batch size", "1"], ["Sequence length", "64"], ["Seed", "7"]] as const) {
-        await workflow.getByRole("textbox", { name: new RegExp(`^${name}\\b`) }).fill(value);
+      await configure("base-model-select", () => workflow.getByRole("combobox", { name: /^Base model\b/ }).selectOption(fixture.baseModelRecordId));
+      await configure("base-model-value", () => expect(workflow.getByRole("combobox", { name: /^Base model\b/ })).toHaveValue(fixture.baseModelRecordId));
+      for (const id of fixture.datasetArtifactIds) await configure("dataset-check", () => workflow.locator(`input[name="training-dataset"][value="${id}"]`).check());
+      await configure("training-task-select", () => workflow.getByRole("combobox", { name: /^Training task\b/ }).selectOption("llm-instruction"));
+      await configure("method-select", () => workflow.getByRole("combobox", { name: /^Method\b/ }).selectOption("lora"));
+      for (const [action, name, value] of [["epochs", "Epochs", "1"], ["max-steps", "Max steps", "1"], ["batch-size", "Batch size", "1"], ["sequence-length", "Sequence length", "64"], ["seed", "Seed", "7"]] as const) {
+        await configure(action, () => workflow.getByRole("textbox", { name: new RegExp(`^${name}\\b`) }).fill(value));
       }
-      await workflow.getByRole("button", { name: /^Advanced training settings\b/ }).click();
-      for (const [name, value] of [["LoRA rank", "1"], ["LoRA alpha", "2"], ["Grad accumulation", "1"]] as const) {
-        await workflow.getByRole("textbox", { name: new RegExp(`^${name}\\b`) }).fill(value);
+      await configure("advanced-open", () => workflow.getByRole("button", { name: /^Advanced training settings\b/ }).click());
+      for (const [action, name, value] of [["lora-rank", "LoRA rank", "1"], ["lora-alpha", "LoRA alpha", "2"], ["grad-accumulation", "Grad accumulation", "1"]] as const) {
+        await configure(action, () => workflow.getByRole("textbox", { name: new RegExp(`^${name}\\b`) }).fill(value));
       }
-      await workflow.getByRole("textbox", { name: /^Output model name\b/ }).fill(fixture.outputName);
-      await workflow.getByRole("textbox", { name: /^Generated model display name\b/ }).fill(fixture.displayName);
-      await workflow.getByRole("checkbox", { name: /^Store locally\b/ }).check();
-      await workflow.getByRole("checkbox", { name: /^Publish to Hugging Face\b/ }).uncheck();
-      await workflow.getByRole("checkbox", { name: /^Validate after training\b/ }).uncheck();
-      await expect(workflow.getByRole("button", { name: "Start Training", exact: true })).toBeEnabled();
+      await configure("output-name", () => workflow.getByRole("textbox", { name: /^Output model name\b/ }).fill(fixture.outputName));
+      await configure("display-name", () => workflow.getByRole("textbox", { name: /^Generated model display name\b/ }).fill(fixture.displayName));
+      await configure("store-local", () => workflow.getByRole("checkbox", { name: /^Store locally\b/ }).check());
+      await configure("publish-disabled", () => workflow.getByRole("checkbox", { name: /^Publish to Hugging Face\b/ }).uncheck());
+      await configure("validation-disabled", () => workflow.getByRole("checkbox", { name: /^Validate after training\b/ }).uncheck());
+      await configure("start-enabled", () => expect(workflow.getByRole("button", { name: "Start Training", exact: true })).toBeEnabled());
     });
     await step("training-accepted", async () => {
       await workflow.getByRole("button", { name: "Start Training", exact: true }).click();
@@ -166,10 +172,17 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
       expect((await readRegistry()).generatedRecordIds).toEqual([savedId]);
       expect(await readSavedRecord()).toBe(savedId);
     });
-  } catch { failed = true; }
+  } catch (error) { failed = true; failure = error; }
   const report = trainingHostReport(phases, failed, fixture.inputProfile ?? "approved-qwen05"), body = JSON.stringify(report);
   if (Buffer.byteLength(body) > 4096) throw new Error("The training host report exceeded its fixed bound.");
-  try { await info.attach("training-host-ui", { body, contentType: "application/json" }); }
+  try {
+    await info.attach("training-host-ui", { body, contentType: "application/json" });
+    if (failed) {
+      const details = JSON.stringify(trainingFailureDetails(report.nextPhase, currentAction, failure));
+      if (Buffer.byteLength(details) > 1024) throw new Error("Training failure details exceeded their fixed bound.");
+      await info.attach("training-host-failure", { body: details, contentType: "application/json" });
+    }
+  }
   catch { throw new Error(`Training host report unavailable; last phase: ${report.nextPhase}.`); }
   if (report.status !== "passed") throw new Error(`Training host phase did not complete: ${report.nextPhase}.`);
 }

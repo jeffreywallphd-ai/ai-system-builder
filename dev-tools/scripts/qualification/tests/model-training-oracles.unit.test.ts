@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyDesktopTrainingJourney, readTrainingHostInventory } from "../visual-composer/e2e/model-training-journey";
-import { captureTrainingHostFixture, trainingHostReport, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_CONFIGURATION_ACTIONS, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
 import { trainingReadOnlyArguments } from "../visual-composer/training-host-fixture";
 
 test("the no-install delegate admits only exact declared read-only probes and pip version", () => {
@@ -82,12 +82,39 @@ test("initial Page and attachment failures retain a fixed training phase without
     const reports: ReturnType<typeof trainingHostReport>[] = [];
     const info = { project: { name: "packaged-desktop" }, attach: async (_: string, input: { body: string }) => { reports.push(JSON.parse(input.body)); } } as unknown as TestInfo;
     await assert.rejects(qualifyDesktopTrainingJourney(page, info, encode(fixture())), /^Error: Training host phase did not complete: workspace-and-inputs-visible\.$/);
-    assert.equal(reports.length, 1); assert.equal(reports[0]!.status, "failed"); assert.deepEqual(reports[0]!.phases, []); assert(!encode(reports).includes("private-page"));
+    assert.equal(reports.length, 2); assert.equal(reports[0]!.status, "failed"); assert.deepEqual(reports[0]!.phases, []); assert(!encode(reports).includes("private-page"));
+    assert.deepEqual(reports[1], trainingFailureDetails("workspace-and-inputs-visible", "phase", new Error("never serialized")));
     info.attach = async () => { throw null; };
     await assert.rejects(qualifyDesktopTrainingJourney(page, info, encode(fixture())), /^Error: Training host report unavailable; last phase: workspace-and-inputs-visible\.$/);
   } finally {
     keys.forEach((key, index) => { if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index]; });
   }
+});
+
+test("training failure details retain closed action identity without reading private errors", () => {
+  let reads = 0;
+  const error = new Error("private-training-value C:\\private\\model");
+  for (const key of ["message", "stack"]) Object.defineProperty(error, key, { get() { reads++; throw new Error("private getter"); } });
+  for (const action of TRAINING_CONFIGURATION_ACTIONS) {
+    const result = trainingFailureDetails("configuration-bounded", action, error);
+    assert.deepEqual(result, { schemaVersion: "training-host-failure-v1", status: "failed", phase: "configuration-bounded", action, errorType: "Error", parentQualificationGranted: false });
+    assert(Object.isFrozen(result)); assert(Buffer.byteLength(encode(result)) <= 1024);
+    assert(!encode(result).includes("private"));
+  }
+  const proxy = new Proxy({}, { get() { reads++; throw new Error("private"); }, getPrototypeOf() { reads++; throw new Error("private"); } });
+  assert.equal(trainingFailureDetails("configuration-bounded", "epochs", proxy).errorType, "Unknown");
+  for (const phase of TRAINING_HOST_PHASES) assert.equal(trainingFailureDetails(phase, "phase", null).status, "failed");
+  assert.equal(reads, 0);
+});
+
+test("training failure details refuse foreign phase/action data without coercion", () => {
+  let reads = 0;
+  const privateValue = { toString() { reads++; return "epochs"; }, get value() { reads++; return "epochs"; } };
+  const proxy = new Proxy({}, { get() { reads++; throw new Error("private"); }, getPrototypeOf() { reads++; throw new Error("private"); } });
+  for (const phase of [undefined, null, 0, "complete", "private-phase", privateValue, proxy]) assert.throws(() => trainingFailureDetails(phase, "phase", null));
+  for (const action of [undefined, null, 0, "private-action", "Epochs", privateValue, proxy]) assert.throws(() => trainingFailureDetails("configuration-bounded", action, null));
+  for (const phase of TRAINING_HOST_PHASES.filter(value => value !== "configuration-bounded")) assert.throws(() => trainingFailureDetails(phase, "epochs", null));
+  assert.equal(reads, 0);
 });
 
 const readInput = () => ({ workspaceId: trainingWorkspaceId(run), baseModelRecordId: "model.base-fixture", baseName: "Qualified Qwen 0.5B input", displayName: TRAINING_DISPLAY_NAME, requestId: "train-fixture-current" });

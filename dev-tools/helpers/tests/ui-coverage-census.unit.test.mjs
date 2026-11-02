@@ -34,18 +34,31 @@ function assertCurrentReviewSiteDrift(map, result) {
 }
 const pendingTrainingDefinitions = Object.freeze([
   {
-    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
-    "baseline": "75aa85b70bbcc0fa457fe8a2eb1b044f94486328",
-    "committed": "2c20479d9514a2b43db87b242cd59210b3d0eee1d9eb86a33a3d6db2e92f9985",
-    "candidate": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b",
-    "facts_sha256": "178ba822ec619b5e9f8b4214c1e4af6904827b1c9d15a61c2918ad2a7342f021"
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+    "baseline": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
+    "committed": "3f905b4d9b9a59e301957dc4874f2e2ed6250a4c1f29338694d0a39d7baa2fe7",
+    "candidate": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
+    "facts_sha256": "8120642b6e51c110d65171ca47637cc82c7954c4f2f7e7f5da08e387438a46c5"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+    "baseline": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
+    "committed": "9c127b81bd0b43bcd14cac38268b5def5a87212c637736c19a8b9f76102115db",
+    "candidate": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
+    "facts_sha256": "fe86eeaa9d320493e6a6c27f4e4f75985dfc783c849ca5a24f76ef27a6e299ca"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+    "baseline": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
+    "committed": "de04843392e4c5de4f096d1ed30072e4f3a47046cc898fb9a9b76e6de2a0d163",
+    "candidate": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f",
+    "facts_sha256": "28037645fbe059695542e93d9453edd33797d98657347427585799a2f441e0f8"
   }
 ].map(Object.freeze));
 
-// Earlier training definitions now have actual committed source pins.
-// Only this exact working-directory change remains prospective. Its baseline
-// pin is a real older Git blob; full candidate facts must match exactly.
-// The generic validator still checks every actual mapped source.
+// Only these exact training diagnostic definitions remain prospective.
+// The recorded baseline pins are real older Git blobs; complete candidate
+// SHA and facts must match. Every other mapped source keeps its own guard.
 function assertCurrentSourceDrift(map, result) {
   const expected = [];
   for (const pending of pendingTrainingDefinitions) {
@@ -319,7 +332,43 @@ test("pending tiny-training bindings reject forged, future, missing and unrelate
   for(const mutate of mutations){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
 });
 
-test("preserves exact historical rows outside current coverage and aggregate budgets",()=>{
+function assertReintroducedTrainingOracle(map,archive) {
+  const source="dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts";
+  const pending=pendingTrainingDefinitions.find(row=>row.path===source);assert(pending);
+  const old=archive.sources.filter(entry=>entry.row.path===source);assert.equal(old.length,1);
+  const current=map.sources.filter(row=>row.path===source);assert.equal(current.length,1);
+  const row=current[0],historical=old[0].row;
+  assert.equal(row.facts.sha256,pending.candidate);
+  assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256);
+  assert.notEqual(row.facts.sha256,historical.facts.sha256);
+  assert.notEqual(row.committed_sha256,historical.committed_sha256);
+  assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
+  const committed=execFileSync("git",["show",`${map.source_baseline}:${source}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+  assert.equal(row.committed_sha256,sha(committed));
+  if(row.facts.sha256!==row.committed_sha256){
+    assert.equal(map.source_baseline,pending.baseline);
+    assert.equal(row.committed_sha256,pending.committed);
+  }
+  const links=[];
+  for(const scenario of map.scenarios){
+    assert(!scenario.host_definitions.includes(source));
+    for(const link of scenario.behavior_links)if(link.assertion_sources.includes(source)){
+      assert.equal(scenario.id,"desktop-model-training");
+      assert.equal(link.assertion_sources.filter(name=>name===source).length,1);
+      assert.equal(scenario.execution_status,"not-asserted-by-census");
+      links.push(link.behavior_index);
+    }
+  }
+  assert.deepEqual(links,[0,1,2,3]);
+  assert.equal(map.full_testing_status,"deferred-by-user");
+  assert(!map.host_spec_files.includes(source));assert(!map.inventories.some(row=>row.source===source));
+  const referenced=new Set([...map.scenarios.flatMap(s=>[...s.host_definitions,...s.behavior_links.flatMap(l=>l.assertion_sources)]),...map.host_spec_files,...map.inventories.map(i=>i.source)]);
+  for(const entry of archive.sources)if(entry.row.path!==source){
+    assert(!referenced.has(entry.row.path));assert(!map.sources.some(row=>row.path===entry.row.path));
+  }
+}
+
+test("preserves exact historical versions without inheriting their current coverage or qualification",()=>{
   const read=repositoryReader(process.cwd()),map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const bytes=read("docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert(bytes.byteLength<=64*1024);const archive=JSON.parse(bytes);
@@ -330,14 +379,37 @@ test("preserves exact historical rows outside current coverage and aggregate bud
   assert.match(archive.prior_census_sha256,/^[a-f0-9]{64}$/);
   assert.equal(archive.prior_pointer.pending_agent_work.length,5);
   assert.equal(archive.sources.length,8);assert.equal(new Set(archive.sources.map(v=>v.row.path)).size,8);
-  const referenced=new Set([...map.scenarios.flatMap(s=>[...s.host_definitions,...s.behavior_links.flatMap(l=>l.assertion_sources)]),...map.host_spec_files,...map.inventories.map(i=>i.source)]);
   for(const entry of archive.sources){
-    censusPath(entry.row.path);assert(!referenced.has(entry.row.path));assert(!map.sources.some(v=>v.path===entry.row.path));
+    censusPath(entry.row.path);
     assert.equal(sha(JSON.stringify(entry.row)),entry.prior_row_sha256);assert.match(entry.row.committed_sha256,/^[a-f0-9]{64}$/);
     assert.match(entry.row.facts.sha256,/^[a-f0-9]{64}$/);assert(entry.reason.length>0);
   }
+  // One newly used, changed oracle has its own exact current source proof.
+  // The eight old rows and their digests remain unchanged historical versions.
+  assertReintroducedTrainingOracle(map,archive);
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
   assert.equal(CENSUS_LIMITS.files,192);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
+});
+
+test("reintroduced oracle coverage refuses old, missing, duplicate, future or unrelated versions",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const archive=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-census-source-history.json"));
+  const name="dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts";
+  const row=m=>m.sources.find(value=>value.path===name);
+  assert.doesNotThrow(()=>assertReintroducedTrainingOracle(map,archive));
+  for(const mutate of [
+    m=>{m.sources[m.sources.findIndex(value=>value.path===name)]=structuredClone(archive.sources.find(value=>value.row.path===name).row);},
+    m=>{m.sources=m.sources.filter(value=>value.path!==name);},
+    m=>{m.sources.push(structuredClone(row(m)));},
+    m=>{row(m).facts.sha256="0".repeat(64);},
+    m=>{row(m).facts.assertionCount++;},
+    m=>{row(m).committed_sha256="0".repeat(64);},
+    m=>{m.source_baseline="HEAD~1";},
+    m=>{m.scenarios.find(value=>value.id==="desktop-model-training").behavior_links[0].assertion_sources=m.scenarios.find(value=>value.id==="desktop-model-training").behavior_links[0].assertion_sources.filter(value=>value!==name);},
+    m=>{m.scenarios.find(value=>value.id!=="desktop-model-training").behavior_links[0].assertion_sources.push(name);},
+    m=>{m.sources.push(structuredClone(archive.sources.find(value=>value.row.path!==name).row));},
+    m=>{m.scenarios.find(value=>value.id==="desktop-model-training").execution_status="passed";},
+  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertReintroducedTrainingOracle(current,archive));}
 });
