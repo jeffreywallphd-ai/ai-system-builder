@@ -265,6 +265,27 @@ SETTINGS_AUTOMATIC = ['dev-tools/scripts/qualification/visual-composer/owned-hos
  'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs']
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_training_form_component_is_finite_borrowed_impact(self):
+        component = "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
+        test = "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx"
+        self.assertIn(component, self.profile()["source_paths"])
+        self.assertNotIn(component, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        for incomplete, required, paths, operational, generic in [
+            (False, ["operational-ui"], [component, test], True, False),
+            (False, ["operational-ui", "focused-tests"], [component, test], True, True),
+            (True, ["operational-ui"], [component, test], True, True),
+            (False, ["operational-ui"], [component, test, "apps/desktop/src/renderer/features/models/unreviewed.tsx"], True, True),
+            (False, ["documentation"], [component], False, True),
+        ]:
+            with self.subTest(incomplete=incomplete, required=required, paths=paths), tempfile.TemporaryDirectory(prefix="training-form-profile-") as directory:
+                root = Path(directory); profile = self.profile()
+                if incomplete: profile["source_paths"].remove(component)
+                self.fixture(root, profile)
+                selected = {row["id"] for row in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                self.assertEqual("operational-ui" in selected, operational)
+                self.assertEqual("focused-tests" in selected, generic)
+
     def test_image_host_sources_preserve_fixed_runners_and_unknown_impact(self):
         import copy
         paths = ['dev-tools/scripts/qualification/visual-composer/image-generation-host-oracles.ts', 'dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.mjs', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-input-records.ts', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.mjs', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/config/playwright.image-host-desktop.config.ts', 'dev-tools/config/playwright.image-host-thin.config.ts', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts']

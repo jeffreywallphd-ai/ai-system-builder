@@ -42,6 +42,21 @@ Focused controller and native-event tests are in
 Vite checks qualify this feature; they do not qualify a complete real host,
 provider, model, OCR or the deferred combined roadmap suite.
 
+# Training field labels
+
+Training inputs use stable per-form IDs and explicit native labels. Glossary
+help buttons sit beside each label. A help click does not select a different
+control or submit training. Normal, advanced and publication fields keep their
+existing values, events and layout.
+
+The mounted `features/models/tests/model-training-observation.unit.test.tsx`
+checks all 25 field associations, multiple form instances, help behavior and the
+existing training requests, review and Save actions. The Operational UI profile
+explicitly covers the exact component when selected; borrowed component changes
+alone and unknown impact retain generic verification. Test membership is unchanged.
+These synthetic checks start no app or model. A real rebuilt Desktop training
+journey, worker retirement and the deferred combined campaign remain separate.
+
 # Runtime status and notification checks
 
 Settings reads Python runtime status only when its runtime controls are open.

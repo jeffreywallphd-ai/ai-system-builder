@@ -51,7 +51,9 @@ class FunctionalHostProfile(unittest.TestCase):
         profile=self.profile();configuration=json.loads((ROOT/CONFIG).read_bytes())["profiles"]
         self.assertLessEqual(len(profile["test_paths"]),100);self.assertLessEqual(len(profile["source_paths"]),200)
         self.assertEqual(len(configuration["operational-ui"]["test_paths"]),81)
-        self.assertEqual(len(configuration["operational-ui"]["source_paths"]),186)
+        # One exact borrowed form source; test membership and automatic routing stay fixed.
+        self.assertEqual(len(configuration["operational-ui"]["source_paths"]),187)
+        self.assertEqual(configuration["operational-ui"]["source_paths"][-1], "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx")
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]),76)
         self.assertNotIn(BORROWED,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
         commands=run_focused_checks.commands(ROOT,profile["test_paths"],exact=True)

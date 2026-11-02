@@ -59,7 +59,32 @@ const pendingTrainingDefinitions = Object.freeze([
 // Only these exact training diagnostic definitions remain prospective.
 // The recorded baseline pins are real older Git blobs; complete candidate
 // SHA and facts must match. Every other mapped source keeps its own guard.
+const pendingTrainingFormDefinition = Object.freeze({
+  "source": "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
+  "baseline": "fe6d35989619bf5da04e314ff07cf1cfa7fd2246",
+  "committed": "d21f260fa8dc7dfdc18cd4613594e03f53b55e9c79879c0b3065c750165656ac",
+  "candidate": "8c0112bb1a19b6ef5c633733ac4ef3e3b28bcc83c3c958981a4e25fde3e90bc6",
+  "facts_sha256": "d2cf942819ff042a6eada4a7ff45322e4a01020f3d71d61ac09e851cfb4589cb"
+});
+function assertTrainingFormSourceDrift(map, result) {
+  const pending = pendingTrainingFormDefinition;
+  const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length,1);
+  const row = rows[0]; assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
+  const committed = execFileSync("git",["show",`${map.source_baseline}:${pending.source}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+  assert.equal(row.committed_sha256,sha(committed),"Training form pins must be real older Git blobs.");
+  const expected = row.facts.sha256 === row.committed_sha256 ? [] : [{kind:"unreviewed-source-drift",source:pending.source}];
+  if(expected.length) {
+    assert.equal(map.source_baseline,pending.baseline);
+    assert.equal(row.committed_sha256,pending.committed);
+    assert.equal(row.facts.sha256,pending.candidate);
+    assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256,"Future form assertions cannot inherit the prospective binding.");
+  }
+  assert.deepEqual(result.gaps.filter(g=>g.kind==="unreviewed-source-drift"&&g.source===pending.source),expected);
+  return {...result,gaps:result.gaps.filter(g=>!(g.kind==="unreviewed-source-drift"&&g.source===pending.source))};
+}
+
 function assertCurrentSourceDrift(map, result) {
+  if(map.sources.some(row=>row.path===pendingTrainingFormDefinition.source)) result=assertTrainingFormSourceDrift(map,result);
   const expected = [];
   for (const pending of pendingTrainingDefinitions) {
     const source = map.sources.find(row => row.path === pending.path); assert(source);
@@ -412,4 +437,28 @@ test("reintroduced oracle coverage refuses old, missing, duplicate, future or un
     m=>{m.sources.push(structuredClone(archive.sources.find(value=>value.row.path!==name).row));},
     m=>{m.scenarios.find(value=>value.id==="desktop-model-training").execution_status="passed";},
   ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertReintroducedTrainingOracle(current,archive));}
+});
+
+test("prospective training form binding rejects forged future missing and extra drift",()=>{
+  const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const map=structuredClone(current),pending=pendingTrainingFormDefinition;
+  const target=m=>m.sources.find(row=>row.path===pending.source);
+  target(map).committed_sha256=pending.committed;
+  map.source_baseline=pending.baseline;
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
+  for(const mutate of [
+    (m,r)=>{target(m).committed_sha256=pending.candidate;},
+    (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+    (m,r)=>{target(m).facts.assertionCount++;},
+    (m,r)=>{m.source_baseline="8a9e94bb52e36e63934b24e6f081f26a0ca8985c";},
+    (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.source);},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.source});},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign-form.test.mjs"});},
+    (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.source);},
+  ]) {
+    const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));
+  }
+  const missing=structuredClone(map);missing.sources=missing.sources.filter(row=>row.path!==pending.source);
+  assert.throws(()=>assertTrainingFormSourceDrift(missing,{gaps:[]}));
 });

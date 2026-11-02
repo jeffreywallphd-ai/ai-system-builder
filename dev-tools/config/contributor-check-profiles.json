@@ -2261,7 +2261,8 @@
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts",
         "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
         "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
-        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
       ]
     },
     "comfyui-host-policy": {

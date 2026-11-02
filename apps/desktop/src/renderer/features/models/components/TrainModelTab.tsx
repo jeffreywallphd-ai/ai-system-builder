@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { ApplicationIcon } from "../../../../../../../modules/ui/shared/components/ApplicationIcon";
 import { PanelHeading } from "../../../../../../../modules/ui/shared/components/PanelHeading";
-import { TermWithHint } from "../../../../../../../modules/ui/shared/glossary";
+import { GlossaryHint, TermWithHint, type GlossaryTermId } from "../../../../../../../modules/ui/shared/glossary";
 import { TypeBadge } from "../../../../../../../modules/ui/shared/components/TypeBadge";
 import { WorkflowSequence, WorkflowStep } from "../../../../../../../modules/ui/shared/components/WorkflowSequence";
 import { TransientNotificationPublisher } from "../../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
@@ -25,8 +25,22 @@ function toDatasetOptionLabel(
 
 type ModelTrainingState = ReturnType<typeof useModelTrainingFeature>;
 
+function TrainingFieldLabel({ controlId, termId, children }: {
+  controlId: string;
+  termId: GlossaryTermId;
+  children: ReactNode;
+}) {
+  return (
+    <span className="ui-glossary-term">
+      <label htmlFor={controlId}>{children}</label>
+      <GlossaryHint termId={termId} />
+    </span>
+  );
+}
+
 export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
   const [showHuggingFaceDefaults, setShowHuggingFaceDefaults] = useState(false);
+  const fieldId = useId();
 
   return (
     <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
@@ -46,11 +60,10 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
             title="Training inputs"
             description="Choose a base model and one or more prepared training datasets."
           >
-            <label className="ui-stack ui-stack--sm">
-              <span>
-                <TermWithHint termId="model">Base model</TermWithHint>
-              </span>
+            <div className="ui-stack ui-stack--sm">
+              <TrainingFieldLabel controlId={`${fieldId}-model`} termId="model">Base model</TrainingFieldLabel>
               <select
+                id={`${fieldId}-model`}
                 className="ui-input"
                 value={s.baseModelRecordId}
                 onChange={(event) => s.setBaseModelRecordId(event.target.value)}
@@ -64,7 +77,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
             <div className="ui-stack ui-stack--sm">
               <span>
@@ -135,13 +148,10 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
             description="Select the task profile and fine-tuning method."
           >
             <div className="ui-workflow__field-grid">
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="trainingTask">
-                    Training task
-                  </TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-trainingTask`} termId="trainingTask">Training task</TrainingFieldLabel>
                 <select
+                  id={`${fieldId}-trainingTask`}
                   className="ui-input"
                   value={s.trainingTask}
                   onChange={(event) =>
@@ -156,12 +166,11 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="trainingMethod">Method</TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-trainingMethod`} termId="trainingMethod">Method</TrainingFieldLabel>
                 <select
+                  id={`${fieldId}-trainingMethod`}
                   className="ui-input"
                   value={s.method}
                   onChange={(event) =>
@@ -174,7 +183,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                   <option value="qlora">QLoRA</option>
                   <option value="full-finetune">Full fine-tune</option>
                 </select>
-              </label>
+              </div>
             </div>
           </WorkflowStep>
 
@@ -183,74 +192,62 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
             description="Set the main optimization limits and expand advanced controls when needed."
           >
             <div className="ui-workflow__field-grid">
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingEpochs">Epochs</TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingEpochs`} termId="modelTrainingEpochs">Epochs</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingEpochs`}
                   className="ui-input"
                   value={s.numEpochs}
                   onChange={(event) => s.setNumEpochs(event.target.value)}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingMaxSteps">
-                    Max steps
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingMaxSteps`} termId="modelTrainingMaxSteps">Max steps</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingMaxSteps`}
                   className="ui-input"
                   value={s.maxSteps}
                   onChange={(event) => s.setMaxSteps(event.target.value)}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingBatchSize">Batch size</TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingBatchSize`} termId="modelTrainingBatchSize">Batch size</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingBatchSize`}
                   className="ui-input"
                   value={s.batchSize}
                   onChange={(event) => s.setBatchSize(event.target.value)}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingLearningRate">
-                    Learning rate
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingLearningRate`} termId="modelTrainingLearningRate">Learning rate</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingLearningRate`}
                   className="ui-input"
                   value={s.learningRate}
                   onChange={(event) => s.setLearningRate(event.target.value)}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingSequenceLength">
-                    Sequence length
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingSequenceLength`} termId="modelTrainingSequenceLength">Sequence length</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingSequenceLength`}
                   className="ui-input"
                   value={s.maxSequenceLength}
                   onChange={(event) =>
                     s.setMaxSequenceLength(event.target.value)
                   }
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="modelTrainingSeed">Seed</TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-modelTrainingSeed`} termId="modelTrainingSeed">Seed</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-modelTrainingSeed`}
                   className="ui-input"
                   value={s.seed}
                   onChange={(event) => s.setSeed(event.target.value)}
                 />
-              </label>
+              </div>
             </div>
 
             <CollapsiblePanel
@@ -259,94 +256,77 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               onToggle={() => s.setShowAdvanced(!s.showAdvanced)}
             >
               <div className="ui-workflow__field-grid">
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingLoraRank">LoRA rank</TermWithHint>
-                  </span>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingLoraRank`} termId="modelTrainingLoraRank">LoRA rank</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingLoraRank`}
                     className="ui-input"
                     value={s.loraRank}
                     onChange={(event) => s.setLoraRank(event.target.value)}
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingLoraAlpha">LoRA alpha</TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingLoraAlpha`} termId="modelTrainingLoraAlpha">LoRA alpha</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingLoraAlpha`}
                     className="ui-input"
                     value={s.loraAlpha}
                     onChange={(event) => s.setLoraAlpha(event.target.value)}
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingLoraDropout">
-                      LoRA dropout
-                    </TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingLoraDropout`} termId="modelTrainingLoraDropout">LoRA dropout</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingLoraDropout`}
                     className="ui-input"
                     value={s.loraDropout}
                     onChange={(event) => s.setLoraDropout(event.target.value)}
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingTargetModules">
-                      Target modules
-                    </TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingTargetModules`} termId="modelTrainingTargetModules">Target modules</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingTargetModules`}
                     className="ui-input"
                     value={s.loraTargetModules}
                     onChange={(event) =>
                       s.setLoraTargetModules(event.target.value)
                     }
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingGradientAccumulation">
-                      Grad accumulation
-                    </TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingGradientAccumulation`} termId="modelTrainingGradientAccumulation">Grad accumulation</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingGradientAccumulation`}
                     className="ui-input"
                     value={s.gradientAccumulationSteps}
                     onChange={(event) =>
                       s.setGradientAccumulationSteps(event.target.value)
                     }
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingCheckpointInterval">
-                      Checkpoint interval
-                    </TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingCheckpointInterval`} termId="modelTrainingCheckpointInterval">Checkpoint interval</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingCheckpointInterval`}
                     className="ui-input"
                     value={s.checkpointIntervalSteps}
                     onChange={(event) =>
                       s.setCheckpointIntervalSteps(event.target.value)
                     }
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="modelTrainingEvalInterval">
-                      Eval interval
-                    </TermWithHint>
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-modelTrainingEvalInterval`} termId="modelTrainingEvalInterval">Eval interval</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-modelTrainingEvalInterval`}
                     className="ui-input"
                     value={s.evalIntervalSteps}
                     onChange={(event) =>
                       s.setEvalIntervalSteps(event.target.value)
                     }
                   />
-                </label>
+                </div>
               </div>
             </CollapsiblePanel>
           </WorkflowStep>
@@ -356,44 +336,35 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
             description="Name the generated model record and control output packaging."
           >
             <div className="ui-workflow__field-grid">
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="outputModelName">
-                    Output model name
-                  </TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-outputModelName`} termId="outputModelName">Output model name</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-outputModelName`}
                   className="ui-input"
                   value={s.outputModelName}
                   onChange={(event) => s.setOutputModelName(event.target.value)}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="assetDisplayName">
-                    Generated model display name
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-assetDisplayName`} termId="assetDisplayName">Generated model display name</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-assetDisplayName`}
                   className="ui-input"
                   value={s.generatedDisplayName}
                   onChange={(event) =>
                     s.setGeneratedDisplayName(event.target.value)
                   }
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="safetensors">
-                    Max safetensors shard size
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <TrainingFieldLabel controlId={`${fieldId}-safetensors`} termId="safetensors">Max safetensors shard size</TrainingFieldLabel>
                 <input
+                  id={`${fieldId}-safetensors`}
                   className="ui-input"
                   value={s.maxShardSize}
                   onChange={(event) => s.setMaxShardSize(event.target.value)}
                 />
-              </label>
+              </div>
             </div>
           </WorkflowStep>
 
@@ -413,58 +384,55 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               />
             </CollapsiblePanel>
             <div className="ui-cluster">
-              <label className="ui-workflow__checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={s.localDestinationEnabled}
-                  onChange={(event) =>
-                    s.setLocalDestinationEnabled(event.target.checked)
-                  }
-                />
-                <span>
-                  <TermWithHint termId="outputDestination">
-                    Store locally
-                  </TermWithHint>
-                </span>
-              </label>
-              <label className="ui-workflow__checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={s.huggingFaceDestinationEnabled}
-                  onChange={(event) =>
-                    s.setHuggingFaceDestinationEnabled(event.target.checked)
-                  }
-                />
-                <span>
-                  <TermWithHint termId="huggingFace">
-                    Publish to Hugging Face
-                  </TermWithHint>
-                </span>
-              </label>
-              <label className="ui-workflow__checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={s.validateAfterTraining}
-                  onChange={(event) =>
-                    s.setValidateAfterTraining(event.target.checked)
-                  }
-                />
-                <span>
-                  <TermWithHint termId="validateAfterTraining">
-                    Validate after training
-                  </TermWithHint>
-                </span>
-              </label>
+              <div className="ui-glossary-term">
+                <label className="ui-workflow__checkbox-row" htmlFor={`${fieldId}-outputDestination`}>
+                  <input
+                    id={`${fieldId}-outputDestination`}
+                    type="checkbox"
+                    checked={s.localDestinationEnabled}
+                    onChange={(event) =>
+                      s.setLocalDestinationEnabled(event.target.checked)
+                    }
+                  />
+                  <span>Store locally</span>
+                </label>
+                <GlossaryHint termId="outputDestination" />
+              </div>
+              <div className="ui-glossary-term">
+                <label className="ui-workflow__checkbox-row" htmlFor={`${fieldId}-huggingFace`}>
+                  <input
+                    id={`${fieldId}-huggingFace`}
+                    type="checkbox"
+                    checked={s.huggingFaceDestinationEnabled}
+                    onChange={(event) =>
+                      s.setHuggingFaceDestinationEnabled(event.target.checked)
+                    }
+                  />
+                  <span>Publish to Hugging Face</span>
+                </label>
+                <GlossaryHint termId="huggingFace" />
+              </div>
+              <div className="ui-glossary-term">
+                <label className="ui-workflow__checkbox-row" htmlFor={`${fieldId}-validateAfterTraining`}>
+                  <input
+                    id={`${fieldId}-validateAfterTraining`}
+                    type="checkbox"
+                    checked={s.validateAfterTraining}
+                    onChange={(event) =>
+                      s.setValidateAfterTraining(event.target.checked)
+                    }
+                  />
+                  <span>Validate after training</span>
+                </label>
+                <GlossaryHint termId="validateAfterTraining" />
+              </div>
             </div>
             {s.huggingFaceDestinationEnabled ? (
               <div className="ui-workflow__field-grid">
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="repository">
-                      Model repository name
-                    </TermWithHint>
-                  </span>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-repository`} termId="repository">Model repository name</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-repository`}
                     className="ui-input"
                     value={s.huggingFaceRepository}
                     onChange={(event) =>
@@ -481,33 +449,29 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                       ? `Namespace: ${s.defaultHuggingFaceNamespace} (publishes to ${s.defaultHuggingFaceNamespace}/${s.huggingFaceRepository.trim() || "your-model-repo"}).`
                       : "Format: owner/repository."}
                   </small>
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="revision">Revision</TermWithHint>{" "}
-                    (optional)
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-revision`} termId="revision">Revision (optional)</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-revision`}
                     className="ui-input"
                     value={s.huggingFaceRevision}
                     onChange={(event) =>
                       s.setHuggingFaceRevision(event.target.value)
                     }
                   />
-                </label>
-                <label className="ui-stack ui-stack--sm">
-                  <span>
-                    <TermWithHint termId="pathPrefix">Path prefix</TermWithHint>{" "}
-                    (optional)
-                  </span>
+                </div>
+                <div className="ui-stack ui-stack--sm">
+                  <TrainingFieldLabel controlId={`${fieldId}-pathPrefix`} termId="pathPrefix">Path prefix (optional)</TrainingFieldLabel>
                   <input
+                    id={`${fieldId}-pathPrefix`}
                     className="ui-input"
                     value={s.huggingFacePathPrefix}
                     onChange={(event) =>
                       s.setHuggingFacePathPrefix(event.target.value)
                     }
                   />
-                </label>
+                </div>
               </div>
             ) : null}
           </WorkflowStep>

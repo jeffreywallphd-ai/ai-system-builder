@@ -75,9 +75,88 @@ async function mountTraining(client: DesktopModelsClient) {
   await act(async () => { root!.render(<TrainingShell client={client} />); await new Promise(done => setTimeout(done, 0)); });
 }
 function trainingButton(label: string) { const value = [...container!.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent?.trim() === label); expect(value).toBeTruthy(); return value!; }
-function trainingField(label: string, selector: string) { const value = [...container!.querySelectorAll("label")].find(element => element.textContent?.includes(label))?.querySelector(selector); expect(value).toBeTruthy(); return value as HTMLInputElement & HTMLSelectElement; }
+function trainingField(label: string, selector: string) { const value = [...container!.querySelectorAll<HTMLLabelElement>("label")].find(element => element.textContent?.includes(label))?.control; expect(value?.matches(selector)).toBe(true); return value as HTMLInputElement & HTMLSelectElement; }
 function changeTraining(field: HTMLInputElement | HTMLSelectElement, value: string) { const prototype = field instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(field, value); field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? "change" : "input", { bubbles: true })); }
 async function selectTrainingInputs() { await act(async () => container!.querySelectorAll<HTMLInputElement>('input[name="training-dataset"]').forEach(input => input.click())); }
+
+it("connects every normal advanced and publication training field to its native label", async () => {
+  const client = trainingClient(); await mountTraining(client);
+  await act(async () => { training.setShowAdvanced(true); training.setHuggingFaceDestinationEnabled(true); });
+  const fields = [...container!.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select,input:not([name="training-dataset"])')];
+  expect(fields).toHaveLength(25);
+  for (const field of fields) {
+    const labels = [...(field.labels ?? [])];
+    expect(labels).toHaveLength(1);
+    expect(labels[0].control).toBe(field);
+    expect(labels[0].htmlFor).toBe(field.id);
+    expect(field.id).not.toBe("");
+    expect(labels[0].querySelector("button")).toBeNull();
+  }
+  expect(new Set(fields.map(field => field.id)).size).toBe(fields.length);
+  expect(container!.querySelectorAll("label button")).toHaveLength(0);
+  expect(client.trainModel).not.toHaveBeenCalled();
+});
+
+it("keeps native training label identities separate across mounted forms", async () => {
+  const client = trainingClient(); await mountTraining(client);
+  await act(async () => { root!.render(<><TrainingShell client={client} /><TrainingShell client={client} /></>); await new Promise(done => setTimeout(done, 0)); });
+  const fields = [...container!.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select,input:not([name="training-dataset"])')];
+  expect(fields.length).toBeGreaterThan(40);
+  expect(fields.every(field => Boolean(field.id))).toBe(true);
+  expect(new Set(fields.map(field => field.id)).size).toBe(fields.length);
+  for (const field of fields) {
+    expect(field.labels).toHaveLength(1);
+    expect(field.labels![0].control).toBe(field);
+    expect(document.getElementById(field.labels![0].htmlFor)).toBe(field);
+  }
+  const before = fields.map(field => field.id);
+  await act(async () => training.setSeed("9"));
+  const currentFields = [...container!.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select,input:not([name="training-dataset"])')];
+  expect(currentFields.map(field => field.id)).toEqual(before);
+  for (const field of currentFields) {
+    expect(field.labels).toHaveLength(1);
+    expect(field.labels![0].control).toBe(field);
+    expect(document.getElementById(field.labels![0].htmlFor)).toBe(field);
+  }
+  expect(client.trainModel).not.toHaveBeenCalled();
+});
+
+it("opens field help without changing or submitting the training configuration", async () => {
+  const client = trainingClient(); await mountTraining(client); await selectTrainingInputs();
+  const label = [...container!.querySelectorAll<HTMLLabelElement>("label")].find(item => item.textContent?.trim() === "Base model");
+  expect(label?.control).toBeInstanceOf(HTMLSelectElement);
+  const help = label!.parentElement!.querySelector<HTMLButtonElement>('button[aria-expanded]');
+  expect(help).toBeTruthy(); expect(help!.closest("label")).toBeNull(); expect(help!.type).toBe("button");
+  const before = { base: training.baseModelRecordId, seed: training.seed, local: training.localDestinationEnabled, publish: training.huggingFaceDestinationEnabled };
+  await act(async () => help!.click());
+  expect(help!.getAttribute("aria-expanded")).toBe("true");
+  expect({ base: training.baseModelRecordId, seed: training.seed, local: training.localDestinationEnabled, publish: training.huggingFaceDestinationEnabled }).toEqual(before);
+  expect(client.trainModel).not.toHaveBeenCalled();
+  expect(trainingButton("Start Training").disabled).toBe(false);
+});
+
+it.each([
+  ["Store locally", "localDestinationEnabled"],
+  ["Publish to Hugging Face", "huggingFaceDestinationEnabled"],
+  ["Validate after training", "validateAfterTraining"],
+] as const)("toggles %s from its caption while separate help cannot toggle or submit", async (caption, key) => {
+  const client = trainingClient(); await mountTraining(client);
+  const readLabel = () => [...container!.querySelectorAll<HTMLLabelElement>("label")].find(label => label.textContent?.trim() === caption)!;
+  const label = readLabel(); expect(label).toBeTruthy();
+  expect(label.control).toBeInstanceOf(HTMLInputElement);
+  expect((label.control as HTMLInputElement).type).toBe("checkbox");
+  expect(label.querySelector("button")).toBeNull();
+  const before = training[key]; await act(async () => label.click());
+  expect(training[key]).toBe(!before);
+  expect((readLabel().control as HTMLInputElement).checked).toBe(!before);
+  const help = readLabel().parentElement!.querySelector<HTMLButtonElement>('button[aria-expanded]');
+  expect(help).toBeTruthy(); expect(help!.closest("label")).toBeNull(); expect(help!.type).toBe("button");
+  await act(async () => help!.click());
+  expect(help!.getAttribute("aria-expanded")).toBe("true");
+  expect(training[key]).toBe(!before);
+  expect((readLabel().control as HTMLInputElement).checked).toBe(!before);
+  expect(client.trainModel).not.toHaveBeenCalled();
+});
 
 it.each(["llm-instruction", "llm-classification", "llm-extraction", "llm-embedding", "llm-reranker", "diffusion-lora", "vision-classification", "vision-detection", "vision-segmentation"] as const)("builds a two-dataset %s training request from the actual form", async task => {
   const client = trainingClient(); await mountTraining(client); await selectTrainingInputs();

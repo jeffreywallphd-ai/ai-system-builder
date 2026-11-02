@@ -1125,8 +1125,8 @@
   {
    "path": "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
    "facts": {
-    "sha256": "d21f260fa8dc7dfdc18cd4613594e03f53b55e9c79879c0b3065c750165656ac",
-    "bytes": 28050,
+    "sha256": "8c0112bb1a19b6ef5c633733ac4ef3e3b28bcc83c3c958981a4e25fde3e90bc6",
+    "bytes": 32973,
     "cases": [
      {
       "name": "reopens a saved task identity into explicit review without publishing a model",
@@ -1137,100 +1137,116 @@
       "line": 38
      },
      {
-      "name": "builds a two-dataset %s training request from the actual form",
+      "name": "connects every normal advanced and publication training field to its native label",
       "line": 82
      },
      {
-      "name": "preserves explicit zero seed and LoRA dropout",
-      "line": 93
-     },
-     {
-      "name": "admits one start before its busy render",
+      "name": "keeps native training label identities separate across mounted forms",
       "line": 100
      },
      {
+      "name": "opens field help without changing or submitting the training configuration",
+      "line": 124
+     },
+     {
+      "name": "toggles %s from its caption while separate help cannot toggle or submit",
+      "line": 138
+     },
+     {
+      "name": "builds a two-dataset %s training request from the actual form",
+      "line": 161
+     },
+     {
+      "name": "preserves explicit zero seed and LoRA dropout",
+      "line": 172
+     },
+     {
+      "name": "admits one start before its busy render",
+      "line": 179
+     },
+     {
       "name": "admits one %s while review is pending",
-      "line": 106
+      "line": 185
      },
      {
       "name": "retains review after foreign %s acknowledgement",
-      "line": 113
+      "line": 192
      },
      {
       "name": "does not save an old review through a replaced client",
-      "line": 120
+      "line": 199
      },
      {
       "name": "routes a safe training failure to Notifications without an inline error",
-      "line": 127
+      "line": 206
      },
      {
       "name": "retains review after nonterminal %s acknowledgement",
-      "line": 133
+      "line": 212
      },
      {
       "name": "retains review when a successful save has no registered output model",
-      "line": 139
-     },
-     {
-      "name": "keeps a confirmed saved model successful if the inventory refresh fails",
-      "line": 144
-     },
-     {
-      "name": "keeps observing a recovered task when a status reply names another run",
-      "line": 150
-     },
-     {
-      "name": "admits one stop request and retains a task after a foreign cancellation",
-      "line": 155
-     },
-     {
-      "name": "does not overwrite a newer recovery identity with a retired start reply",
-      "line": 164
-     },
-     {
-      "name": "keeps a confirmed review when an older stop is %s",
-      "line": 173
-     },
-     {
-      "name": "notifies an uncertain stop without hiding active task controls",
-      "line": 184
-     },
-     {
-      "name": "shows bounded training counters without runtime text or the internal run identifier",
-      "line": 190
-     },
-     {
-      "name": "omits invalid epoch progress %j while retaining valid batch progress and task controls",
-      "line": 203
-     },
-     {
-      "name": "retains valid epoch progress when batch counters are invalid",
       "line": 218
      },
      {
+      "name": "keeps a confirmed saved model successful if the inventory refresh fails",
+      "line": 223
+     },
+     {
+      "name": "keeps observing a recovered task when a status reply names another run",
+      "line": 229
+     },
+     {
+      "name": "admits one stop request and retains a task after a foreign cancellation",
+      "line": 234
+     },
+     {
+      "name": "does not overwrite a newer recovery identity with a retired start reply",
+      "line": 243
+     },
+     {
+      "name": "keeps a confirmed review when an older stop is %s",
+      "line": 252
+     },
+     {
+      "name": "notifies an uncertain stop without hiding active task controls",
+      "line": 263
+     },
+     {
+      "name": "shows bounded training counters without runtime text or the internal run identifier",
+      "line": 269
+     },
+     {
+      "name": "omits invalid epoch progress %j while retaining valid batch progress and task controls",
+      "line": 282
+     },
+     {
+      "name": "retains valid epoch progress when batch counters are invalid",
+      "line": 297
+     },
+     {
       "name": "keeps a fixed waiting message when no numeric progress is valid",
-      "line": 228
+      "line": 307
      },
      {
       "name": "shows report availability without a local path and keeps explicit model review",
-      "line": 238
+      "line": 317
      },
      {
       "name": "uses fixed %s terminal copy without stale progress",
-      "line": 247
+      "line": 326
      },
      {
       "name": "chooses and submits the prepared text model from the real client's path-free inventory",
-      "line": 257
+      "line": 336
      },
      {
       "name": "does not choose a remote reference or an adapter as the installed training default",
-      "line": 280
+      "line": 359
      },
      {
       "name": "retains the newest installed nontext fallback when no local text model exists",
-      "line": 291
+      "line": 370
      }
     ],
     "dynamicCases": 0,
@@ -1280,8 +1296,8 @@
       "line": 80
      }
     ],
-    "assertionCount": 103,
-    "assertionDigest": "e2c4b0aabee330556b0150374e45a099a3a4d86ac37013677d1e363fb3e2fab9",
+    "assertionCount": 144,
+    "assertionDigest": "558546c607d0b27b74c45c229c819df4df14013bbb4c1073a8efba6d420b4e1e",
     "assertionExamples": [
      {
       "line": 33,
