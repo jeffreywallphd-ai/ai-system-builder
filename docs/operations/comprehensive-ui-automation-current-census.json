@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "8bbc8aca6cfedc95aec0920f2fcf648b7fda6559",
+ "source_baseline": "5c32b9c4ea15a5229100edd1eb14d2dd1c339734",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -12717,7 +12717,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32"
+   "committed_sha256": "d847a4eb19c454182c0606e7c5732f13cda018d1c392bed69f09d927f6c934c7"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
@@ -12923,7 +12923,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5"
+   "committed_sha256": "c33950fff4c27f2e4e06dc8075a6a45bd7c16762db58a0aefff9db81c0e371b1"
   },
   {
    "path": "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
