@@ -421,6 +421,46 @@ def prepare_training_dataset_cache(root, worker, cache, environment, run):
     return target
 
 
+def activate_training_dataset_working_directory(root, worker, dataset_cache, environment, run):
+    """Use only this fresh Tiny child's admitted short root before imports.
+
+    Datasets duplicates an absolute cache name into its lock filename. Fsspec
+    expands parent-relative writer paths without normalization. A short cwd and
+    the fixed cache spelling d avoid both expansions without supplier patches.
+    These cooperative directory checks are not native custody or race proof.
+    """
+    if dataset_cache is None:
+        return
+    match = re.fullmatch(r"training-ui-([a-f0-9]{32})-01", run) if type(run) is str else None
+    if match is None:
+        deny()
+    identity = match.group(1)
+    short = root / ".local-codex/q" / identity[:8]
+    package = short / "o/ai-system-builder-win32-x64"
+    acquisition = f".local-codex/training-inputs/tiny-{uuid.UUID(hex=identity)}/input.json"
+    if (environment.get("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT") != str(package) or
+            environment.get("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION") != acquisition or
+            environment.get("HF_DATASETS_CACHE") != os.path.join("..", "..", "..", "..", "d") or
+            worker != package / "resources/worker" or dataset_cache != short / "d"):
+        deny()
+    if not root.is_absolute() or root.resolve() != root or Path.cwd() != worker:
+        deny()
+    known = (root, *[root.joinpath(*worker.relative_to(root).parts[:i])
+                    for i in range(1, len(worker.relative_to(root).parts) + 1)], dataset_cache)
+    for current in known:
+        info = current.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or current.is_symlink() or current.resolve() != current or
+                getattr(info, "st_file_attributes", 0) & 0x400):
+            deny()
+    try:
+        os.chdir(short)
+    except OSError:
+        deny()
+    if Path.cwd() != short:
+        deny()
+    environment["HF_DATASETS_CACHE"] = "d"
+
+
 def main():
     if sys.argv[1:] or os.name != "nt" or any(os.getenv(key) != "1" for key in
             ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "PIP_NO_INDEX")):
@@ -467,6 +507,7 @@ def main():
         deny()
     model = root / inputs["modelRelativeDirectory"]
     dataset_cache = prepare_training_dataset_cache(root, worker, cache, os.environ, run)
+    activate_training_dataset_working_directory(root, worker, dataset_cache, os.environ, run)
     spec = importlib.util.spec_from_file_location("aisb_training_qualification_main", worker / "main.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

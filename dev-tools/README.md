@@ -955,6 +955,15 @@ exception text, arguments, filenames, code names or frame locals. Unknown types
 and source functions stay unknown; truncation is explicit. The fixed exclusive
 output is capped at 8 KiB. No supplier module or default profile is patched.
 
+The fresh Tiny test child keeps its initial worker-directory admission. Before
+loading the app or providers, it activates the same run's shorter working
+directory and uses the dataset-cache name `d`. This avoids the supplier's
+absolute lock-name duplication and unresolved parent-relative writer paths.
+Exact run, package, input, cache and before/after directory checks are required.
+A failed check or directory change stops before training, without retry or
+fallback. Other profiles and the production worker keep their existing working
+directories. These local checks do not establish native custody or race proof.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

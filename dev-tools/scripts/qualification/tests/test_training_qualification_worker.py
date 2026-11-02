@@ -411,6 +411,110 @@ class TrainingDatasetCacheTests(unittest.TestCase):
         self.assertEqual(result["error"]["message"],str(FileNotFoundError(2,"Missing",private_path)))
 
 
+class TrainingDatasetWorkingDirectoryTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = TrainingDatasetCacheTests()
+        self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.target = self.fixture.prepare()
+
+    def activate(self, **overrides):
+        f = self.fixture
+        args = dict(root=f.root, worker=f.worker, dataset_cache=self.target,
+                    environment=f.environment, run=f.run)
+        args.update(overrides)
+        return worker.activate_training_dataset_working_directory(**args)
+
+    def test_changes_once_to_same_short_root_and_only_updates_dataset_environment(self):
+        f = self.fixture;before = dict(f.environment)
+        with patch.object(Path, "cwd", side_effect=[f.worker, f.short]), patch.object(worker.os, "chdir") as change:
+            self.activate()
+        change.assert_called_once_with(f.short)
+        self.assertEqual(f.environment, {**before, "HF_DATASETS_CACHE": "d"})
+        self.assertEqual((f.short / f.environment["HF_DATASETS_CACHE"]).resolve(), self.target)
+        self.assertEqual(list(self.target.iterdir()), [])
+        self.assertEqual(list(f.cache.iterdir()), [])
+
+    def test_legacy_none_does_not_read_paths_cwd_or_environment_or_change_directory(self):
+        with patch.object(Path, "lstat", side_effect=AssertionError("legacy filesystem access")), \
+                patch.object(Path, "cwd", side_effect=AssertionError("legacy cwd access")), \
+                patch.object(worker.os, "chdir", side_effect=AssertionError("legacy cwd change")):
+            self.assertIsNone(worker.activate_training_dataset_working_directory(None, None, None, None, None))
+
+    def test_foreign_bindings_deny_before_filesystem_or_cwd_effects(self):
+        f = self.fixture
+        variants = [{"run": value} for value in (None, {}, "wrong", "training-ui-" + "f" * 32 + "-01")]
+        variants += [{"root": f.root / "foreign"}, {"worker": f.root / "foreign-worker"},
+                     {"dataset_cache": f.root / "foreign-cache"}]
+        for key, value in (("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT", str(f.root / "foreign")),
+                           ("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION", "foreign-input"),
+                           ("HF_DATASETS_CACHE", str(self.target)), ("HF_DATASETS_CACHE", "d")):
+            variants.append({"environment": {**f.environment, key: value}})
+        for variant in variants:
+            before = dict(variant.get("environment", f.environment))
+            with self.subTest(variant=variant), patch.object(Path, "lstat", side_effect=AssertionError("foreign path read")), \
+                    patch.object(Path, "cwd", side_effect=AssertionError("foreign cwd read")), \
+                    patch.object(worker.os, "chdir", side_effect=AssertionError("foreign cwd effect")), self.assertRaises(ValueError):
+                self.activate(**variant)
+            self.assertEqual(variant.get("environment", f.environment), before)
+
+    def test_wrong_initial_directory_denies_before_change_and_environment_mutation(self):
+        f = self.fixture;before = dict(f.environment)
+        with patch.object(Path, "cwd", return_value=f.root), patch.object(worker.os, "chdir") as change, self.assertRaises(ValueError):
+            self.activate()
+        change.assert_not_called()
+        self.assertEqual(f.environment, before)
+
+    def test_reparse_directory_denies_without_change_or_environment_success(self):
+        f = self.fixture;before = dict(f.environment);original = Path.lstat
+        def observed(path, *args, **kwargs):
+            if path == self.target:
+                return SimpleNamespace(st_mode=stat.S_IFDIR | 0o700, st_file_attributes=0x400)
+            return original(path, *args, **kwargs)
+        with patch.object(Path, "cwd", return_value=f.worker), patch.object(Path, "lstat", observed), \
+                patch.object(worker.os, "chdir") as change, self.assertRaises(ValueError):
+            self.activate()
+        change.assert_not_called()
+        self.assertEqual(f.environment, before)
+
+    def test_missing_or_file_cache_denies_before_change(self):
+        f = self.fixture;before = dict(f.environment);self.target.rmdir()
+        for file_instead in (False, True):
+            if file_instead: self.target.write_bytes(b"inert wrong-kind fixture")
+            with patch.object(Path, "cwd", return_value=f.worker), patch.object(worker.os, "chdir") as change, \
+                    self.assertRaises((ValueError, FileNotFoundError)):
+                self.activate()
+            change.assert_not_called()
+            self.assertEqual(f.environment, before)
+
+    def test_directory_change_failure_does_not_retry_or_change_environment(self):
+        f = self.fixture;before = dict(f.environment)
+        with patch.object(Path, "cwd", return_value=f.worker), \
+                patch.object(worker.os, "chdir", side_effect=PermissionError("synthetic private error")) as change, self.assertRaises(ValueError):
+            self.activate()
+        change.assert_called_once_with(f.short)
+        self.assertEqual(f.environment, before)
+
+    def test_wrong_resulting_directory_denies_without_fallback_or_environment_success(self):
+        f = self.fixture;before = dict(f.environment)
+        with patch.object(Path, "cwd", side_effect=[f.worker, f.root]), patch.object(worker.os, "chdir") as change, self.assertRaises(ValueError):
+            self.activate()
+        change.assert_called_once_with(f.short)
+        self.assertEqual(f.environment, before)
+
+    def test_main_activates_after_fresh_cache_and_before_worker_import(self):
+        tree = ast.parse(Path(worker.__file__).read_text())
+        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+        calls = [n for n in ast.walk(main) if isinstance(n, ast.Call)]
+        prepare = [n for n in calls if isinstance(n.func, ast.Name) and n.func.id == "prepare_training_dataset_cache"]
+        activate = [n for n in calls if isinstance(n.func, ast.Name) and n.func.id == "activate_training_dataset_working_directory"]
+        imports = [n for n in calls if isinstance(n.func, ast.Attribute) and n.func.attr == "spec_from_file_location" and
+                   n.args and isinstance(n.args[0], ast.Constant) and n.args[0].value == "aisb_training_qualification_main"]
+        self.assertEqual((len(prepare), len(activate), len(imports)), (1, 1, 1))
+        self.assertLess(prepare[0].lineno, activate[0].lineno)
+        self.assertLess(activate[0].lineno, imports[0].lineno)
+
+
 class TrainingFailureFactsTests(unittest.TestCase):
     cache = Path("C:/owned-test/controlled-model-cache")
 
