@@ -1781,6 +1781,20 @@ this split without running generated commands. Actual native compatibility still
 requires its separately reviewed bounded execution. Existing accepted accuracy
 results and pending production/resource qualification are unchanged.
 
+### Training dataset fixture storage
+
+The input-only training fixture writes dataset files in the `artifacts` folder
+below its owned Desktop data root. This matches the real Desktop main composition.
+The catalog and primary bindings use the same storage root and organization store.
+No task, result or trained adapter is seeded.
+
+The training launch-plan suite reads both exact JSONL inputs and their primary
+bindings through the actual filesystem and shared document adapters. It checks
+byte limits and that training refuses another workspace before reading bytes or
+dispatching a task. The old root reproduced visible records with missing files.
+This model-free setup regression does not qualify the actual Desktop journey.
+Completed accuracy and OCR checks stay closed. Full-system testing stays deferred.
+
 ### Tiny generated input for the Desktop training test
 
 The training profile also accepts a separate `generated-tiny-qwen2-v1` input.

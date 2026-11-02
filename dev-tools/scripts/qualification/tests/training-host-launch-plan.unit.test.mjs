@@ -5,11 +5,12 @@ import { readFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, w
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tsImport } from "tsx/esm/api";
+import { register as registerCjs } from "tsx/cjs/api";
 import trainingHostSetup from "../visual-composer/training-host-global-setup.mjs";
 
 // This .mjs file also runs alone without the catalog's optional --import loader.
 const fixtureModule = await tsImport("../visual-composer/training-host-fixture.ts", import.meta.url);
-const { trainingDependencyProbe, trainingReadOnlyArguments } = fixtureModule.default ?? fixtureModule;
+const { trainingDependencyProbe, trainingReadOnlyArguments, seedTrainingDatasets } = fixtureModule.default ?? fixtureModule;
 
 test("fixed dependency probe literals match JavaScript template newline semantics", () => {
   for (const newline of ["\n", "\r\n", "\r"]) {
@@ -208,4 +209,61 @@ test("the real training profile loads its helper in a worker after ESM setup pre
   const observed = JSON.parse(readFileSync(report, "utf8"));
   assert.deepEqual(Object.fromEntries(["expected", "skipped", "unexpected", "flaky"].map(key => [key, observed.stats[key]])), { expected: 1, skipped: 0, unexpected: 0, flaky: 0 });
   assert.deepEqual(observed.errors, []);
+});
+
+
+test("seeded training bytes and bindings are readable by the actual Desktop storage layout", async t => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const scoped = registerCjs({ namespace: "training-dataset-storage-regression" });
+  t.after(() => scoped.unregister());
+  const load = relative => scoped.require(path.join(root, relative), import.meta.url);
+  const storageAdapters = await load("modules/adapters/storage/filesystem/index.ts");
+  const { createInMemoryStructuredDocumentStore } = await load("modules/adapters/persistence/shared/index.ts");
+  const { createRetrieveArtifactRequest } = await load("modules/contracts/storage/index.ts");
+  const { trainingWorkspaceId, trainingDatasetIds } = await load("dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts");
+  const parent = path.join(root, ".local-codex/t"); mkdirSync(parent, { recursive: true });
+  assert.equal(realpathSync(parent), parent);
+  const dataRoot = mkdtempSync(path.join(parent, "training-datasets-"));
+  const identity = statSync(dataRoot);
+  t.after(() => {
+    assert.equal(path.dirname(dataRoot), parent); assert.equal(realpathSync(dataRoot), dataRoot);
+    const now = statSync(dataRoot); assert.equal(now.dev, identity.dev); assert.equal(now.ino, identity.ino);
+    rmSync(dataRoot, { recursive: true, force: false });
+  });
+  const run = "synthetic-training-dataset-regression-0123456789";
+  const context = { workspaceId: trainingWorkspaceId(run) };
+  const documents = createInMemoryStructuredDocumentStore().forOrganization("organization.synthetic-training");
+  const datasets = await seedTrainingDatasets(dataRoot, documents, context, run);
+  assert.deepEqual(datasets, trainingDatasetIds(run));
+  // Keep this consumer convention independent of the fixture's implementation.
+  // The real Desktop main passes path.join(desktopDataRootDirectory, "artifacts").
+  const storage = storageAdapters.createFilesystemArtifactObjectStorageAdapter({ rootDirectory: path.join(dataRoot, "artifacts"), host: "desktop" });
+  const bindings = storageAdapters.createLocalArtifactStorageBindingAdapter({ rootDirectory: path.join(dataRoot, "artifacts"), documents });
+  const expected = Buffer.from('{"instruction":"What does the help panel show?","output":"The help panel shows guidance for the current feature."}\n{"instruction":"Where are task updates?","output":"Task updates are in the notification center."}\n');
+  assert.equal(expected.length, 213);
+  for (const key of datasets) {
+    const binding = await bindings.readArtifactStorageBindings({ workspaceId: context.workspaceId, artifactId: key });
+    assert.equal(binding.ok, true); assert.equal(binding.value.bindings.length, 1);
+    assert.deepEqual(binding.value.bindings[0].backing, { kind: "artifact-object", provider: "local-filesystem", locator: key, revision: undefined });
+    const result = await storage.retrieveArtifact(createRetrieveArtifactRequest(key, { maximumBytes: 213 }), context);
+    assert.equal(result.ok, true, "A visible seeded dataset must have physical bytes at the real Desktop artifact root.");
+    assert.deepEqual(Buffer.from(result.value.content), expected);
+    const otherBindings = await bindings.readArtifactStorageBindings({ workspaceId: "workspace.other-training", artifactId: key });
+    assert.equal(otherBindings.ok, true); assert.deepEqual(otherBindings.value.bindings, []);
+    const tooSmall = await storage.retrieveArtifact(createRetrieveArtifactRequest(key, { maximumBytes: 212 }), context);
+    assert.equal(tooSmall.ok, false);
+  }
+  const { TrainModelUseCase } = await load("modules/application/use-cases/model/train-model.use-case.ts");
+  let byteReads = 0, dispatches = 0;
+  const useCase = new TrainModelUseCase({ storageBindings: bindings,
+    storage: { retrieveArtifact(...args) { byteReads++; return storage.retrieveArtifact(...args); } },
+    runtimeTaskRegistry: { startTask() { dispatches++; throw Error("Unexpected task dispatch."); } },
+    modelRegistry: {}, taskPowerLifecycle: {},
+  });
+  await assert.rejects(useCase.execute({ workspaceId: "workspace.other-training", trainingTask: "llm-classification",
+    baseModel: { modelId: "synthetic" }, datasets: [{ artifactId: datasets[0], splitRole: "train", format: "jsonl" }],
+    method: "lora", commonParameters: {}, output: { outputModelName: "synthetic", destination: { local: { enabled: true } } },
+  }), error => error.code === "MODEL_TRAINING_START_DATASET_RESOLUTION");
+  assert.equal(byteReads, 0); assert.equal(dispatches, 0);
+  await assert.rejects(seedTrainingDatasets(dataRoot, documents, { workspaceId: "workspace.other-training" }, run));
 });

@@ -1,5 +1,7 @@
 /** Trusted prelaunch inputs only. Never seed a task, result or generated model. */
 import path from "node:path";
+import type { ApplicationRequestContext } from "../../../../modules/application/ports";
+import type { StructuredDocumentStore } from "../../../../modules/adapters/persistence/shared";
 import { execFile, spawnSync } from "node:child_process";
 import { lstatSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { ensurePythonRuntimeWorkerDependencies, ensurePythonRuntimeModelTrainingDependencies } from "../../../../modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies";
@@ -82,6 +84,24 @@ function requireOwnedCase(environment: NodeJS.ProcessEnv): string {
   if (!root.startsWith(`${fence}${path.sep}`)) return fail();
   return root;
 }
+/** Input-only setup: use the same storage layout as the Desktop consumer. */
+export async function seedTrainingDatasets(dataRoot: string, documents: StructuredDocumentStore, context: ApplicationRequestContext, run: unknown): Promise<readonly [string, string]> {
+  const workspaceId = createWorkspaceId(trainingWorkspaceId(run));
+  if (context.workspaceId !== workspaceId) return fail();
+  const artifactRoot = path.join(dataRoot, "artifacts");
+  const catalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: artifactRoot, documents });
+  const bindings = createLocalArtifactStorageBindingAdapter({ rootDirectory: artifactRoot, documents });
+  const storage = createFilesystemArtifactObjectStorageAdapter({ rootDirectory: artifactRoot, host: "desktop", artifactCatalogAppend: catalog, artifactBindingWrite: bindings });
+  const datasets = trainingDatasetIds(run);
+  for (const key of datasets) {
+    const bound = await bindings.createArtifactStorageBindingIfAbsent({ binding: { workspaceId, artifactId: key, role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: key } } }, context);
+    if (!bound.ok || bound.value.binding.artifactId !== key) return fail();
+    const content = new TextEncoder().encode('{"instruction":"What does the help panel show?","output":"The help panel shows guidance for the current feature."}\n{"instruction":"Where are task updates?","output":"Task updates are in the notification center."}\n');
+    const stored = await storage.storeArtifact(createStoreArtifactRequest(content, { descriptor: { key, mediaType: "application/jsonl", metadata: { originalFileName: path.basename(key) } } }), context);
+    if (!stored.ok || stored.value.key !== key) return fail();
+  }
+  return datasets;
+}
 export async function seedTrainingInputs(environment: NodeJS.ProcessEnv): Promise<string> {
   const dataRoot = requireOwnedCase(environment);
   const run = environment.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
@@ -101,18 +121,8 @@ export async function seedTrainingInputs(environment: NodeJS.ProcessEnv): Promis
     if (created.status !== "created" || created.workspace?.workspaceId !== workspaceId) return fail();
     const registry = createLocalModelRegistryAdapter({ filePath: path.join(dataRoot, "model-registry/models.json"), rootDirectory: dataRoot, documents, discovery: { enabled: false } });
     const base = await registry.registerDownloadedModel({ workspaceId, displayName: inputs.displayName, source: "local", provider: inputs.provider, modelId: inputs.modelId, localPath: path.join(repoRoot, inputs.modelRelativeDirectory), artifactForm: "full-model", inferenceMode: "causal", serializationFormat: "safetensors" });
-    const catalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: dataRoot, documents });
-    const bindings = createLocalArtifactStorageBindingAdapter({ rootDirectory: dataRoot, documents });
-    const storage = createFilesystemArtifactObjectStorageAdapter({ rootDirectory: dataRoot, host: "desktop", artifactCatalogAppend: catalog, artifactBindingWrite: bindings });
     const context = { workspaceId, organizationId: identity.organizationId, principalId: identity.principalId };
-    const datasets = trainingDatasetIds(run);
-    for (const key of datasets) {
-      const bound = await bindings.createArtifactStorageBindingIfAbsent({ binding: { workspaceId, artifactId: key, role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: key } } }, context);
-      if (!bound.ok || bound.value.binding.artifactId !== key) return fail();
-      const content = new TextEncoder().encode('{"instruction":"What does the help panel show?","output":"The help panel shows guidance for the current feature."}\n{"instruction":"Where are task updates?","output":"Task updates are in the notification center."}\n');
-      const stored = await storage.storeArtifact(createStoreArtifactRequest(content, { descriptor: { key, mediaType: "application/jsonl", metadata: { originalFileName: path.basename(key) } } }), context);
-      if (!stored.ok || stored.value.key !== key) return fail();
-    }
+    const datasets = await seedTrainingDatasets(dataRoot, documents, context, run);
     const fixture = JSON.stringify({ schemaVersion: inputs.profile === "generated-tiny-qwen2-v1" ? "training-host-fixture-v2" : "training-host-fixture-v1",
       ...(inputs.profile === "generated-tiny-qwen2-v1" ? { inputProfile: inputs.profile } : {}),
       runId: run, sourceRevision: source, workspaceId, baseModelRecordId: base.model.modelRecordId, datasetArtifactIds: datasets, outputName: TRAINING_OUTPUT_NAME, displayName: TRAINING_DISPLAY_NAME });
