@@ -1,5 +1,5 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME, type TrainingConfigurationAction } from "../model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingBaseName, readTrainingHostTaskDiagnostic, failTrainingWithTaskDiagnostic, TRAINING_HOST_PHASES, TRAINING_HOST_PHASE_TIMEOUT_MS, TRAINING_WORKSPACE_NAME, type TrainingConfigurationAction } from "../model-training-oracles";
 
 /** Serialized into the owned renderer. Return only admitted IDs, never paths or metadata. */
 export async function readTrainingHostInventory(input: { workspaceId: string; baseModelRecordId: string; baseName: string; displayName: string; requestId: string }) {
@@ -56,6 +56,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
   if (!fixture || info.project.name !== "packaged-desktop") throw new Error("The Desktop training prerequisites are invalid.");
   const phases: string[] = [];
   let failed = false;
+  let requestId = "";
   let failure: unknown, currentAction: "phase" | TrainingConfigurationAction = "phase";
   async function step(phase: typeof TRAINING_HOST_PHASES[number], action: () => Promise<void>) {
     if (TRAINING_HOST_PHASES[phases.length] !== phase) throw new Error("Unexpected training host phase.");
@@ -72,7 +73,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
     const manageTab = page.getByRole("tab", { name: "Manage Models", exact: true });
     const workflow = page.getByRole("list", { name: "Model training workflow", exact: true });
     const savedCard = page.getByRole("region", { name: "Managed models", exact: true }).locator("article").filter({ has: page.getByText(fixture.displayName, { exact: true }) });
-    let requestId = "", savedId = "";
+    let savedId = "";
     const readRegistry = () => page.evaluate(readTrainingHostInventory, { workspaceId: fixture!.workspaceId,
       baseModelRecordId: fixture!.baseModelRecordId, baseName: trainingBaseName(fixture!), displayName: fixture!.displayName, requestId });
     async function dismissNotifications() {
@@ -184,5 +185,12 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
     }
   }
   catch { throw new Error(`Training host report unavailable; last phase: ${report.nextPhase}.`); }
+  if (failed && requestId) return failTrainingWithTaskDiagnostic(report.nextPhase,
+    () => page.evaluate(readTrainingHostTaskDiagnostic, { workspaceId: fixture.workspaceId, runId: requestId }),
+    async diagnostic => {
+      const body = JSON.stringify(diagnostic);
+      if (Buffer.byteLength(body) > 1024) throw new Error("The training task diagnostic exceeded its fixed bound.");
+      await info.attach("training-host-task-diagnostic", { body, contentType: "application/json" });
+    });
   if (report.status !== "passed") throw new Error(`Training host phase did not complete: ${report.nextPhase}.`);
 }

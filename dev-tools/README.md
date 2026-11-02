@@ -1781,6 +1781,30 @@ this split without running generated commands. Actual native compatibility still
 requires its separately reviewed bounded execution. Existing accepted accuracy
 results and pending production/resource qualification are unchanged.
 
+### Diagnose a training task after it starts
+
+A failed training UI journey can read its already-accepted task through the
+existing Desktop status bridge before owned shutdown. The observer keeps the
+exact task and workspace context. A fixed two-second controller deadline covers
+the optional read and report write. The renderer also bounds its IPC wait. Both
+timers retire, and a late read cannot publish after the controller retires.
+The read keeps its normal application bookkeeping. The observer records only a
+closed status, stage, error code and error type. It copies no task ID, message, prompt, path, log or model metadata.
+A running task, a failed task and a completed task remain distinct observations.
+None of these observations changes the failed UI phase into a pass.
+
+The observer runs only after a failed journey with a consumed task ID. Successful
+journeys retain their eight phases and two original success attachments. A read
+failure records unavailable evidence. A report failure keeps the safe original
+phase failure and a fixed secondary error; owned shutdown still runs.
+
+The Operational profile borrows the existing fake-only worker training test.
+It now has 83 fixed test files and 193 source references. Its 76 automatic source
+triggers, limits and unknown, incomplete or explicit generic fallbacks stay intact.
+Worker-only changes retain generic selection. No ordinary check imports a real
+model for this addition. The actual training cause remains pending a separately
+reviewed current package and Desktop journey. Accepted accuracy and OCR remain closed.
+
 ### Training dataset fixture storage
 
 The input-only training fixture writes dataset files in the `artifacts` folder

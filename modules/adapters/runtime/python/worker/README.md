@@ -824,3 +824,19 @@ focused and profile commands cannot run it. An explicit bounded offline run of
 that tiny CPU fixture checks supplier compatibility, tied-weight forward parity,
 repeat use and cleanup. It does not qualify model accuracy, production admission,
 model resources, retained restart or shared disk accounting.
+
+## Safe training failure details
+
+Caught training exceptions retain the existing `training_failed` result and its
+existing message, method and task fields. The worker adds a fixed internal stage
+and an allowlisted builtin error type to `error.details`. Custom exception names
+become `OtherError`; the type projection reads no exception message or attributes.
+Stages cover dataset/model loading, tokenization, adapter and trainer setup,
+training, serialization, validation and result creation. Existing success,
+cancellation, delegated results and loading/serialization controls are unchanged.
+
+The developer UI observer copies only those admitted fields and task status into
+failure evidence. It does not copy the legacy raw error message. Fake-supplier
+regressions exercise each stage without importing Torch or loading a model.
+This source change needs a fresh package and real UI qualification; it does not
+qualify training outcomes, model accuracy, native resources or offload recovery.

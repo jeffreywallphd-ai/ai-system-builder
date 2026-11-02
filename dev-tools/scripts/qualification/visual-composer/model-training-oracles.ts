@@ -21,6 +21,99 @@ export const TRAINING_CONFIGURATION_ACTIONS = Object.freeze([
 export type TrainingConfigurationAction = typeof TRAINING_CONFIGURATION_ACTIONS[number];
 const invalid = () => new Error("The fixed training host test input is unavailable or invalid.");
 
+const TRAINING_TASK_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled", "unavailable"] as const;
+const TRAINING_TASK_ERROR_CODES = ["training_failed", "validation_failed", "training_task_unknown", "task_failed", "cancelled", "internal", "unavailable", "other"] as const;
+const TRAINING_TASK_STAGES = ["purpose-mapping", "diffusion-delegate", "vision-delegate", "initializing", "base-model-resolution", "dataset-loading", "model-loading", "sequence-length", "tokenization", "adapter-configuration", "training-arguments", "training-loop", "serialization", "validation", "serialization-manifest", "run-metadata", "generated-candidate", "completion-report", "training", "serializing", "validating", "completed", "failed", "unavailable", "other"] as const;
+const TRAINING_TASK_ERROR_TYPES = ["ValueError", "RuntimeError", "TypeError", "MemoryError", "ImportError", "ModuleNotFoundError", "OSError", "AttributeError", "KeyError", "IndexError", "AssertionError", "OtherError", "unavailable", "other"] as const;
+export interface TrainingHostTaskDiagnostic {
+  schemaVersion: "training-host-task-diagnostic-v1";
+  status: typeof TRAINING_TASK_STATUSES[number];
+  errorCode: string;
+  stage: string;
+  errorType: string;
+  parentQualificationGranted: false;
+}
+
+/** Admit only the closed renderer projection. Never traverse an error or payload. */
+export function trainingTaskDiagnostic(value: unknown): Readonly<TrainingHostTaskDiagnostic> {
+  const unavailable = (): Readonly<TrainingHostTaskDiagnostic> => Object.freeze({ schemaVersion: "training-host-task-diagnostic-v1", status: "unavailable", errorCode: "unavailable", stage: "unavailable", errorType: "unavailable", parentQualificationGranted: false });
+  try {
+    if (!value || typeof value !== "object" || types.isProxy(value) || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value))) return unavailable();
+    const keys = ["schemaVersion", "status", "errorCode", "stage", "errorType", "parentQualificationGranted"];
+    if (Reflect.ownKeys(value).length !== keys.length) return unavailable();
+    const fields: Record<string, unknown> = {};
+    for (const key of keys) {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      if (!field || !("value" in field)) return unavailable();
+      fields[key] = field.value;
+    }
+    if (fields.schemaVersion !== "training-host-task-diagnostic-v1" || fields.parentQualificationGranted !== false ||
+        !TRAINING_TASK_STATUSES.includes(fields.status as never) || !TRAINING_TASK_ERROR_CODES.includes(fields.errorCode as never) ||
+        !TRAINING_TASK_STAGES.includes(fields.stage as never) || !TRAINING_TASK_ERROR_TYPES.includes(fields.errorType as never)) return unavailable();
+    return Object.freeze(fields as unknown as TrainingHostTaskDiagnostic);
+  } catch { return unavailable(); }
+}
+
+/** Serialized into the owned renderer; read one existing task, return no text or IDs. */
+export async function readTrainingHostTaskDiagnostic(input: { workspaceId: string; runId: string }): Promise<TrainingHostTaskDiagnostic> {
+  const unavailable = (): TrainingHostTaskDiagnostic => ({ schemaVersion: "training-host-task-diagnostic-v1", status: "unavailable", errorCode: "unavailable", stage: "unavailable", errorType: "unavailable", parentQualificationGranted: false });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const data = (object: unknown, key: string): unknown => {
+      if (!object || typeof object !== "object" || Array.isArray(object)) return undefined;
+      const field = Object.getOwnPropertyDescriptor(object, key);
+      return field && "value" in field ? field.value : undefined;
+    };
+    if (!input || typeof input !== "object" || Reflect.ownKeys(input).length !== 2) return unavailable();
+    const workspaceId = data(input, "workspaceId"), runId = data(input, "runId");
+    if (typeof workspaceId !== "string" || !/^workspace\.training-host\.[a-f0-9]{16}$/.test(workspaceId) ||
+        typeof runId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{3,191}$/.test(runId)) return unavailable();
+    const api = (window as unknown as { desktopApi?: { readModelTrainingStatus(request: { workspaceId: string; runId: string }): Promise<unknown> } }).desktopApi;
+    if (!api || typeof api.readModelTrainingStatus !== "function") return unavailable();
+    const response: unknown = await Promise.race([
+      api.readModelTrainingStatus({ workspaceId, runId }),
+      new Promise<undefined>(resolve => { timer = setTimeout(() => resolve(undefined), 2000); }),
+    ]);
+    if (data(response, "ok") !== true) return unavailable();
+    const value = data(response, "value");
+    if (data(value, "runId") !== runId) return unavailable();
+    const status = data(value, "status");
+    if (typeof status !== "string" || !["queued", "running", "succeeded", "failed", "cancelled"].includes(status)) return unavailable();
+    const allowed = (value: unknown, values: readonly string[], fallback: string) => typeof value === "string" && value.length <= 64 && values.includes(value) ? value : fallback;
+    const error = data(value, "error"), details = data(error, "details"), progress = data(value, "progress");
+    return { schemaVersion: "training-host-task-diagnostic-v1", status: status as TrainingHostTaskDiagnostic["status"],
+      errorCode: allowed(data(error, "code"), ["training_failed", "validation_failed", "training_task_unknown", "task_failed", "cancelled", "internal", "unavailable"], error ? "other" : "unavailable"),
+      stage: allowed(data(details, "stage") ?? data(progress, "stage"), ["purpose-mapping", "diffusion-delegate", "vision-delegate", "initializing", "base-model-resolution", "dataset-loading", "model-loading", "sequence-length", "tokenization", "adapter-configuration", "training-arguments", "training-loop", "serialization", "validation", "serialization-manifest", "run-metadata", "generated-candidate", "completion-report", "training", "serializing", "validating", "completed", "failed"], "unavailable"),
+      errorType: allowed(data(details, "errorType"), ["ValueError", "RuntimeError", "TypeError", "MemoryError", "ImportError", "ModuleNotFoundError", "OSError", "AttributeError", "KeyError", "IndexError", "AssertionError", "OtherError"], "unavailable"),
+      parentQualificationGranted: false };
+  } catch { return unavailable(); }
+  finally { if (timer !== undefined) clearTimeout(timer); }
+}
+
+/** A diagnostic cannot turn a failed UI phase into success or hide its safe error. */
+export async function failTrainingWithTaskDiagnostic(phase: unknown, read: () => Promise<unknown>, publish: (report: Readonly<TrainingHostTaskDiagnostic>) => Promise<void>): Promise<never> {
+  if (typeof phase !== "string" || !(TRAINING_HOST_PHASES as readonly string[]).includes(phase)) throw invalid();
+  const failure = new Error(`Training host phase did not complete: ${phase}.`);
+  let retired = false, timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    // This controller deadline also covers a wedged renderer or report writer.
+    // The renderer's independent IPC-read timer cannot protect those frontiers.
+    const deadline = new Promise<"timed-out"> (resolve => { timer = setTimeout(() => resolve("timed-out"), 2000); });
+    const observation = (async () => {
+      let report = trainingTaskDiagnostic(undefined);
+      try { const value = await read(); if (retired) return "retired" as const; report = trainingTaskDiagnostic(value); }
+      catch { /* Keep only the fixed unavailable projection. */ }
+      if (retired) return "retired" as const;
+      try { await publish(report); return "published" as const; }
+      catch { return "publication-failed" as const; }
+    })();
+    const outcome = await Promise.race([observation, deadline]);
+    if (outcome === "timed-out") throw new AggregateError([failure, new Error("The training task diagnostic timed out.")], failure.message);
+    if (outcome === "publication-failed") throw new AggregateError([failure, new Error("The training task diagnostic could not be recorded.")], failure.message);
+  } finally { retired = true; if (timer !== undefined) clearTimeout(timer); }
+  throw failure;
+}
+
 const TRAINING_DIAGNOSTIC_EVENTS = ["desktop.host.feature.load.failed", "desktop.host.model.operation.failed"] as const;
 const TRAINING_DIAGNOSTIC_FEATURES = ["model-registry", "runtime-task-registry", "python-runtime-foundation", "comfyui-image-runtime"] as const;
 const TRAINING_DIAGNOSTIC_STAGES = ["import", "compose", "trainModel.execute", "trainModel.read", "trainModel.save", "trainModel.discard"] as const;

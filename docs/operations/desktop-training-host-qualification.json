@@ -1,27 +1,34 @@
 {
   "schema_version": "desktop-training-host-qualification-v1",
-  "scope": "training-fixture-desktop-storage-layout-fix-with-preserved-failed-host-evidence",
-  "status": "fixture-storage-fixed-actual-training-ui-pending",
-  "user_summary": "The agent found why the latest training test could not start. The test put dataset files in the wrong folder. The setup now uses the folder that Desktop reads. The setup regression and related tests pass. A fresh Desktop training, private review, Save and reopen test is still needed. No action is needed from the user.",
+  "scope": "asynchronous-training-task-diagnostics-with-preserved-failed-ui-evidence",
+  "status": "task-diagnostics-added-actual-training-ui-pending",
+  "user_summary": "The test now starts a training task. It did not reach the screen where the model can be saved. The saved evidence did not show whether the task failed, was still running, or finished without the expected screen. The agent has added a safe task-status check to capture that information before the test closes the app. Focused tests pass. A new Desktop training test is still needed. No action is needed from the user.",
   "source": {
-    "actual_failed_host_commit": "e280bfde7c420bdecccf9257a54a471018dc8f89",
-    "actual_failed_host_source_digest": "09a4dff877e10eabee1aa2e0757736e36bb86727a28cf1a4f8387957d4d5e110",
-    "actual_failed_host_source_revision": "source.ebb34bbb7c89a679e5fb4b7eab5ae0c5245b2307aec3a1e70e8525b244b2a432",
-    "fixture_source_sha256": "c2c054e995300ef6b2e8cafd8427daad18008331de2c7c934f345a19fafd18d7",
-    "fixture_regression_sha256": "25856715ca8795c7418227d918658d0f581c225aaebf4116d8bcfd9a54cc57f9"
+    "actual_failed_host_commit": "163d49d54f87421daa2c676f21cf44f7d532876a",
+    "actual_failed_host_source_digest": "290ccca0617f088874f278926f496d47de0341122742fc4e8fa7ec224a473690",
+    "actual_failed_host_source_revision": "source.d7f04eb43445135c137c7a2b14a3fc517d01ce374ad6ba18973478ec4ef28ea3",
+    "original_package_source_commit": "e280bfde7c420bdecccf9257a54a471018dc8f89",
+    "original_package_source_digest": "09a4dff877e10eabee1aa2e0757736e36bb86727a28cf1a4f8387957d4d5e110",
+    "diagnostic_source_hashes": {
+      "modules/adapters/runtime/python/worker/tasks/train_model.py": "0b3d47eee7b33ac5ecd4b86d5179b9fb87bef8d480aed871f645747add7913c1",
+      "modules/adapters/runtime/python/worker/tests/test_train_model_task.py": "d8356ad9ab2c82fb72a2ce2db5f8f29d24a023c9b5a321aa009630ec27dd0978",
+      "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts": "46306c8ff6fca94353247c5e163d69d3ef96aea89392720fe6be08f5dbb50b24",
+      "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5",
+      "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32"
+    }
   },
   "stages": [
     {
-      "id": "current-source-offline-package",
-      "status": "passed-for-failed-run-source-only",
+      "id": "reused-qualified-offline-package",
+      "status": "passed-original-source-and-fresh-copy-only",
       "files": 217,
       "bytes": 384071842,
       "worker_files": 109,
-      "scope": "The package matches this failed diagnostic run source. It grants no successful training or later fixture qualification."
+      "scope": "All2934 original build inputs stayed unchanged for the fixture-only correction. The original217file package was verified and copied to a fresh owned run; no new package build was asserted. The new worker diagnostic changes need a fresh package."
     },
     {
-      "id": "actual-desktop-training-ui-with-start-diagnostics",
-      "status": "failed-before-task-dispatch",
+      "id": "actual-desktop-training-ui-after-storage-fixture-fix",
+      "status": "failed-before-private-review",
       "actual_tests_passed": 0,
       "actual_tests_failed": 1,
       "actual_tests_skipped": 0,
@@ -29,15 +36,15 @@
       "global_errors": 0,
       "completed_ui_phases": [
         "workspace-and-inputs-visible",
-        "configuration-bounded"
+        "configuration-bounded",
+        "training-accepted"
       ],
-      "failed_phase": "training-accepted",
-      "specific_control_or_cause": "Both213byte synthetic datasets existed under the test data root. Neither existed under its artifacts subfolder where Desktop reads bytes. Shared organization documents made the catalog and bindings visible despite missing physical input files.",
-      "actual_training_execution": "not-reached",
+      "failed_phase": "private-review-pending",
+      "specific_control_or_cause": "Unknown. The accepted task did not produce the expected Save/private-review UI within the unchanged phase deadline. Existing attachments contain no task status or worker failure stage. This does not prove whether the task failed, was still running, or completed without the expected UI.",
+      "actual_training_execution": "task-accepted-completion-unconfirmed",
       "requested_ui_training_seed": 7,
       "synthetic_input_generation_seed": 13,
-      "scope": "Completed configuration does not qualify training, private review, Save or reopened records. The selected training seed was not confirmed by an accepted task.",
-      "closed_start_code": "MODEL_TRAINING_START_DATASET_RESOLUTION"
+      "scope": "Task acceptance confirms the fixture storage repair reached dispatch. Training completion, private review, Save and reopen remain unqualified. No unchanged-source retry is authorized."
     },
     {
       "id": "inner-owned-worker-cleanup",
@@ -53,7 +60,7 @@
       "id": "original-outer-native-job-retirement",
       "status": "retired-after-failed-test",
       "native_root_exit_code": 1,
-      "owned_processes_total": 103,
+      "owned_processes_total": 115,
       "owned_processes_active_after_retirement": 0,
       "peak_active_observed": 15,
       "original_owned_handles_and_streams_retired": true,
@@ -61,60 +68,65 @@
       "fence_required": false,
       "observed_limit_messages": [],
       "observed_limit_notifications": [],
-      "peak_process_commit_bytes": 691691520,
-      "peak_job_commit_bytes": 1386438656,
-      "scope": "Original Native limits and ownership were preserved. Independent review confirmed retirement before the exact fresh active marker was retired. This does not change the failed training result."
+      "peak_process_commit_bytes": 691781632,
+      "peak_job_commit_bytes": 1516462080,
+      "scope": "The original Job retired115 lifetime owned processes with active0, complete stream/handle acknowledgements and no observed limit signal. Independent review and root revalidation preceded retirement of only the exact new active marker. This does not prove general resource fitness or change the failed UI result."
     },
     {
-      "id": "desktop-layout-input-regression",
-      "status": "passed-model-free-feature-check",
-      "focused_cases_passed": 40,
+      "id": "bounded-asynchronous-task-diagnostics",
+      "status": "passed-model-free-component-checks",
+      "worker_cases_passed": 45,
+      "observer_and_setup_cases_passed": 52,
+      "routing_suites_passed": 3,
+      "census_guard_cases_passed": 33,
       "skips": 0,
-      "diagnostic": "The actual helper seeds both exact213byte JSONL inputs and primary bindings for the independently constructed Desktop artifacts-root storage consumer. Byte-limit denial and training rejection of another workspace before byte read/task dispatch pass.",
-      "scope": "The old root reproduced missing physical bytes. The fixture-only repair seeds no result and starts no app or model."
+      "diagnostic": "Fixed stage/error-type details cover caught worker exceptions. After a failed UI phase, one existing scoped task read can distinguish queued/running/completed/failed/cancelled states. Only allowlisted fields enter the failure report. Unknown, stale, malformed and private fields remain unavailable. Owned shutdown and fixed original phase errors are preserved. A fixed controller deadline covers both optional page reading and report publication. Hung reads/writes still reach owned shutdown once, and late reads cannot publish after retirement. The status read retains its existing lifecycle bookkeeping.",
+      "scope": "These focused checks use fake suppliers and bridges. They start no app, model or Native Job. Current source receipts/review and actual package/training qualification are separate."
     }
   ],
   "evidence_digests": {
-    "actual_failed_ui_result_review_sha256": "57da12dd18670852e00146c4ba58c62b9ec1f7ea65fc08ad88123bdda45dc775",
-    "actual_ui_tool_observation_sha256": "96a6d1864f595e17af8917f3351813dc0784ec6e726b0072c5262907d5dad85d",
-    "actual_ui_native_observation_sha256": "632059c50cc2bfa55f1d09c524b5d38277ae3eb57c93bd1f1a071b8f0e01e148",
-    "dataset_root_diagnostic_sha256": "5355340e61d29657ccd07ec834a7e539edb832cf667280cc490e2237afc89aad",
-    "exact_failed_active_marker_retirement_sha256": "851251a4ba540306c8a5a9aefc2df9a4bc0e5d0966bf9f8c8b10e82bb36e6237",
-    "red_fixture_regression_sha256": "017731bf0c5e0267bd76ad2b5c7c22223eb63e8a8c0a73e8594a2f9eed0c01ec",
-    "focused_fixture_regressions_sha256": "3e2dc5cfbac9d1d8b6d829e55b77532a8f57f23023442c0de5b342b9406598d3"
+    "actual_failed_ui_result_review_sha256": "4dc3ecd60a845b5e3441daa442da7f200cfe0effab0ebb8d96ea47046e0af88d",
+    "actual_ui_tool_observation_sha256": "72a4e636a97af0c130dc934884add3a0306a53a383cd7143de88ec3dc1aae3df",
+    "actual_ui_native_observation_sha256": "a1c1a1bb1782b4dda85d60b49770cfd8e58ffc401affcf40e2ab0791542c447f",
+    "exact_failed_active_marker_retirement_sha256": "1b66f64f852208601de1648fbdc95403e417d02d4f212bc91c67fdb02d89d6f7",
+    "original_package_copy_provenance_sha256": "ee2fa7b9db1b207e337caef0791c90b145ca4c2432241ebe80d0bc6171bc195d",
+    "actual_playwright_result_sha256": "519c9029edd6d5f7c4b87d7064c713aa986a0b7d62abfd9193b9ea26b0e72e53",
+    "actual_persisted_cleanup_sha256": "d48bc48a8ad5f29a842b6d54bc9746724378d58c85a23da4aef233bfa4114e58",
+    "worker_component_checks_sha256": "66d8ec22dcd36b3de12a067212cf6bf7ac044161bd58277ad31dfab28ac77fc4",
+    "observer_component_checks_sha256": "e14901831cdcd261ff5d4fee1d67dbc5acc7b5fac34b62252a3d04698497b03e",
+    "operational_routing_checks_sha256": "46fb8d9efdad1bb83939804f28df5e8c5a5a1d0f9d4a15e73749b819024e87c1",
+    "functional_routing_checks_sha256": "8667059e8c9aa8dcf8811183cea8be9e2609ccc3599cd236e7f6b86e83fa02dd",
+    "run_evidence_routing_checks_sha256": "eefca354209adecb12c6771e7db4f03c96a93c2dba4303f62a325d6f64c5cee1",
+    "current_census_guard_checks_sha256": "e62f13f2b4392c7475ef61c9e2743315a1c44a5061b79cb8383eccd7f856fca0",
+    "diagnostic_only_worker_ast_proof_sha256": "766ea920526e6f39b0025a746730234816e6e1773c4d17368fc3bd50c5683045"
   },
   "prior_reports": [
     {
-      "raw_sha256": "a600e8336bdd3944a954db9be454498ecac7c551d4e0d00a4e977ca37290d06a",
+      "raw_sha256": "3e38a7c6a08e380c49a5cca0a72a9b7edd87eb139b24544e85bbcdc0c8bd5273",
       "report": {
         "schema_version": "desktop-training-host-qualification-v1",
-        "scope": "safe-training-start-diagnostics-with-preserved-actual-host-failure",
-        "status": "training-start-diagnostics-added-actual-training-ui-pending",
-        "user_summary": "The app opened the test workspace, model and datasets. The repaired training form worked. Start Training did not return an accepted task ID. The agent has added safe diagnostics to identify where a future attempt fails. The cause is still unknown. Training, private review, Save and reopen need a successful feature test. No action is needed from the user.",
+        "scope": "training-fixture-desktop-storage-layout-fix-with-preserved-failed-host-evidence",
+        "status": "fixture-storage-fixed-actual-training-ui-pending",
+        "user_summary": "The agent found why the latest training test could not start. The test put dataset files in the wrong folder. The setup now uses the folder that Desktop reads. The setup regression and related tests pass. A fresh Desktop training, private review, Save and reopen test is still needed. No action is needed from the user.",
         "source": {
-          "actual_failed_host_commit": "024f3f759a904ef0e1eef9b12f9f1df072840882",
-          "actual_failed_host_source_digest": "a96fc86da364c3d0f351f23afe1a54cb04e42de689c77102905ec319f51ee74d",
-          "actual_failed_host_source_revision": "source.b7667b46841c474dbd3aa4f16e774103311c6b928081294ba3c35fab009c16c3",
-          "diagnostic_source_hashes": {
-            "modules/application/use-cases/model/train-model.use-case.ts": "8677746ec98c9f13ce283c9c7040c79df2cded69e651e625266ed0ffadc13601",
-            "modules/application/use-cases/tests/train-model.use-case.unit.test.ts": "f4f9aa048c0917d28d6da021a7ecb2384fdcbb146171d3091f2c37a86f3ab3a0",
-            "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
-            "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
-            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8"
-          }
+          "actual_failed_host_commit": "e280bfde7c420bdecccf9257a54a471018dc8f89",
+          "actual_failed_host_source_digest": "09a4dff877e10eabee1aa2e0757736e36bb86727a28cf1a4f8387957d4d5e110",
+          "actual_failed_host_source_revision": "source.ebb34bbb7c89a679e5fb4b7eab5ae0c5245b2307aec3a1e70e8525b244b2a432",
+          "fixture_source_sha256": "c2c054e995300ef6b2e8cafd8427daad18008331de2c7c934f345a19fafd18d7",
+          "fixture_regression_sha256": "25856715ca8795c7418227d918658d0f581c225aaebf4116d8bcfd9a54cc57f9"
         },
         "stages": [
           {
             "id": "current-source-offline-package",
             "status": "passed-for-failed-run-source-only",
             "files": 217,
-            "bytes": 384071195,
+            "bytes": 384071842,
             "worker_files": 109,
-            "scope": "The package matches the source of this failed run. Later diagnostic source changes require a new package before another real host check."
+            "scope": "The package matches this failed diagnostic run source. It grants no successful training or later fixture qualification."
           },
           {
-            "id": "actual-desktop-training-ui-after-form-fix",
-            "status": "failed-before-observed-task-acceptance",
+            "id": "actual-desktop-training-ui-with-start-diagnostics",
+            "status": "failed-before-task-dispatch",
             "actual_tests_passed": 0,
             "actual_tests_failed": 1,
             "actual_tests_skipped": 0,
@@ -125,11 +137,12 @@
               "configuration-bounded"
             ],
             "failed_phase": "training-accepted",
-            "specific_control_or_cause": "Unknown. The test did not observe the accepted task ID. No retained diagnostic proves the reason.",
-            "actual_training_execution": "unconfirmed",
+            "specific_control_or_cause": "Both213byte synthetic datasets existed under the test data root. Neither existed under its artifacts subfolder where Desktop reads bytes. Shared organization documents made the catalog and bindings visible despite missing physical input files.",
+            "actual_training_execution": "not-reached",
             "requested_ui_training_seed": 7,
             "synthetic_input_generation_seed": 13,
-            "scope": "Completed configuration does not qualify training, private review, Save or reopened records. The selected training seed was not confirmed by an accepted task."
+            "scope": "Completed configuration does not qualify training, private review, Save or reopened records. The selected training seed was not confirmed by an accepted task.",
+            "closed_start_code": "MODEL_TRAINING_START_DATASET_RESOLUTION"
           },
           {
             "id": "inner-owned-worker-cleanup",
@@ -153,456 +166,287 @@
             "fence_required": false,
             "observed_limit_messages": [],
             "observed_limit_notifications": [],
-            "peak_process_commit_bytes": 691990528,
-            "peak_job_commit_bytes": 1339080704,
-            "scope": "The original Job retired its owned resources. No limit signal was observed. This is not a general resource qualification or proof of why training was not accepted."
+            "peak_process_commit_bytes": 691691520,
+            "peak_job_commit_bytes": 1386438656,
+            "scope": "Original Native limits and ownership were preserved. Independent review confirmed retirement before the exact fresh active marker was retired. This does not change the failed training result."
           },
           {
-            "id": "closed-training-start-and-runtime-diagnostics",
+            "id": "desktop-layout-input-regression",
             "status": "passed-model-free-feature-check",
-            "focused_cases_passed": 58,
-            "application_cases": 31,
-            "oracle_cases": 27,
+            "focused_cases_passed": 40,
             "skips": 0,
-            "diagnostic": "Six fixed start-stage codes pass through the unchanged real host logger. Failed host checks keep only bounded allowlisted facts. Unicode limits, listener registration, cleanup and redaction have focused regressions.",
-            "scope": "These tests start no app or model. The original eight-phase success report, task and physical-worker checks remain unchanged."
+            "diagnostic": "The actual helper seeds both exact213byte JSONL inputs and primary bindings for the independently constructed Desktop artifacts-root storage consumer. Byte-limit denial and training rejection of another workspace before byte read/task dispatch pass.",
+            "scope": "The old root reproduced missing physical bytes. The fixture-only repair seeds no result and starts no app or model."
           }
         ],
         "evidence_digests": {
-          "actual_failed_ui_result_review_sha256": "bbcd17b612501b5842cca413701fb0cf3787a411ab1aba1d383b11b83e8034f4",
-          "actual_ui_tool_observation_sha256": "2fbc1a95a43e9552c8c2de0df1ee007e230295e6086c7c494b7128f52784fecb",
-          "actual_ui_native_observation_sha256": "2ae9e085ca143d0bdf2c2c7a2f1558c564f0ecbfe1b220f7074e6c0055d4b370",
-          "actual_playwright_result_sha256": "09614acdd2876facee9334579c55fece21ab297922b23ae8929041493f570074",
-          "actual_persisted_cleanup_sha256": "e80c7b82a82fd667c9259597db66791aaa8987d5e26691373a5a5fd9c59b2539",
-          "exact_failed_active_marker_retirement_sha256": "d7ecb461bfeb7f106c8340a63ead17f52d1b847d89407cf37ddb427472c3ebb9",
-          "focused_stage_and_collector_observation_sha256": "e9eed3838e9834de326788f34d65143ded8166bd797e75687e48fe64c29e1197",
-          "focused_stage_and_collector_stdout_sha256": "a4ead91315f7ff0053fc4f521ef70298cb57cf7d142956cae2483b50d900afb1",
-          "independent_three_findings_closure_sha256": "6d40d8ae675de890a20b4f417edc67fd03c878f7913cdd0f2830bd59fc01bfd5"
+          "actual_failed_ui_result_review_sha256": "57da12dd18670852e00146c4ba58c62b9ec1f7ea65fc08ad88123bdda45dc775",
+          "actual_ui_tool_observation_sha256": "96a6d1864f595e17af8917f3351813dc0784ec6e726b0072c5262907d5dad85d",
+          "actual_ui_native_observation_sha256": "632059c50cc2bfa55f1d09c524b5d38277ae3eb57c93bd1f1a071b8f0e01e148",
+          "dataset_root_diagnostic_sha256": "5355340e61d29657ccd07ec834a7e539edb832cf667280cc490e2237afc89aad",
+          "exact_failed_active_marker_retirement_sha256": "851251a4ba540306c8a5a9aefc2df9a4bc0e5d0966bf9f8c8b10e82bb36e6237",
+          "red_fixture_regression_sha256": "017731bf0c5e0267bd76ad2b5c7c22223eb63e8a8c0a73e8594a2f9eed0c01ec",
+          "focused_fixture_regressions_sha256": "3e2dc5cfbac9d1d8b6d829e55b77532a8f57f23023442c0de5b342b9406598d3"
         },
         "prior_reports": [
           {
-            "raw_sha256": "961f5e4ba356dfda8d9b8c602e30d4742c1e020d81e5286b08740b9fe7609ad1",
+            "raw_sha256": "a600e8336bdd3944a954db9be454498ecac7c551d4e0d00a4e977ca37290d06a",
             "report": {
               "schema_version": "desktop-training-host-qualification-v1",
-              "scope": "specific-training-action-diagnostics-with-preserved-actual-host-failure",
-              "status": "configuration-diagnostics-added-actual-training-ui-pending",
-              "user_summary": "The app opened the test workspace, model and datasets. The test then failed while entering training settings, before training started. The agent has added a safe diagnostic that names the failed action. Training, Save and reopen still need a successful feature test. No action is needed from the user.",
+              "scope": "safe-training-start-diagnostics-with-preserved-actual-host-failure",
+              "status": "training-start-diagnostics-added-actual-training-ui-pending",
+              "user_summary": "The app opened the test workspace, model and datasets. The repaired training form worked. Start Training did not return an accepted task ID. The agent has added safe diagnostics to identify where a future attempt fails. The cause is still unknown. Training, private review, Save and reopen need a successful feature test. No action is needed from the user.",
               "source": {
-                "actual_failed_host_commit": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
-                "actual_failed_host_source_digest": "8a0dbc0fec864dcee025e7db78e4047e25c82d853c4003e0fc35664d4e00d880",
-                "actual_failed_host_source_revision": "source.deeac914e207cc4b1dc93119d4592b90be61230501b51de531b4041c4d959445",
+                "actual_failed_host_commit": "024f3f759a904ef0e1eef9b12f9f1df072840882",
+                "actual_failed_host_source_digest": "a96fc86da364c3d0f351f23afe1a54cb04e42de689c77102905ec319f51ee74d",
+                "actual_failed_host_source_revision": "source.b7667b46841c474dbd3aa4f16e774103311c6b928081294ba3c35fab009c16c3",
                 "diagnostic_source_hashes": {
-                  "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
-                  "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
-                  "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f"
+                  "modules/application/use-cases/model/train-model.use-case.ts": "8677746ec98c9f13ce283c9c7040c79df2cded69e651e625266ed0ffadc13601",
+                  "modules/application/use-cases/tests/train-model.use-case.unit.test.ts": "f4f9aa048c0917d28d6da021a7ecb2384fdcbb146171d3091f2c37a86f3ab3a0",
+                  "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
+                  "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
+                  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8"
                 }
               },
               "stages": [
                 {
-                  "id": "actual-desktop-training-ui-after-loader-fix",
-                  "status": "failed-during-training-configuration",
+                  "id": "current-source-offline-package",
+                  "status": "passed-for-failed-run-source-only",
+                  "files": 217,
+                  "bytes": 384071195,
+                  "worker_files": 109,
+                  "scope": "The package matches the source of this failed run. Later diagnostic source changes require a new package before another real host check."
+                },
+                {
+                  "id": "actual-desktop-training-ui-after-form-fix",
+                  "status": "failed-before-observed-task-acceptance",
                   "actual_tests_passed": 0,
                   "actual_tests_failed": 1,
                   "actual_tests_skipped": 0,
                   "retries": 0,
                   "global_errors": 0,
-                  "completed_prerequisite_probes": 12,
                   "completed_ui_phases": [
-                    "workspace-and-inputs-visible"
+                    "workspace-and-inputs-visible",
+                    "configuration-bounded"
                   ],
-                  "failed_phase": "configuration-bounded",
-                  "specific_control_or_cause": "Not retained by the earlier test; unproven.",
-                  "training_started": false,
-                  "scope": "The module-loading repair allowed the actual test to enter the app. This does not qualify training, private review, Save or reopened records."
+                  "failed_phase": "training-accepted",
+                  "specific_control_or_cause": "Unknown. The test did not observe the accepted task ID. No retained diagnostic proves the reason.",
+                  "actual_training_execution": "unconfirmed",
+                  "requested_ui_training_seed": 7,
+                  "synthetic_input_generation_seed": 13,
+                  "scope": "Completed configuration does not qualify training, private review, Save or reopened records. The selected training seed was not confirmed by an accepted task."
                 },
                 {
                   "id": "inner-owned-worker-cleanup",
-                  "status": "failed",
-                  "physical_workers_observed": 0,
+                  "status": "passed-for-this-failed-journey",
+                  "physical_workers_observed": 1,
+                  "physical_workers_alive": 0,
                   "app_main_exit_code": 0,
                   "will_quit_acknowledged": true,
-                  "safe_diagnostic": "The unchanged success check requires at least one physical worker. The test failed before starting training, so that proof was not available. The requirement stays in place."
+                  "failures": 0,
+                  "scope": "Cooperative worker cleanup passed. It does not change the failed training result or prove crash recovery."
                 },
                 {
                   "id": "original-outer-native-job-retirement",
                   "status": "retired-after-failed-test",
                   "native_root_exit_code": 1,
-                  "owned_processes_total": 64,
+                  "owned_processes_total": 103,
                   "owned_processes_active_after_retirement": 0,
-                  "peak_active_observed": 10,
+                  "peak_active_observed": 15,
                   "original_owned_handles_and_streams_retired": true,
                   "forced_termination": false,
                   "fence_required": false,
-                  "limit_notifications": false,
-                  "peak_process_commit_bytes": 691781632,
-                  "peak_job_commit_bytes": 930533376,
-                  "scope": "The outer Job retired its processes and resources. This is distinct from the failed training journey and missing inner worker proof."
+                  "observed_limit_messages": [],
+                  "observed_limit_notifications": [],
+                  "peak_process_commit_bytes": 691990528,
+                  "peak_job_commit_bytes": 1339080704,
+                  "scope": "The original Job retired its owned resources. No limit signal was observed. This is not a general resource qualification or proof of why training was not accepted."
                 },
                 {
-                  "id": "closed-training-failure-action-diagnostics",
+                  "id": "closed-training-start-and-runtime-diagnostics",
                   "status": "passed-model-free-feature-check",
-                  "focused_cases_passed": 14,
+                  "focused_cases_passed": 58,
+                  "application_cases": 31,
+                  "oracle_cases": 27,
                   "skips": 0,
-                  "diagnostic": "A separate bounded failure attachment records only fixed phase, action and error-type labels. It contains no field values, paths, page content or raw error text.",
-                  "scope": "The original eight-phase success report and physical-worker shutdown assertions remain unchanged. No app or model was started by these focused tests."
+                  "diagnostic": "Six fixed start-stage codes pass through the unchanged real host logger. Failed host checks keep only bounded allowlisted facts. Unicode limits, listener registration, cleanup and redaction have focused regressions.",
+                  "scope": "These tests start no app or model. The original eight-phase success report, task and physical-worker checks remain unchanged."
                 }
               ],
               "evidence_digests": {
-                "actual_ui_effect_review_sha256": "f273c6681ebb3816d41d88fb047b302ee0fd3f01be3107513c9a803388e9afb2",
-                "actual_failed_ui_result_review_sha256": "459fb7626c292fe83a120c7f9ca20c7e0b9e1d16e861d0795a999073da345cfe",
-                "actual_ui_native_observation_sha256": "a2d32179da06fb7abd2ea0818e6f6a752adc6192e3b942351e007b676dea8988",
-                "actual_ui_tool_observation_sha256": "1fd38017791c5a92d1abc1ac592dc6b2378dc3ca9e828e95f10a0da032066041",
-                "actual_playwright_result_sha256": "e51792f53df1d5ca6bfa9cc425917d533b6377c90f079a6128943da665ddb8cf",
-                "actual_persisted_failed_cleanup_sha256": "d7f7f7845e467b7d50e02b44461336d19d0bdd3b04721b0e1eebe7f8aeb0fe96",
-                "exact_failed_active_marker_retirement_sha256": "bee944bd953ed6783a91a12dc8daf89341b85742cd6e9f63f4f71b303dc32ffe",
-                "known_prior_failed_phase_preservation_sha256": "ddb5a724379b2710bddc4ebe37c94edb84c81f3aa2dc936b6e638b0cb9ed4d8a",
-                "focused_training_actions_observation_sha256": "e97f2b6ad4d511c29ee1bcfdfeac9bbff1026ddceaf811c22951e06d96721ed0",
-                "focused_training_actions_stdout_sha256": "35ac1824881409451ae251298d2208443211ce2eb9e946098493df1ad831be19"
+                "actual_failed_ui_result_review_sha256": "bbcd17b612501b5842cca413701fb0cf3787a411ab1aba1d383b11b83e8034f4",
+                "actual_ui_tool_observation_sha256": "2fbc1a95a43e9552c8c2de0df1ee007e230295e6086c7c494b7128f52784fecb",
+                "actual_ui_native_observation_sha256": "2ae9e085ca143d0bdf2c2c7a2f1558c564f0ecbfe1b220f7074e6c0055d4b370",
+                "actual_playwright_result_sha256": "09614acdd2876facee9334579c55fece21ab297922b23ae8929041493f570074",
+                "actual_persisted_cleanup_sha256": "e80c7b82a82fd667c9259597db66791aaa8987d5e26691373a5a5fd9c59b2539",
+                "exact_failed_active_marker_retirement_sha256": "d7ecb461bfeb7f106c8340a63ead17f52d1b847d89407cf37ddb427472c3ebb9",
+                "focused_stage_and_collector_observation_sha256": "e9eed3838e9834de326788f34d65143ded8166bd797e75687e48fe64c29e1197",
+                "focused_stage_and_collector_stdout_sha256": "a4ead91315f7ff0053fc4f521ef70298cb57cf7d142956cae2483b50d900afb1",
+                "independent_three_findings_closure_sha256": "6d40d8ae675de890a20b4f417edc67fd03c878f7913cdd0f2830bd59fc01bfd5"
               },
               "prior_reports": [
                 {
-                  "raw_sha256": "cc8ab5d53b4f378db4a5a3a883ed80e3db3fd66d99fe8b1917459d19a7873162",
+                  "raw_sha256": "961f5e4ba356dfda8d9b8c602e30d4742c1e020d81e5286b08740b9fe7609ad1",
                   "report": {
                     "schema_version": "desktop-training-host-qualification-v1",
-                    "scope": "training-loader-repair-and-preserved-real-host-failure",
-                    "status": "loader-repaired-actual-training-ui-pending",
-                    "user_summary": "The training test failed before its UI journey began. The module-loading repair passes a real model-free setup and worker regression. The actual Desktop training journey still needs a fresh test. No action is required from the user for this repair.",
+                    "scope": "specific-training-action-diagnostics-with-preserved-actual-host-failure",
+                    "status": "configuration-diagnostics-added-actual-training-ui-pending",
+                    "user_summary": "The app opened the test workspace, model and datasets. The test then failed while entering training settings, before training started. The agent has added a safe diagnostic that names the failed action. Training, Save and reopen still need a successful feature test. No action is needed from the user.",
                     "source": {
-                      "actual_failed_host_commit": "9d393938491c04834625725b1bf5ad001ec2b9bd",
-                      "actual_failed_host_source_digest": "60d2f2fb3f98899d96134e945ac05b6f5d1a09853c777b5bca9178930b765c99",
-                      "actual_failed_host_source_revision": "source.80345d9293801295cd66f0e776e7371b8e07b64213344d425dacdca8e0eff53b",
-                      "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
+                      "actual_failed_host_commit": "0eacad6d0674bf2d2448a1b0cb5714e31f4a8893",
+                      "actual_failed_host_source_digest": "8a0dbc0fec864dcee025e7db78e4047e25c82d853c4003e0fc35664d4e00d880",
+                      "actual_failed_host_source_revision": "source.deeac914e207cc4b1dc93119d4592b90be61230501b51de531b4041c4d959445",
+                      "diagnostic_source_hashes": {
+                        "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
+                        "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
+                        "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f"
+                      }
                     },
                     "stages": [
                       {
-                        "id": "input-readiness-package",
-                        "status": "passed-in-prior-qualified-stages",
-                        "scope": "Inherited history below; no new package, model or OCR claim."
+                        "id": "actual-desktop-training-ui-after-loader-fix",
+                        "status": "failed-during-training-configuration",
+                        "actual_tests_passed": 0,
+                        "actual_tests_failed": 1,
+                        "actual_tests_skipped": 0,
+                        "retries": 0,
+                        "global_errors": 0,
+                        "completed_prerequisite_probes": 12,
+                        "completed_ui_phases": [
+                          "workspace-and-inputs-visible"
+                        ],
+                        "failed_phase": "configuration-bounded",
+                        "specific_control_or_cause": "Not retained by the earlier test; unproven.",
+                        "training_started": false,
+                        "scope": "The module-loading repair allowed the actual test to enter the app. This does not qualify training, private review, Save or reopened records."
                       },
                       {
-                        "id": "actual-desktop-training-ui-attempt-01",
-                        "status": "failed-before-test-execution",
-                        "actual_tests_passed": 0,
-                        "actual_tests_skipped": 0,
-                        "actual_suites": 0,
-                        "completed_prerequisite_probes": 12,
-                        "collection_error_type": "SyntaxError",
-                        "safe_diagnostic": "The test worker could not load the training mjs helper after setup preloaded that helper. No tests were found.",
+                        "id": "inner-owned-worker-cleanup",
+                        "status": "failed",
+                        "physical_workers_observed": 0,
+                        "app_main_exit_code": 0,
+                        "will_quit_acknowledged": true,
+                        "safe_diagnostic": "The unchanged success check requires at least one physical worker. The test failed before starting training, so that proof was not available. The requirement stays in place."
+                      },
+                      {
+                        "id": "original-outer-native-job-retirement",
+                        "status": "retired-after-failed-test",
                         "native_root_exit_code": 1,
-                        "owned_processes_total": 50,
+                        "owned_processes_total": 64,
                         "owned_processes_active_after_retirement": 0,
+                        "peak_active_observed": 10,
                         "original_owned_handles_and_streams_retired": true,
                         "forced_termination": false,
                         "fence_required": false,
                         "limit_notifications": false,
-                        "peak_process_commit_bytes": 691736576,
-                        "peak_job_commit_bytes": 961490944
+                        "peak_process_commit_bytes": 691781632,
+                        "peak_job_commit_bytes": 930533376,
+                        "scope": "The outer Job retired its processes and resources. This is distinct from the failed training journey and missing inner worker proof."
                       },
                       {
-                        "id": "loader-repair-regression",
+                        "id": "closed-training-failure-action-diagnostics",
                         "status": "passed-model-free-feature-check",
-                        "focused_training_definition_cases_passed": 12,
-                        "real_inert_playwright_worker_cases_passed": 1,
+                        "focused_cases_passed": 14,
                         "skips": 0,
-                        "retries": 0,
-                        "input": "Synthetic declared plan only; no model files read.",
-                        "source_hashes": {
-                          "dev-tools/config/playwright.training-host.config.ts": "4fb9cc48860780bbe8ac308346b28a9c3747caf949c74fb5b785c51afcf93fba",
-                          "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs": "7f407f3add3483b4e164e3e1d17218af71526eb2a340ad5ff085381d3697267c"
-                        },
-                        "fixture_cleanup": "The test verified and removed its own fresh workspace-local fixture."
+                        "diagnostic": "A separate bounded failure attachment records only fixed phase, action and error-type labels. It contains no field values, paths, page content or raw error text.",
+                        "scope": "The original eight-phase success report and physical-worker shutdown assertions remain unchanged. No app or model was started by these focused tests."
                       }
                     ],
-                    "diagnosis": {
-                      "cause": "Mixed ESM/CommonJS loading in the real Playwright setup/worker sequence. A no-setup collection listing did not reproduce it.",
-                      "causal_comparison": [
-                        "Pure worker without setup preload: one passed.",
-                        "Same pure worker after real helper setup preload: same collection failure.",
-                        "Same preload and worker with existing native mjs externalization: one passed."
-                      ],
-                      "repair": "Use build.external for existing mjs helpers in the dedicated public training profile. The regression uses that actual setting rather than a mocked loader."
-                    },
                     "evidence_digests": {
-                      "actual_ui_effect_review_sha256": "434d4151566083c3c3a18b10b61f8f40942c3a3f24ace1034712b6f1b55b3301",
-                      "actual_ui_native_observation_sha256": "247cb5060b3526c247eecf56a5f010413bca6106412ffebf346a2e2826bb5196",
-                      "actual_ui_tool_observation_sha256": "1d1fe53b27d72be2aa90702a322488d540b19ba2509ea6e27767ae3cca794457",
-                      "actual_failed_ui_result_review_sha256": "741c0bf8c7e51031273803853cb729dd94c7a7d2f621e66648176804de2d2da7",
-                      "exact_failed_active_marker_retirement_sha256": "cf4278b07708ee5f2095d702d32f362a07814fbf87d4a3faaa67a839620b4544",
-                      "causal_real_worker_comparison_sha256": "d4cabbe90d7d6fb9fe03da611b131ddcd0ee700136e997bcbeed5de9cfe94e07",
-                      "focused_training_test_observation_sha256": "2c63a2539878b100755b49ec04f471353ba3241644a80cde22a1371b4f9ed601",
-                      "focused_training_stdout_sha256": "c4f5522b17f0d0b56d76b2486c881a1c5eb8154bb2ff229e8880315fa0179d53"
+                      "actual_ui_effect_review_sha256": "f273c6681ebb3816d41d88fb047b302ee0fd3f01be3107513c9a803388e9afb2",
+                      "actual_failed_ui_result_review_sha256": "459fb7626c292fe83a120c7f9ca20c7e0b9e1d16e861d0795a999073da345cfe",
+                      "actual_ui_native_observation_sha256": "a2d32179da06fb7abd2ea0818e6f6a752adc6192e3b942351e007b676dea8988",
+                      "actual_ui_tool_observation_sha256": "1fd38017791c5a92d1abc1ac592dc6b2378dc3ca9e828e95f10a0da032066041",
+                      "actual_playwright_result_sha256": "e51792f53df1d5ca6bfa9cc425917d533b6377c90f079a6128943da665ddb8cf",
+                      "actual_persisted_failed_cleanup_sha256": "d7f7f7845e467b7d50e02b44461336d19d0bdd3b04721b0e1eebe7f8aeb0fe96",
+                      "exact_failed_active_marker_retirement_sha256": "bee944bd953ed6783a91a12dc8daf89341b85742cd6e9f63f4f71b303dc32ffe",
+                      "known_prior_failed_phase_preservation_sha256": "ddb5a724379b2710bddc4ebe37c94edb84c81f3aa2dc936b6e638b0cb9ed4d8a",
+                      "focused_training_actions_observation_sha256": "e97f2b6ad4d511c29ee1bcfdfeac9bbff1026ddceaf811c22951e06d96721ed0",
+                      "focused_training_actions_stdout_sha256": "35ac1824881409451ae251298d2208443211ce2eb9e946098493df1ad831be19"
                     },
                     "prior_reports": [
                       {
-                        "raw_sha256": "ce40d5f610991caac0b60270b580d009304f27f7640354ebc16bfc3c09c68b37",
+                        "raw_sha256": "cc8ab5d53b4f378db4a5a3a883ed80e3db3fd66d99fe8b1917459d19a7873162",
                         "report": {
                           "schema_version": "desktop-training-host-qualification-v1",
-                          "scope": "actual-isolated-offline-desktop-package",
-                          "status": "package-qualified-ui-pending",
+                          "scope": "training-loader-repair-and-preserved-real-host-failure",
+                          "status": "loader-repaired-actual-training-ui-pending",
+                          "user_summary": "The training test failed before its UI journey began. The module-loading repair passes a real model-free setup and worker regression. The actual Desktop training journey still needs a fresh test. No action is required from the user for this repair.",
                           "source": {
-                            "commit": "0b6f465df4df9ee8a0d7aec41a28360bd2dd3b73",
-                            "source_digest": "328d304d050969d6e68e7d8f885f4d666c143c9f741dcb2252d4b78a5cbc3d3e",
-                            "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827",
-                            "generator_sha256": "d0c9d9999a8eea160929c0c1e63bfaf68d842873b123ca57bf7caaeff4e19ef2"
-                          },
-                          "source_repair": {
-                            "commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
-                            "work_id": "fix-training-startup-and-task-progress",
-                            "receipt_digest": "2c5eee631c419ba6ea4b5fdb51b61c31b0c461e1de24f94f9bd66c24cbef3039",
-                            "review_digest": "4e5a1e5e65281644463e03a91424af0212b84f1d13cd64eb076cb8690cf89b96"
+                            "actual_failed_host_commit": "9d393938491c04834625725b1bf5ad001ec2b9bd",
+                            "actual_failed_host_source_digest": "60d2f2fb3f98899d96134e945ac05b6f5d1a09853c777b5bca9178930b765c99",
+                            "actual_failed_host_source_revision": "source.80345d9293801295cd66f0e776e7371b8e07b64213344d425dacdca8e0eff53b",
+                            "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
                           },
                           "stages": [
                             {
-                              "id": "input-generation",
-                              "status": "passed",
-                              "actual_parent_invocations": 1,
-                              "actual_native_job_attempts": 1,
-                              "root_exit_code": 0,
-                              "total_created_processes": 1,
-                              "remaining_active_processes": 0,
-                              "limits": {
-                                "flags": 8968,
-                                "process_bytes": 2147483648,
-                                "job_bytes": 4294967296,
-                                "active_limit": 32
-                              },
-                              "configured_child_deadline_seconds": 120,
-                              "observed_peak_commit_bytes": {
-                                "process_commit_bytes": 774774784,
-                                "job_commit_bytes": 774774784
-                              },
-                              "stdout_bytes": 465,
-                              "stderr_bytes": 108,
-                              "cleanup_confirmed": true,
-                              "all_owned_handles_close_acknowledged": true,
-                              "forced_owned_job_termination": false,
-                              "observed_limit_notifications": 0,
-                              "missing_notifications_prove_no_limit_hit": false,
-                              "created_safe_model_files": 6,
-                              "created_safe_model_file_bytes": 24240,
-                              "created_manifest_bytes": 1217,
-                              "input_qualification_pass": true,
-                              "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas.",
-                              "qualification_origin": "Preserved earlier actual input qualification. All known input bytes remain unchanged; this check did not regenerate them."
+                              "id": "input-readiness-package",
+                              "status": "passed-in-prior-qualified-stages",
+                              "scope": "Inherited history below; no new package, model or OCR claim."
                             },
                             {
-                              "id": "read-only-dependency-readiness",
-                              "status": "passed",
-                              "actual_parent_invocations": 1,
-                              "actual_native_job_attempts": 1,
-                              "root_exit_code": 0,
-                              "total_created_processes": 35,
-                              "remaining_active_processes": 0,
-                              "limits": {
-                                "flags": 8968,
-                                "process_bytes": 2147483648,
-                                "job_bytes": 4294967296,
-                                "active_limit": 32
-                              },
-                              "configured_child_deadline_seconds": 300,
-                              "observed_elapsed_seconds": 28.578,
-                              "elapsed_measurement": "Parent driver elapsed time includes metadata checks. No per-probe timing is collected.",
-                              "observed_peak_commit_bytes": {
-                                "process_commit_bytes": 691388416,
-                                "job_commit_bytes": 845275136
-                              },
-                              "stdout_bytes": 526,
-                              "stderr_bytes": 0,
-                              "cleanup_confirmed": true,
-                              "all_owned_handles_close_acknowledged": true,
-                              "forced_owned_job_termination": false,
-                              "observed_limit_notifications": 0,
-                              "missing_notifications_prove_no_limit_hit": false,
-                              "completed": [
-                                "inputs",
-                                "worker",
-                                "training",
-                                "context"
-                              ],
-                              "observed_probes": 12,
-                              "readiness_qualification_pass": true,
-                              "dependency_outcomes": [
-                                {
-                                  "operation": "worker",
-                                  "success": true,
-                                  "detectedBackend": "cuda",
-                                  "selectedBackend": "cuda",
-                                  "verificationSuccess": true,
-                                  "recordedStages": 7
-                                },
-                                {
-                                  "operation": "model-training",
-                                  "success": true,
-                                  "detectedBackend": null,
-                                  "selectedBackend": null,
-                                  "verificationSuccess": null,
-                                  "recordedStages": 3
-                                }
-                              ],
-                              "denied_actions": [],
-                              "retained_unsuccessful_inventory_probes": [
-                                {
-                                  "kind": "gpu-nvidia",
-                                  "exit_code": 255,
-                                  "spawn_error_code": null
-                                },
-                                {
-                                  "kind": "gpu-rocm",
-                                  "exit_code": null,
-                                  "spawn_error_code": "ENOENT"
-                                }
-                              ],
-                              "actual_model_generation": false,
-                              "actual_training": false,
-                              "actual_gpu_model_workload_qualified": false,
-                              "reason": "The real worker, training and Context dependency checks passed without installation. Startup selected the available installed CUDA runtime and its existing verification passed. Failed inventory utility observations remain in the evidence."
+                              "id": "actual-desktop-training-ui-attempt-01",
+                              "status": "failed-before-test-execution",
+                              "actual_tests_passed": 0,
+                              "actual_tests_skipped": 0,
+                              "actual_suites": 0,
+                              "completed_prerequisite_probes": 12,
+                              "collection_error_type": "SyntaxError",
+                              "safe_diagnostic": "The test worker could not load the training mjs helper after setup preloaded that helper. No tests were found.",
+                              "native_root_exit_code": 1,
+                              "owned_processes_total": 50,
+                              "owned_processes_active_after_retirement": 0,
+                              "original_owned_handles_and_streams_retired": true,
+                              "forced_termination": false,
+                              "fence_required": false,
+                              "limit_notifications": false,
+                              "peak_process_commit_bytes": 691736576,
+                              "peak_job_commit_bytes": 961490944
                             },
                             {
-                              "id": "offline-desktop-package",
-                              "status": "passed",
-                              "actual_parent_invocations": 1,
-                              "actual_native_job_attempts": 1,
-                              "root_exit_code": 0,
-                              "total_created_processes": 46,
-                              "remaining_active_processes": 0,
-                              "observed_peak_active_processes": 9,
-                              "limits": {
-                                "flags": 8968,
-                                "process_bytes": 2147483648,
-                                "job_bytes": 4294967296,
-                                "active_limit": 32
+                              "id": "loader-repair-regression",
+                              "status": "passed-model-free-feature-check",
+                              "focused_training_definition_cases_passed": 12,
+                              "real_inert_playwright_worker_cases_passed": 1,
+                              "skips": 0,
+                              "retries": 0,
+                              "input": "Synthetic declared plan only; no model files read.",
+                              "source_hashes": {
+                                "dev-tools/config/playwright.training-host.config.ts": "4fb9cc48860780bbe8ac308346b28a9c3747caf949c74fb5b785c51afcf93fba",
+                                "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs": "7f407f3add3483b4e164e3e1d17218af71526eb2a340ad5ff085381d3697267c"
                               },
-                              "configured_child_deadline_seconds": 420,
-                              "observed_parent_elapsed_seconds": 112.578,
-                              "elapsed_measurement": "Includes parent metadata and final file verification; not a pure compiler or app startup benchmark.",
-                              "observed_peak_commit_bytes": {
-                                "process_commit_bytes": 848195584,
-                                "job_commit_bytes": 1703301120
-                              },
-                              "stdout_bytes": 123,
-                              "stderr_bytes": 0,
-                              "cleanup_confirmed": true,
-                              "all_owned_handles_close_acknowledged": true,
-                              "forced_owned_job_termination": false,
-                              "observed_limit_notifications": 0,
-                              "missing_notifications_prove_no_limit_hit": false,
-                              "copied_source_files": 2934,
-                              "copied_source_bytes": 37618836,
-                              "electron_version": "42.11.18",
-                              "reused_electron_distribution_files": 75,
-                              "actual_package_files": 217,
-                              "actual_package_bytes": 384069821,
-                              "package_tree_sha256": "83a09ac63bef56cab5392dd0fa8adaa274215f7602edb3893f8e77d9bdc21b19",
-                              "application_sha256": "b3df400020e6d0419589831608295d9d0496408b1db0851e9b8b0791e32e509a",
-                              "worker_main_sha256": "25fb44fadfb66a0fcc155a813d8f1d3f0c299e939527cfc42515af6f027e1c59",
-                              "complete_original_worker_files_verified": 109,
-                              "required_main_and_preload_bundles": 3,
-                              "required_renderer_html_entries": 2,
-                              "original_ocr_build_hook_retained": true,
-                              "optional_ocr_build_files_present": 3,
-                              "optional_ocr_qualification": "not-asserted",
-                              "actual_application_or_model_executed": false,
-                              "package_qualification_pass": true
-                            },
-                            {
-                              "id": "desktop-train-review-save-reopen",
-                              "status": "pending",
-                              "reason": "After packaging passes, run the one-app training, private review, Save and reopen journey. No user action is needed."
+                              "fixture_cleanup": "The test verified and removed its own fresh workspace-local fixture."
                             }
                           ],
                           "diagnosis": {
-                            "resolved_tokenizer": {
-                              "status": "source-fixed-and-fresh-input-qualified",
-                              "source_commit": "2f29db6d1386dbf329909cb7e73fb337bc69e1a0",
-                              "required_tokenizer_class": "PreTrainedTokenizerFast",
-                              "strict_inspector_unchanged": true,
-                              "original_failed_files_unchanged": true
-                            },
-                            "readiness_failure": {
-                              "status": "source-fixed-and-fresh-readiness-qualified",
-                              "gpu_inventory_exit_code": 255,
-                              "installed_torch_imported": true,
-                              "installed_torch_reports_cuda_available": true,
-                              "actual_gpu_workload_qualified": false,
-                              "captured_torch_output_sha256": "22dd9ebe9b8c578ee1a0e1bb124420641fa75b52a987c7d152b2fdd94fd8f51b",
-                              "exact_fixed_output_bytes": 113,
-                              "cause": "The earlier inventory utility failure selected CPU despite available installed CUDA. That earlier startup path rejected the CUDA build and requested a network probe. The adapter refused the request before dispatch.",
-                              "source_fix_implemented": true,
-                              "actual_network_or_installation_subprocess_observed": false,
-                              "source_fix_commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
-                              "actual_readiness_qualified": true,
-                              "repair": "When inventory detection falls back to CPU, use an unambiguous available installed accelerator, then retain actual backend verification. No dependency or installation policy changed."
-                            },
-                            "tracked_fixture_newlines": {
-                              "status": "source-fixed-and-actual-readiness-qualified",
-                              "cause": "Physical Windows line endings in a read source probe differ from JavaScript template-literal evaluation.",
-                              "ignored_adapter_fixed_and_tested": true,
-                              "tracked_fixture_fixed": true,
-                              "source_fix_commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa"
-                            },
-                            "private_package_adapter": {
-                              "status": "corrected-and-actual-package-qualified",
-                              "cause": "The private test adapter expected a top-level package function. Installed Forge8 exposes that method on its public API instance.",
-                              "earlier_failure": "The first run failed before building. Its bounded error alone does not prove import succeeded. Original failure and all its logs remain failed history.",
-                              "repair": "Use the exact installed public API with its receiver. Distinguish import, API selection and package-build failures. Preserve normal copied configuration and all resource checks.",
-                              "focused_tests_passed": 24,
-                              "dependency_versions_changed": false,
-                              "actual_build_passed_after_separate_review": true
-                            }
+                            "cause": "Mixed ESM/CommonJS loading in the real Playwright setup/worker sequence. A no-setup collection listing did not reproduce it.",
+                            "causal_comparison": [
+                              "Pure worker without setup preload: one passed.",
+                              "Same pure worker after real helper setup preload: same collection failure.",
+                              "Same preload and worker with existing native mjs externalization: one passed."
+                            ],
+                            "repair": "Use build.external for existing mjs helpers in the dedicated public training profile. The regression uses that actual setting rather than a mocked loader."
                           },
                           "evidence_digests": {
-                            "consumer_definition_review_sha256": "f22d34cfb6e5103fb18d9e2f20ebba632239f7fe739708e82b45c63ef2ef6f6e",
-                            "readiness_effect_reference_sha256": "2aba08e14b6af25f2298ea2669a7edc0bff6974158e726c4105da39696e17bbd",
-                            "actual_readiness_result_sha256": "3543eec0b08918431d9e35bd9470aa1781ab721c4706728e1158109492e33c5f",
-                            "actual_readiness_native_observation_sha256": "0da73dd0f1f6eaaa3d68f28502c36ac62badf7bea33c2182839fb0a1e5503842",
-                            "actual_readiness_observation_sha256": "f4118c8f1e6e711a04e5e31d05c7045ec5ea54817ebd844d003853acc4507163",
-                            "actual_readiness_result_review_sha256": "47bf2603769241ae6874aee8427949df988502ea2b307399ce091739e63f3db4",
-                            "actual_readiness_tool_observation_sha256": "9917a5f497bb0736fe2a26062bec388d33559b1b8745eaa7937ab6735b5acb3a",
-                            "readiness_marker_retirement_sha256": "e2aa160ab9097a56bd963985d6700fb217ca3aaae85fcf080ad54982f92ff393",
-                            "prior_readiness_file_preservation_sha256": "44082a51821c4680205bfcfd99962fd159a7b1ab5f15be0d04faea0f0829ecd2",
-                            "package_metadata_preparation_review_sha256": "76dabc263abac83df32a6eb78d5771e7faefb6a118b82fd8d16194c02456a3ae",
-                            "package_metadata_result_review_sha256": "ead306fdb4062f791bdb0144697410ac41c68334e23fbf618977655e5857bf8d",
-                            "failed_package_result_review_sha256": "a83d32df60f3755aef32e7c776e9d57f2c4ca02945d5d9d9b3cdeb5fde3ed1bc",
-                            "failed_package_native_observation_sha256": "98976a45d82ee3ff24ae74af441303e88be7cdab83c2d0a5283ced34b82ad1cb",
-                            "failed_package_tool_observation_sha256": "00dbf84afe0035dadcfd5c14315249c3a3e5cfb61df042c96973027868fd1be6",
-                            "package_api_correction_review_sha256": "47e0dc7c3def3b8c331118ba65f51beed0f6e114e857f23c860629cf6bad0d89",
-                            "package_api_correction_actual_result_sha256": "49de2d899ad46f39d1cc225f9c44e359c00ed9163f8f0086bc6c284f8e070b75",
-                            "package_api_correction_tests_sha256": "5f98c688be0018b40585258283967ef7ea23a517a1bb8172a5adb60d8f7a6ea8",
-                            "package_effect_reference_sha256": "9a49a80e27264919982272136c430e3e8d92ec3963aa0b2a063dc8efa06e5d21",
-                            "actual_package_result_sha256": "1740f2671df508a6c4bac4620b7aebfeb541973429372b7da0f9027425946162",
-                            "actual_package_native_observation_sha256": "fe57a817294a804b4779c1e1e67f7d7994b5c879679ddd4ddb73fa3ab0ca0cd9",
-                            "actual_package_observation_sha256": "212bb32e58c89c553e37b34c1fa8a2eb3a49b30a443b23a93cc4d025a98063a5",
-                            "actual_package_result_review_sha256": "05d1da0996584954046dd255ae76bf84a14eabb7ea4d3009a26b5dbac07d2360",
-                            "actual_package_tool_observation_sha256": "7557459504b6552b942215c0bc1942127cbbda173cd1ce9010c792835141d495",
-                            "package_marker_retirement_sha256": "b8397965edaaf9d3410f491621551911176ea2acd6d74815880ab3187f6f627e"
+                            "actual_ui_effect_review_sha256": "434d4151566083c3c3a18b10b61f8f40942c3a3f24ace1034712b6f1b55b3301",
+                            "actual_ui_native_observation_sha256": "247cb5060b3526c247eecf56a5f010413bca6106412ffebf346a2e2826bb5196",
+                            "actual_ui_tool_observation_sha256": "1d1fe53b27d72be2aa90702a322488d540b19ba2509ea6e27767ae3cca794457",
+                            "actual_failed_ui_result_review_sha256": "741c0bf8c7e51031273803853cb729dd94c7a7d2f621e66648176804de2d2da7",
+                            "exact_failed_active_marker_retirement_sha256": "cf4278b07708ee5f2095d702d32f362a07814fbf87d4a3faaa67a839620b4544",
+                            "causal_real_worker_comparison_sha256": "d4cabbe90d7d6fb9fe03da611b131ddcd0ee700136e997bcbeed5de9cfe94e07",
+                            "focused_training_test_observation_sha256": "2c63a2539878b100755b49ec04f471353ba3241644a80cde22a1371b4f9ed601",
+                            "focused_training_stdout_sha256": "c4f5522b17f0d0b56d76b2486c881a1c5eb8154bb2ff229e8880315fa0179d53"
                           },
-                          "prior_readiness_file_preservation": [
-                            {
-                              "historical_phase_file": "stdout.log",
-                              "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/stdout.log",
-                              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                            },
-                            {
-                              "historical_phase_file": "stderr.log",
-                              "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/stderr.log",
-                              "sha256": "cc97d7b0dd1cbcfa98a6816e0cd7d23eb5167ededa567aad251d882765cfec07"
-                            },
-                            {
-                              "historical_phase_file": "readiness-probes.jsonl",
-                              "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/readiness-probes.jsonl",
-                              "sha256": "9bfa60d63124cfeebb8544f2a0ef8739ae48bd331214c2b9519439ea1829a10f"
-                            }
-                          ],
                           "prior_reports": [
                             {
-                              "raw_sha256": "5d9f752d8d4ea9ef9ded7fedafbb17171f09831740f6c4e724e3fa09290d4e96",
+                              "raw_sha256": "ce40d5f610991caac0b60270b580d009304f27f7640354ebc16bfc3c09c68b37",
                               "report": {
                                 "schema_version": "desktop-training-host-qualification-v1",
-                                "scope": "committed-startup-repair-and-actual-readonly-readiness",
-                                "status": "readiness-qualified-package-pending",
+                                "scope": "actual-isolated-offline-desktop-package",
+                                "status": "package-qualified-ui-pending",
                                 "source": {
-                                  "commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
-                                  "source_digest": "9859971a5f572e3f1c6a29a5c30ab891aef367c029ced7a027044668ea641c17",
+                                  "commit": "0b6f465df4df9ee8a0d7aec41a28360bd2dd3b73",
+                                  "source_digest": "328d304d050969d6e68e7d8f885f4d666c143c9f741dcb2252d4b78a5cbc3d3e",
                                   "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827",
                                   "generator_sha256": "d0c9d9999a8eea160929c0c1e63bfaf68d842873b123ca57bf7caaeff4e19ef2"
                                 },
@@ -720,8 +564,50 @@
                                   },
                                   {
                                     "id": "offline-desktop-package",
-                                    "status": "pending",
-                                    "reason": "Create and qualify the isolated offline Desktop package. No user action is needed."
+                                    "status": "passed",
+                                    "actual_parent_invocations": 1,
+                                    "actual_native_job_attempts": 1,
+                                    "root_exit_code": 0,
+                                    "total_created_processes": 46,
+                                    "remaining_active_processes": 0,
+                                    "observed_peak_active_processes": 9,
+                                    "limits": {
+                                      "flags": 8968,
+                                      "process_bytes": 2147483648,
+                                      "job_bytes": 4294967296,
+                                      "active_limit": 32
+                                    },
+                                    "configured_child_deadline_seconds": 420,
+                                    "observed_parent_elapsed_seconds": 112.578,
+                                    "elapsed_measurement": "Includes parent metadata and final file verification; not a pure compiler or app startup benchmark.",
+                                    "observed_peak_commit_bytes": {
+                                      "process_commit_bytes": 848195584,
+                                      "job_commit_bytes": 1703301120
+                                    },
+                                    "stdout_bytes": 123,
+                                    "stderr_bytes": 0,
+                                    "cleanup_confirmed": true,
+                                    "all_owned_handles_close_acknowledged": true,
+                                    "forced_owned_job_termination": false,
+                                    "observed_limit_notifications": 0,
+                                    "missing_notifications_prove_no_limit_hit": false,
+                                    "copied_source_files": 2934,
+                                    "copied_source_bytes": 37618836,
+                                    "electron_version": "42.11.18",
+                                    "reused_electron_distribution_files": 75,
+                                    "actual_package_files": 217,
+                                    "actual_package_bytes": 384069821,
+                                    "package_tree_sha256": "83a09ac63bef56cab5392dd0fa8adaa274215f7602edb3893f8e77d9bdc21b19",
+                                    "application_sha256": "b3df400020e6d0419589831608295d9d0496408b1db0851e9b8b0791e32e509a",
+                                    "worker_main_sha256": "25fb44fadfb66a0fcc155a813d8f1d3f0c299e939527cfc42515af6f027e1c59",
+                                    "complete_original_worker_files_verified": 109,
+                                    "required_main_and_preload_bundles": 3,
+                                    "required_renderer_html_entries": 2,
+                                    "original_ocr_build_hook_retained": true,
+                                    "optional_ocr_build_files_present": 3,
+                                    "optional_ocr_qualification": "not-asserted",
+                                    "actual_application_or_model_executed": false,
+                                    "package_qualification_pass": true
                                   },
                                   {
                                     "id": "desktop-train-review-save-reopen",
@@ -758,6 +644,15 @@
                                     "ignored_adapter_fixed_and_tested": true,
                                     "tracked_fixture_fixed": true,
                                     "source_fix_commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa"
+                                  },
+                                  "private_package_adapter": {
+                                    "status": "corrected-and-actual-package-qualified",
+                                    "cause": "The private test adapter expected a top-level package function. Installed Forge8 exposes that method on its public API instance.",
+                                    "earlier_failure": "The first run failed before building. Its bounded error alone does not prove import succeeded. Original failure and all its logs remain failed history.",
+                                    "repair": "Use the exact installed public API with its receiver. Distinguish import, API selection and package-build failures. Preserve normal copied configuration and all resource checks.",
+                                    "focused_tests_passed": 24,
+                                    "dependency_versions_changed": false,
+                                    "actual_build_passed_after_separate_review": true
                                   }
                                 },
                                 "evidence_digests": {
@@ -769,7 +664,22 @@
                                   "actual_readiness_result_review_sha256": "47bf2603769241ae6874aee8427949df988502ea2b307399ce091739e63f3db4",
                                   "actual_readiness_tool_observation_sha256": "9917a5f497bb0736fe2a26062bec388d33559b1b8745eaa7937ab6735b5acb3a",
                                   "readiness_marker_retirement_sha256": "e2aa160ab9097a56bd963985d6700fb217ca3aaae85fcf080ad54982f92ff393",
-                                  "prior_readiness_file_preservation_sha256": "44082a51821c4680205bfcfd99962fd159a7b1ab5f15be0d04faea0f0829ecd2"
+                                  "prior_readiness_file_preservation_sha256": "44082a51821c4680205bfcfd99962fd159a7b1ab5f15be0d04faea0f0829ecd2",
+                                  "package_metadata_preparation_review_sha256": "76dabc263abac83df32a6eb78d5771e7faefb6a118b82fd8d16194c02456a3ae",
+                                  "package_metadata_result_review_sha256": "ead306fdb4062f791bdb0144697410ac41c68334e23fbf618977655e5857bf8d",
+                                  "failed_package_result_review_sha256": "a83d32df60f3755aef32e7c776e9d57f2c4ca02945d5d9d9b3cdeb5fde3ed1bc",
+                                  "failed_package_native_observation_sha256": "98976a45d82ee3ff24ae74af441303e88be7cdab83c2d0a5283ced34b82ad1cb",
+                                  "failed_package_tool_observation_sha256": "00dbf84afe0035dadcfd5c14315249c3a3e5cfb61df042c96973027868fd1be6",
+                                  "package_api_correction_review_sha256": "47e0dc7c3def3b8c331118ba65f51beed0f6e114e857f23c860629cf6bad0d89",
+                                  "package_api_correction_actual_result_sha256": "49de2d899ad46f39d1cc225f9c44e359c00ed9163f8f0086bc6c284f8e070b75",
+                                  "package_api_correction_tests_sha256": "5f98c688be0018b40585258283967ef7ea23a517a1bb8172a5adb60d8f7a6ea8",
+                                  "package_effect_reference_sha256": "9a49a80e27264919982272136c430e3e8d92ec3963aa0b2a063dc8efa06e5d21",
+                                  "actual_package_result_sha256": "1740f2671df508a6c4bac4620b7aebfeb541973429372b7da0f9027425946162",
+                                  "actual_package_native_observation_sha256": "fe57a817294a804b4779c1e1e67f7d7994b5c879679ddd4ddb73fa3ab0ca0cd9",
+                                  "actual_package_observation_sha256": "212bb32e58c89c553e37b34c1fa8a2eb3a49b30a443b23a93cc4d025a98063a5",
+                                  "actual_package_result_review_sha256": "05d1da0996584954046dd255ae76bf84a14eabb7ea4d3009a26b5dbac07d2360",
+                                  "actual_package_tool_observation_sha256": "7557459504b6552b942215c0bc1942127cbbda173cd1ce9010c792835141d495",
+                                  "package_marker_retirement_sha256": "b8397965edaaf9d3410f491621551911176ea2acd6d74815880ab3187f6f627e"
                                 },
                                 "prior_readiness_file_preservation": [
                                   {
@@ -790,16 +700,22 @@
                                 ],
                                 "prior_reports": [
                                   {
-                                    "original_raw_sha256": "1fd5403e71deeeaa62e1d9bd12ac31d4026cd2e6fc26cefb43fe4435d813b267",
+                                    "raw_sha256": "5d9f752d8d4ea9ef9ded7fedafbb17171f09831740f6c4e724e3fa09290d4e96",
                                     "report": {
                                       "schema_version": "desktop-training-host-qualification-v1",
-                                      "scope": "corrected-input-and-failed-readiness-before-desktop-training",
-                                      "status": "source-fix-required",
+                                      "scope": "committed-startup-repair-and-actual-readonly-readiness",
+                                      "status": "readiness-qualified-package-pending",
                                       "source": {
-                                        "commit": "2f29db6d1386dbf329909cb7e73fb337bc69e1a0",
-                                        "source_digest": "9d7117f3dc76d0bbe16114beec4f842826018e764cf49ab448ee839bf8a54f8f",
-                                        "generator_sha256": "d0c9d9999a8eea160929c0c1e63bfaf68d842873b123ca57bf7caaeff4e19ef2",
-                                        "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
+                                        "commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
+                                        "source_digest": "9859971a5f572e3f1c6a29a5c30ab891aef367c029ced7a027044668ea641c17",
+                                        "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827",
+                                        "generator_sha256": "d0c9d9999a8eea160929c0c1e63bfaf68d842873b123ca57bf7caaeff4e19ef2"
+                                      },
+                                      "source_repair": {
+                                        "commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
+                                        "work_id": "fix-training-startup-and-task-progress",
+                                        "receipt_digest": "2c5eee631c419ba6ea4b5fdb51b61c31b0c461e1de24f94f9bd66c24cbef3039",
+                                        "review_digest": "4e5a1e5e65281644463e03a91424af0212b84f1d13cd64eb076cb8690cf89b96"
                                       },
                                       "stages": [
                                         {
@@ -832,15 +748,16 @@
                                           "created_safe_model_file_bytes": 24240,
                                           "created_manifest_bytes": 1217,
                                           "input_qualification_pass": true,
-                                          "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas."
+                                          "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas.",
+                                          "qualification_origin": "Preserved earlier actual input qualification. All known input bytes remain unchanged; this check did not regenerate them."
                                         },
                                         {
                                           "id": "read-only-dependency-readiness",
-                                          "status": "failed",
+                                          "status": "passed",
                                           "actual_parent_invocations": 1,
                                           "actual_native_job_attempts": 1,
-                                          "root_exit_code": 1,
-                                          "total_created_processes": 20,
+                                          "root_exit_code": 0,
+                                          "total_created_processes": 35,
                                           "remaining_active_processes": 0,
                                           "limits": {
                                             "flags": 8968,
@@ -849,36 +766,72 @@
                                             "active_limit": 32
                                           },
                                           "configured_child_deadline_seconds": 300,
+                                          "observed_elapsed_seconds": 28.578,
+                                          "elapsed_measurement": "Parent driver elapsed time includes metadata checks. No per-probe timing is collected.",
                                           "observed_peak_commit_bytes": {
-                                            "process_commit_bytes": 691195904,
-                                            "job_commit_bytes": 844693504
+                                            "process_commit_bytes": 691388416,
+                                            "job_commit_bytes": 845275136
                                           },
-                                          "stdout_bytes": 0,
-                                          "stderr_bytes": 208,
+                                          "stdout_bytes": 526,
+                                          "stderr_bytes": 0,
                                           "cleanup_confirmed": true,
                                           "all_owned_handles_close_acknowledged": true,
                                           "forced_owned_job_termination": false,
                                           "observed_limit_notifications": 0,
                                           "missing_notifications_prove_no_limit_hit": false,
                                           "completed": [
-                                            "inputs"
+                                            "inputs",
+                                            "worker",
+                                            "training",
+                                            "context"
                                           ],
-                                          "observed_probes": 7,
-                                          "readiness_qualification_pass": false,
-                                          "failure_stage": "real-worker-dependencies",
+                                          "observed_probes": 12,
+                                          "readiness_qualification_pass": true,
+                                          "dependency_outcomes": [
+                                            {
+                                              "operation": "worker",
+                                              "success": true,
+                                              "detectedBackend": "cuda",
+                                              "selectedBackend": "cuda",
+                                              "verificationSuccess": true,
+                                              "recordedStages": 7
+                                            },
+                                            {
+                                              "operation": "model-training",
+                                              "success": true,
+                                              "detectedBackend": null,
+                                              "selectedBackend": null,
+                                              "verificationSuccess": null,
+                                              "recordedStages": 3
+                                            }
+                                          ],
+                                          "denied_actions": [],
+                                          "retained_unsuccessful_inventory_probes": [
+                                            {
+                                              "kind": "gpu-nvidia",
+                                              "exit_code": 255,
+                                              "spawn_error_code": null
+                                            },
+                                            {
+                                              "kind": "gpu-rocm",
+                                              "exit_code": null,
+                                              "spawn_error_code": "ENOENT"
+                                            }
+                                          ],
                                           "actual_model_generation": false,
                                           "actual_training": false,
-                                          "reason": "The GPU inventory query failed. The installed PyTorch reported available CUDA. Startup selected a CPU installation target and rejected the installed CUDA build. The read-only adapter refused the next network-probe request before dispatch."
+                                          "actual_gpu_model_workload_qualified": false,
+                                          "reason": "The real worker, training and Context dependency checks passed without installation. Startup selected the available installed CUDA runtime and its existing verification passed. Failed inventory utility observations remain in the evidence."
                                         },
                                         {
                                           "id": "offline-desktop-package",
                                           "status": "pending",
-                                          "reason": "Repair and recheck dependency readiness, then qualify the isolated offline package."
+                                          "reason": "Create and qualify the isolated offline Desktop package. No user action is needed."
                                         },
                                         {
                                           "id": "desktop-train-review-save-reopen",
                                           "status": "pending",
-                                          "reason": "After readiness and packaging pass, run the actual one-app training, private review, Save and reopen journey."
+                                          "reason": "After packaging passes, run the one-app training, private review, Save and reopen journey. No user action is needed."
                                         }
                                       ],
                                       "diagnosis": {
@@ -890,57 +843,76 @@
                                           "original_failed_files_unchanged": true
                                         },
                                         "readiness_failure": {
-                                          "status": "independently-confirmed-startup-target-mismatch",
+                                          "status": "source-fixed-and-fresh-readiness-qualified",
                                           "gpu_inventory_exit_code": 255,
                                           "installed_torch_imported": true,
                                           "installed_torch_reports_cuda_available": true,
                                           "actual_gpu_workload_qualified": false,
                                           "captured_torch_output_sha256": "22dd9ebe9b8c578ee1a0e1bb124420641fa75b52a987c7d152b2fdd94fd8f51b",
                                           "exact_fixed_output_bytes": 113,
-                                          "cause": "The inventory utility failure caused CPU selection despite the installed runtime reporting available CUDA. Current CPU matching refuses a CUDA build and requests a network probe.",
-                                          "planned_repair": "Use the installed runtime capability to choose a backend when inventory utilities find none. Keep actual backend verification and fail-closed installation controls.",
-                                          "source_fix_implemented": false,
-                                          "actual_network_or_installation_subprocess_observed": false
+                                          "cause": "The earlier inventory utility failure selected CPU despite available installed CUDA. That earlier startup path rejected the CUDA build and requested a network probe. The adapter refused the request before dispatch.",
+                                          "source_fix_implemented": true,
+                                          "actual_network_or_installation_subprocess_observed": false,
+                                          "source_fix_commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa",
+                                          "actual_readiness_qualified": true,
+                                          "repair": "When inventory detection falls back to CPU, use an unambiguous available installed accelerator, then retain actual backend verification. No dependency or installation policy changed."
                                         },
                                         "tracked_fixture_newlines": {
-                                          "status": "source-fix-pending",
+                                          "status": "source-fixed-and-actual-readiness-qualified",
                                           "cause": "Physical Windows line endings in a read source probe differ from JavaScript template-literal evaluation.",
                                           "ignored_adapter_fixed_and_tested": true,
-                                          "tracked_fixture_fixed": false
+                                          "tracked_fixture_fixed": true,
+                                          "source_fix_commit": "3bc0b03096594e9b43d2675f8ca72bb7bf935daa"
                                         }
                                       },
                                       "evidence_digests": {
-                                        "corrected_input_effect_reference_sha256": "1051ca707ed9c6dc557b003ff9ed96aec6ee17825da5b696dfcf6817ce82d3ec",
-                                        "corrected_input_result_sha256": "d19272c6f56c9125b54994262ed25dc3af412781d356725d0c9615e8ad30ed93",
-                                        "corrected_input_native_observation_sha256": "ffe72b87329d8e4bb2c055b7e9a03b05f1f999d949490ba1c14a436484fe5372",
-                                        "corrected_input_result_review_sha256": "f528d3af2974954680c28631d3596c9f6571f09f3ecb46788cf3e5b5b4863f24",
-                                        "corrected_input_marker_retirement_sha256": "611a856157c0f0ae4b33bdf7d303544d4f695d64ff3b8fb77e7454338accd1fa",
-                                        "readiness_effect_reference_sha256": "89dff5e37f09869d50a47ba2227b7a26a76ed207f67586c4e287cc965249d24c",
-                                        "failed_readiness_native_observation_sha256": "9d0e56d43dc08d24f4587372c43aea05ba8951ddeee9b1650fb12b71846b69d4",
-                                        "failed_readiness_result_review_sha256": "39b8fb087ac9357be340f3e4646ed09c4baf8b2467eef91078cddc0367a8653b",
-                                        "failed_readiness_cause_review_sha256": "672f27d561c766a69b5c1a99a332568150808fe4789e957bf1f5e3e2c9fbb554",
-                                        "failed_readiness_marker_retirement_sha256": "296d798337c191dc96e7f4b5262ec9b95b30846540cc7c4ee61cbeddf187c5c9"
+                                        "consumer_definition_review_sha256": "f22d34cfb6e5103fb18d9e2f20ebba632239f7fe739708e82b45c63ef2ef6f6e",
+                                        "readiness_effect_reference_sha256": "2aba08e14b6af25f2298ea2669a7edc0bff6974158e726c4105da39696e17bbd",
+                                        "actual_readiness_result_sha256": "3543eec0b08918431d9e35bd9470aa1781ab721c4706728e1158109492e33c5f",
+                                        "actual_readiness_native_observation_sha256": "0da73dd0f1f6eaaa3d68f28502c36ac62badf7bea33c2182839fb0a1e5503842",
+                                        "actual_readiness_observation_sha256": "f4118c8f1e6e711a04e5e31d05c7045ec5ea54817ebd844d003853acc4507163",
+                                        "actual_readiness_result_review_sha256": "47bf2603769241ae6874aee8427949df988502ea2b307399ce091739e63f3db4",
+                                        "actual_readiness_tool_observation_sha256": "9917a5f497bb0736fe2a26062bec388d33559b1b8745eaa7937ab6735b5acb3a",
+                                        "readiness_marker_retirement_sha256": "e2aa160ab9097a56bd963985d6700fb217ca3aaae85fcf080ad54982f92ff393",
+                                        "prior_readiness_file_preservation_sha256": "44082a51821c4680205bfcfd99962fd159a7b1ab5f15be0d04faea0f0829ecd2"
                                       },
+                                      "prior_readiness_file_preservation": [
+                                        {
+                                          "historical_phase_file": "stdout.log",
+                                          "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/stdout.log",
+                                          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                        },
+                                        {
+                                          "historical_phase_file": "stderr.log",
+                                          "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/stderr.log",
+                                          "sha256": "cc97d7b0dd1cbcfa98a6816e0cd7d23eb5167ededa567aad251d882765cfec07"
+                                        },
+                                        {
+                                          "historical_phase_file": "readiness-probes.jsonl",
+                                          "retained_evidence_file": ".local-codex/training-readiness-recheck-20261101/retained-readiness-01/readiness-probes.jsonl",
+                                          "sha256": "9bfa60d63124cfeebb8544f2a0ef8739ae48bd331214c2b9519439ea1829a10f"
+                                        }
+                                      ],
                                       "prior_reports": [
                                         {
-                                          "original_raw_sha256": "9bb39049602c3c9e3f70b30cf6fdd44b437cc44a4eb6257ad95b425159847463",
+                                          "original_raw_sha256": "1fd5403e71deeeaa62e1d9bd12ac31d4026cd2e6fc26cefb43fe4435d813b267",
                                           "report": {
                                             "schema_version": "desktop-training-host-qualification-v1",
-                                            "scope": "failed-tiny-input-stage-before-desktop-training",
+                                            "scope": "corrected-input-and-failed-readiness-before-desktop-training",
                                             "status": "source-fix-required",
                                             "source": {
-                                              "commit": "05de2fe85a6f9233ad8a1fb384cfd225e60d3784",
-                                              "source_digest": "6a76e5ceb3489936234739db8826c1d41138ae35f6094f07880ae13b4f995e19",
-                                              "generator_sha256": "25ed3b9a3b29ed23b2130fd94c511332ea681cf1dfe26cdb6d130aec51d8a795",
+                                              "commit": "2f29db6d1386dbf329909cb7e73fb337bc69e1a0",
+                                              "source_digest": "9d7117f3dc76d0bbe16114beec4f842826018e764cf49ab448ee839bf8a54f8f",
+                                              "generator_sha256": "d0c9d9999a8eea160929c0c1e63bfaf68d842873b123ca57bf7caaeff4e19ef2",
                                               "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
                                             },
                                             "stages": [
                                               {
                                                 "id": "input-generation",
-                                                "status": "failed",
+                                                "status": "passed",
                                                 "actual_parent_invocations": 1,
                                                 "actual_native_job_attempts": 1,
-                                                "root_exit_code": 1,
+                                                "root_exit_code": 0,
                                                 "total_created_processes": 1,
                                                 "remaining_active_processes": 0,
                                                 "limits": {
@@ -951,10 +923,10 @@
                                                 },
                                                 "configured_child_deadline_seconds": 120,
                                                 "observed_peak_commit_bytes": {
-                                                  "process_commit_bytes": 774365184,
-                                                  "job_commit_bytes": 774365184
+                                                  "process_commit_bytes": 774774784,
+                                                  "job_commit_bytes": 774774784
                                                 },
-                                                "stdout_bytes": 165,
+                                                "stdout_bytes": 465,
                                                 "stderr_bytes": 108,
                                                 "cleanup_confirmed": true,
                                                 "all_owned_handles_close_acknowledged": true,
@@ -962,59 +934,213 @@
                                                 "observed_limit_notifications": 0,
                                                 "missing_notifications_prove_no_limit_hit": false,
                                                 "created_safe_model_files": 6,
-                                                "created_safe_model_file_bytes": 24556,
+                                                "created_safe_model_file_bytes": 24240,
                                                 "created_manifest_bytes": 1217,
-                                                "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas.",
-                                                "input_qualification_pass": false
+                                                "input_qualification_pass": true,
+                                                "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas."
                                               },
                                               {
                                                 "id": "read-only-dependency-readiness",
-                                                "status": "pending",
-                                                "reason": "The input source fix and separately reviewed phase consumer are pending."
+                                                "status": "failed",
+                                                "actual_parent_invocations": 1,
+                                                "actual_native_job_attempts": 1,
+                                                "root_exit_code": 1,
+                                                "total_created_processes": 20,
+                                                "remaining_active_processes": 0,
+                                                "limits": {
+                                                  "flags": 8968,
+                                                  "process_bytes": 2147483648,
+                                                  "job_bytes": 4294967296,
+                                                  "active_limit": 32
+                                                },
+                                                "configured_child_deadline_seconds": 300,
+                                                "observed_peak_commit_bytes": {
+                                                  "process_commit_bytes": 691195904,
+                                                  "job_commit_bytes": 844693504
+                                                },
+                                                "stdout_bytes": 0,
+                                                "stderr_bytes": 208,
+                                                "cleanup_confirmed": true,
+                                                "all_owned_handles_close_acknowledged": true,
+                                                "forced_owned_job_termination": false,
+                                                "observed_limit_notifications": 0,
+                                                "missing_notifications_prove_no_limit_hit": false,
+                                                "completed": [
+                                                  "inputs"
+                                                ],
+                                                "observed_probes": 7,
+                                                "readiness_qualification_pass": false,
+                                                "failure_stage": "real-worker-dependencies",
+                                                "actual_model_generation": false,
+                                                "actual_training": false,
+                                                "reason": "The GPU inventory query failed. The installed PyTorch reported available CUDA. Startup selected a CPU installation target and rejected the installed CUDA build. The read-only adapter refused the next network-probe request before dispatch."
                                               },
                                               {
                                                 "id": "offline-desktop-package",
                                                 "status": "pending",
-                                                "reason": "The input and readiness stages and separately reviewed offline package consumer are pending."
+                                                "reason": "Repair and recheck dependency readiness, then qualify the isolated offline package."
                                               },
                                               {
                                                 "id": "desktop-train-review-save-reopen",
                                                 "status": "pending",
-                                                "reason": "The prerequisite stages and separately reviewed single-app setup are pending."
+                                                "reason": "After readiness and packaging pass, run the actual one-app training, private review, Save and reopen journey."
                                               }
                                             ],
                                             "diagnosis": {
-                                              "status": "independently-confirmed-source-mismatch",
-                                              "saved_tokenizer_class": "PreTrainedTokenizer",
-                                              "required_tokenizer_class": "PreTrainedTokenizerFast",
-                                              "cause": "The installed pinned tokenizer serializer removes the Fast suffix when its slow-save property is true. The generated-input inspector requires the explicit Fast class.",
-                                              "confirmation": "Read-only inspection reached the strict tokenizer-class denial after all six file hashes, the fixed configuration, seed and model identity matched.",
-                                              "warning_is_not_proven_cause": true,
-                                              "planned_repair": "Normalize only fresh generated tokenizer metadata to the explicit expected Fast class before the manifest. Keep the strict inspector unchanged. Add supplier-shaped regression and bounded failure-stage/type diagnostics.",
-                                              "source_fix_implemented": false
+                                              "resolved_tokenizer": {
+                                                "status": "source-fixed-and-fresh-input-qualified",
+                                                "source_commit": "2f29db6d1386dbf329909cb7e73fb337bc69e1a0",
+                                                "required_tokenizer_class": "PreTrainedTokenizerFast",
+                                                "strict_inspector_unchanged": true,
+                                                "original_failed_files_unchanged": true
+                                              },
+                                              "readiness_failure": {
+                                                "status": "independently-confirmed-startup-target-mismatch",
+                                                "gpu_inventory_exit_code": 255,
+                                                "installed_torch_imported": true,
+                                                "installed_torch_reports_cuda_available": true,
+                                                "actual_gpu_workload_qualified": false,
+                                                "captured_torch_output_sha256": "22dd9ebe9b8c578ee1a0e1bb124420641fa75b52a987c7d152b2fdd94fd8f51b",
+                                                "exact_fixed_output_bytes": 113,
+                                                "cause": "The inventory utility failure caused CPU selection despite the installed runtime reporting available CUDA. Current CPU matching refuses a CUDA build and requests a network probe.",
+                                                "planned_repair": "Use the installed runtime capability to choose a backend when inventory utilities find none. Keep actual backend verification and fail-closed installation controls.",
+                                                "source_fix_implemented": false,
+                                                "actual_network_or_installation_subprocess_observed": false
+                                              },
+                                              "tracked_fixture_newlines": {
+                                                "status": "source-fix-pending",
+                                                "cause": "Physical Windows line endings in a read source probe differ from JavaScript template-literal evaluation.",
+                                                "ignored_adapter_fixed_and_tested": true,
+                                                "tracked_fixture_fixed": false
+                                              }
                                             },
                                             "evidence_digests": {
-                                              "effect_plan_sha256": "1b08bbea4988c8b4c8fd305399ce852ba445620cd73530dfa67ccf586ce3027e",
-                                              "effect_reference_sha256": "17b80797fec697970824aaabea5ab7b5d1e3639123f0499b3bcdecd7df31eb7f",
-                                              "attempt_sha256": "b5110c0eee7a369f915b73804066f3de1ec65dd4b7d49be92a322b83cb179175",
-                                              "native_observation_sha256": "ffb9895f37cd15d9a60a3f305e557284f5e3acadd64108b032f0a8f9d89f929f",
-                                              "failure_sha256": "1f8b5b8a79fea8070cbddd53a6f491302126e55923e1465d8095006674257f0d",
-                                              "root_tool_observation_sha256": "70f6df0a78b4934119acfdd8e2a34cc41408e16604d346f477617a85c7a01eae",
-                                              "read_only_denial_diagnostic_sha256": "68c00de51888803a443bbece073ffbbadfdeb4f24c0accfd744d3f2c859e7114",
-                                              "independent_failed_result_reference_sha256": "3e86c35b5063c689d5c8830d8075281a6868f45b507e427f3dbb45d1a24b4da6",
-                                              "exact_marker_retirement_sha256": "51b7e2bf8252df4d97bb097e454bed0c00c348cb24a5573df17320d3d0e87fd5"
+                                              "corrected_input_effect_reference_sha256": "1051ca707ed9c6dc557b003ff9ed96aec6ee17825da5b696dfcf6817ce82d3ec",
+                                              "corrected_input_result_sha256": "d19272c6f56c9125b54994262ed25dc3af412781d356725d0c9615e8ad30ed93",
+                                              "corrected_input_native_observation_sha256": "ffe72b87329d8e4bb2c055b7e9a03b05f1f999d949490ba1c14a436484fe5372",
+                                              "corrected_input_result_review_sha256": "f528d3af2974954680c28631d3596c9f6571f09f3ecb46788cf3e5b5b4863f24",
+                                              "corrected_input_marker_retirement_sha256": "611a856157c0f0ae4b33bdf7d303544d4f695d64ff3b8fb77e7454338accd1fa",
+                                              "readiness_effect_reference_sha256": "89dff5e37f09869d50a47ba2227b7a26a76ed207f67586c4e287cc965249d24c",
+                                              "failed_readiness_native_observation_sha256": "9d0e56d43dc08d24f4587372c43aea05ba8951ddeee9b1650fb12b71846b69d4",
+                                              "failed_readiness_result_review_sha256": "39b8fb087ac9357be340f3e4646ed09c4baf8b2467eef91078cddc0367a8653b",
+                                              "failed_readiness_cause_review_sha256": "672f27d561c766a69b5c1a99a332568150808fe4789e957bf1f5e3e2c9fbb554",
+                                              "failed_readiness_marker_retirement_sha256": "296d798337c191dc96e7f4b5262ec9b95b30846540cc7c4ee61cbeddf187c5c9"
                                             },
+                                            "prior_reports": [
+                                              {
+                                                "original_raw_sha256": "9bb39049602c3c9e3f70b30cf6fdd44b437cc44a4eb6257ad95b425159847463",
+                                                "report": {
+                                                  "schema_version": "desktop-training-host-qualification-v1",
+                                                  "scope": "failed-tiny-input-stage-before-desktop-training",
+                                                  "status": "source-fix-required",
+                                                  "source": {
+                                                    "commit": "05de2fe85a6f9233ad8a1fb384cfd225e60d3784",
+                                                    "source_digest": "6a76e5ceb3489936234739db8826c1d41138ae35f6094f07880ae13b4f995e19",
+                                                    "generator_sha256": "25ed3b9a3b29ed23b2130fd94c511332ea681cf1dfe26cdb6d130aec51d8a795",
+                                                    "native_helper_sha256": "d79c14cf94d535825b4aafa93e02b32c459c25ae0e111fea7d9adbea6a105827"
+                                                  },
+                                                  "stages": [
+                                                    {
+                                                      "id": "input-generation",
+                                                      "status": "failed",
+                                                      "actual_parent_invocations": 1,
+                                                      "actual_native_job_attempts": 1,
+                                                      "root_exit_code": 1,
+                                                      "total_created_processes": 1,
+                                                      "remaining_active_processes": 0,
+                                                      "limits": {
+                                                        "flags": 8968,
+                                                        "process_bytes": 2147483648,
+                                                        "job_bytes": 4294967296,
+                                                        "active_limit": 32
+                                                      },
+                                                      "configured_child_deadline_seconds": 120,
+                                                      "observed_peak_commit_bytes": {
+                                                        "process_commit_bytes": 774365184,
+                                                        "job_commit_bytes": 774365184
+                                                      },
+                                                      "stdout_bytes": 165,
+                                                      "stderr_bytes": 108,
+                                                      "cleanup_confirmed": true,
+                                                      "all_owned_handles_close_acknowledged": true,
+                                                      "forced_owned_job_termination": false,
+                                                      "observed_limit_notifications": 0,
+                                                      "missing_notifications_prove_no_limit_hit": false,
+                                                      "created_safe_model_files": 6,
+                                                      "created_safe_model_file_bytes": 24556,
+                                                      "created_manifest_bytes": 1217,
+                                                      "byte_limit_semantics": "The six-file sum is inspected after generation and capped at 1 MiB. The manifest is separately bounded to 8192 bytes. These are not OS streaming disk quotas.",
+                                                      "input_qualification_pass": false
+                                                    },
+                                                    {
+                                                      "id": "read-only-dependency-readiness",
+                                                      "status": "pending",
+                                                      "reason": "The input source fix and separately reviewed phase consumer are pending."
+                                                    },
+                                                    {
+                                                      "id": "offline-desktop-package",
+                                                      "status": "pending",
+                                                      "reason": "The input and readiness stages and separately reviewed offline package consumer are pending."
+                                                    },
+                                                    {
+                                                      "id": "desktop-train-review-save-reopen",
+                                                      "status": "pending",
+                                                      "reason": "The prerequisite stages and separately reviewed single-app setup are pending."
+                                                    }
+                                                  ],
+                                                  "diagnosis": {
+                                                    "status": "independently-confirmed-source-mismatch",
+                                                    "saved_tokenizer_class": "PreTrainedTokenizer",
+                                                    "required_tokenizer_class": "PreTrainedTokenizerFast",
+                                                    "cause": "The installed pinned tokenizer serializer removes the Fast suffix when its slow-save property is true. The generated-input inspector requires the explicit Fast class.",
+                                                    "confirmation": "Read-only inspection reached the strict tokenizer-class denial after all six file hashes, the fixed configuration, seed and model identity matched.",
+                                                    "warning_is_not_proven_cause": true,
+                                                    "planned_repair": "Normalize only fresh generated tokenizer metadata to the explicit expected Fast class before the manifest. Keep the strict inspector unchanged. Add supplier-shaped regression and bounded failure-stage/type diagnostics.",
+                                                    "source_fix_implemented": false
+                                                  },
+                                                  "evidence_digests": {
+                                                    "effect_plan_sha256": "1b08bbea4988c8b4c8fd305399ce852ba445620cd73530dfa67ccf586ce3027e",
+                                                    "effect_reference_sha256": "17b80797fec697970824aaabea5ab7b5d1e3639123f0499b3bcdecd7df31eb7f",
+                                                    "attempt_sha256": "b5110c0eee7a369f915b73804066f3de1ec65dd4b7d49be92a322b83cb179175",
+                                                    "native_observation_sha256": "ffb9895f37cd15d9a60a3f305e557284f5e3acadd64108b032f0a8f9d89f929f",
+                                                    "failure_sha256": "1f8b5b8a79fea8070cbddd53a6f491302126e55923e1465d8095006674257f0d",
+                                                    "root_tool_observation_sha256": "70f6df0a78b4934119acfdd8e2a34cc41408e16604d346f477617a85c7a01eae",
+                                                    "read_only_denial_diagnostic_sha256": "68c00de51888803a443bbece073ffbbadfdeb4f24c0accfd744d3f2c859e7114",
+                                                    "independent_failed_result_reference_sha256": "3e86c35b5063c689d5c8830d8075281a6868f45b507e427f3dbb45d1a24b4da6",
+                                                    "exact_marker_retirement_sha256": "51b7e2bf8252df4d97bb097e454bed0c00c348cb24a5573df17320d3d0e87fd5"
+                                                  },
+                                                  "scope_limits": [
+                                                    "The child created a random tiny test fixture and then failed its input inspection. This is not a passing input, training or application result.",
+                                                    "Native process and handle retirement were confirmed. Acceptance of the failed-result audit does not turn command exit 1 into a pass.",
+                                                    "The old failed files and every earlier failure remain unchanged. Only the exact new active-run marker was preserved and retired after separate audit.",
+                                                    "No dependency, engine, memory guard, native limit or disk policy changed. The existing 2 GiB process and 4 GiB total ceilings were not reservations.",
+                                                    "No inference, model accuracy, OCR, readiness consumer, package or application test ran in this attempt.",
+                                                    "A source fix, focused regression checks and a fresh separately reviewed attempt remain agent work. No retry or successor effect is granted by this report.",
+                                                    "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource/delivery/cleanup remain separate pending work.",
+                                                    "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows feature implementation."
+                                                  ],
+                                                  "actual_training_qualification": false,
+                                                  "accuracy_executed": false,
+                                                  "ocr_executed": false,
+                                                  "failed_input_bytes_preserved": true,
+                                                  "history_preserved": true,
+                                                  "remaining_native_effect_allowance": 0,
+                                                  "parent_pass": false
+                                                }
+                                              }
+                                            ],
                                             "scope_limits": [
-                                              "The child created a random tiny test fixture and then failed its input inspection. This is not a passing input, training or application result.",
-                                              "Native process and handle retirement were confirmed. Acceptance of the failed-result audit does not turn command exit 1 into a pass.",
-                                              "The old failed files and every earlier failure remain unchanged. Only the exact new active-run marker was preserved and retired after separate audit.",
-                                              "No dependency, engine, memory guard, native limit or disk policy changed. The existing 2 GiB process and 4 GiB total ceilings were not reservations.",
-                                              "No inference, model accuracy, OCR, readiness consumer, package or application test ran in this attempt.",
-                                              "A source fix, focused regression checks and a fresh separately reviewed attempt remain agent work. No retry or successor effect is granted by this report.",
+                                              "Input creation passed only for the new random tiny generated test fixture. This is not useful model-quality or actual training qualification.",
+                                              "Readiness remains failed. Exact native process and handle retirement passed, while later packaging and app stages remain pending.",
+                                              "The reconstructed fixed Torch result matched the captured bytes and SHA-256 exactly. It did not repeat the probe and does not prove a CUDA model workload.",
+                                              "The original failed input files and failed readiness evidence remain unchanged. The complete previous failed report is preserved as history.",
+                                              "Source repair and a fresh separately reviewed readiness attempt remain agent work. No diagnostic successor effect, retry, package or UI authority is granted by this report.",
+                                              "No dependency, engine, memory guard, native limit or disk policy changed. Existing 2 GiB process and 4 GiB total ceilings do not reserve RAM.",
                                               "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource/delivery/cleanup remain separate pending work.",
                                               "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows feature implementation."
                                             ],
                                             "actual_training_qualification": false,
+                                            "actual_readiness_qualification": false,
                                             "accuracy_executed": false,
                                             "ocr_executed": false,
                                             "failed_input_bytes_preserved": true,
@@ -1025,17 +1151,16 @@
                                         }
                                       ],
                                       "scope_limits": [
-                                        "Input creation passed only for the new random tiny generated test fixture. This is not useful model-quality or actual training qualification.",
-                                        "Readiness remains failed. Exact native process and handle retirement passed, while later packaging and app stages remain pending.",
-                                        "The reconstructed fixed Torch result matched the captured bytes and SHA-256 exactly. It did not repeat the probe and does not prove a CUDA model workload.",
-                                        "The original failed input files and failed readiness evidence remain unchanged. The complete previous failed report is preserved as history.",
-                                        "Source repair and a fresh separately reviewed readiness attempt remain agent work. No diagnostic successor effect, retry, package or UI authority is granted by this report.",
-                                        "No dependency, engine, memory guard, native limit or disk policy changed. Existing 2 GiB process and 4 GiB total ceilings do not reserve RAM.",
-                                        "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource/delivery/cleanup remain separate pending work.",
-                                        "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows feature implementation."
+                                        "The previous failed input and failed readiness remain failed in complete preserved history. Known input files and the three retained old readiness outputs keep their exact hashes.",
+                                        "This result qualifies real read-only startup dependency checks and their owned retirement. It does not qualify a CUDA model workload, actual training, packaging or the UI journey.",
+                                        "The existing 2 GiB process and 4 GiB aggregate limits are ceilings, not reservations. The 32-process ceiling limits simultaneous processes; 35 total processes were created sequentially.",
+                                        "No package installation, download, model input generation, model accuracy test, OCR test, provider operation, guard change or disk-credit release was performed.",
+                                        "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload memory, disk, runtime, delivery and cleanup remain independent pending work.",
+                                        "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows all requested feature implementation.",
+                                        "Installed supplier references and the trusted adapter are not hostile-filesystem protection or a network sandbox. No new effect, retry or parent qualification is authorized by this report."
                                       ],
                                       "actual_training_qualification": false,
-                                      "actual_readiness_qualification": false,
+                                      "actual_readiness_qualification": true,
                                       "accuracy_executed": false,
                                       "ocr_executed": false,
                                       "failed_input_bytes_preserved": true,
@@ -1046,13 +1171,14 @@
                                   }
                                 ],
                                 "scope_limits": [
-                                  "The previous failed input and failed readiness remain failed in complete preserved history. Known input files and the three retained old readiness outputs keep their exact hashes.",
-                                  "This result qualifies real read-only startup dependency checks and their owned retirement. It does not qualify a CUDA model workload, actual training, packaging or the UI journey.",
-                                  "The existing 2 GiB process and 4 GiB aggregate limits are ceilings, not reservations. The 32-process ceiling limits simultaneous processes; 35 total processes were created sequentially.",
-                                  "No package installation, download, model input generation, model accuracy test, OCR test, provider operation, guard change or disk-credit release was performed.",
-                                  "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload memory, disk, runtime, delivery and cleanup remain independent pending work.",
-                                  "Completed model accuracy and OCR checks remain closed. Combined full-system testing follows all requested feature implementation.",
-                                  "Installed supplier references and the trusted adapter are not hostile-filesystem protection or a network sandbox. No new effect, retry or parent qualification is authorized by this report."
+                                  "Actual input and read-only readiness results retain their original source bindings. The current package result is separately bound to its exact source, private consumers and installed references.",
+                                  "The first package attempt remains failed. Its exact two logs and old adapter bytes are preserved. The corrected build used a fresh independently reviewed one-use plan.",
+                                  "This result qualifies isolated offline packaging and owned build-process retirement. The actual Desktop train, private review, Save and reopen journey remains pending. No human action is needed.",
+                                  "The 2 GiB process and 4 GiB aggregate limits are ceilings, not reservations. ACTIVE32 limits simultaneous processes; 46 total build processes exited and the observed active peak was nine.",
+                                  "Existing installed dependencies and Electron files were reused through the reviewed offline route. The route uses separate candidate caches and output paths; all declared original source and known tiny input references remained unchanged. Offline settings and reference checks are not a network or hostile-filesystem sandbox.",
+                                  "Three optional OCR build resources are present. This is not a new OCR qualification. No app, training workload, model accuracy test, provider operation, guard change, offload lease or disk-credit release ran.",
+                                  "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource, delivery and cleanup work remain independent. Accepted model accuracy and OCR stay closed. The combined full-system campaign follows feature implementation.",
+                                  "No new effect, retry, current-candidate parent qualification or roadmap completion follows from this component report."
                                 ],
                                 "actual_training_qualification": false,
                                 "actual_readiness_qualification": true,
@@ -1061,29 +1187,27 @@
                                 "failed_input_bytes_preserved": true,
                                 "history_preserved": true,
                                 "remaining_native_effect_allowance": 0,
-                                "parent_pass": false
+                                "parent_pass": false,
+                                "actual_package_qualification": true
                               }
                             }
                           ],
-                          "scope_limits": [
-                            "Actual input and read-only readiness results retain their original source bindings. The current package result is separately bound to its exact source, private consumers and installed references.",
-                            "The first package attempt remains failed. Its exact two logs and old adapter bytes are preserved. The corrected build used a fresh independently reviewed one-use plan.",
-                            "This result qualifies isolated offline packaging and owned build-process retirement. The actual Desktop train, private review, Save and reopen journey remains pending. No human action is needed.",
-                            "The 2 GiB process and 4 GiB aggregate limits are ceilings, not reservations. ACTIVE32 limits simultaneous processes; 46 total build processes exited and the observed active peak was nine.",
-                            "Existing installed dependencies and Electron files were reused through the reviewed offline route. The route uses separate candidate caches and output paths; all declared original source and known tiny input references remained unchanged. Offline settings and reference checks are not a network or hostile-filesystem sandbox.",
-                            "Three optional OCR build resources are present. This is not a new OCR qualification. No app, training workload, model accuracy test, provider operation, guard change, offload lease or disk-credit release ran.",
-                            "Native file protection, shared accounting, model-worker/crash recovery, retained restart and actual offload resource, delivery and cleanup work remain independent. Accepted model accuracy and OCR stay closed. The combined full-system campaign follows feature implementation.",
-                            "No new effect, retry, current-candidate parent qualification or roadmap completion follows from this component report."
-                          ],
-                          "actual_training_qualification": false,
                           "actual_readiness_qualification": true,
+                          "actual_package_qualification": true,
+                          "actual_training_qualification": false,
                           "accuracy_executed": false,
                           "ocr_executed": false,
                           "failed_input_bytes_preserved": true,
                           "history_preserved": true,
                           "remaining_native_effect_allowance": 0,
                           "parent_pass": false,
-                          "actual_package_qualification": true
+                          "scope_limits": [
+                            "The source and Native facts above describe their named historical run; this report grants no current-candidate parent qualification.",
+                            "The pure regression does not qualify actual Train, private review, Save, reopened record or UI shutdown.",
+                            "No new app, model, provider, installation, download, Native Job or automatic retry is granted.",
+                            "Model accuracy and OCR remain closed; native file protection/accounting, retained restart, offload, hardware budgets and the later shared full-system campaign remain independent.",
+                            "Original memory/time/byte/Job/lease/credit guards and all failed evidence are preserved."
+                          ]
                         }
                       }
                     ],
@@ -1097,32 +1221,32 @@
                     "remaining_native_effect_allowance": 0,
                     "parent_pass": false,
                     "scope_limits": [
-                      "The source and Native facts above describe their named historical run; this report grants no current-candidate parent qualification.",
-                      "The pure regression does not qualify actual Train, private review, Save, reopened record or UI shutdown.",
-                      "No new app, model, provider, installation, download, Native Job or automatic retry is granted.",
-                      "Model accuracy and OCR remain closed; native file protection/accounting, retained restart, offload, hardware budgets and the later shared full-system campaign remain independent.",
-                      "Original memory/time/byte/Job/lease/credit guards and all failed evidence are preserved."
+                      "All results describe the exact named source and run. A diagnostic or historical result supplies no current-candidate or parent pass.",
+                      "Actual Train, private review, explicit Save, reopened record and owned-worker cleanup still require a successful separately reviewed feature test.",
+                      "Both failed attempts and their original bytes remain preserved. The earlier known phase was moved only after reviewed retirement; no unknown data was inspected, adopted, deleted or changed.",
+                      "No Native retry, new model, package rebuild, provider, install or download is authorized by this report.",
+                      "Accepted model accuracy and OCR remain closed. Native file protection/accounting, owned-model-worker crash/restart, retained recovery, actual offload resources and final combined testing remain independent.",
+                      "All original memory, runtime, Job, byte, staging, lease and credit controls remain unchanged. Full-system testing stays deferred until feature implementation is complete."
                     ]
                   }
                 }
               ],
-              "actual_readiness_qualification": true,
-              "actual_package_qualification": true,
-              "actual_training_qualification": false,
-              "accuracy_executed": false,
-              "ocr_executed": false,
-              "failed_input_bytes_preserved": true,
-              "history_preserved": true,
-              "remaining_native_effect_allowance": 0,
-              "parent_pass": false,
-              "scope_limits": [
-                "All results describe the exact named source and run. A diagnostic or historical result supplies no current-candidate or parent pass.",
-                "Actual Train, private review, explicit Save, reopened record and owned-worker cleanup still require a successful separately reviewed feature test.",
-                "Both failed attempts and their original bytes remain preserved. The earlier known phase was moved only after reviewed retirement; no unknown data was inspected, adopted, deleted or changed.",
-                "No Native retry, new model, package rebuild, provider, install or download is authorized by this report.",
-                "Accepted model accuracy and OCR remain closed. Native file protection/accounting, owned-model-worker crash/restart, retained recovery, actual offload resources and final combined testing remain independent.",
-                "All original memory, runtime, Job, byte, staging, lease and credit controls remain unchanged. Full-system testing stays deferred until feature implementation is complete."
-              ]
+              "qualification": {
+                "actual_ui_training_pass": false,
+                "actual_training_execution": "unconfirmed",
+                "model_accuracy_rerun": false,
+                "ocr_qualification_rerun": false,
+                "parent_qualification_granted": false,
+                "full_testing_status": "deferred-by-user"
+              },
+              "pending_agent_work": [
+                "Build the diagnostic source into a fresh package and run one separately reviewed current training journey.",
+                "Use the safe failure facts to diagnose and fix any reproduced start failure. Preserve failed evidence.",
+                "Qualify all eight training phases, private review, Save and reopen on the actual host.",
+                "Keep native crash recovery, low-memory staging, durable accounting and other roadmap qualification open until their own evidence passes.",
+                "Run the shared full-system campaign only after the open roadmap implementation work is complete."
+              ],
+              "completed_quality_policy": "Previously accepted Standard model-quality results remain closed. Do not repeat accuracy or OCR checks for this work."
             }
           }
         ],
@@ -1135,11 +1259,9 @@
           "full_testing_status": "deferred-by-user"
         },
         "pending_agent_work": [
-          "Build the diagnostic source into a fresh package and run one separately reviewed current training journey.",
-          "Use the safe failure facts to diagnose and fix any reproduced start failure. Preserve failed evidence.",
-          "Qualify all eight training phases, private review, Save and reopen on the actual host.",
-          "Keep native crash recovery, low-memory staging, durable accounting and other roadmap qualification open until their own evidence passes.",
-          "Run the shared full-system campaign only after the open roadmap implementation work is complete."
+          "Run a separately reviewed fresh Desktop training journey with the corrected input setup.",
+          "Qualify unchanged training, private review, explicit Save, reopened record and physical-worker cleanup assertions.",
+          "Keep Native source/accounting/restart/offload work and the later shared full-system campaign separate."
         ],
         "completed_quality_policy": "Previously accepted Standard model-quality results remain closed. Do not repeat accuracy or OCR checks for this work."
       }
@@ -1154,9 +1276,10 @@
     "full_testing_status": "deferred-by-user"
   },
   "pending_agent_work": [
-    "Run a separately reviewed fresh Desktop training journey with the corrected input setup.",
-    "Qualify unchanged training, private review, explicit Save, reopened record and physical-worker cleanup assertions.",
-    "Keep Native source/accounting/restart/offload work and the later shared full-system campaign separate."
+    "Bind the revised coverage definitions to their actual reviewed source commit.",
+    "Prepare and separately qualify a fresh current worker package and Desktop journey; the earlier package lacks these new diagnostics.",
+    "Use the observed task outcome to diagnose and repair the actual private-review failure, then qualify all eight unchanged UI phases and physical cleanup.",
+    "Keep accepted accuracy and OCR closed. Native/offload and the shared final full-system campaign remain separate."
   ],
   "completed_quality_policy": "Previously accepted Standard model-quality results remain closed. Do not repeat accuracy or OCR checks for this work."
 }

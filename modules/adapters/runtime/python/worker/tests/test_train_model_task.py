@@ -50,6 +50,57 @@ class _FakeTokenizer:
         (out / "tokenizer.json").write_text("{}", encoding="utf-8")
 
 
+@pytest.mark.parametrize("operation,stage", [
+    ("_resolve_training_purpose_paths", "purpose-mapping"),
+    ("_resolve_base_model", "base-model-resolution"),
+    ("_load_dataset", "dataset-loading"),
+    ("_load_transformers_objects", "model-loading"),
+    ("_resolve_effective_sequence_length", "sequence-length"),
+    ("_tokenize_dataset", "tokenization"),
+    ("_apply_lora", "adapter-configuration"),
+    ("_build_training_args", "training-arguments"),
+    ("_run_trainer", "training-loop"),
+    ("save_adapter_pretrained", "serialization"),
+    ("validate_model_output", "validation"),
+    ("write_serialization_manifest", "serialization-manifest"),
+    ("_write_run_metadata", "run-metadata"),
+    ("_training_task_tags", "generated-candidate"),
+])
+def test_caught_training_failures_identify_only_fixed_stage_and_error_type(monkeypatch, tmp_path, operation, stage):
+    # Exercise the real orchestration with inert suppliers, never Torch or a model.
+    monkeypatch.setattr(train_model_module, "_load_dataset", lambda payload: ({"train": object()}, None))
+    monkeypatch.setattr(train_model_module, "_resolve_base_model", lambda payload: "synthetic/base")
+    monkeypatch.setattr(train_model_module, "_load_transformers_objects", lambda *args: (_FakeModel(), _FakeTokenizer()))
+    monkeypatch.setattr(train_model_module, "_tokenize_dataset", lambda *args, **kwargs: {"train": object()})
+    monkeypatch.setattr(train_model_module, "_apply_lora", lambda model, payload: model)
+    monkeypatch.setattr(train_model_module, "_build_training_args", lambda *args: object())
+    monkeypatch.setattr(train_model_module, "_run_trainer", lambda *args, **kwargs: ({}, []))
+    def fail(*args, **kwargs):
+        raise ValueError("private-synthetic-message C:\\private\\model")
+    monkeypatch.setattr(train_model_module, operation, fail)
+    result = train_model_module.train_model(_request(tmp_path))
+    assert result.status == "failed" and result.generatedModelCandidate is None
+    assert result.error["code"] == "training_failed"
+    # Preserve the existing task error semantics; the new details carry no text.
+    assert result.error["message"] == "private-synthetic-message C:\\private\\model"
+    assert result.error["details"] == {
+        "method": "lora", "trainingTask": "llm-instruction",
+        "stage": stage, "errorType": "ValueError",
+    }
+    assert "private" not in json.dumps(result.error["details"])
+
+
+def test_training_error_type_does_not_read_custom_error_text_or_names():
+    class PrivateError(RuntimeError):
+        def __str__(self):
+            raise AssertionError("Diagnostic type projection must not read error text.")
+    assert train_model_module._training_error_type(PrivateError()) == "OtherError"
+    for error, expected in [(ValueError(), "ValueError"), (RuntimeError(), "RuntimeError"),
+                            (TypeError(), "TypeError"), (MemoryError(), "MemoryError"),
+                            (ImportError(), "ImportError"), (ModuleNotFoundError(), "ModuleNotFoundError")]:
+        assert train_model_module._training_error_type(error) == expected
+
+
 def test_resolve_effective_sequence_length_clamps_to_model_context_window() -> None:
     model = SimpleNamespace(config=SimpleNamespace(n_positions=1024))
     tokenizer = SimpleNamespace(model_max_length=2048)

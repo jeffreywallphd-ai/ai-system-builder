@@ -51,6 +51,21 @@ class TrainingCancellationRequested(RuntimeError):
     pass
 
 
+def _training_error_type(error: BaseException) -> str:
+    """Fixed diagnostic types only; never inspect custom names or error text."""
+    for error_class, name in (
+        (ValueError, "ValueError"), (RuntimeError, "RuntimeError"),
+        (TypeError, "TypeError"), (MemoryError, "MemoryError"),
+        (ImportError, "ImportError"), (ModuleNotFoundError, "ModuleNotFoundError"),
+        (OSError, "OSError"), (AttributeError, "AttributeError"),
+        (KeyError, "KeyError"), (IndexError, "IndexError"),
+        (AssertionError, "AssertionError"),
+    ):
+        if type(error) is error_class:
+            return name
+    return "OtherError"
+
+
 def _require_non_empty(value: str | None, field: str) -> str:
     if value is None or value.strip() == "":
         raise ValueError(f"{field} is required.")
@@ -671,9 +686,11 @@ def train_model(
             },
         )
 
+    stage = "purpose-mapping"
     try:
         purpose_paths = _resolve_training_purpose_paths(payload)
         if training_task in DIFFUSION_TRAINING_TASKS:
+            stage = "diffusion-delegate"
             from .train_model_multimodal import train_diffusion_lora_model
 
             return train_diffusion_lora_model(
@@ -687,6 +704,7 @@ def train_model(
             )
 
         if training_task in VISION_TRAINING_TASKS:
+            stage = "vision-delegate"
             from .train_model_multimodal import train_vision_model
 
             return train_vision_model(
@@ -699,16 +717,21 @@ def train_model(
                 on_progress=on_progress,
             )
 
+        stage = "initializing"
         if on_progress is not None:
             on_progress({"stage": "initializing", "message": "Loading training datasets and model assets..."})
 
+        stage = "base-model-resolution"
         base_model_ref = _resolve_base_model(payload)
+        stage = "dataset-loading"
         dataset, eval_dataset = _load_dataset(payload)
 
+        stage = "model-loading"
         advanced = _to_dict(payload.advancedParameters)
         quantization = _to_dict(advanced.get("quantization"))
         model, tokenizer = _load_transformers_objects(base_model_ref, payload.method, quantization)
 
+        stage = "sequence-length"
         effective_sequence_length, sequence_length_warning = _resolve_effective_sequence_length(
             model,
             tokenizer,
@@ -718,6 +741,7 @@ def train_model(
             warnings.append(sequence_length_warning)
             logs.append(sequence_length_warning)
 
+        stage = "tokenization"
         tokenized = _tokenize_dataset(
             dataset,
             tokenizer,
@@ -728,9 +752,11 @@ def train_model(
         tokenized_eval = tokenized["validation"] if "validation" in tokenized else None
 
         if payload.method in {"lora", "qlora"}:
+            stage = "adapter-configuration"
             model = _apply_lora(model, payload)
             logs.append(f"Applied {payload.method.upper()} adapter config.")
 
+        stage = "training-arguments"
         train_args = _build_training_args(payload, output_path)
         def on_training_progress(progress: dict[str, int]) -> None:
             message = (
@@ -741,8 +767,10 @@ def train_model(
             if on_progress is not None:
                 on_progress({**progress, "message": message, "stage": "training"})
 
+        stage = "training-loop"
         metrics, checkpoints = _run_trainer(model, tokenizer, tokenized, tokenized_eval, train_args, on_progress=on_training_progress)
 
+        stage = "serialization"
         if on_progress is not None:
             on_progress({"stage": "serializing", "message": "Serializing trained model artifacts..."})
 
@@ -759,6 +787,7 @@ def train_model(
             serialization = save_full_model_pretrained(model, tokenizer, output_path, max_shard_size=max_shard_size)
             artifact_form = "full-model"
 
+        stage = "validation"
         if on_progress is not None:
             on_progress({"stage": "validating", "message": "Running post-training validation..."})
 
@@ -779,6 +808,7 @@ def train_model(
             }
         )
 
+        stage = "serialization-manifest"
         manifest_path = write_serialization_manifest(output_path, {
             "runId": run_id,
             "method": payload.method,
@@ -787,6 +817,7 @@ def train_model(
             "validation": validation,
         })
 
+        stage = "run-metadata"
         run_metadata_path = _write_run_metadata(
             output_path,
             {
@@ -801,6 +832,7 @@ def train_model(
             },
         )
 
+        stage = "generated-candidate"
         generated_model_path = str(output_path)
         model_id = payload.baseModel.modelId
 
@@ -832,6 +864,7 @@ def train_model(
                 "metadata": metadata,
             }
 
+        stage = "completion-report"
         if on_progress is not None:
             on_progress({"stage": "completed", "message": "Training task completed."})
 
@@ -879,6 +912,8 @@ def train_model(
                 "details": {
                     "method": payload.method,
                     "trainingTask": training_task,
+                    "stage": stage,
+                    "errorType": _training_error_type(error),
                 },
             },
         )

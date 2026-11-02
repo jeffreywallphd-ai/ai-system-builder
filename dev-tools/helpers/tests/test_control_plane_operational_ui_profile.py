@@ -107,6 +107,7 @@ TESTS += ['dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.
  'modules/application/use-cases/tests/settings.use-cases.unit.test.ts']
 
 TESTS += ['modules/application/use-cases/tests/train-model.use-case.unit.test.ts']
+TESTS += ['modules/adapters/runtime/python/worker/tests/test_train_model_task.py']
 
 EXPECTED_COMMANDS = [['node',
   '--import',
@@ -252,7 +253,19 @@ EXPECTED_COMMANDS = [['node',
   '-s',
   'dev-tools/scripts/qualification/tests',
   '-p',
-  'test_training_qualification_worker.py']]
+  'test_training_qualification_worker.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'pytest',
+  '-c',
+  'dev-tools/config/pytest-focused.ini',
+  '--noconftest',
+  '-p',
+  'no:cacheprovider',
+  '-q',
+  '--',
+  'modules/adapters/runtime/python/worker/tests/test_train_model_task.py']]
 
 SETTINGS_AUTOMATIC = ['dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs',
  'dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs',
@@ -426,7 +439,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 82)
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -459,7 +472,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 82)
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -485,7 +498,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 82)
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -683,6 +696,36 @@ class OperationalUiProfile(unittest.TestCase):
                 (root/CONFIG).write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"operational-ui":profile}}))
                 ids={c["id"] for c in catalog.plan(root,[core,*declarations],["documentation"],"synthetic-candidate")["selected"]}
                 self.assertIn("focused-tests",ids)
+
+    def test_training_worker_diagnostics_borrow_only_the_existing_fake_worker_suite(self):
+        core = "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
+        worker = "modules/adapters/runtime/python/worker/tasks/train_model.py"
+        unit = "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"
+        profile = self.profile()
+        self.assertEqual(profile["test_paths"][-1], unit)
+        self.assertEqual(profile["source_paths"][-3:], [worker, unit, "modules/adapters/runtime/python/worker/README.md"])
+        self.assertEqual(len(profile["test_paths"]), 83)
+        self.assertEqual(len(profile["source_paths"]), 193)
+        self.assertNotIn(worker, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertNotIn(unit, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="training-worker-diagnostic-profile-") as directory:
+            root = Path(directory)
+            self.fixture(root, profile)
+            for paths, required, selected, generic in [
+                ([worker], ["documentation"], False, True),
+                ([core, worker, unit], ["documentation"], True, False),
+                ([core, worker], ["focused-tests"], True, True),
+                ([core, worker, "modules/adapters/runtime/python/worker/tasks/unknown.py"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, selected)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(worker)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, worker], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
 
 if __name__ == "__main__":
     unittest.main()

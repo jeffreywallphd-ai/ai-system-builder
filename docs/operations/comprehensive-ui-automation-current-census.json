@@ -12657,8 +12657,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
    "facts": {
-    "sha256": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
-    "bytes": 14751,
+    "sha256": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32",
+    "bytes": 15316,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -12672,45 +12672,45 @@
      },
      {
       "name": "step",
-      "line": 60
+      "line": 61
      },
      {
       "name": "configure",
-      "line": 65
+      "line": 66
      },
      {
       "name": "dismissNotifications",
-      "line": 78
+      "line": 79
      },
      {
       "name": "refreshInventory",
-      "line": 82
+      "line": 83
      },
      {
       "name": "readSavedRecord",
-      "line": 156
+      "line": 157
      }
     ],
     "assertionCount": 31,
-    "assertionDigest": "78f05ac7d4917a4199c214d7981242783bd743f344fa325c07553e62b866ddb5",
+    "assertionDigest": "0c4f0a70f9ad0a6cf4e28c8fcd99b2747b68b4ee999247e7310bf56713ba6ec6",
     "assertionExamples": [
      {
-      "line": 85,
+      "line": 86,
       "kind": "expect",
       "sha256": "8b1a4e20ddbb3cb0e7d0eed8599954f90ec5225671ee4de2974c0ecd09e03710"
      },
      {
-      "line": 89,
+      "line": 90,
       "kind": "expect",
       "sha256": "3a369e3f6f97e53c268e617cdb4d3c7e929db54fa6713afe8a6bf4ee81efe9e0"
      },
      {
-      "line": 90,
+      "line": 91,
       "kind": "expect",
       "sha256": "3cdd520de6cd9d84d08d16a578748f6239fdb78389806ed9e938c127e32f7dac"
      },
      {
-      "line": 92,
+      "line": 93,
       "kind": "expect",
       "sha256": "9a6f81f56771d89dd1ff248930f2c7f4bbcfc0a6466ca03719b959255b1bf388"
      }
@@ -12722,139 +12722,195 @@
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
    "facts": {
-    "sha256": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
-    "bytes": 25914,
+    "sha256": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5",
+    "bytes": 39276,
     "cases": [
      {
+      "name": "failed-task observation reads the actual workspace-scoped status once and publishes no IDs or text",
+      "line": 24
+     },
+     {
+      "name": "failed-task diagnostics distinguish still-running and completed tasks without granting a UI pass",
+      "line": 37
+     },
+     {
+      "name": "invalid or foreign-shaped task inputs are refused before the status bridge",
+      "line": 47
+     },
+     {
+      "name": "stale failed and malformed bridge replies stay unavailable without inspecting private errors",
+      "line": 58
+     },
+     {
+      "name": "unknown or oversized runtime fields cannot escape the closed task diagnostic",
+      "line": 66
+     },
+     {
+      "name": "a hung task diagnostic read has a fixed two-second window and retires its timer",
+      "line": 76
+     },
+     {
+      "name": "task report admission rejects proxies getters extra fields and forged success without invoking getters",
+      "line": 85
+     },
+     {
+      "name": "every fixed worker failure stage survives the independent report admission",
+      "line": 95
+     },
+     {
+      "name": "failed observation preserves the original safe UI phase and runs owned shutdown once",
+      "line": 102
+     },
+     {
+      "name": "diagnostic publication failure retains the safe phase and fixed secondary failure",
+      "line": 111
+     },
+     {
+      "name": "a never-settling page read cannot delay owned shutdown or publish after retirement",
+      "line": 130
+     },
+     {
+      "name": "a never-settling diagnostic publication cannot delay owned shutdown or revise the failed result",
+      "line": 146
+     },
+     {
       "name": "the no-install delegate admits only exact declared read-only probes and pip version",
-      "line": 12
+      "line": 161
      },
      {
       "name": "training diagnostics keep fragmented UTF8 and interleaved streams separate without private fields",
-      "line": 27
+      "line": 176
      },
      {
       "name": "training diagnostics allow only closed fields and codes and never pass from unknown log text",
-      "line": 35
+      "line": 184
      },
      {
       "name": "training diagnostic collection rejects proxy and getter-like inputs without running their code",
-      "line": 39
+      "line": 188
      },
      {
       "name": "training diagnostics bound lines, combined bytes and event history without inventing completion",
-      "line": 46
+      "line": 195
      },
      {
       "name": "astral characters crossing the training diagnostic line cap cannot evade the bound",
-      "line": 51
+      "line": 200
      },
      {
       "name": "real training producer codes survive the unchanged real host redaction and reach the collector",
-      "line": 55
+      "line": 204
      },
      {
       "name": "training diagnostics retain incomplete and malformed evidence and freeze finalization",
-      "line": 64
+      "line": 213
      },
      {
       "name": "training failure collection observes before the real action and detaches both streams afterward",
-      "line": 69
+      "line": 218
      },
      {
       "name": "successful training actions gain no extra diagnostic attachment or success evidence",
-      "line": 74
+      "line": 223
      },
      {
       "name": "training diagnostic storage failure retains the original failure and always detaches listeners",
-      "line": 79
+      "line": 228
      },
      {
       "name": "training diagnostic listener failure preserves the original error and still removes the other listener",
-      "line": 84
+      "line": 233
      },
      {
       "name": "captures only the fixed current training declaration and detaches its dataset identities",
-      "line": 99
+      "line": 248
      },
      {
       "name": "generated input has an explicit versioned fixture and its report never claims model accuracy",
-      "line": 106
+      "line": 255
      },
      {
       "name": "rejects stale or foreign source, workspace, base and dataset declarations",
-      "line": 117
+      "line": 266
      },
      {
       "name": "closed public identities cannot contain paths, queries or coercion hooks",
-      "line": 129
+      "line": 278
      },
      {
       "name": "only a dense ordered complete phase list can pass; failure never grants parent qualification",
-      "line": 135
+      "line": 284
      },
      {
       "name": "unknown prerequisites cannot enter Page ports or disclose the declaration",
-      "line": 148
+      "line": 297
      },
      {
       "name": "initial Page and attachment failures retain a fixed training phase without raw private errors",
-      "line": 155
+      "line": 304
      },
      {
       "name": "training failure details retain closed action identity without reading private errors",
-      "line": 173
+      "line": 322
      },
      {
       "name": "training failure details refuse foreign phase/action data without coercion",
-      "line": 189
+      "line": 338
      },
      {
       "name": "real read-only inventory projection returns only IDs and exact base/task-owned output facts",
-      "line": 207
+      "line": 356
      },
      {
       "name": "the real inventory projection accepts only the declared generated input label without exposing paths",
-      "line": 217
+      "line": 366
      },
      {
       "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
-      "line": 224
+      "line": 373
      },
      {
       "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
-      "line": 236
+      "line": 385
      }
     ],
     "dynamicCases": 1,
     "functions": [
      {
+      "name": "withDiagnosticBridge",
+      "line": 15
+     },
+     {
+      "name": "assertOwnedDiagnosticTimeout",
+      "line": 122
+     },
+     {
       "name": "withInventoryPort",
-      "line": 202
+      "line": 351
      }
     ],
-    "assertionCount": 123,
-    "assertionDigest": "a9f457557dd596f3a9f775a4fc81619be9aa26fd73b9dd3e2490d064197a1e9f",
+    "assertionCount": 201,
+    "assertionDigest": "963867a92e4fb854713f84e6cc1ee9612a0cdcea31865946b04c9066d7f34075",
     "assertionExamples": [
      {
-      "line": 14,
+      "line": 28,
       "kind": "assert",
-      "sha256": "e813aff1a0957fa9eee9e8f04012ee88043fc2dc64acf723c5ba9c3805521ef4"
+      "sha256": "599c98ac67ea6ec38769ccf2339ad86b70a01b3367252d4a5639026deae45ae2"
      },
      {
-      "line": 15,
+      "line": 30,
       "kind": "assert",
-      "sha256": "1ff6d80c889e301e048d62919d5e4b5c00c46a80b3eb97007768ea50a97588e9"
-     },
-     {
-      "line": 16,
-      "kind": "assert",
-      "sha256": "6ddc53dfc038dab73b298dc2bdd7f42cf5b1d7a8d5dbdc1cf4d7f3810dac3a46"
+      "sha256": "d6d9597c9782cdd8f41e21aefea9db97a0774550b5d66b98f639c1d8aaf69f61"
      },
      {
       "line": 31,
       "kind": "assert",
-      "sha256": "8258a767203568232cb0cd81625c6f0108f56dd28fb59568ee48a4ac85223d52"
+      "sha256": "27ffb191f755a89fcc3796c2a30a2956dc8919655811857e9a0aae3054d1131a"
+     },
+     {
+      "line": 31,
+      "kind": "assert",
+      "sha256": "eef6ce08a96c4ea4338d75c3562369690b940bc5213b422eaa1da09db6c40afb"
      }
     ],
     "modifiers": []
@@ -14238,50 +14294,62 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
    "facts": {
-    "sha256": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
-    "bytes": 14790,
+    "sha256": "46306c8ff6fca94353247c5e163d69d3ef96aea89392720fe6be08f5dbb50b24",
+    "bytes": 22968,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
-      "name": "createTrainingRuntimeFailureCollector",
+      "name": "trainingTaskDiagnostic",
       "line": 38
      },
      {
+      "name": "readTrainingHostTaskDiagnostic",
+      "line": 58
+     },
+     {
+      "name": "failTrainingWithTaskDiagnostic",
+      "line": 94
+     },
+     {
+      "name": "createTrainingRuntimeFailureCollector",
+      "line": 131
+     },
+     {
       "name": "withTrainingRuntimeFailureDiagnostics",
-      "line": 104
+      "line": 197
      },
      {
       "name": "trainingFailureDetails",
-      "line": 137
+      "line": 230
      },
      {
       "name": "denseStrings",
-      "line": 145
+      "line": 238
      },
      {
       "name": "trainingPublicId",
-      "line": 157
+      "line": 250
      },
      {
       "name": "trainingWorkspaceId",
-      "line": 161
+      "line": 254
      },
      {
       "name": "trainingDatasetIds",
-      "line": 165
+      "line": 258
      },
      {
       "name": "captureTrainingHostFixture",
-      "line": 182
+      "line": 275
      },
      {
       "name": "trainingBaseName",
-      "line": 201
+      "line": 294
      },
      {
       "name": "trainingHostReport",
-      "line": 204
+      "line": 297
      }
     ],
     "assertionCount": 0,

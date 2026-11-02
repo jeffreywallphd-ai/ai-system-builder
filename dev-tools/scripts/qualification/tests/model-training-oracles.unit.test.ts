@@ -8,6 +8,155 @@ import type { Page, TestInfo } from "@playwright/test";
 import { qualifyDesktopTrainingJourney, readTrainingHostInventory } from "../visual-composer/e2e/model-training-journey";
 import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, createTrainingRuntimeFailureCollector, withTrainingRuntimeFailureDiagnostics, TRAINING_HOST_PHASES, TRAINING_CONFIGURATION_ACTIONS, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
 import { trainingReadOnlyArguments } from "../visual-composer/training-host-fixture";
+import { readTrainingHostTaskDiagnostic, trainingTaskDiagnostic, failTrainingWithTaskDiagnostic } from "../visual-composer/model-training-oracles";
+
+const diagnosticTaskId = "task.synthetic-diagnostic";
+const diagnosticWorkspaceId = "workspace.training-host.0123456789abcdef";
+async function withDiagnosticBridge(api: unknown, action: () => Promise<void>) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { desktopApi: api } });
+  try { await action(); }
+  finally { if (previous) Object.defineProperty(globalThis, "window", previous); else Reflect.deleteProperty(globalThis, "window"); }
+}
+const taskDiagnosticInput = () => ({ workspaceId: diagnosticWorkspaceId, runId: diagnosticTaskId });
+const taskDiagnosticResponse = () => ({ ok: true, value: { runId: diagnosticTaskId, status: "failed", error: { code: "training_failed", details: { stage: "model-loading", errorType: "ValueError" } } } });
+
+test("failed-task observation reads the actual workspace-scoped status once and publishes no IDs or text", async () => {
+  const response = taskDiagnosticResponse(); let reads = 0, privateReads = 0;
+  Object.defineProperty(response.value.error, "message", { get() { privateReads++; throw new Error("private-synthetic-message"); } });
+  Object.assign(response.value.error.details, { path: "C:\\private\\model", prompt: "private-synthetic-prompt" });
+  await withDiagnosticBridge({ async readModelTrainingStatus(input: unknown) { reads++; assert.deepEqual(input, taskDiagnosticInput()); return response; } }, async () => {
+    const report = trainingTaskDiagnostic(await readTrainingHostTaskDiagnostic(taskDiagnosticInput()));
+    assert.deepEqual(report, { schemaVersion: "training-host-task-diagnostic-v1", status: "failed", errorCode: "training_failed", stage: "model-loading", errorType: "ValueError", parentQualificationGranted: false });
+    assert(Object.isFrozen(report)); assert(Buffer.byteLength(JSON.stringify(report)) <= 1024);
+    for (const value of ["private", diagnosticTaskId, diagnosticWorkspaceId, "message", "prompt", "path"]) assert(!JSON.stringify(report).includes(value));
+  });
+  assert.equal(reads, 1); assert.equal(privateReads, 0);
+});
+
+test("failed-task diagnostics distinguish still-running and completed tasks without granting a UI pass", async () => {
+  for (const status of ["queued", "running", "succeeded", "cancelled"]) await withDiagnosticBridge({ async readModelTrainingStatus() {
+    return { ok: true, value: { runId: diagnosticTaskId, status, progress: { stage: "training", message: "private-synthetic-progress" }, generatedModelCandidate: { localPath: "C:\\private\\model" } } };
+  } }, async () => {
+    const report = trainingTaskDiagnostic(await readTrainingHostTaskDiagnostic(taskDiagnosticInput()));
+    assert.equal(report.status, status); assert.equal(report.stage, "training"); assert.equal(report.errorCode, "unavailable");
+    assert.equal(report.parentQualificationGranted, false); assert(!JSON.stringify(report).includes("private")); assert.equal("passed" in report, false);
+  });
+});
+
+test("invalid or foreign-shaped task inputs are refused before the status bridge", async () => {
+  let calls = 0, getters = 0;
+  const accessor = Object.defineProperty({ runId: diagnosticTaskId }, "workspaceId", { enumerable: true, get() { getters++; return diagnosticWorkspaceId; } });
+  await withDiagnosticBridge({ async readModelTrainingStatus() { calls++; return taskDiagnosticResponse(); } }, async () => {
+    for (const input of [undefined, {}, { workspaceId: "workspace.foreign", runId: diagnosticTaskId }, { ...taskDiagnosticInput(), runId: "private/invalid" }, { ...taskDiagnosticInput(), runId: "x".repeat(193) }, { ...taskDiagnosticInput(), extra: "private" }, accessor]) {
+      assert.equal((await readTrainingHostTaskDiagnostic(input as never)).status, "unavailable");
+    }
+  });
+  assert.equal(calls, 0); assert.equal(getters, 0);
+});
+
+test("stale failed and malformed bridge replies stay unavailable without inspecting private errors", async () => {
+  for (const response of [undefined, { ok: false, error: { message: "private" } }, { ok: true, value: { runId: "task.foreign", status: "failed" } }, { ok: true, value: { runId: diagnosticTaskId, status: "private-status" } }]) {
+    await withDiagnosticBridge({ async readModelTrainingStatus() { return response; } }, async () => assert.equal((await readTrainingHostTaskDiagnostic(taskDiagnosticInput())).status, "unavailable"));
+  }
+  await withDiagnosticBridge({ async readModelTrainingStatus() { throw new Error("private-bridge-error"); } }, async () => assert.equal((await readTrainingHostTaskDiagnostic(taskDiagnosticInput())).status, "unavailable"));
+  await withDiagnosticBridge(undefined, async () => assert.equal((await readTrainingHostTaskDiagnostic(taskDiagnosticInput())).status, "unavailable"));
+});
+
+test("unknown or oversized runtime fields cannot escape the closed task diagnostic", async () => {
+  const response = taskDiagnosticResponse(); Object.assign(response.value.error, { code: "private-code".repeat(1000) });
+  Object.assign(response.value.error.details, { stage: "private-stage", errorType: "private-type", secret: "private-secret" });
+  await withDiagnosticBridge({ async readModelTrainingStatus() { return response; } }, async () => {
+    const report = trainingTaskDiagnostic(await readTrainingHostTaskDiagnostic(taskDiagnosticInput()));
+    assert.equal(report.errorCode, "other"); assert.equal(report.stage, "unavailable"); assert.equal(report.errorType, "unavailable");
+    assert(!JSON.stringify(report).includes("private")); assert(Buffer.byteLength(JSON.stringify(report)) <= 1024);
+  });
+});
+
+test("a hung task diagnostic read has a fixed two-second window and retires its timer", async () => {
+  const beforeSet = globalThis.setTimeout, beforeClear = globalThis.clearTimeout; let clears = 0, calls = 0;
+  globalThis.setTimeout = ((callback: () => void, delay: number) => { assert.equal(delay, 2000); queueMicrotask(callback); return 77; }) as never;
+  globalThis.clearTimeout = ((handle: unknown) => { assert.equal(handle, 77); clears++; }) as never;
+  try { await withDiagnosticBridge({ readModelTrainingStatus() { calls++; return new Promise(() => {}); } }, async () => assert.equal((await readTrainingHostTaskDiagnostic(taskDiagnosticInput())).status, "unavailable")); }
+  finally { globalThis.setTimeout = beforeSet; globalThis.clearTimeout = beforeClear; }
+  assert.equal(calls, 1); assert.equal(clears, 1);
+});
+
+test("task report admission rejects proxies getters extra fields and forged success without invoking getters", () => {
+  const valid = { schemaVersion: "training-host-task-diagnostic-v1", status: "failed", errorCode: "training_failed", stage: "model-loading", errorType: "ValueError", parentQualificationGranted: false };
+  let reads = 0; const getter = { ...valid }; Object.defineProperty(getter, "stage", { get() { reads++; throw Error("private"); } });
+  const proxy = new Proxy(valid, { getPrototypeOf() { reads++; throw Error("private"); }, ownKeys() { reads++; throw Error("private"); } });
+  for (const value of [proxy, getter, { ...valid, extra: "private" }, { ...valid, parentQualificationGranted: true }, { ...valid, schemaVersion: "other" }, { ...valid, stage: "private" }, { ...valid, status: "passed" }]) {
+    const report = trainingTaskDiagnostic(value); assert.equal(report.status, "unavailable"); assert.equal(report.parentQualificationGranted, false); assert(!JSON.stringify(report).includes("private"));
+  }
+  assert.equal(reads, 0);
+});
+
+test("every fixed worker failure stage survives the independent report admission", () => {
+  for (const stage of ["purpose-mapping", "diffusion-delegate", "vision-delegate", "initializing", "base-model-resolution", "dataset-loading", "model-loading", "sequence-length", "tokenization", "adapter-configuration", "training-arguments", "training-loop", "serialization", "validation", "serialization-manifest", "run-metadata", "generated-candidate", "completion-report"]) {
+    const report = trainingTaskDiagnostic({ schemaVersion: "training-host-task-diagnostic-v1", status: "failed", errorCode: "training_failed", stage, errorType: "ValueError", parentQualificationGranted: false });
+    assert.equal(report.stage, stage); assert.equal(report.status, "failed");
+  }
+});
+
+test("failed observation preserves the original safe UI phase and runs owned shutdown once", async () => {
+  let reads = 0, publications = 0, shutdowns = 0;
+  await assert.rejects(runOwnedRestartPhase(() => failTrainingWithTaskDiagnostic("private-review-pending", async () => { reads++; throw new Error("private-read"); }, async report => { publications++; assert.equal(report.status, "unavailable"); assert(!JSON.stringify(report).includes("private-read")); }), async () => { shutdowns++; }), error => {
+    assert(error instanceof AggregateError); assert.equal(error.errors.length, 1);
+    assert.equal(error.errors[0].message, "Training host phase did not complete: private-review-pending."); return true;
+  });
+  assert.equal(reads, 1); assert.equal(publications, 1); assert.equal(shutdowns, 1);
+});
+
+test("diagnostic publication failure retains the safe phase and fixed secondary failure", async () => {
+  let shutdowns = 0;
+  await assert.rejects(runOwnedRestartPhase(() => failTrainingWithTaskDiagnostic("private-review-pending", async () => undefined, async () => { throw new Error("private-publisher-error"); }), async () => { shutdowns++; }), error => {
+    assert(error instanceof AggregateError); assert.equal(error.errors.length, 1);
+    const diagnosticFailure = error.errors[0]; assert(diagnosticFailure instanceof AggregateError); assert.equal(diagnosticFailure.errors.length, 2);
+    assert.equal(diagnosticFailure.errors[0].message, "Training host phase did not complete: private-review-pending.");
+    assert.equal(diagnosticFailure.errors[1].message, "The training task diagnostic could not be recorded."); assert(!diagnosticFailure.message.includes("private-publisher")); return true;
+  });
+  assert.equal(shutdowns, 1);
+});
+
+function assertOwnedDiagnosticTimeout(error: unknown) {
+  assert(error instanceof AggregateError); assert.equal(error.errors.length, 1);
+  const failure = error.errors[0]; assert(failure instanceof AggregateError); assert.equal(failure.errors.length, 2);
+  assert.equal(failure.errors[0].message, "Training host phase did not complete: private-review-pending.");
+  assert.equal(failure.errors[1].message, "The training task diagnostic timed out.");
+  return true;
+}
+
+test("a never-settling page read cannot delay owned shutdown or publish after retirement", async () => {
+  const beforeSet = globalThis.setTimeout, beforeClear = globalThis.clearTimeout;
+  let fire!: () => void, settleRead!: (value: unknown) => void, reads = 0, publications = 0, shutdowns = 0, clears = 0;
+  globalThis.setTimeout = ((callback: () => void, delay: number) => { assert.equal(delay, 2000); fire = callback; return 88; }) as never;
+  globalThis.clearTimeout = ((handle: unknown) => { assert.equal(handle, 88); clears++; }) as never;
+  try {
+    const operation = runOwnedRestartPhase(() => failTrainingWithTaskDiagnostic("private-review-pending", () => { reads++; return new Promise(resolve => { settleRead = resolve; }); }, async () => { publications++; }), async () => { shutdowns++; });
+    const rejected = assert.rejects(operation, assertOwnedDiagnosticTimeout);
+    assert.equal(reads, 1); fire(); await rejected;
+    assert.equal(shutdowns, 1); assert.equal(clears, 1); assert.equal(publications, 0);
+    settleRead({ schemaVersion: "training-host-task-diagnostic-v1", status: "succeeded", errorCode: "unavailable", stage: "completed", errorType: "unavailable", parentQualificationGranted: false });
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(publications, 0); assert.equal(shutdowns, 1); assert.equal(clears, 1);
+  } finally { globalThis.setTimeout = beforeSet; globalThis.clearTimeout = beforeClear; }
+});
+
+test("a never-settling diagnostic publication cannot delay owned shutdown or revise the failed result", async () => {
+  const beforeSet = globalThis.setTimeout, beforeClear = globalThis.clearTimeout;
+  let fire!: () => void, settlePublication!: () => void, publications = 0, shutdowns = 0, clears = 0;
+  globalThis.setTimeout = ((callback: () => void, delay: number) => { assert.equal(delay, 2000); fire = callback; return 89; }) as never;
+  globalThis.clearTimeout = ((handle: unknown) => { assert.equal(handle, 89); clears++; }) as never;
+  try {
+    const operation = runOwnedRestartPhase(() => failTrainingWithTaskDiagnostic("private-review-pending", async () => undefined, () => { publications++; return new Promise(resolve => { settlePublication = resolve; }); }), async () => { shutdowns++; });
+    const rejected = assert.rejects(operation, assertOwnedDiagnosticTimeout);
+    await Promise.resolve(); await Promise.resolve(); assert.equal(publications, 1);
+    fire(); await rejected; assert.equal(shutdowns, 1); assert.equal(clears, 1);
+    settlePublication(); await Promise.resolve(); await Promise.resolve();
+    assert.equal(publications, 1); assert.equal(shutdowns, 1); assert.equal(clears, 1);
+  } finally { globalThis.setTimeout = beforeSet; globalThis.clearTimeout = beforeClear; }
+});
 
 test("the no-install delegate admits only exact declared read-only probes and pip version", () => {
   const probes = new Set(["fixed-readonly-probe"]);

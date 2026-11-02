@@ -50,10 +50,10 @@ class FunctionalHostProfile(unittest.TestCase):
     def test_finite_sources_and_actual_runners_do_not_change_neighbor_bounds(self):
         profile=self.profile();configuration=json.loads((ROOT/CONFIG).read_bytes())["profiles"]
         self.assertLessEqual(len(profile["test_paths"]),100);self.assertLessEqual(len(profile["source_paths"]),200)
-        self.assertEqual(len(configuration["operational-ui"]["test_paths"]),82)
-        # One training use-case test and exact borrowed sources; automatic routing stays fixed.
-        self.assertEqual(len(configuration["operational-ui"]["source_paths"]),190)
-        self.assertEqual(configuration["operational-ui"]["source_paths"][-4:], ["apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx", 'modules/application/use-cases/model/train-model.use-case.ts', 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts', 'modules/application/use-cases/README.md'])
+        self.assertEqual(len(configuration["operational-ui"]["test_paths"]),83)
+        # Training use-case and fake-only worker tests with exact borrowed sources; automatic routing stays fixed.
+        self.assertEqual(len(configuration["operational-ui"]["source_paths"]),193)
+        self.assertEqual(configuration["operational-ui"]["source_paths"][-7:], ["apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx", 'modules/application/use-cases/model/train-model.use-case.ts', 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts', 'modules/application/use-cases/README.md', 'modules/adapters/runtime/python/worker/tasks/train_model.py', 'modules/adapters/runtime/python/worker/tests/test_train_model_task.py', 'modules/adapters/runtime/python/worker/README.md'])
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]),76)
         self.assertNotIn(BORROWED,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
         commands=run_focused_checks.commands(ROOT,profile["test_paths"],exact=True)

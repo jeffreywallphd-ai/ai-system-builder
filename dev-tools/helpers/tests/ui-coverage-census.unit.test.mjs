@@ -108,17 +108,45 @@ const pendingTrainingStartDefinitions = Object.freeze([
     "facts_sha256": "2ef88e6a94c53a4c48e6d8789111a1bc77e967f51538d68a2e54b90e8c787b1c"
   }
 ].map(Object.freeze));
+// Exact current task diagnostics retain real older pins until their source commit.
+// Historical U, form and C fixtures reconstruct their own Git facts below.
+const pendingTrainingTaskDefinitions = Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+    "baseline": "4ff4b0323640cff3e229995c552a8513f1b07551",
+    "committed": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
+    "candidate": "46306c8ff6fca94353247c5e163d69d3ef96aea89392720fe6be08f5dbb50b24",
+    "facts_sha256": "52d8acad2eddd3a8b85ea79fa0d12d48727f580a863202e882ebe9c0af4ec51e"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+    "baseline": "4ff4b0323640cff3e229995c552a8513f1b07551",
+    "committed": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
+    "candidate": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5",
+    "facts_sha256": "1540338a98b70faeeeb6126475c5514c6a630b4b12ff3192c2374e10d715cf65"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+    "baseline": "4ff4b0323640cff3e229995c552a8513f1b07551",
+    "committed": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0",
+    "candidate": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32",
+    "facts_sha256": "86916a3a88ef5d26c158dcafedc7c11d95c8a15010c3a84af44224e522b2ee35"
+  }
+].map(Object.freeze));
 function trainingDefinitionsFor(map) {
   if(map.source_baseline===pendingTrainingDefinitions[0].baseline)return pendingTrainingDefinitions;
   const replaced=new Set(pendingTrainingStartDefinitions.map(row=>row.path));
-  return [...pendingTrainingDefinitions.filter(row=>!replaced.has(row.path)),...pendingTrainingStartDefinitions];
+  const previous=[...pendingTrainingDefinitions.filter(row=>!replaced.has(row.path)),...pendingTrainingStartDefinitions];
+  if([pendingTrainingStartDefinitions[0].baseline,pendingTrainingFormDefinition.baseline].includes(map.source_baseline))return previous;
+  const updated=new Set(pendingTrainingTaskDefinitions.map(row=>row.path));
+  return [...previous.filter(row=>!updated.has(row.path)),...pendingTrainingTaskDefinitions];
 }
 
 function assertCurrentSourceDrift(map, result) {
   if(map.sources.some(row=>row.path===pendingTrainingFormDefinition.source)) result=assertTrainingFormSourceDrift(map,result);
   const expected = [];
   for (const pending of trainingDefinitionsFor(map)) {
-    const source = map.sources.find(row => row.path === pending.path); assert(source);
+    const rows = map.sources.filter(row => row.path === pending.path); assert.equal(rows.length, 1); const source = rows[0];
     assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
     const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.path}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
     assert.equal(source.committed_sha256, sha(committed), "Training commit pins must reference real Git blobs.");
@@ -479,7 +507,7 @@ test("prospective training form binding rejects forged future missing and extra 
   const target=m=>m.sources.find(row=>row.path===pending.source);
   target(map).committed_sha256=pending.committed;
   map.source_baseline=pending.baseline;
-  for(const changed of pendingTrainingStartDefinitions){
+  for(const changed of new Map([...pendingTrainingStartDefinitions,...pendingTrainingTaskDefinitions].map(row=>[row.path,row])).values()){
     const row=map.sources.find(value=>value.path===changed.path);assert(row);
     const original=execFileSync("git",["show",`${pending.baseline}:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
     row.facts=sourceFacts(row.path,original);row.committed_sha256=sha(original);
@@ -504,6 +532,12 @@ test("prospective training form binding rejects forged future missing and extra 
 
 test("pending training-start definitions reject forged missing duplicate and unrelated evidence",()=>{
   const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  // Rebuild the preceding candidate from its real Git version, not current I facts.
+  for(const changed of pendingTrainingTaskDefinitions){
+    const row=map.sources.find(value=>value.path===changed.path);assert(row);
+    const original=execFileSync("git",["show",`${changed.baseline}:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    row.facts=sourceFacts(row.path,original);row.committed_sha256=sha(original);
+  }
   map.source_baseline=pendingTrainingStartDefinitions[0].baseline;
   for(const pending of pendingTrainingStartDefinitions)map.sources.find(row=>row.path===pending.path).committed_sha256=pending.committed;
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
@@ -518,6 +552,27 @@ test("pending training-start definitions reject forged missing duplicate and unr
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign.test.mjs"});},
       (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.source_baseline="0cf2678091e936588b4dfdb5fd9a3911910af3da";},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
+  }
+});
+
+test("pending asynchronous training diagnostics refuse forged future missing duplicate and extra facts",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
+  for(const pending of pendingTrainingTaskDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign-task.test.mjs"});},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
       (m,r)=>{m.source_baseline="0cf2678091e936588b4dfdb5fd9a3911910af3da";},
     ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
   }
