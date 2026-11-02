@@ -12657,8 +12657,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
    "facts": {
-    "sha256": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32",
-    "bytes": 15316,
+    "sha256": "d847a4eb19c454182c0606e7c5732f13cda018d1c392bed69f09d927f6c934c7",
+    "bytes": 15410,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -12668,49 +12668,49 @@
      },
      {
       "name": "qualifyDesktopTrainingJourney",
-      "line": 54
+      "line": 56
      },
      {
       "name": "step",
-      "line": 61
+      "line": 63
      },
      {
       "name": "configure",
-      "line": 66
+      "line": 68
      },
      {
       "name": "dismissNotifications",
-      "line": 79
+      "line": 81
      },
      {
       "name": "refreshInventory",
-      "line": 83
+      "line": 85
      },
      {
       "name": "readSavedRecord",
-      "line": 157
+      "line": 159
      }
     ],
     "assertionCount": 31,
-    "assertionDigest": "0c4f0a70f9ad0a6cf4e28c8fcd99b2747b68b4ee999247e7310bf56713ba6ec6",
+    "assertionDigest": "82135eb8b5eca4c70aafdfe07704988f7c8e6ce0c974f8ca771a3799a6b8638d",
     "assertionExamples": [
      {
-      "line": 86,
+      "line": 88,
       "kind": "expect",
       "sha256": "8b1a4e20ddbb3cb0e7d0eed8599954f90ec5225671ee4de2974c0ecd09e03710"
      },
      {
-      "line": 90,
+      "line": 92,
       "kind": "expect",
       "sha256": "3a369e3f6f97e53c268e617cdb4d3c7e929db54fa6713afe8a6bf4ee81efe9e0"
      },
      {
-      "line": 91,
+      "line": 93,
       "kind": "expect",
       "sha256": "3cdd520de6cd9d84d08d16a578748f6239fdb78389806ed9e938c127e32f7dac"
      },
      {
-      "line": 93,
+      "line": 95,
       "kind": "expect",
       "sha256": "9a6f81f56771d89dd1ff248930f2c7f4bbcfc0a6466ca03719b959255b1bf388"
      }
@@ -12722,8 +12722,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
    "facts": {
-    "sha256": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5",
-    "bytes": 39276,
+    "sha256": "c33950fff4c27f2e4e06dc8075a6a45bd7c16762db58a0aefff9db81c0e371b1",
+    "bytes": 40562,
     "cases": [
      {
       "name": "failed-task observation reads the actual workspace-scoped status once and publishes no IDs or text",
@@ -12866,12 +12866,20 @@
       "line": 366
      },
      {
+      "name": "inventory proof rejects full-model formats on an adapter and adapter formats on the base",
+      "line": 374
+     },
+     {
+      "name": "inventory proof refuses missing and unsafe serialization formats for either model kind",
+      "line": 384
+     },
+     {
       "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
-      "line": 373
+      "line": 394
      },
      {
       "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
-      "line": 385
+      "line": 406
      }
     ],
     "dynamicCases": 1,
@@ -12889,8 +12897,8 @@
       "line": 351
      }
     ],
-    "assertionCount": 201,
-    "assertionDigest": "963867a92e4fb854713f84e6cc1ee9612a0cdcea31865946b04c9066d7f34075",
+    "assertionCount": 203,
+    "assertionDigest": "2c9cdb4d1e8852dada2770d3684d4e17832a1821667614ff32b7520696ee821c",
     "assertionExamples": [
      {
       "line": 28,

@@ -347,7 +347,7 @@ test("training failure details refuse foreign phase/action data without coercion
 
 const readInput = () => ({ workspaceId: trainingWorkspaceId(run), baseModelRecordId: "model.base-fixture", baseName: "Qualified Qwen 0.5B input", displayName: TRAINING_DISPLAY_NAME, requestId: "train-fixture-current" });
 const baseRow = () => ({ workspaceId: trainingWorkspaceId(run), modelRecordId: "model.base-fixture", displayName: "Qualified Qwen 0.5B input", source: "local", lifecycleStatus: "downloaded", artifactForm: "full-model", serializationFormat: "safetensors", localPath: "C:\\private\\original-verified-model" });
-const generatedRow = () => ({ ...baseRow(), modelRecordId: "model.generated-fixture", displayName: TRAINING_DISPLAY_NAME, source: "generated", lifecycleStatus: "generated", artifactForm: "adapter", generatedFromRunId: "train-fixture-current", localPath: "C:\\private\\owned-output" });
+const generatedRow = () => ({ ...baseRow(), modelRecordId: "model.generated-fixture", displayName: TRAINING_DISPLAY_NAME, source: "generated", lifecycleStatus: "generated", artifactForm: "adapter", serializationFormat: "adapter-safetensors", generatedFromRunId: "train-fixture-current", localPath: "C:\\private\\owned-output" });
 async function withInventoryPort(port: (input: unknown) => Promise<unknown>, action: () => Promise<void>) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
   Object.defineProperty(globalThis, "window", { configurable: true, value: { desktopApi: { listModels: port } } });
@@ -369,6 +369,27 @@ test("the real inventory projection accepts only the declared generated input la
     assert.deepEqual(await readTrainingHostInventory(input), { baseModelRecordId: input.baseModelRecordId, generatedRecordIds: [] });
     await assert.rejects(readTrainingHostInventory(readInput()), /could not be confirmed/);
   });
+});
+
+test("inventory proof rejects full-model formats on an adapter and adapter formats on the base", async () => {
+  for (const models of [
+    [baseRow(), { ...generatedRow(), serializationFormat: "safetensors" }],
+    [baseRow(), { ...generatedRow(), serializationFormat: "sharded-safetensors" }],
+    [{ ...baseRow(), serializationFormat: "adapter-safetensors" }, generatedRow()],
+  ]) await withInventoryPort(async () => ({ ok: true, value: { models } }), async () => {
+    await assert.rejects(readTrainingHostInventory(readInput()), /^Error: The training registry read could not be confirmed\.$/);
+  });
+});
+
+test("inventory proof refuses missing and unsafe serialization formats for either model kind", async () => {
+  for (const format of [undefined, null, "", "pickle", "unknown", "private-format"]) {
+    for (const models of [[{ ...baseRow(), serializationFormat: format }, generatedRow()],
+                          [baseRow(), { ...generatedRow(), serializationFormat: format }]]) {
+      await withInventoryPort(async () => ({ ok: true, value: { models } }), async () => {
+        await assert.rejects(readTrainingHostInventory(readInput()), /^Error: The training registry read could not be confirmed\.$/);
+      });
+    }
+  }
 });
 test("inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows", async () => {
   let release!: (value: unknown) => void, settled = false;

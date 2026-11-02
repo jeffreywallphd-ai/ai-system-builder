@@ -32,16 +32,18 @@ export async function readTrainingHostInventory(input: { workspaceId: string; ba
       if (!slot || !("value" in slot)) throw invalid();
       const row: unknown = slot.value, record = id(data(row, "modelRecordId"));
       const local = data(row, "localPath");
-      if (data(row, "workspaceId") !== input.workspaceId || data(row, "serializationFormat") !== "safetensors" ||
+      if (data(row, "workspaceId") !== input.workspaceId ||
           typeof local !== "string" || !local.trim() || local.length > 32768 || /[\0\r\n]/.test(local)) throw invalid();
       if (record === input.baseModelRecordId) {
         if (base || data(row, "displayName") !== input.baseName || data(row, "source") !== "local" ||
-            data(row, "lifecycleStatus") !== "downloaded" || data(row, "artifactForm") !== "full-model") throw invalid();
+            data(row, "lifecycleStatus") !== "downloaded" || data(row, "artifactForm") !== "full-model" ||
+            data(row, "serializationFormat") !== "safetensors") throw invalid();
         base = record;
       } else {
         if (generated.length || !input.requestId || data(row, "displayName") !== input.displayName ||
             data(row, "source") !== "generated" || data(row, "lifecycleStatus") !== "generated" ||
-            data(row, "artifactForm") !== "adapter" || data(row, "generatedFromRunId") !== input.requestId) throw invalid();
+            data(row, "artifactForm") !== "adapter" || data(row, "serializationFormat") !== "adapter-safetensors" ||
+            data(row, "generatedFromRunId") !== input.requestId) throw invalid();
         generated.push(record);
       }
     }
@@ -157,7 +159,7 @@ export async function qualifyDesktopTrainingJourney(page: Page, info: TestInfo, 
     async function readSavedRecord() {
       await refreshInventory(); await expect(savedCard).toHaveCount(1);
       await expect(savedCard).toContainText("generated | generated | adapter");
-      await expect(savedCard).toContainText("Serialization: safetensors | Local files: available");
+      await expect(savedCard).toContainText("Serialization: adapter-safetensors | Local files: available");
       await savedCard.getByRole("button", { name: "Details", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Model details", exact: true });
       const record = dialog.locator("dt").filter({ hasText: /^Record$/ }).locator("xpath=following-sibling::dd[1]");

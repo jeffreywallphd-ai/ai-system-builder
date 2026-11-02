@@ -964,6 +964,18 @@ A failed check or directory change stops before training, without retry or
 fallback. Other profiles and the production worker keep their existing working
 directories. These local checks do not establish native custody or race proof.
 
+The LoRA training journey checks each model's declared format: `safetensors`
+for its full-model input and `adapter-safetensors` for the saved adapter. Missing,
+unsafe or swapped formats fail. The original workspace, task, private review,
+explicit Save, reopen and cleanup checks remain. A coverage definition or a
+partial successful run cannot replace a passing eight-step UI journey.
+
+Coverage tests reuse historical Git bytes only within one test invocation. The
+cache requires a full immutable commit ID and exact source path, bounds entries
+and total bytes, and returns defensive copies. Working files are read freshly.
+This removes repeated Git launches without changing the 45-second wrapper or
+any source-integrity and negative checks.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

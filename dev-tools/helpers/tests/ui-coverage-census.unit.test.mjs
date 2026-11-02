@@ -10,6 +10,27 @@ const file = "dev-tools/example.unit.test.ts", host = "dev-tools/scripts/qualifi
 const code = Buffer.from('import {test,expect} from "fixture"; test("retains scoped records",()=>{expect(1).toBe(1)});');
 const inventoryFile = "modules/contracts/example.ts", inventory = Buffer.from('export const TYPES = ["first", "second"] as const;');
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
+// Immutable full-commit Git objects are read once per test invocation. Keep
+// fresh defensive bytes for every assertion; never cache current working files.
+const historicalGitBytes = new Map();
+let historicalGitTotalBytes = 0;
+function historicalSource(commit, source) {
+  assert.match(commit, /^[a-f0-9]{40}$/);
+  censusPath(source);
+  const key = JSON.stringify([commit, source]);
+  let bytes = historicalGitBytes.get(key);
+  if (!bytes) {
+    assert(historicalGitBytes.size < 64);
+    const original = execFileSync("git", ["show", `${commit}:${source}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
+    assert(original.length <= CENSUS_LIMITS.sourceBytes);
+    assert(historicalGitTotalBytes + original.length <= CENSUS_LIMITS.totalBytes);
+    bytes = Buffer.from(original);
+    historicalGitTotalBytes += bytes.length;
+    historicalGitBytes.set(key, bytes);
+  }
+  return Buffer.from(bytes);
+}
+
 const pendingReviewSiteDefinition = Object.freeze({
   source: "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
   baseline: "79379e6d8618548c03c8eb45bf816c1be9c87080",
@@ -21,7 +42,7 @@ function assertCurrentReviewSiteDrift(map, result) {
   const pending = pendingReviewSiteDefinition;
   const source = map.sources.find(row => row.path === pending.source); assert(source);
   assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
-  const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.source}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
+  const committed = historicalSource(map.source_baseline,pending.source);
   assert.equal(source.committed_sha256, sha(committed), "The recorded committed pin must be a real blob at the declared baseline.");
   const expected = source.facts.sha256 === source.committed_sha256 ? [] : [{ kind: "unreviewed-source-drift", source: pending.source }];
   assert.deepEqual(result.gaps.filter(g => g.kind === "unreviewed-source-drift"), expected, "Only the exact pending review-source definition may retain a drift gap.");
@@ -70,7 +91,7 @@ function assertTrainingFormSourceDrift(map, result) {
   const pending = pendingTrainingFormDefinition;
   const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length,1);
   const row = rows[0]; assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
-  const committed = execFileSync("git",["show",`${map.source_baseline}:${pending.source}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+  const committed = historicalSource(map.source_baseline,pending.source);
   assert.equal(row.committed_sha256,sha(committed),"Training form pins must be real older Git blobs.");
   const expected = row.facts.sha256 === row.committed_sha256 ? [] : [{kind:"unreviewed-source-drift",source:pending.source}];
   if(expected.length) {
@@ -133,13 +154,35 @@ const pendingTrainingTaskDefinitions = Object.freeze([
     "facts_sha256": "86916a3a88ef5d26c158dcafedc7c11d95c8a15010c3a84af44224e522b2ee35"
   }
 ].map(Object.freeze));
+// Canonical adapter-format proof retains real older pins until its reviewed commit.
+const pendingTrainingAdapterDefinitions=Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts",
+    "baseline": "8bbc8aca6cfedc95aec0920f2fcf648b7fda6559",
+    "committed": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32",
+    "candidate": "d847a4eb19c454182c0606e7c5732f13cda018d1c392bed69f09d927f6c934c7",
+    "facts_sha256": "e7f77bdf3e8f8f3da2ffba6f5c7b6a7ee617b2fdb4949d65ec7ce2468a23e0fe"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+    "baseline": "8bbc8aca6cfedc95aec0920f2fcf648b7fda6559",
+    "committed": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5",
+    "candidate": "c33950fff4c27f2e4e06dc8075a6a45bd7c16762db58a0aefff9db81c0e371b1",
+    "facts_sha256": "fcca6e6584ea0c66eaaace645f2fc08d87458917e03a79df869276a9d07c3b9a"
+  }
+].map(Object.freeze));
 function trainingDefinitionsFor(map) {
   if(map.source_baseline===pendingTrainingDefinitions[0].baseline)return pendingTrainingDefinitions;
   const replaced=new Set(pendingTrainingStartDefinitions.map(row=>row.path));
   const previous=[...pendingTrainingDefinitions.filter(row=>!replaced.has(row.path)),...pendingTrainingStartDefinitions];
   if([pendingTrainingStartDefinitions[0].baseline,pendingTrainingFormDefinition.baseline].includes(map.source_baseline))return previous;
   const updated=new Set(pendingTrainingTaskDefinitions.map(row=>row.path));
-  return [...previous.filter(row=>!updated.has(row.path)),...pendingTrainingTaskDefinitions];
+  const task=[...previous.filter(row=>!updated.has(row.path)),...pendingTrainingTaskDefinitions];
+  if(map.source_baseline===pendingTrainingAdapterDefinitions[0].baseline){
+    const adapter=new Set(pendingTrainingAdapterDefinitions.map(row=>row.path));
+    return [...task.filter(row=>!adapter.has(row.path)),...pendingTrainingAdapterDefinitions];
+  }
+  return task;
 }
 
 function assertCurrentSourceDrift(map, result) {
@@ -148,7 +191,7 @@ function assertCurrentSourceDrift(map, result) {
   for (const pending of trainingDefinitionsFor(map)) {
     const rows = map.sources.filter(row => row.path === pending.path); assert.equal(rows.length, 1); const source = rows[0];
     assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
-    const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.path}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
+    const committed = historicalSource(map.source_baseline,pending.path);
     assert.equal(source.committed_sha256, sha(committed), "Training commit pins must reference real Git blobs.");
     if (source.facts.sha256 !== source.committed_sha256) {
       assert.equal(map.source_baseline, pending.baseline);
@@ -397,7 +440,7 @@ test("pending tiny-training bindings reject forged, future, missing and unrelate
   const map = {source_baseline: pendingTrainingDefinitions[0].baseline, sources: current.sources.filter(row=>paths.includes(row.path)).map(row=>{
     const pending=pendingTrainingDefinitions.find(p=>p.path===row.path);
     if(!pending)return row;
-    const original=execFileSync("git",["show",`b3cfef49ea0f3a6cd016f502400b66e0835b339d:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    const original=historicalSource("b3cfef49ea0f3a6cd016f502400b66e0835b339d",row.path);
     const facts=sourceFacts(row.path,original);assert.equal(facts.sha256,pending.candidate);assert.equal(sha(JSON.stringify(facts)),pending.facts_sha256);
     return {...row,facts,committed_sha256:pending.committed};
   })};
@@ -430,7 +473,7 @@ function assertReintroducedTrainingOracle(map,archive) {
   assert.notEqual(row.facts.sha256,historical.facts.sha256);
   assert.notEqual(row.committed_sha256,historical.committed_sha256);
   assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
-  const committed=execFileSync("git",["show",`${map.source_baseline}:${source}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+  const committed=historicalSource(map.source_baseline,source);
   assert.equal(row.committed_sha256,sha(committed));
   if(row.facts.sha256!==row.committed_sha256){
     assert.equal(map.source_baseline,pending.baseline);
@@ -509,7 +552,7 @@ test("prospective training form binding rejects forged future missing and extra 
   map.source_baseline=pending.baseline;
   for(const changed of new Map([...pendingTrainingStartDefinitions,...pendingTrainingTaskDefinitions].map(row=>[row.path,row])).values()){
     const row=map.sources.find(value=>value.path===changed.path);assert(row);
-    const original=execFileSync("git",["show",`${pending.baseline}:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    const original=historicalSource(pending.baseline,row.path);
     row.facts=sourceFacts(row.path,original);row.committed_sha256=sha(original);
   }
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
@@ -535,7 +578,7 @@ test("pending training-start definitions reject forged missing duplicate and unr
   // Rebuild the preceding candidate from its real Git version, not current I facts.
   for(const changed of pendingTrainingTaskDefinitions){
     const row=map.sources.find(value=>value.path===changed.path);assert(row);
-    const original=execFileSync("git",["show",`${changed.baseline}:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    const original=historicalSource(changed.baseline,row.path);
     row.facts=sourceFacts(row.path,original);row.committed_sha256=sha(original);
   }
   map.source_baseline=pendingTrainingStartDefinitions[0].baseline;
@@ -567,8 +610,11 @@ test("pending asynchronous training diagnostics refuse forged future missing dup
   for(const pending of pendingTrainingTaskDefinitions){
     assert.equal(pending.baseline,map.source_baseline);
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
-    const committed=execFileSync("git",["show",`${pending.baseline}:${pending.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    const committed=historicalSource(pending.baseline,pending.path);
     assert.equal(sha(committed),pending.committed,"Pending fixtures retain actual historical Git pins.");
+    const reviewed=historicalSource("8bbc8aca6cfedc95aec0920f2fcf648b7fda6559",pending.path);
+    assert.equal(sha(reviewed),pending.candidate,"Historical task candidates retain their real reviewed Git bytes.");
+    rows[0].facts=sourceFacts(pending.path,reviewed);
     rows[0].committed_sha256=pending.committed;
   }
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
@@ -588,4 +634,45 @@ test("pending asynchronous training diagnostics refuse forged future missing dup
       (m,r)=>{m.source_baseline="0cf2678091e936588b4dfdb5fd9a3911910af3da";},
     ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
   }
+});
+
+test("pending adapter-format definitions refuse forged future missing duplicate and extra facts",()=>{
+  const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
+  const map=structuredClone(current);map.source_baseline=pendingTrainingAdapterDefinitions[0].baseline;
+  for(const pending of pendingTrainingAdapterDefinitions){
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
+    const committed=historicalSource(pending.baseline,pending.path);
+    assert.equal(sha(committed),pending.committed);rows[0].committed_sha256=pending.committed;
+    assert.equal(sha(JSON.stringify(rows[0].facts)),pending.facts_sha256);
+  }
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
+  for(const pending of pendingTrainingAdapterDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign-adapter.test.mjs"});},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{m.source_baseline="0cf2678091e936588b4dfdb5fd9a3911910af3da";},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
+  }
+});
+
+test("historical Git lookup keeps commit and path identity and returns defensive bytes",()=>{
+  const first=pendingTrainingAdapterDefinitions[0],other=pendingTrainingAdapterDefinitions[1];
+  const original=historicalSource(first.baseline,first.path);assert.equal(sha(original),first.committed);
+  original.fill(0);
+  const next=historicalSource(first.baseline,first.path);assert.notStrictEqual(next,original);assert.equal(sha(next),first.committed);
+  assert.equal(sha(historicalSource(other.baseline,other.path)),other.committed);
+  for(const commit of ["HEAD","HEAD~1","", "a".repeat(39)])assert.throws(()=>historicalSource(commit,first.path));
+  for(const name of ["../private.ts","C:/private.ts","docs/../private.ts"])assert.throws(()=>historicalSource(first.baseline,name));
+  assert(historicalGitBytes.size<=64);assert(historicalGitTotalBytes<=CENSUS_LIMITS.totalBytes);
 });
