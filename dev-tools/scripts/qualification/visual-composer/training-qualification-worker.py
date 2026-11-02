@@ -3,12 +3,13 @@
 No model installation, download, accuracy evaluation or fabricated result.
 """
 from __future__ import annotations
+import ast
 import importlib
 import importlib.util
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import stat
 import sys
@@ -143,7 +144,79 @@ def validate_training_request(request, fixture, model_directory, temp_directory,
         inspect_file(temp_directory, Path(row["path"]), 8192)
 
 
-def single_training_dispatch(original, fixture, model_directory, temp_directory, inspect_file=admit_dataset):
+def training_failure_facts(result, cache):
+    """Classify bounded legacy text in memory. Never return that text or a path.
+
+    Message labels are diagnostic hints, not proof of an exception's cause.
+    No filesystem access, supplier import or model execution occurs here.
+    """
+    facts = {"schema_version": "training-failure-facts-v1", "status": "unavailable",
+             "stage": "other", "error_number_kind": None, "error_number": None,
+             "path_kind": "unavailable", "path_characters": None, "windows_path_utf16_units": None,
+             "windows_legacy_path_limit_exceeded": None,
+             "parent_qualification_granted": False}
+    if type(result) is not dict:
+        return facts
+    error = result.get("error")
+    if type(error) is not dict or type(error.get("code")) is not str or error["code"] != "training_failed":
+        return facts
+    details = error.get("details")
+    if type(details) is dict and type(details.get("stage")) is str and details["stage"] == "dataset-loading":
+        facts["stage"] = "dataset-loading"
+    message = error.get("message")
+    if type(message) is not str or not 0 < len(message) <= 16384:
+        return facts
+    # Full-match the builtin OSError rendering only. Arbitrary prose and nested
+    # provider messages never become paths or trusted error identities.
+    match = re.fullmatch(r"\[(Errno|WinError) ([0-9]{1,3})\] [^:\r\n]{1,160}: (['\"])([^\r\n]{1,2048})\3", message)
+    if match is None:
+        return facts
+    kind, number, quote, raw_path = match.groups()
+    number = int(number)
+    if number not in ({2, 3, 5, 206} if kind == "WinError" else {2, 5, 13, 22, 28, 36}):
+        return facts
+    # OSError uses repr(filename): count the decoded path, not doubled Windows
+    # backslashes. literal_eval admits no calls, attributes or executable code.
+    try:
+        raw_path = ast.literal_eval(quote + raw_path + quote)
+    except (SyntaxError, ValueError):
+        return facts
+    if type(raw_path) is not str or not raw_path or not raw_path.isprintable():
+        return facts
+    path, owned = PureWindowsPath(raw_path), PureWindowsPath(str(cache))
+    if not path.is_absolute() or ".." in path.parts:
+        return facts
+    facts.update(status="classified", error_number_kind="winerror" if kind == "WinError" else "errno",
+                 error_number=number, path_kind="other", path_characters=len(raw_path),
+                 windows_path_utf16_units=len(raw_path.encode("utf-16-le")) // 2,
+                 windows_legacy_path_limit_exceeded=len(raw_path.encode("utf-16-le")) // 2 >= 260)
+    if path.is_relative_to(owned):
+        facts["path_kind"] = "owned-cache-lock" if path.suffix == ".lock" else "owned-cache-file"
+    return facts
+
+
+def write_training_failure_facts(result, cache):
+    """One fixed, exclusive leaf in the already admitted fresh test cache.
+
+    This is local qualification evidence, not native custody or a test pass.
+    The caller isolates diagnostic failure from the actual training result.
+    """
+    if not cache.is_absolute() or cache.resolve() != cache or not cache.is_dir():
+        deny()
+    info = cache.lstat()
+    if cache.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+        deny()
+    payload = (json.dumps(training_failure_facts(result, cache), separators=(",", ":")) + "\n").encode("utf8")
+    if len(payload) > 1024:
+        deny()
+    target = cache / "qualification-training-failure.json"
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(payload)
+
+
+def single_training_dispatch(original, fixture, model_directory, temp_directory, inspect_file=admit_dataset,
+                             failure_observer=None):
     used = False
 
     def dispatch(request):
@@ -152,8 +225,17 @@ def single_training_dispatch(original, fixture, model_directory, temp_directory,
             deny()
         validate_training_request(request, fixture, model_directory, temp_directory, inspect_file)
         used = True
-        # Return the original result unchanged, including failure/cancellation.
-        return original(request)
+        result = original(request)
+        if (failure_observer is not None and type(result) is dict and
+                type(result.get("status")) is str and result["status"] == "failed"):
+            try:
+                failure_observer(result)
+            except Exception:
+                # Missing diagnostic evidence stays missing; never retry, hide
+                # the original failure, or manufacture a successful task.
+                pass
+        # Preserve exact return identity, including failure/cancellation.
+        return result
     return dispatch
 
 
@@ -211,7 +293,8 @@ def main():
     spec.loader.exec_module(module)
     host, port = module._resolve_launch_configuration()  # Real token and loopback guard.
     application = importlib.import_module("_ai_system_builder_worker.app")
-    application._run_task = single_training_dispatch(application._run_task, fixture, model, temp)
+    application._run_task = single_training_dispatch(application._run_task, fixture, model, temp,
+        failure_observer=lambda result: write_training_failure_facts(result, cache))
     application._ensure_model_download_data = deny_download
     with (cache / f"qualification-worker-identity-{os.getpid()}.json").open("x", encoding="utf-8") as stream:
         json.dump({"pid": os.getpid(), "parentPid": os.getppid(), "scenario": "training-model-host"}, stream)

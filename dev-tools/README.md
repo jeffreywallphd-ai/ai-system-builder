@@ -928,6 +928,15 @@ The latest real run completed form configuration but failed before an accepted
 training task was observed. Its cause remains unknown. These diagnostics do not
 close that real-host check or qualify model quality, offloading or crash recovery.
 
+The fixed offline training worker also records a failure-only local summary. It
+classifies a bounded file-error message in memory and writes only known error
+numbers, path length and cache-file categories to one exclusive file in the fresh
+test cache. It does not save the message or path, read the reported file, retry
+training, or change the original task result. Missing or malformed facts stay
+unavailable. A long-path reproduction is a diagnostic clue, not proof that it
+caused a real training failure. Actual training, private review, Save and reopen
+still require a successful focused host journey.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

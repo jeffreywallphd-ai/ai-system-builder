@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import unittest
 import tempfile
 import os
+import json
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("training_worker", Path(__file__).parents[1] / "visual-composer/training-qualification-worker.py")
@@ -145,6 +146,160 @@ class TrainingQualificationWorkerTests(unittest.TestCase):
             offsets=iter((100,200))
             with patch.object(worker.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(ValueError):
                 worker._source_identity_bytes(root,file)
+
+
+class TrainingFailureFactsTests(unittest.TestCase):
+    cache = Path("C:/owned-test/controlled-model-cache")
+
+    @staticmethod
+    def failed(message, **details):
+        return {"status": "failed", "error": {"code": "training_failed", "message": message,
+                "details": {"stage": "dataset-loading", "errorType": "OtherError", **details}}}
+
+    def test_long_owned_lock_is_classified_without_serializing_text_or_path(self):
+        path = str(self.cache / "datasets" / ("x" * 255 + ".lock"))
+        facts = worker.training_failure_facts(self.failed(str(FileNotFoundError(2, "No such file or directory", path))), self.cache)
+        self.assertEqual(facts, {"schema_version": "training-failure-facts-v1", "status": "classified",
+            "stage": "dataset-loading", "error_number_kind": "errno", "error_number": 2,
+            "path_kind": "owned-cache-lock", "path_characters": len(path),
+            "windows_path_utf16_units": len(path),
+            "windows_legacy_path_limit_exceeded": True, "parent_qualification_granted": False})
+        self.assertNotIn(str(self.cache), json.dumps(facts))
+        self.assertNotIn("No such file", json.dumps(facts))
+
+    def test_windows_error_and_owned_nonlock_keep_only_closed_labels(self):
+        path = str(self.cache / "datasets" / "private-data.arrow")
+        facts = worker.training_failure_facts(self.failed(f"[WinError 5] Access is denied: {path!r}"), self.cache)
+        self.assertEqual((facts["error_number_kind"], facts["error_number"], facts["path_kind"]),
+                         ("winerror", 5, "owned-cache-file"))
+        self.assertFalse(facts["windows_legacy_path_limit_exceeded"])
+        self.assertNotIn("private-data", json.dumps(facts))
+
+    def test_foreign_path_is_not_read_or_mislabeled_owned(self):
+        for path in ("C:/owned-test/controlled-model-cache-other/secret.lock", "D:/foreign/private.lock"):
+            with self.subTest(path=path), patch.object(Path, "open", side_effect=AssertionError("no reads")):
+                facts = worker.training_failure_facts(self.failed(f"[Errno 13] Private marker: '{path}'"), self.cache)
+                self.assertEqual(facts["path_kind"], "other")
+                self.assertNotIn("Private marker", json.dumps(facts))
+                self.assertNotIn("secret", json.dumps(facts))
+
+    def test_real_builtin_escaped_windows_path_has_exact_decoded_length(self):
+        path = "C:\\owned-test\\controlled-model-cache\\datasets\\private's-é.lock"
+        message = str(FileNotFoundError(2, "No such file or directory", path))
+        facts = worker.training_failure_facts(self.failed(message), self.cache)
+        self.assertEqual((facts["status"], facts["path_kind"], facts["path_characters"]),
+                         ("classified", "owned-cache-lock", len(path)))
+        self.assertNotIn("private", json.dumps(facts))
+
+    def test_path_threshold_uses_decoded_length_and_invalid_literals_are_unavailable(self):
+        prefix = "C:\\owned-test\\controlled-model-cache\\datasets\\"
+        for length in (259, 260):
+            path = prefix + "x" * (length - len(prefix) - 5) + ".lock"
+            facts = worker.training_failure_facts(self.failed(str(FileNotFoundError(2, "Missing", path))), self.cache)
+            self.assertEqual(facts["path_characters"], length)
+            self.assertEqual(facts["windows_legacy_path_limit_exceeded"], length >= 260)
+        for literal in ("'C:/private\\nsecret'", "'C:/private\\x00secret'", "'C:/private' + malicious() + 'secret'", "'C:/private\\xZZ'"):
+            facts = worker.training_failure_facts(self.failed("[Errno 2] Missing: " + literal), self.cache)
+            self.assertEqual(facts["status"], "unavailable")
+
+    def test_windows_threshold_counts_utf16_units_for_astral_characters(self):
+        prefix = "C:\\owned-test\\controlled-model-cache\\datasets\\"
+        for units in (259, 260):
+            path = prefix + "x" * (units - len(prefix) - 7) + "\U0001f9ea.lock"
+            self.assertEqual(len(path.encode("utf-16-le")) // 2, units)
+            facts = worker.training_failure_facts(self.failed(str(FileNotFoundError(2, "Missing", path))), self.cache)
+            self.assertEqual(facts["path_characters"], units - 1)
+            self.assertEqual(facts["windows_path_utf16_units"], units)
+            self.assertEqual(facts["windows_legacy_path_limit_exceeded"], units >= 260)
+
+    def test_unknown_nested_oversized_and_noncanonical_messages_stay_unavailable(self):
+        for message in (None, {}, "", "x" * 16385, "synthetic-secret-token", "Nested: [Errno 2] Missing: 'C:/secret'",
+                        "[Errno 999] Missing: 'C:/secret'", "[WinError 999] Missing: 'C:/secret'",
+                        "[Errno 2] Missing: 'relative/secret'", "[Errno 2] Missing: 'C:/owned-test/../secret'",
+                        "[Errno 2] Missing: 'C:/secret'\nprivate"):
+            facts = worker.training_failure_facts(self.failed(message), self.cache)
+            self.assertEqual(facts["status"], "unavailable")
+            self.assertIsNone(facts["error_number"])
+            self.assertIsNone(facts["path_characters"])
+            self.assertNotIn("secret", json.dumps(facts))
+
+    def test_custom_mappings_strings_and_fields_are_not_evaluated(self):
+        class DangerousDict(dict):
+            def get(self, *_): raise AssertionError("custom get evaluated")
+        class DangerousString(str):
+            def __eq__(self, _): raise AssertionError("custom equality evaluated")
+        class Dangerous:
+            def __eq__(self, _): raise AssertionError("custom equality evaluated")
+            def __str__(self): raise AssertionError("custom stringify evaluated")
+        variants = [DangerousDict(), None, Dangerous(), {"error": DangerousDict()},
+                    {"error": {"code": Dangerous()}}, {"error": {"code": DangerousString("training_failed")}},
+                    self.failed(DangerousString("private")), self.failed(Dangerous(), stage=Dangerous()),
+                    {"error": {"code": "training_failed", "details": DangerousDict()}}]
+        for value in variants:
+            self.assertEqual(worker.training_failure_facts(value, self.cache)["status"], "unavailable")
+
+    def test_exclusive_fixed_leaf_is_bounded_and_never_overwritten(self):
+        with tempfile.TemporaryDirectory(prefix="training-failure-facts-") as folder:
+            cache = Path(folder).resolve()
+            result = self.failed("synthetic-secret-token C:/private/path")
+            worker.write_training_failure_facts(result, cache)
+            target = cache / "qualification-training-failure.json"
+            before = target.read_bytes()
+            self.assertLessEqual(len(before), 1024)
+            self.assertNotIn(b"synthetic-secret-token", before)
+            self.assertNotIn(b"C:/private", before)
+            with self.assertRaises(FileExistsError): worker.write_training_failure_facts(result, cache)
+            self.assertEqual(target.read_bytes(), before)
+            self.assertEqual([file.name for file in cache.iterdir()], [target.name])
+
+    def test_missing_or_relative_cache_is_denied_without_creation(self):
+        with tempfile.TemporaryDirectory(prefix="training-failure-missing-") as folder:
+            missing = Path(folder).resolve() / "missing"
+            for cache in (missing, Path("relative-cache")):
+                with self.assertRaises(ValueError): worker.write_training_failure_facts(self.failed("private"), cache)
+            self.assertFalse(missing.exists())
+
+    def test_one_failed_dispatch_preserves_result_identity_even_when_observer_fails(self):
+        fixture = TrainingQualificationWorkerTests();fixture.setUp()
+        result = self.failed("synthetic-private")
+        observed = []
+        def observer(actual):
+            observed.append(actual)
+            raise OSError("synthetic-private-observer-error")
+        dispatch = worker.single_training_dispatch(lambda _: result, fixture.fixture, fixture.model, fixture.temp,
+                                                   lambda *_: None, observer)
+        self.assertIs(dispatch(fixture.request), result)
+        self.assertIs(observed[0], result)
+        with self.assertRaises(ValueError): dispatch(fixture.request)
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(result, self.failed("synthetic-private"))
+
+    def test_success_cancellation_nonresults_and_malformed_status_do_not_observe(self):
+        fixture = TrainingQualificationWorkerTests();fixture.setUp()
+        class Dangerous:
+            def __eq__(self, _): raise AssertionError("status equality evaluated")
+        for result in ({"status": "completed"}, {"status": "cancelled"}, {"status": Dangerous()}, "original", None):
+            observed=[]
+            dispatch = worker.single_training_dispatch(lambda _: result, fixture.fixture, fixture.model, fixture.temp,
+                                                       lambda *_: None, observed.append)
+            self.assertIs(dispatch(fixture.request), result)
+            self.assertEqual(observed, [])
+
+    def test_rejected_request_and_raised_original_never_invoke_observer(self):
+        fixture = TrainingQualificationWorkerTests();fixture.setUp();observed=[];calls=[]
+        dispatch = worker.single_training_dispatch(lambda _: calls.append(True), fixture.fixture, fixture.model, fixture.temp,
+                                                   lambda *_: None, observed.append)
+        fixture.request.taskType = "foreign"
+        with self.assertRaises(ValueError): dispatch(fixture.request)
+        self.assertEqual((calls,observed),([],[]))
+        fixture.request.taskType = "train-model"
+        error=RuntimeError("synthetic-private")
+        def fail(_): raise error
+        dispatch = worker.single_training_dispatch(fail, fixture.fixture, fixture.model, fixture.temp,
+                                                   lambda *_: None, observed.append)
+        with self.assertRaises(RuntimeError) as actual: dispatch(fixture.request)
+        self.assertIs(actual.exception,error)
+        self.assertEqual(observed,[])
 
 
 if __name__ == "__main__": unittest.main()
