@@ -12,6 +12,7 @@ REFERENCE = 'docs/operations/roadmap-supporting-work.json'
 CONSOLIDATION = 'docs/security/security-roadmap-consolidation.json'
 RETIREMENT = 'docs/operations/retired-run-test-roadmap.json'
 ROADMAP_ENGINE = 'skills/manage-implementation-roadmaps/scripts/roadmap.py'
+MAX_SUPPORT_LINKS = 1000  # Whole document is still limited to 1 MiB.
 
 
 def criterion_definitions(state):
@@ -208,7 +209,7 @@ def enrich(root: Path, roadmaps: list, records: dict, diagnostics: list) -> None
             if key not in criteria or key in seen_labels:
                 raise ValueError('unknown or duplicate criterion label')
             text(label['title'], limit=200); seen_labels.add(key); labels.append((key,label))
-        for link in _list(document['links']):
+        for link in _list(document['links'], MAX_SUPPORT_LINKS):
             keys = {'roadmap_id','increment_id','criterion_id','work_id','work_criteria','receipt_digest','review_digest','scope','limitations'}
             fields(link, keys, keys)
             key = _identity(link); identifier(link['work_id'])

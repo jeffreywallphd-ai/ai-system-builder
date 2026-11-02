@@ -14245,6 +14245,55 @@
           "The worker shutdown, complete logs and handle cleanup were independently checked."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af1d0edcacd9a8751e2547a38cc1d898c70be9bb53fff79b436d1b281343ab25",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for the original model input records.",
+          "All 36 record checks and their related checks passed.",
+          "Input records do not prove that real files are safe to use."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8f9321374bbd222ece7b03e115598549cbafb285809badbbf73ce6574375ba86",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5cf72af5dc87414161d864ca93fad4688ca90d901aefb43f8a2dffbc222e310f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are source-code and simulated checks.",
+          "Low-memory mode remains unavailable until the actual checks pass.",
+          "Existing memory and disk limits stay in force.",
+          "Unknown temporary files still use the full 12 GiB allowance."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bc91044ea12f22b2172d77b10a255bc684bf1b8b8d70415f08c69db1806ec586",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added private code to hold and check the original model files.",
+          "All 69 simulated checks and five related check groups passed.",
+          "Independent review found a cleanup flaw, which the agent fixed and tested.",
+          "This code is not connected to model loading yet."
+        ]
+      }
     }
   ]
 }

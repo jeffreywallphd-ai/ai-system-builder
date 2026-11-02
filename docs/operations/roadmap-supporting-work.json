@@ -9011,6 +9011,86 @@
         "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
         "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "complete-original-offload-inventory-binding-and-profile-docs",
+      "work_criteria": [
+        "bounded-effect-free-original-inventory-binding",
+        "substitution-drift-and-safe-denial-regressions",
+        "exact-focused-routing-and-honest-owned-checkpoint"
+      ],
+      "receipt_digest": "912383008f6eb646359a82550169b902a1c4c22cff4d366202e8284263342e99",
+      "review_digest": "874c5d8a366fa778387e2582b2f8b5e91f8516c4c44b93bf38e57dbdf1f2a174",
+      "scope": "The agent added checks for the original model input records. All 36 record checks and their related checks passed. Input records do not prove that real files are safe to use.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use.",
+        "These are source-code and simulated checks. Low-memory mode remains unavailable until the actual checks pass. Existing memory and disk limits stay in force. Unknown temporary files still use the full 12 GiB allowance."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "complete-original-offload-inventory-binding-and-profile-docs",
+      "work_criteria": [
+        "bounded-effect-free-original-inventory-binding",
+        "substitution-drift-and-safe-denial-regressions",
+        "exact-focused-routing-and-honest-owned-checkpoint"
+      ],
+      "receipt_digest": "912383008f6eb646359a82550169b902a1c4c22cff4d366202e8284263342e99",
+      "review_digest": "874c5d8a366fa778387e2582b2f8b5e91f8516c4c44b93bf38e57dbdf1f2a174",
+      "scope": "The agent added checks for the original model input records. All 36 record checks and their related checks passed. Input records do not prove that real files are safe to use.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use.",
+        "These are source-code and simulated checks. Low-memory mode remains unavailable until the actual checks pass. Existing memory and disk limits stay in force. Unknown temporary files still use the full 12 GiB allowance."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "implement-unused-original-model-source-owner",
+      "work_criteria": [
+        "original-read-only-source-api-and-owner",
+        "finite-graph-original-custody-and-retirement",
+        "model-free-source-qualification-and-honest-limits"
+      ],
+      "receipt_digest": "caeebd1e1824b5039b871c91da64ad0ce7aa5b02a707e2e06d6b32495d972cce",
+      "review_digest": "0a0297d0fdb15a55448c88feaf83d29f17e50fe737f56619140545bde48c05c2",
+      "scope": "The agent added private code to hold and check the original model files. All 69 simulated checks and five related check groups passed. Independent review found a cleanup flaw, which the agent fixed and tested. This code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use.",
+        "These are source-code and simulated checks. Low-memory mode remains unavailable until the actual checks pass. Existing memory and disk limits stay in force. Unknown temporary files still use the full 12 GiB allowance."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "implement-unused-original-model-source-owner",
+      "work_criteria": [
+        "original-read-only-source-api-and-owner",
+        "finite-graph-original-custody-and-retirement",
+        "model-free-source-qualification-and-honest-limits"
+      ],
+      "receipt_digest": "caeebd1e1824b5039b871c91da64ad0ce7aa5b02a707e2e06d6b32495d972cce",
+      "review_digest": "0a0297d0fdb15a55448c88feaf83d29f17e50fe737f56619140545bde48c05c2",
+      "scope": "The agent added private code to hold and check the original model files. All 69 simulated checks and five related check groups passed. Independent review found a cleanup flaw, which the agent fixed and tested. This code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use.",
+        "These are source-code and simulated checks. Low-memory mode remains unavailable until the actual checks pass. Existing memory and disk limits stay in force. Unknown temporary files still use the full 12 GiB allowance."
+      ]
     }
   ]
 }

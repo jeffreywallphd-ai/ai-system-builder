@@ -52,6 +52,14 @@ records, labeled separately. Passing criteria never marks a planned chunk
 complete. Legacy roadmap declarations retain their evidence label and never
 gain invented receipts or review attestations.
 
+The support registry accepts up to 1,000 links within its existing 1 MiB document
+limit. All previous links remain versioned. Complete configuration validation
+precedes publication: an oversized file, a 1,001st link, a duplicate, an unknown
+target or a malformed final row rejects the configuration without displaying a
+partial accepted prefix. Existing field and smaller-list bounds stay unchanged.
+Each displayed link retains its checked historical receipt and review lineage;
+it does not qualify the current candidate or complete its parent criterion.
+
 The Roadmaps view shows Open Roadmaps first and Completed Roadmaps afterward.
 Completion uses only the roadmap's top-level completion status, never increment
 or work-item progress. The canonical status is `completed`; legacy `complete` and

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from control_plane.common import digest
 from control_plane.projection import project
-from control_plane.supporting_work import CONSOLIDATION, RETIREMENT, criterion_definitions
+from control_plane.supporting_work import CONSOLIDATION, RETIREMENT, criterion_definitions, enrich
 
 ENGINE_PATH = 'skills/manage-implementation-roadmaps/scripts/roadmap.py'
 ENGINE_SOURCE = Path(__file__).resolve().parents[3] / ENGINE_PATH
@@ -248,6 +248,93 @@ class ConsolidationTests(unittest.TestCase):
         self.assertEqual(increment['offline_acceptance'][0]['status'], 'offline-user-owned')
         self.assertIn('Participant acceptance only', increment['offline_acceptance'][0]['criteria'][0]['description'])
         self.assertEqual(owner['status'], 'blocked')
+
+
+class SupportRegistryCapacityTests(unittest.TestCase):
+    """Growing valid history stays visible without relaxing document/row checks."""
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix='support-capacity-')
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.path = self.root / 'docs/operations/roadmap-supporting-work.json'
+        self.path.parent.mkdir(parents=True)
+        self.roadmaps = [{'id':'owner','status':'executing','increments':[{
+            'id':'increment','criteria':[{'id':'check','outcome':'pending'}]}]}]
+        self.original = copy.deepcopy(self.roadmaps)
+        self.document = {'schema_version':'roadmap-supporting-work-v1',
+            'agent_only_roadmaps':['owner'],'criterion_labels':[],'successors':[],'links':[]}
+
+    def links(self, count):
+        self.document['links'] = [{'roadmap_id':'owner','increment_id':'increment',
+            'criterion_id':'check','work_id':f'component-{i:04d}','work_criteria':['source'],
+            'receipt_digest':'a'*64,'review_digest':'b'*64,
+            'scope':'Reviewed source component only.',
+            'limitations':['No actual runtime or parent qualification.']} for i in range(count)]
+
+    def run_projection(self, records=None):
+        self.path.write_text(json.dumps(self.document),encoding='utf8')
+        diagnostics=[]
+        enrich(self.root,self.roadmaps,records or {'work_items':{}},diagnostics)
+        return diagnostics
+
+    def assert_rejected_without_prefix_decoration(self):
+        self.assertEqual(self.run_projection(),[{'code':'projection.supporting-work-unavailable'}])
+        self.assertEqual(self.roadmaps,self.original)
+
+    def test_valid_history_grows_past500_without_hiding_old_links(self):
+        self.links(504)
+        self.assertEqual(self.run_projection(),[])
+        criterion=self.roadmaps[0]['increments'][0]['criteria'][0]
+        rows=criterion['supporting_work']
+        self.assertEqual([v['work_id'] for v in rows],[v['work_id'] for v in self.document['links']])
+        self.assertTrue(all(v['status']=='record-unavailable' and v['current_qualification']=='not-asserted' for v in rows))
+        self.assertEqual(criterion['outcome'],'pending')
+        self.assertEqual(self.roadmaps[0]['status'],'executing')
+
+    def test_inclusive500_501_and1000_link_boundaries(self):
+        for count in (500,501,1000):
+            with self.subTest(count=count):
+                self.roadmaps=copy.deepcopy(self.original);self.links(count)
+                self.assertEqual(self.run_projection(),[])
+                self.assertEqual(len(self.roadmaps[0]['increments'][0]['criteria'][0]['supporting_work']),count)
+                self.assertLessEqual(self.path.stat().st_size,1024*1024)
+
+    def test1001_links_still_deny_the_whole_configuration(self):
+        self.links(1001)
+        self.assert_rejected_without_prefix_decoration()
+        self.assertLess(self.path.stat().st_size,1024*1024)
+
+    def test_existing1MiB_document_limit_denies_large_valid_shaped_rows(self):
+        self.links(500)
+        for row in self.document['links']:
+            row['scope']='s'*500
+            row['limitations']=['l'*1500,'m'*1500]
+        self.assert_rejected_without_prefix_decoration()
+        self.assertGreater(self.path.stat().st_size,1024*1024)
+
+    def test_duplicate_after500_does_not_publish_an_accepted_prefix(self):
+        self.links(504);self.document['links'][-1]=copy.deepcopy(self.document['links'][0])
+        self.assert_rejected_without_prefix_decoration()
+
+    def test_unknown_target_after500_does_not_publish_a_prefix(self):
+        self.links(504);self.document['links'][-1]['criterion_id']='foreign'
+        self.assert_rejected_without_prefix_decoration()
+
+    def test_malformed_tail_keeps_full_admission_and_field_bounds(self):
+        for key,value in [('receipt_digest','z'*64),('work_criteria',[]),('work_criteria',['source']*101),
+                          ('scope','s'*501),('limitations',['limit']*13),('current_qualification','passed')]:
+            with self.subTest(field=key,value_size=len(value)):
+                self.links(504);self.document['links'][-1][key]=value
+                self.assert_rejected_without_prefix_decoration()
+
+    def test_unverified_lineage_never_completes_a_criterion_at_new_capacity(self):
+        self.links(504)
+        records={'work_items':{row['work_id']:{'status':'active'} for row in self.document['links']}}
+        self.assertEqual(self.run_projection(records),[])
+        criterion=self.roadmaps[0]['increments'][0]['criteria'][0]
+        self.assertTrue(all(row['status']=='unverified-support' for row in criterion['supporting_work']))
+        self.assertEqual(criterion['outcome'],'pending')
+        self.assertEqual(self.roadmaps[0]['status'],'executing')
 
 
 if __name__ == '__main__':
