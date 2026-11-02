@@ -1044,7 +1044,7 @@ omits the supplier folder argument. It still creates its owned staging marker
 and keeps the same positive reservation, disk checks and cleanup rules. This is
 not a mode with no file writes.
 
-The ordinary lifecycle profile now contains eighteen model-free test files. A
+The ordinary lifecycle profile now contains nineteen model-free test files. A
 separate tiny CPU supplier fixture needs an explicitly bounded offline run. That
 fixture checks compatibility and cleanup only. Production low-memory admission,
 retained-file protection, shared durable accounting, original-reference and
@@ -1065,3 +1065,19 @@ unavailable pending native/source/ancestor protection, shared durable accounting
 model-worker/crash and retained-restart proof, and actual offload resources,
 delivery and cleanup. Unknown usage still consumes 12 GiB. Accepted model
 accuracy and OCR stay closed. Full-system tests follow feature implementation.
+
+## Check the original model input records
+
+No user action is needed. The agent added and tested an in-memory record binding
+before implementing native source-file handling. It rejects malformed, copied,
+substituted and changed input records without opening files or starting a model.
+The ordinary lifecycle profile includes its synthetic tests. Tensor sizes must
+fit each declared model file, including its bounded header.
+
+These checks do not prove that files exist, came from the inspector or remain
+unchanged. They grant no native operation or disk capacity. The original 20 GiB
+model-source limit and separate 12 GiB staging limit stay unchanged. Actual file
+and ancestor protection, finite execution, shared accounting, model-worker and
+restart safeguards, and offload resource checks remain pending agent work.
+Accepted accuracy/OCR stay closed. Full-system tests remain deferred until all
+requested feature implementation is worked through.

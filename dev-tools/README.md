@@ -1804,10 +1804,15 @@ and actual model resources remain separate qualification.
 
 ## Safe-weight supplier boundary tests
 
-The `offload-resource-lifecycle` profile contains eighteen fixed model-free files,
+The `offload-resource-lifecycle` profile contains nineteen fixed model-free files,
 including `qualification/tests/test_offload_supplier_boundary.py`. This suite
 reuses only the fake loader harness. It checks the omitted supplier folder, strict
 in-memory index validation, positive owned staging and guarded-readiness denial.
+
+The profile also includes the inert original-inventory binding tests. They
+check structure, original-object/immutable-fact drift and safe denial without
+opening files, loading models or issuing native/budget authority. Actual held
+source bytes and native/source-owner qualification remain separate.
 
 `test_bounded_model_loader_native.py` is an explicit controlled fixture. Default,
 exact and profile focused selection refuse to execute it. Source changes to the

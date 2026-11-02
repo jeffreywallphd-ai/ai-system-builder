@@ -1671,6 +1671,29 @@ unknown retained sources are not inspected, adopted, moved, deleted or changed.
 Model-free unit and native fixture evidence remain separate from parent closure.
 
 
+### Inert original model inventory binding
+
+The private source-input component validates only an original in-memory
+`LocalModelInventory`. Exact classes and primitive field shapes are checked
+before callbacks or equality on untrusted values. Names, counts, config bytes,
+file-size/hash records, tensor metadata and the ordered source digest are bounded.
+Each complete per-shard tensor payload must fit the declared file size with its
+eight-byte prefix and the existing bounded header. Capture rechecks the original
+records before returning; this is not an atomic or filesystem ownership claim.
+Original-object and field-reference identity plus an independently captured
+immutable value snapshot reject later drift. Copy, deep-copy and serialization
+transfer are denied; fixed representation and errors disclose no path or data.
+
+A manually constructed valid record can pass: this is no inspector-issuance or
+file-integrity proof, and is not isolation from malicious code in the same Python
+process. There is no file/native/provider/model IO, budget reservation, borrower,
+callback port, native readiness, handle or staging credit. The existing source
+20 GiB and staging 12 GiB limits remain separate. Actual source/ancestor guards,
+absent-optional-file discovery, whole finite-operation/terminal reservation,
+native retirement, shared journal/model worker and restart qualification remain
+pending. The unavailable production factory, unknown full staging charge,
+Standard loading and accepted accuracy/OCR are unchanged.
+
 ## Guarded offload lifecycle consumer delta
 
 The private parent/worker context reaches the actual generator factory/cache,

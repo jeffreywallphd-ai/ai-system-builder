@@ -1502,7 +1502,7 @@ a later observer test does not convert that receipt or a parent criterion to a
 pass. No user action is needed for this agent-owned compatibility repair.
 
 The `offload-resource-lifecycle` profile also owns the fixed read-session entry,
-fixture and two ordinary synthetic test files. Its eighteen fixed files test
+fixture and two ordinary synthetic test files. Its nineteen fixed files test
 closed planning, original-generation fault control and strict cancellation/exit
 oracles. The ordinary profile never invokes `--native`, Windows APIs, a real
 worker, a model or accuracy. Exact standalone Windows effects require their own
@@ -1512,8 +1512,9 @@ shared-domain, production, resource or parent-roadmap qualification.
 
 ### Safe-weight supplier fixture isolation
 
-The lifecycle profile adds the pure supplier boundary suite as its eighteenth
-model-free file. The separate native loader fixture is a source trigger, not a
+The lifecycle profile includes the pure supplier boundary suite and inert
+original-inventory binding tests in its nineteen model-free files. The separate
+native loader fixture is a source trigger, not a
 profile test. Its controlled filename is excluded from ordinary owner selection
 and denied by exact/profile selection. An explicitly bounded offline fixture run
 is separate evidence; it cannot qualify real model accuracy, production admission,

@@ -840,3 +840,21 @@ failure evidence. It does not copy the legacy raw error message. Fake-supplier
 regressions exercise each stage without importing Torch or loading a model.
 This source change needs a fresh package and real UI qualification; it does not
 qualify training outcomes, model accuracy, native resources or offload recovery.
+
+## Original model inventory binding
+
+`tasks/windows_offload_sources.py` validates and binds the original in-memory
+`LocalModelInventory` without file access, callbacks or runtime imports. Exact
+classes, primitive shapes, finite counts, canonical file names, config/hash and
+per-shard tensor totals with bounded header space are checked. Later checks require the same inventory,
+original field references and independently captured immutable facts. Copy,
+deep-copy and pickle transfer are denied. The representation and failures expose
+no input paths or contents.
+
+A manually constructed structurally valid inventory can pass. This is not proof
+of inspector issuance, file bytes or a native source owner. The 20 GiB source
+ceiling is separate from the unchanged 12 GiB staging ceiling. No budget, handle,
+borrower, staging credit, production readiness or guarded context is issued.
+Actual original file/ancestor references, absent-file discovery, finite execution
+and terminal-call reservation, guards, cleanup and native qualification remain
+pending. Standard loading and accepted model accuracy/OCR stay unchanged.
