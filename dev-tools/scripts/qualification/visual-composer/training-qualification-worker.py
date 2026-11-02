@@ -14,6 +14,7 @@ import re
 import stat
 import sys
 import uuid
+from types import FunctionType, ModuleType, TracebackType
 
 MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 TINY_MODEL_ID = "aisb-testing/tiny-qwen2-v1"
@@ -245,6 +246,134 @@ def deny_download(*_args, **_kwargs):
     deny()
 
 
+def dataset_exception_facts(error, loader):
+    """Finite exception/source facts only; never stringify or inspect payloads."""
+    facts = {"schema_version": "training-dataset-exception-v1", "status": "unavailable",
+             "stage": "dataset-loading", "exceptions": [], "chain_truncated": False,
+             "parent_qualification_granted": False}
+    if not isinstance(error, BaseException):
+        return facts
+    sources = []
+    def admit_function(value, label):
+        if type(value) is staticmethod or type(value) is classmethod:
+            value = value.__func__
+        if type(value) is FunctionType:
+            sources.append((value.__code__, label))
+    admit_function(loader, "training-loader")
+    # Compare code identity from fixed already-loaded functions. Do not inspect
+    # traceback filenames, code names, frame locals or arbitrary module members.
+    for name, label, functions, classes in (
+        ("datasets.builder", "datasets-builder", (),
+         (("DatasetBuilder", ("__init__", "_build_cache_dir", "download_and_prepare", "_download_and_prepare", "as_dataset", "_as_dataset")),
+          ("ArrowBasedBuilder", ("_prepare_split", "_prepare_split_single")))),
+        ("datasets.load", "datasets-load", ("load_dataset", "load_dataset_builder", "dataset_module_factory"),
+         (("PackagedDatasetModuleFactory", ("__init__", "get_module")),)),
+        ("datasets.packaged_modules.json.json", "datasets-json", (),
+         (("Json", ("_split_generators", "_generate_tables")),)),
+        ("datasets.utils._filelock", "datasets-filelock", (),
+         (("FileLock", ("__init__", "hash_filename_if_too_long")),)),
+        ("filelock._windows", "filelock-windows", (),
+         (("WindowsFileLock", ("_acquire", "_release")),)),
+        ("filelock._api", "filelock-api", (), (("BaseFileLock", ("acquire", "release", "__enter__")),)),
+        ("datasets.download.download_manager", "datasets-download-manager", (),
+         (("DownloadManager", ("download", "download_and_extract", "extract", "_download_single")),)),
+        ("datasets.utils.file_utils", "datasets-file-utils", ("cached_path", "get_from_cache", "xopen"), ()),
+        ("fsspec.implementations.local", "fsspec-local", ("make_path_posix",),
+         (("LocalFileSystem", ("_open", "_strip_protocol", "makedirs", "info", "exists")),
+          ("LocalFileOpener", ("__init__", "_open")))),
+    ):
+        module = sys.modules.get(name)
+        if type(module) is not ModuleType:
+            continue
+        namespace = module.__dict__
+        for attribute in functions:
+            admit_function(namespace.get(attribute), label)
+        for attribute, methods in classes:
+            kind = namespace.get(attribute)
+            if type(kind) is type:
+                for method in methods:
+                    admit_function(kind.__dict__.get(method), label)
+    builtins = ((FileNotFoundError, "FileNotFoundError"), (PermissionError, "PermissionError"),
+                (NotADirectoryError, "NotADirectoryError"), (IsADirectoryError, "IsADirectoryError"),
+                (FileExistsError, "FileExistsError"), (NotImplementedError, "NotImplementedError"),
+                (ValueError, "ValueError"), (TypeError, "TypeError"), (RuntimeError, "RuntimeError"),
+                (OSError, "OSError"), (MemoryError, "MemoryError"), (ImportError, "ImportError"),
+                (ModuleNotFoundError, "ModuleNotFoundError"), (AttributeError, "AttributeError"),
+                (KeyError, "KeyError"), (IndexError, "IndexError"), (AssertionError, "AssertionError"))
+    known = list(builtins)
+    for name, attribute, label in (("datasets.exceptions", "DatasetGenerationError", "DatasetGenerationError"),
+                                   ("datasets.exceptions", "DatasetGenerationCastError", "DatasetGenerationCastError"),
+                                   ("datasets.exceptions", "DatasetNotFoundError", "DatasetNotFoundError"),
+                                   ("pyarrow.lib", "ArrowInvalid", "ArrowInvalid"),
+                                   ("pyarrow.lib", "ArrowNotImplementedError", "ArrowNotImplementedError"),
+                                   ("pyarrow.lib", "ArrowKeyError", "ArrowKeyError")):
+        module = sys.modules.get(name)
+        kind = module.__dict__.get(attribute) if type(module) is ModuleType else None
+        if type(kind) is type:
+            known.append((kind, label))
+    current, seen = error, set()
+    facts["status"] = "observed"
+    while current is not None and len(facts["exceptions"]) < 3 and id(current) not in seen:
+        seen.add(id(current))
+        kind = type(current)
+        label = next((name for candidate, name in known if kind is candidate), "OtherError")
+        number = None
+        if any(kind is candidate for candidate in (OSError, FileNotFoundError, PermissionError,
+                                                    NotADirectoryError, IsADirectoryError, FileExistsError)):
+            candidate = OSError.errno.__get__(current)
+            if type(candidate) is int and candidate in {1, 2, 3, 5, 8, 12, 13, 22, 24, 28, 32, 36, 80, 206}:
+                number = candidate
+        # Base slots bypass private/custom exception property overrides. Frame
+        # locals, code names, raw filenames, exception args and messages stay unread.
+        trace = BaseException.__traceback__.__get__(current)
+        frames, scanned = [], 0
+        while type(trace) is TracebackType and scanned < 16:
+            scanned += 1
+            code, line = trace.tb_frame.f_code, trace.tb_lineno
+            source = next((label for candidate, label in sources if code is candidate), None)
+            if source is not None and type(line) is int and 1 <= line <= 1_000_000:
+                frames.append({"source": source, "line": line})
+            trace = trace.tb_next
+        facts["exceptions"].append({"error_type": label, "errno": number, "frames": frames,
+                                    "frames_scanned": scanned, "traceback_truncated": trace is not None})
+        cause = BaseException.__cause__.__get__(current)
+        if cause is None and not BaseException.__suppress_context__.__get__(current):
+            cause = BaseException.__context__.__get__(current)
+        current = cause if isinstance(cause, BaseException) else None
+    facts["chain_truncated"] = current is not None
+    return facts
+
+
+def write_dataset_exception_facts(error, cache, loader):
+    """Exclusive fixed local test evidence, never a result or custody grant."""
+    if not cache.is_absolute() or cache.resolve() != cache or not cache.is_dir():
+        deny()
+    info = cache.lstat()
+    if cache.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+        deny()
+    payload = (json.dumps(dataset_exception_facts(error, loader), separators=(",", ":")) + "\n").encode("utf8")
+    if len(payload) > 8192:
+        deny()
+    fd = os.open(cache / "qualification-dataset-exception.json",
+                 os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(payload)
+
+
+def observe_training_dataset_loader(original, failure_observer):
+    """Observe the app-owned loader seam; do not patch the dataset supplier."""
+    def observed(*args, **kwargs):
+        try:
+            return original(*args, **kwargs)
+        except Exception as error:
+            try:
+                failure_observer(error)
+            except Exception:
+                pass
+            raise
+    return observed
+
+
 def prepare_training_dataset_cache(root, worker, cache, environment, run):
     """One fresh dataset-only leaf in the admitted Tiny package's own run.
 
@@ -343,6 +472,11 @@ def main():
     spec.loader.exec_module(module)
     host, port = module._resolve_launch_configuration()  # Real token and loopback guard.
     application = importlib.import_module("_ai_system_builder_worker.app")
+    if dataset_cache is not None:
+        training_tasks = importlib.import_module("_ai_system_builder_worker.tasks.train_model")
+        original_dataset_loader = training_tasks._load_dataset
+        training_tasks._load_dataset = observe_training_dataset_loader(original_dataset_loader,
+            lambda error: write_dataset_exception_facts(error, cache, original_dataset_loader))
     application._run_task = single_training_dispatch(application._run_task, fixture, model, temp,
         failure_observer=lambda result: write_training_failure_facts(result, cache, dataset_cache))
     application._ensure_model_download_data = deny_download

@@ -946,6 +946,15 @@ and aliased parents are refused. Other caches and legacy profiles retain their
 original behavior. This is test isolation, not native custody or offload proof;
 the real training journey still needs a passing result.
 
+The same fixed Tiny mode can observe an exception from the app-owned dataset
+loader. The delegate receives the same arguments and keeps its original result
+or exception. Diagnostic failure cannot change that outcome. The local summary
+contains only fixed exception labels, at most three causes, and at most sixteen
+source-code identities and numeric line locations per cause. It does not read
+exception text, arguments, filenames, code names or frame locals. Unknown types
+and source functions stay unknown; truncation is explicit. The fixed exclusive
+output is capped at 8 KiB. No supplier module or default profile is patched.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

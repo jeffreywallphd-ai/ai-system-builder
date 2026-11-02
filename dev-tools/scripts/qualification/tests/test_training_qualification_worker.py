@@ -8,6 +8,8 @@ import tempfile
 import os
 import json
 import stat
+import ast
+from types import ModuleType
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("training_worker", Path(__file__).parents[1] / "visual-composer/training-qualification-worker.py")
@@ -147,6 +149,156 @@ class TrainingQualificationWorkerTests(unittest.TestCase):
             offsets=iter((100,200))
             with patch.object(worker.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(ValueError):
                 worker._source_identity_bytes(root,file)
+
+
+class TrainingDatasetExceptionTests(unittest.TestCase):
+    def test_success_forwards_identical_arguments_and_result_without_observation(self):
+        argument=object();option=object();result=object();calls=[];observed=[]
+        def load(*args,**kwargs):calls.append((args,kwargs));return result
+        wrapped=worker.observe_training_dataset_loader(load,observed.append)
+        self.assertIs(wrapped(argument,option=option),result)
+        self.assertEqual(len(calls),1)
+        self.assertIs(calls[0][0][0],argument);self.assertIs(calls[0][1]["option"],option)
+        self.assertEqual(observed,[])
+
+    def test_original_exception_and_cause_survive_observer_failure_without_retry(self):
+        cause=ValueError("synthetic-private-cause");error=RuntimeError("synthetic-private-error");error.__cause__=cause
+        calls=[];observed=[]
+        def load(value):calls.append(value);raise error
+        def observe(actual):observed.append(actual);raise PermissionError("synthetic observer failure")
+        wrapped=worker.observe_training_dataset_loader(load,observe);value=object()
+        with self.assertRaises(RuntimeError)as actual:wrapped(value)
+        self.assertIs(actual.exception,error);self.assertIs(error.__cause__,cause)
+        self.assertEqual(calls,[value]);self.assertEqual(observed,[error])
+
+    def test_interrupt_and_exit_keep_original_behavior_without_observer(self):
+        for error in (KeyboardInterrupt(),SystemExit(3)):
+            observed=[]
+            def load():raise error
+            wrapped=worker.observe_training_dataset_loader(load,observed.append)
+            with self.assertRaises(type(error))as actual:wrapped()
+            self.assertIs(actual.exception,error);self.assertEqual(observed,[])
+
+    def test_builtin_type_and_loaded_function_code_identity_produce_fixed_source_labels(self):
+        class Builder:
+            @staticmethod
+            def _as_dataset():raise NotImplementedError("synthetic-private-message C:/private/data")
+        module=ModuleType("datasets.builder");module.DatasetBuilder=Builder
+        def load():return Builder._as_dataset()
+        with patch.dict(worker.sys.modules,{"datasets.builder":module}):
+            try:load()
+            except Exception as error:facts=worker.dataset_exception_facts(error,load)
+        self.assertEqual(facts["status"],"observed")
+        self.assertEqual(facts["exceptions"][0]["error_type"],"NotImplementedError")
+        self.assertEqual({v["source"]for v in facts["exceptions"][0]["frames"]},{"training-loader","datasets-builder"})
+        self.assertTrue(all(type(v["line"])is int and v["line"]>0 for v in facts["exceptions"][0]["frames"]))
+        data=json.dumps(facts)
+        for private in ("synthetic-private", "C:/private", str(Path(__file__)), "_as_dataset"):
+            self.assertNotIn(private,data)
+
+    def test_loaded_provider_exception_identity_and_base_cause_slots_are_bounded(self):
+        class GenerationError(Exception):pass
+        module=ModuleType("datasets.exceptions");module.DatasetGenerationError=GenerationError
+        cause=FileNotFoundError(2,"synthetic-private","C:/private/input")
+        error=GenerationError("synthetic-private-outer");error.__cause__=cause
+        with patch.dict(worker.sys.modules,{"datasets.exceptions":module}):facts=worker.dataset_exception_facts(error,lambda:None)
+        self.assertEqual([v["error_type"]for v in facts["exceptions"]],["DatasetGenerationError","FileNotFoundError"])
+        self.assertEqual(facts["exceptions"][1]["errno"],2)
+        self.assertNotIn("synthetic-private",json.dumps(facts));self.assertNotIn("C:/private",json.dumps(facts))
+
+    def test_private_custom_properties_and_text_are_never_evaluated(self):
+        class PrivateError(Exception):
+            def __str__(self):raise AssertionError("private str was read")
+            @property
+            def __cause__(self):raise AssertionError("private cause getter was read")
+            @property
+            def __context__(self):raise AssertionError("private context getter was read")
+            @property
+            def __traceback__(self):raise AssertionError("private traceback getter was read")
+            @property
+            def errno(self):raise AssertionError("private errno getter was read")
+            @property
+            def filename(self):raise AssertionError("private filename getter was read")
+        error=PrivateError("synthetic-secret-token C:/private/input")
+        def load():raise error
+        try:load()
+        except PrivateError as actual:facts=worker.dataset_exception_facts(actual,load)
+        self.assertEqual(facts["exceptions"][0]["error_type"],"OtherError")
+        self.assertIsNone(facts["exceptions"][0]["errno"])
+        self.assertNotIn("PrivateError",json.dumps(facts));self.assertNotIn("synthetic-secret",json.dumps(facts))
+
+    def test_chain_cycles_depth_and_traceback_scans_have_hard_limits(self):
+        errors=[RuntimeError("synthetic-private")for _ in range(5)]
+        for before,after in zip(errors,errors[1:]):before.__cause__=after
+        facts=worker.dataset_exception_facts(errors[0],lambda:None)
+        self.assertEqual(len(facts["exceptions"]),3);self.assertTrue(facts["chain_truncated"])
+        errors[0].__cause__=errors[0]
+        facts=worker.dataset_exception_facts(errors[0],lambda:None)
+        self.assertEqual(len(facts["exceptions"]),1);self.assertTrue(facts["chain_truncated"])
+        def deep(depth):
+            if depth:return deep(depth-1)
+            raise RuntimeError("synthetic-private")
+        try:deep(24)
+        except RuntimeError as error:facts=worker.dataset_exception_facts(error,deep)
+        row=facts["exceptions"][0]
+        self.assertEqual(row["frames_scanned"],16);self.assertLessEqual(len(row["frames"]),16)
+        self.assertTrue(row["traceback_truncated"])
+
+    def test_suppressed_context_stays_unread_and_explicit_cause_wins(self):
+        error=RuntimeError("synthetic-private");context=ValueError("synthetic-private-context");error.__context__=context
+        error.__suppress_context__=True
+        self.assertEqual(len(worker.dataset_exception_facts(error,lambda:None)["exceptions"]),1)
+        error.__suppress_context__=False
+        self.assertEqual([v["error_type"]for v in worker.dataset_exception_facts(error,lambda:None)["exceptions"]],["RuntimeError","ValueError"])
+        error.__cause__=TypeError("synthetic-private-cause")
+        self.assertEqual([v["error_type"]for v in worker.dataset_exception_facts(error,lambda:None)["exceptions"]],["RuntimeError","TypeError"])
+
+    def test_output_is_fixed_exclusive_bounded_and_never_contains_raw_data(self):
+        with tempfile.TemporaryDirectory(prefix="training-dataset-exception-")as folder:
+            cache=Path(folder).resolve()
+            def load():raise OSError(13,"synthetic-secret-token","C:/private/dataset")
+            try:load()
+            except OSError as error:worker.write_dataset_exception_facts(error,cache,load)
+            target=cache/"qualification-dataset-exception.json";before=target.read_bytes()
+            self.assertLessEqual(len(before),8192)
+            self.assertEqual(json.loads(before)["exceptions"][0]["errno"],13)
+            for private in (b"synthetic-secret",b"C:/private",b"filename",b"args",b"locals"):
+                self.assertNotIn(private,before)
+            with self.assertRaises(FileExistsError):worker.write_dataset_exception_facts(RuntimeError("other"),cache,load)
+            self.assertEqual(target.read_bytes(),before)
+            self.assertEqual([v.name for v in cache.iterdir()],[target.name])
+
+    def test_missing_cache_and_oversized_projection_deny_before_file_creation(self):
+        with tempfile.TemporaryDirectory(prefix="training-dataset-exception-denial-")as folder:
+            cache=Path(folder).resolve();missing=cache/"missing";error=RuntimeError("synthetic-private")
+            with self.assertRaises(ValueError):worker.write_dataset_exception_facts(error,missing,lambda:None)
+            with patch.object(worker,"dataset_exception_facts",return_value={"data":"x"*8193}),self.assertRaises(ValueError):
+                worker.write_dataset_exception_facts(error,cache,lambda:None)
+            self.assertFalse(missing.exists());self.assertEqual(list(cache.iterdir()),[])
+
+    def test_unavailable_input_foreign_module_types_and_custom_provider_members_do_not_execute(self):
+        class Private:
+            def __str__(self):raise AssertionError("private str evaluated")
+        self.assertEqual(worker.dataset_exception_facts(Private(),lambda:None)["status"],"unavailable")
+        class Builder:
+            @property
+            def _as_dataset(self):raise AssertionError("provider property evaluated")
+        module=ModuleType("datasets.builder");module.DatasetBuilder=Builder
+        def forbidden(name):raise AssertionError("module fallback evaluated")
+        module.__getattr__=forbidden
+        with patch.dict(worker.sys.modules,{"datasets.builder":module,"datasets.load":Private()}),patch.object(worker.importlib,"import_module",side_effect=AssertionError("provider imported")):
+            facts=worker.dataset_exception_facts(RuntimeError("synthetic-private"),lambda:None)
+        self.assertEqual(facts["exceptions"][0]["frames"],[])
+
+    def test_main_installs_only_the_app_owned_loader_hook_in_the_fresh_mode(self):
+        tree=ast.parse(Path(worker.__file__).read_text());main=next(n for n in tree.body if isinstance(n,ast.FunctionDef)and n.name=="main")
+        guarded=[n for n in ast.walk(main)if isinstance(n,ast.If)and ast.unparse(n.test)=="dataset_cache is not None"]
+        self.assertEqual(len(guarded),1)
+        calls=[n for n in ast.walk(guarded[0])if isinstance(n,ast.Call)]
+        self.assertTrue(any(isinstance(n.func,ast.Attribute)and n.func.attr=="import_module"and n.args and isinstance(n.args[0],ast.Constant)and n.args[0].value=="_ai_system_builder_worker.tasks.train_model"for n in calls))
+        self.assertTrue(any(isinstance(n.func,ast.Name)and n.func.id=="observe_training_dataset_loader"for n in calls))
+        facts=next(n for n in tree.body if isinstance(n,ast.FunctionDef)and n.name=="dataset_exception_facts")
+        self.assertFalse(any(isinstance(n,ast.Attribute)and n.attr in {"co_filename","co_name","f_locals","args","filename"}for n in ast.walk(facts)))
 
 
 class TrainingDatasetCacheTests(unittest.TestCase):
