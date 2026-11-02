@@ -8842,6 +8842,175 @@
         "Completed model accuracy and text-recognition checks stay closed. The combined full-system tests will run after the requested feature work is finished. No user action is needed.",
         "The agent still needs to finish protecting model files, checking disk use, restarting workers safely and measuring low-memory mode. No action is needed from the user."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "classify-real-training-dataset-failures",
+      "work_criteria": [
+        "failure-only-closed-diagnostics",
+        "truthful-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "cb305f4ecf2c74d8249388b27810a27ec38708f69f6326920b9a3f508213086b",
+      "review_digest": "c367ce196681ebe6b265387acfc6978e69c8f58540896d6bde7f9a0dd6f179c5",
+      "scope": "Failed dataset-loading tests report short, fixed error labels. The diagnostics exclude private error text.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These are diagnostic or source checks. The later eight-step journey provides the separate real app result."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "shorten-owned-training-test-dataset-cache",
+      "work_criteria": [
+        "fresh-same-run-relative-dataset-cache",
+        "truthful-diagnostic-history-and-owned-checkpoint"
+      ],
+      "receipt_digest": "68ca0e862e370dba813093de5cd38c86ee812e59e9a021ff0f6f30a26abee6b6",
+      "review_digest": "d645689473135f3ee1fdeb716492cacd2707b8b13c96c4a5537518db3bfbfa31",
+      "scope": "The isolated test stores dataset cache files under its own short run folder. The existing model-loading and resource checks stay in place.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These folder changes apply only to the isolated test worker. The normal product folder rules stay unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "observe-owned-training-dataset-exceptions",
+      "work_criteria": [
+        "transparent-bounded-dataset-exception-observer",
+        "honest-current-failure-and-owned-checkpoint"
+      ],
+      "receipt_digest": "91bab26806c363a335c0f65675e645bcdeaf50118fe53e4f410e9a2d5c2dea4d",
+      "review_digest": "7a90f0e2de33309774d3a4de9a91f2d0b4c2258c8fcff1a0b2625d0e5ce34dca",
+      "scope": "The dataset-loading observer preserves the original exception. It reports only bounded, safe facts for diagnosis.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These are diagnostic or source checks. The later eight-step journey provides the separate real app result."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "collect-real-training-dataset-exception-facts",
+      "work_criteria": [
+        "actual-transparent-loader-diagnostic",
+        "honest-diagnostic-checkpoint-without-training-pass"
+      ],
+      "receipt_digest": "5a298d136abbe74efe0b2490bff04a8e037811fa8237ad02f74c783f7aabe3cb",
+      "review_digest": "76cfc56829fce3f56da6d1dbfeb344feeffa9c02b9a8dc6cf1987d13b71bf19d",
+      "scope": "The earlier failed training run was diagnosed without exposing private error text. A separate harmless file test supported the Windows path-length diagnosis.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "That earlier run failed. The later eight-step journey provides the separate successful app result."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "shorten-owned-training-test-working-directory",
+      "work_criteria": [
+        "same-run-short-cwd-admission",
+        "honest-path-diagnosis-and-owned-checkpoint"
+      ],
+      "receipt_digest": "e753da985567d3f1f70cc3a613470acfa830f071b9962b933164f00a606c0c76",
+      "review_digest": "af6c21e72c21f00e89bdb62076af53b545c7e01c3f36a887c5fb35b0d619f485",
+      "scope": "The isolated training worker uses its own short run folder for dataset files. All 56 focused checks passed.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These folder changes apply only to the isolated test worker. The normal product folder rules stay unchanged."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "align-training-ui-with-adapter-safetensors",
+      "work_criteria": [
+        "canonical-format-specific-training-proof",
+        "truthful-current-facts-and-pending-host-qualification"
+      ],
+      "receipt_digest": "83799efe9fa4a805ab06af00ea13681a0ff20140dd6a2cfb3316d11c65ca7199",
+      "review_digest": "95289c407eeb78bd1580a08dcbde707b244eb6eadf455dc566d3a84b95fe8b63",
+      "scope": "The training test checks the full model and generated adapter against their correct file formats. All 41 focused training checks passed. The coverage check also avoids repeated reads of unchanged version history.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These are diagnostic or source checks. The later eight-step journey provides the separate real app result."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "bind-reviewed-adapter-format-census",
+      "work_criteria": [
+        "actual-reviewed-two-source-binding",
+        "preserved-map-and-honest-qualification"
+      ],
+      "receipt_digest": "7f99b01e587656e0b5c38b06c405bb34e3de5dd673db91d65106978954e68e15",
+      "review_digest": "731502985b04c6a97580f0c15437263506f42b2057a2f43cf97c6729c172e42a",
+      "scope": "The test-coverage records now link to the actual reviewed test code. All 180 source facts and the other coverage records stay intact.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work.",
+        "These are diagnostic or source checks. The later eight-step journey provides the separate real app result."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-desktop-training-with-canonical-adapter-format",
+      "work_criteria": [
+        "actual-eight-phase-training-journey",
+        "honest-source-bound-feature-checkpoint"
+      ],
+      "receipt_digest": "8805c1c3d00a5241b32ccd2d8729a266560aefffec6dd01b24f97799fc9f7eb8",
+      "review_digest": "f3d3b5a6c8bab1c1f51f24160521956c6152693bd72199dbd52009eba28bfc9d",
+      "scope": "The real Desktop app passed all eight training steps. It trained a local adapter, kept the candidate private, saved it, reopened the record and preserved it after a renderer reload. The app and its worker shut down successfully.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-desktop-training-with-canonical-adapter-format",
+      "work_criteria": [
+        "actual-eight-phase-training-journey",
+        "honest-source-bound-feature-checkpoint"
+      ],
+      "receipt_digest": "8805c1c3d00a5241b32ccd2d8729a266560aefffec6dd01b24f97799fc9f7eb8",
+      "review_digest": "f3d3b5a6c8bab1c1f51f24160521956c6152693bd72199dbd52009eba28bfc9d",
+      "scope": "The eight-step training journey ran once with no skipped steps or retries. All 110 test-owned processes exited without forced termination. The worker shutdown, complete logs and handle cleanup were independently checked.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. Native file protection, low-memory cleanup and safe restart remain separate agent work."
+      ]
     }
   ]
 }

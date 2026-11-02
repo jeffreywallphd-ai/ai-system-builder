@@ -14077,6 +14077,174 @@
           "They do not grant a successful app, model, low-memory or complete-roadmap result."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4d4b36b1f2d2f585128cbdb3f6c151ff64b119784418c2714fdc473d985edcd6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Failed dataset-loading tests report short, fixed error labels.",
+          "The diagnostics exclude private error text."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7d04b89c8261d874dc4d593f0a1b6d25b8f31ad6116b452244761efafd55e11b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records reviewed work at its saved source version.",
+          "It does not complete the parent roadmap or qualify a later source version."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bd703e1c57f12177520466202b437982781a6014149d0e2b67f737abbad359e3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy and text-recognition checks stay closed.",
+          "The shared system test campaign is still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f2415908249234f8ed7344ce1a6ff0ea66669cbb26c4072b29938697765a5d49",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "Native file protection, low-memory cleanup and safe restart remain separate agent work."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "058c3f93411cfe44bf74ce3dfad6cef09cfcb7afc8aa3a015f7598afc90a4727",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are diagnostic or source checks.",
+          "The later eight-step journey provides the separate real app result."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "737f7e0645ccb1fd2a87927229b5625c032f3857979f6039cef37923850a8e96",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The isolated test stores dataset cache files under its own short run folder.",
+          "The existing model-loading and resource checks stay in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0a2cbbd357554e66534e067ddc25ee631ca5462ecaa6d0335454bc816f086097",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These folder changes apply only to the isolated test worker.",
+          "The normal product folder rules stay unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "395ff35b10827dfe4a154c2a5d8253ffda94dd5bf418d5ebc1fdcfd816b3fd6e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The dataset-loading observer preserves the original exception.",
+          "It reports only bounded, safe facts for diagnosis."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "37ce38658f457b0f54a51244e53ce7122cc55010d692cba4859d735a128b4715",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The earlier failed training run was diagnosed without exposing private error text.",
+          "A separate harmless file test supported the Windows path-length diagnosis."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0fb4a825d14cffe5cce38cff0a2c8858d1079927df936abd907f978230eb8712",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "That earlier run failed.",
+          "The later eight-step journey provides the separate successful app result."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bafcf43097ca409f322b8d9985181df837f5fca8fa3c80b7b19c61ccd8709ba9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The isolated training worker uses its own short run folder for dataset files.",
+          "All 56 focused checks passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e709b8e8b27c54336e7e12574555f3e42fcdbdec894720a60b00f80539ea0e9d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training test checks the full model and generated adapter against their correct file formats.",
+          "All 41 focused training checks passed.",
+          "The coverage check also avoids repeated reads of unchanged version history."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d9203ef1a8dcfec7bca01871596224cd5aca3ae636e67188d775f900f39b7f93",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test-coverage records now link to the actual reviewed test code.",
+          "All 180 source facts and the other coverage records stay intact."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5fdacdd54aaeb27c5b22748e7241f3977c82082e7849c691f92309a120c15d6c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The real Desktop app passed all eight training steps.",
+          "It trained a local adapter, kept the candidate private, saved it, reopened the record and preserved it after a renderer reload.",
+          "The app and its worker shut down successfully."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "eac7e2cc6f868d7118653e17f8c2ea16581dc2730284c26765e533baa452317b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The eight-step training journey ran once with no skipped steps or retries.",
+          "All 110 test-owned processes exited without forced termination.",
+          "The worker shutdown, complete logs and handle cleanup were independently checked."
+        ]
+      }
     }
   ]
 }
