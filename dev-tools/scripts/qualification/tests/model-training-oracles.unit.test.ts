@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { EventEmitter } from "node:events";
+import { TrainModelUseCase } from "../../../../modules/application/use-cases/model/train-model.use-case";
+import { createDesktopFeatureFailureDetail } from "../../../../modules/hosts/desktop/composition/featureLifecycle";
+import { runOwnedRestartPhase } from "../visual-composer/asset-authoring-oracles";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyDesktopTrainingJourney, readTrainingHostInventory } from "../visual-composer/e2e/model-training-journey";
-import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, TRAINING_HOST_PHASES, TRAINING_CONFIGURATION_ACTIONS, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
+import { captureTrainingHostFixture, trainingHostReport, trainingFailureDetails, trainingPublicId, trainingWorkspaceId, trainingDatasetIds, trainingBaseName, createTrainingRuntimeFailureCollector, withTrainingRuntimeFailureDiagnostics, TRAINING_HOST_PHASES, TRAINING_CONFIGURATION_ACTIONS, TRAINING_OUTPUT_NAME, TRAINING_DISPLAY_NAME } from "../visual-composer/model-training-oracles";
 import { trainingReadOnlyArguments } from "../visual-composer/training-host-fixture";
 
 test("the no-install delegate admits only exact declared read-only probes and pip version", () => {
@@ -17,6 +21,81 @@ const fixture = () => ({ schemaVersion: "training-host-fixture-v1", runId: run, 
   workspaceId: trainingWorkspaceId(run), baseModelRecordId: "model.base-fixture",
   datasetArtifactIds: [...trainingDatasetIds(run)], outputName: TRAINING_OUTPUT_NAME, displayName: TRAINING_DISPLAY_NAME });
 const encode = (value: unknown) => JSON.stringify(value);
+
+const diagnosticLine = (data: Record<string, unknown> = {}) => JSON.stringify({ event: "desktop.host.model.operation.failed", data: { featureKey: "model-registry", stage: "trainModel.execute", errorName: "Error", errorCode: "MODEL_TRAINING_START_DATASET_RESOLUTION", ...data } }) + "\n";
+
+test("training diagnostics keep fragmented UTF8 and interleaved streams separate without private fields", () => {
+  const collector = createTrainingRuntimeFailureCollector(), bytes = Buffer.from(diagnosticLine({ message: "private-synthetic-prompt😀", path: "private-synthetic-path" }));
+  collector.push("stdout", bytes.subarray(0, 31)); collector.push("stderr", diagnosticLine({ errorCode: "unavailable", errorName: "RuntimeCapabilityUnavailableError" }));
+  for (let i = 31; i < bytes.length; i++) collector.push("stdout", bytes.subarray(i, i + 1));
+  const report = collector.finish(); assert.equal(report.observations.length, 2); assert.equal(report.malformed, false); assert.equal(report.incompleteLine, false);
+  assert.equal(report.observations[0].errorCode, "unavailable"); assert.equal(report.observations[1].errorCode, "MODEL_TRAINING_START_DATASET_RESOLUTION");
+  assert(!JSON.stringify(report).includes("private-synthetic")); assert.equal(report.parentQualificationGranted, false);
+});
+test("training diagnostics allow only closed fields and codes and never pass from unknown log text", () => {
+  const collector = createTrainingRuntimeFailureCollector(); collector.push("stdout", "ordinary non-JSON log\n"); collector.push("stdout", diagnosticLine({ featureKey: "private-synthetic-feature", stage: "private-synthetic-stage", errorName: "private-synthetic-error", errorCode: "private-synthetic-code", raw: { payload: "private-synthetic-payload" } }));
+  const report = collector.finish(); assert.deepEqual(report.observations, [{ event: "desktop.host.model.operation.failed", featureKey: "other", stage: "other", errorName: "OtherError", errorCode: "other" }]); assert(!JSON.stringify(report).includes("private-synthetic")); assert.equal("status" in report, false);
+});
+test("training diagnostic collection rejects proxy and getter-like inputs without running their code", () => {
+  const collector = createTrainingRuntimeFailureCollector(); let calls = 0;
+  const getter = Object.defineProperty({}, "toString", { get() { calls++; throw new Error("private"); } });
+  collector.push("stdout", getter); collector.push("stderr", new Proxy(Buffer.from("x"), { get() { calls++; throw new Error("private"); }, getPrototypeOf() { calls++; throw new Error("private"); } }));
+  const buffer = Buffer.from("x"); Object.defineProperty(buffer, "length", { get() { calls++; throw new Error("private"); } }); collector.push("stdout", buffer);
+  assert.equal(calls, 0); assert.equal(collector.finish().malformed, true); assert.equal(collector.finish().observations.length, 0);
+});
+test("training diagnostics bound lines, combined bytes and event history without inventing completion", () => {
+  const lineBound = createTrainingRuntimeFailureCollector(); lineBound.push("stdout", "x".repeat(8192) + "\n" + diagnosticLine()); assert.equal(lineBound.finish().overflow, true); assert.equal(lineBound.finish().observations.length, 1);
+  const byteBound = createTrainingRuntimeFailureCollector(); for (let i = 0; i < 5; i++) byteBound.push("stderr", Buffer.alloc(65_536, 120)); byteBound.push("stdout", diagnosticLine()); assert.equal(byteBound.finish().overflow, true); assert.equal(byteBound.finish().observations.length, 0);
+  const history = createTrainingRuntimeFailureCollector(); for (let i = 0; i < 12; i++) history.push("stdout", diagnosticLine()); const report = history.finish(); assert.equal(report.observations.length, 8); assert.equal(report.overflow, true); assert.equal(report.parentQualificationGranted, false);
+});
+test("astral characters crossing the training diagnostic line cap cannot evade the bound", () => {
+  const collector = createTrainingRuntimeFailureCollector(); collector.push("stdout", "x".repeat(4095) + "😀" + "x".repeat(8192) + "\n" + diagnosticLine());
+  const report = collector.finish(); assert.equal(report.overflow, true); assert.equal(report.observations.length, 1); assert.equal(report.incompleteLine, false);
+});
+test("real training producer codes survive the unchanged real host redaction and reach the collector", async () => {
+  const unused = Object.freeze({});
+  const useCase = new TrainModelUseCase({ runtimeTaskRegistry: unused as never, modelRegistry: unused as never, storageBindings: unused as never, storage: unused as never, taskPowerLifecycle: unused as never });
+  let caught: unknown;
+  try { await useCase.execute({ baseModel: { modelId: "synthetic" }, datasets: [{ artifactId: "synthetic", splitRole: "train" }], method: "lora", commonParameters: {}, output: { outputModelName: "synthetic", destination: { local: { enabled: true } } } }); } catch (error) { caught = error; }
+  const detail = createDesktopFeatureFailureDetail(caught); assert.equal(detail.errorCode, "MODEL_TRAINING_START_REQUEST_VALIDATION");
+  const collector = createTrainingRuntimeFailureCollector(); collector.push("stdout", diagnosticLine(detail));
+  assert.equal(collector.finish().observations[0].errorCode, "MODEL_TRAINING_START_REQUEST_VALIDATION"); assert.equal(collector.finish().parentQualificationGranted, false);
+});
+test("training diagnostics retain incomplete and malformed evidence and freeze finalization", () => {
+  const collector = createTrainingRuntimeFailureCollector(); collector.push("stderr", '{"event":"desktop.host.model.operation.failed",bad}\n'); collector.push("stdout", diagnosticLine().trimEnd());
+  const report = collector.finish(); assert.equal(report.malformed, true); assert.equal(report.incompleteLine, true); assert.equal(report.observations.length, 0); assert(Object.isFrozen(report)); assert(Object.isFrozen(report.observations));
+  collector.push("stdout", diagnosticLine()); assert.equal(collector.finish(), report); assert.equal(report.observations.length, 0);
+});
+test("training failure collection observes before the real action and detaches both streams afterward", async () => {
+  const stdout = new EventEmitter(), stderr = new EventEmitter(), failure = new Error("original-failure"); let report: unknown;
+  await assert.rejects(withTrainingRuntimeFailureDiagnostics({ stdout, stderr }, async () => { stdout.emit("data", diagnosticLine()); throw failure; }, async value => { report = value; }), error => error === failure);
+  assert.equal((report as ReturnType<ReturnType<typeof createTrainingRuntimeFailureCollector>["finish"]>).observations.length, 1); assert.equal(stdout.listenerCount("data"), 0); assert.equal(stderr.listenerCount("data"), 0);
+});
+test("successful training actions gain no extra diagnostic attachment or success evidence", async () => {
+  const stdout = new EventEmitter(), stderr = new EventEmitter(); let publications = 0;
+  await withTrainingRuntimeFailureDiagnostics({ stdout, stderr }, async () => { stderr.emit("data", diagnosticLine()); }, async () => { publications++; });
+  assert.equal(publications, 0); assert.equal(stdout.listenerCount("data"), 0); assert.equal(stderr.listenerCount("data"), 0);
+});
+test("training diagnostic storage failure retains the original failure and always detaches listeners", async () => {
+  const stdout = new EventEmitter(), stderr = new EventEmitter(), failure = new Error("original-failure"); let caught: unknown;
+  try { await withTrainingRuntimeFailureDiagnostics({ stdout, stderr }, async () => { throw failure; }, async () => { throw new Error("private-storage-detail"); }); } catch (error) { caught = error; }
+  assert(caught instanceof AggregateError); assert.equal(caught.errors[0], failure); assert.equal(caught.errors[1].message, "Bounded training diagnostics could not be stored."); assert.equal(stdout.listenerCount("data"), 0); assert.equal(stderr.listenerCount("data"), 0);
+});
+test("training diagnostic listener failure preserves the original error and still removes the other listener", async () => {
+  const stdout = new EventEmitter(), stderr = new EventEmitter(), failure = new Error("original-failure"); let caught: unknown;
+  const broken = { on: stdout.on.bind(stdout), off(event: "data", listener: (chunk: unknown) => void) { stdout.off(event, listener); throw new Error("private-cleanup-detail"); } };
+  try { await withTrainingRuntimeFailureDiagnostics({ stdout: broken, stderr }, async () => { throw failure; }, async () => {}); } catch (error) { caught = error; }
+  assert(caught instanceof AggregateError); assert.equal(caught.errors[0], failure); assert.equal(caught.errors[1].message, "Training diagnostic listener cleanup failed."); assert.equal(stdout.listenerCount("data"), 0); assert.equal(stderr.listenerCount("data"), 0);
+});
+for (const attachThenThrow of [false, true]) test(`training diagnostic registration failure (${attachThenThrow}) still executes owned action and shutdown exactly once`, async () => {
+  const stdout = new EventEmitter(), stderr = new EventEmitter(), original = new Error("original-failure"); let journey = 0, shutdown = 0, outDetach = 0, errDetach = 0, published: unknown, caught: unknown;
+  const broken = { on(event: "data", listener: (chunk: unknown) => void) { if (attachThenThrow) stdout.on(event, listener); throw new Error("private-registration-detail"); }, off(event: "data", listener: (chunk: unknown) => void) { outDetach++; return stdout.off(event, listener); } };
+  const other = { on: stderr.on.bind(stderr), off(event: "data", listener: (chunk: unknown) => void) { errDetach++; return stderr.off(event, listener); } };
+  try { await withTrainingRuntimeFailureDiagnostics({ stdout: broken, stderr: other }, () => runOwnedRestartPhase(async () => { journey++; throw original; }, async () => { shutdown++; }), async report => { published = report; }); } catch (error) { caught = error; }
+  assert.equal(journey, 1); assert.equal(shutdown, 1); assert.equal(outDetach, 1); assert.equal(errDetach, 1); assert.equal(stdout.listenerCount("data"), 0); assert.equal(stderr.listenerCount("data"), 0);
+  assert(caught instanceof AggregateError); assert(caught.errors[0] instanceof AggregateError); assert.equal(caught.errors[0].errors[0], original); assert.equal(caught.errors[1].message, "Training diagnostic listener registration failed.");
+  assert.equal((published as { observerFailure: boolean }).observerFailure, true); assert(!JSON.stringify(published).includes("private-registration"));
+});
 test("captures only the fixed current training declaration and detaches its dataset identities", () => {
   assert.equal(captureTrainingHostFixture(undefined, undefined, undefined), undefined);
   const v = fixture(), result = captureTrainingHostFixture(encode(v), run, source)!;

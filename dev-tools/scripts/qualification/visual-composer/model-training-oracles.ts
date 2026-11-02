@@ -21,6 +21,118 @@ export const TRAINING_CONFIGURATION_ACTIONS = Object.freeze([
 export type TrainingConfigurationAction = typeof TRAINING_CONFIGURATION_ACTIONS[number];
 const invalid = () => new Error("The fixed training host test input is unavailable or invalid.");
 
+const TRAINING_DIAGNOSTIC_EVENTS = ["desktop.host.feature.load.failed", "desktop.host.model.operation.failed"] as const;
+const TRAINING_DIAGNOSTIC_FEATURES = ["model-registry", "runtime-task-registry", "python-runtime-foundation", "comfyui-image-runtime"] as const;
+const TRAINING_DIAGNOSTIC_STAGES = ["import", "compose", "trainModel.execute", "trainModel.read", "trainModel.save", "trainModel.discard"] as const;
+const TRAINING_DIAGNOSTIC_ERRORS = ["Error", "TypeError", "RangeError", "SyntaxError", "RuntimeCapabilityUnavailableError", "PythonRuntimeContextDependencyError"] as const;
+const TRAINING_DIAGNOSTIC_CODES = ["unavailable", "ENOENT", "EACCES", "EPERM", "ETIMEDOUT", "MODULE_NOT_FOUND", "ERR_MODULE_NOT_FOUND", "ERR_REQUIRE_ESM",
+  "MODEL_TRAINING_START_REQUEST_VALIDATION", "MODEL_TRAINING_START_RUNTIME_READINESS", "MODEL_TRAINING_START_BASE_MODEL",
+  "MODEL_TRAINING_START_DATASET_RESOLUTION", "MODEL_TRAINING_START_TASK_DISPATCH", "MODEL_TRAINING_START_TASK_REGISTRATION"] as const;
+type TrainingRuntimeFailureReport = Readonly<{
+  schemaVersion: "training-host-runtime-failures-v1";
+  observations: readonly Readonly<Record<"event" | "featureKey" | "stage" | "errorName" | "errorCode", string>>[];
+  overflow: boolean; malformed: boolean; incompleteLine: boolean; observerFailure: boolean; parentQualificationGranted: false;
+}>;
+
+/** Child bytes are untrusted. Keep only finite known codes, never messages or raw lines. */
+export function createTrainingRuntimeFailureCollector() {
+  const streams = { stdout: { decoder: new TextDecoder(), pending: "", discarding: false }, stderr: { decoder: new TextDecoder(), pending: "", discarding: false } };
+  const observations: Array<TrainingRuntimeFailureReport["observations"][number]> = [];
+  let inputBytes = 0, overflow = false, malformed = false, finished: TrainingRuntimeFailureReport | undefined;
+  const allowed = (value: unknown, values: readonly string[], fallback: string) => typeof value === "string" && values.includes(value) ? value : fallback;
+  const line = (value: string) => {
+    if (!TRAINING_DIAGNOSTIC_EVENTS.some(event => value.includes(event))) return;
+    try {
+      const entry: unknown = JSON.parse(value);
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) { malformed = true; return; }
+      const parsed = entry as Record<string, unknown>;
+      if (typeof parsed.event !== "string" || !(TRAINING_DIAGNOSTIC_EVENTS as readonly string[]).includes(parsed.event)) return;
+      if (!parsed.data || typeof parsed.data !== "object" || Array.isArray(parsed.data)) { malformed = true; return; }
+      if (observations.length === 8) { overflow = true; return; }
+      const data = parsed.data as Record<string, unknown>;
+      observations.push(Object.freeze({ event: parsed.event,
+        featureKey: allowed(data.featureKey, TRAINING_DIAGNOSTIC_FEATURES, "other"),
+        stage: allowed(data.stage, TRAINING_DIAGNOSTIC_STAGES, "other"),
+        errorName: allowed(data.errorName, TRAINING_DIAGNOSTIC_ERRORS, "OtherError"),
+        errorCode: allowed(data.errorCode, TRAINING_DIAGNOSTIC_CODES, "other") }));
+    } catch { malformed = true; }
+  };
+  const push = (stream: unknown, chunk: unknown) => {
+    if (finished) return;
+    try {
+      if (stream !== "stdout" && stream !== "stderr" || types.isProxy(chunk)) { malformed = true; return; }
+      let bytes: Uint8Array;
+      if (typeof chunk === "string") {
+        if (chunk.length > 65_536 || Buffer.byteLength(chunk) > 65_536) { overflow = true; return; }
+        bytes = Buffer.from(chunk);
+      } else if (Buffer.isBuffer(chunk) && Object.getPrototypeOf(chunk) === Buffer.prototype) {
+        if (["length", "byteLength", "byteOffset", "buffer"].some(key => Object.getOwnPropertyDescriptor(chunk, key))) { malformed = true; return; }
+        const getBytes = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Uint8Array.prototype), "byteLength")!.get!;
+        const size = getBytes.call(chunk) as number;
+        if (size > 65_536) { overflow = true; return; }
+        bytes = chunk;
+      } else { malformed = true; return; }
+      inputBytes += bytes.byteLength;
+      if (inputBytes > 256 * 1024) { overflow = true; return; }
+      const state = streams[stream];
+      for (const char of state.decoder.decode(bytes, { stream: true })) {
+        if (char === "\n") {
+          if (!state.discarding) line(state.pending.endsWith("\r") ? state.pending.slice(0, -1) : state.pending);
+          state.pending = ""; state.discarding = false;
+        } else if (!state.discarding) {
+          if (state.pending.length + char.length > 4096) { state.pending = ""; state.discarding = true; overflow = true; }
+          else state.pending += char;
+        }
+      }
+    } catch { malformed = true; }
+  };
+  const finish = (): TrainingRuntimeFailureReport => {
+    if (finished) return finished;
+    let incompleteLine = false;
+    for (const state of Object.values(streams)) {
+      const tail = state.decoder.decode();
+      if (state.pending.trim() || tail.trim() || state.discarding) incompleteLine = true;
+      state.pending = "";
+    }
+    finished = Object.freeze({ schemaVersion: "training-host-runtime-failures-v1", observations: Object.freeze(observations.slice()), overflow, malformed, incompleteLine, observerFailure: false, parentQualificationGranted: false });
+    return finished;
+  };
+  return Object.freeze({ push, finish });
+}
+
+type TrainingDiagnosticStream = { on(event: "data", listener: (chunk: unknown) => void): unknown; off(event: "data", listener: (chunk: unknown) => void): unknown };
+export async function withTrainingRuntimeFailureDiagnostics(
+  streams: { stdout?: TrainingDiagnosticStream | null; stderr?: TrainingDiagnosticStream | null },
+  action: () => Promise<void>, publishFailure: (report: TrainingRuntimeFailureReport) => Promise<void>,
+): Promise<void> {
+  const collector = createTrainingRuntimeFailureCollector();
+  const stdout = (chunk: unknown) => collector.push("stdout", chunk), stderr = (chunk: unknown) => collector.push("stderr", chunk);
+  let outAttempted = false, errAttempted = false, failed = false, failure: unknown;
+  const observerErrors: Error[] = [];
+  try {
+    if (streams.stdout) { outAttempted = true; try { streams.stdout.on("data", stdout); } catch { observerErrors.push(new Error("Training diagnostic listener registration failed.")); } }
+    if (streams.stderr) { errAttempted = true; try { streams.stderr.on("data", stderr); } catch { observerErrors.push(new Error("Training diagnostic listener registration failed.")); } }
+    // Observation is non-authoritative. The original owned action/shutdown must
+    // still run exactly once when an optional listener cannot be registered.
+    try { await action(); } catch (error) { failed = true; failure = error; }
+  } finally {
+    for (const [stream, listener, attempted] of [[streams.stdout, stdout, outAttempted], [streams.stderr, stderr, errAttempted]] as const) {
+      if (!attempted) continue;
+      try { stream?.off("data", listener); }
+      catch { observerErrors.push(new Error("Training diagnostic listener cleanup failed.")); }
+    }
+  }
+  const report = collector.finish();
+  if (observerErrors.length) {
+    failure = new AggregateError(failed ? [failure, ...observerErrors] : observerErrors, "Training diagnostic observation failed."); failed = true;
+  }
+  if (failed) {
+    try { await publishFailure(observerErrors.length ? Object.freeze({ ...report, observerFailure: true }) : report); }
+    catch { failure = new AggregateError([failure, new Error("Bounded training diagnostics could not be stored.")], "Training and diagnostic finalization failed."); }
+  }
+  if (failed) throw failure;
+}
+
 /** Closed diagnostics only. Never inspect a locator, field value or raw error text. */
 export function trainingFailureDetails(phase: unknown, action: unknown, error: unknown) {
   if (typeof phase !== "string" || !(TRAINING_HOST_PHASES as readonly string[]).includes(phase) ||

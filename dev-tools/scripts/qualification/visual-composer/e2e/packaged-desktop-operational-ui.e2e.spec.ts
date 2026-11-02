@@ -9,7 +9,7 @@ import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from ".
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { createTrainingCaseEnvironment } from "../training-host-launch-plan.mjs";
-import { captureTrainingHostFixture, TRAINING_HOST_TIMEOUT_MS } from "../model-training-oracles";
+import { captureTrainingHostFixture, withTrainingRuntimeFailureDiagnostics, TRAINING_HOST_TIMEOUT_MS } from "../model-training-oracles";
 import { qualifyDesktopTrainingJourney } from "./model-training-journey";
 import { runOwnedRestartPhase } from "../asset-authoring-oracles";
 import {createImageCaseEnvironment,captureImageInspection} from "../image-host-launch-plan.mjs";
@@ -64,10 +64,15 @@ test("packaged desktop trains one local adapter, reviews privately, saves and re
   if (!fixture) throw new Error("Training qualification input seed is unavailable.");
   env.VISUAL_COMPOSER_TRAINING_FIXTURE = JSON.stringify(fixture);
   const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, cwd: isolated.dataRoot, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env, timeout: 60_000 });
-  await runOwnedRestartPhase(async () => {
+  const appProcess = app.process();
+  await withTrainingRuntimeFailureDiagnostics(appProcess, () => runOwnedRestartPhase(async () => {
     const page = await app.firstWindow({ timeout: 60_000 });
     await qualifyDesktopTrainingJourney(page, test.info(), JSON.stringify(fixture));
-  }, () => closeDesktopAndQualifyOwnedWorkers(app, env.HF_HUB_CACHE, test.info()));
+  }, () => closeDesktopAndQualifyOwnedWorkers(app, env.HF_HUB_CACHE, test.info())), async report => {
+    const body = JSON.stringify(report);
+    if (Buffer.byteLength(body) > 4096) throw new Error("Training runtime diagnostics exceeded their fixed bound.");
+    await test.info().attach("training-host-runtime-failures", { body, contentType: "application/json" });
+  });
 });
 
 for(const scenario of ["create-register","task-recovery"] as const)test(`packaged desktop image ${scenario} uses real output and saved artifacts`,async()=>{

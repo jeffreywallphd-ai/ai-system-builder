@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, parse, relative, resolve } from "node:path";
+import { types } from "node:util";
 
 import {
   normalizeModelTrainingRequest,
@@ -17,6 +18,23 @@ import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
 import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 import type { RuntimeCapabilityGuardService, TaskPowerLifecyclePort } from "../../services/runtime";
+
+type TrainingStartStage = "request-validation" | "runtime-readiness" | "base-model"
+  | "dataset-resolution" | "task-dispatch" | "task-registration";
+
+/** Add only a fixed diagnostic code. Preserve the original error and all denials. */
+function trainingStartFailure(error: unknown, stage: TrainingStartStage): unknown {
+  try {
+    if (error === null || typeof error !== "object" || types.isProxy(error)) return error;
+    const prototype = Object.getPrototypeOf(error);
+    if (![Error.prototype, TypeError.prototype, RangeError.prototype].includes(prototype)
+        || Object.getOwnPropertyDescriptor(error, "code") || !Object.isExtensible(error)) return error;
+    Object.defineProperty(error, "code", { value: `MODEL_TRAINING_START_${stage.replaceAll("-", "_").toUpperCase()}`, enumerable: false });
+  } catch {
+    // Diagnostics cannot replace an original failure or inspect a cause/message.
+  }
+  return error;
+}
 
 function ensureBaseModelSelection(request: ModelTrainingRequest): void {
   if (!request.baseModel.modelRecordId && !request.baseModel.modelId && !request.baseModel.localPath) {
@@ -199,6 +217,15 @@ export class TrainModelUseCase {
   }
 
   private async executeOwned(request: ModelTrainingRequest, lease?: OwnedTaskLease): Promise<ModelTrainingResult> {
+    let stage: TrainingStartStage = "request-validation";
+    try {
+      return await this.executeAtStartStage(request, lease, (next) => { stage = next; });
+    } catch (error) {
+      throw trainingStartFailure(error, stage);
+    }
+  }
+
+  private async executeAtStartStage(request: ModelTrainingRequest, lease: OwnedTaskLease | undefined, enterStage: (stage: TrainingStartStage) => void): Promise<ModelTrainingResult> {
     if (this.workspaceIdByRequestId.size >= 1024) throw new Error("Training session task capacity is unavailable.");
     this.dependencies.taskReconciler?.assertAccepting();
     const normalizedRequest = normalizeModelTrainingRequest(request);
@@ -208,8 +235,10 @@ export class TrainModelUseCase {
     ensureBaseModelSelection(normalizedRequest);
     ensureDatasetSelections(normalizedRequest);
     ensureOutputDestinationSelection(normalizedRequest);
+    enterStage("runtime-readiness");
     await this.dependencies.runtimeCapabilityGuard?.requireCapabilityReady("model-training");
 
+    enterStage("base-model");
     let baseModelRecordId: string | undefined = normalizedRequest.baseModel.modelRecordId;
 
     if (normalizedRequest.baseModel.modelRecordId) {
@@ -236,12 +265,14 @@ export class TrainModelUseCase {
     let stagedBytes = 0;
     const accountBytes = (bytes: number) => { stagedBytes += bytes; if (stagedBytes > 256 * 1024 * 1024) throw new Error("Training inputs exceed the aggregate byte budget."); };
     try {
+      enterStage("dataset-resolution");
       const resolvedDatasets = [];
       for (const [datasetIndex, dataset] of normalizedRequest.datasets.entries()) {
         const resolved = await this.resolveDatasetForRuntime(normalizedRequest, dataset, datasetIndex, () => runtimeDatasetDir, (value) => { runtimeDatasetDir = value; }, accountBytes);
         resolvedDatasets.push(resolved);
       }
 
+      enterStage("task-dispatch");
       const started = await this.dependencies.runtimeTaskRegistry.startTask({
         workspaceId: normalizedRequest.workspaceId,
         taskType: TaskType.MODEL_TRAINING,
@@ -255,6 +286,7 @@ export class TrainModelUseCase {
         },
       });
 
+      enterStage("task-registration");
       if (typeof started.requestId !== "string" || started.requestId.trim().length === 0) {
         throw new Error("Model training start response missing requestId.");
       }

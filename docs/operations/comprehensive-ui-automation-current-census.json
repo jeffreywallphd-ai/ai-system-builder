@@ -8191,8 +8191,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b",
-    "bytes": 15123,
+    "sha256": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8",
+    "bytes": 15543,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8208,19 +8208,19 @@
      },
      {
       "name": "packaged desktop model reference searches, saves and survives reload and workspace changes",
-      "line": 120
+      "line": 125
      },
      {
       "name": "packaged desktop artifact local lifecycle preserves actual bytes and scope",
-      "line": 133
+      "line": 138
      },
      {
       "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
-      "line": 160
+      "line": 165
      },
      {
       "name": "packaged desktop private artifact publication records local branch and remote commit",
-      "line": 165
+      "line": 170
      }
     ],
     "dynamicCases": 9,
@@ -8231,11 +8231,11 @@
      },
      {
       "name": "runProviderDesktopCase",
-      "line": 149
+      "line": 154
      }
     ],
     "assertionCount": 7,
-    "assertionDigest": "ceebf4cfd0f3e540188e7e6f44c35b4ef8f1cf48be74b789de041b1060684e16",
+    "assertionDigest": "50921e99848c7fa8cd403b0a48a708b9de48ba82d3145433594e695c7b2bd1ca",
     "assertionExamples": [
      {
       "line": 28,
@@ -8248,12 +8248,12 @@
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
      },
      {
-      "line": 106,
+      "line": 111,
       "kind": "expect",
       "sha256": "4aec4f3cd2e1363691f43dc9b9f2221057e583ee37bc6f7ac1b95514a4dcc117"
      },
      {
-      "line": 110,
+      "line": 115,
       "kind": "expect",
       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
      }
@@ -8264,27 +8264,27 @@
       "kind": "skip"
      },
      {
-      "line": 75,
+      "line": 80,
       "kind": "skip"
      },
      {
-      "line": 99,
+      "line": 104,
       "kind": "skip"
      },
      {
-      "line": 122,
+      "line": 127,
       "kind": "skip"
      },
      {
-      "line": 135,
-      "kind": "skip"
-     },
-     {
-      "line": 161,
+      "line": 140,
       "kind": "skip"
      },
      {
       "line": 166,
+      "kind": "skip"
+     },
+     {
+      "line": 171,
       "kind": "skip"
      }
     ]
@@ -12722,95 +12722,139 @@
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
    "facts": {
-    "sha256": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f",
-    "bytes": 14998,
+    "sha256": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
+    "bytes": 25914,
     "cases": [
      {
       "name": "the no-install delegate admits only exact declared read-only probes and pip version",
-      "line": 8
+      "line": 12
      },
      {
-      "name": "captures only the fixed current training declaration and detaches its dataset identities",
-      "line": 20
-     },
-     {
-      "name": "generated input has an explicit versioned fixture and its report never claims model accuracy",
+      "name": "training diagnostics keep fragmented UTF8 and interleaved streams separate without private fields",
       "line": 27
      },
      {
-      "name": "rejects stale or foreign source, workspace, base and dataset declarations",
-      "line": 38
+      "name": "training diagnostics allow only closed fields and codes and never pass from unknown log text",
+      "line": 35
      },
      {
-      "name": "closed public identities cannot contain paths, queries or coercion hooks",
-      "line": 50
+      "name": "training diagnostic collection rejects proxy and getter-like inputs without running their code",
+      "line": 39
      },
      {
-      "name": "only a dense ordered complete phase list can pass; failure never grants parent qualification",
-      "line": 56
+      "name": "training diagnostics bound lines, combined bytes and event history without inventing completion",
+      "line": 46
      },
      {
-      "name": "unknown prerequisites cannot enter Page ports or disclose the declaration",
+      "name": "astral characters crossing the training diagnostic line cap cannot evade the bound",
+      "line": 51
+     },
+     {
+      "name": "real training producer codes survive the unchanged real host redaction and reach the collector",
+      "line": 55
+     },
+     {
+      "name": "training diagnostics retain incomplete and malformed evidence and freeze finalization",
+      "line": 64
+     },
+     {
+      "name": "training failure collection observes before the real action and detaches both streams afterward",
       "line": 69
      },
      {
+      "name": "successful training actions gain no extra diagnostic attachment or success evidence",
+      "line": 74
+     },
+     {
+      "name": "training diagnostic storage failure retains the original failure and always detaches listeners",
+      "line": 79
+     },
+     {
+      "name": "training diagnostic listener failure preserves the original error and still removes the other listener",
+      "line": 84
+     },
+     {
+      "name": "captures only the fixed current training declaration and detaches its dataset identities",
+      "line": 99
+     },
+     {
+      "name": "generated input has an explicit versioned fixture and its report never claims model accuracy",
+      "line": 106
+     },
+     {
+      "name": "rejects stale or foreign source, workspace, base and dataset declarations",
+      "line": 117
+     },
+     {
+      "name": "closed public identities cannot contain paths, queries or coercion hooks",
+      "line": 129
+     },
+     {
+      "name": "only a dense ordered complete phase list can pass; failure never grants parent qualification",
+      "line": 135
+     },
+     {
+      "name": "unknown prerequisites cannot enter Page ports or disclose the declaration",
+      "line": 148
+     },
+     {
       "name": "initial Page and attachment failures retain a fixed training phase without raw private errors",
-      "line": 76
+      "line": 155
      },
      {
       "name": "training failure details retain closed action identity without reading private errors",
-      "line": 94
+      "line": 173
      },
      {
       "name": "training failure details refuse foreign phase/action data without coercion",
-      "line": 110
+      "line": 189
      },
      {
       "name": "real read-only inventory projection returns only IDs and exact base/task-owned output facts",
-      "line": 128
+      "line": 207
      },
      {
       "name": "the real inventory projection accepts only the declared generated input label without exposing paths",
-      "line": 138
+      "line": 217
      },
      {
       "name": "inventory proof waits for the fresh call and a refused read cannot reuse previous visible rows",
-      "line": 145
+      "line": 224
      },
      {
       "name": "inventory proof denies malformed, failed, stale, foreign and duplicate rows without reading accessors",
-      "line": 157
+      "line": 236
      }
     ],
-    "dynamicCases": 0,
+    "dynamicCases": 1,
     "functions": [
      {
       "name": "withInventoryPort",
-      "line": 123
+      "line": 202
      }
     ],
-    "assertionCount": 61,
-    "assertionDigest": "ba4a13dd478a4830a08dbd9e879aef40349e5dc8d200cd93da5c4eef2255c7e4",
+    "assertionCount": 123,
+    "assertionDigest": "a9f457557dd596f3a9f775a4fc81619be9aa26fd73b9dd3e2490d064197a1e9f",
     "assertionExamples": [
      {
-      "line": 10,
+      "line": 14,
       "kind": "assert",
       "sha256": "e813aff1a0957fa9eee9e8f04012ee88043fc2dc64acf723c5ba9c3805521ef4"
      },
      {
-      "line": 11,
+      "line": 15,
       "kind": "assert",
       "sha256": "1ff6d80c889e301e048d62919d5e4b5c00c46a80b3eb97007768ea50a97588e9"
      },
      {
-      "line": 12,
+      "line": 16,
       "kind": "assert",
       "sha256": "6ddc53dfc038dab73b298dc2bdd7f42cf5b1d7a8d5dbdc1cf4d7f3810dac3a46"
      },
      {
-      "line": 21,
+      "line": 31,
       "kind": "assert",
-      "sha256": "cf891e7cce0ee35d3b2e10b3fda6053313cc767bb70967c00e666675055bf0d8"
+      "sha256": "8258a767203568232cb0cd81625c6f0108f56dd28fb59568ee48a4ac85223d52"
      }
     ],
     "modifiers": []
@@ -14194,42 +14238,50 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
    "facts": {
-    "sha256": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
-    "bytes": 7102,
+    "sha256": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
+    "bytes": 14790,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "createTrainingRuntimeFailureCollector",
+      "line": 38
+     },
+     {
+      "name": "withTrainingRuntimeFailureDiagnostics",
+      "line": 104
+     },
+     {
       "name": "trainingFailureDetails",
-      "line": 25
+      "line": 137
      },
      {
       "name": "denseStrings",
-      "line": 33
+      "line": 145
      },
      {
       "name": "trainingPublicId",
-      "line": 45
+      "line": 157
      },
      {
       "name": "trainingWorkspaceId",
-      "line": 49
+      "line": 161
      },
      {
       "name": "trainingDatasetIds",
-      "line": 53
+      "line": 165
      },
      {
       "name": "captureTrainingHostFixture",
-      "line": 70
+      "line": 182
      },
      {
       "name": "trainingBaseName",
-      "line": 89
+      "line": 201
      },
      {
       "name": "trainingHostReport",
-      "line": 92
+      "line": 204
      }
     ],
     "assertionCount": 0,

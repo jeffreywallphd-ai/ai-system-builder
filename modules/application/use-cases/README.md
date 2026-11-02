@@ -4,6 +4,12 @@
 
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
+Training start failures can carry a fixed `MODEL_TRAINING_START_*` diagnostic code
+for request validation, runtime readiness, base-model lookup, dataset resolution,
+task dispatch or task registration. The original error object, message and cause
+remain intact. Existing codes, typed denials, frozen errors and proxy values are
+not changed. These labels grant no runtime readiness or task acceptance.
+
 - Governed ingestion task use cases
   - persist workspace-scoped progress before reporting it to clients;
   - accept idempotent bounded file chunks and finalize through an async stream;

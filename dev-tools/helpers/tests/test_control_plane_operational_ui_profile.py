@@ -106,6 +106,8 @@ TESTS += ['dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.
  'modules/ui/shared/settings/tests/SettingField.unit.test.tsx',
  'modules/application/use-cases/tests/settings.use-cases.unit.test.ts']
 
+TESTS += ['modules/application/use-cases/tests/train-model.use-case.unit.test.ts']
+
 EXPECTED_COMMANDS = [['node',
   '--import',
   'tsx',
@@ -156,12 +158,13 @@ EXPECTED_COMMANDS = [['node',
   'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
   'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts',
   'modules/application/use-cases/tests/settings.use-cases.unit.test.ts',
-  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'],
+  'modules/application/use-cases/tests/train-model.use-case.unit.test.ts'],
  ['node',
   '--import',
   'tsx',
   '--test',
   '--',
+  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts',
   'modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx',
   'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx',
@@ -265,6 +268,33 @@ SETTINGS_AUTOMATIC = ['dev-tools/scripts/qualification/visual-composer/owned-hos
  'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs']
 
 class OperationalUiProfile(unittest.TestCase):
+    def test_training_start_sources_are_finite_borrowed_impact(self):
+        sources = ['modules/application/use-cases/model/train-model.use-case.ts', 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts', 'modules/application/use-cases/README.md']
+        test = 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts'
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        self.assertIn(test, self.profile()["test_paths"])
+        for source in sources:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        for missing, remove_test, required, paths, generic in [
+            (None, False, ["operational-ui"], sources, False),
+            (None, False, ["operational-ui", "focused-tests"], sources, True),
+            (None, False, ["operational-ui"], sources + ["modules/application/use-cases/model/unknown.ts"], True),
+            (test, False, ["operational-ui"], sources, False),
+            *[(source, source == test, ["operational-ui"], sources, True) for source in sources],
+        ]:
+            with self.subTest(missing=missing, remove_test=remove_test, required=required, paths=paths), tempfile.TemporaryDirectory(prefix="training-start-profile-") as directory:
+                root=Path(directory);profile=self.profile()
+                if missing:profile["source_paths"].remove(missing)
+                if remove_test:profile["test_paths"].remove(test)
+                self.fixture(root,profile)
+                ids={row["id"]for row in catalog.plan(root,paths,required,"synthetic-candidate")["selected"]}
+                self.assertIn("operational-ui",ids);self.assertEqual("focused-tests"in ids,generic)
+        with tempfile.TemporaryDirectory(prefix="training-start-borrowed-")as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={row["id"]for row in catalog.plan(root,sources,["documentation"],"synthetic-candidate")["selected"]}
+            self.assertNotIn("operational-ui",ids);self.assertIn("focused-tests",ids)
+
     def test_training_form_component_is_finite_borrowed_impact(self):
         component = "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
         test = "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx"
@@ -396,7 +426,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
-        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(self.profile()["test_paths"]), 82)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -429,7 +459,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(self.profile()["test_paths"]), 82)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
@@ -455,7 +485,7 @@ class OperationalUiProfile(unittest.TestCase):
     def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
-        self.assertEqual(len(self.profile()["test_paths"]), 81)
+        self.assertEqual(len(self.profile()["test_paths"]), 82)
         self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])

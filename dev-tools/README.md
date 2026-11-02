@@ -917,6 +917,17 @@ recording its value or raw error. The eight workflow phases and physical worker
 shutdown checks still need actual success. A clean outer Job exit alone is
 not a successful training or worker-cleanup result.
 
+A failed training check also attaches a bounded runtime-failure summary from the
+existing safe Desktop feature events. It keeps only known event, feature, stage,
+error-type and error-code labels. It reads at most 256 KiB across both child
+streams, limits each chunk to 64 KiB and each line to 4096 UTF-16 units, and keeps
+at most eight facts. Raw messages, paths, prompts and dataset values are excluded.
+Listener failures still run the original journey and owned-worker shutdown once.
+Successful checks keep the original success report and shutdown requirements.
+The latest real run completed form configuration but failed before an accepted
+training task was observed. Its cause remains unknown. These diagnostics do not
+close that real-host check or qualify model quality, offloading or crash recovery.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

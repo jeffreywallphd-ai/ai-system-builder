@@ -2073,7 +2073,8 @@
         "dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs",
         "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
         "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
-        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts"
+        "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
+        "modules/application/use-cases/tests/train-model.use-case.unit.test.ts"
       ],
       "source_paths": [
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -2262,7 +2263,10 @@
         "apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx",
         "modules/ui/shared/settings/tests/SettingField.unit.test.tsx",
         "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
-        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
+        "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx",
+        "modules/application/use-cases/model/train-model.use-case.ts",
+        "modules/application/use-cases/tests/train-model.use-case.unit.test.ts",
+        "modules/application/use-cases/README.md"
       ]
     },
     "comfyui-host-policy": {

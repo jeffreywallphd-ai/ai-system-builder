@@ -20,6 +20,7 @@ import type {
   ArtifactStorageBindingPort,
 } from "../../ports/storage";
 import { TrainModelUseCase } from "../model/train-model.use-case";
+import { RuntimeCapabilityUnavailableError } from "../../services/runtime/runtime-capability-guard.service";
 
 describe("TrainModelUseCase", () => {
   const baseRequest = {
@@ -140,6 +141,44 @@ describe("TrainModelUseCase", () => {
       localPath: "/models/generated/demo-adapter",
       modelId: "generated/demo-adapter",
     })),
+  });
+
+  for (const stage of ["request-validation", "runtime-readiness", "base-model", "dataset-resolution", "task-dispatch", "task-registration"] as const) it(`keeps the original training-start failure and adds only a safe ${stage} code`, async () => {
+    const failure = new Error("private-synthetic-start-detail");
+    const runtime = createRuntimeTaskRegistryFake();
+    if (stage === "task-dispatch") runtime.startTask = async () => { throw failure; };
+    if (stage === "task-registration") runtime.startTask = async () => ({ requestId: "", accepted: true, status: "queued" });
+    const bindings = createStorageBindingsFake();
+    if (stage === "dataset-resolution") bindings.readArtifactStorageBindings = async () => { throw failure; };
+    const useCase = new TrainModelUseCase({
+      runtimeTaskRegistry: runtime,
+      modelRegistry: stage === "base-model" ? { ...baseRegistry, getModelRecord: async () => { throw failure; } } : baseRegistry,
+      storageBindings: bindings, storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake(),
+      runtimeCapabilityGuard: { requireCapabilityReady: async () => { if (stage === "runtime-readiness") throw failure; return {} as never; } },
+    });
+    let caught: unknown;
+    try { await useCase.execute(stage === "request-validation" ? { ...baseRequest, workspaceId: undefined } : baseRequest); } catch (error) { caught = error; }
+    expect((caught as Error & { code?: string }).code).toBe(`MODEL_TRAINING_START_${stage.replaceAll("-", "_").toUpperCase()}`);
+    if (stage !== "request-validation" && stage !== "task-registration") expect(caught).toBe(failure);
+    expect(Object.getOwnPropertyDescriptor(caught, "code")?.enumerable).toBe(false);
+    expect(JSON.stringify(caught)).not.toContain("private-synthetic-start-detail");
+  });
+
+  for (const kind of ["typed-readiness", "existing-code", "frozen", "proxy", "accessor-code", "primitive"] as const) it(`preserves protected ${kind} training failures without inspecting private fields`, async () => {
+    let inspections = 0;
+    const original = new Error("private-synthetic-detail");
+    const typed = new RuntimeCapabilityUnavailableError({ capabilityId: "model-training", status: "unavailable", summary: "Unavailable", available: false, healthy: false, updatedAt: "2026-01-01T00:00:00Z" } as never);
+    const failure = kind === "typed-readiness" ? typed : kind === "primitive" ? "private-synthetic-detail" : kind === "proxy" ? new Proxy(original, { get() { inspections++; throw new Error("must not inspect"); }, getPrototypeOf() { inspections++; throw new Error("must not inspect"); } }) : original;
+    if (kind === "existing-code") Object.defineProperty(original, "code", { value: "ENOENT" });
+    if (kind === "frozen") Object.freeze(original);
+    if (kind === "accessor-code") Object.defineProperty(original, "code", { get() { inspections++; throw new Error("must not inspect"); } });
+    const useCase = new TrainModelUseCase({ runtimeTaskRegistry: createRuntimeTaskRegistryFake(), modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake(), runtimeCapabilityGuard: { requireCapabilityReady: async () => { throw failure; } } });
+    let caught: unknown;
+    try { await useCase.execute(baseRequest); } catch (error) { caught = error; }
+    expect(caught).toBe(failure); expect(inspections).toBe(0);
+    if (kind === "typed-readiness") expect(typed.code).toBe("unavailable");
+    if (kind === "existing-code") expect((original as Error & { code?: string }).code).toBe("ENOENT");
+    if (kind === "frozen") expect(Object.getOwnPropertyDescriptor(original, "code")).toBeUndefined();
   });
 
   for (const data of [undefined, { runId: "train-req-1", status: "invalid" }]) it("settles malformed successful training output without a renderer", async () => {

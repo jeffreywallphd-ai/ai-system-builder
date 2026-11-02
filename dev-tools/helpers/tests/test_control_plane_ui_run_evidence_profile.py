@@ -43,7 +43,7 @@ class UiRunEvidenceProfile(unittest.TestCase):
 
     def test_closed_extension_preserves_prior_members_and_auto_triggers(self):
         profile = self.profile()
-        self.assertEqual(len(profile["test_paths"]), 81)
+        self.assertEqual(len(profile["test_paths"]), 82)
         self.assertEqual(profile["test_paths"][46:49], [
             "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
             "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",

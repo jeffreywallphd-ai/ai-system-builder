@@ -83,10 +83,41 @@ function assertTrainingFormSourceDrift(map, result) {
   return {...result,gaps:result.gaps.filter(g=>!(g.kind==="unreviewed-source-drift"&&g.source===pending.source))};
 }
 
+// These three exact candidate definitions retain real prior Git pins until
+// their reviewed source is committed. Historical bindings stay inspectable.
+const pendingTrainingStartDefinitions = Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+    "baseline": "b3cfef49ea0f3a6cd016f502400b66e0835b339d",
+    "committed": "b2f0742d831acd7634d6317d7de8c3f7f4bf5596ea9d0e76e791c06758863666",
+    "candidate": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a",
+    "facts_sha256": "0cb6786784b8340e8ab22a2d4960cb4e2bf4b6380b39a59caf8f14567803d618"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+    "baseline": "b3cfef49ea0f3a6cd016f502400b66e0835b339d",
+    "committed": "5fe9d9e420cef992fc000f2aae7b1d2b1559b712c30c17733f2edf4a0b2adc2f",
+    "candidate": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced",
+    "facts_sha256": "bc35c6265a30389938d97e942eb42a6ba9a39182d5696950d8af52050fbc3b32"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "baseline": "b3cfef49ea0f3a6cd016f502400b66e0835b339d",
+    "committed": "2d52954a9d7cfc32073134b57e741bf8b8507b2160b06188b7453cc1e0ebf92b",
+    "candidate": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8",
+    "facts_sha256": "2ef88e6a94c53a4c48e6d8789111a1bc77e967f51538d68a2e54b90e8c787b1c"
+  }
+].map(Object.freeze));
+function trainingDefinitionsFor(map) {
+  if(map.source_baseline===pendingTrainingDefinitions[0].baseline)return pendingTrainingDefinitions;
+  const replaced=new Set(pendingTrainingStartDefinitions.map(row=>row.path));
+  return [...pendingTrainingDefinitions.filter(row=>!replaced.has(row.path)),...pendingTrainingStartDefinitions];
+}
+
 function assertCurrentSourceDrift(map, result) {
   if(map.sources.some(row=>row.path===pendingTrainingFormDefinition.source)) result=assertTrainingFormSourceDrift(map,result);
   const expected = [];
-  for (const pending of pendingTrainingDefinitions) {
+  for (const pending of trainingDefinitionsFor(map)) {
     const source = map.sources.find(row => row.path === pending.path); assert(source);
     assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
     const committed = execFileSync("git", ["show", `${map.source_baseline}:${pending.path}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
@@ -99,7 +130,7 @@ function assertCurrentSourceDrift(map, result) {
       expected.push({kind: "unreviewed-source-drift", source: pending.path});
     }
   }
-  const paths = new Set(pendingTrainingDefinitions.map(pending => pending.path));
+  const paths = new Set(trainingDefinitionsFor(map).map(pending => pending.path));
   const trainingGaps = result.gaps.filter(g => g.kind === "unreviewed-source-drift" && paths.has(g.source));
   const ordered = rows => [...rows].sort((a,b) => a.source.localeCompare(b.source));
   assert.deepEqual(ordered(trainingGaps), ordered(expected), "Missing, duplicate or extra training drift is refused.");
@@ -261,7 +292,7 @@ test("checks the current repository map against original scope and actual source
     if (row.facts.sha256 !== row.committed_sha256) {
       // The composed exact SHA/full-facts/Git guard above admits this one
       // prospective oracle definition; a pathname alone never exempts drift.
-      assert(pendingTrainingDefinitions.some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
+      assert(trainingDefinitionsFor(map).some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
       assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===source));
     } else assert.equal(row.facts.sha256,row.committed_sha256);
     assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));
@@ -337,7 +368,10 @@ test("pending tiny-training bindings reject forged, future, missing and unrelate
   const paths = [...pendingTrainingDefinitions.map(p=>p.path), pendingReviewSiteDefinition.source];
   const map = {source_baseline: pendingTrainingDefinitions[0].baseline, sources: current.sources.filter(row=>paths.includes(row.path)).map(row=>{
     const pending=pendingTrainingDefinitions.find(p=>p.path===row.path);
-    return pending?{...row,committed_sha256:pending.committed}:row;
+    if(!pending)return row;
+    const original=execFileSync("git",["show",`b3cfef49ea0f3a6cd016f502400b66e0835b339d:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    const facts=sourceFacts(row.path,original);assert.equal(facts.sha256,pending.candidate);assert.equal(sha(JSON.stringify(facts)),pending.facts_sha256);
+    return {...row,facts,committed_sha256:pending.committed};
   })};
   // This fixture declares exactly the inspected current facts. It does not
   // execute the training journey, change its status or grant a parent pass.
@@ -359,7 +393,7 @@ test("pending tiny-training bindings reject forged, future, missing and unrelate
 
 function assertReintroducedTrainingOracle(map,archive) {
   const source="dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts";
-  const pending=pendingTrainingDefinitions.find(row=>row.path===source);assert(pending);
+  const pending=trainingDefinitionsFor(map).find(row=>row.path===source);assert(pending);
   const old=archive.sources.filter(entry=>entry.row.path===source);assert.equal(old.length,1);
   const current=map.sources.filter(row=>row.path===source);assert.equal(current.length,1);
   const row=current[0],historical=old[0].row;
@@ -445,6 +479,11 @@ test("prospective training form binding rejects forged future missing and extra 
   const target=m=>m.sources.find(row=>row.path===pending.source);
   target(map).committed_sha256=pending.committed;
   map.source_baseline=pending.baseline;
+  for(const changed of pendingTrainingStartDefinitions){
+    const row=map.sources.find(value=>value.path===changed.path);assert(row);
+    const original=execFileSync("git",["show",`${pending.baseline}:${row.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    row.facts=sourceFacts(row.path,original);row.committed_sha256=sha(original);
+  }
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
   for(const mutate of [
@@ -461,4 +500,25 @@ test("prospective training form binding rejects forged future missing and extra 
   }
   const missing=structuredClone(map);missing.sources=missing.sources.filter(row=>row.path!==pending.source);
   assert.throws(()=>assertTrainingFormSourceDrift(missing,{gaps:[]}));
+});
+
+test("pending training-start definitions reject forged missing duplicate and unrelated evidence",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  map.source_baseline=pendingTrainingStartDefinitions[0].baseline;
+  for(const pending of pendingTrainingStartDefinitions)map.sources.find(row=>row.path===pending.path).committed_sha256=pending.committed;
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
+  for(const pending of pendingTrainingStartDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/foreign.test.mjs"});},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.source_baseline="0cf2678091e936588b4dfdb5fd9a3911910af3da";},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
+  }
 });
