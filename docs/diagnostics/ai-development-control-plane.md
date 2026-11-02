@@ -1510,7 +1510,7 @@ a later observer test does not convert that receipt or a parent criterion to a
 pass. No user action is needed for this agent-owned compatibility repair.
 
 The `offload-resource-lifecycle` profile also owns the fixed read-session entry,
-fixture and two ordinary synthetic test files. Its nineteen fixed files test
+fixture and two ordinary synthetic test files. Its twenty fixed files test
 closed planning, original-generation fault control and strict cancellation/exit
 oracles. The ordinary profile never invokes `--native`, Windows APIs, a real
 worker, a model or accuracy. Exact standalone Windows effects require their own
@@ -1521,7 +1521,7 @@ shared-domain, production, resource or parent-roadmap qualification.
 ### Safe-weight supplier fixture isolation
 
 The lifecycle profile includes the pure supplier boundary suite and inert
-original-inventory binding tests in its nineteen model-free files. The separate
+original-inventory binding tests in its twenty model-free files. The separate
 native loader fixture is a source trigger, not a
 profile test. Its controlled filename is excluded from ordinary owner selection
 and denied by exact/profile selection. An explicitly bounded offline fixture run
@@ -1713,3 +1713,24 @@ complete Train, private review, explicit Save, reopened record and cleanup.
 The failed run, its files and the earlier input/readiness/package evidence stay
 preserved. Completed model-accuracy and OCR checks stay closed; shared full-system
 testing remains deferred until feature implementation is complete.
+
+### Original-source diagnostic routing
+
+The ordinary lifecycle profile now selects twenty fixed model-free test files.
+The new source fixture file owns pure shared-row, producer, entry, strict-report
+and original-lifetime regressions. The fixed source entry and fixture are source
+triggers only; ordinary collection does not execute `--native`, Windows APIs,
+fixture setup, models or accuracy tests. Missing test/source declarations retain
+the generic fallback.
+
+The SOURCE diagnostic reserves original physical rows for engine work, source
+prepare/check/unused close, report/finalization and one-shot exit/watchdog/park
+intents before the source DLL loads. Its 16,384 total includes one shared 64-row
+terminal tail. Pure per-call checks reuse original Job/timer/thread/source facts;
+explicit boundary readbacks are budgeted. Known returns survive observation
+corruption, but corrupted observations cannot authorize ACK or replay.
+
+Only separately reviewed committed-source/effect execution can supply actual
+Windows evidence. Production source/ancestor/mapping/discovery, shared accounting,
+model-worker/crash/restart and offload resources remain pending agent work. No
+parent criterion passes from this definition. Accepted accuracy/OCR stay closed.

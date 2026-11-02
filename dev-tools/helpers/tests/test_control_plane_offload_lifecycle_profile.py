@@ -37,6 +37,7 @@ TESTS = [
     "modules/adapters/runtime/python/worker/tests/test_windows_offload_execution_child.py",
     "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_fixture.py",
     "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
     "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
 ]
 
@@ -51,7 +52,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             path.write_bytes((ROOT / name).read_bytes())
         (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {PROFILE: profile}}))
 
-    def test_fixed_profile_executes_only_nineteen_model_free_files(self):
+    def test_fixed_profile_executes_only_twenty_model_free_files(self):
         self.assertEqual(self.profile()["test_paths"], TESTS)
         expected = [run_focused_checks.python_test_command(ROOT, name) for name in sorted(TESTS)]
         self.assertEqual(run_focused_checks.profile_commands(ROOT, PROFILE), expected)
@@ -66,6 +67,9 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             for paths, required, selected, generic in [
                 ([CORE, ENTRY, CONFIG, "dev-tools/README.md"], ["documentation"], True, False),
                 ([GUARD], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/qualify_windows_offload_sources.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/windows_offload_sources_fixture.py"], ["documentation"], True, False),
+                (["dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tests/test_windows_offload_sources.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"], ["documentation"], True, False),
@@ -109,7 +113,8 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                     self.assertEqual("focused-tests" in ids, generic)
 
     def test_missing_source_declaration_does_not_suppress_generic_gate(self):
-        for source in ("modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py", CORE,
+        for source in ("dev-tools/scripts/qualification/qualify_windows_offload_sources.py", "dev-tools/scripts/qualification/windows_offload_sources_fixture.py",
+                       "modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py", CORE,
                        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py",
                        "modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py",
                        "dev-tools/scripts/qualification/qualify_windows_offload_journal.py",
@@ -127,7 +132,8 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                 self.assertIn(PROFILE, ids); self.assertIn("focused-tests", ids)
 
     def test_missing_new_test_declaration_keeps_generic_coverage(self):
-        for test in ("modules/adapters/runtime/python/worker/tests/test_windows_offload_sources.py", "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+        for test in ("dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
+                     "modules/adapters/runtime/python/worker/tests/test_windows_offload_sources.py", "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
                      "modules/adapters/runtime/python/worker/tests/test_windows_offload_journal.py",
                      "dev-tools/scripts/qualification/tests/test_windows_offload_journal_fixture.py",
                      "dev-tools/scripts/qualification/tests/test_windows_offload_journal_qualification.py",

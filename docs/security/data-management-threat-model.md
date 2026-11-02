@@ -2166,3 +2166,35 @@ No new effect, limit, model download, provider publication, offload lease, disk
 credit, quality result or roadmap pass follows from source tests. Secure rollback
 removes this additive profile and retains the existing offline approved-model
 path and all product security controls.
+
+### Finite original-source diagnostic producer
+
+This additive diagnostic uses the existing exact source-owner API and a private
+SOURCE profile. Production supplies no producer or borrower. One original table
+preallocates 16,384 rows, including its shared 64-row terminal tail. Bind physical
+row/reservation/payload/completion membership before each Native dispatch; reserve
+source prepare, one live check and unused closes plus producer/report/exit debts
+before SourceAPI construction. No row, source close or uncertain exit refunds
+capacity or staging. Preserve old profiles, runtime limits and the four IPC
+operations.
+
+Bind the actual original Job/timer/thread/source context at budgeted boundaries.
+Per-call predicates are pure. System bootstrap retains the exact original DLL
+object and immediate error; typed calls retain their actual scalar reply/error.
+Known-return custody survives cleared observation lists or changed payloads, but
+observation drift denies ACK, further dispatch and replay. Retain partial output
+slots, read IOSBs/buffers/events and separate guard OVERLAPPED requests. A requested
+cancel, signaled event, timer setting or self-exit intent is not completion proof.
+Only the original parent process observation can prove child exit and empty Job.
+
+Fixed new synthetic input cases cover an 8 MiB boundary and exact hash-denial
+frontier. Other setup/read/Native failures remain failed cases. Default/import/plan
+paths grant no effect. Focused synthetic positive/denial/lifetime/routing tests
+precede independent review and an owned source checkpoint; actual Windows effects
+require another exact-source/effect review. No historical tree is inspected,
+adopted, moved, removed, ACL-changed or credited.
+
+Residual production source/ancestor/mapping/discovery, protected shared accounting,
+model-worker/crash/restart and offload resource proof remain pending. No model
+quality, OCR or parent qualification follows. Rollback removes only this additive
+diagnostic and retains production denial, all unknown usage and prior evidence.

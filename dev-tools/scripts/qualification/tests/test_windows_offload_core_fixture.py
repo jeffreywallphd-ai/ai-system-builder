@@ -356,6 +356,36 @@ class ControllerTests(unittest.TestCase):
         native._Native__profile = subject._CORE_PROFILE
         with self.assertRaises(AttributeError): native.profile = subject._JOURNAL_PROFILE
 
+    def test_source_profile_is_canonical_fixed_and_preserves_prior_profiles(self):
+        p=subject._SOURCE_PROFILE
+        self.assertIs(subject._canonical_profile(p),p)
+        self.assertEqual(p.schema,'windows-offload-sources-native-v1')
+        self.assertEqual(p.cases,('deadline-control','source-read-close','source-hash-denied'))
+        self.assertEqual(p.runs.name,p.schema)
+        self.assertEqual([Path(n).stem for n in p.task_files],
+            ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',
+             'windows_offload_execution','windows_offload_sources'])
+        self.assertNotIn('windows_offload_execution_child',[Path(n).stem for n in p.task_files])
+        with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
+        hashes={subject.TOOL_FILES[1]:'a'*64}
+        code=subject._bootstrap('a'*32,p.cases[1],hashes,1,10,11,12,p)
+        self.assertTrue(code.endswith(',m._SOURCE_PROFILE)\n'))
+        self.assertNotIn('_EXECUTION_PROFILE',code)
+        with self.assertRaises(subject.FixtureError):subject._bootstrap('a'*32,'empty-stage',hashes,1,10,11,12,p)
+        with patch.object(subject,'_Native',side_effect=AssertionError('No native setup')) as native:
+            with self.assertRaises(subject.FixtureError):subject.standalone_native_sources()
+        native.assert_not_called()
+
+    def test_source_private_package_loads_exact_dependencies_before_consumer(self):
+        p=subject._SOURCE_PROFILE;hashes={n:'a'*64 for n in p.task_files+p.tool_files}
+        order=[];name='_fixed_windows_staging_qualification_tasks'
+        with patch.dict(sys.modules),patch.object(subject,'_repo_hashes',return_value=hashes), \
+             patch.object(subject,'_load_file',side_effect=lambda name,path,digest:order.append(path.stem) or object()):
+            sys.modules.pop(name,None)
+            result=subject._private_core_package(hashes,p)
+        self.assertEqual(order,[Path(n).stem for n in p.task_files])
+        self.assertEqual(tuple(result),tuple(order))
+
     def test_parent_oracle_refuses_cross_profile_case_without_rewriting_facts(self):
         value = parent('empty-stage')
         with self.assertRaises(subject.FixtureError):

@@ -17,7 +17,7 @@ from pathlib import Path, PureWindowsPath
 import stat
 import subprocess
 import sys
-from threading import get_ident
+from threading import RLock, get_ident
 import time
 import types
 import uuid
@@ -79,12 +79,22 @@ _EXECUTION_PROFILE = _FixtureProfile(
     ('dev-tools/scripts/qualification/qualify_windows_offload_read_session.py', TOOL_FILES[1],
      'dev-tools/scripts/qualification/windows_offload_read_session_fixture.py'),
     ROOT / '.local-codex/windows-offload-read-session-native-v1')
+_SOURCE_PROFILE = _FixtureProfile(
+    ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_sources.py',
+    '_standalone_windows_sources_engine', 'windows-offload-sources-native-v1',
+    ('deadline-control', 'source-read-close', 'source-hash-denied'),
+    TASK_FILES + ('modules/adapters/runtime/python/worker/tasks/windows_offload_execution.py',
+                  'modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py'),
+    ('dev-tools/scripts/qualification/qualify_windows_offload_sources.py', TOOL_FILES[1],
+     'dev-tools/scripts/qualification/windows_offload_sources_fixture.py'),
+    ROOT / '.local-codex/windows-offload-sources-native-v1')
+_SOURCE_PARENT, _SOURCE_CHILD = object(), object()
 
 
 def _canonical_profile(profile):
     require(type(profile) is _FixtureProfile
             and (profile is _CORE_PROFILE or profile is _JOURNAL_PROFILE or profile is _READ_PROFILE
-                 or profile is _EXECUTION_PROFILE), 'fixture-profile')
+                 or profile is _EXECUTION_PROFILE or profile is _SOURCE_PROFILE), 'fixture-profile')
     return profile
 
 
@@ -307,6 +317,9 @@ def _component(profile, hashes):
     if profile is _CORE_PROFILE: return None
     if profile is _JOURNAL_PROFILE: return _journal_fixture(hashes)
     if profile is _READ_PROFILE: return _read_fixture(hashes)
+    if profile is _SOURCE_PROFILE:
+        path=profile.tool_files[2]
+        return _load_file('_fixed_windows_sources_component',ROOT/path,hashes[path])
     raise FixtureError('fixture-profile')
 
 
@@ -316,6 +329,7 @@ def _component_error(profile, component, error):
     if component is None: return False
     if profile is _JOURNAL_PROFILE: return type(error) is component.JournalFixtureError
     if profile is _READ_PROFILE: return type(error) is component.ReadBindingFixtureError
+    if profile is _SOURCE_PROFILE: return type(error) is component.SourceFixtureError
     return False
 
 
@@ -324,6 +338,7 @@ def _component_failure(profile):
     if profile is _CORE_PROFILE: return 'core-operation'
     if profile is _JOURNAL_PROFILE: return 'journal-operation'
     if profile is _READ_PROFILE: return 'read-binding-operation'
+    if profile is _SOURCE_PROFILE: return 'source-operation'
     raise FixtureError('fixture-profile')
 
 
@@ -397,7 +412,8 @@ def _worker_arguments(image, bootstrap, ready, dispatch):
 class _Windows:
     def __init__(self, owner):
         require((C.sizeof(_BasicLimits), C.sizeof(_ExtendedLimits), C.sizeof(_StartupEx), C.sizeof(_Process)) == (64, 144, 112, 24), 'native-layout')
-        self.k = C.WinDLL('kernel32', use_last_error=True)
+        self.k = (owner._source_bootstrap() if getattr(owner,'_Native__profile',None) is _SOURCE_PROFILE
+                  else C.WinDLL('kernel32', use_last_error=True))
         self.owner = owner
 
     def location(self, image):
@@ -416,9 +432,387 @@ _ABI = types.SimpleNamespace(Process=_Process, Accounting=_Accounting, Security=
                              m=types.SimpleNamespace(ExtendedLimits=_ExtendedLimits))
 
 
+class _SourceSlot:
+    __slots__ = ('origin', 'arena', 'index', 'terminal', 'generation', 'facts',
+                 'reservation', 'binding', 'completion', 'payload')
+    def __init__(self, arena, index):
+        self.origin, self.arena, self.index = self, arena, index
+        self.terminal = index >= 16320
+        self.generation = object()
+        self.facts = (self, arena, index, self.terminal, self.generation)
+        self.reservation = self.binding = self.completion = self.payload = None
+
+
+class _SourceSlotReservation:
+    """Original physical rows, not independently sufficient execution authority."""
+    __slots__ = ('origin', 'arena', 'purpose', 'rows', 'original')
+    def __init__(self, arena, purpose):
+        self.origin, self.arena, self.purpose = self, arena, purpose
+        self.rows, self.original = None, None
+    def __repr__(self): return '<original diagnostic row reservation>'
+    def __copy__(self): raise FixtureError('source-reservation-transfer')
+    def __deepcopy__(self, memo): raise FixtureError('source-reservation-transfer')
+    def __reduce_ex__(self, protocol): raise FixtureError('source-reservation-transfer')
+
+
+class _SourceSlots:
+    """SOURCE-only shared physical capacity. This class performs no Native IO.
+
+    The actual producer must additionally prove its original Job, timer, thread,
+    source and operation. A plan, reservation or fake actor alone grants no call.
+    The64 terminal rows are INSIDE the existing16384 total, never a fresh pool.
+    Bindings and completions retain independent originals if mutable lists drift.
+    """
+    def __init__(self, owner, role):
+        require(type(owner) is _Native and _profile_for(owner) is _SOURCE_PROFILE
+                and (role is _SOURCE_PARENT or role is _SOURCE_CHILD), 'source-slot-owner')
+        self.origin, self.owner, self.role = self, owner, role
+        self.deadline = owner.deadline_ns
+        self.case = self.case_origin = getattr(owner,'source_case',None)
+        self.cutoff_used = False
+        self.lock = RLock()
+        self.rows = tuple(_SourceSlot(self, i) for i in range(16384))
+        self.bindings, self.completions, self.claims, self.payloads = ([None]*16384 for _ in range(4))
+        self.reservations, self.issued = [], []
+        self.order = self.order_origin = ()
+        self.calls = owner.calls
+        self.original = (owner, role, self.rows, self.bindings, self.completions,
+                         self.claims, self.reservations, self.issued, self.calls, self.payloads)
+        self.fenced = False
+        self.api_bindings = self.api_origin = None
+        self.ready = self.ready_origin = None
+
+    def __repr__(self): return '<original shared diagnostic slots>'
+    def __copy__(self): raise FixtureError('source-reservation-transfer')
+    def __deepcopy__(self, memo): raise FixtureError('source-reservation-transfer')
+    def __reduce_ex__(self, protocol): raise FixtureError('source-reservation-transfer')
+
+    def physical_origin_bound(self):
+        """Retain known returns even after an observation list is corrupted.
+
+        This is custody only. Dispatch, invocation ACK and escape admission still
+        require the complete original observation graph through origin_bound.
+        """
+        require(type(self) is _SourceSlots and self.origin is self
+                and type(self.original) is tuple and len(self.original) == 10
+                and all(a is b for a,b in zip((self.owner,self.role,self.rows,self.bindings,
+                    self.completions,self.claims,self.reservations,self.issued,self.calls,self.payloads),self.original))
+                and type(self.owner) is _Native and _profile_for(self.owner) is _SOURCE_PROFILE
+                and self.owner.source_slots is self and self.owner.calls is self.calls
+                and len(self.rows) == 16384
+                and all(type(v) is list and len(v) == 16384 for v in
+                        (self.bindings,self.completions,self.claims,self.payloads)), 'source-slot-origin')
+
+    def origin_bound(self):
+        self.physical_origin_bound()
+        require(type(self.order) is tuple and self.order is self.order_origin
+                and len(self.issued) == len(self.order) == len(self.calls)
+                and all(a is b for a,b in zip(self.issued,self.order))
+                and all(a is b.payload for a,b in zip(self.calls,self.order))
+                and all(row.payload is self.payloads[row.index] for row in self.order), 'source-slot-origin')
+        require(self.api_bindings is self.api_origin
+                and getattr(self.owner,'source_function_bindings',None) is self.api_bindings,
+                'source-api-origin')
+        require(self.case is self.case_origin and getattr(self.owner,'source_case',None) is self.case,
+                'source-case-origin')
+        if self.api_bindings is not None:
+            for function,args,result in self.api_bindings:
+                require(tuple(function.argtypes)==args and function.restype is result,
+                        'source-api-signature')
+
+    def physical_member(self, row):
+        self.physical_origin_bound()
+        require(type(row) is _SourceSlot and row.origin is row and row.arena is self
+                and type(row.index) is int and 0 <= row.index < 16384
+                and self.rows[row.index] is row and type(row.facts) is tuple and len(row.facts) == 5
+                and row.facts[0] is row and row.facts[1] is self and row.facts[2] == row.index
+                and type(row.terminal) is bool and row.terminal is row.facts[3]
+                and row.terminal is (row.index >= 16320) and row.generation is row.facts[4],
+                'source-slot-member')
+
+    def member(self, row):
+        self.origin_bound()
+        self.physical_member(row)
+
+    def shorten_control(self, deadline):
+        self.origin_bound()
+        require(self.role is _SOURCE_CHILD and self.case=='deadline-control'
+                and not self.cutoff_used and not self.owner.timer_started
+                and type(deadline) is int and time.monotonic_ns()<deadline<=self.deadline,
+                'source-control-cutoff')
+        self.cutoff_used=True
+        self.deadline=self.owner.deadline_ns=deadline
+
+    def capture_child_ready(self, hashes):
+        self.origin_bound();native=self.owner;native.live()
+        require(self.role is _SOURCE_CHILD and self.ready is None
+                and native.timer_configured is True and type(hashes) is dict
+                and native.source_escapes.timer_binding is not None,'source-job-ready')
+        rows=[]
+        for stage in ('child-job-membership','job-limits','job-accounting'):
+            row=next((row for row in reversed(self.order)if row.binding[1]==stage),None)
+            require(row is not None and row.payload['acknowledged'] is True,'source-job-evidence')
+            rows.append(row)
+        member,limits,accounting=(row.binding[3][2]._obj for row in rows)
+        require(type(member) is C.c_int32 and type(limits) is _ExtendedLimits
+                and type(accounting) is _Accounting
+                and rows[0].binding[2] is native.k.IsProcessInJob
+                and all(row.binding[2] is native.k.QueryInformationJobObject for row in rows[1:])
+                and all(row.binding[3][0] is None for row in rows[1:])
+                and rows[0].binding[3][:2]==(native.source_process,None)
+                and rows[1].binding[3][1]==9 and rows[2].binding[3][1]==1,'source-job-evidence')
+        facts=(member.value,limits.basic.flags,limits.basic.active_process_limit,
+               limits.process_memory_limit,limits.job_memory_limit,
+               accounting.total,accounting.active,accounting.terminated)
+        require(facts==(1,LIMIT_FLAGS,1,MEMORY_BYTES,MEMORY_BYTES,1,1,0),'source-job-evidence')
+        self.ready=self.ready_origin=(native,native.callback,native.timer,native.due,
+            tuple(rows),(member,limits,accounting),facts,tuple(sorted(hashes.items())))
+
+    def assert_child_ready(self, hashes):
+        self.origin_bound();native=self.owner;native.live()
+        value=self.ready
+        require(self.role is _SOURCE_CHILD and value is self.ready_origin and type(value) is tuple
+                and len(value)==8 and value[0] is native and value[1] is native.callback
+                and value[2] is native.timer and value[3] is native.due
+                and native.timer_configured is True and value[7]==tuple(sorted(hashes.items())),
+                'source-job-origin')
+        member,limits,accounting=value[5]
+        require(value[6]==(member.value,limits.basic.flags,limits.basic.active_process_limit,
+                limits.process_memory_limit,limits.job_memory_limit,
+                accounting.total,accounting.active,accounting.terminated),'source-job-drift')
+        for row in value[4]:
+            self.member(row)
+            require(row.payload['acknowledged'] is True and row.completion is self.completions[row.index],
+                    'source-job-drift')
+
+    def reserve(self, purpose, normal, terminal):
+        self.origin_bound()
+        require(type(purpose) is str and re.fullmatch('[a-z][a-z0-9-]{0,63}', purpose)
+                and type(normal) is int and 0 <= normal <= 16320
+                and type(terminal) is int and 0 <= terminal <= 64 and normal+terminal > 0,
+                'source-reservation-shape')
+        with self.lock:
+            require(not self.fenced, 'source-slot-fenced')
+            free_normal = tuple(row for row in self.rows[:16320] if self.claims[row.index] is None)
+            free_terminal = tuple(row for row in self.rows[16320:] if self.claims[row.index] is None)
+            require(normal <= len(free_normal) and terminal <= len(free_terminal), 'source-shared-capacity')
+            ticket = _SourceSlotReservation(self, purpose)
+            self.reservations.append(ticket)  # Original partial allocation before mutation.
+            try:
+                selected = free_normal[:normal]+free_terminal[:terminal]
+                for row in selected:
+                    self.member(row)
+                    require(row.reservation is self.claims[row.index] is None
+                            and row.binding is self.bindings[row.index] is None, 'source-slot-reuse')
+                    self.claims[row.index] = ticket
+                    row.reservation = ticket
+                ticket.rows = selected
+                ticket.original = (self,purpose,selected)
+                self.assert_reserved(ticket)
+                return ticket
+            except BaseException:
+                self.fenced = True  # No partial reservation rollback or refund.
+                raise
+
+    def assert_reserved(self, ticket):
+        self.origin_bound()
+        require(type(ticket) is _SourceSlotReservation and ticket.origin is ticket
+                and ticket.arena is self and any(v is ticket for v in self.reservations)
+                and type(ticket.original) is tuple and len(ticket.original) == 3
+                and ticket.original[0] is self and ticket.original[1] is ticket.purpose
+                and ticket.original[2] is ticket.rows and type(ticket.rows) is tuple,
+                'source-reservation-origin')
+        for row in ticket.rows:
+            self.member(row)
+            require(row.reservation is ticket and self.claims[row.index] is ticket,
+                    'source-reservation-membership')
+
+    def begin(self, ticket, stage, function, args, keep, *, terminal=False,
+              variant='scalar', library=None, source_record=None):
+        """Bind an original invocation before dispatch; this method calls no API."""
+        self.assert_reserved(ticket)
+        require(not self.fenced and type(terminal) is bool and type(args) is tuple
+                and type(keep) is tuple and type(stage) is str and callable(function)
+                and variant in ('scalar','system-library'), 'source-call-shape')
+        if variant == 'system-library':
+            require(function is C.WinDLL and library in ('kernel32.dll','ntdll.dll')
+                    and args == (library,), 'source-dll-shape')
+        else: require(library is None, 'source-call-shape')
+        with self.lock:
+            require(not self.fenced and self.owner.pending is None
+                    and len(self.calls) == len(self.issued)
+                    and all(a is b.payload for a,b in zip(self.calls,self.issued)), 'source-call-custody')
+            selected = next((v for v in ticket.rows if v.terminal is terminal
+                             and self.bindings[v.index] is None and v.binding is None), None)
+            require(selected is not None, 'source-reservation-exhausted')
+            binding = (ticket,stage,function,args,keep,get_ident(),variant,library,source_record)
+            payload = {'stage':stage,'function':function,'args':args,'started':True,
+                       'returned':False,'acknowledged':False,'result':None,'os_error':None}
+            # Fixed row + independent tables retain the original payload/binding,
+            # even if either variable-length observation list is cleared.
+            self.bindings[selected.index] = binding
+            self.payloads[selected.index] = payload
+            selected.binding, selected.payload = binding, payload
+            self.order = self.order_origin = self.order+(selected,)
+            self.issued.append(selected)
+            self.calls.append(payload)
+            self.owner.pending = payload
+            return selected
+
+    def returned(self, row, value, error):
+        """Known return only. Native invocation ACK is NOT IO/exit completion."""
+        with self.lock:
+            self.physical_member(row)
+            binding = self.bindings[row.index]
+            require(binding is row.binding and type(binding) is tuple and len(binding) == 9
+                    and binding[5] == get_ident() and row.completion is self.completions[row.index] is None
+                    and type(error) is int and 0 <= error <= 0xffffffff, 'source-return-origin')
+            if binding[6] in ('scalar','escape'):
+                require(type(value) in (int,type(None)), 'source-scalar-return')
+            else:
+                require(type(value) is C.WinDLL and type(value._name) is str and value._name == binding[7]
+                        and type(value._handle) is int and value._handle > 0, 'source-dll-return')
+            completion = (binding,value,error,get_ident())
+            self.completions[row.index] = completion
+            row.completion = completion
+            payload=self.payloads[row.index]
+            if not (type(payload) is dict and payload.get('function') is binding[2]
+                    and payload.get('args') is binding[3] and payload.get('stage') == binding[1]
+                    and payload.get('started') is True and payload.get('returned') is False
+                    and payload.get('acknowledged') is False):
+                self.fenced=self.owner.uncertain=True
+                raise FixtureError('source-return-payload')
+            payload.update(result=value,os_error=error,returned=True)
+
+    def acknowledge(self, row):
+        with self.lock:
+            self.member(row)
+            self.owner.live()
+            binding, completion = self.bindings[row.index], self.completions[row.index]
+            require(not self.fenced and binding is row.binding and binding[6] != 'escape' and type(completion) is tuple
+                    and len(completion) == 4 and completion is row.completion
+                    and completion[0] is binding and completion[3] == binding[5] == get_ident()
+                    and len(self.calls) == len(self.issued)
+                    and all(a is b.payload for a,b in zip(self.calls,self.issued))
+                    and self.owner.pending is row.payload and row.payload['result'] is completion[1]
+                    and row.payload['os_error'] == completion[2] and row.payload['returned'] is True
+                    and row.payload['acknowledged'] is False, 'source-invocation-ack')
+            row.payload['acknowledged'] = True
+            self.owner.pending = None
+
+    def begin_escape(self, ticket, stage, function, args, keep):
+        """Only an original escape owner may use this; normal pending stays held."""
+        self.assert_reserved(ticket)
+        with self.lock:
+            selected=next((row for row in ticket.rows if row.terminal
+                           and self.bindings[row.index] is row.binding is None),None)
+            require(selected is not None,'source-escape-used')
+            binding=(ticket,stage,function,args,keep,get_ident(),'escape',None,None)
+            payload={'stage':stage,'function':function,'args':args,'started':True,
+                     'returned':False,'acknowledged':False,'result':None,'os_error':None}
+            self.bindings[selected.index]=binding
+            self.payloads[selected.index]=payload
+            selected.binding,selected.payload=binding,payload
+            self.order=self.order_origin=self.order+(selected,)
+            self.issued.append(selected);self.calls.append(payload)
+            self.fenced=True
+            return selected
+
+
+class _SourceEscapes:
+    """Original own-process exit and one park; no target is accepted from data."""
+    def __init__(self, native, arena, tickets, process_row):
+        require(type(native) is _Native and type(arena) is _SourceSlots
+                and arena.owner is native and len(tickets)==3,'source-escape-owner')
+        arena.member(process_row)
+        require(process_row.binding[2] is native.k.GetCurrentProcess
+                and process_row.payload['acknowledged'] is True
+                and process_row.completion[1]==C.c_void_p(-1).value,'source-own-process')
+        self.origin,self.native,self.arena=self,native,arena
+        self.tickets=tickets
+        self.process_row,self.process=process_row,process_row.completion[1]
+        self.terminate,self.sleep=native.k.TerminateProcess,native.k.Sleep
+        self.original=(native,arena,tickets,process_row,self.process,self.terminate,self.sleep)
+        self.callback=self.timer=self.timer_binding=None
+        self.winner=self.parked=None
+
+    def origin_bound(self):
+        require(type(self) is _SourceEscapes and self.origin is self
+                and type(self.original) is tuple and len(self.original)==7
+                and all(a is b for a,b in zip((self.native,self.arena,self.tickets,
+                    self.process_row,self.process,self.terminate,self.sleep),self.original))
+                and self.native.source_escapes is self,'source-escape-origin')
+        self.native.origin()
+        require(self.native.k.TerminateProcess is self.terminate and self.native.k.Sleep is self.sleep,
+                'source-escape-function')
+        self.arena.member(self.process_row)
+        require(self.process_row.completion[1] is self.process
+                and self.process_row.payload['acknowledged'] is True,'source-own-process')
+
+    def bind_timer(self, callback, timer):
+        self.origin_bound()
+        require(self.timer_binding is None and callback is self.native.callback
+                and type(timer) is int and timer>0,'source-escape-timer')
+        self.callback,self.timer=callback,timer
+        self.timer_binding=(callback,timer)
+
+    def terminate_once(self, code, *, timer_args=None):
+        self.origin_bound()
+        with self.arena.lock:
+            require(type(code) is int and code in (0,2,9),'native-self-exit-code')
+            if timer_args is None:
+                require(get_ident()==self.native.component_thread,'source-exit-thread')
+                kind=0
+            else:
+                require(type(timer_args) is tuple and len(timer_args)==3 and code==2
+                        and self.timer_binding is not None and self.timer_binding[0] is self.callback
+                        and self.timer_binding[1] is self.timer and self.native.callback is self.callback
+                        and self.native.timer==self.timer and timer_args[1] is None
+                        and timer_args[2]==self.timer and type(timer_args[0]) is int and timer_args[0]>0,
+                        'source-timer-context')
+                kind=1
+            if self.winner is not None:return
+            self.winner=kind
+            row=self.arena.begin_escape(self.tickets[kind],
+                'source-own-exit' if kind==0 else 'source-deadline-exit',self.terminate,
+                (self.process,code),(self,self.callback,self.timer))
+        try:
+            value=self.terminate(self.process,code)
+            error=C.get_last_error()&0xffffffff
+            self.arena.returned(row,value,error)
+        finally:self.native.uncertain=True  # Return/interrupt is never retirement.
+
+    def park_once(self):
+        self.origin_bound()
+        with self.arena.lock:
+            if self.parked is not None:return
+            row=self.arena.begin_escape(self.tickets[2],'source-park',self.sleep,(0xffffffff,),(self,))
+            self.parked=row
+        try:
+            value=self.sleep(0xffffffff)
+            error=C.get_last_error()&0xffffffff
+            self.arena.returned(row,value,error)
+        finally:self.native.uncertain=True
+
+
+def _source_halt_without_calls():
+    # Exceptional last resort after the one original Sleep returned or raised.
+    # Retain custody with no further Native dispatch or Python teardown. The
+    # independent original parent Job/deadline remains the external fence.
+    while True:pass
+
+
+def _own_process(native):
+    if getattr(native,'_Native__profile',None) is _SOURCE_PROFILE:
+        native.source_escapes.origin_bound()
+        require(native.source_process is native.source_escapes.process,'source-own-process')
+        return native.source_process
+    return native.k.GetCurrentProcess()
+
+
 class _Native:
     """One standalone diagnostic. No caller process target or generic runner."""
-    def __init__(self, deadline_ns, *, profile=_CORE_PROFILE):
+    def __init__(self, deadline_ns, *, profile=_CORE_PROFILE, _source_role=None, _source_case=None):
         self.__profile = _canonical_profile(profile)  # Before any native setup.
         self.__component_thread = get_ident()
         require(os.name == 'nt' and C.sizeof(C.c_void_p) == 8 and sys.implementation.name == 'cpython', 'platform')
@@ -431,6 +825,21 @@ class _Native:
         self.timer = self.callback = self.due = None
         self.timer_started = self.timer_configured = False
         _NATIVE_OWNERS.append(self)  # Before library/attribute/output acquisition.
+        self.source_slots=self.source_escapes=None
+        self.source_finalizing=False
+        self.source_function_bindings=None
+        self.source_case=_source_case
+        self.api=None
+        if profile is _SOURCE_PROFILE:
+            require((_source_role is _SOURCE_CHILD and _source_case in profile.cases)
+                    or (_source_role is _SOURCE_PARENT and _source_case is None),'source-native-role')
+            self.source_slots=_SourceSlots(self,_source_role)
+            self.buffers.append(self.source_slots)
+            self.source_normal=self.source_slots.reserve('engine-normal',256,0)
+            self.source_final=self.source_slots.reserve('engine-final',0,9)
+            self.source_escape_tickets=tuple(self.source_slots.reserve(purpose,0,1)
+                for purpose in ('own-exit','deadline-exit','one-park'))
+            self.source_safety=self.source_slots.reserve('engine-safety',0,4)
         self.job = _ABI
         self.api = _Windows(self)
         self.k = self.api.k
@@ -470,6 +879,15 @@ class _Native:
         ]
         for label, args, result in signatures:
             fn = getattr(self.k, label); fn.argtypes, fn.restype = args, result
+        if profile is _SOURCE_PROFILE:
+            bindings=tuple((getattr(self.k,label),tuple(args),result)for label,args,result in signatures)
+            self.source_function_bindings=bindings
+            self.source_slots.api_bindings=self.source_slots.api_origin=bindings
+            self.source_functions=tuple(getattr(self.k,label)for label,_,_ in signatures)
+            self.source_process=self.call('source-current-process',self.k.GetCurrentProcess)
+            self.source_escapes=_SourceEscapes(self,self.source_slots,self.source_escape_tickets,
+                                             self.source_slots.order[-1])
+            self.buffers.append(self.source_escapes)
 
     @property
     def profile(self):
@@ -484,12 +902,46 @@ class _Native:
         require(type(self) is _Native and getattr(self, '_Native__origin', None) is self
                 and any(value is self for value in _NATIVE_OWNERS), 'native-owner-origin')
         _canonical_profile(getattr(self, '_Native__profile', None))
+        if self.profile is _SOURCE_PROFILE:
+            require(type(self.source_slots) is _SourceSlots and self.source_slots.owner is self
+                    and self.deadline_ns==self.source_slots.deadline,'source-native-origin')
+            self.source_slots.origin_bound()
+
+    def _source_bootstrap(self):
+        arena=self.source_slots
+        row=arena.begin(self.source_normal,'source-system-bootstrap',C.WinDLL,
+                        ('kernel32.dll',),(),variant='system-library',library='kernel32.dll')
+        try:
+            value=C.WinDLL('kernel32.dll',use_last_error=True,winmode=0x800)
+            error=C.get_last_error()&0xffffffff
+            arena.returned(row,value,error);arena.acknowledge(row)
+            return value
+        except BaseException:
+            arena.fenced=self.uncertain=True
+            raise
+
+    def _source_call(self, stage, function, args, valid):
+        self.live()
+        require(any(value is function for value in self.source_functions),'source-engine-function')
+        ticket=self.source_final if self.source_finalizing else self.source_normal
+        row=self.source_slots.begin(ticket,stage,function,args,(),terminal=self.source_finalizing)
+        try:
+            value=function(*args)
+            error=C.get_last_error()&0xffffffff
+            self.source_slots.returned(row,value,error)
+            require(valid(value),stage)
+            self.source_slots.acknowledge(row)
+            return value
+        except BaseException:
+            self.source_slots.fenced=self.uncertain=True
+            raise
 
     def live(self):
         self.origin()
         require(not self.uncertain and not self.expired and time.monotonic_ns() < self.deadline_ns, 'native-deadline')
 
     def call(self, stage, function, *args, valid=lambda value: type(value) is int and value != 0):
+        if getattr(self,'_Native__profile',None) is _SOURCE_PROFILE:return self._source_call(stage,function,args,valid)
         self.live()
         require(self.pending is None and len(self.calls) < 16384, 'native-call-admission')
         row = {'stage': stage, 'function': function, 'args': args, 'started': False, 'returned': False, 'acknowledged': False, 'result': None, 'os_error': None}
@@ -537,6 +989,10 @@ class _Native:
 
     def exit_self(self, code):
         # This is deliberately not a caller-selected process or graceful DLL exit.
+        if getattr(self,'_Native__profile',None) is _SOURCE_PROFILE:
+            try:self.source_escapes.terminate_once(code)
+            except BaseException:self.uncertain=True
+            _park(self)
         try:
             self.origin(); require(type(code) is int and code in (0, 2, 9), 'native-self-exit-code')
             self.k.TerminateProcess(self.k.GetCurrentProcess(), code)
@@ -553,6 +1009,12 @@ class _Native:
         self.timer_started = True
         callback_type = C.WINFUNCTYPE(None, C.c_void_p, C.c_void_p, C.c_void_p)
         def expired(_instance, _context, _timer):
+            if getattr(self,'_Native__profile',None) is _SOURCE_PROFILE:
+                try:
+                    self.expired=True
+                    self.source_escapes.terminate_once(2,timer_args=(_instance,_context,_timer))
+                except BaseException:self.uncertain=True
+                return
             try:
                 self.expired = True
                 # WinDLL operations release the GIL, but callback dispatch still
@@ -567,6 +1029,7 @@ class _Native:
                                valid=lambda value: type(value) is int and value > 0)
         remaining = self.deadline_ns - time.monotonic_ns(); require(remaining > 0, 'native-timer-budget')
         self.due = C.c_int64(-max(1, remaining // 100)); self.buffers.append(self.due)
+        if getattr(self,'_Native__profile',None) is _SOURCE_PROFILE:self.source_escapes.bind_timer(self.callback,self.timer)
         self.call('native-timer-arm', self.k.SetThreadpoolTimer, self.timer, C.byref(self.due), 0, 0, valid=lambda value: value is None)
         self.call('native-timer-setting', self.k.IsThreadpoolTimerSet, self.timer)
         self.timer_configured = True
@@ -577,6 +1040,10 @@ class _Native:
 
 def _park(native):
     """Retain this standalone owner without another termination/cleanup attempt."""
+    if getattr(native,'_Native__profile',None) is _SOURCE_PROFILE:
+        try:native.source_escapes.park_once()
+        except BaseException:native.uncertain=True
+        _source_halt_without_calls()
     while True:
         try:
             native.uncertain = True
@@ -668,7 +1135,7 @@ def _bootstrap(run_id, case, hashes, deadline_ns, ready, dispatch, report, profi
             'm._LOADED_SOURCE_SHA256=' + repr(expected) + '\n'
             'm._owned_child(' + ','.join(repr(x) for x in (run_id, case, hashes, deadline_ns, ready, dispatch, report))
             + ',m.' + {id(_CORE_PROFILE): '_CORE_PROFILE', id(_JOURNAL_PROFILE): '_JOURNAL_PROFILE',
-                       id(_READ_PROFILE): '_READ_PROFILE'}[id(profile)] + ')\n')
+                       id(_READ_PROFILE): '_READ_PROFILE',id(_SOURCE_PROFILE):'_SOURCE_PROFILE'}[id(profile)] + ')\n')
     require(len(code.encode()) <= 16384, 'bootstrap-size')
     return code
 
@@ -726,8 +1193,8 @@ class _Session:
         n.call('report-file-kind', k.GetFileInformationByHandleEx, report.value, 9, C.byref(attributes), C.sizeof(attributes))
         require(not attributes[0] & (0x10 | 0x400), 'report-file-kind')
         inherited = C.c_void_p(); n.buffers.append(inherited)
-        n.call('report-handle-duplicate', k.DuplicateHandle, k.GetCurrentProcess(), report.value,
-               k.GetCurrentProcess(), C.byref(inherited), 0, 1, 2)
+        n.call('report-handle-duplicate', k.DuplicateHandle, _own_process(n), report.value,
+               _own_process(n), C.byref(inherited), 0, 1, 2)
         report_child = self.slot('report-child', inherited.value); n.inherit(report_child, True)
         bound_job = self.acquire('job', k.CreateJobObjectW, None, None); n.inherit(bound_job, False)
         limits = job.m.ExtendedLimits(); n.buffers.append(limits)
@@ -824,7 +1291,7 @@ def _inherited(native, name, value):
 
 def _child_readback(native):
     member = C.c_int32(); native.buffers.append(member)
-    native.call('child-job-membership', native.k.IsProcessInJob, native.k.GetCurrentProcess(), None, C.byref(member))
+    native.call('child-job-membership', native.k.IsProcessInJob, _own_process(native), None, C.byref(member))
     require(member.value == 1, 'child-job-membership')
     # NULL queries this process's immediate Job. The parent separately observes
     # membership of its exact created process in its exact held Job handle.
@@ -954,7 +1421,8 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
         require(sys.flags.isolated == sys.flags.no_site == 1 and sys.dont_write_bytecode
                 and sys.prefix == sys.base_prefix, 'isolated-base-runtime')
         source = source_digest(hashes)
-        native = _Native(deadline_ns, profile=profile)
+        native = (_Native(deadline_ns,profile=profile,_source_role=_SOURCE_CHILD,_source_case=case)
+                  if profile is _SOURCE_PROFILE else _Native(deadline_ns, profile=profile))
         require(_all_hashes(native) == hashes, 'source-drift')
         ready = _inherited(native, 'ready', ready_value)
         dispatch = _inherited(native, 'dispatch', dispatch_value)
@@ -970,22 +1438,27 @@ def _owned_child(run_id, case, hashes, deadline_ns, ready_value, dispatch_value,
         value = (component.base_report(case, source, started) if component is not None
                  else _base_report(case, source, started))
         if case == 'deadline-control':
-            native.deadline_ns = min(deadline_ns, time.monotonic_ns() + CONTROL_NS)
+            cutoff=min(deadline_ns, time.monotonic_ns() + CONTROL_NS)
+            if profile is _SOURCE_PROFILE:native.source_slots.shorten_control(cutoff)
+            else:native.deadline_ns=cutoff
         native.arm_deadline()
         require(native.timer_configured is True, 'child-timer-unconfirmed')
+        if profile is _SOURCE_PROFILE:native.source_slots.capture_child_ready(hashes)
         value['timer_configured'] = True
         if case == 'deadline-control':
             value.update(outcome='armed', elapsed_ns=max(1, time.monotonic_ns() - started))
             _write_report(native, report, value)
             # Timer delivery must cause actual native exit2 while WinDLL Sleep
             # releases the GIL. A marker or IsTimerSet result is not a pass.
-            native.k.Sleep(0xffffffff)
+            if profile is _SOURCE_PROFILE:native.source_escapes.park_once()
+            else:native.k.Sleep(0xffffffff)
             raise FixtureError('timer-returned')
         folder = profile.runs / run_id / case
         if component is None:
             _exercise_core(native, case, hashes, folder, value)
         else:
             component.exercise(sys.modules[__name__], native, case, hashes, folder, value)
+        if profile is _SOURCE_PROFILE:native.source_finalizing=True
         require(_all_hashes(native) == hashes, 'source-drift')
         value['elapsed_ns'] = max(1, time.monotonic_ns() - started)
         if component is None: validate_child_report(value, case, source)
@@ -1083,6 +1556,11 @@ def standalone_native_read_session():
     return _standalone_native(_EXECUTION_PROFILE)
 
 
+def standalone_native_sources():
+    """Fixed diagnostic only; actual execution requires separate effect review."""
+    return _standalone_native(_SOURCE_PROFILE)
+
+
 def _standalone_native(profile):
     profile = _canonical_profile(profile)
     require(__name__ == profile.module_name
@@ -1096,7 +1574,8 @@ def _standalone_native(profile):
               'old_staging_accessed': False, 'source_bindings': {}, 'failure_stage': 'initialization',
               'deadline_scope': 'Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Host sleep/system suspend and indefinitely stuck kernel I/O are not qualified.'}
     try:
-        native = _Native(started + BUDGET_NS, profile=profile)
+        native = (_Native(started+BUDGET_NS,profile=profile,_source_role=_SOURCE_PARENT)
+                  if profile is _SOURCE_PROFILE else _Native(started+BUDGET_NS,profile=profile))
         native.arm_deadline()  # Before any case/file/Job creation.
         hashes = _all_hashes(native)
         result['source_bindings'] = hashes

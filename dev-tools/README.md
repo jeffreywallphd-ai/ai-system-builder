@@ -1804,7 +1804,7 @@ and actual model resources remain separate qualification.
 
 ## Safe-weight supplier boundary tests
 
-The `offload-resource-lifecycle` profile contains nineteen fixed model-free files,
+The `offload-resource-lifecycle` profile contains twenty fixed model-free files,
 including `qualification/tests/test_offload_supplier_boundary.py`. This suite
 reuses only the fake loader harness. It checks the omitted supplier folder, strict
 in-memory index validation, positive owned staging and guarded-readiness denial.
@@ -1919,3 +1919,36 @@ isolated tests and independent source review before a separately reviewed
 one-use migration. It must then register genuine normal work with the original
 before-source provenance and run current checks and separate review. A bootstrap
 marker coordinates cooperative work; it is not a normal claim or approval.
+
+## Fixed original-source Windows qualification
+
+The ordinary `offload-resource-lifecycle` profile contains twenty fixed model-free
+test files. It adds `test_windows_offload_sources_fixture.py`; the new entry and
+fixture are source triggers, never ordinary Native test commands. Default and
+`--plan` only print declarations:
+
+```sh
+python -B dev-tools/scripts/qualification/qualify_windows_offload_sources.py --plan
+```
+
+Actual `--native` requires separate committed-source and effect review, the exact
+base interpreter under `-I -S -B`, the repository working directory and the fixed
+entry. It creates only new synthetic inputs. The fixed cases prove deadline
+exit, completed held-file hashes and unused close, or exact changed-hash denial.
+An access/setup/read failure cannot count as the changed-hash result. No model,
+accuracy, OCR, old staging or whole-system suite runs.
+
+SOURCE uses one physical table of 16,384 original dispatch rows, with 64 terminal
+rows inside that total. Before SourceAPI construction, engine work reserves 256
+normal rows and 16 terminal rows; source prepare, one live check and unused close
+reserve disjoint rows from the same table. For A ancestors and four files with
+five reads, source normal debt is 6A+126 and close debt is A+21; A must fit the
+shared terminal tail. The existing 120-second deadline and 512 MiB child ceiling
+remain. This is a ceiling, not upfront RAM allocation or a model policy.
+
+Original DLL/scalar replies, errors, buffers, IOSBs and guard requests are retained
+separately from mutable observations. Pure per-call checks issue no hidden file
+or Job queries. An exit intent or cancel request supplies no retirement ACK; the
+original parent must observe process exit and an empty Job. Existing profiles
+and runtime IPC stay unchanged. Source tests grant no production, shared-disk,
+worker/restart, model-resource or parent-roadmap qualification.

@@ -1044,7 +1044,7 @@ omits the supplier folder argument. It still creates its owned staging marker
 and keeps the same positive reservation, disk checks and cleanup rules. This is
 not a mode with no file writes.
 
-The ordinary lifecycle profile now contains nineteen model-free test files. A
+The ordinary lifecycle profile now contains twenty model-free test files. A
 separate tiny CPU supplier fixture needs an explicitly bounded offline run. That
 fixture checks compatibility and cleanup only. Production low-memory admission,
 retained-file protection, shared durable accounting, original-reference and
@@ -1106,3 +1106,24 @@ Low-memory mode remains unavailable until those checks pass. Existing limits and
 the full charge for unknown temporary files stay in force. Completed model
 accuracy and OCR checks stay closed. Full-system tests remain deferred until all
 requested feature implementation is worked through.
+
+## Prepare fixed Windows checks for model files
+
+No user action is needed. The agent is adding a bounded test harness for the
+original model-file owner. Its three fixed cases check deadline exit, exact
+file reads followed by unused cleanup, and rejection of changed bytes. The
+synthetic weight file crosses an 8 MiB read boundary. These files are not a
+real model or evidence of model accuracy.
+
+All work shares one finite reservation table, including cleanup and exit work.
+The test keeps actual DLL replies, errors and original read/guard records. It
+checks original read completion before buffer reuse. Requested cancellation and
+event signals cannot replace completion proof. A different setup or read error
+cannot pass the changed-file test. Source-only tests simulate Windows replies.
+Actual Windows execution needs a separate review of committed source and effects.
+
+This adds no production file service or model-file borrower. Low-memory mode
+stays unavailable while file/ancestor/mapping/discovery protection, shared disk
+accounting, worker shutdown, guarded restart and measured offload resources remain
+pending. Unknown temporary-file usage retains its full 12 GiB charge. Accepted
+accuracy and OCR stay closed. Full-system tests follow all feature implementation.
