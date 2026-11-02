@@ -1081,3 +1081,28 @@ and ancestor protection, finite execution, shared accounting, model-worker and
 restart safeguards, and offload resource checks remain pending agent work.
 Accepted accuracy/OCR stay closed. Full-system tests remain deferred until all
 requested feature implementation is worked through.
+
+## Hold and check original model files
+
+No user action is needed. The agent added private source code to hold model-file
+references and check their exact bytes. This code is not connected to model
+loading yet. Production must first provide the existing bounded execution service
+and reserve capacity for the complete operation, including cleanup.
+
+The source tests simulate Windows replies. They check read-only file access,
+file identity, file size, hashes and cleanup. They also check failed reads,
+changed references, duplicate or late callbacks and interrupted cleanup. Original
+read and cleanup records remain held even if another record list is cleared. One
+8 MiB read buffer is reused only after the original read has completed with the
+exact byte count. A signaled event or a request to cancel is not sufficient.
+
+Actual Windows tests and the remaining implementation are agent work. They must
+prove file sharing, memory mapping, original-folder protection, safe file discovery,
+bounded execution, shared disk accounting, worker shutdown, restart and resource
+use. Read notifications do not stop new files from appearing in a folder. The
+agent must prove this boundary before the loader can use the files.
+
+Low-memory mode remains unavailable until those checks pass. Existing limits and
+the full charge for unknown temporary files stay in force. Completed model
+accuracy and OCR checks stay closed. Full-system tests remain deferred until all
+requested feature implementation is worked through.

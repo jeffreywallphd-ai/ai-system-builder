@@ -1694,6 +1694,50 @@ native retirement, shared journal/model worker and restart qualification remain
 pending. The unavailable production factory, unknown full staging charge,
 Standard loading and accepted accuracy/OCR are unchanged.
 
+## Unused original source API and custody delta
+
+The original inventory binding stays inert. A separate unused private owner now
+defines a fixed read-only Windows ABI. Explicit prepare/check/retire operations
+require a trusted original finite producer and actual shared whole-graph capacity
+before DLL bootstrap; production provides no producer. No-op synthetic ports,
+opaque reservation objects or metadata alone are not authority. Private Python
+composition seams do not isolate malicious code in the same process.
+
+System-only DLL loading, asynchronous read-only/share-read opens, exact original
+ancestor/file identities, bounded kind/link/default-stream facts and advisory R
+guards precede held-handle hashing. Original slots, installed native values,
+generations, call records, IOSBs, offsets, buffer and guard requests are retained
+before effects. Independently held original handle/guard/read/native-call and
+operation membership detects in-place list clearing or reordering and retains
+unfinished IRPs even when mutable owner fields lose their elements. Native
+last-error is captured immediately, before producer
+bookkeeping. Every read reset/reuse requires original completed status and exact
+bytes. Pending reads, timeout or cancellation requests cannot authorize reuse.
+No read IOSB is cast to a guard OVERLAPPED or a two-argument NtCancelIoFileEx call.
+
+The graph includes per-file rounded reads, metadata, reset/wait/guard calls,
+handles, bounded retained memory and unused-reference retirement. Existing
+16,384 normal/64 shared terminal calls, 120 seconds, 512 MiB and four IPC operations
+stay fixed. A+5F+1 terminal calls is only the completed-read source close lower
+bound; original pending-I/O and producer/process retirement also need capacity
+in the same actual ledger. Missing, foreign or insufficient reservation denies
+before API construction. Additional checks require incremental normal capacity.
+
+Uncertain acquisition, substituted references, skipped/double/late callbacks,
+read or close failure retain the original graph and fence reuse. Only unused
+completed-read references may retire after exact guard cancellation/completion
+and original close acknowledgements. Original retirement graphs remain retained
+and count toward the same bounded owner registry; no disk/worker credit is issued.
+There is no ACL, write, directory creation, delete, rename, borrower or context
+operation, and no production selection. Unknown historical trees are untouched.
+
+Synthetic Win64 ABI tests prove source predicates only. Actual Native byte custody,
+reader/mapping compatibility, ancestor and absent-file discovery isolation,
+finite-producer composition, shared accounting, model-worker/crash/restart and
+offload resources remain pending. Advisory notifications do not fence child
+creation. Source 20 GiB and staging 12 GiB stay separate; unknown staging remains
+fully charged. Standard loading and accepted accuracy/OCR are unchanged.
+
 ## Guarded offload lifecycle consumer delta
 
 The private parent/worker context reaches the actual generator factory/cache,

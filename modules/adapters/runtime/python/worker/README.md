@@ -858,3 +858,46 @@ borrower, staging credit, production readiness or guarded context is issued.
 Actual original file/ancestor references, absent-file discovery, finite execution
 and terminal-call reservation, guards, cleanup and native qualification remain
 pending. Standard loading and accepted model accuracy/OCR stay unchanged.
+
+## Unused original source owner
+
+The same source module now contains a separate private read-only Windows API and
+original-reference owner. Construction performs no IO. Explicit preparation needs
+the original finite execution producer and its shared whole-graph reservation
+before system-only DLL loading. Production provides no such producer. The API
+has no write, ACL, create-directory, delete or rename operation and does not inherit
+the staging API. Trusted composition seams are not authentication against Python
+code already executing in this process.
+
+Source preparation holds original ancestor/file identities, read-only opens,
+single-link/default-stream metadata and reader-compatible advisory R guards.
+It hashes exact bound bytes through held asynchronous handles, one 8 MiB buffer
+and one manual-reset read event. Every reset follows the previous original read's
+successful status and exact byte count. Signaling alone is insufficient. Original
+IOSB, offset, output slot, generation, guard OVERLAPPED, call and buffer references
+stay in custody before dispatch. Independent original membership also retains
+each handle, guard, read, native call and operation if an owner list is cleared
+or reordered in place. Native error capture precedes producer bookkeeping.
+
+The plan rounds each file separately and derives normal calls, handles, retained
+memory and unused-close costs. It preserves 16,384 normal calls, 64 shared terminal
+calls, 120 seconds and 512 MiB. The source-only close lower bound is A+5F+1 for
+A ancestor handles and F files; pending read and producer/process retirement are
+additional shared debts which the actual producer must reserve. No new ledger or
+IPC operation exists. Repeated live checks need fresh normal-call reservation;
+the retained-memory estimate covers the complete existing call ceilings.
+
+Only unused, completed-read references can retire. Requested cancellation does
+not prove guard completion. Every guard needs its original cancellation, wait,
+terminal status and close acknowledgements. A partial, unknown or interrupted
+acquisition/read/callback/close retains original custody, fences reuse and grants
+no staging or worker credit. A retained retirement graph remains bounded by the
+same 64-owner registry. Unknown reads have no inline cancellation shortcut.
+
+Synthetic Win64 ABI tests qualify source predicates only. Actual Windows bytes,
+reader/mapping compatibility, ancestor and absent-file discovery isolation,
+finite producer, shared accounting, worker/crash/restart and resource qualification
+remain pending. Advisory guards do not prevent directory child creation. There is
+no borrower, guarded context or production factory selection. Standard loading,
+source 20 GiB, staging 12 GiB, unknown full staging charge and accepted accuracy/OCR
+stay unchanged. No user action is needed for this component.
