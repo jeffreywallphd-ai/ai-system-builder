@@ -937,6 +937,15 @@ unavailable. A long-path reproduction is a diagnostic clue, not proof that it
 caused a real training failure. Actual training, private review, Save and reopen
 still require a successful focused host journey.
 
+For the fixed Tiny input and fresh-package test only, the worker creates one new
+dataset-cache folder in that same run's short root. It binds the package, input
+manifest and test case to the same run. It passes the supplier a fixed relative
+path from the unchanged worker directory, so the supplier does not duplicate a
+long absolute path in its lock filename. Existing folders, foreign identities
+and aliased parents are refused. Other caches and legacy profiles retain their
+original behavior. This is test isolation, not native custody or offload proof;
+the real training journey still needs a passing result.
+
 ### Launcher-aware shutdown checks
 
 The Windows test observer can bind a known worker to its known test root through

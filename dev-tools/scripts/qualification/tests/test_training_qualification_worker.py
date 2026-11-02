@@ -7,6 +7,7 @@ import unittest
 import tempfile
 import os
 import json
+import stat
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("training_worker", Path(__file__).parents[1] / "visual-composer/training-qualification-worker.py")
@@ -146,6 +147,116 @@ class TrainingQualificationWorkerTests(unittest.TestCase):
             offsets=iter((100,200))
             with patch.object(worker.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(ValueError):
                 worker._source_identity_bytes(root,file)
+
+
+class TrainingDatasetCacheTests(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory(prefix="training-relative-cache-")
+        self.addCleanup(self.folder.cleanup)
+        self.root = Path(self.folder.name).resolve()
+        self.identity = "0123456789abcdef0123456789abcdef"
+        self.run = f"training-ui-{self.identity}-01"
+        self.short = self.root / ".local-codex/q/01234567"
+        self.package = self.short / "o/ai-system-builder-win32-x64"
+        self.worker = self.package / "resources/worker"
+        self.worker.mkdir(parents=True)
+        self.cache = self.root / "original-controlled-cache"
+        self.cache.mkdir()
+        self.environment = {"VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT": str(self.package),
+            "VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION": ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json",
+            "HF_DATASETS_CACHE": str(self.cache / "datasets"), "HF_HUB_CACHE": str(self.cache),
+            "TEMP": "unchanged-temp", "HF_HUB_OFFLINE": "1"}
+
+    def prepare(self, environment=None, run=None, worker_directory=None):
+        return worker.prepare_training_dataset_cache(self.root, self.worker if worker_directory is None else worker_directory,
+            self.cache, self.environment if environment is None else environment, self.run if run is None else run)
+
+    def test_fresh_dataset_cache_is_same_run_and_relative_without_changing_cwd_or_other_environment(self):
+        before=dict(self.environment);cwd=Path.cwd()
+        target=self.prepare()
+        self.assertEqual(target,self.short/"d")
+        self.assertTrue(target.is_dir())
+        self.assertEqual(list(target.iterdir()),[])
+        relative=os.path.join("..","..","..","..","d")
+        self.assertEqual(self.environment,{**before,"HF_DATASETS_CACHE":relative})
+        self.assertEqual(Path(os.path.abspath(self.worker/relative)),target)
+        self.assertEqual(Path.cwd(),cwd)
+        self.assertEqual(list(self.cache.iterdir()),[])
+
+    def test_legacy_profile_has_no_new_filesystem_or_environment_effect(self):
+        environment={key:value for key,value in self.environment.items()if key!="VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT"}
+        before=dict(environment)
+        with patch.object(Path,"lstat",side_effect=AssertionError("no legacy filesystem change")):
+            self.assertIsNone(self.prepare(environment))
+        self.assertEqual(environment,before)
+        self.assertFalse((self.short/"d").exists())
+
+    def test_foreign_package_input_case_and_original_cache_values_fail_before_creation(self):
+        variants=[]
+        for key,value in (("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT",str(self.root/"out/ai-system-builder-win32-x64")),
+                          ("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT",str(self.root/".local-codex/q/ffffffff/o/ai-system-builder-win32-x64")),
+                          ("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT",{}),
+                          ("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION",".local-codex/training-inputs/tiny-ffffffff-ffff-ffff-ffff-ffffffffffff/input.json"),
+                          ("HF_DATASETS_CACHE",str(self.root/"foreign-cache")),("HF_DATASETS_CACHE",None)):
+            environment=dict(self.environment);environment[key]=value;variants.append((environment,self.run,self.worker))
+        for run in ("wrong-case", "training-ui-"+"f"*32+"-01", "training-ui-"+self.identity+"-02", {}):
+            variants.append((dict(self.environment),run,self.worker))
+        variants.append((dict(self.environment),self.run,self.root/"foreign-worker"))
+        for environment,run,directory in variants:
+            before=dict(environment)
+            with self.subTest(run=run),self.assertRaises(ValueError):self.prepare(environment,run,directory)
+            self.assertEqual(environment,before)
+            self.assertFalse((self.short/"d").exists())
+
+    def test_existing_directory_is_not_inspected_adopted_changed_or_removed(self):
+        target=self.short/"d";target.mkdir();file=target/"existing.bin";file.write_bytes(b"synthetic retained bytes")
+        before=dict(self.environment)
+        with self.assertRaises(ValueError):self.prepare()
+        self.assertEqual(file.read_bytes(),b"synthetic retained bytes")
+        self.assertEqual(self.environment,before)
+        self.assertEqual([p.name for p in target.iterdir()],["existing.bin"])
+
+    def test_existing_file_is_not_replaced(self):
+        target=self.short/"d";target.write_bytes(b"synthetic existing file")
+        with self.assertRaises(ValueError):self.prepare()
+        self.assertEqual(target.read_bytes(),b"synthetic existing file")
+
+    def test_reparse_ancestor_is_denied_before_cache_creation(self):
+        original=Path.lstat
+        def observed(path,*args,**kwargs):
+            if path==self.short:return SimpleNamespace(st_mode=stat.S_IFDIR|0o700,st_file_attributes=0x400)
+            return original(path,*args,**kwargs)
+        with patch.object(Path,"lstat",observed),self.assertRaises(ValueError):self.prepare()
+        self.assertFalse((self.short/"d").exists())
+
+    def test_directory_creation_failure_preserves_environment_and_does_not_retry(self):
+        before=dict(self.environment)
+        with patch.object(Path,"mkdir",side_effect=PermissionError("synthetic private failure"))as create:
+            with self.assertRaises(ValueError):self.prepare()
+            self.assertEqual(create.call_count,1)
+        self.assertEqual(self.environment,before)
+        self.assertFalse((self.short/"d").exists())
+
+    def test_non_directory_worker_ancestor_is_denied_before_cache_creation(self):
+        self.worker.rmdir();self.worker.write_bytes(b"synthetic file instead of directory")
+        with self.assertRaises(ValueError):self.prepare()
+        self.assertFalse((self.short/"d").exists())
+
+    def test_second_admission_never_reuses_the_new_cache(self):
+        original=dict(self.environment);target=self.prepare()
+        with self.assertRaises(ValueError):self.prepare(dict(original))
+        self.assertEqual(list(target.iterdir()),[])
+
+    def test_closed_failure_facts_use_new_cache_identity_but_original_diagnostic_destination(self):
+        target=self.prepare();private_path=str(target/"private.lock")
+        result={"status":"failed","error":{"code":"training_failed","message":str(FileNotFoundError(2,"Missing",private_path)),"details":{"stage":"dataset-loading"}}}
+        worker.write_training_failure_facts(result,self.cache,target)
+        data=(self.cache/"qualification-training-failure.json").read_bytes();facts=json.loads(data)
+        self.assertEqual(facts["path_kind"],"owned-cache-lock")
+        self.assertEqual(facts["path_characters"],len(private_path))
+        self.assertNotIn(b"private.lock",data)
+        self.assertEqual(list(target.iterdir()),[])
+        self.assertEqual(result["error"]["message"],str(FileNotFoundError(2,"Missing",private_path)))
 
 
 class TrainingFailureFactsTests(unittest.TestCase):

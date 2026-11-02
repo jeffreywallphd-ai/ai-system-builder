@@ -13,6 +13,7 @@ from pathlib import Path, PureWindowsPath
 import re
 import stat
 import sys
+import uuid
 
 MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 TINY_MODEL_ID = "aisb-testing/tiny-qwen2-v1"
@@ -195,7 +196,7 @@ def training_failure_facts(result, cache):
     return facts
 
 
-def write_training_failure_facts(result, cache):
+def write_training_failure_facts(result, cache, dataset_cache=None):
     """One fixed, exclusive leaf in the already admitted fresh test cache.
 
     This is local qualification evidence, not native custody or a test pass.
@@ -206,7 +207,8 @@ def write_training_failure_facts(result, cache):
     info = cache.lstat()
     if cache.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
         deny()
-    payload = (json.dumps(training_failure_facts(result, cache), separators=(",", ":")) + "\n").encode("utf8")
+    facts_root = cache if dataset_cache is None else dataset_cache
+    payload = (json.dumps(training_failure_facts(result, facts_root), separators=(",", ":")) + "\n").encode("utf8")
     if len(payload) > 1024:
         deny()
     target = cache / "qualification-training-failure.json"
@@ -241,6 +243,53 @@ def single_training_dispatch(original, fixture, model_directory, temp_directory,
 
 def deny_download(*_args, **_kwargs):
     deny()
+
+
+def prepare_training_dataset_cache(root, worker, cache, environment, run):
+    """One fresh dataset-only leaf in the admitted Tiny package's own run.
+
+    The supplier duplicates its cache spelling into a lock filename. A fixed
+    worker-relative spelling avoids that duplication without changing cwd or
+    patching the supplier. This is cooperative test isolation, not native custody.
+    Legacy profiles retain their original cache and environment unchanged.
+    """
+    package = environment.get("VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT")
+    if package is None:
+        return None
+    match = re.fullmatch(r"training-ui-([a-f0-9]{32})-01", run) if type(run) is str else None
+    if match is None or type(package) is not str:
+        deny()
+    identity = match.group(1)
+    acquisition = f".local-codex/training-inputs/tiny-{uuid.UUID(hex=identity)}/input.json"
+    short = root / ".local-codex/q" / identity[:8]
+    expected_package = short / "o/ai-system-builder-win32-x64"
+    if (not root.is_absolute() or root.resolve() != root or package != str(expected_package) or
+            worker != expected_package / "resources/worker" or
+            environment.get("VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION") != acquisition or
+            environment.get("HF_DATASETS_CACHE") != str(cache / "datasets")):
+        deny()
+    # Inspect only the already admitted package's ancestor chain. Never inspect
+    # or adopt a pre-existing dataset leaf, even when it appears empty.
+    for current in (root, *[root.joinpath(*worker.relative_to(root).parts[:i])
+                           for i in range(1, len(worker.relative_to(root).parts) + 1)]):
+        info = current.lstat()
+        if not stat.S_ISDIR(info.st_mode) or current.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+            deny()
+    target = short / "d"
+    relative = os.path.relpath(target, worker)
+    if (relative != os.path.join("..", "..", "..", "..", "d") or
+            Path(os.path.abspath(worker / relative)) != target):
+        deny()
+    try:
+        target.mkdir(mode=0o700)
+    except OSError:
+        deny()
+    info = target.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or target.resolve() != target or target.is_symlink() or
+            getattr(info, "st_file_attributes", 0) & 0x400):
+        deny()
+    environment["HF_DATASETS_CACHE"] = relative
+    return target
 
 
 def main():
@@ -288,13 +337,14 @@ def main():
     if tiny != (inputs.get("inputProfile") == "generated-tiny-qwen2-v1"):
         deny()
     model = root / inputs["modelRelativeDirectory"]
+    dataset_cache = prepare_training_dataset_cache(root, worker, cache, os.environ, run)
     spec = importlib.util.spec_from_file_location("aisb_training_qualification_main", worker / "main.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     host, port = module._resolve_launch_configuration()  # Real token and loopback guard.
     application = importlib.import_module("_ai_system_builder_worker.app")
     application._run_task = single_training_dispatch(application._run_task, fixture, model, temp,
-        failure_observer=lambda result: write_training_failure_facts(result, cache))
+        failure_observer=lambda result: write_training_failure_facts(result, cache, dataset_cache))
     application._ensure_model_download_data = deny_download
     with (cache / f"qualification-worker-identity-{os.getpid()}.json").open("x", encoding="utf-8") as stream:
         json.dump({"pid": os.getpid(), "parentPid": os.getppid(), "scenario": "training-model-host"}, stream)
