@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "fe6d35989619bf5da04e314ff07cf1cfa7fd2246",
+ "source_baseline": "b3cfef49ea0f3a6cd016f502400b66e0835b339d",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -1322,7 +1322,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "d21f260fa8dc7dfdc18cd4613594e03f53b55e9c79879c0b3065c750165656ac"
+   "committed_sha256": "8c0112bb1a19b6ef5c633733ac4ef3e3b28bcc83c3c958981a4e25fde3e90bc6"
   },
   {
    "path": "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
