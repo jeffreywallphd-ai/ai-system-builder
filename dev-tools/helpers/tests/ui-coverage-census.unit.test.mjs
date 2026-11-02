@@ -558,7 +558,19 @@ test("pending training-start definitions reject forged missing duplicate and unr
 });
 
 test("pending asynchronous training diagnostics refuse forged future missing duplicate and extra facts",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
+  // Test pending-only denials against their own real history after legitimate binding.
+  const map=structuredClone(current);
+  map.source_baseline=pendingTrainingTaskDefinitions[0].baseline;
+  for(const pending of pendingTrainingTaskDefinitions){
+    assert.equal(pending.baseline,map.source_baseline);
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
+    const committed=execFileSync("git",["show",`${pending.baseline}:${pending.path}`],{timeout:5000,maxBuffer:CENSUS_LIMITS.sourceBytes});
+    assert.equal(sha(committed),pending.committed,"Pending fixtures retain actual historical Git pins.");
+    rows[0].committed_sha256=pending.committed;
+  }
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.doesNotThrow(()=>assertCurrentSourceDrift(map,result));
   for(const pending of pendingTrainingTaskDefinitions){

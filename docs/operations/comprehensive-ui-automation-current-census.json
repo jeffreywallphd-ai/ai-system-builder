@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "4ff4b0323640cff3e229995c552a8513f1b07551",
+ "source_baseline": "8bbc8aca6cfedc95aec0920f2fcf648b7fda6559",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -12717,7 +12717,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "c7d4d2e5caf96dcde6e318f1cfce5b3cf41675ce07ead27c82edf83fbac21ae0"
+   "committed_sha256": "853e3c1a55958154c3b6f37419dc4a6114032f1ede2d189ec4c4827303b84c32"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
@@ -12915,7 +12915,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "db83ebf95933804f06ef4898f7cf9e86b0bc5768049b9d184115867ba97d2ced"
+   "committed_sha256": "bba9ff73a8f0f9dbfd0b1385dca30d7723349c2ed848a27a3f67e13c8ea753c5"
   },
   {
    "path": "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
@@ -14357,7 +14357,7 @@
     "assertionExamples": [],
     "modifiers": []
    },
-   "committed_sha256": "978be3739816cf39026eb9b199d5fa137dc3fe6a5818daabf7938e1c1e6cec6a"
+   "committed_sha256": "46306c8ff6fca94353247c5e163d69d3ef96aea89392720fe6be08f5dbb50b24"
   }
  ],
  "scenarios": [
