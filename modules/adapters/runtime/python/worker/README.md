@@ -943,3 +943,16 @@ configuration construction or formatting. This declaration is source metadata;
 the separately selected runtime precision still controls placement and conversion.
 Focused tests cover malformed shapes, each supported declaration and the runtime
 override. They do not import model frameworks or repeat model accuracy tests.
+
+### Synthetic text and generation parity definitions
+
+The controlled native loader test file defines three additional tiny Qwen cases.
+They compare modern, legacy and empty token-decoder settings with the pinned
+supplier, including Unicode text, token flags, IDs, explicit nulls and the
+already admitted public chat format. They also compare generation-file defaults
+and model-config fallback, two cached generation steps, repeated use and lease
+cleanup. Candidate-only sentinels deny factory, cache, provider and temporary-file
+discovery. The reference reads only each new local fixture. Ordinary lifecycle
+checks do not execute these cases. Actual native execution requires its own
+exact-source effect review. Definitions alone qualify no model accuracy, native
+custody, restart, resources or parent roadmap.

@@ -1261,3 +1261,21 @@ The recorded tiny compatibility run remains evidence for its original source
 version and narrow tensor/cleanup scope. Text/settings parity, native ownership,
 restart and real-model resource checks remain pending. The shared system campaign
 is still deferred until all open feature work is implemented.
+
+### Focused text and generation comparisons
+
+The controlled `NativeTextGenerationParityTests` definitions add three synthetic
+local-fixture comparisons. They cover token IDs and flags, modern and legacy
+precedence, an explicitly empty decoder, Unicode normalization and whitespace,
+explicit nulls and the existing approved public chat format. Generation checks
+compare file defaults with config fallback and run two cached token steps twice.
+Candidate loading and use have explicit discovery-denial sentinels; the normal
+supplier reference resolves only the fresh local test input. No acquired model
+weights, external provider or accuracy corpus is used.
+
+These are definitions until a separate exact-source, bounded native run is
+reviewed. Ordinary lifecycle checks remain model-free. Keep accepted accuracy
+and OCR results closed. Native source custody, lazy-reader lifetime, folder
+protection, disk accounting, owned-worker recovery and actual-model resources
+still need their own evidence. Keep full-software testing for the shared campaign
+after all open feature work is implemented.
