@@ -14441,6 +14441,30 @@
           "Unknown temporary model files still count against the full 12 GiB limit."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0a5748720376635dd254b98637e1a77fc155895b6143a0dd01e10c4506ee73e6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The corrected chat-format case passed.",
+          "It checked text and chat formatting, model settings, reuse of earlier model calculations and cleanup.",
+          "The two earlier successful cases were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f803630c912ab9e159f1e865f54c35c55235e36986a4070e508d0806655ed10c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent still needs to finish file protection, temporary-file accounting, worker shutdown and restart.",
+          "Real-model resource checks are also pending."
+        ]
+      }
     }
   ]
 }

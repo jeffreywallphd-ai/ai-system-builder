@@ -9251,6 +9251,46 @@
         "No user action is needed. The agent must fix the chat test file and run only that case. It must also finish file protection, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
         "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "preserve-chat-template-fixture-bytes",
+      "work_criteria": [
+        "byte-exact-fixture-and-persisted-hash",
+        "preserve-passed-and-failed-scope",
+        "focused-reviewed-source-checkpoint"
+      ],
+      "receipt_digest": "ffc988431bab509e26b5c57a7488491dbbc0aaf2b8c7683005613a1bbee2f9d3",
+      "review_digest": "92a337d3b651d85cd7c2c879d8efbe3d84e802d639a5bf4af47d453c907d3d45",
+      "scope": "The corrected chat-format case passed. It checked text and chat formatting, model settings, reuse of earlier model calculations and cleanup. The two earlier successful cases were not repeated.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent still needs to finish file protection, temporary-file accounting, worker shutdown and restart. Real-model resource checks are also pending.",
+        "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "preserve-chat-template-fixture-bytes",
+      "work_criteria": [
+        "byte-exact-fixture-and-persisted-hash",
+        "preserve-passed-and-failed-scope",
+        "focused-reviewed-source-checkpoint"
+      ],
+      "receipt_digest": "ffc988431bab509e26b5c57a7488491dbbc0aaf2b8c7683005613a1bbee2f9d3",
+      "review_digest": "92a337d3b651d85cd7c2c879d8efbe3d84e802d639a5bf4af47d453c907d3d45",
+      "scope": "The corrected chat-format case passed. It checked text and chat formatting, model settings, reuse of earlier model calculations and cleanup. The two earlier successful cases were not repeated.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent still needs to finish file protection, temporary-file accounting, worker shutdown and restart. Real-model resource checks are also pending.",
+        "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
+      ]
     }
   ]
 }

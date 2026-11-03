@@ -63,7 +63,6 @@
     "unexecuted_proposal01_and_read_only_audit_crlf_correction_preserved": true
   },
   "pending": [
-    "Qualify only the corrected modern-token/chat/default-generation case with a fresh separately reviewed exact-source native trial.",
     "Original-source and lazy-borrower lifetime protection",
     "Protected model folders and shared durable temporary-file accounting",
     "Owned model-worker exit, crash recovery and retained restart",
@@ -182,5 +181,68 @@
     "modern_native_case_qualified": false,
     "accepted_accuracy_or_ocr_repeated": false,
     "parent_qualification_granted": false
+  },
+  "pending_before_modern_chat_trial_02": [
+    "Qualify only the corrected modern-token/chat/default-generation case with a fresh separately reviewed exact-source native trial.",
+    "Original-source and lazy-borrower lifetime protection",
+    "Protected model folders and shared durable temporary-file accounting",
+    "Owned model-worker exit, crash recovery and retained restart",
+    "Real-model offload memory, speed and cleanup qualification",
+    "Shared full-software campaign after all open feature work"
+  ],
+  "text_generation_trial_02": {
+    "status": "reviewed-passed-modern-case-component",
+    "source_work": {
+      "work_id": "preserve-chat-template-fixture-bytes",
+      "commit": "5a20ad6a773676d001b5161d6c02f3d677b6a111",
+      "source_digest": "578ec49c80c1c27bab677bad49d891a5e320da5af1946f3857dc57adf64dfd27",
+      "receipt_digest": "ffc988431bab509e26b5c57a7488491dbbc0aaf2b8c7683005613a1bbee2f9d3",
+      "review_digest": "92a337d3b651d85cd7c2c879d8efbe3d84e802d639a5bf4af47d453c907d3d45"
+    },
+    "fixture": "One corrected generated modern-token Qwen2: two layers, hidden8, vocabulary512, seed37, CPU float32, one thread.",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modern_case_passed": true,
+    "persisted_public_template_hash_verified_before_loading": true,
+    "observed_scope": [
+      "modern token IDs/flags and text encode/decode with Unicode and normalization",
+      "public chat-template render and tokenization parity",
+      "generation-file defaults and explicit EOS null",
+      "reference prefill3/cached decode1 and each of two candidate repeats",
+      "two repeated exact generated-token comparisons",
+      "named candidate-only factory/cache/provider/tempfile discovery denials",
+      "selected dtype restoration and owned synthetic lease cleanup"
+    ],
+    "previous_successful_cases_rerun": false,
+    "previous_partial_result_and_two_passed_cases_retained": true,
+    "previous_source_followup_is_historical_pre_trial_status": true,
+    "elapsed_seconds": 10.858999999938533,
+    "sampled_peak_direct_engine_rss_bytes": 575397888,
+    "sampling_is_not_a_hard_os_quota": true,
+    "actual_engine_identity_confirmed_before_framework": true,
+    "actual_engine_exit_observed": true,
+    "actual_engine_and_wrapper_exit_code": 0,
+    "abort_reason": null,
+    "deadline_seconds": 120,
+    "sampled_rss_abort_bytes": 4294967296,
+    "stdout_bytes": 246,
+    "stderr_bytes": 1029,
+    "stdout_sha256": "0e1dd0767bd7b780f5cc2ff8f5eb4b2eeeff644a04b23eb3d867799515eef4e5",
+    "stderr_sha256": "21fba7f0eae47f7c06268358b4fc55727b87c232fdf8e92aafd20033dcd79296",
+    "output_truncated": false,
+    "actual_tool_launch": "be96aa",
+    "actual_tool_completion": "4e6272",
+    "effect_reference_sha256": "e769e6aa2e96c4a39dfa662c453f7cd948d0f0685067b67b2d9a6bec9f8e8d52",
+    "outcome_reference_sha256": "d11fa6b2b33adb7cd39145b77f7f66dd11ae8a7916247094c3d7a43d576d9081",
+    "remaining_effect_allowance": 0,
+    "automatic_retry_allowed": false,
+    "model_accuracy_or_ocr_qualification": false,
+    "production_or_current_parent_qualification": false,
+    "limits": [
+      "Only this fixed modern synthetic CPU case ran on the corrected source. Earlier legacy/empty passes retain their recorded source version and were not rerun.",
+      "No acquired-model weights, CUDA result, original-source protection, shared accounting, owned model-worker/crash/restart or real-model resource qualification."
+    ]
   }
 }

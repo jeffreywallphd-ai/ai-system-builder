@@ -1309,3 +1309,26 @@ guard is unchanged. The source correction alone does not pass the modern native
 case. Only that remaining case needs a fresh exact-source reviewed trial. Keep
 the two earlier passed cases and the complete failed run as history. Accepted
 accuracy and OCR stay closed, and full-software testing remains deferred.
+
+## Corrected modern chat case: observed pass
+
+The remaining modern-token/chat-format case passed on the committed byte-exact
+fixture correction. It checked persisted template bytes, text and chat-format
+parity, generation defaults, actual prefill3 then cached decode1, two repeated
+exact outputs, named discovery denials and owned lease cleanup. The direct
+engine exited successfully after 10.859 seconds and peaked at 575,397,888 bytes
+of sampled RSS. This is not a hard OS quota or a larger-model memory result.
+
+Only this one case ran. The earlier legacy and explicit-empty passes were not
+repeated and retain their own recorded source version. The complete failed
+three-case run and pre-trial source-followup status remain historical in the
+[versioned evidence](discovery-free-supplier-qualification.json); the new
+`text_generation_trial_02` records the successful modern case. The current
+pending list no longer includes this chat-fixture check.
+
+Original-source and lazy-reader protection, protected folders, shared durable
+accounting, owned model-worker exit/crash/restart and real-model offload resource
+evidence remain pending. Production offload stays unavailable and unknown
+temporary usage remains charged at the full 12 GiB limit. No user action is
+needed. Accepted accuracy and OCR stay closed; full-software testing remains
+deferred until all open feature work is implemented.
