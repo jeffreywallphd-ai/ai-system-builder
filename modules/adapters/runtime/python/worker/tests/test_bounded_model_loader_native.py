@@ -191,7 +191,10 @@ class NativeTextGenerationParityTests(unittest.TestCase):
             if mode == "modern":
                 self.assertEqual(hashlib.sha256(_PUBLIC_QWEN_CHAT_TEMPLATE.encode()).hexdigest(),
                                  "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f")
-                (root / "chat_template.jinja").write_text(_PUBLIC_QWEN_CHAT_TEMPLATE, encoding="utf8")
+                template_file = root / "chat_template.jinja"
+                template_file.write_bytes(_PUBLIC_QWEN_CHAT_TEMPLATE.encode("utf8"))
+                self.assertEqual(hashlib.sha256(template_file.read_bytes()).hexdigest(),
+                                 "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f")
             # Independent normal supplier resolution is restricted to our fresh
             # local fixture. Denial sentinels below apply only to the candidate.
             expected_tokenizer = Qwen2TokenizerFast.from_pretrained(str(root), local_files_only=True)

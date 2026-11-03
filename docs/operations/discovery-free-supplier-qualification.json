@@ -63,7 +63,7 @@
     "unexecuted_proposal01_and_read_only_audit_crlf_correction_preserved": true
   },
   "pending": [
-    "Correct the synthetic Windows chat-template write to preserve exact bytes, then qualify only the remaining modern-token/chat/default-generation case.",
+    "Qualify only the corrected modern-token/chat/default-generation case with a fresh separately reviewed exact-source native trial.",
     "Original-source and lazy-borrower lifetime protection",
     "Protected model folders and shared durable temporary-file accounting",
     "Owned model-worker exit, crash recovery and retained restart",
@@ -162,5 +162,25 @@
     "remaining_effect_allowance": 0,
     "automatic_retry_allowed": false,
     "production_or_current_parent_qualification": false
+  },
+  "pending_before_chat_fixture_source_correction": [
+    "Correct the synthetic Windows chat-template write to preserve exact bytes, then qualify only the remaining modern-token/chat/default-generation case.",
+    "Original-source and lazy-borrower lifetime protection",
+    "Protected model folders and shared durable temporary-file accounting",
+    "Owned model-worker exit, crash recovery and retained restart",
+    "Real-model offload memory, speed and cleanup qualification",
+    "Shared full-software campaign after all open feature work"
+  ],
+  "chat_fixture_source_correction": {
+    "status": "implemented-native-recheck-pending",
+    "work_id": "preserve-chat-template-fixture-bytes",
+    "fixture_file": "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py",
+    "fixture_sha256": "634f4fed622aa1d87d628118abd29c1bc6cda133e168098c192f93a7f2856292",
+    "byte_exact_utf8_and_persisted_hash_assertion": true,
+    "production_template_guard_changed": false,
+    "previous_native_trial_and_successful_cases_preserved": true,
+    "modern_native_case_qualified": false,
+    "accepted_accuracy_or_ocr_repeated": false,
+    "parent_qualification_granted": false
   }
 }

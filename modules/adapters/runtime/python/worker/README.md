@@ -956,3 +956,13 @@ discovery. The reference reads only each new local fixture. Ordinary lifecycle
 checks do not execute these cases. Actual native execution requires its own
 exact-source effect review. Definitions alone qualify no model accuracy, native
 custody, restart, resources or parent roadmap.
+
+### Byte-exact public chat fixture
+
+The generated native chat test writes the admitted public template as UTF8
+bytes and verifies the persisted hash before either supplier reference or
+candidate loading. This avoids Windows newline translation without changing
+the production hash policy. The preceding native run remains partial: legacy
+and explicit-empty cases passed, while modern chat failed before a lease. A
+fresh separately reviewed modern-only native run is still required; do not
+repeat completed cases, model accuracy or OCR.

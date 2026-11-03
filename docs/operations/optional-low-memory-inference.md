@@ -1299,3 +1299,13 @@ reader lifetime, folder/accounting, worker/crash/restart or larger-model resourc
 The production template guard and all resource limits stay unchanged. No user
 action is needed. Accepted model accuracy and OCR stay closed; the shared full
 software campaign remains deferred until all open feature work is implemented.
+
+### Windows chat fixture source correction
+
+The agent replaced a default text write in the generated chat fixture with exact
+UTF8 byte output and a check of the persisted file hash. Windows newline
+translation caused the earlier pre-lease denial; the strict production template
+guard is unchanged. The source correction alone does not pass the modern native
+case. Only that remaining case needs a fresh exact-source reviewed trial. Keep
+the two earlier passed cases and the complete failed run as history. Accepted
+accuracy and OCR stay closed, and full-software testing remains deferred.
