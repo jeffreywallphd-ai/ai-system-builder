@@ -6,6 +6,8 @@ Python composition may issue only fixed package/UI forms for synthetic dataset
 delivery or real Windows OCR with synthetic generation.
 Separate private training roles require reviewed runtime and source witnesses;
 ordinary selftests remain model-free and grant no training effect authority.
+The private Source role admits only its fixed standalone synthetic qualifier;
+it grants no model, retained-staging, production or parent qualification.
 """
 from __future__ import annotations
 import argparse
@@ -40,6 +42,17 @@ _HOST_UI_PROJECTS={
     "ui-thin":("thin-chrome",),
     "ui-desktop":("packaged-desktop",),
 }
+_SOURCE_SESSION_ROLE="source-session"
+_SOURCE_SESSION_SECONDS=180
+_SOURCE_SESSION_FILES=tuple("modules/adapters/runtime/python/worker/tasks/"+name for name in (
+    "local_model_offload.py", "offload_recovery.py", "windows_offload_core.py",
+    "windows_offload_backend.py", "windows_offload_source_ledger.py",
+    "windows_offload_native_session.py", "windows_offload_execution.py",
+    "windows_offload_sources.py", "windows_offload_source_session.py",
+    "windows_offload_source_session_child.py")) + (
+    "dev-tools/scripts/qualification/qualify_windows_offload_source_session.py",
+    "dev-tools/scripts/qualification/windows_offload_source_session_fixture.py",
+)
 _TRAINING_DEADLINES=MappingProxyType({
     "training-input-create":120, "training-readiness":300,
     "training-package":420, "training-ui":690, "training-budget":8,
@@ -453,12 +466,65 @@ def _reviewed_ocr_runtime_import_intent_v2(*,run,folder,review_digest):
 def _digest_bytes(value):return hashlib.sha256(value).hexdigest()
 
 
+def _source_session_fresh(folder):
+    _regular_directory(folder,_REPO)
+    _regular_directory(folder/"t",_REPO)
+    with os.scandir(folder) as entries:
+        first=next(entries,None)
+        need(first is not None and first.name=="t" and next(entries,None) is None,
+             "source-session-fresh-phase")
+    with os.scandir(folder/"t") as entries:
+        need(next(entries,None) is None,"source-session-fresh-temp")
+
+
+def _reviewed_source_session_intent(*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    """Issue one literal Source command; witnesses alone grant no effect authority.
+
+    The independent committed-source effect review and its one-use attempt record
+    are separate. No existing role, command selector or larger budget is reused.
+    """
+    _assert_no_pending()
+    family=_REPO/".local-codex/native-source-session-host-v1"
+    need(isinstance(run,Path) and isinstance(folder,Path) and run.parent==family/"runs"
+         and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/_SOURCE_SESSION_ROLE,
+         "source-session-fixed-run")
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}",review_digest),
+         "source-session-review-witness")
+    _prior_family_clear(family);_prior_family_clear(run)
+    _source_session_fresh(folder)
+    base=Path(sys._base_executable).resolve()
+    runtime=(base,base.parent/"python312.dll")
+    need(base.name.lower()=="python.exe" and type(runtime_file_hashes) is dict
+         and set(runtime_file_hashes)=={str(path) for path in runtime},"source-session-runtime-witness")
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(_SOURCE_SESSION_FILES),
+         "source-session-source-witness")
+    bindings={}
+    total=0
+    for path in runtime:
+        total+=_training_file(path,runtime_file_hashes[str(path)])
+        bindings[str(path)]=runtime_file_hashes[str(path)]
+    for name in _SOURCE_SESSION_FILES:
+        path=_REPO/name;total+=_training_file(path,reviewed_file_hashes[name])
+        bindings[str(path)]=reviewed_file_hashes[name]
+    need(total<=32*1024**2,"source-session-total-input-bound")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute()
+         and Path(env.get("WINDIR",env["SystemRoot"]))==Path(env["SystemRoot"]),
+         "source-session-system-environment")
+    env.update({"PATH":os.pathsep.join((str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "TEMP":str(folder/"t"),"TMP":str(folder/"t")})
+    argv=(str(base),"-I","-S","-B",str(_REPO/_SOURCE_SESSION_FILES[-2]),"--native")
+    return _remember(_Intent(_SOURCE_SESSION_ROLE,argv,folder,MappingProxyType(env),
+        _SOURCE_SESSION_SECONDS,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
 def _validate_intent(intent,folder):
     _assert_no_pending()
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent and folder==intent.folder,"external-intent-denied")
     need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
-    if intent.phase in _TRAINING_DEADLINES:
+    if intent.phase in _TRAINING_DEADLINES or intent.phase==_SOURCE_SESSION_ROLE:
         for name,value in intent.consumer_hashes.items():_training_file(Path(name),value)
+        if intent.phase==_SOURCE_SESSION_ROLE:_source_session_fresh(folder)
         if intent.phase=="training-package":
             _training_empty_cache(_REPO/".local-codex/q"/intent.folder.parent.name[:8])
     else:
@@ -471,7 +537,7 @@ def _memory_limits(intent):
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2") or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2",_SOURCE_SESSION_ROLE) or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
     if phase in _TRAINING_DEADLINES:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
     ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or ((phase=="package" or phase in _HOST_UI_PROJECTS) and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
     if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
@@ -723,7 +789,7 @@ class _OwnedJob:
 
     def _drain(self,name,handle):
         saved=0;observed=0;digest=hashlib.sha256();first=bytearray();sent=False
-        discard=self.intent.phase in ("ocr-runtime-import","ocr-runtime-import-v2")
+        discard=self.intent.phase in ("ocr-runtime-import","ocr-runtime-import-v2") or (self.intent.phase==_SOURCE_SESSION_ROLE and name=="stderr")
         try:
             with (self.folder/(name+".log")).open("xb") as stream:
                 buffer=c.create_string_buffer(65536)

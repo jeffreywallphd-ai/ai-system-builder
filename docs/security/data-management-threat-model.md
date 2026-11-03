@@ -2343,3 +2343,28 @@ shutdown and unchanged-identity/hash checks. Source tests are model-free; curren
 Windows effects remain separately reviewable and pending. Borrower/cache lifetime,
 shared durable journal domain, owned model workers and actual offload resources
 remain unqualified. Old staging and the full 12 GiB charge remain unchanged.
+
+### Outer ownership for the fixed Source qualification
+
+The existing native qualification runner gains one closed Source intent. It
+selects only the fixed isolated Base-Python Source qualifier and fresh synthetic
+run family. Exact twelve-source and two-runtime witnesses are read through the
+existing stable bounded reader before Native preparation. The minimal fixed
+environment excludes ambient search paths and credentials. Private witness
+strings are cooperative reviewed-source data, never public execution authority.
+
+The original atomic outer Job assignment, noninherited Job handle, handle list,
+no-breakaway, retirement and pending-owner fencing remain. Source uses the existing
+1 GiB process, 2 GiB aggregate and 32-member policy; its fixed 180-second execution
+timeout adds no reservation or quota selector. The nested Source child retains
+its own 512 MiB limit and 120-second session lifetime. Job close covers driver
+termination, while the outer polling timeout requires a live scheduled driver.
+No stronger frozen-driver guarantee is claimed.
+
+Source stderr is drained and discarded, with original observed-byte overflow
+retained. An empty saved log does not prove empty original output. A separately
+reviewed one-use consumer must validate the bounded stdout object, fixed evidence
+namespace, exact Source bindings, inner report and original outer retirement.
+Definitions and portable tests grant no actual Native or parent pass. Model
+borrowers, protected shared accounting, model-worker recovery and actual resources
+remain pending. Unknown staging remains untouched and fully charged at 12 GiB.

@@ -32,6 +32,101 @@ class PortableNativePolicyTests(unittest.TestCase):
     def issued_intent(self,phase):
         return job._remember(job._Intent(phase,(),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
 
+    @contextlib.contextmanager
+    def source_session_subject(self):
+        with tempfile.TemporaryDirectory(prefix="source job role ") as directory:
+            root=Path(directory).resolve();base=root/"base/python.exe"
+            base.parent.mkdir();base.write_bytes(b"fixed Base image")
+            dll=base.parent/"python312.dll";dll.write_bytes(b"fixed runtime DLL")
+            runtime={str(path):job._digest(path) for path in (base,dll)}
+            hashes={}
+            for name in job._SOURCE_SESSION_FILES:
+                path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"fixed_source = True\n")
+                hashes[name]=job._digest(path)
+            run=root/".local-codex/native-source-session-host-v1/runs"/("a"*32)
+            folder=run/"source-session";(folder/"t").mkdir(parents=True)
+            windows=root/"Windows";(windows/"System32").mkdir(parents=True)
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)), \
+                 patch.dict(os.environ,{"SystemRoot":str(windows),"WINDIR":str(windows),
+                    "PATH":"untrusted-search-path","SECRET_TOKEN":"never-forward",
+                    "PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"ocr-documents"},clear=True), \
+                 patch.object(job,"_Win",side_effect=AssertionError("No Native construction")) as native:
+                yield SimpleNamespace(root=root,base=base,dll=dll,run=run,folder=folder,native=native,
+                    args=dict(run=run,folder=folder,reviewed_file_hashes=hashes,
+                              runtime_file_hashes=runtime,review_digest="b"*64))
+
+    def test_source_role_has_one_fixed_command_environment_and_original_budget(self):
+        with self.source_session_subject() as case:
+            intent=job._reviewed_source_session_intent(**case.args)
+            self.assertIs(job._ISSUED[id(intent)],intent)
+            self.assertEqual(intent.argv,(str(case.base),"-I","-S","-B",
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),"--native"))
+            self.assertEqual((intent.phase,intent.seconds,intent.cwd),("source-session",180,case.folder))
+            self.assertEqual(set(intent.environment),{"SystemRoot","WINDIR","PATH","TEMP","TMP"})
+            self.assertEqual(intent.environment["PATH"],os.pathsep.join((str(case.base.parent),str(case.root/"Windows/System32"))))
+            self.assertEqual(intent.environment["TEMP"],str(case.folder/"t"))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            self.assertEqual(job.MEMBERS,32);self.assertEqual(len(intent.consumer_hashes),14)
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises(TypeError):intent.environment["PATH"]="replacement"
+            case.native.assert_not_called()
+
+    def test_source_role_refuses_all_command_runtime_environment_or_budget_selectors(self):
+        with self.source_session_subject() as case:
+            for selector in ("command","cwd","environment","python_executable","seconds","process_bytes","job_bytes"):
+                with self.subTest(selector=selector),self.assertRaises(TypeError):
+                    job._reviewed_source_session_intent(**case.args,**{selector:"untrusted"})
+            self.assertNotIn("source-session",job._FIXTURES)
+            with self.assertRaises(job.NativeFailure):job._fixture_intent("source-session",case.folder)
+            case.native.assert_not_called()
+
+    def test_source_role_requires_exact_source_and_runtime_witness_sets(self):
+        with self.source_session_subject() as case:
+            for field in ("reviewed_file_hashes","runtime_file_hashes"):
+                for mutation in ("missing","extra","bad-value"):
+                    wrong=dict(case.args[field])
+                    if mutation=="missing":wrong.pop(next(iter(wrong)))
+                    elif mutation=="extra":wrong["untrusted"]="0"*64
+                    else:wrong[next(iter(wrong))]="not-a-hash"
+                    with self.subTest(field=field,mutation=mutation),self.assertRaises(job.NativeFailure):
+                        job._reviewed_source_session_intent(**{**case.args,field:wrong})
+            case.native.assert_not_called()
+
+    def test_source_role_revalidates_code_and_runtime_before_native_preparation(self):
+        with self.source_session_subject() as case:
+            intent=job._reviewed_source_session_intent(**case.args)
+            for path in (case.root/job._SOURCE_SESSION_FILES[0],case.base,case.dll):
+                before=path.read_bytes();path.write_bytes(before+b" changed")
+                with self.subTest(path=path.name),self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                path.write_bytes(before)
+            case.native.assert_not_called()
+
+    def test_source_role_freshness_pending_owner_and_unknown_roles_fail_closed(self):
+        with self.source_session_subject() as case:
+            with self.assertRaises(job.NativeFailure):
+                job._reviewed_source_session_intent(**{**case.args,"folder":case.run/"wrong"})
+            job._PENDING[123]=object()
+            with self.assertRaises(job.NativeFailure):job._reviewed_source_session_intent(**case.args)
+            job._PENDING.pop(123)
+            for path in (case.folder/"stdout.log",case.folder/"t/old.tmp"):
+                path.write_bytes(b"retained")
+                with self.subTest(path=path.name),self.assertRaises(job.NativeFailure):
+                    job._reviewed_source_session_intent(**case.args)
+                path.unlink()
+            intent=job._reviewed_source_session_intent(**case.args)
+            (case.folder/"stderr.log").write_bytes(b"earlier output")
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+            case.native.assert_not_called()
+
+    def test_source_role_does_not_select_ocr_grade_from_environment_or_accept_copied_identity(self):
+        for scenario in (None,"ocr-documents","dataset-profile"):
+            env={} if scenario is None else {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+            intent=job._remember(job._Intent("source-session",(),SOURCE.parent,env,180,SOURCE.parent,{},{}))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            with self.assertRaises(job.NativeFailure):job._memory_limits(job.copy.copy(intent))
+        for phase in ("source-session:command","source-session-extra"):
+            with self.assertRaises(job.NativeFailure):job._memory_limits(self.issued_intent(phase))
+
     def fake_owned(self):
         native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
         with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native):
@@ -199,6 +294,20 @@ class PortableNativePolicyTests(unittest.TestCase):
                 self.assertEqual(saved,b"");self.assertTrue(owned.overflow.is_set())
                 self.assertEqual(owned.log_state["stdout"]["observed_bytes"],9)
                 self.assertTrue(owned.log_state["stdout"]["complete"])
+
+    def test_source_role_discards_stderr_without_hiding_bytes_overflow_or_stdout(self):
+        private=b"private synthetic stderr\n"
+        owner,saved=self.drain_bytes("source-session",[private],stream_name="stderr")
+        self.assertEqual(saved,b"");self.assertEqual(owner.log_state["stderr"]["observed_bytes"],len(private))
+        self.assertTrue(owner.log_state["stderr"]["raw_content_discarded"])
+        self.assertTrue(owner.first.empty())
+        self.assertEqual(owner.log_state["stderr"]["sha256"],hashlib.sha256(b"").hexdigest())
+        overflow,saved=self.drain_bytes("source-session",[b"123456789"],maximum=8,stream_name="stderr")
+        self.assertEqual(saved,b"");self.assertTrue(overflow.overflow.is_set())
+        stdout,saved=self.drain_bytes("source-session",[b'{"status":"observed"}\n'])
+        self.assertEqual(saved,b'{"status":"observed"}\n')
+        self.assertEqual(stdout.first.get_nowait(),b'{"status":"observed"}')
+        self.assertNotIn("raw_content_discarded",stdout.log_state["stdout"])
 
     def test_runtime_import_facts_distinguish_import_and_accelerator_failures_without_messages(self):
         original_import=builtins.__import__

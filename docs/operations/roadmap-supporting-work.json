@@ -9291,6 +9291,82 @@
         "No user action is needed. The agent still needs to finish file protection, temporary-file accounting, worker shutdown and restart. Real-model resource checks are also pending.",
         "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "share-runtime-source-ledger-with-closed-manifest",
+      "work_criteria": [
+        "runtime-owned-original-ledger",
+        "native-provenance-and-budgets-preserved",
+        "focused-routing-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "c61e97770326f487bd1258499dfbf4f7994af83df85069efa4b1d363d5f2d906",
+      "review_digest": "9f1eb82c1f980b2168b36cf33e263292fe165d02ace028284e0014038a85267b",
+      "scope": "The shared call-tracking code is now part of the runtime. Focused tests check its limits and refusal paths.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "share-runtime-source-ledger-with-closed-manifest",
+      "work_criteria": [
+        "runtime-owned-original-ledger",
+        "native-provenance-and-budgets-preserved",
+        "focused-routing-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "c61e97770326f487bd1258499dfbf4f7994af83df85069efa4b1d363d5f2d906",
+      "review_digest": "9f1eb82c1f980b2168b36cf33e263292fe165d02ace028284e0014038a85267b",
+      "scope": "The shared call-tracking code is now part of the runtime. Focused tests check its limits and refusal paths.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "integrate-closed-original-source-runtime-session",
+      "work_criteria": [
+        "concrete-source-role-and-existing-io-compatibility",
+        "one-original-budget-and-lifetime",
+        "focused-consumer-security-review-and-checkpoint"
+      ],
+      "receipt_digest": "4b440b7dcb1972f853eebbe63ca481a6dd67f42050f3ba44cdb9aa03cd5f0f44",
+      "review_digest": "fd3eff42efc22a1a35365123c64a46b6c58c6d26ce3ffefd9d82d7db48d21067",
+      "scope": "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "integrate-closed-original-source-runtime-session",
+      "work_criteria": [
+        "concrete-source-role-and-existing-io-compatibility",
+        "one-original-budget-and-lifetime",
+        "focused-consumer-security-review-and-checkpoint"
+      ],
+      "receipt_digest": "4b440b7dcb1972f853eebbe63ca481a6dd67f42050f3ba44cdb9aa03cd5f0f44",
+      "review_digest": "fd3eff42efc22a1a35365123c64a46b6c58c6d26ce3ffefd9d82d7db48d21067",
+      "scope": "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
     }
   ]
 }

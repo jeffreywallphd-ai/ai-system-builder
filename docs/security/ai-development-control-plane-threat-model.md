@@ -636,3 +636,30 @@ network probes and unknown scripts before spawning. Model-free actual-port
 regressions establish argument equality and refusal, not a model/runtime or Native
 qualification. Prior failed observations, accepted accuracy/OCR, original memory
 and disk guards, unknown retained data and pending full-system coverage remain.
+
+## Closed Source qualification Job role
+
+One new private issuer admits the exact isolated Source qualifier command. It
+requires the fixed fresh run family, twelve source witnesses, two base-runtime
+witnesses and stable bounded revalidation before Native preparation. It adds no
+public command, executable, environment, quota or runtime selector. Witness hashes
+are cooperative reviewed-source data, not approval or an authentication boundary
+against arbitrary Python code in the same process.
+
+The original Job assignment, explicit inherited handles, no breakaway, retained
+ownership, bounded drains, pending-owner fencing and acknowledged retirement are
+reused. The Source role stays at 1 GiB per process, 2 GiB aggregate and 32 members.
+The fixed 180-second outer execution timeout depends on the live driver; driver
+termination closes its noninherited kill-on-close Job. This does not qualify a
+frozen-alive-driver watchdog. The inner Source lifetime and limits are unchanged.
+
+Only Source stderr is newly discarded. Draining and observed-byte overflow remain
+mandatory; saved empty hashes cannot prove empty original output. A reviewed
+one-use consumer must parse one bounded stdout object, validate the fixed Source
+evidence namespace and fresh leaf, and require the strict inner report and
+original outer retirement. A JSON path or exit code alone cannot qualify it.
+
+Portable tests perform no Native effect. New support references identify only
+already completed source work and retain hash-bound plain descriptions. They grant
+no parent, production, retained-staging, model, memory or later-source pass.
+Actual nested execution and remaining recovery/resource checks stay pending.

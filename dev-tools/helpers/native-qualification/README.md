@@ -234,3 +234,35 @@ messages, paths and traceback text are excluded. Success schemas, legacy model
 admission, installed dependencies, Native budgets and effect-review requirements
 remain unchanged. Model-free regressions cover the actual supplier-shaped label;
 they do not qualify a new physical input, model, app or parent roadmap.
+
+## Private Source-session role
+
+The private Source issuer admits only the base interpreter with `-I -S -B`, the
+fixed Source qualifier and `--native`. It checks exactly twelve reviewed source
+files and the two base-runtime files. Stable bounded reads run at issuance and
+again before Native preparation. No command, executable, directory, environment
+or budget selector is added to the public CLI. The review hash is a cooperative
+source witness; it does not establish reviewer identity or grant effect authority.
+
+The fixed fresh phase lives under `native-source-session-host-v1/runs` in ignored
+local storage. PATH uses the admitted Windows directory and base interpreter.
+TEMP and TMP use the fresh phase's empty `t` directory. Ambient search paths and
+credentials are not copied. The Source role uses the existing 1 GiB process,
+2 GiB aggregate and 32-process limits, with a fixed 180-second execution timeout.
+These are ceilings, not reservations. The inner Source lifetime remains 120 seconds
+and its immediate child Job remains 512 MiB. Existing role limits stay unchanged.
+
+The existing runner assigns the outer Job atomically from qualifier creation.
+Its noninherited Job handle and kill-on-close cover driver termination; complete
+root exit, Job zero, drains and handle acknowledgements still govern retirement.
+Its timeout uses the live driver's polling loop. It is not an independent watchdog
+for a frozen but alive driver. Source stderr is drained and discarded while its
+observed byte count and overflow remain visible. The saved empty-log hash does not
+prove that original stderr was empty. Bounded stdout is retained for strict parsing.
+
+A separately reviewed one-use consumer must check one bounded Source JSON object,
+the fixed namespace and fresh 32-hex `summary.json` leaf, source bindings, inner
+report and original outer retirement. A printed path is data, not authority.
+Ordinary portable tests execute no Native role. The actual nested Source trial,
+model borrowers, staging/accounting, model-worker recovery, resources and parent
+qualification remain pending. Accepted model accuracy and OCR stay closed.

@@ -14465,6 +14465,56 @@
           "Real-model resource checks are also pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aefa3ba52c24cba8a2692a5d660edec608c45a75e4da6aa3a4c0f19573d05cfc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared call-tracking code is now part of the runtime. Focused tests check its limits and refusal paths."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2825af6c3d8cfac55f412fc295d36b8a166fc8cf605d5a5571d00c8487c2c90d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7ae6f9714a9d49a55352401609691087d9962b2f1fdcf8622a606a0965b1dcfe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ed70f479afc2675f0f48c6afe003eef5899e7a56119e2a1a32755c969bdaee14",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "09b125ab834d61f92dc38530f845ecce31b05bb52a03d0f8943e2678021ce022",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+        ]
+      }
     }
   ]
 }

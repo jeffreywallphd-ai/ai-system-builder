@@ -1374,3 +1374,24 @@ exit/crash/restart and real-model offload measurements remain pending. Productio
 offload stays unavailable. Unknown staging usage remains charged at 12 GiB.
 No user action is needed. Accepted accuracy and OCR checks stay closed. The shared
 whole-software campaign remains deferred until open feature work is implemented.
+
+## Guard the complete file-checking test tree
+
+The agent added a fixed command to the existing process-tree test runner. The
+runner must own the file-checking test from process creation. This closes the gap
+where the launcher could exit before its child had finished setting up its guards.
+The command and environment are fixed. Source and runtime files must match their
+reviewed hashes. The existing memory ceilings stay at 1 GiB per process and 2 GiB
+for the outer test tree. These limits do not reserve memory up front.
+
+The command has a fixed 180-second outer timeout. The file-checking session keeps
+its own 120-second lifetime and 512 MiB child limit. Closing the runner stops its
+owned tree. The outer timeout needs a running driver; it does not prove protection
+against a driver that remains alive but stops running. Forced termination is a
+failed test, even if later cleanup succeeds.
+
+Focused tests use simulated operating-system calls. The actual Windows run still
+needs a separate review and one-use attempt record. No user action is needed.
+Low-memory mode remains unavailable while file protection, shared temporary-file
+accounting, model-worker recovery and real-model resource checks are pending.
+Accepted accuracy and OCR remain closed. Full-software testing remains deferred.
