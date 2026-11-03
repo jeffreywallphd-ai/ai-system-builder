@@ -79,7 +79,8 @@
         "dev-tools/scripts/qualification/windows_offload_sources_fixture.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
         "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
-        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py"
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py",
+        "modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py"
       ]
     },
     "model-qualification-scheduling": {

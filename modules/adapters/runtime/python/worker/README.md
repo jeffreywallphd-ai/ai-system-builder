@@ -966,3 +966,21 @@ the production hash policy. The preceding native run remains partial: legacy
 and explicit-empty cases passed, while modern chat failed before a lease. A
 fresh separately reviewed modern-only native run is still required; do not
 repeat completed cases, model accuracy or OCR.
+
+### Shared original source-call rows
+
+`tasks/windows_offload_source_ledger.py` owns the pure physical row, reservation,
+intent, completion and invocation-acknowledgement machinery used by the existing
+closed Source diagnostic. The base grants no Native actor or execution authority
+and invokes no stored native function. Concrete actor, profile, Job, timer,
+thread, source, ABI and retirement guards remain in the closed consumer. The
+16,384 total rows include one shared 64-row terminal tail; completed rows are
+not refunded. Independent original tables retain known returns when observation
+lists drift, while drift still denies acknowledgement or replay.
+
+The existing 21-file model-free lifecycle profile owns this module and its
+actual diagnostic-consumer tests. This extraction is preparation for a concrete
+source-only runtime session. It enables no production source/model borrower,
+shared journal domain, model worker or staging recovery. Native qualification
+remains separate. Existing v1 wire, 512 MiB/120-second limits, accepted accuracy
+and OCR stay unchanged; full-software testing remains deferred.

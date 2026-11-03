@@ -1332,3 +1332,22 @@ evidence remain pending. Production offload stays unavailable and unknown
 temporary usage remains charged at the full 12 GiB limit. No user action is
 needed. Accepted accuracy and OCR stay closed; full-software testing remains
 deferred until all open feature work is implemented.
+
+## Runtime-owned source-call ledger
+
+The agent moved reusable physical Source row bookkeeping behind the runtime
+adapter boundary. The existing diagnostic is an actual consumer, while its
+concrete actor and native provenance checks remain unchanged. The shared base
+cannot authorize a native call or invoke a stored function. It retains the
+original 16,384-row total, shared 64-row terminal tail, nonrefund reservations
+and independent original intent/completion custody. Source-owned regression
+checks keep ordinary collection model-free and preserve generic fallback.
+
+The next work chunk is a closed source-only runtime session using the established
+model-free worker envelope. It must preserve v1 protocol and budgets and expose
+only the original parent session live state. This extraction alone implements no
+model borrower, production source authority, shared journal-domain/fence producer
+or owned model worker. The concrete protected journal is retained. Earlier Native
+results keep their recorded source versions; new physical qualification requires
+a separate committed-source effect review. Unknown staging remains fully charged
+at 12 GiB. Accepted accuracy/OCR stay closed; shared full testing stays deferred.

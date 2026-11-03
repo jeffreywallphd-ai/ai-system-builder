@@ -2011,3 +2011,20 @@ The shared worker README no longer selects unrelated semantic-curation feature
 tests by itself. Documentation and ordinary fallback coverage remain. Both the
 actual semantic-curation source and its test still select their original profile;
 a focused routing regression checks this distinction.
+
+### Runtime-owned shared Source rows
+
+The closed Source diagnostic consumes the pure runtime-owned physical row
+mechanism in `modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py`.
+The fixed source manifest includes that exact module; hash-checked source-buffer
+loading still avoids stale bytecode. The diagnostic retains its concrete actor
+and native Job/timer/thread/source/ABI/retirement checks. Other fixture profiles
+retain their cases and behavior; their fixed source graph now includes the pure
+shared module. The original v1 runtime wire and model-free budgets are unchanged.
+
+The 21-file lifecycle profile remains model-free. Its Source tests exercise the
+real diagnostic consumer and the shared base denial/redaction paths. Routing
+checks cover the new source and missing-declaration fallback. Source refactoring
+is not current Native, model, restart or parent qualification. Keep physical
+execution behind a separately reviewed committed-source effect plan. Do not
+rerun accepted model accuracy/OCR or the deferred shared full-software campaign.

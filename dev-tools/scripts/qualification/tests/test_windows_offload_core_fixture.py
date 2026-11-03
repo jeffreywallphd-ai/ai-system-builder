@@ -338,7 +338,10 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(p.cases,('stalled-response-cancellation','owned-child-exit-during-response'))
         self.assertEqual(p.schema,'windows-offload-read-session-native-v1')
         self.assertEqual(p.runs.name,p.schema)
-        self.assertEqual(len(p.task_files),6);self.assertEqual(len(p.tool_files),3)
+        self.assertEqual([Path(n).stem for n in p.task_files],
+            ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',
+             'windows_offload_source_ledger','windows_offload_execution','windows_offload_execution_child'])
+        self.assertEqual(len(p.tool_files),3)
         with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
         with self.assertRaises(subject.FixtureError):subject._component(p,{})
         with self.assertRaises(subject.FixtureError):subject._bootstrap('a'*32,p.cases[0],{},1,10,11,12,p)
@@ -365,7 +368,7 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(p.runs.name,p.schema)
         self.assertEqual([Path(n).stem for n in p.task_files],
             ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',
-             'windows_offload_execution','windows_offload_sources'])
+             'windows_offload_source_ledger','windows_offload_execution','windows_offload_sources'])
         self.assertNotIn('windows_offload_execution_child',[Path(n).stem for n in p.task_files])
         with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
         hashes={subject.TOOL_FILES[1]:'a'*64}
@@ -386,6 +389,45 @@ class ControllerTests(unittest.TestCase):
             result=subject._private_core_package(hashes,p)
         self.assertEqual(order,[Path(n).stem for n in p.task_files])
         self.assertEqual(tuple(result),tuple(order))
+
+    def test_shared_source_ledger_hash_is_required_before_any_private_package_load(self):
+        ledger='modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py'
+        expected_hash=hashlib.sha256((subject.ROOT/ledger).read_bytes()).hexdigest()
+        for profile in (subject._CORE_PROFILE,subject._JOURNAL_PROFILE,subject._READ_PROFILE,
+                        subject._EXECUTION_PROFILE,subject._SOURCE_PROFILE):
+            # The native bootstrap supplies this pin. This model-free test
+            # supplies the same exact source hash without starting that bootstrap.
+            with self.subTest(profile=profile.schema), \
+                 patch.object(subject,'_LOADED_SOURCE_SHA256',
+                              hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),create=True):
+                self.assertEqual(profile.task_files.count(ledger),1)
+                hashes=subject._repo_hashes(profile)
+                self.assertEqual(hashes[ledger],expected_hash)
+                for wrong in ('0'*64,None):
+                    expected=dict(hashes)
+                    if wrong is None: expected.pop(ledger)
+                    else: expected[ledger]=wrong
+                    with patch.object(subject,'_load_file') as load:
+                        with self.assertRaises(KeyError if wrong is None else subject.FixtureError):
+                            subject._private_core_package(expected,profile)
+                    load.assert_not_called()
+
+    def test_shared_source_ledger_drift_after_loading_refuses_the_private_package(self):
+        profile=subject._SOURCE_PROFILE
+        ledger='modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py'
+        with patch.object(subject,'_LOADED_SOURCE_SHA256',
+                          hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),create=True):
+            hashes=subject._repo_hashes(profile)
+        changed={**hashes,ledger:'0'*64}
+        name='_fixed_windows_staging_qualification_tasks'
+        with patch.dict(sys.modules),patch.object(subject,'_repo_hashes',side_effect=[hashes,changed]), \
+             patch.object(subject,'_load_file',return_value=object()) as load:
+            sys.modules.pop(name,None)
+            with self.assertRaises(subject.FixtureError):subject._private_core_package(hashes,profile)
+            self.assertEqual([call.args[1] for call in load.call_args_list],
+                             [subject.ROOT/n for n in profile.task_files])
+            ledger_load=next(call for call in load.call_args_list if call.args[1]==subject.ROOT/ledger)
+            self.assertEqual(ledger_load.args[2],hashes[ledger])
 
     def test_parent_oracle_refuses_cross_profile_case_without_rewriting_facts(self):
         value = parent('empty-stage')

@@ -72,6 +72,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                 (["dev-tools/scripts/qualification/windows_offload_sources_fixture.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tests/test_windows_offload_sources.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tasks/bounded_model_inputs.py"], ["documentation"], True, False),
@@ -117,7 +118,8 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
 
     def test_missing_source_declaration_does_not_suppress_generic_gate(self):
         for source in ("dev-tools/scripts/qualification/qualify_windows_offload_sources.py", "dev-tools/scripts/qualification/windows_offload_sources_fixture.py",
-                       "modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py", CORE,
+                       "modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py",
+                       "modules/adapters/runtime/python/worker/tasks/windows_offload_source_ledger.py", CORE,
                        "modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py",
                        "modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py",
                        "dev-tools/scripts/qualification/qualify_windows_offload_journal.py",

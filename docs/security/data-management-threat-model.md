@@ -2297,3 +2297,22 @@ input-validation gap without changing selected runtime precision, safe-weight
 identity/shape/type checks, resource limits or production readiness. The logging
 consequence was supported by installed source inspection; no emitted private log
 was observed. Synthetic positive and denial regressions cover the correction.
+
+### Shared Source row mechanism retains closed actor authority
+
+The runtime-owned Source ledger is pure bookkeeping. Its default actor guards
+deny reservation, and stored native functions are never invoked by the module.
+The concrete diagnostic retains its original actor/profile/Job/timer/thread,
+source, ABI and retirement checks and its fixed safe error mapping. A row or
+reservation is not a capability. Positive allocation still requires the concrete
+consumer original graph, and invocation acknowledgement proves neither IO nor
+process retirement. The original independent tables preserve known returns when
+mutable observation lists drift; acknowledgement and replay stay denied.
+
+The common 16,384-row total includes a single 64-row terminal tail. No refund,
+second pool, new deadline, private model input, arbitrary command/callback
+selection, Native effect or readiness authority is introduced by extraction.
+Focused original-graph, copy/rebinding, exhaustion, return-custody, failure
+redaction and routing regressions cover the source boundary. Source-only session,
+borrower, shared-domain and owned model-worker composition remain pending. Old
+retained trees remain untouched and fully charged; no parent qualification follows.

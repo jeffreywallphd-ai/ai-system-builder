@@ -45,6 +45,34 @@ class SourceSlotsTests(unittest.TestCase):
         self.owner = owner
         owner.source_slots = self.arena = e._SourceSlots(owner,e._SOURCE_CHILD)
 
+    def test_actual_diagnostic_uses_runtime_owned_physical_rows(self):
+        shared = e._shared_source_ledger
+        self.assertIsInstance(self.arena, shared._SourceRows)
+        self.assertIs(e._SourceSlot, shared._SourceSlot)
+        ticket = self.arena.reserve('shared-runtime-rows', 1, 0)
+        row = self.invoke_data(ticket)
+        self.assertIs(type(row), shared._SourceSlot)
+        for method in ('reserve', 'assert_reserved', 'begin', 'returned', 'acknowledge', 'begin_escape'):
+            self.assertIs(getattr(e._SourceSlots, method), getattr(shared._SourceRows, method))
+        self.assertIs(row.completion, self.arena.completions[row.index])
+
+    def test_shared_rows_alone_grant_no_native_actor_or_reservation(self):
+        shared = e._shared_source_ledger
+        rows = shared._SourceRows()
+        with self.assertRaises(shared.SourceLedgerError):
+            rows.reserve('not-a-live-actor', 1, 0)
+        for operation in (copy.copy, copy.deepcopy, pickle.dumps):
+            with self.subTest(operation=operation.__name__), self.assertRaises(shared.SourceLedgerError):
+                operation(rows)
+        self.assertFalse(self.owner.calls)
+
+    def test_shared_ledger_failure_has_only_fixed_safe_stage_and_message(self):
+        shared = e._shared_source_ledger
+        error = shared.SourceLedgerError('synthetic-private-path-and-payload-not-an-admitted-stage')
+        self.assertEqual(error.stage, 'source-ledger')
+        self.assertNotIn('synthetic-private', str(error))
+        self.assertEqual(shared.SourceLedgerError('source-return-origin').stage, 'source-return-origin')
+
     def deny(self, operation):
         with self.assertRaises(e.FixtureError):operation()
 
