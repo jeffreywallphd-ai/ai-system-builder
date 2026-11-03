@@ -14404,6 +14404,43 @@
           "Low-memory mode remains unavailable, and unknown temporary model files keep their full 12 GiB charge."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "86efe1a5a1c25d97b13e2d1e2e97cf3f1f882ab45f3860d00c93880d3d235b2f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added focused tests.",
+          "Two cases passed checks for text handling, model settings, reuse of earlier model calculations and cleanup.",
+          "The chat-format case stopped because Windows changed test-file line endings."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "216c8d7b0fcded85396b69f026e1f69ab4fe0bdf76aa687a300bdc907cd59b09",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent must fix the chat test file and run only that case.",
+          "It must also finish file protection, temporary-file accounting, worker shutdown and restart, and real-model resource checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "63f5dba34f8723720b1a4f6c6d25b12260d486c17fd758c2ca1a4000d5dc4cb6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These small generated models check software behavior.",
+          "They do not measure the memory use or answer quality of larger models.",
+          "Low-memory mode stays unavailable.",
+          "Unknown temporary model files still count against the full 12 GiB limit."
+        ]
+      }
     }
   ]
 }

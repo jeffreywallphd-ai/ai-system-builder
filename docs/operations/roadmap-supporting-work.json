@@ -9211,6 +9211,46 @@
         "No user action is needed. The agent still needs to check text handling and generation settings with the installed libraries. It must also finish protected file access, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
         "The two generated models check compatibility only. Their memory result does not describe larger models. Low-memory mode remains unavailable, and unknown temporary model files keep their full 12 GiB charge."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "define-native-text-and-generation-parity",
+      "work_criteria": [
+        "synthetic-text-and-generation-definition",
+        "discovery-denial-and-scope",
+        "reviewed-source-checkpoint"
+      ],
+      "receipt_digest": "5bbcdcbb210a9e336b66a01429335b1a6fa5464b46666f886a149f84c8123134",
+      "review_digest": "b984ffe2c0f93b460dfda1c74e2b02d8152e7c0af1ff3805be8ef4224b5df321",
+      "scope": "The agent added focused tests. Two cases passed checks for text handling, model settings, reuse of earlier model calculations and cleanup. The chat-format case stopped because Windows changed test-file line endings.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must fix the chat test file and run only that case. It must also finish file protection, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
+        "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "define-native-text-and-generation-parity",
+      "work_criteria": [
+        "synthetic-text-and-generation-definition",
+        "discovery-denial-and-scope",
+        "reviewed-source-checkpoint"
+      ],
+      "receipt_digest": "5bbcdcbb210a9e336b66a01429335b1a6fa5464b46666f886a149f84c8123134",
+      "review_digest": "b984ffe2c0f93b460dfda1c74e2b02d8152e7c0af1ff3805be8ef4224b5df321",
+      "scope": "The agent added focused tests. Two cases passed checks for text handling, model settings, reuse of earlier model calculations and cleanup. The chat-format case stopped because Windows changed test-file line endings.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must fix the chat test file and run only that case. It must also finish file protection, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
+        "These small generated models check software behavior. They do not measure the memory use or answer quality of larger models. Low-memory mode stays unavailable. Unknown temporary model files still count against the full 12 GiB limit."
+      ]
     }
   ]
 }

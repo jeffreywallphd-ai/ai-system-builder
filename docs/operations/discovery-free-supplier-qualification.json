@@ -63,8 +63,7 @@
     "unexecuted_proposal01_and_read_only_audit_crlf_correction_preserved": true
   },
   "pending": [
-    "Installed tokenizer encode/decode/chat/template and generation-default parity",
-    "Dynamic actual supplier discovery-denial checks",
+    "Correct the synthetic Windows chat-template write to preserve exact bytes, then qualify only the remaining modern-token/chat/default-generation case.",
     "Original-source and lazy-borrower lifetime protection",
     "Protected model folders and shared durable temporary-file accounting",
     "Owned model-worker exit, crash recovery and retained restart",
@@ -98,5 +97,70 @@
     "Generated tiny tensor tests are not model output-accuracy tests or larger-model resource measurements.",
     "No old staging/model-cache inspection, adoption, move, deletion, ACL change or capacity credit.",
     "No model download, provider publication, broad UI run or full-system suite."
-  ]
+  ],
+  "pending_before_text_generation_trial_01": [
+    "Installed tokenizer encode/decode/chat/template and generation-default parity",
+    "Dynamic actual supplier discovery-denial checks",
+    "Original-source and lazy-borrower lifetime protection",
+    "Protected model folders and shared durable temporary-file accounting",
+    "Owned model-worker exit, crash recovery and retained restart",
+    "Real-model offload memory, speed and cleanup qualification",
+    "Shared full-software campaign after all open feature work"
+  ],
+  "text_generation_trial_01": {
+    "status": "partial-result-chat-fixture-correction-pending",
+    "source_work": {
+      "work_id": "define-native-text-and-generation-parity",
+      "commit": "7381326109bcafe4357e73fa0425a874e14fde41",
+      "source_digest": "fe0b459b032e091414052e9af8e1ee0d1be9ec063a1175d5eea97dfbf90eac37",
+      "receipt_digest": "5bbcdcbb210a9e336b66a01429335b1a6fa5464b46666f886a149f84c8123134",
+      "review_digest": "b984ffe2c0f93b460dfda1c74e2b02d8152e7c0af1ff3805be8ef4224b5df321"
+    },
+    "generated_fixture": "Two-layer hidden8 vocabulary512 seeded Qwen2, CPU float32, one thread; three named text/generation cases. No acquired model weights or accuracy corpus.",
+    "tests": 3,
+    "passed_cases": [
+      "legacy-token-files-and-model-generation-fallback",
+      "empty-modern-decoder-ignores-legacy-files-and-explicit-nulls"
+    ],
+    "failed_case": "modern-token-decoder-chat-template-and-generation-file",
+    "failures": 0,
+    "errors": 1,
+    "skipped": 0,
+    "whole_fixture_passed": false,
+    "failure_stage": "chat-template-hash-inspection-before-lease-acquisition",
+    "diagnosis": "A separate pure Windows probe reproduced LF-to-CRLF translation from the fixture default text write. Byte-exact writing preserves the admitted public template hash. The actual failed fixture bytes were not retained. No product guard defect or relaxation is asserted.",
+    "newline_probe_default_write_sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6",
+    "newline_probe_byte_exact_sha256": "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+    "source_fixture_correction_pending": true,
+    "passed_case_scope": [
+      "token IDs/flags and text encode/decode including Unicode and normalization",
+      "legacy and explicit-empty decoder precedence",
+      "file defaults or model-config fallback and selected explicit nulls",
+      "actual prefill3 then cached decode1 in reference and each candidate repeat",
+      "two repeated exact generated-token comparisons per passed case",
+      "named candidate-only factory/cache/provider/tempfile denial sentinels",
+      "owned synthetic lease cleanup"
+    ],
+    "elapsed_seconds": 22.014999999897555,
+    "sampled_peak_direct_engine_rss_bytes": 577191936,
+    "sampling_is_not_a_hard_os_quota": true,
+    "actual_engine_identity_confirmed_before_framework": true,
+    "actual_engine_exit_observed": true,
+    "actual_engine_and_wrapper_exit_code": 1,
+    "abort_reason": null,
+    "deadline_seconds": 120,
+    "sampled_rss_abort_bytes": 4294967296,
+    "stdout_bytes": 246,
+    "stderr_bytes": 4316,
+    "stdout_sha256": "920b7536f3bb643651cf00b16f017e46809a31b6df981cdda6f450d2b296d33a",
+    "stderr_sha256": "4475f2b72192c3b848e492e9de8987053e11943edebd2cacb27e188a9eced953",
+    "output_truncated": false,
+    "actual_tool_launch": "0d21f3",
+    "actual_tool_completion": "e491c6",
+    "effect_reference_sha256": "60ed94051055c257569c211ec7b0da0390f6d41e1c4a8e18f2db05af7b9e262c",
+    "outcome_reference_sha256": "04d86545ef73baa8629b657fa656c1b2703da7e463ce93c17525d4b1eef35a08",
+    "remaining_effect_allowance": 0,
+    "automatic_retry_allowed": false,
+    "production_or_current_parent_qualification": false
+  }
 }

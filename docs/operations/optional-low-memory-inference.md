@@ -1279,3 +1279,23 @@ and OCR results closed. Native source custody, lazy-reader lifetime, folder
 protection, disk accounting, owned-worker recovery and actual-model resources
 still need their own evidence. Keep full-software testing for the shared campaign
 after all open feature work is implemented.
+
+## Native text and generation: partial observed result
+
+The three new synthetic CPU cases ran once. Legacy token files and an explicitly
+empty modern decoder passed text/settings comparisons, actual prefill3 and cached
+decode1, repeated exact generation, named discovery denials and owned cleanup.
+The modern chat-format case stopped at the template hash check before a lease
+was acquired. A separate pure Windows probe reproduced default text-write
+LF-to-CRLF translation; exact byte writing preserved the admitted template hash.
+The failed fixture bytes were not retained. The agent must correct the fixture
+and qualify only this remaining case. The two passed cases stay recorded.
+
+The engine exited with code1 after 22.015 seconds, with no controller abort or
+truncated output. The [versioned component report](discovery-free-supplier-qualification.json)
+preserves the full partial outcome, earlier report fields and original pending
+descriptions. This result does not qualify production offload, native source or
+reader lifetime, folder/accounting, worker/crash/restart or larger-model resources.
+The production template guard and all resource limits stay unchanged. No user
+action is needed. Accepted model accuracy and OCR stay closed; the shared full
+software campaign remains deferred until all open feature work is implemented.
