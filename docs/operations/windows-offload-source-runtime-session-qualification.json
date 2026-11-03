@@ -1,32 +1,30 @@
 {
   "schema_version": "windows-source-runtime-session-component-evidence-v1",
-  "status": "partial-observation-overall-trial-failed",
-  "scope": "Fresh synthetic unused-source session only. Source data checks were observed; outer count mismatch prevents complete Native Source qualification.",
-  "source_commit": "380e586c20b2a4772adc5d8842d38c29450882d5",
-  "source_digest": "1f03dff5ea49b04a1fe69675ade62b012d9cfda17f20e76de44a02b1fb7c2964",
+  "status": "unused-source-roundtrip-observed-and-independently-reviewed",
+  "scope": "One fresh synthetic unused-source roundtrip with corrected detached parent. The outer count and original inner retirement passed. This is not model, borrower, staging, restart, resource or parent-roadmap qualification.",
+  "source_commit": "7b1e898283c58a237a0caf7637439c5e772f4755",
+  "source_digest": "f12e60c97dfb7fc655dcb98671398ff8aa597f26c32fdc0e8015989f4610e4fd",
   "trial": {
-    "outer_run_id": "b5285d8393d346b08d003a69ab393d6b",
-    "inner_run_id": "d4aa1c88b59447188f203d2c66395083",
-    "launch_tool": "78d81b",
-    "tool_session": 45177,
-    "completion_tool": "d57bf8",
-    "actual_tool_exit_code": 1,
-    "elapsed_seconds": 7.766,
+    "outer_run_id": "1190efc33bb24bc7b9b8f432eff8b4ef",
+    "inner_run_id": "6e86712bdf8943999c947e58aa5b8ab3",
+    "launch_tool": "f8dc13",
+    "tool_session": 15447,
+    "completion_tool": "534188",
+    "actual_tool_exit_code": 0,
+    "elapsed_seconds": 37.266,
     "expected_outer_processes": 3,
-    "observed_outer_processes": 4,
-    "whole_trial_passed": false,
+    "observed_outer_processes": 3,
+    "whole_trial_passed": true,
     "effect_allowance_remaining": 0,
     "automatic_retry_allowed": false,
-    "extra_process_identity": "unidentified",
-    "candidate_cause": "The Source parent uses a hidden-console launch form. A detached launch is a candidate correction; the fourth process was not identified.",
-    "process_creation_reference": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags"
+    "extra_process_identity": "No extra process was counted. The earlier fourth process remains unidentified."
   },
   "outer_observations": {
     "root_exit_code": 0,
     "job_accounting": {
       "active": 0,
       "terminated": 0,
-      "total": 4
+      "total": 3
     },
     "assigned_at_creation": true,
     "resumed_after_membership": true,
@@ -37,8 +35,8 @@
       "process_bytes": 1073741824
     },
     "peak_commit": {
-      "job_commit_bytes": 123891712,
-      "process_commit_bytes": 86679552
+      "job_commit_bytes": 122036224,
+      "process_commit_bytes": 86568960
     },
     "cleanup_confirmed": true,
     "all_owned_handles_close_acknowledged": true,
@@ -47,8 +45,7 @@
     "log_overflow": false,
     "completion_message_overflow": false,
     "observed_limit_messages": [],
-    "observed_limit_notifications": [],
-    "absence_of_limit_hits_claimed": false
+    "observed_limit_notifications": []
   },
   "outer_streams": {
     "stderr": {
@@ -64,7 +61,7 @@
       "cap_bytes": 8388608,
       "complete": true,
       "observed_bytes": 231,
-      "sha256": "7fb2eafed82baa4120ab6d4870087409d14bb9efab5e1986f0b00fa14e18dd25"
+      "sha256": "17327cd9e5b32c34a1b25eb58e52541621f5bddb67339f674ddac375c8564df7"
     }
   },
   "inner_observations": {
@@ -91,7 +88,6 @@
     "watchdog_termination_attempted": false,
     "dispatch_event_closed": true,
     "four_exact_inputs_removed": true,
-    "synthetic_input_bytes": 313,
     "source_bindings": {
       "local_model_offload.py": "99114a954d1865290d70eb239e69d6ba5797fa55ad85492d22f94862fcb74cc5",
       "offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
@@ -104,7 +100,7 @@
       "windows_offload_source_session_child.py": "6e1f807397a289c83ca6886991547b6e5074d0da6b58ebdf6b5b46f609bb3b81",
       "windows_offload_sources.py": "9876aa738098bb070affeb1519353625a0363844418e5848c037d96e938c1f56"
     },
-    "qualification_fixture_sha256": "19531ef15af7223c91a877d10ae298e0ca50a7514bb090ffa0d0243aa9511a6f",
+    "qualification_fixture_sha256": "6eff68e5215f421b9f076456fa280bc057e295443fb5ae4caf1c9d2c89ca663f",
     "streams": [
       {
         "bytes": 437,
@@ -125,13 +121,13 @@
     ]
   },
   "evidence_hashes": {
-    "effect_reference": "34142e7a051755e826b2bcc04f20b156c1452d29a42643fa73e897a15737607c",
-    "independent_outcome_reference": "5ae06ece8e13005610240427f0c135bf58228e2c3ca5d4eba0c4cb92ee7c1878",
-    "independent_outcome_report": "47b94a183d0bb51e86e0d62a0b475e92126f2cadb3d5482a54e0dda97e2eb5dd",
-    "inner_summary": "4c5e79b7298603f4dc4aefc36f3fb1598007e316d00a83ab576f9f49c4fd1218",
-    "input_manifest": "441d59a89d3944dd797da207a8e7623a867513457b497404487a8102329664cf",
-    "outer_observation": "f3caa4eb39fdcfa1d371b1bc3b7ae3c16675d48eeb7a5590c3d974a337c6196b",
-    "actual_driver_result": "d249c5c145f391a9e4a7f82627680f9f2aeb4f8e1a9055c30a487b724f9c7e8b"
+    "effect_reference": "a5dbe7537c0765bbd5d9eee7084902412c12c2f709d19aa348bac248b5ab6cf1",
+    "independent_outcome_reference": "eeacb386377b7615b7739a15548efe57d5e48b4ac1648816a2af772111728b3b",
+    "independent_outcome_report": "e08348edbba2b286f8a2fce50a62b8bb2c3ba4c0fa7718080cbd39ad347c4512",
+    "inner_summary": "69603a9300a0120956782f4355bff6ca3f3acc181400800b0b347df60748f772",
+    "input_manifest": "5a8cc5d0c5e1eae1df761727b14e766ad6c9521524f4114a8dfea43274fb50a0",
+    "outer_observation": "031ea039cabe1a74263e446316f0dea2f2d29dcc01479bbb96c9233e11159f5a",
+    "actual_driver_result": "fd359f51640eeb8b0600f2e85ae93c8d7fd22c3cf8f4240e86cdaf0ec5ec0545"
   },
   "runtime_witnesses": {
     "python.exe": "1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5",
@@ -152,10 +148,9 @@
     "breakaway_enabled": false,
     "count_requirement_relaxed": false,
     "legacy_v1_or_inner_launch_changed": false,
-    "status": "source-only-correction-pending-fresh-native-check"
+    "status": "observed-detached-parent-unused-source-roundtrip-passed"
   },
   "pending": [
-    "Fresh separately reviewed exact-candidate Source trial with outer total3.",
     "Original model borrowers and cache lifetime.",
     "Protected shared temporary-file accounting and fencing.",
     "Owned model-worker shutdown, crash and restart.",
@@ -168,7 +163,216 @@
   "old_staging_accessed": false,
   "unknown_staging_charge_bytes": 12884901888,
   "production_composed": false,
-  "actual_native_component_pass": false,
+  "actual_native_component_pass": true,
   "actual_native_source_session_qualified": false,
-  "parent_qualification_granted": false
+  "parent_qualification_granted": false,
+  "prior_trials": [
+    {
+      "schema_version": "windows-source-runtime-session-component-evidence-v1",
+      "status": "partial-observation-overall-trial-failed",
+      "scope": "Fresh synthetic unused-source session only. Source data checks were observed; outer count mismatch prevents complete Native Source qualification.",
+      "source_commit": "380e586c20b2a4772adc5d8842d38c29450882d5",
+      "source_digest": "1f03dff5ea49b04a1fe69675ade62b012d9cfda17f20e76de44a02b1fb7c2964",
+      "trial": {
+        "outer_run_id": "b5285d8393d346b08d003a69ab393d6b",
+        "inner_run_id": "d4aa1c88b59447188f203d2c66395083",
+        "launch_tool": "78d81b",
+        "tool_session": 45177,
+        "completion_tool": "d57bf8",
+        "actual_tool_exit_code": 1,
+        "elapsed_seconds": 7.766,
+        "expected_outer_processes": 3,
+        "observed_outer_processes": 4,
+        "whole_trial_passed": false,
+        "effect_allowance_remaining": 0,
+        "automatic_retry_allowed": false,
+        "extra_process_identity": "unidentified",
+        "candidate_cause": "The Source parent uses a hidden-console launch form. A detached launch is a candidate correction; the fourth process was not identified.",
+        "process_creation_reference": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags"
+      },
+      "outer_observations": {
+        "root_exit_code": 0,
+        "job_accounting": {
+          "active": 0,
+          "terminated": 0,
+          "total": 4
+        },
+        "assigned_at_creation": true,
+        "resumed_after_membership": true,
+        "limits": {
+          "active_limit": 32,
+          "flags": 8968,
+          "job_bytes": 2147483648,
+          "process_bytes": 1073741824
+        },
+        "peak_commit": {
+          "job_commit_bytes": 123891712,
+          "process_commit_bytes": 86679552
+        },
+        "cleanup_confirmed": true,
+        "all_owned_handles_close_acknowledged": true,
+        "forced_owned_job_termination": false,
+        "fence_required": false,
+        "log_overflow": false,
+        "completion_message_overflow": false,
+        "observed_limit_messages": [],
+        "observed_limit_notifications": [],
+        "absence_of_limit_hits_claimed": false
+      },
+      "outer_streams": {
+        "stderr": {
+          "bytes": 0,
+          "cap_bytes": 8388608,
+          "complete": true,
+          "observed_bytes": 0,
+          "raw_content_discarded": true,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 231,
+          "cap_bytes": 8388608,
+          "complete": true,
+          "observed_bytes": 231,
+          "sha256": "7fb2eafed82baa4120ab6d4870087409d14bb9efab5e1986f0b00fa14e18dd25"
+        }
+      },
+      "inner_observations": {
+        "status": "observed",
+        "parent_report": {
+          "borrower_started": false,
+          "child_exit_confirmed": true,
+          "job_active_zero": true,
+          "model_started": false,
+          "native_calls": 76,
+          "original_handles_closed": true,
+          "parent_qualification_granted": false,
+          "production_composed": false,
+          "schema_version": "owned-source-parent-result-v1",
+          "source_digest": "a38a47b101fdc0eeaef57f7b03be994481d32b94509e699a6732b5a572abcbfa",
+          "source_retired": true,
+          "status": "passed",
+          "terminal_calls": 15,
+          "timer_callbacks_retired": true
+        },
+        "original_parent_exit_observed": true,
+        "watchdog_expired": false,
+        "watchdog_failed": false,
+        "watchdog_termination_attempted": false,
+        "dispatch_event_closed": true,
+        "four_exact_inputs_removed": true,
+        "synthetic_input_bytes": 313,
+        "source_bindings": {
+          "local_model_offload.py": "99114a954d1865290d70eb239e69d6ba5797fa55ad85492d22f94862fcb74cc5",
+          "offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+          "windows_offload_backend.py": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+          "windows_offload_core.py": "6148878a16ec28e4a8d0c255301d2a18165cce4b655b7855cf42ac79bff66cb0",
+          "windows_offload_execution.py": "f22b80dec395c2ab8cd04d72239ef2fe5f2ecfccda31710288dd4a92282df2c0",
+          "windows_offload_native_session.py": "c9a9b494b4c6b380fbff8db4995b40f4985193b30910fcc5699f05e836d29e3e",
+          "windows_offload_source_ledger.py": "eb8b7e2d92ded7063256750f191904ab5892003aa808c3297c8707a98e80d173",
+          "windows_offload_source_session.py": "0d6623b50a8c8942ba876772a765a59a2ffb89e5f9da4b8f0efd3d7f495abf28",
+          "windows_offload_source_session_child.py": "6e1f807397a289c83ca6886991547b6e5074d0da6b58ebdf6b5b46f609bb3b81",
+          "windows_offload_sources.py": "9876aa738098bb070affeb1519353625a0363844418e5848c037d96e938c1f56"
+        },
+        "qualification_fixture_sha256": "19531ef15af7223c91a877d10ae298e0ca50a7514bb090ffa0d0243aa9511a6f",
+        "streams": [
+          {
+            "bytes": 437,
+            "failed": false,
+            "overflow": false,
+            "sha256": "68d6cade034ae6ca2bc5d31a52903121598016db20fa2a2c74af3a41533b3847",
+            "start_attempted": true,
+            "started": true
+          },
+          {
+            "bytes": 0,
+            "failed": false,
+            "overflow": false,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "start_attempted": true,
+            "started": true
+          }
+        ]
+      },
+      "evidence_hashes": {
+        "effect_reference": "34142e7a051755e826b2bcc04f20b156c1452d29a42643fa73e897a15737607c",
+        "independent_outcome_reference": "5ae06ece8e13005610240427f0c135bf58228e2c3ca5d4eba0c4cb92ee7c1878",
+        "independent_outcome_report": "47b94a183d0bb51e86e0d62a0b475e92126f2cadb3d5482a54e0dda97e2eb5dd",
+        "inner_summary": "4c5e79b7298603f4dc4aefc36f3fb1598007e316d00a83ab576f9f49c4fd1218",
+        "input_manifest": "441d59a89d3944dd797da207a8e7623a867513457b497404487a8102329664cf",
+        "outer_observation": "f3caa4eb39fdcfa1d371b1bc3b7ae3c16675d48eeb7a5590c3d974a337c6196b",
+        "actual_driver_result": "d249c5c145f391a9e4a7f82627680f9f2aeb4f8e1a9055c30a487b724f9c7e8b"
+      },
+      "runtime_witnesses": {
+        "python.exe": "1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5",
+        "python312.dll": "3b56fa10d3797c231468cee42caeaaaff40dbede7bc0d142ec4878493f48e07d"
+      },
+      "preflight_history": {
+        "tool": "3c86ce",
+        "status": "refused-before-native",
+        "reason": "The557799-byte source snapshot exceeded an accidentally reused64KiB decoder cap.",
+        "correction": "The reader and decoder both use the original2MiB snapshot bound. Full source guard passed before the separately renewed effect review.",
+        "source_effect_consumed": false,
+        "earlier_reference_preserved": true
+      },
+      "source_correction": {
+        "scope": "SourceParent Popen only",
+        "before_creationflags": 134217728,
+        "after_creationflags": 8,
+        "breakaway_enabled": false,
+        "count_requirement_relaxed": false,
+        "legacy_v1_or_inner_launch_changed": false,
+        "status": "source-only-correction-pending-fresh-native-check"
+      },
+      "pending": [
+        "Fresh separately reviewed exact-candidate Source trial with outer total3.",
+        "Original model borrowers and cache lifetime.",
+        "Protected shared temporary-file accounting and fencing.",
+        "Owned model-worker shutdown, crash and restart.",
+        "Actual optional offload resource measurements.",
+        "Parent roadmap qualification and deferred shared system campaign."
+      ],
+      "model_started": false,
+      "borrower_started": false,
+      "accepted_accuracy_or_OCR_executed": false,
+      "old_staging_accessed": false,
+      "unknown_staging_charge_bytes": 12884901888,
+      "production_composed": false,
+      "actual_native_component_pass": false,
+      "actual_native_source_session_qualified": false,
+      "parent_qualification_granted": false
+    }
+  ],
+  "historical_support_copy": {
+    "work_id": "integrate-closed-original-source-runtime-session",
+    "scope": "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending.",
+    "limitation": "The recorded Windows launch test counted 4 processes instead of 3. The agent changed the launch setting. A fresh test is pending.",
+    "descriptions": [
+      {
+        "kind": "support-scope",
+        "source_text_sha256": "2825af6c3d8cfac55f412fc295d36b8a166fc8cf605d5a5571d00c8487c2c90d",
+        "user_description": {
+          "owner": "agent",
+          "sentences": [
+            "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending."
+          ]
+        }
+      },
+      {
+        "kind": "support-limitation",
+        "source_text_sha256": "9c5b30df79804e91c782f54e66cf42b830f8668fd39eea0865b991c90c61c44f",
+        "user_description": {
+          "owner": "agent",
+          "sentences": [
+            "The recorded Windows launch test counted 4 processes instead of 3.",
+            "The agent changed the launch setting.",
+            "A fresh test is pending."
+          ]
+        }
+      }
+    ],
+    "source_description_document_sha256": "a5494bd06d519d5e2718f235ed3534ae6a2a12e1edb91286187e5f1831e8eb5f"
+  },
+  "absence_of_limit_hits_claimed": false,
+  "unused_source_roundtrip_qualified": true,
+  "all_source_adversarial_paths_qualified": false
 }

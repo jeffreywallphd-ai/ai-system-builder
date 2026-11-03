@@ -1416,3 +1416,23 @@ needs a new exact-source effect review; the source correction alone is not Nativ
 qualification. No user action is needed. Low-memory mode and the remaining model,
 shared accounting, recovery and resource checks stay pending. Accepted accuracy
 and OCR remain closed, and the shared system campaign remains deferred.
+
+## Corrected Windows file handoff test
+
+The corrected test passed with exactly three processes. The child exited, the
+whole test tree retired, all owned handles closed and all four tiny synthetic
+input files were removed. No forced termination was needed. The outer tree used
+about 116 MiB peak committed memory. These observed values are separate from the
+unchanged 1 GiB per-process and 2 GiB tree ceilings.
+
+This closes the extra-process finding for this unused-file handoff case. The
+earlier four-process failure remains in the versioned component evidence. Its
+fourth process was not identified. A separate review checked the new run and the
+unchanged earlier evidence. This one passing case does not qualify every native
+failure or race path.
+
+The agent must still finish model borrowers and cache lifetime, protected shared
+file accounting, model-worker shutdown and restart, and actual offload resource
+measurements. Low-memory mode and parent-roadmap qualification remain pending.
+No user action is needed. Accepted accuracy and OCR stay closed. The shared full
+system campaign remains deferred.

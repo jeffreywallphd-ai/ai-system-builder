@@ -9342,12 +9342,12 @@
       ],
       "receipt_digest": "4b440b7dcb1972f853eebbe63ca481a6dd67f42050f3ba44cdb9aa03cd5f0f44",
       "review_digest": "fd3eff42efc22a1a35365123c64a46b6c58c6d26ce3ffefd9d82d7db48d21067",
-      "scope": "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending.",
+      "scope": "At its saved version, this work implemented the file-checking worker and its launch controls. It used simulated Windows tests. It did not include the later Windows run.",
       "limitations": [
         "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
         "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending.",
-        "The recorded Windows launch test counted 4 processes instead of 3. The agent changed the launch setting. A fresh test is pending."
+        "The first Windows launch test failed with 4 processes. The corrected file handoff test passed with 3 processes. This result does not qualify model offloading."
       ]
     },
     {
@@ -9362,12 +9362,12 @@
       ],
       "receipt_digest": "4b440b7dcb1972f853eebbe63ca481a6dd67f42050f3ba44cdb9aa03cd5f0f44",
       "review_digest": "fd3eff42efc22a1a35365123c64a46b6c58c6d26ce3ffefd9d82d7db48d21067",
-      "scope": "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending.",
+      "scope": "At its saved version, this work implemented the file-checking worker and its launch controls. It used simulated Windows tests. It did not include the later Windows run.",
       "limitations": [
         "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
         "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending.",
-        "The recorded Windows launch test counted 4 processes instead of 3. The agent changed the launch setting. A fresh test is pending."
+        "The first Windows launch test failed with 4 processes. The corrected file handoff test passed with 3 processes. This result does not qualify model offloading."
       ]
     }
   ]

@@ -14477,16 +14477,6 @@
       }
     },
     {
-      "kind": "support-scope",
-      "source_text_sha256": "2825af6c3d8cfac55f412fc295d36b8a166fc8cf605d5a5571d00c8487c2c90d",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "The file-checking worker and its launch controls are implemented and tested with simulated operating-system calls. The real Windows test is still pending."
-        ]
-      }
-    },
-    {
       "kind": "support-limitation",
       "source_text_sha256": "7ae6f9714a9d49a55352401609691087d9962b2f1fdcf8622a606a0965b1dcfe",
       "user_description": {
@@ -14517,14 +14507,26 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "9c5b30df79804e91c782f54e66cf42b830f8668fd39eea0865b991c90c61c44f",
+      "kind": "support-scope",
+      "source_text_sha256": "6deb98707fc100098e4ed821a48c1b5a9950fe6b8bd6325aa111269839990635",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The recorded Windows launch test counted 4 processes instead of 3.",
-          "The agent changed the launch setting.",
-          "A fresh test is pending."
+          "At its saved version, this work implemented the file-checking worker and its launch controls.",
+          "It used simulated Windows tests.",
+          "It did not include the later Windows run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "020e627eb6c556df413ca048b22aedbae614735d115a5cf99876e1efaa7b3c4d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The first Windows launch test failed with 4 processes.",
+          "The corrected file handoff test passed with 3 processes.",
+          "This result does not qualify model offloading."
         ]
       }
     }

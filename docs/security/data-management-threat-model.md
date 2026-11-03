@@ -2390,3 +2390,18 @@ observation and independent-audit hashes. Its safe copy states that a fresh chec
 is pending. Console allocation is a candidate explanation, not measured identity.
 There is no automatic retry or Native effect in this correction. All retained old
 staging and its full 12 GiB charge remain unchanged.
+
+### Observed detached unused-Source component
+
+The fresh committed-source test counted exactly three outer processes and
+confirmed natural exit, zero active Job members, original handle and timer
+retirement, and removal of the four exclusively created synthetic input files.
+Independent outcome review retained the earlier failed count and rehashed its
+known evidence. No PID adoption, limit/count relaxation, old staging access or
+model loading occurred.
+
+This evidence qualifies only the declared unused-Source roundtrip. It does not
+qualify all native denial/race paths, borrower or cache lifetime, protected shared
+journal accounting, model-worker crash/restart, actual offload resources,
+production composition or parent-roadmap completion. Unknown retained staging
+still consumes the full 12 GiB. The live-driver outer-timeout limitation remains.
