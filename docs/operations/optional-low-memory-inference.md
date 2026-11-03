@@ -1247,3 +1247,17 @@ worker exit/crash/restart and real offload resource evidence remain pending.
 No user action is needed. Unknown temporary-model usage remains charged at the
 full 12 GiB limit. Accepted model accuracy and OCR remain closed. The shared
 full-software campaign follows completion of all open feature work.
+
+
+### Follow-up review: declared precision settings
+
+The agent corrected model-file precision validation. Invalid objects and other
+unsupported declarations are rejected before model configuration is constructed.
+Missing/null settings and the supported precision names remain valid. The runtime
+still uses the precision selected for the run. All 80 focused model-free inventory
+and loader tests passed. No accuracy, OCR or Native trial was repeated.
+
+The recorded tiny compatibility run remains evidence for its original source
+version and narrow tensor/cleanup scope. Text/settings parity, native ownership,
+restart and real-model resource checks remain pending. The shared system campaign
+is still deferred until all open feature work is implemented.

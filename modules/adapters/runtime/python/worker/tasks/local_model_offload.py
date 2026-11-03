@@ -235,6 +235,13 @@ def _validate_config(config: dict) -> None:
     }
     if set(config).difference(allowed) or config.get("model_type") != "qwen2":
         raise OffloadAdmissionError()
+    # This flat native profile supports only the inspected safe-weight types.
+    # Reject malformed declarations before supplier configuration formatting;
+    # the separately selected runtime dtype still controls actual placement.
+    declared_dtype = config.get("torch_dtype")
+    if declared_dtype is not None and (
+            type(declared_dtype) is not str or declared_dtype not in {"float32", "float16", "bfloat16"}):
+        raise OffloadAdmissionError()
     for key, maximum in (("hidden_size", 8192), ("intermediate_size", 65536), ("num_hidden_layers", 128), ("num_attention_heads", 128), ("num_key_value_heads", 128), ("vocab_size", 262144), ("max_position_embeddings", 131072)):
         value = config.get(key)
         if type(value) is not int or not 0 < value <= maximum:

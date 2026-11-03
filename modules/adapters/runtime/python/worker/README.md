@@ -933,3 +933,13 @@ tiny-model cases remain separate controlled compatibility checks; their presence
 is not execution evidence. Discovery-free inputs do not qualify native source
 custody, cached lazy forwards, borrower shutdown, folder/accounting protection or
 crash/restart recovery. Production offload remains unavailable.
+
+
+### Validate declared model precision before construction
+
+The finite native Qwen inspector accepts a missing or null `torch_dtype`, or
+one of `float32`, `float16` and `bfloat16`. Other values deny before supplier
+configuration construction or formatting. This declaration is source metadata;
+the separately selected runtime precision still controls placement and conversion.
+Focused tests cover malformed shapes, each supported declaration and the runtime
+override. They do not import model frameworks or repeat model accuracy tests.

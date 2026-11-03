@@ -46,6 +46,27 @@ class OffloadInventoryTests(unittest.TestCase):
         self.assertEqual(len(inventory.bindings), 4)
         inventory.verify_unchanged()
 
+    def test_declared_dtype_rejects_non_scalar_and_unsupported_metadata(self):
+        cases = [("object", {"private_note": "synthetic_private_marker"}),
+                 ("list", ["float32"]), ("boolean", True), ("integer", 32),
+                 ("float", 1.5), ("unsupported", "float64"),
+                 ("unknown", "synthetic_private_marker"), ("qualified-name", "torch.float32")]
+        for label, value in cases:
+            with self.subTest(case=label):
+                self.config.write_text(json.dumps({**CONFIG, "torch_dtype": value}), encoding="utf-8")
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    offload.inspect_local_model(self.root)
+
+    def test_missing_null_and_supported_declared_dtypes_preserve_the_inventory(self):
+        configurations = [dict(CONFIG), {**CONFIG, "torch_dtype": None}]
+        configurations.extend({**CONFIG, "torch_dtype": dtype} for dtype in ("float32", "float16", "bfloat16"))
+        for configuration in configurations:
+            with self.subTest(declared=configuration.get("torch_dtype", "omitted")):
+                self.config.write_text(json.dumps(configuration), encoding="utf-8")
+                inventory = offload.inspect_local_model(self.root)
+                self.assertEqual(inventory.config, configuration)
+                inventory.verify_unchanged()
+
     def test_same_size_weight_mutation_is_detected_by_hash(self):
         inventory = offload.inspect_local_model(self.root)
         body = self.weights.read_bytes()

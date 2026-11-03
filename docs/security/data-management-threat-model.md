@@ -2285,3 +2285,15 @@ mutation or later disk-backed forwards. Native source/borrower lifetime, protect
 folder/accounting, worker exit/crash/restart and bounded resources remain pending;
 production capability stays unavailable. Unknown retained staging data remains
 untouched and fully charged. There is no new provider, protocol or privilege.
+
+
+### Declared model precision validation
+
+The finite flat-Qwen profile validates the optional source `torch_dtype` before
+native configuration construction. Only a missing/null declaration or a supported
+scalar precision name is admitted. Objects, containers, booleans and unsupported
+names deny before supplier formatting or weight loading. This closes the observed
+input-validation gap without changing selected runtime precision, safe-weight
+identity/shape/type checks, resource limits or production readiness. The logging
+consequence was supported by installed source inspection; no emitted private log
+was observed. Synthetic positive and denial regressions cover the correction.

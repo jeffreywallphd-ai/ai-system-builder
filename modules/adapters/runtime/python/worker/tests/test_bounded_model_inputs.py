@@ -145,6 +145,29 @@ class IntegratedDiscoveryFreeTests(unittest.TestCase):
         self.assertFalse((self.cache / ".aisb-offload-v1" / "active").exists())
         self.assertFalse(loader._RETAINED_LEASES)
 
+    def test_invalid_declared_dtype_denies_before_native_config_or_lease(self):
+        config = {**CONFIG, "torch_dtype": {"private_note": "synthetic_private_marker"}}
+        (self.root / "config.json").write_text(json.dumps(config), encoding="utf8")
+        native = self.modules["transformers"].Qwen2Config
+        with patch.object(native, "from_dict", side_effect=AssertionError("No native construction")) as construct:
+            with self.assertRaises(OffloadAdmissionError):
+                self.load()
+        construct.assert_not_called()
+        self.assertFalse(self.calls)
+        self.assertFalse(hasattr(self, "tokenizer_options"))
+        self.assertFalse((self.cache / ".aisb-offload-v1").exists())
+
+    def test_supported_declared_dtype_does_not_replace_selected_runtime_dtype(self):
+        config = {**CONFIG, "torch_dtype": "float16"}
+        (self.root / "config.json").write_text(json.dumps(config), encoding="utf8")
+        bundle = self.load()
+        try:
+            self.assertEqual(bundle.inventory.config["torch_dtype"], "float16")
+            self.assertEqual(bundle.model.config["torch_dtype"], "float32")
+            self.assertEqual(self.calls[0][1]["dtype"], "float32")
+        finally:
+            self.close(bundle)
+
     def close(self, bundle):
         bundle.model = None; bundle.tokenizer = None
         loader.release_offload_lease(bundle.lease, bundle.model_references)

@@ -72,8 +72,17 @@
     "Shared full-software campaign after all open feature work"
   ],
   "resumed_source_review": {
-    "status": "separate-correction-pending",
-    "summary": "The careful follow-up review found malformed declared data-type metadata admitted before construction. A focused validation correction is planned. No actual emitted private log was observed. These tiny fixtures do not test that malformed-input boundary."
+    "status": "input-validation-corrected",
+    "followup_work_id": "reject-invalid-declared-model-dtypes",
+    "source_file": "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
+    "source_sha256": "99114a954d1865290d70eb239e69d6ba5797fa55ad85492d22f94862fcb74cc5",
+    "summary": "Malformed declared data-type metadata is rejected before native configuration construction. Missing/null and supported scalar declarations are preserved, as is the selected runtime precision. The earlier two-case Native result stays historical and limited to tensor forwards and lease cleanup.",
+    "focused_model_free_tests": 80,
+    "focused_tests_passed": true,
+    "focused_test_log_sha256": "3c7f50e5d7cb8c73d7f64e13674aa368eb9b3b7a0ab665349ef25dec4de7ba06",
+    "actual_emitted_private_log_observed": false,
+    "native_model_accuracy_or_ocr_tests_repeated": false,
+    "parent_qualification_granted": false
   },
   "unchanged_controls": {
     "standard_model_memory_guard_gib": [
