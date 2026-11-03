@@ -14294,6 +14294,43 @@
           "This code is not connected to model loading yet."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2b48fbc71641dfa1dbf47d6d681d9a94328205ff72dd1095dc8fa42e77bb0eb6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent completed the Windows file-check harness.",
+          "All 133 related fixture checks passed.",
+          "One Windows run passed all three file and cleanup checks in 11.6 seconds.",
+          "The code is not connected to model loading yet."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3e5f99098482acd0e0e33d59f5b65d782867935cc210f2a58b052ce2ee479772",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent must connect safe file access to model loading and finish folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and offload resource tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5d9497e685921353929def8dcff77035b102662e9b27c9ee9a2adca4c60d5b68",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These Windows checks use generated test files.",
+          "They do not measure model memory or inference speed.",
+          "Low-memory mode remains unavailable until the remaining checks pass.",
+          "Existing limits and the full 12 GiB charge for unknown temporary files stay in force."
+        ]
+      }
     }
   ]
 }

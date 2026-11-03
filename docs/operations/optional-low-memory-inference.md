@@ -1109,11 +1109,12 @@ requested feature implementation is worked through.
 
 ## Prepare fixed Windows checks for model files
 
-No user action is needed. The agent is adding a bounded test harness for the
-original model-file owner. Its three fixed cases check deadline exit, exact
-file reads followed by unused cleanup, and rejection of changed bytes. The
-synthetic weight file crosses an 8 MiB read boundary. These files are not a
-real model or evidence of model accuracy.
+No user action is needed. The agent completed the bounded test harness for the
+original model-file owner. A separately reviewed Windows run passed all three
+fixed cases in 11.6 seconds: deadline exit, exact reads with unused cleanup and
+rejection of changed bytes. See the [versioned results](windows-offload-source-qualification.json).
+The generated weight file crossed an 8 MiB read boundary. This was a file-access
+test. It did not load a model or repeat model accuracy checks.
 
 All work shares one finite reservation table, including cleanup and exit work.
 The test keeps actual DLL replies, errors and original read/guard records. It
@@ -1127,3 +1128,13 @@ stays unavailable while file/ancestor/mapping/discovery protection, shared disk
 accounting, worker shutdown, guarded restart and measured offload resources remain
 pending. Unknown temporary-file usage retains its full 12 GiB charge. Accepted
 accuracy and OCR stay closed. Full-system tests follow all feature implementation.
+
+The successful case explicitly closed 20 source handles through 32 cleanup
+calls. The changed-file case retained its uncertain state until the parent
+confirmed that the child had exited and its Job was empty. The agent then
+removed only the eight verified generated inputs, reclaiming about 16 MiB.
+Reports and hashes remain. This housekeeping supplied no production disk credit.
+
+The tested code is not connected to model loading yet. Folder protection,
+mapping, safe file discovery, shared accounting, model-worker recovery, guarded
+restart, optional-mode UI checks and actual offload resources remain agent work.

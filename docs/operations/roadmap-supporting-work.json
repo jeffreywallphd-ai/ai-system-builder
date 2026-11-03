@@ -9091,6 +9091,46 @@
         "No user action is needed. The agent must finish and test bounded execution, Windows file and folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and actual low-memory resource use.",
         "These are source-code and simulated checks. Low-memory mode remains unavailable until the actual checks pass. Existing memory and disk limits stay in force. Unknown temporary files still use the full 12 GiB allowance."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "implement-finite-original-source-qualification",
+      "work_criteria": [
+        "shared-original-source-budget-and-terminal-custody",
+        "fixed-source-fixture-entry-and-honest-oracles",
+        "profile-compatibility-security-and-owned-checkpoint"
+      ],
+      "receipt_digest": "0041df21e54035addb1ec902e10e4c804f534bea618501c21c3bfcdf8bf858ca",
+      "review_digest": "aa9d6509280298b3e56b7cff5205f999a081b264a03b5c3d7afcad5d03a706c9",
+      "scope": "The agent completed the Windows file-check harness. All 133 related fixture checks passed. One Windows run passed all three file and cleanup checks in 11.6 seconds. The code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must connect safe file access to model loading and finish folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and offload resource tests.",
+        "These Windows checks use generated test files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. Existing limits and the full 12 GiB charge for unknown temporary files stay in force."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "implement-finite-original-source-qualification",
+      "work_criteria": [
+        "shared-original-source-budget-and-terminal-custody",
+        "fixed-source-fixture-entry-and-honest-oracles",
+        "profile-compatibility-security-and-owned-checkpoint"
+      ],
+      "receipt_digest": "0041df21e54035addb1ec902e10e4c804f534bea618501c21c3bfcdf8bf858ca",
+      "review_digest": "aa9d6509280298b3e56b7cff5205f999a081b264a03b5c3d7afcad5d03a706c9",
+      "scope": "The agent completed the Windows file-check harness. All 133 related fixture checks passed. One Windows run passed all three file and cleanup checks in 11.6 seconds. The code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must connect safe file access to model loading and finish folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and offload resource tests.",
+        "These Windows checks use generated test files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. Existing limits and the full 12 GiB charge for unknown temporary files stay in force."
+      ]
     }
   ]
 }
