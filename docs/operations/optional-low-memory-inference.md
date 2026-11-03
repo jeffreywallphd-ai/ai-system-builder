@@ -1104,6 +1104,22 @@ valid for their original cases; they do not prove this new case. Model loading,
 folder protection, optional-file discovery, shared accounting, restart and real
 offload resource checks still need evidence. Accepted accuracy and OCR stay closed.
 
+## Correct the Windows file check
+
+No user action is needed. The first three Windows source tests passed. The new
+reader test failed its final file check. The generated file kept the same file
+identity and content hash, but two Python APIs reported different values for a
+field labelled `ctime`.
+
+The agent corrected the test to compare explicit file-creation time together
+with file identity, size, modification time and content hashes. Missing creation
+time still stops the test. The file guards and model-memory limits stay unchanged.
+
+Failure reports now preserve steps that finished before the failure. They do
+not mark unchanged bytes or source cleanup complete until those checks finish.
+The failed trial stays failed. The corrected code still needs a separately
+reviewed Windows run. Accepted model accuracy and OCR stay closed.
+
 ## Hold and check original model files
 
 No user action is needed. The agent added private source code to hold model-file

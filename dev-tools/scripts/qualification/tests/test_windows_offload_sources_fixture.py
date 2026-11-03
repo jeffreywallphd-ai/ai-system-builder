@@ -719,6 +719,31 @@ class ReaderGraphTests(unittest.TestCase):
                 self.assertFalse(graph.section.row or graph.view.row)
             finally:trial.doCleanups()
 
+    def test_final_byte_verification_failure_retains_completed_progress_without_source_retirement(self):
+        initial=self.s._OriginalModelSources.__init__
+        def construct(source,*args,**kwargs):
+            initial(source,*args,**kwargs);self.source=source
+        value=f.base_report(f.CASES[3],'a'*64,time.monotonic_ns())
+        with(patch.object(self.s._OriginalModelSources,'__init__',construct),
+             patch.object(e,'_child_readback'),patch.object(e,'_all_hashes',return_value=self.hashes),
+             patch.object(e,'_private_core_package',return_value={'windows_offload_sources':self.s,'local_model_offload':self.m}),
+             patch.object(f,'_synthetic_inputs',return_value=(self.backend.value(),object())),
+             patch.object(f,'_verify_fresh_inputs',side_effect=f.SourceFixtureError('source-fresh-content'))):
+            with self.assertRaises(f.SourceFixtureError)as caught:
+                f.exercise(e,self.actor,f.CASES[3],self.hashes,object(),value)
+        self.assertEqual(caught.exception.stage,'source-fresh-content')
+        self.assertTrue(value['source_prepared']and value['exact_hashes_confirmed']and value['source_reads_completed'])
+        self.assertTrue(value['shared_rows_reserved'])
+        self.assertTrue(all(value[n]for n in f._READER_FLAGS if n!='source_bytes_unchanged'))
+        self.assertEqual((value['reader_native_calls'],value['reader_terminal_calls'],value['reader_closed_objects']),(12,3,3))
+        self.assertGreater(value['source_native_calls'],0)
+        self.assertGreater(value['source_reserved_normal'],0)
+        self.assertFalse(value['source_bytes_unchanged']or value['source_retired']or value['source_handles_closed'])
+        self.assertFalse(self.source._retired)
+        self.assertFalse(any(n.closed for n in self.source._handles))
+        self.assertFalse(any(n=='CancelIoEx'for n,_ in self.backend.calls))
+        with self.assertRaises(f.SourceFixtureError):f.validate_child_report(value,f.CASES[3],'a'*64)
+
 
 class FreshInputVerificationTests(unittest.TestCase):
     def setUp(self):
@@ -731,7 +756,7 @@ class FreshInputVerificationTests(unittest.TestCase):
                 self.name,self.data,self.link=name,data,False
                 self.info=SimpleNamespace(st_mode=0o040000 if directory else 0o100000,
                     st_file_attributes=0,st_nlink=1,st_dev=1,st_ino=len(outer.files)+1,
-                    st_size=len(data),st_mtime_ns=10,st_ctime_ns=11)
+                    st_size=len(data),st_mtime_ns=10,st_ctime_ns=11,st_birthtime_ns=11)
             def lstat(self):return self.info
             def is_symlink(self):return self.link
             def __truediv__(self,name):return outer.files[name]
@@ -778,6 +803,61 @@ class FreshInputVerificationTests(unittest.TestCase):
         self.inventory.bindings=(('../unknown',1,'a'*64),)+self.inventory.bindings[1:]
         with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
         self.assertFalse(self.opened)
+
+    def test_windows_named_and_held_ctime_discrepancy_preserves_explicit_creation_identity(self):
+        def windows_fstat(fd):
+            info=SimpleNamespace(**vars(self.current));info.st_ctime_ns=777
+            return info
+        with patch.object(f.os,'fstat',side_effect=windows_fstat):
+            f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertEqual(self.opened,list(self.files))
+        self.assertEqual(self.facts[1][0][1][-1],11)
+
+    def test_missing_malformed_or_changed_creation_time_still_denies(self):
+        file=self.files['config.json'];original=file.info.st_birthtime_ns
+        for bad in (None,True,0,'synthetic-private',original+1):
+            file.info.st_birthtime_ns=bad
+            with self.subTest(bad=bad),self.assertRaises(f.SourceFixtureError)as caught:
+                f._verify_fresh_inputs(self.inventory,self.facts)
+            self.assertEqual(caught.exception.stage,'source-fresh-identity')
+        del file.info.st_birthtime_ns
+        with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertFalse(self.opened)
+
+    def test_held_hardlink_or_reparse_is_denied_before_content_read(self):
+        class NoRead(io.BytesIO):
+            def fileno(self):return 42
+            def read(self,*args):raise AssertionError('Invalid held file must not be read')
+        file=self.files['config.json']
+        for field,value in(('st_nlink',2),('st_file_attributes',0x400),('st_mode',0o040000)):
+            info=SimpleNamespace(**vars(file.info));setattr(info,field,value)
+            with(patch.object(file,'open',return_value=NoRead(file.data)),patch.object(f.os,'fstat',return_value=info)):
+                with self.subTest(field=field),self.assertRaises(f.SourceFixtureError)as caught:
+                    f._verify_fresh_inputs(self.inventory,self.facts)
+            self.assertEqual(caught.exception.stage,'source-fresh-open-identity')
+
+    def test_modification_or_creation_drift_during_read_denies_before_next_file(self):
+        for field in('st_mtime_ns','st_birthtime_ns'):
+            calls=0;self.opened.clear()
+            def drift(fd):
+                nonlocal calls
+                calls+=1;info=SimpleNamespace(**vars(self.current))
+                if calls==2:setattr(info,field,getattr(info,field)+1)
+                return info
+            with patch.object(f.os,'fstat',side_effect=drift):
+                with self.subTest(field=field),self.assertRaises(f.SourceFixtureError)as caught:
+                    f._verify_fresh_inputs(self.inventory,self.facts)
+            self.assertEqual(caught.exception.stage,'source-fresh-after-read')
+            self.assertEqual(self.opened,['config.json'])
+
+    def test_content_failure_and_file_exception_report_specific_safe_stages(self):
+        file=self.files['config.json'];file.data=b'X'*len(file.data)
+        with self.assertRaises(f.SourceFixtureError)as caught:f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertEqual(caught.exception.stage,'source-fresh-content')
+        with patch.object(file,'open',side_effect=OSError('synthetic-private')):
+            with self.assertRaises(f.SourceFixtureError)as caught:f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertEqual(caught.exception.stage,'source-fresh-content')
+        self.assertNotIn('synthetic-private',str(caught.exception))
 
 
 class ReaderReportTests(unittest.TestCase):

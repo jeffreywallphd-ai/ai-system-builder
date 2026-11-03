@@ -31,7 +31,9 @@ _FIELDS=frozenset(('schema_version','case','source_digest','outcome','elapsed_ns
                   'failure_stage',*_FLAGS,*_COUNTS))
 _FAILURES=frozenset(('source-operation','source-case','source-report','source-context',
     'source-owner','source-reservation','source-callback','source-data','source-outcome',
-    'reader-origin','reader-operation','reader-output','reader-view','reader-retirement'))
+    'reader-origin','reader-operation','reader-output','reader-view','reader-retirement',
+    'source-fresh-root','source-fresh-identity','source-fresh-open-identity',
+    'source-fresh-content','source-fresh-after-read'))
 
 
 class SourceFixtureError(RuntimeError):
@@ -491,35 +493,66 @@ class _ReaderGraph:
             raise
 
 
-def _fresh_facts(path,directory=False):
-    info=path.lstat()
+def _fresh_info(info,directory,stage):
+    # CPython3.12 Windows stat/lstat copy birth time into deprecated ctime;
+    # fstat reports ChangeTime there. Compare explicit creation time instead.
+    birth=getattr(info,'st_birthtime_ns',None)
+    facts=(info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,birth)
     need((stat.S_ISDIR(info.st_mode)if directory else stat.S_ISREG(info.st_mode))
-         and not path.is_symlink() and not getattr(info,'st_file_attributes',0)&0x400
-         and(directory or info.st_nlink==1),'source-data')
-    return(info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+         and not getattr(info,'st_file_attributes',0)&0x400
+         and(directory or info.st_nlink==1)
+         and all(type(value)is int for value in facts)
+         and facts[0]>0 and facts[1]>0 and facts[2]>=0 and facts[3]>0 and facts[4]>0,stage)
+    return facts
+
+
+def _fresh_facts(path,directory=False,stage='source-data'):
+    try:
+        info=path.lstat();need(not path.is_symlink(),stage)
+        return _fresh_info(info,directory,stage)
+    except OSError:raise SourceFixtureError(stage)from None
 
 
 def _verify_fresh_inputs(inventory,original):
     """Four exact fresh leaves only; never enumerate or follow unknown trees."""
     root,files=original
-    need(_fresh_facts(inventory.root,True)==root,'source-data')
-    need(type(files)is tuple and len(files)==len(inventory.bindings)==4,'source-data')
+    need(_fresh_facts(inventory.root,True,'source-fresh-root')==root,'source-fresh-root')
+    need(type(files)is tuple and len(files)==len(inventory.bindings)==4,'source-fresh-identity')
     for (name,size,digest),(original_name,facts)in zip(inventory.bindings,files):
         need(name==original_name and name in ('config.json','model.safetensors','tokenizer.json','tokenizer_config.json'),
-             'source-data')
+             'source-fresh-identity')
         path=inventory.root/name
-        need(_fresh_facts(path)==facts and facts[2]==size,'source-data')
+        need(_fresh_facts(path,stage='source-fresh-identity')==facts and facts[2]==size,'source-fresh-identity')
         actual=hashlib.sha256();count=0
-        with path.open('rb')as stream:
-            opened=os.fstat(stream.fileno())
-            need((opened.st_dev,opened.st_ino,opened.st_size,opened.st_mtime_ns,opened.st_ctime_ns)==facts,'source-data')
-            while count<size:
-                block=stream.read(min(1024**2,size-count))
-                need(bool(block),'source-data');count+=len(block);actual.update(block)
-            need(stream.read(1)==b'' and actual.hexdigest()==digest,'source-data')
-            after=os.fstat(stream.fileno())
-            need((after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns)==facts,'source-data')
-        need(_fresh_facts(path)==facts and _fresh_facts(inventory.root,True)==root,'source-data')
+        try:
+            with path.open('rb')as stream:
+                need(_fresh_info(os.fstat(stream.fileno()),False,'source-fresh-open-identity')==facts,
+                     'source-fresh-open-identity')
+                while count<size:
+                    block=stream.read(min(1024**2,size-count))
+                    need(bool(block),'source-fresh-content');count+=len(block);actual.update(block)
+                need(stream.read(1)==b'' and actual.hexdigest()==digest,'source-fresh-content')
+                need(_fresh_info(os.fstat(stream.fileno()),False,'source-fresh-after-read')==facts,
+                     'source-fresh-after-read')
+        except OSError:raise SourceFixtureError('source-fresh-content')from None
+        need(_fresh_facts(path,stage='source-fresh-after-read')==facts
+             and _fresh_facts(inventory.root,True,'source-fresh-root')==root,'source-fresh-after-read')
+
+
+def _reader_progress(reader):
+    """Completed facts only; unchanged source bytes need a later independent check."""
+    reader.check()
+    need(reader.retired and reader.changed and len(reader.records)==15
+         and all(row.payload['acknowledged']for row in reader.records)
+         and all(node.retired for node in (reader.view,reader.section,reader.reader)),
+         'reader-retirement')
+    return dict(reader_identity_confirmed=True,writer_sharing_denied=True,
+        private_view_changed=True,source_bytes_unchanged=False,reader_graph_retired=True,
+        reader_reserved_normal=len(reader.normal.rows),
+        reader_native_calls=sum(not row.terminal for row in reader.records),
+        reader_terminal_calls=sum(row.terminal for row in reader.records),
+        reader_closed_objects=sum(node.retired for node in (reader.view,reader.section,reader.reader)),
+        private_view_bytes=VIEW_BYTES,private_view_commit_bytes=VIEW_BYTES)
 
 
 def _synthetic_inputs(engine,folder,profile,model):
@@ -576,18 +609,15 @@ def exercise(engine,native,case,hashes,folder,value):
         engine_reserved_normal=256,engine_reserved_terminal=16)
     if case in ('source-read-close',CASES[3]):
         source.prepare()
+        value.update(shared_rows_reserved=True,source_prepared=True,exact_hashes_confirmed=True,
+            source_reads_completed=all(row.completed for row in source._reads),
+            source_native_calls=len(source._calls),
+            source_reserved_normal=len(port.ticket.native.normal.rows),
+            source_reserved_terminal=len(port.ticket.native.terminal.rows))
         if reader is not None:
-            reader.exercise();_verify_fresh_inputs(inventory,fresh)
-            value.update(reader_identity_confirmed=True,writer_sharing_denied=True,
-                private_view_changed=True,source_bytes_unchanged=True,reader_graph_retired=True,
-                reader_reserved_normal=len(reader.normal.rows),
-                reader_native_calls=sum(not row.terminal for row in reader.records),
-                reader_terminal_calls=sum(row.terminal for row in reader.records),
-                reader_closed_objects=sum(node.retired for node in (reader.view,reader.section,reader.reader)),
-                private_view_bytes=VIEW_BYTES,private_view_commit_bytes=VIEW_BYTES)
+            reader.exercise();value.update(_reader_progress(reader))
+            _verify_fresh_inputs(inventory,fresh);value['source_bytes_unchanged']=True
         source.assert_bound()
-        value.update(source_prepared=True,exact_hashes_confirmed=True,
-                     source_reads_completed=all(row.completed for row in source._reads))
         source.retire_unused()
         value.update(source_guards_retired=all(row.retired for row in source._guards),
             source_handles_closed=all(row.closed for row in source._handles),source_retired=source._retired)

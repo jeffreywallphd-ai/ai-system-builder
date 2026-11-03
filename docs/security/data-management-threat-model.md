@@ -2234,3 +2234,27 @@ effects require separate committed-source/effect review. These checks do not
 qualify supplier discovery/mapping, production borrowing, ancestor fences,
 model-worker/cache policy, shared durable accounting, crash/restart or offload
 resources. Existing guards and limits remain. Accuracy/OCR stay closed.
+
+### Windows named and held timestamp compatibility
+
+Security impact: security-relevant. The source diagnostic must compare the same
+five facts across named and held observations: device, file ID, size,
+modification time and explicit creation time. Windows CPython's deprecated
+`ctime` is unsuitable for this cross-API creation-time comparison. Use valid
+`st_birthtime_ns` and fail closed if it is unavailable. This preserves creation
+identity rather than discarding a check to obtain a pass.
+
+Retain original Source/file/guard custody, the four exact fresh leaves, and
+ordinary-file, single-link, non-reparse, before/open/after identity and SHA-256
+checks. Validate held-file type/link facts before reading. Modification,
+creation, identity or hash drift still denies. Bounded allowlisted failure
+stages disclose no path, pointer, payload or arbitrary exception text.
+
+Report only completed preparation, reader calls and reader retirement before
+later verification can fail. Unchanged source bytes, unused Source retirement
+and full qualification remain distinct. Process exit and an empty Job do not
+replace missing Source retirement ACKs. Preserve the failed v2 trial, its
+evidence and earlier v1 results. Source tests and checkpoint grant no retry or
+cleanup authority; actual execution requires a new independent exact-source
+effect review. Production/source/discovery/accounting/worker/restart/resource
+gaps and all existing guards, limits and unknown-usage charge remain unchanged.

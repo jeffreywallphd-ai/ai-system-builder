@@ -1976,3 +1976,21 @@ These definitions and synthetic tests do not claim an actual Windows v2 pass,
 supplier compatibility, production source borrowing or safe optional-file
 discovery. Those results need their own current evidence. Existing guards,
 other profiles, limits and accepted model accuracy/OCR remain unchanged.
+
+### Windows timestamps in source verification
+
+SOURCE v2 compares five facts across named and opened observations: device,
+file ID, size, modification time and explicit `st_birthtime_ns`. Creation time
+must be available and valid. CPython 3.12 Windows `stat`/`lstat` put creation time
+in deprecated `ctime`; `fstat` can report metadata-change time there. Comparing
+those `ctime` values can reject an unchanged file. The pinned implementation is
+documented in [CPython stat conversion](https://github.com/python/cpython/blob/v3.12.8/Modules/posixmodule.c)
+and [file information conversion](https://github.com/python/cpython/blob/v3.12.8/Python/fileutils.c).
+
+Keep ordinary-file, single-link, reparse, original-guard, before/open/after
+identity and hash checks. Completed source preparation and reader operations
+are reported before subsequent verification; unchanged bytes and Source unused
+retirement require their own success. Closed failure-stage codes identify root,
+identity, content and after-read failures without paths or raw error text.
+The first v2 trial remains failed. A corrected source checkpoint does not grant
+a new Native attempt, production borrowing or parent qualification.
