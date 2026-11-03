@@ -9171,6 +9171,46 @@
         "No user action is needed. The agent must connect the checked file reader to model loading, protect model folders, count temporary files across runs, and finish worker shutdown, restart and resource checks.",
         "These checks use generated files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. The full 12 GiB charge for unknown temporary model files stays in force."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "finish-discovery-free-qwen-input-path",
+      "work_criteria": [
+        "admitted-tokenizer-generation-and-shards",
+        "integrated-pinned-discovery-free-loading",
+        "focused-parity-denial-and-owned-checkpoint"
+      ],
+      "receipt_digest": "75278f08438b047f953869d45e428054beb73ac928aa3b428a95d843ba76383f",
+      "review_digest": "37edeff58c5a72335bb0b65de1ecd03f6b65678826c9481f9928a1b0384c5800",
+      "scope": "The agent replaced hidden model-file searches with inspected inputs. All 52 focused source tests and five related check groups passed. Two generated CPU models passed single-file and split-file loading, repeated model calculations, and cleanup.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent still needs to check text handling and generation settings with the installed libraries. It must also finish protected file access, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
+        "The two generated models check compatibility only. Their memory result does not describe larger models. Low-memory mode remains unavailable, and unknown temporary model files keep their full 12 GiB charge."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "finish-discovery-free-qwen-input-path",
+      "work_criteria": [
+        "admitted-tokenizer-generation-and-shards",
+        "integrated-pinned-discovery-free-loading",
+        "focused-parity-denial-and-owned-checkpoint"
+      ],
+      "receipt_digest": "75278f08438b047f953869d45e428054beb73ac928aa3b428a95d843ba76383f",
+      "review_digest": "37edeff58c5a72335bb0b65de1ecd03f6b65678826c9481f9928a1b0384c5800",
+      "scope": "The agent replaced hidden model-file searches with inspected inputs. All 52 focused source tests and five related check groups passed. Two generated CPU models passed single-file and split-file loading, repeated model calculations, and cleanup.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent still needs to check text handling and generation settings with the installed libraries. It must also finish protected file access, temporary-file accounting, worker shutdown and restart, and real-model resource checks.",
+        "The two generated models check compatibility only. Their memory result does not describe larger models. Low-memory mode remains unavailable, and unknown temporary model files keep their full 12 GiB charge."
+      ]
     }
   ]
 }

@@ -1,0 +1,93 @@
+{
+  "schema_version": "discovery-free-supplier-evidence-v1",
+  "status": "reviewed-component-support",
+  "source_work": {
+    "work_id": "finish-discovery-free-qwen-input-path",
+    "commit": "6aa11ecc3f995e529af9735bbc04f16a1d5291b7",
+    "source_digest": "1587a8d19881fff90c464f716f0e51a7da3f6f7bae2ec462a4a9492186b95abd",
+    "receipt_digest": "75278f08438b047f953869d45e428054beb73ac928aa3b428a95d843ba76383f",
+    "review_digest": "37edeff58c5a72335bb0b65de1ecd03f6b65678826c9481f9928a1b0384c5800",
+    "focused_source_cases": 52,
+    "check_ids": [
+      "offload-resource-lifecycle",
+      "documentation",
+      "agent-support",
+      "control-plane",
+      "architecture"
+    ],
+    "parent_qualification": false
+  },
+  "installed_supplier_fixture": {
+    "fixture": "Generated native Qwen2: two layers, hidden size8, vocabulary32, seed13, CPU float32, one thread. One single-file and one two-shard case.",
+    "cases": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "fixed_tensor_logits_and_two_repeated_forwards_per_case": true,
+    "tied_disk_alias_and_owned_lease_cleanup": true,
+    "tokenizer_construction_only": true,
+    "elapsed_seconds": 22.609999999869615,
+    "unittest_seconds": 21.544,
+    "sampled_peak_direct_engine_rss_bytes": 575303680,
+    "actual_engine_identity_confirmed_before_framework": true,
+    "actual_engine_and_wrapper_exit_code": 0,
+    "deadline_seconds": 120,
+    "sampled_rss_abort_bytes": 4294967296,
+    "sampling_is_not_a_hard_os_quota": true,
+    "stdout_bytes": 255,
+    "stderr_bytes": 1357,
+    "stdout_sha256": "7187a525c13dd94d58c772bffcf422f6516b099b246ab99a32225430292f183a",
+    "stderr_sha256": "53b95673a7894561e48b29fa0402386cbb38f86cd70dc2238892cd39a190043e",
+    "output_truncated": false,
+    "actual_tool_launch": "dbd5a7",
+    "actual_tool_completion": "8881cf",
+    "effect_reference_sha256": "02c7ad4af6048080725a7146b3df90db353567967c7ac0ad741d2193ba94debc",
+    "outcome_reference_sha256": "d7ba4bcde95aa6835e91bc4dd541d7e99aab0c4c9525c38004d6f85620eedd63",
+    "outcome_review_sha256": "795437b2c98873d4988514b57d2ed6873d7f053e9842086cab3bcf45b887984f",
+    "remaining_effect_allowance": 0,
+    "automatic_retry_allowed": false,
+    "production_or_current_parent_qualification": false
+  },
+  "runtime_versions": {
+    "python": "3.12.8",
+    "torch": "2.6.0+cu126",
+    "transformers": "4.51.3",
+    "accelerate": "1.14.0",
+    "safetensors": "0.5.2"
+  },
+  "preserved_history": {
+    "failed_predecessor_work": "implement-discovery-free-qwen-input-path",
+    "failed_predecessor_receipt": "2bf49f90dfee7a1883df1154f51f326b9bd94712d04a9b2a579a7a3fd990bdeb",
+    "failed_predecessor_remains_unqualified": true,
+    "prior_supplier_result": "docs/operations/safe-weight-supplier-qualification.json",
+    "unexecuted_proposal01_and_read_only_audit_crlf_correction_preserved": true
+  },
+  "pending": [
+    "Installed tokenizer encode/decode/chat/template and generation-default parity",
+    "Dynamic actual supplier discovery-denial checks",
+    "Original-source and lazy-borrower lifetime protection",
+    "Protected model folders and shared durable temporary-file accounting",
+    "Owned model-worker exit, crash recovery and retained restart",
+    "Real-model offload memory, speed and cleanup qualification",
+    "Shared full-software campaign after all open feature work"
+  ],
+  "resumed_source_review": {
+    "status": "separate-correction-pending",
+    "summary": "The careful follow-up review found malformed declared data-type metadata admitted before construction. A focused validation correction is planned. No actual emitted private log was observed. These tiny fixtures do not test that malformed-input boundary."
+  },
+  "unchanged_controls": {
+    "standard_model_memory_guard_gib": [
+      3.0,
+      3.5
+    ],
+    "unknown_retained_staging_charge_gib": 12,
+    "production_offload_available": false,
+    "accepted_model_accuracy_and_ocr_not_repeated": true
+  },
+  "limits": [
+    "Recorded component evidence only, not current-parent or production qualification.",
+    "Generated tiny tensor tests are not model output-accuracy tests or larger-model resource measurements.",
+    "No old staging/model-cache inspection, adoption, move, deletion, ACL change or capacity credit.",
+    "No model download, provider publication, broad UI run or full-system suite."
+  ]
+}

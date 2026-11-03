@@ -1226,3 +1226,24 @@ accuracy test. Production remains unavailable pending original-source lifetime,
 native borrowing, folder protection, accounting, worker exit/restart and resource
 qualification. Accepted model quality and OCR stay closed. Full-software testing
 is deferred to the shared campaign requested by the user.
+
+
+## Discovery-free loader compatibility results
+
+The source implementation is committed, tested and independently reviewed. Two
+generated tiny CPU fixtures passed single-file and sharded safe-weight loading,
+repeated tensor forwards and owned lease cleanup in 22.61 seconds. The actual
+engine peaked at 575,303,680 bytes of sampled RSS; this is neither a hard OS
+quota nor a larger-model memory measurement. See the versioned
+[component evidence](discovery-free-supplier-qualification.json).
+
+Tokenizer construction was exercised. Text encoding/decoding, chat templates,
+generation-default parity and actual supplier-discovery denial still need their
+own focused checks. The resumed source review also identified a declared data-type
+metadata validation correction; that separate work is pending.
+
+Production source/borrower lifetime, protected folder/accounting, owned model
+worker exit/crash/restart and real offload resource evidence remain pending.
+No user action is needed. Unknown temporary-model usage remains charged at the
+full 12 GiB limit. Accepted model accuracy and OCR remain closed. The shared
+full-software campaign follows completion of all open feature work.

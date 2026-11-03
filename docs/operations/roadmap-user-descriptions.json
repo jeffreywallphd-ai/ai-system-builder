@@ -14368,6 +14368,42 @@
           "The full 12 GiB charge for unknown temporary model files stays in force."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "69d82eee7bdfa8369a5a8887f350e5a760606588afe3f73b70732b0a29719208",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent replaced hidden model-file searches with inspected inputs.",
+          "All 52 focused source tests and five related check groups passed.",
+          "Two generated CPU models passed single-file and split-file loading, repeated model calculations, and cleanup."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dca5d8e200177e3b96706301f02bddacdd5e71bac0f7708078c64b58e6b3ab22",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent still needs to check text handling and generation settings with the installed libraries.",
+          "It must also finish protected file access, temporary-file accounting, worker shutdown and restart, and real-model resource checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4b3fc52fcccd2b3af4dee5de7f3fd1ded38308e252f26922db6bcb3e99aa3d77",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The two generated models check compatibility only.",
+          "Their memory result does not describe larger models.",
+          "Low-memory mode remains unavailable, and unknown temporary model files keep their full 12 GiB charge."
+        ]
+      }
     }
   ]
 }
