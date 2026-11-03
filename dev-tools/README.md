@@ -1952,3 +1952,27 @@ or Job queries. An exit intent or cancel request supplies no retirement ACK; the
 original parent must observe process exit and an empty Job. Existing profiles
 and runtime IPC stay unchanged. Source tests grant no production, shared-disk,
 worker/restart, model-resource or parent-roadmap qualification.
+
+### Original reader and private mapping diagnostic
+
+The SOURCE v2 definition adds one fixed reader case in a new run namespace;
+existing v1 evidence keeps its original scope. Before SourceAPI construction,
+the reader graph reserves 16 normal rows and binds the engine's existing four
+safety rows. Its 12 actual normal calls debit that reader reservation. Exactly
+three terminal calls debit the original safety reservation; no second terminal
+pool, refund or reset exists.
+
+The case opens only the fresh `model.safetensors` for read access. It checks
+noninheritance, disk type, file attributes, original volume/file identity and
+size. A write-open probe must return the exact sharing error 32. It never writes
+to the source file. The fixed unnamed, nonexecutable `PAGE_WRITECOPY` section
+uses a 64 KiB `FILE_MAP_COPY` view. Its entire view counts as commit, even though
+only one private byte changes. Each byte access checks the original returned
+pointer, slot, generation, live state and range. Unmap, section close and reader
+close must finish in that order before Source unused retirement. The four exact
+fresh files must retain their original identities and hashes.
+
+These definitions and synthetic tests do not claim an actual Windows v2 pass,
+supplier compatibility, production source borrowing or safe optional-file
+discovery. Those results need their own current evidence. Existing guards,
+other profiles, limits and accepted model accuracy/OCR remain unchanged.

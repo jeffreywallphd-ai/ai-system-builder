@@ -2198,3 +2198,39 @@ Residual production source/ancestor/mapping/discovery, protected shared accounti
 model-worker/crash/restart and offload resource proof remain pending. No model
 quality, OCR or parent qualification follows. Rollback removes only this additive
 diagnostic and retains production denial, all unknown usage and prior evidence.
+
+### Fixed second-reader and private-view diagnostic
+
+Security impact: security-relevant. Protect original source bytes, file identity,
+mapped memory, exact resource lifetime and the shared dispatch/terminal budget.
+The SOURCE v2 test is a diagnostic seam, not production loading authority.
+
+Reserve the reader's actual 16 normal rows before source DLL acquisition and
+bind its three cleanup calls to the existing safety4 reservation inside the
+64-row tail. Pin original reader, writer-probe, section and view output nodes
+before dispatch. Retain original completions, immediate errors, pointers and
+generations independently of mutable observations. A valid unexpected writer
+handle or unknown return fails the test and remains held; it never triggers
+speculative cleanup.
+
+Require the second reader's disk type, noninheritance, non-reparse attributes,
+original volume/file identity and size. Only exact sharing error 32 qualifies
+the write-open refusal. Use a fixed unnamed, noninherited, nonexecutable,
+file-backed copy-on-write section and a nonzero 64 KiB private view. Account for
+the whole view's commit. Before every byte access, bind the original successful
+map completion, slot, pointer, generation, live state and nonoverflowing range.
+Never dereference a replaced, failed, stale or unmapped pointer. A mapped-page
+fault can terminate the isolated child; there is no guaranteed Python recovery.
+
+Require original unmap, section-close and reader-close ACKs in that order before
+Source retirement. Any uncertain operation retains both graphs and stops later
+cleanup. Recheck only the four newly generated inputs against original file
+identity, size and hash. No old tree is followed, adopted, moved, removed or
+credited. Strict v2 fields cannot qualify old cases or relabel v1 evidence.
+
+Focused memory-only positive, denial, interruption, custody, pointer-bound and
+retirement tests precede independent source review and checkpoint. Actual Windows
+effects require separate committed-source/effect review. These checks do not
+qualify supplier discovery/mapping, production borrowing, ancestor fences,
+model-worker/cache policy, shared durable accounting, crash/restart or offload
+resources. Existing guards and limits remain. Accuracy/OCR stay closed.

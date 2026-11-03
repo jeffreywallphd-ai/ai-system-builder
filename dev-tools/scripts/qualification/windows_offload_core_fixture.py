@@ -81,13 +81,14 @@ _EXECUTION_PROFILE = _FixtureProfile(
     ROOT / '.local-codex/windows-offload-read-session-native-v1')
 _SOURCE_PROFILE = _FixtureProfile(
     ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_sources.py',
-    '_standalone_windows_sources_engine', 'windows-offload-sources-native-v1',
-    ('deadline-control', 'source-read-close', 'source-hash-denied'),
+    '_standalone_windows_sources_engine', 'windows-offload-sources-native-v2',
+    ('deadline-control', 'source-read-close', 'source-hash-denied',
+     'source-reader-mapping-and-write-denial'),
     TASK_FILES + ('modules/adapters/runtime/python/worker/tasks/windows_offload_execution.py',
                   'modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py'),
     ('dev-tools/scripts/qualification/qualify_windows_offload_sources.py', TOOL_FILES[1],
      'dev-tools/scripts/qualification/windows_offload_sources_fixture.py'),
-    ROOT / '.local-codex/windows-offload-sources-native-v1')
+    ROOT / '.local-codex/windows-offload-sources-native-v2')
 _SOURCE_PARENT, _SOURCE_CHILD = object(), object()
 
 
@@ -828,6 +829,7 @@ class _Native:
         self.source_slots=self.source_escapes=None
         self.source_finalizing=False
         self.source_function_bindings=None
+        self.source_reader=None
         self.source_case=_source_case
         self.api=None
         if profile is _SOURCE_PROFILE:
@@ -877,6 +879,12 @@ class _Native:
             ('Sleep', [u32], None),
             ('GetDriveTypeW', [C.c_wchar_p], u32),
         ]
+        if profile is _SOURCE_PROFILE:
+            signatures.extend([
+                ('CreateFileMappingW', [ptr, ptr, u32, u32, u32, C.c_wchar_p], ptr),
+                ('MapViewOfFile', [ptr, u32, u32, u32, C.c_size_t], ptr),
+                ('UnmapViewOfFile', [ptr], i32),
+            ])
         for label, args, result in signatures:
             fn = getattr(self.k, label); fn.argtypes, fn.restype = args, result
         if profile is _SOURCE_PROFILE:

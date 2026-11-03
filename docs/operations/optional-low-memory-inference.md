@@ -1082,6 +1082,28 @@ restart safeguards, and offload resource checks remain pending agent work.
 Accepted accuracy/OCR stay closed. Full-system tests remain deferred until all
 requested feature implementation is worked through.
 
+## Test a second reader and a private mapped view
+
+No user action is needed. The agent added a fixed test definition for reading a
+held model file and changing a private copy of one byte. The source file must
+stay unchanged. This test uses generated files and does not load a real model.
+
+The test must confirm these results:
+
+- The second reader opens the same file, with the expected size and read access.
+- A request for write access fails with the expected sharing error.
+- The 64 KiB private view changes without changing any source file.
+- The original view is unmapped, then the section and reader handles close.
+- The original source handles close only after that cleanup succeeds.
+- A failed or interrupted operation retains its records and stops later cleanup.
+
+The SOURCE v2 definition uses a new evidence namespace. Its synthetic tests
+check the code and failure paths. Actual Windows execution remains pending
+until source and execution reviews are complete. The accepted v1 results remain
+valid for their original cases; they do not prove this new case. Model loading,
+folder protection, optional-file discovery, shared accounting, restart and real
+offload resource checks still need evidence. Accepted accuracy and OCR stay closed.
+
 ## Hold and check original model files
 
 No user action is needed. The agent added private source code to hold model-file

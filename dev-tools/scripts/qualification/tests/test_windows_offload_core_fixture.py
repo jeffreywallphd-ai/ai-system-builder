@@ -359,8 +359,9 @@ class ControllerTests(unittest.TestCase):
     def test_source_profile_is_canonical_fixed_and_preserves_prior_profiles(self):
         p=subject._SOURCE_PROFILE
         self.assertIs(subject._canonical_profile(p),p)
-        self.assertEqual(p.schema,'windows-offload-sources-native-v1')
-        self.assertEqual(p.cases,('deadline-control','source-read-close','source-hash-denied'))
+        self.assertEqual(p.schema,'windows-offload-sources-native-v2')
+        self.assertEqual(p.cases,('deadline-control','source-read-close','source-hash-denied',
+                                'source-reader-mapping-and-write-denial'))
         self.assertEqual(p.runs.name,p.schema)
         self.assertEqual([Path(n).stem for n in p.task_files],
             ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',

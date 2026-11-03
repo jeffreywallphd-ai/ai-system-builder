@@ -2,7 +2,7 @@
 import argparse
 import json
 
-SCHEMA = 'windows-offload-sources-qualification-v1'
+SCHEMA = 'windows-offload-sources-qualification-v2'
 
 
 class _Parser(argparse.ArgumentParser):
@@ -13,7 +13,8 @@ def current_plan():
     return {'schema_version':SCHEMA,'status':'technical-check-pending',
         'action_owner':'agent','user_action':'No action needed.',
         'component':'fresh-original-source-references',
-        'cases':['deadline-control','source-read-close','source-hash-denied'],
+        'cases':['deadline-control','source-read-close','source-hash-denied',
+                 'source-reader-mapping-and-write-denial'],
         'maximum_seconds':120,'maximum_active_children':1,
         'inert_child_commit_ceiling_bytes':512*1024**2,
         'ceiling_is_not_upfront_allocation_or_model_policy':True,
@@ -22,7 +23,12 @@ def current_plan():
             'original-shared-rows-and-whole-graph-reservation',
             'exact-held-byte-hash-and-original-read-completion',
             'unused-guard-cancel-close-and-no-late-reuse',
-            'changed-hash-denial-and-retained-originals'],
+            'changed-hash-denial-and-retained-originals',
+            'original-second-reader-identity-and-exact-write-denial',
+            'bounded-private-copy-view-and-ordered-original-retirement'],
+        'reader_normal_slots':16,'reader_normal_calls':12,
+        'reader_terminal_calls_from_existing_safety_slots':3,
+        'private_copy_view_bytes':65536,'private_copy_commit_charge_bytes':65536,
         'qualification_complete':False,'native_tests_executed':False,'native_effects':False,
         'old_staging_accessed':False,'model_or_worker_started':False,
         'quality_tests_executed':False,'shared_domain_qualified':False,

@@ -189,11 +189,15 @@ class SourceReportsTests(unittest.TestCase):
             source_reserved_normal=144,source_reserved_terminal=24,
             engine_reserved_normal=256,engine_reserved_terminal=16,
             late_reuse_refused=True,no_source_replay=True)
-        if case==f.CASES[1]:
+        if case in (f.CASES[1],f.CASES[3]):
             v.update(source_prepared=True,exact_hashes_confirmed=True,source_reads_completed=True,
                 source_guards_retired=True,source_handles_closed=True,source_retired=True,
                 source_native_calls=168,source_terminal_calls=24,source_closed_handles=12)
         else:v.update(hash_denial_observed=True,original_custody_retained=True,source_native_calls=88)
+        if case==f.CASES[3]:
+            v.update(**{n:True for n in f._READER_FLAGS},reader_reserved_normal=16,
+                reader_native_calls=12,reader_terminal_calls=3,reader_closed_objects=3,
+                private_view_bytes=f.VIEW_BYTES,private_view_commit_bytes=f.VIEW_BYTES)
         return v
 
     def test_each_complete_case_has_strict_distinct_oracle(self):
@@ -295,7 +299,8 @@ class SourceProducerTests(unittest.TestCase):
         from modules.adapters.runtime.python.worker.tests import test_windows_offload_sources as original
         self.original=original;self.s=original.s;self.m=original.m
         self.actor=self.owner;self.hashes={'synthetic-source':'a'*64};n=self.actor
-        n.job=e._ABI;n.handles=[];n.source_case=f.CASES[1];self.arena.case=self.arena.case_origin=n.source_case
+        n.job=e._ABI;n.handles=[];n.source_reader=None
+        n.source_case=getattr(self,'source_case',f.CASES[1]);self.arena.case=self.arena.case_origin=n.source_case
         n.source_normal=self.arena.reserve('engine-normal',256,0)
         n.source_final=self.arena.reserve('engine-final',0,9)
         n.source_escape_tickets=tuple(self.arena.reserve(name,0,1)for name in ('own-exit','deadline-exit','one-park'))
@@ -304,6 +309,9 @@ class SourceProducerTests(unittest.TestCase):
         self.effects=[]
         def reply(name,args):
             self.effects.append((name,args))
+            if hasattr(self,'reader_reply')and name not in ('GetCurrentProcess','IsProcessInJob',
+                    'QueryInformationJobObject','TerminateProcess','Sleep'):
+                return self.reader_reply(name,args)
             if name=='GetCurrentProcess':return C.c_void_p(-1).value
             if name=='IsProcessInJob':args[2]._obj.value=1
             if name=='QueryInformationJobObject':
@@ -317,7 +325,7 @@ class SourceProducerTests(unittest.TestCase):
         class Function:
             def __init__(self,name):self.name=name;self.argtypes=[];self.restype=C.c_int32
             def __call__(self,*args):return reply(self.name,args)
-        names=('GetCurrentProcess','IsProcessInJob','QueryInformationJobObject','TerminateProcess','Sleep','CloseHandle')
+        names=('GetCurrentProcess','IsProcessInJob','QueryInformationJobObject','TerminateProcess','Sleep','CloseHandle')+getattr(self,'reader_names',())
         n.k=SimpleNamespace(**{name:Function(name)for name in names})
         n.source_function_bindings=tuple((getattr(n.k,name),(),C.c_int32)for name in names)
         n.source_functions=tuple(getattr(n.k,name)for name in names)
@@ -329,7 +337,7 @@ class SourceProducerTests(unittest.TestCase):
         e._child_readback(n);self.arena.capture_child_ready(self.hashes)
         backend=self.original.FakeSourceNative();self.backend=backend
         # One file spans an8MiB boundary. No file is created and no model loads.
-        backend.payloads['model.safetensors']=b'x'*(f.READ_BYTES+128)
+        backend.payloads['model.safetensors']=getattr(self,'model_byte',b'x')*(f.READ_BYTES+128)
         class Dll:
             def __init__(self,name,**kwargs):
                 self._name,self._handle=name,123
@@ -470,6 +478,325 @@ class SourceProducerTests(unittest.TestCase):
         self.assertIs(self.owner.pending,pending.payload)
         self.assertEqual(sum(name=='Sleep'for name,_ in self.effects),1)
         self.assertFalse(self.arena.order[-1].payload['acknowledged'])
+
+
+class ReaderGraphTests(unittest.TestCase):
+    source_case=f.CASES[3]
+    model_byte=b'\0'
+    reader_names=('WaitForSingleObject','CreateFileW','GetHandleInformation','GetFileType',
+        'GetFileInformationByHandleEx','GetFileSizeEx','CreateFileMappingW','MapViewOfFile',
+        'UnmapViewOfFile')
+    def setUp(self):
+        self.view_buffer=(C.c_ubyte*f.VIEW_BYTES)()
+        self.fault=None
+        SourceProducerTests.setUp(self)
+    def reader_reply(self,name,args):
+        if self.fault:
+            override=self.fault(name,args)
+            if override is not None:return override
+        if name=='WaitForSingleObject':return 258
+        if name=='CreateFileW':
+            self.assertEqual(args[0],str(self.source._inventory.root/'model.safetensors'))
+            self.assertEqual(args[3:],(None,3,0x00200080,None))
+            if args[1]==0x80000000:
+                self.assertEqual(args[2],1);return 501
+            self.assertEqual(args[1:3],(0x40000000,7))
+            C.set_last_error(32);return C.c_void_p(-1).value
+        if name=='GetHandleInformation':args[1]._obj.value=0;return 1
+        if name=='GetFileType':return 1
+        if name=='GetFileInformationByHandleEx':
+            self.assertEqual(args[0],501)
+            if args[1]==9:args[2]._obj[0]=0x80
+            else:
+                self.assertEqual(args[1],18)
+                C.memmove(args[2],self.source._files[1][1][0],24)
+            return 1
+        if name=='GetFileSizeEx':args[1]._obj.value=self.source._files[1][4];return 1
+        if name=='CreateFileMappingW':self.assertEqual(args,(501,None,8,0,0,None));return 502
+        if name=='MapViewOfFile':self.assertEqual(args,(502,1,0,0,65536));return C.addressof(self.view_buffer)
+        if name in ('UnmapViewOfFile','CloseHandle'):return 1
+        raise AssertionError('Unexpected reader operation')
+    def make(self):
+        graph=f._ReaderGraph(e,self.actor,self.s,self.source,self.port,self.hashes)
+        self.assertFalse(self.backend.calls or self.backend.dll_calls)
+        self.source.prepare()
+        return graph
+    def view_ready(self):
+        graph=self.make();graph.bind_source()
+        for label in graph._NORMAL[:-1]:graph._step(label)
+        return graph
+    def test_actual_reader_dispatch_uses_its16_rows_and_existing_three_terminal_rows(self):
+        graph=self.make();before=len(self.actor.source_normal.rows)
+        with (patch.object(Path,'open',side_effect=AssertionError('Hidden IO')),
+              patch.object(e,'_all_hashes',side_effect=AssertionError('Hidden hash')),
+              patch.object(e,'_child_readback',side_effect=AssertionError('Hidden Job query'))):
+            graph.exercise()
+        self.assertTrue(graph.retired and graph.changed)
+        self.assertEqual(self.view_buffer[112],1)
+        self.assertEqual(self.backend.payloads['model.safetensors'][112],0)
+        self.assertEqual(len(graph.records),15)
+        self.assertEqual(sum(r.binding is not None for r in graph.normal.rows),12)
+        self.assertEqual(sum(r.binding is not None for r in graph.safety.rows),3)
+        self.assertEqual(len(self.actor.source_normal.rows),before)
+        self.assertEqual([r.binding[1]for r in graph.records],
+            ['reader-'+label for label in graph._NORMAL+graph._TERMINAL])
+        self.assertEqual([(name,args)for name,args in self.effects if name in ('UnmapViewOfFile','CloseHandle')],
+            [('UnmapViewOfFile',(C.addressof(self.view_buffer),)),('CloseHandle',(502,)),('CloseHandle',(501,))])
+        self.assertTrue(all(r.payload['acknowledged']for r in graph.records))
+        self.source.assert_bound();self.source.retire_unused()
+        self.assertTrue(self.source._retired)
+    def test_constructor_reserves_before_source_dll_and_cannot_be_repeated_or_transferred(self):
+        graph=self.make()
+        mine={id(r)for r in graph.normal.rows}
+        self.assertFalse(mine&{id(r)for r in self.actor.source_normal.rows})
+        self.assertIs(graph.safety,self.actor.source_safety)
+        self.assertLessEqual(sum(r.terminal for t in self.arena.reservations for r in t.rows),64)
+        for operation in (lambda:copy.copy(graph),lambda:copy.deepcopy(graph),lambda:pickle.dumps(graph),
+            lambda:f._ReaderGraph(e,self.actor,self.s,self.source,self.port,self.hashes)):
+            with self.assertRaises(f.SourceFixtureError):operation()
+        self.assertFalse(graph.records)
+    def test_wrong_case_and_missing_job_proof_deny_without_reader_or_source_effects(self):
+        self.actor.source_case=f.CASES[1]
+        with self.assertRaises(f.SourceFixtureError):
+            f._ReaderGraph(e,self.actor,self.s,self.source,self.port,self.hashes)
+        self.assertFalse(self.backend.calls or self.backend.dll_calls)
+    def test_original_source_file_output_identity_and_size_must_match(self):
+        graph=self.make()
+        def wrong(name,args):
+            if name=='GetFileInformationByHandleEx'and args[1]==18:
+                C.memset(args[2],7,24);return 1
+        self.fault=wrong
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertTrue(graph.failed and self.source._uncertain)
+        self.assertEqual(len(graph.records),6)
+        self.assertFalse(graph.reader.retired)
+        self.assertFalse(any(n=='MapViewOfFile'for n,_ in self.effects))
+    def test_size_mismatch_stops_before_writer_or_mapping(self):
+        graph=self.make()
+        def wrong(name,args):
+            if name=='GetFileSizeEx':args[1]._obj.value=1;return 1
+        self.fault=wrong
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertEqual(len(graph.records),7)
+        self.assertFalse(graph.writer.row or graph.section.row)
+    def test_unexpected_writer_handle_is_kept_and_source_cleanup_is_denied(self):
+        graph=self.make()
+        self.fault=lambda name,args:703 if name=='CreateFileW'and args[1]==0x40000000 else None
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertEqual(graph.writer.slot.value,703)
+        self.assertEqual(graph.writer.completion[1],703)
+        self.assertIs(graph.writer.completion,self.arena.completions[graph.writer.row.index])
+        self.assertFalse(graph.writer.row.payload['acknowledged'])
+        self.assertFalse(graph.section.row or graph.view.row or graph.retired)
+        with self.assertRaises(self.m.OffloadAdmissionError):self.source.retire_unused()
+        self.assertFalse(any(n.closed for n in self.source._handles))
+    def test_wrong_writer_error_is_not_the_expected_sharing_violation(self):
+        graph=self.make()
+        def denied(name,args):
+            if name=='CreateFileW'and args[1]==0x40000000:
+                C.set_last_error(5);return C.c_void_p(-1).value
+        self.fault=denied
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertEqual(graph.writer.completion[2],5)
+        self.assertFalse(graph.writer.row.payload['acknowledged'])
+    def test_null_view_is_retained_without_any_memory_dereference(self):
+        graph=self.make()
+        self.fault=lambda name,args:0 if name=='MapViewOfFile'else None
+        with patch.object(graph,'private_copy',side_effect=AssertionError('No dereference')):
+            with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertEqual(graph.view.completion[1],0)
+        self.assertFalse(graph.view.retired or graph.changed)
+    def test_replaced_pointer_slot_and_generation_deny_before_touch(self):
+        graph=self.view_ready();original=graph.view.slot
+        graph.view.slot=C.c_void_p(C.addressof(self.view_buffer))
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        graph.view.slot=original;generation=graph.view.generation;graph.view.generation=object()
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        graph.view.generation=generation;original.value+=1
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        self.assertEqual(self.view_buffer[112],0)
+
+    def test_copied_or_rebound_map_intent_and_completion_deny_before_byte_access(self):
+        graph=self.view_ready();row=graph.view.row
+        binding=row.binding;row.binding=tuple(list(binding))
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        self.assertIs(row.completion[0],binding)
+        self.assertEqual(self.view_buffer[112],0)
+        row.binding=binding;completion=row.completion;row.completion=tuple(list(completion))
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        row.completion=completion;row.payload['result']=None
+        with self.assertRaises(f.SourceFixtureError):graph.private_copy()
+        self.assertEqual(self.view_buffer[112],0)
+    def test_nonoverflowing_original_map_result_is_required_before_any_byte_access(self):
+        graph=self.make()
+        self.fault=lambda name,args:C.c_void_p(-1).value-4 if name=='MapViewOfFile'else None
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertFalse(graph.changed)
+        self.assertEqual(self.view_buffer[112],0)
+        self.assertTrue(graph.view.completion)
+    def test_bad_observation_retains_known_original_map_return_without_ack(self):
+        graph=self.make()
+        def changed(name,args):
+            if name=='MapViewOfFile':
+                self.actor.pending['stage']='changed'
+                return C.addressof(self.view_buffer)
+        self.fault=changed
+        with self.assertRaises(e.FixtureError):graph.exercise()
+        self.assertEqual(graph.view.slot.value,C.addressof(self.view_buffer))
+        self.assertIs(graph.view.completion,self.arena.completions[graph.view.row.index])
+        self.assertFalse(graph.view.row.payload['acknowledged'])
+    def test_inflight_interruption_retains_original_pending_graph_without_following_closes(self):
+        graph=self.make()
+        def interrupted(name,args):
+            if name=='CreateFileMappingW':raise KeyboardInterrupt()
+        self.fault=interrupted
+        with self.assertRaises(KeyboardInterrupt):graph.exercise()
+        self.assertIs(self.actor.pending,graph.section.row.payload)
+        self.assertIsNone(graph.section.completion)
+        self.assertFalse(graph.section.retired or graph.reader.retired)
+        self.assertFalse(any(n in ('UnmapViewOfFile','CloseHandle')for n,_ in self.effects))
+    def test_order_and_replay_denial_and_no_dereference_after_unmap(self):
+        graph=self.view_ready()
+        with self.assertRaises(f.SourceFixtureError):graph._step('reader-close')
+        graph.private_copy();graph._step('guard-after');graph._step('view-unmap')
+        with self.assertRaises(f.SourceFixtureError):graph._view_address()
+        with self.assertRaises(f.SourceFixtureError):graph._step('view-unmap')
+        graph._step('section-close');graph._step('reader-close')
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertEqual(sum(r.terminal for r in graph.records),3)
+    def test_failed_unmap_stops_all_following_cleanup_and_retains_original_address(self):
+        graph=self.make()
+        self.fault=lambda name,args:0 if name=='UnmapViewOfFile'else None
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertTrue(graph.view.closing)
+        self.assertFalse(graph.view.retired or graph.section.closing or graph.reader.closing)
+        self.assertEqual(graph.view.slot.value,C.addressof(self.view_buffer))
+        self.assertEqual(sum(r.terminal for r in graph.records),1)
+    def test_original_function_binding_and_file_graph_drift_deny_without_dispatch(self):
+        graph=self.make();graph.bind_source();before=len(self.effects)
+        self.actor.k.MapViewOfFile=lambda *args:0
+        with self.assertRaises(f.SourceFixtureError):graph._step('guard-before')
+        self.assertEqual(len(self.effects),before)
+
+    def test_rebound_source_file_graph_and_job_fact_deny_before_reader_open(self):
+        graph=self.make();graph.bind_source();before=len(self.effects)
+        files=self.source._files;self.source._files=tuple(list(files))
+        with self.assertRaises((f.SourceFixtureError,self.m.OffloadAdmissionError)):graph._step('guard-before')
+        self.source._files=files;self.arena.ready[5][0].value=0
+        with self.assertRaises(e.FixtureError):graph._step('guard-before')
+        self.assertEqual(len(self.effects),before)
+
+    def test_failed_section_close_stops_before_reader_close(self):
+        graph=self.make()
+        self.fault=lambda name,args:0 if name=='CloseHandle'and args==(502,)else None
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertTrue(graph.view.retired and graph.section.closing)
+        self.assertFalse(graph.section.retired or graph.reader.closing or graph.retired)
+        self.assertEqual(sum(r.terminal for r in graph.records),2)
+
+    def test_failed_reader_close_is_not_retirement_even_after_other_two_acknowledge(self):
+        graph=self.make()
+        self.fault=lambda name,args:0 if name=='CloseHandle'and args==(501,)else None
+        with self.assertRaises(f.SourceFixtureError):graph.exercise()
+        self.assertTrue(graph.view.retired and graph.section.retired and graph.reader.closing)
+        self.assertFalse(graph.reader.retired or graph.retired)
+        self.assertFalse(graph.records[-1].payload['acknowledged'])
+
+    def test_read_handle_type_attributes_and_inheritance_denials_stop_before_mapping(self):
+        # Separate fresh in-memory owners keep each failed history intact.
+        for denial in ('inheritance','non-disk','reparse'):
+            trial=ReaderGraphTests();trial.setUp()
+            try:
+                graph=trial.make()
+                def fault(name,args):
+                    if denial=='inheritance'and name=='GetHandleInformation':
+                        args[1]._obj.value=1;return 1
+                    if denial=='non-disk'and name=='GetFileType':return 2
+                    if denial=='reparse'and name=='GetFileInformationByHandleEx'and args[1]==9:
+                        args[2]._obj[0]=0x400;return 1
+                trial.fault=fault
+                with self.subTest(denial=denial),self.assertRaises(f.SourceFixtureError):graph.exercise()
+                self.assertFalse(graph.section.row or graph.view.row)
+            finally:trial.doCleanups()
+
+
+class FreshInputVerificationTests(unittest.TestCase):
+    def setUp(self):
+        self.current=None;self.opened=[]
+        outer=self
+        class Stream(io.BytesIO):
+            def fileno(self):return 42
+        class File:
+            def __init__(self,name,data,directory=False):
+                self.name,self.data,self.link=name,data,False
+                self.info=SimpleNamespace(st_mode=0o040000 if directory else 0o100000,
+                    st_file_attributes=0,st_nlink=1,st_dev=1,st_ino=len(outer.files)+1,
+                    st_size=len(data),st_mtime_ns=10,st_ctime_ns=11)
+            def lstat(self):return self.info
+            def is_symlink(self):return self.link
+            def __truediv__(self,name):return outer.files[name]
+            def open(self,mode):
+                outer.opened.append(self.name);outer.current=self.info
+                self.assert_mode=mode
+                return Stream(self.data)
+        self.files={}
+        for name in ('config.json','model.safetensors','tokenizer.json','tokenizer_config.json'):
+            self.files[name]=File(name,b'synthetic-'+name.encode())
+        self.root=File('root',b'',True)
+        self.inventory=SimpleNamespace(root=self.root,bindings=tuple((n,len(p.data),
+            __import__('hashlib').sha256(p.data).hexdigest())for n,p in self.files.items()))
+        self.facts=(f._fresh_facts(self.root,True),tuple((n,f._fresh_facts(p))for n,p in self.files.items()))
+        scope=patch.object(f.os,'fstat',side_effect=lambda fd:self.current)
+        scope.start();self.addCleanup(scope.stop)
+    def test_only_the_four_exact_original_fresh_files_are_opened_and_hashes_match(self):
+        f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertEqual(self.opened,list(self.files))
+    def test_changed_hash_and_changed_identity_do_not_qualify_unchanged_bytes(self):
+        self.files['config.json'].data=b'X'*len(self.files['config.json'].data)
+        with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.files['config.json'].info.st_ino+=1;self.opened.clear()
+        with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertFalse(self.opened)
+    def test_link_reparse_multiple_link_and_nonregular_inputs_deny_before_open(self):
+        file=self.files['config.json']
+        for field,value in (('link',True),('st_file_attributes',0x400),('st_nlink',2),('st_mode',0o040000)):
+            target=file if field=='link'else file.info;old=getattr(target,field);setattr(target,field,value)
+            with self.subTest(field=field),self.assertRaises(f.SourceFixtureError):
+                f._verify_fresh_inputs(self.inventory,self.facts)
+            setattr(target,field,old)
+        self.assertFalse(self.opened)
+    def test_opened_file_identity_mismatch_denies_before_read(self):
+        info=SimpleNamespace(**vars(self.files['config.json'].info));info.st_ino=999
+        with patch.object(f.os,'fstat',return_value=info):
+            with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertEqual(self.opened,['config.json'])
+    def test_swapped_root_or_unapproved_leaf_is_not_followed(self):
+        self.root.info.st_ino+=1
+        with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertFalse(self.opened)
+        self.root.info.st_ino-=1
+        self.inventory.bindings=(('../unknown',1,'a'*64),)+self.inventory.bindings[1:]
+        with self.assertRaises(f.SourceFixtureError):f._verify_fresh_inputs(self.inventory,self.facts)
+        self.assertFalse(self.opened)
+
+
+class ReaderReportTests(unittest.TestCase):
+    def test_every_reader_flag_and_count_is_required_only_for_the_reader_case(self):
+        factory=SourceReportsTests()
+        for name in f._READER_FLAGS+f._READER_COUNTS:
+            good=factory.value(f.CASES[3]);good[name]=False if name in f._READER_FLAGS else good[name]-1
+            with self.subTest(name=name),self.assertRaises(f.SourceFixtureError):
+                f.validate_child_report(good,f.CASES[3],'a'*64)
+            for case in f.CASES[:3]:
+                old=factory.value(case);old[name]=True if name in f._READER_FLAGS else 1
+                with self.subTest(case=case,name=name),self.assertRaises(f.SourceFixtureError):
+                    f.validate_child_report(old,case,'a'*64)
+    def test_private_copy_commit_charges_full_view_and_not_changed_byte(self):
+        value=SourceReportsTests().value(f.CASES[3]);value['private_view_commit_bytes']=1
+        with self.assertRaises(f.SourceFixtureError):f.validate_child_report(value,f.CASES[3],'a'*64)
+    def test_legacy_v1_evidence_cannot_be_relabelled_as_current_reader_evidence(self):
+        value=SourceReportsTests().value(f.CASES[3]);value['schema_version']='windows-offload-sources-native-v1'
+        with self.assertRaises(f.SourceFixtureError):f.validate_child_report(value,f.CASES[3],'a'*64)
 
 
 if __name__ == '__main__':unittest.main()
