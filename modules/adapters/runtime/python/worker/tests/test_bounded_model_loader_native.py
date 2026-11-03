@@ -14,6 +14,12 @@ from modules.adapters.runtime.python.worker.tests.test_local_model_offload impor
 
 class NativeTiedDiskForwardTests(unittest.TestCase):
     def test_tiny_tied_qwen_disk_forward_parity_repeated_use_and_cleanup(self):
+        self.exercise_tiny_disk_forward(sharded=False)
+
+    def test_tiny_sharded_tied_qwen_disk_forward_parity_repeated_use_and_cleanup(self):
+        self.exercise_tiny_disk_forward(sharded=True)
+
+    def exercise_tiny_disk_forward(self, *, sharded):
         try:
             import torch
             from safetensors.torch import save_file
@@ -34,7 +40,17 @@ class NativeTiedDiskForwardTests(unittest.TestCase):
             with torch.no_grad():
                 expected = original(tokens).logits.clone()
             weights = {name: value for name, value in original.state_dict().items() if name != "lm_head.weight"}
-            save_file(weights, str(root / "model.safetensors"))
+            if sharded:
+                weight_map = {}
+                for group in range(2):
+                    shard = f"model-{group + 1:05d}-of-00002.safetensors"
+                    selected = {name: value for number, (name, value) in enumerate(weights.items()) if number % 2 == group}
+                    save_file(selected, str(root / shard))
+                    weight_map.update(dict.fromkeys(selected, shard))
+                (root / "model.safetensors.index.json").write_text(json.dumps({"weight_map": weight_map}), encoding="utf8")
+                del selected
+            else:
+                save_file(weights, str(root / "model.safetensors"))
             del weights, original
             gc.collect()
             (root / "config.json").write_text(json.dumps(config), encoding="utf-8")
@@ -81,7 +97,7 @@ class NativeTiedDiskForwardTests(unittest.TestCase):
                 bundle.model = None; bundle.tokenizer = None
                 loader.release_offload_lease(bundle.lease, bundle.model_references)
             self.assertTrue(bundle.lease.released)
-            self.assertTrue((root / "model.safetensors").is_file())
+            self.assertTrue((root / ("model-00001-of-00002.safetensors" if sharded else "model.safetensors")).is_file())
             self.assertFalse((cache / ".aisb-offload-v1" / "active").exists())
 
 

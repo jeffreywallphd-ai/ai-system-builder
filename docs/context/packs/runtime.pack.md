@@ -176,7 +176,7 @@
 
 ADR-0045 and `docs/operations/optional-low-memory-inference.md` govern the explicit
 default-off Dataset Preparation offload profile. Use exact capability gating,
-finite native model/tokenizer support, pre-supplier PEFT discovery denial and separate weight/process/staging budgets.
+finite native model/tokenizer support, inventory-bound `bounded_model_inputs.py` instead of outer supplier discovery, and separate weight/process/staging budgets. Keep native initialization, aliases and dispatch; the twenty-one-file ordinary lifecycle profile is model-free. Tiny supplier parity and production source/borrower/folder/accounting/worker/restart/resource qualification remain separate pending work.
 Cached-generator ownership survives task completion; teardown cannot rematerialize
 weights or declare unsupported running cancellation complete. Passive reads never
 install/load. Installed-model and native filesystem evidence remain separate.

@@ -901,3 +901,35 @@ remain pending. Advisory guards do not prevent directory child creation. There i
 no borrower, guarded context or production factory selection. Standard loading,
 source 20 GiB, staging 12 GiB, unknown full staging charge and accepted accuracy/OCR
 stay unchanged. No user action is needed for this component.
+
+
+### Discovery-free optional Qwen2 inputs
+
+`tasks/bounded_model_inputs.py` privately derives tokenizer, generation and safe
+checkpoint inputs from the original inspected inventory. It rechecks bounded
+metadata bytes against their admitted hashes. It supplies the native fast
+tokenizer with an in-memory backend, including AddedToken flags, IDs and legacy
+precedence. It preserves the independent chat-template priority and distinguishes
+missing generation settings from explicit nulls. No supplier directory resolver,
+AutoConfig, adapter lookup or slow/GGUF conversion is used. Metadata remains
+private; do not serialize this adapter into evidence or logs.
+
+The optional loader uses native config/attention/dtype/meta construction, the
+pinned lower safe-weight loader with explicit checkpoint keys and shard paths,
+and Accelerate dispatch with the verified in-memory disk index and skip keys.
+It retains aliases, ties, generation/resource/device/shape checks, weak partial
+model references and the positive owned lease. It requests no supplier folder
+or temporary state dict. Distributed, quantized and alternate-engine loading
+remain unsupported by this profile. Standard loading stays unchanged.
+
+The adapter restores the exact shared Torch default dtype in its own `finally`
+boundary, including failed construction, and records the selected dtype in the
+native config. It prevalidates numeric generation fields and captures transient
+supplier validation warnings so private metadata cannot escape through them.
+
+The ordinary lifecycle profile now has twenty-one model-free files. Run the input
+and fake supplier tests during source work. The native single-file and sharded
+tiny-model cases remain separate controlled compatibility checks; their presence
+is not execution evidence. Discovery-free inputs do not qualify native source
+custody, cached lazy forwards, borrower shutdown, folder/accounting protection or
+crash/restart recovery. Production offload remains unavailable.

@@ -189,13 +189,21 @@ class PinnedLoaderBoundaryTests(unittest.TestCase):
         self.calls = []
         self.holders = []
         self.failure = None
+        self.default_dtype = "float64"
         self.information = {"missing_keys": [], "unexpected_keys": [], "mismatched_keys": [], "error_msgs": []}
         owner = self
 
         class FakeQwen:
             def __init__(self, config):
+                self.config = config
+                self._skip_keys_device_placement = ["past_key_values"]
                 self.parameter = SimpleNamespace(shape=(2, 2), dtype="torch.float32")
                 self.hf_device_map = {"model.embed_tokens": "cpu"}
+            def forward(self, input_ids, logits_to_keep=0):
+                raise AssertionError("No inference in model-free checks")
+            def eval(self):
+                self.evaluated = True
+                return self
             def tie_weights(self):
                 pass
             def state_dict(self):
@@ -209,9 +217,18 @@ class PinnedLoaderBoundaryTests(unittest.TestCase):
             def children(self):
                 return []
             @classmethod
-            def from_pretrained(cls, reference, **kwargs):
-                owner.calls.append((reference, kwargs))
-                model = cls(kwargs["config"])
+            def from_pretrained(cls, *args, **kwargs):
+                raise AssertionError("Directory model resolution is forbidden")
+            @classmethod
+            def _from_config(cls, config, **kwargs):
+                owner.init_options = kwargs
+                owner.default_dtype = kwargs["torch_dtype"]
+                if owner.failure == "init":
+                    raise RuntimeError("synthetic-private-constructor-failure")
+                return cls(config)
+            @classmethod
+            def _load_pretrained_model(cls, model, state_dict, checkpoint_files, reference, **kwargs):
+                owner.calls.append((reference, {**kwargs, "state_dict": state_dict, "checkpoint_files": checkpoint_files}))
                 if owner.failure == "retained":
                     owner.holders.append(model)
                     raise RuntimeError("synthetic-private-load-error")
@@ -220,14 +237,39 @@ class PinnedLoaderBoundaryTests(unittest.TestCase):
                         raise ValueError("synthetic-inner-private-detail")
                     except ValueError as error:
                         raise RuntimeError("synthetic-private-load-error") from error
-                return model, owner.information
+                info = owner.information
+                return (model, info.get("missing_keys", []), info.get("unexpected_keys", []),
+                        info.get("mismatched_keys", []), None, info.get("error_msgs", []))
+
+        class FakeAddedToken:
+            def __init__(self, content, **flags):
+                self.content = content
+                self.flags = flags
+            def __str__(self):
+                return self.content
+
+        class FakeGenerationConfig(SimpleNamespace):
+            @classmethod
+            def from_model_config(cls, value):
+                return cls(**{k: v for k, v in value.items() if k.endswith("_token_id")})
+
+        class FakeConfig(dict):
+            def __setattr__(self, name, value):
+                self[name] = value
 
         tokenizer = SimpleNamespace(pad_token_id=0, eos_token_id=1, chat_template="template")
         self.modules = {
-            "torch": SimpleNamespace(float32="float32", float16="float16", bfloat16="bfloat16", cuda=SimpleNamespace(is_available=lambda: True)),
-            "accelerate": SimpleNamespace(init_empty_weights=lambda **kwargs: nullcontext(), infer_auto_device_map=self.infer),
-            "transformers": SimpleNamespace(Qwen2TokenizerFast=SimpleNamespace(from_pretrained=self.tokenizer),
-                Qwen2Config=SimpleNamespace(from_dict=lambda value: value), Qwen2ForCausalLM=FakeQwen),
+            "torch": SimpleNamespace(float32="float32", float16="float16", bfloat16="bfloat16", cuda=SimpleNamespace(is_available=lambda: True),
+                get_default_dtype=lambda: self.default_dtype,
+                set_default_dtype=lambda value: setattr(self, "default_dtype", value)),
+            "accelerate": SimpleNamespace(init_empty_weights=lambda **kwargs: nullcontext(), infer_auto_device_map=self.infer,
+                                         dispatch_model=self.dispatch),
+            "tokenizers": SimpleNamespace(Tokenizer=SimpleNamespace(from_str=lambda text: json.loads(text)), AddedToken=FakeAddedToken),
+            "transformers": SimpleNamespace(Qwen2TokenizerFast=self.tokenizer,
+                Qwen2Config=SimpleNamespace(from_dict=lambda value: FakeConfig(value)), Qwen2ForCausalLM=FakeQwen,
+                GenerationConfig=FakeGenerationConfig),
+            "transformers.modeling_utils": SimpleNamespace(no_init_weights=lambda: nullcontext(),
+                is_deepspeed_zero3_enabled=lambda: False, is_fsdp_enabled=lambda: False),
         }
         self.tokenizer_value = tokenizer
         loader._RETAINED_LEASES.clear()
@@ -241,9 +283,13 @@ class PinnedLoaderBoundaryTests(unittest.TestCase):
         self.map_options = kwargs
         return {"model.embed_tokens": "cpu"}
 
-    def tokenizer(self, reference, **kwargs):
+    def tokenizer(self, **kwargs):
         self.tokenizer_options = kwargs
         return self.tokenizer_value
+
+    def dispatch(self, model, **kwargs):
+        self.dispatch_options = kwargs
+        model.hf_device_map = kwargs["device_map"]
 
     def load(self):
         with patch.dict(sys.modules, self.modules), patch.object(loader, "offload_runtime_available", return_value=True):
@@ -253,19 +299,26 @@ class PinnedLoaderBoundaryTests(unittest.TestCase):
     def test_pinned_safe_weight_call_uses_bounded_meta_map_and_no_secondary_temp(self):
         bundle = self.load()
         options = self.calls[0][1]
-        self.assertTrue(options["local_files_only"])
-        self.assertFalse(options["trust_remote_code"])
-        self.assertTrue(options["use_safetensors"])
         self.assertTrue(options["weights_only"])
-        self.assertTrue(options["low_cpu_mem_usage"])
         self.assertFalse(options["offload_state_dict"])
-        self.assertFalse(options["offload_buffers"])
-        self.assertEqual(options["torch_dtype"], "float32")
+        self.assertIsNone(options["disk_offload_folder"])
+        self.assertIsNone(options["state_dict"])
+        self.assertIsNone(self.calls[0][0])
+        self.assertEqual(options["checkpoint_files"], [str(self.root / "model.safetensors")])
+        self.assertEqual(options["sharded_metadata"], {"all_checkpoint_keys": ["model.embed_tokens.weight"],
+            "weight_map": {"model.embed_tokens.weight": "model.safetensors"}})
+        self.assertEqual(options["dtype"], "float32")
+        self.assertEqual(self.init_options, {"torch_dtype": "float32"})
+        self.assertIsNone(self.dispatch_options["offload_dir"])
+        self.assertFalse(self.dispatch_options["offload_buffers"])
+        self.assertEqual(self.dispatch_options["skip_keys"], ["past_key_values"])
+        self.assertTrue(bundle.model.evaluated)
+        self.assertEqual(bundle.model.config["torch_dtype"], "float32")
+        self.assertEqual(self.default_dtype, "float64")
         self.assertEqual(self.map_options["max_memory"], {"cpu": 1024**3})
         self.assertFalse(self.map_options["fallback_allocation"])
         self.assertEqual(self.map_options["no_split_module_classes"], ["Qwen2DecoderLayer"])
-        self.assertEqual(self.tokenizer_options, {"local_files_only": True, "trust_remote_code": False,
-            "tokenizer_file": str(self.root / "tokenizer.json"), "vocab_file": None, "merges_file": None})
+        self.assertEqual(self.tokenizer_options, {"tokenizer_object": TOKENIZER, "added_tokens_decoder": {}})
         bundle.model = None
         bundle.tokenizer = None
         loader.release_offload_lease(bundle.lease, bundle.model_references)

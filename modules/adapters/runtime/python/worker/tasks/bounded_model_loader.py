@@ -6,14 +6,17 @@ placement and cooperative ownership are not a kernel process-memory guarantee.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import ExitStack
 import gc
 import importlib.metadata
 import importlib.util
 import inspect
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
 from typing import Any, Callable
 import weakref
+import warnings
 
 from .local_model_offload import (
     CPU_WEIGHT_LIMIT, CUDA_WEIGHT_LIMIT, MAX_INPUT_TOKENS, MAX_NEW_TOKENS,
@@ -21,6 +24,7 @@ from .local_model_offload import (
     ORDINARY_OFFLOAD, OwnedOffloadLease, inspect_local_model, plan_resources, validate_device_map, fit_cpu_residency,
 )
 from .offload_recovery import require_fresh_guarded_context, require_guarded_context
+from .bounded_model_inputs import AdmittedModelInputs
 
 
 def offload_runtime_available() -> bool:
@@ -304,15 +308,22 @@ def _load_bounded_local_model(
     if not offload_runtime_available() or _RETAINED_LEASES:
         raise OffloadAdmissionError()
     inventory = inspect_local_model(reference)
+    inputs = AdmittedModelInputs.from_inventory(inventory)
     import torch
-    from accelerate import init_empty_weights, infer_auto_device_map
-    from transformers import Qwen2TokenizerFast, Qwen2Config, Qwen2ForCausalLM
+    from accelerate import init_empty_weights, infer_auto_device_map, dispatch_model
+    from tokenizers import Tokenizer, AddedToken
+    from transformers import Qwen2TokenizerFast, Qwen2Config, Qwen2ForCausalLM, GenerationConfig
+    from transformers.modeling_utils import no_init_weights, is_deepspeed_zero3_enabled, is_fsdp_enabled
+
+    if is_deepspeed_zero3_enabled() or is_fsdp_enabled():
+        raise OffloadAdmissionError()
 
     dtype = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}[model_config.torchDtype]
     dtype_bytes = 4 if model_config.torchDtype == "float32" else 2
     if model_config.device == "cuda" and not torch.cuda.is_available():
         raise OffloadAdmissionError()
     native_config = Qwen2Config.from_dict(inventory.config)
+    native_config.torch_dtype = dtype
     with init_empty_weights(include_buffers=False):
         skeleton = Qwen2ForCausalLM(native_config)
     skeleton.tie_weights()
@@ -376,26 +387,56 @@ def _load_bounded_local_model(
 
     def construct():
         try:
-            tokenizer = Qwen2TokenizerFast.from_pretrained(
-                str(reference), local_files_only=True, trust_remote_code=False,
-                tokenizer_file=str(reference / "tokenizer.json"),
-                vocab_file=str(reference / "vocab.json") if "vocab.json" in inventory.directory_names else None,
-                merges_file=str(reference / "merges.txt") if "merges.txt" in inventory.directory_names else None,
+            tokenizer = Qwen2TokenizerFast(
+                tokenizer_object=Tokenizer.from_str(inputs.tokenizer_json),
+                **inputs.tokenizer_kwargs(AddedToken),
             )
-            model, information = TrackedQwen2ForCausalLM.from_pretrained(
-                str(reference), config=native_config, local_files_only=True,
-                trust_remote_code=False, use_safetensors=True, weights_only=True,
-                torch_dtype=dtype, low_cpu_mem_usage=True, device_map=device_map,
-                # The pinned safe-file loader returns its verified index in
-                # memory. A folder would request redundant supplier mkdirs.
-                # The positive owned lease and its guards remain required.
-                offload_state_dict=False,
-                offload_buffers=False, output_loading_info=True, ignore_mismatched_sizes=False,
+            # Keep native attention selection without a resolver. The pinned
+            # supplier does not restore the shared default dtype on every
+            # constructor failure, so this adapter owns the finally boundary.
+            original_dtype = torch.get_default_dtype()
+            try:
+                with ExitStack() as stack:
+                    stack.enter_context(no_init_weights())
+                    stack.enter_context(init_empty_weights(include_buffers=False))
+                    model = TrackedQwen2ForCausalLM._from_config(native_config, torch_dtype=dtype)
+            finally:
+                torch.set_default_dtype(original_dtype)
+            model.tie_weights()
+            if inputs.generation is not None:
+                validate_generation_limits(SimpleNamespace(forward=model.forward,
+                    generation_config=SimpleNamespace(**inputs.generation)),
+                    SimpleNamespace(shape=(1, 1)), generation_params)
+                if any(hasattr(GenerationConfig, key) for key in inputs.generation):
+                    raise OffloadAdmissionError()
+            # With no override kwargs the pinned from_dict is this same
+            # constructor plus an info log of private metadata. Avoid that log.
+            # Supplier validation warnings can include private metadata. Keep
+            # them transient and local; no supplier functions/loggers are patched.
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                model.generation_config = (GenerationConfig(**inputs.generation)
+                    if inputs.generation is not None else GenerationConfig.from_model_config(model.config))
+            # Reject expanding generation defaults before any weights/dispatch.
+            validate_generation_limits(model, SimpleNamespace(shape=(1, 1)), generation_params)
+            loaded = TrackedQwen2ForCausalLM._load_pretrained_model(
+                model, None, list(inputs.checkpoint_files), None,
+                sharded_metadata=inputs.sharded_metadata(), device_map=device_map,
+                disk_offload_folder=None, offload_state_dict=False, dtype=dtype,
+                hf_quantizer=None, keep_in_fp32_regex=None, device_mesh=None,
+                key_mapping=None, weights_only=True, ignore_mismatched_sizes=False,
             )
+            model, missing, unexpected, mismatched, offload_index, errors = loaded
             permitted_missing = {name for group in tied for name in group if name not in {entry.name for entry in inventory.tensors}}
-            if (set(information.get("missing_keys", ())).difference(permitted_missing)
-                    or information.get("unexpected_keys") or information.get("mismatched_keys") or information.get("error_msgs")):
+            if set(missing).difference(permitted_missing) or unexpected or mismatched or errors:
                 raise OffloadAdmissionError()
+            model.tie_weights()
+            model.eval()
+            # Retain the supplier's lazy in-memory safe index and skip-key
+            # handling. No redundant folder or temporary state dict is needed.
+            dispatch_model(model, device_map=device_map, offload_dir=None,
+                           offload_index=offload_index, offload_buffers=False,
+                           skip_keys=model._skip_keys_device_placement)
             if model.hf_device_map != device_map:
                 raise OffloadAdmissionError()
             validate_device_map(model.hf_device_map, sizes, device=model_config.device, tied_groups=tied, unsplit_groups=unsplit, nonpersistent_buffer_modules=buffer_modules)

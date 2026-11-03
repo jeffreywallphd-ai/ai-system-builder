@@ -1199,3 +1199,30 @@ protect model folders and optional-file discovery, finish shared temporary-file
 accounting and restart, and confirm worker shutdown and real offload resources.
 These results do not complete the parent roadmap. Accepted model accuracy and
 OCR stay closed. Full-system testing follows the remaining feature work.
+
+
+### Discovery-free optional loading
+
+The agent is replacing hidden supplier file searches with explicit inspected
+inputs. No user action is needed. The private input adapter verifies metadata
+size and hash, bounds parsed structure to one million nodes and 32 levels per
+file, and retains the existing 32 MiB tokenizer and 8 MiB auxiliary file limits.
+Parsing/backend copies are transient private memory, not copied model weights;
+these finite limits are not a measured process-memory guarantee. Existing RAM,
+VRAM, staging and resource admission limits remain unchanged.
+
+Tokenizer settings preserve omitted/null defaults, AddedToken flags and IDs,
+legacy special/added token precedence and independent template priority. The
+loader uses admitted generation settings, or native model-config defaults when
+the file is absent. Generation expansion is checked before safe-weight loading.
+Explicit checkpoint files and a complete inspected key/shard map replace outer
+model resolvers. Native initialization, precision, attention, aliases, dispatch
+skip keys, weak ownership and cleanup remain part of the path. No redundant
+supplier directory or temporary state dict is requested.
+
+The current source checks are model-free. Real tiny supplier parity for both
+single and sharded layouts is separate pending compatibility work, not a new
+accuracy test. Production remains unavailable pending original-source lifetime,
+native borrowing, folder protection, accounting, worker exit/restart and resource
+qualification. Accepted model quality and OCR stay closed. Full-software testing
+is deferred to the shared campaign requested by the user.

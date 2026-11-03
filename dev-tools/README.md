@@ -1994,3 +1994,20 @@ retirement require their own success. Closed failure-stage codes identify root,
 identity, content and after-read failures without paths or raw error text.
 The first v2 trial remains failed. A corrected source checkpoint does not grant
 a new Native attempt, production borrowing or parent qualification.
+
+
+### Discovery-free model input checks
+
+The `offload-resource-lifecycle` profile now contains twenty-one model-free test
+files. Its explicit new input test covers admitted single/sharded checkpoint
+maps, token metadata precedence, generation defaults and integrated fake loads
+with outer model resolution, network and temporary supplier writes denied.
+The routing covers both the private input adapter and its test. Generic fallback
+for unknown source paths remains enabled. The native-capable loader test files
+remain excluded from ordinary discovery; tiny actual-supplier compatibility is
+a separate controlled check. Do not rerun accepted model accuracy or OCR.
+
+The shared worker README no longer selects unrelated semantic-curation feature
+tests by itself. Documentation and ordinary fallback coverage remain. Both the
+actual semantic-curation source and its test still select their original profile;
+a focused routing regression checks this distinction.

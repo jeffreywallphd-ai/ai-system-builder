@@ -2258,3 +2258,30 @@ evidence and earlier v1 results. Source tests and checkpoint grant no retry or
 cleanup authority; actual execution requires a new independent exact-source
 effect review. Production/source/discovery/accounting/worker/restart/resource
 gaps and all existing guards, limits and unknown-usage charge remain unchanged.
+
+
+### Optional model input discovery boundary
+
+The private bounded-model input adapter addresses supplier searches for unbound
+configuration, tokenizer, adapter and generation files. It reads only a finite
+set of original inventory-bound metadata, rechecks size/hash, and supplies a
+native tokenizer backend plus complete safe-weight checkpoint references. It
+rejects unsupported selectors, traversal, malformed/duplicate/nonfinite/deep
+metadata and expansion settings before weights or dispatch. AddedToken and
+legacy precedence are explicit, preventing silent behavior loss while removing
+directory resolution. No global supplier I/O patch, fake PEFT availability,
+unsafe fallback, full resident state dict or extra temporary tree is used.
+
+The adapter owns an exact shared-default-dtype restoration boundary on success
+and construction failure. Native config retains the selected dtype. Generation
+field type validation and a scoped warning capture prevent private settings
+from appearing in supplier validation warnings. No supplier I/O or logger is
+globally patched.
+
+The source gate covers successful single/sharded fake loads and denial/failure
+cleanup without importing model frameworks. Tiny installed-supplier parity
+remains separately qualified. These cooperative checks do not fence namespace
+mutation or later disk-backed forwards. Native source/borrower lifetime, protected
+folder/accounting, worker exit/crash/restart and bounded resources remain pending;
+production capability stays unavailable. Unknown retained staging data remains
+untouched and fully charged. There is no new provider, protocol or privilege.

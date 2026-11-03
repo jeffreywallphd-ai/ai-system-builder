@@ -295,7 +295,7 @@ class GuardedConsumerTests(unittest.TestCase):
                 owner = recovery._GuardedOffloadOwner(backend)
                 arguments = dict(reference=fixture.root, cache_root=fixture.cache, read_memory=lambda: SimpleNamespace(available_bytes=8 * 1024**3), read_cuda_memory=lambda: 0, _recovery=owner.worker_context)
                 fake_model = fixture.modules["transformers"].Qwen2ForCausalLM
-                with patch.dict(sys.modules, fixture.modules), patch.object(loader, "offload_runtime_available", return_value=True), patch.object(fake_model, "from_pretrained", side_effect=KeyboardInterrupt()):
+                with patch.dict(sys.modules, fixture.modules), patch.object(loader, "offload_runtime_available", return_value=True), patch.object(fake_model, "_load_pretrained_model", side_effect=KeyboardInterrupt()):
                     with self.assertRaises(KeyboardInterrupt):
                         loader.load_bounded_local_model(boundary.model_config(), {"max_new_tokens": 8}, **arguments)
                 with self.assertRaises(offload.OffloadAdmissionError): owner.worker_context.check_ready()

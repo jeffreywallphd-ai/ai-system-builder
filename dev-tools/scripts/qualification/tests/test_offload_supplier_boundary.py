@@ -47,7 +47,8 @@ class SupplierBoundaryTests(fixtures.PinnedLoaderBoundaryTests):
         try:
             self.assertNotIn('offload_folder',self.calls[-1][1],
                              'The admitted safe-file supplier must not be asked to create a directory.')
-            self.assertTrue(self.calls[-1][1]['use_safetensors'])
+            self.assertTrue(self.calls[-1][1]['weights_only'])
+            self.assertTrue(all(p.endswith('.safetensors') for p in self.calls[-1][1]['checkpoint_files']))
             self.assertFalse(self.calls[-1][1]['offload_state_dict'])
         finally:self.close_bundle(bundle)
 

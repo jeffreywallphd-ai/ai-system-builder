@@ -39,6 +39,7 @@ TESTS = [
     "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py",
     "dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
     "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+    "modules/adapters/runtime/python/worker/tests/test_bounded_model_inputs.py",
 ]
 
 
@@ -52,7 +53,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             path.write_bytes((ROOT / name).read_bytes())
         (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {PROFILE: profile}}))
 
-    def test_fixed_profile_executes_only_twenty_model_free_files(self):
+    def test_fixed_profile_executes_only_twenty_one_model_free_files(self):
         self.assertEqual(self.profile()["test_paths"], TESTS)
         expected = [run_focused_checks.python_test_command(ROOT, name) for name in sorted(TESTS)]
         self.assertEqual(run_focused_checks.profile_commands(ROOT, PROFILE), expected)
@@ -73,6 +74,8 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
                 (["modules/adapters/runtime/python/worker/tasks/windows_offload_sources.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tests/test_windows_offload_sources.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tasks/bounded_model_inputs.py"], ["documentation"], True, False),
+                (["modules/adapters/runtime/python/worker/tests/test_bounded_model_inputs.py"], ["documentation"], True, False),
                 (["modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/windows_offload_core_fixture.py"], ["documentation"], True, False),
                 (["dev-tools/scripts/qualification/tests/test_windows_offload_core_fixture.py"], ["documentation"], True, False),
@@ -155,6 +158,16 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             with self.subTest(name=name):
                 ids = {row["id"] for row in catalog.plan(ROOT, [name], ["documentation"], "synthetic")["selected"]}
                 self.assertNotIn(PROFILE, ids)
+
+    def test_shared_worker_readme_does_not_schedule_unrelated_semantic_feature(self):
+        ids = {row["id"] for row in catalog.plan(ROOT,
+            ["modules/adapters/runtime/python/worker/README.md"], ["documentation"], "synthetic")["selected"]}
+        self.assertIn("documentation", ids)
+        self.assertNotIn("dataset-semantic-curation", ids)
+        for source in ("modules/adapters/runtime/python/worker/tasks/semantic_curation.py",
+                       "modules/adapters/runtime/python/worker/tests/test_semantic_curation.py"):
+            ids = {row["id"] for row in catalog.plan(ROOT, [source], ["documentation"], "synthetic")["selected"]}
+            self.assertIn("dataset-semantic-curation", ids)
 
 
 if __name__ == "__main__": unittest.main()

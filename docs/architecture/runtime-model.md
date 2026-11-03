@@ -1186,3 +1186,21 @@ reference-controlled release remain required. This change is not a reference-onl
 or zero-staging lifecycle contract and does not enable an unavailable guarded
 backend. Existing native protection, global accounting, worker/crash, retained
 restart and model-resource qualification remain pending.
+
+
+### Optional Qwen2 input and supplier adapter
+
+The runtime adapter's private `bounded_model_inputs.py` consumes an original
+`LocalModelInventory`. It exposes no core/transport API. Bounded hash-checked
+metadata supplies native tokenizer construction and generation defaults, while
+complete inspected checkpoint keys/shards feed the pinned Transformers lower
+safe-weight loading seam. Existing Accelerate dispatch receives the in-memory
+safe index, device map and skip keys. Native dtype/attention/meta initialization,
+tied aliases, ownership and resource validation remain in the runtime adapter.
+Outer model/tokenizer resolvers and alternate conversion paths are excluded.
+
+This is internal implementation under the accepted optional-profile architecture,
+not a new engine or model-worker design. The existing read-only native protocol
+and unavailable production factory remain unchanged. Source-level tests cannot
+supply original-source custody, lazy-forward lifetime, worker/crash/restart or
+process-memory evidence. Tiny real-supplier parity is a separate qualification.

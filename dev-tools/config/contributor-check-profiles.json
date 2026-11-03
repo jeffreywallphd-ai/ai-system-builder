@@ -22,11 +22,13 @@
         "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_fixture.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_read_session_qualification.py",
         "dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
-        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py"
+        "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
+        "modules/adapters/runtime/python/worker/tests/test_bounded_model_inputs.py"
       ],
       "source_paths": [
         "modules/adapters/runtime/python/worker/tasks/local_model_offload.py",
         "modules/adapters/runtime/python/worker/tasks/bounded_model_loader.py",
+        "modules/adapters/runtime/python/worker/tasks/bounded_model_inputs.py",
         "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
         "modules/adapters/runtime/python/worker/tasks/offload_recovery.py",
         "modules/adapters/runtime/python/worker/tests/test_offload_recovery.py",
