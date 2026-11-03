@@ -46,7 +46,9 @@ def _entry_environment():
           and _NATIVE_ENTRY is _ENTRY_TOKEN and os.name == 'nt'
           and sys.flags.isolated == sys.flags.no_site == 1 and sys.dont_write_bytecode
           and sys.prefix == sys.base_prefix and len(sys.argv) == 2
-          and Path(sys.argv[0]).absolute() == ENTRY and sys.argv[1] == '--native', 'entry')
+          and Path(sys.argv[0]).absolute() == ENTRY
+          and sys.argv[1] in ('--native', '--native-shared-write-denial'), 'entry')
+    return 'shared-write-map-denial' if sys.argv[1] == '--native-shared-write-denial' else None
 
 
 class _ParentFenceApi:
@@ -425,6 +427,37 @@ def _validate_parent_report(value, digest):
     return dict(value)
 
 
+def _validate_denial_report(value, digest, manifest, source):
+    """Exact observations only; original process/Job retirement is separate."""
+    true_fields = ('child_exit_confirmed', 'job_active_zero', 'source_released_by_owned_exit',
+                   'original_handles_closed', 'timer_callbacks_retired')
+    false_fields = ('source_retired_unused', 'model_started', 'borrower_started',
+                    'production_composed', 'parent_qualification_granted')
+    _need(type(value) is dict and value.keys() == {
+        'schema_version', 'status', 'source_digest', 'denial', 'mapping',
+        'native_calls', 'terminal_calls', 'child_exit_code', *true_fields, *false_fields}
+        and value['schema_version'] == 'owned-source-parent-denial-v1'
+        and value['status'] == 'denied' and value['source_digest'] == digest
+        and type(value['child_exit_code']) is int and value['child_exit_code'] == 9
+        and type(value['native_calls']) is int and 0 < value['native_calls'] <= 1024 + 61
+        and type(value['terminal_calls']) is int and 0 < value['terminal_calls'] <= 61
+        and all(value[name] is True for name in true_fields)
+        and all(value[name] is False for name in false_fields), 'fence-exit')
+    source._denial_witness(value['denial'])
+    mapping = value['mapping']
+    flags = ('writer_closed_before_child', 'view_held_through_child_exit',
+             'view_unmapped', 'section_and_ancestors_closed')
+    _need(type(mapping) is dict and mapping.keys() == {
+        'schema_version', 'target_identity_sha256', 'content_sha256', 'size', *flags}
+        and mapping['schema_version'] == 'source-shared-write-view-v1'
+        and mapping['target_identity_sha256'] == value['denial']['target_identity_sha256']
+        and mapping['content_sha256'] == manifest['model.safetensors']['sha256']
+        and type(mapping['size']) is int
+        and 0 < mapping['size'] == manifest['model.safetensors']['bytes'] <= 4096
+        and all(mapping[name] is True for name in flags), 'fence-exit')
+    return dict(value)
+
+
 def _cleanup_exact_inputs(run_root, manifest, removed=None):
     root = run_root / 'inputs'
     _need({p.name for p in root.iterdir()} == set(manifest), 'entry')
@@ -509,7 +542,7 @@ class _CollectionOwner:
 
 def run_native():
     """One fixed synthetic roundtrip. Collection never closes a roadmap."""
-    _entry_environment()
+    case = _entry_environment()
     source, folder, hashes = _load_runtime_sources()
     runtime = source.io._runtime_image()
     nonce = uuid.uuid4().hex
@@ -535,7 +568,8 @@ def run_native():
         event = owner.event
         deadline = time.monotonic_ns() + _BUDGET_NS
         code = source._source_bootstrap(folder, hashes, nonce, deadline,
-                                        (str(runtime[0]), runtime[1]), str(run_root), handles=(event.handle,))
+                                        (str(runtime[0]), runtime[1]), str(run_root),
+                                        handles=(event.handle,), case=case)
         startup = subprocess.STARTUPINFO()
         startup.lpAttributeList = {'handle_list': [event.handle]}
         env = {name: os.environ[name] for name in ('SystemRoot', 'WINDIR', 'PATH') if name in os.environ}
@@ -573,7 +607,10 @@ def run_native():
             time.sleep(0.01)
         fence.join_observed()
         for capture in owner.captures:capture.join()
-        report = _validate_parent_report(_json_object(bytes(owner.captures[0].data)), expected['source_digest'])
+        observed = _json_object(bytes(owner.captures[0].data))
+        report = (_validate_denial_report(observed, expected['source_digest'], owner.manifest, source)
+                  if case == 'shared-write-map-denial'
+                  else _validate_parent_report(observed, expected['source_digest']))
         stage = 'dispatch-event-close'
         event.close_after_exit(fence)
         stage = 'input-cleanup'
@@ -594,7 +631,7 @@ def run_native():
     result = {'schema_version': 'windows-offload-source-session-qualification-v1',
               'status': 'observed' if passed else 'failed',
               'collection_status': 'evidence-collected-review-required',
-              'case': 'source-roundtrip', 'failure_stage': stage,
+              'case': case or 'source-roundtrip', 'failure_stage': stage,
               'source_bindings': hashes, 'parent_report': report,
               'qualification_fixture_sha256': globals().get('_QUALIFICATION_SOURCE_SHA256'),
               'original_parent_exit_observed': getattr(owner.fence, 'exit_observed', False),

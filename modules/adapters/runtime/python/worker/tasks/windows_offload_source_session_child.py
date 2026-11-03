@@ -36,6 +36,7 @@ class _SourceExecution(sources._SourceExecutionPort):
     """Concrete original Source producer in the one actual owned child actor."""
     def __init__(self, child, source):
         x._need(type(self) is _SourceExecution and type(child) is _OriginalSourceChild
+                and not hasattr(self, 'origin')
                 and _CHILD is child and child.source is source
                 and type(source) is sources._OriginalModelSources
                 and type(child.api) is x._SourceNative
@@ -47,14 +48,32 @@ class _SourceExecution(sources._SourceExecutionPort):
         self.busy = self.failed = self.check_used = False
         self.kind = self.plan = self.ticket = None
         self.bootstraps = []
-        self.original = (child, source, self.api, self.arena, self.thread, self.bootstraps)
+        identities = ()
+
+        def retain_identity(record, row, raw):
+            nonlocal identities
+            x._need(type(raw) is bytes and len(raw) == 24 and len(identities) < 16320
+                    and not any(a is record or b is row for a, b, _ in identities))
+            identities += ((record, row, raw),)
+
+        def original_identity(record, row):
+            found = [raw for a, b, raw in identities if a is record and b is row]
+            x._need(len(found) == 1)
+            return found[0]
+
+        # Immutable copies of known Native identity output survive mutation of
+        # the C buffers and of subsequently inspectable observation fields.
+        self.identity_custody = (retain_identity, original_identity)
+        self.original = (child, source, self.api, self.arena, self.thread,
+                         self.bootstraps, self.identity_custody)
         child.buffers.append(self)
 
     def assert_bound(self, owner):
         x._need(type(self) is _SourceExecution and self.origin is self
-                and type(self.original) is tuple and len(self.original) == 6
+                and type(self.original) is tuple and len(self.original) == 7
                 and all(a is b for a, b in zip(
-                    (self.child, self.source, self.api, self.arena, self.thread, self.bootstraps), self.original))
+                    (self.child, self.source, self.api, self.arena, self.thread,
+                     self.bootstraps, self.identity_custody), self.original))
                 and _CHILD is self.child and self.child.source is owner is self.source
                 and self.child.source_port is self and self.child.api is self.api
                 and type(owner) is sources._OriginalModelSources and owner._origin is owner
@@ -137,6 +156,13 @@ class _SourceExecution(sources._SourceExecutionPort):
             arena.acknowledge(row)
             if variant == 'system-library':
                 self.bootstraps.append(value)
+            elif (record.function is owner._api.k.GetFileInformationByHandleEx
+                  and len(record.args) == 4 and record.args[1] == 18
+                  and type(value) is int and value != 0):
+                x._need(record.args[3] == 24 and len(record.keep) == 2
+                        and type(record.keep[1]) is C.c_ubyte * 24
+                        and getattr(record.args[2], '_obj', None) is record.keep[1])
+                self.identity_custody[0](record, row, bytes(record.keep[1]))
             return value
         except BaseException:
             if record.returned and row.completion is None:
@@ -226,6 +252,110 @@ class _OriginalSourceChild(x._SourceFrameIo):
         sources._OriginalModelSources.__init__(self.source, self.inventory, _execution=self.source_port)
         x._need(self.source.prepare() is None)
 
+    def _source_call_return(self, record):
+        """Read an original physical completion; never invoke or renew it."""
+        source, port, arena = self.source, self.source_port, self.api.rows
+        x._need(type(record) is sources._SourceNativeCall)
+        record.assert_original(source)
+        arena.origin_bound()
+        found = [row for row in arena.order
+                 if type(row.binding) is tuple and len(row.binding) == 9
+                 and row.binding[8] is record]
+        x._need(len(found) == 1)
+        row = found[0]
+        arena.physical_member(row)
+        binding, completion, payload = arena.bindings[row.index], arena.completions[row.index], arena.payloads[row.index]
+        x._need(binding is row.binding and binding[0] is port.ticket.native.normal
+                and binding[1] == 'source-native' and binding[2] is record.function
+                and binding[3] is record.args and type(binding[4]) is tuple
+                and len(binding[4]) == 4 and binding[4][0] is source
+                and binding[4][1] is record and binding[4][3] is port
+                and binding[5] == get_ident() == self.thread
+                and binding[6:] == ('scalar', None, record)
+                and type(completion) is tuple and len(completion) == 4
+                and completion is row.completion and completion[0] is binding
+                and completion[1] is record.value and completion[2] == record.error
+                and completion[3] == self.thread and type(payload) is dict
+                and payload is row.payload and payload['function'] is binding[2]
+                and payload['args'] is binding[3] and payload['returned'] is True
+                and payload['acknowledged'] is True and payload['result'] is completion[1]
+                and payload['os_error'] == completion[2])
+        return row
+
+    def _original_source_denial(self):
+        """Attribute the one documented denial before marking this actor failed."""
+        self._live()
+        source, port = self.source, self.source_port
+        x._need(self.entry.case == x._MAP_DENIAL_CASE
+                and self.current is self.requests[0] and self.current['seq'] == 0
+                and type(source) is sources._OriginalModelSources
+                and type(port) is _SourceExecution and port.origin is port
+                and type(port.original) is tuple and len(port.original) == 7
+                and all(a is b for a, b in zip(
+                    (self, source, self.api, self.api.rows, port.thread,
+                     port.bootstraps, port.identity_custody), port.original))
+                and port.thread == self.thread == get_ident()
+                and port.failed is True and port.kind == 'prepare' and source._execution is port
+                and source._uncertain is True and source._busy is True
+                and source._retired is False and source._terminal is False)
+        custody = sources._SOURCE_CUSTODY.get(id(source))
+        x._need(type(custody) is sources._SourceCustody and custody.owner is source)
+        custody.check()
+        x._need(type(source._api) is sources._WindowsSourceApi
+                and source._reservation is port.ticket and source._plan is port.plan
+                and len(port.bootstraps) == 2
+                and port.bootstraps[0] is source._api.k and port.bootstraps[1] is source._api.n)
+        source._api._assert_original()
+        port.ticket.assert_original(port, source, port.plan)
+        port.ticket.native.assert_original(self.api.rows, source, port.plan)
+        operation = source._op
+        x._need(type(operation) is x.core._ExecutionCall
+                and operation is source._operations[-1] is custody.operation_origins[-1]
+                and operation.started is True and operation.finished is False
+                and operation.thread == self.thread)
+        record = source._pending
+        x._need(record is source._calls[-1] and record.started is True
+                and record.returned is True and record.acknowledged is False
+                and record.thread == self.thread and record.terminal is False
+                and type(record.value) is int and record.value == 0
+                and type(record.error) is int and record.error == 801
+                and record.expected_error == 997
+                and record.function is source._api.k.DeviceIoControl)
+        self._source_call_return(record)
+        guard = source._guards[-1]
+        x._need(type(guard) is sources._SourceGuard and guard is custody.guard_origins[-1])
+        guard.assert_original()
+        guard.handle.assert_original(source)
+        x._need(len(record.args) == 8 and record.args[0] == guard.handle.installed
+                and record.args[1] == 0x90240
+                and getattr(record.args[2], '_obj', None) is guard.incoming
+                and record.args[3] == C.sizeof(guard.incoming)
+                and getattr(record.args[4], '_obj', None) is guard.outgoing
+                and record.args[5] == C.sizeof(guard.outgoing) and record.args[6] is None
+                and getattr(record.args[7], '_obj', None) is guard.overlapped
+                and record.keep == (guard,))
+        identities = [call for call in source._calls[:-1]
+                      if call.function is source._api.k.GetFileInformationByHandleEx
+                      and len(call.args) == 4 and call.args[0] == guard.handle.installed
+                      and call.args[1] == 18]
+        x._need(identities)
+        identity = identities[-1]
+        x._need(identity.acknowledged is True and identity.returned is True
+                and type(identity.value) is int and identity.value != 0
+                and identity.args[3] == 24 and len(identity.keep) == 2
+                and identity.keep[0] is guard.handle
+                and type(identity.keep[1]) is C.c_ubyte * 24
+                and getattr(identity.args[2], '_obj', None) is identity.keep[1])
+        row = self._source_call_return(identity)
+        original = port.identity_custody[1](identity, row)
+        x._need(bytes(identity.keep[1]) == original and any(original[:8]) and any(original[8:]))
+        return x._denial_witness({
+            'schema_version': 'source-native-denial-v1', 'phase': 'prepare-source',
+            'control_code': 0x90240,
+            'requested_level': 1, 'native_return': 0, 'win32_error': 801,
+            'target_identity_sha256': x.hashlib.sha256(original).hexdigest(),
+            'source_call_count': len(source._calls)})
+
     def execute(self, message):
         self._live()
         x._need(self.current is None)
@@ -254,6 +384,18 @@ class _OriginalSourceChild(x._SourceFrameIo):
             self.state = next_state
             return {**message, 'body': {'state': next_state}}
         except BaseException:
+            if self.entry.case == x._MAP_DENIAL_CASE and sequence == 0:
+                # A failed prepare keeps its uncertain custody. Only emit
+                # original-call observations; the parent still must observe
+                # this exact child's exit before reporting the expected case.
+                try:
+                    denial = self._original_source_denial()
+                    reply = {**message, 'body': {'error': 'source-session-unavailable',
+                             'source_retired': False, 'denial': denial}}
+                    x._denial_message(reply, self.nonce, self.entry.digest, self.deadline)
+                    self._write_bytes(self.channels['response'], x._frame(reply))
+                except BaseException:
+                    pass  # No witness means a generic failed case, never a pass.
             self.failed = True
             raise
 

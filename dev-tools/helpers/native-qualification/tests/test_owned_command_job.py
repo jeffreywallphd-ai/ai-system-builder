@@ -33,7 +33,7 @@ class PortableNativePolicyTests(unittest.TestCase):
         return job._remember(job._Intent(phase,(),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
 
     @contextlib.contextmanager
-    def source_session_subject(self):
+    def source_session_subject(self,role='source-session'):
         with tempfile.TemporaryDirectory(prefix="source job role ") as directory:
             root=Path(directory).resolve();base=root/"base/python.exe"
             base.parent.mkdir();base.write_bytes(b"fixed Base image")
@@ -44,7 +44,7 @@ class PortableNativePolicyTests(unittest.TestCase):
                 path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"fixed_source = True\n")
                 hashes[name]=job._digest(path)
             run=root/".local-codex/native-source-session-host-v1/runs"/("a"*32)
-            folder=run/"source-session";(folder/"t").mkdir(parents=True)
+            folder=run/role;(folder/"t").mkdir(parents=True)
             windows=root/"Windows";(windows/"System32").mkdir(parents=True)
             with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)), \
                  patch.dict(os.environ,{"SystemRoot":str(windows),"WINDIR":str(windows),
@@ -78,6 +78,23 @@ class PortableNativePolicyTests(unittest.TestCase):
                     job._reviewed_source_session_intent(**case.args,**{selector:"untrusted"})
             self.assertNotIn("source-session",job._FIXTURES)
             with self.assertRaises(job.NativeFailure):job._fixture_intent("source-session",case.folder)
+            case.native.assert_not_called()
+
+    def test_distinct_mapped_denial_role_has_literal_command_and_same_original_limits(self):
+        with self.source_session_subject('source-shared-map-denial')as case:
+            intent=job._reviewed_source_map_denial_intent(**case.args)
+            self.assertEqual(intent.phase,'source-shared-map-denial')
+            self.assertEqual(intent.argv,(str(case.base),'-I','-S','-B',
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),'--native-shared-write-denial'))
+            self.assertEqual(intent.seconds,180)
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises(job.NativeFailure):job._reviewed_source_session_intent(**case.args)
+            with self.assertRaises(job.NativeFailure):job._source_session_intent('source-other',**case.args)
+            for selector in ('command','case','environment','seconds','job_bytes'):
+                with self.assertRaises(TypeError):job._reviewed_source_map_denial_intent(**case.args,**{selector:'other'})
+            (case.root/job._SOURCE_SESSION_FILES[0]).write_bytes(b'changed')
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
             case.native.assert_not_called()
 
     def test_source_role_requires_exact_source_and_runtime_witness_sets(self):

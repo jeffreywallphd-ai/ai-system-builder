@@ -16,7 +16,8 @@ class _Parser(argparse.ArgumentParser):
 
 
 def _native_environment():
-    if (__name__ != '__main__' or os.name != 'nt' or sys.argv[1:] != ['--native']
+    if (__name__ != '__main__' or os.name != 'nt'
+            or sys.argv[1:] not in (['--native'], ['--native-shared-write-denial'])
             or not sys.flags.isolated or not sys.flags.no_site
             or not sys.dont_write_bytecode or sys.prefix != sys.base_prefix):
         raise ValueError('Fixed standalone Source runtime required.')
@@ -55,7 +56,7 @@ def _load_fixture():
 def current_plan():
     return {'schema_version': SCHEMA, 'status': 'technical-check-pending',
             'action_owner': 'agent', 'user_action': 'No action needed.',
-            'cases': ['source-roundtrip'], 'maximum_seconds': 120,
+            'cases': ['source-roundtrip', 'shared-write-map-denial'], 'maximum_seconds': 120,
             'child_commit_ceiling_bytes': 512 * 1024**2,
             'ceiling_is_not_upfront_allocation_or_model_policy': True,
             'shared_rows_per_actor': 16384, 'terminal_rows_inside_total': 64,
@@ -78,8 +79,9 @@ def main(argv=None):
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--plan', action='store_true')
         group.add_argument('--native', action='store_true')
+        group.add_argument('--native-shared-write-denial', action='store_true')
         args = parser.parse_args(argv)
-        if args.native:
+        if args.native or args.native_shared_write_denial:
             _native_environment()
             return _load_fixture().run_native()
         print(json.dumps(current_plan(), sort_keys=True))

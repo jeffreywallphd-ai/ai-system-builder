@@ -114,6 +114,62 @@ class InputAndEvidenceTests(unittest.TestCase):
         with self.assertRaises(subject.SourceSessionFixtureError):
             subject._validate_parent_report({**value,'extra':'untrusted'},digest)
 
+    def denial_report(self):
+        from modules.adapters.runtime.python.worker.tasks import windows_offload_source_session as source
+        manifest=subject._synthetic_source_inputs(self.root)
+        denial={'schema_version':'source-native-denial-v1','phase':'prepare-source',
+                'control_code':0x90240,'requested_level':1,'native_return':0,'win32_error':801,
+                'target_identity_sha256':'a'*64,'source_call_count':75}
+        mapping={'schema_version':'source-shared-write-view-v1','target_identity_sha256':'a'*64,
+                 'content_sha256':manifest['model.safetensors']['sha256'],
+                 'size':manifest['model.safetensors']['bytes'],
+                 **dict.fromkeys(('writer_closed_before_child','view_held_through_child_exit',
+                                  'view_unmapped','section_and_ancestors_closed'),True)}
+        value={'schema_version':'owned-source-parent-denial-v1','status':'denied',
+               'source_digest':'b'*64,'native_calls':100,'terminal_calls':20,
+               'child_exit_code':9,'denial':denial,'mapping':mapping,
+               **dict.fromkeys(('child_exit_confirmed','job_active_zero','source_released_by_owned_exit',
+                                'original_handles_closed','timer_callbacks_retired'),True),
+               **dict.fromkeys(('source_retired_unused','model_started','borrower_started',
+                                'production_composed','parent_qualification_granted'),False)}
+        return source,manifest,value
+
+    def test_expected_denial_requires_all_retirement_and_exact_manifest_observations(self):
+        source,manifest,value=self.denial_report()
+        self.assertEqual(subject._validate_denial_report(value,'b'*64,manifest,source),value)
+        with self.assertRaises(subject.SourceSessionFixtureError):subject._validate_parent_report(value,'b'*64)
+        for key in value:
+            with self.subTest(key=key),self.assertRaises((subject.SourceSessionFixtureError,source.OffloadAdmissionError)):
+                subject._validate_denial_report({**value,key:None},'b'*64,manifest,source)
+        for key in value['mapping']:
+            wrong={**value,'mapping':{**value['mapping'],key:None}}
+            with self.subTest(mapping=key),self.assertRaises(subject.SourceSessionFixtureError):
+                subject._validate_denial_report(wrong,'b'*64,manifest,source)
+        for key in ('native_calls','terminal_calls','child_exit_code'):
+            with self.subTest(boolean=key),self.assertRaises(subject.SourceSessionFixtureError):
+                subject._validate_denial_report({**value,key:True},'b'*64,manifest,source)
+
+    def test_other_target_hash_size_or_generic_failure_is_not_expected_denial(self):
+        source,manifest,value=self.denial_report()
+        for key,replacement in (('target_identity_sha256','c'*64),('content_sha256','c'*64),
+                                ('size',True),('size',4097)):
+            with self.subTest(key=key),self.assertRaises(subject.SourceSessionFixtureError):
+                subject._validate_denial_report({**value,'mapping':{**value['mapping'],key:replacement}},
+                                                'b'*64,manifest,source)
+        for key,replacement in (('status','failed'),('child_exit_code',0),('source_retired_unused',True)):
+            with self.subTest(key=key),self.assertRaises(subject.SourceSessionFixtureError):
+                subject._validate_denial_report({**value,key:replacement},'b'*64,manifest,source)
+
+    def test_entry_selects_only_two_closed_native_cases(self):
+        flags=SimpleNamespace(isolated=1,no_site=1)
+        for argument,expected in (('--native',None),('--native-shared-write-denial','shared-write-map-denial')):
+            with patch.object(subject,'__name__','_standalone_source_session_qualification'), \
+                 patch.object(subject,'_NATIVE_ENTRY',subject._ENTRY_TOKEN), \
+                 patch.object(subject.sys,'flags',flags),patch.object(subject.sys,'dont_write_bytecode',True), \
+                 patch.object(subject.sys,'prefix',subject.sys.base_prefix), \
+                 patch.object(subject.sys,'argv',[str(subject.ENTRY),argument]):
+                self.assertEqual(subject._entry_environment(),expected)
+
     def test_stream_capture_retains_bounded_bytes_and_aborts_overflow_or_failure(self):
         abort=[];capture=subject._StreamCapture(io.BytesIO(b'fixed report'),lambda:abort.append(True))
         capture.start()

@@ -2405,3 +2405,33 @@ qualify all native denial/race paths, borrower or cache lifetime, protected shar
 journal accounting, model-worker crash/restart, actual offload resources,
 production composition or parent-roadmap completion. Unknown retained staging
 still consumes the full 12 GiB. The live-driver outer-timeout limitation remains.
+
+### Section-only write access and attributed Source refusal
+
+The closed Source diagnostic defines a distinct negative case for an already
+created shared writable memory view. Its original parent retains ordinary
+relative-open ancestors, opens only the new tiny synthetic weight file, validates
+identity/type/size, creates PAGE_READWRITE/FILE_MAP_WRITE, verifies actual view
+protection/span and hashes bounded bytes without writing. It acknowledges closing
+the original writer before child launch. It adds no process topology or Core
+worker capability. The whole graph fits the parent's existing normal/final rows
+before the mapper DLL loads; no separate pool, refund or deadline is introduced.
+
+Only the child's original prepare operation, physical DeviceIoControl completion,
+Read-oplock request, immediate error801 and independently retained target identity
+can emit the fixed denial observation. The parent matches that identity and still
+requires original child exit9/Jobactive0-total1. Immutable exit-output snapshots,
+the sealed resource graph and prebound known-return cells prevent mutable
+diagnostics from granting retirement or losing a partially returned resource.
+Unmap/section/ancestor close acknowledgements precede parent timer retirement.
+Unknown setup, writer-close, exit, map or teardown outcomes retain custody and
+fail the case; they do not retry or credit staging. Generic errors and unexpected
+successful admission cannot qualify the expected refusal.
+
+Focused fake-Native tests cover the actual Source producer, mapped setup and
+original exit/cleanup paths. The new physical case remains pending separate
+committed-source effect review, execution and outcome audit. Rollback withdraws
+only this diagnostic case; the unused-Source/v1 defaults and all guards remain.
+No accepted accuracy/OCR check is reopened. Protected shared accounting, borrower
+and cache lifetime, model-worker crash/restart, actual resources, production and
+parent qualification remain pending; unknown old staging keeps its full12GiB charge.

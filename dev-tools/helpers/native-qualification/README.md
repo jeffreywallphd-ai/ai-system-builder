@@ -266,3 +266,17 @@ report and original outer retirement. A printed path is data, not authority.
 Ordinary portable tests execute no Native role. The actual nested Source trial,
 model borrowers, staging/accounting, model-worker recovery, resources and parent
 qualification remain pending. Accepted model accuracy and OCR stay closed.
+
+The separate private issuer `_reviewed_source_map_denial_intent` admits only
+`--native-shared-write-denial` in a fresh `source-shared-map-denial` phase under
+the same fixed family. It uses the same reviewed twelve-source/two-runtime set,
+sanitized environment,180-second timeout,1GiB process/2GiB tree/32-member ceilings
+and strict original retirement. No public case, command or quota selector exists.
+The inner parent owns one shared writable view of a new tiny synthetic file,
+closes the writer before Source admission, then requires the attributed Read-oplock
+refusal and actual child exit before view/section cleanup. Collector validation
+matches its bounded hash/size to the original input manifest; it never trusts a
+generic failure as the expected denial. Default `--native` remains the original
+unused-Source case. Source stderr handling and the live-driver timeout limitation
+remain unchanged. Portable checks never execute either physical case; separate
+exact-source effect review and outcome review remain required.

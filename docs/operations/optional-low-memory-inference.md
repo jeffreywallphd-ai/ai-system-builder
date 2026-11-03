@@ -1436,3 +1436,23 @@ file accounting, model-worker shutdown and restart, and actual offload resource
 measurements. Low-memory mode and parent-roadmap qualification remain pending.
 No user action is needed. Accepted accuracy and OCR stay closed. The shared full
 system campaign remains deferred.
+
+## Test for a file already mapped for writing
+
+The agent is adding a focused Windows check. No user action is needed. The test
+uses one new, tiny synthetic weight file. It keeps a writable memory view open
+after it closes the file handle. It then checks that source admission refuses
+the file for the expected reason. A crash or another access error does not pass.
+
+The parent must match the child's file identity, observe that exact child exit
+and confirm zero active Job members. It must then unmap the view, close the
+section and ancestor handles, and retire the timer. The collected file hash and
+size must match the exact synthetic input manifest before input removal.
+
+The fixed entry is `--native-shared-write-denial`. Ordinary checks only test its
+code with fake Windows replies. Physical execution needs a separate review of
+the committed source and a new one-use attempt. It remains pending. The earlier
+unused-file pass and failed history remain unchanged. No old staging, model
+weights or accepted accuracy/OCR tests are used. All existing resource ceilings,
+security controls and production defaults remain in force. This check does not
+complete the shared-accounting, borrower, worker-recovery or resource work.

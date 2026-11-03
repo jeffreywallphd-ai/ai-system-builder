@@ -1008,3 +1008,28 @@ paths. The controlled Source roundtrip is not run by ordinary checks. Its actual
 Windows execution requires committed definitions and a separate exact-source
 effect review. Production offload, borrowers, protected shared accounting,
 owned model workers and actual offload resources remain pending.
+
+### Attributed writable-view refusal check
+
+The Source diagnostic also defines a separate `shared-write-map-denial` case.
+Its original parent opens one tiny synthetic weight file through held ordinary
+ancestors. It creates an unnamed shared writable section/view, verifies its
+protection and bounded bytes, then acknowledges closing the writer handle before
+child launch. The memory view stays open through the original child's exit.
+This separates mapped-write access from an ordinary open-writer sharing conflict.
+
+The child may report the expected refusal only from its original Read-oplock
+call, immediate error801, retained file identity and physical call completion.
+The parent matches that identity and independently requires exit9 and Job zero
+before unmapping, closing the section/ancestors and retiring its timer. Generic
+errors, successful admission, a message or a numeric exit flag cannot pass.
+The complete graph uses the existing1024 parent engine rows and61 final rows;
+the three escape rows, total16384, deadline and memory limits stay unchanged.
+Known outputs and the original cleanup graph survive observation corruption,
+while corruption still denies acknowledgement and replay.
+
+Focused tests use fake DLL replies, including the actual Source prepare/producer
+and mapper paths. They supply no Windows qualification. Only a separately
+reviewed committed-source attempt may run the fixed negative case. The default
+unused-Source sequence and legacy v1 wire remain unchanged. Accepted model
+accuracy/OCR stay closed; production and parent qualification remain pending.

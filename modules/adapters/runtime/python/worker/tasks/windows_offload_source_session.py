@@ -23,6 +23,7 @@ from . import windows_offload_source_ledger as ledger
 from .local_model_offload import OffloadAdmissionError
 
 _VERSION = 2
+_MAP_DENIAL_CASE = 'shared-write-map-denial'
 _OPERATIONS = {0: 'prepare-source', 1: 'check-source',
                2: 'retire-unused-source', 3: 'finish-source'}
 _STATES = {0: 'source-prepared', 1: 'source-checked',
@@ -36,6 +37,12 @@ _PARENT_ROLE, _CHILD_ROLE = object(), object()
 _PARENT = None
 _ENTRY_CONTEXT = None
 _NATIVE_OWNERS = {}
+_MAPPER_OWNERS = {}
+_MAPPER_RETURNS = {}
+_MAPPER_RESOURCES = {}
+_MAPPER_PREPARED = {}
+_MAPPER_CLOSED = {}
+_PARENT_RETIREMENTS = {}
 _SOURCE_NAMES = ('local_model_offload.py', 'offload_recovery.py', 'windows_offload_core.py',
                  'windows_offload_backend.py', 'windows_offload_source_ledger.py',
                  'windows_offload_native_session.py', 'windows_offload_execution.py',
@@ -69,7 +76,7 @@ def _qualification_root(value):
     return path
 
 
-def _source_bootstrap(folder, hashes, nonce, deadline, runtime, run_root, *, handles):
+def _source_bootstrap(folder, hashes, nonce, deadline, runtime, run_root, *, handles, case=None):
     """Fixed source-buffer closure. Caller data selects no module or function."""
     _need(type(folder) is type(Path()) and folder.is_absolute()
           and type(hashes) is dict and hashes.keys() == set(_SOURCE_NAMES)
@@ -81,11 +88,14 @@ def _source_bootstrap(folder, hashes, nonce, deadline, runtime, run_root, *, han
           and io._root(runtime[0]) == runtime[0]
           and type(runtime[1]) is str and re.fullmatch('[a-f0-9]{64}', runtime[1]))
     _qualification_root(run_root)
+    _need(case is None or type(case) is str and case == _MAP_DENIAL_CASE)
     _need(type(handles) is tuple and len(handles) in (1, 4)
           and len(handles) == len(set(handles))
           and all(type(n) is int and 0 < n < C.c_void_p(-1).value for n in handles))
     mode = 'windows_offload_source_session' if len(handles) == 1 else 'windows_offload_source_session_child'
     bootstrap = (nonce, hashes, deadline, runtime, run_root, handles)
+    if case is not None:
+        bootstrap += (case,)
     code = ('import hashlib,os,sys,types\n'
             'p=' + repr(str(folder)) + ';h=' + repr(hashes) + '\n'
             'pkg=types.ModuleType(' + repr(_PRIVATE_PACKAGE) + ');pkg.__path__=[p];sys.modules[pkg.__name__]=pkg\n'
@@ -106,8 +116,10 @@ class _OriginalSourceEntry:
     def __init__(self, role, bootstrap):
         _private_environment()
         _need(_ENTRY_CONTEXT is None and role in (_PARENT_ROLE, _CHILD_ROLE)
-              and type(bootstrap) is tuple and len(bootstrap) == 6)
-        nonce, hashes, deadline, runtime, run_root, handles = bootstrap
+              and type(bootstrap) is tuple and len(bootstrap) in (6, 7))
+        nonce, hashes, deadline, runtime, run_root, handles = bootstrap[:6]
+        case = bootstrap[6] if len(bootstrap) == 7 else None
+        _need(len(bootstrap) == 6 or type(case) is str and case == _MAP_DENIAL_CASE)
         self.__origin, self.role = self, role
         self.values, self.hashes, self.digest = _source_inputs()
         _need(type(hashes) is dict and hashes == self.hashes
@@ -117,6 +129,7 @@ class _OriginalSourceEntry:
               and io._root(runtime[0]) == runtime[0]
               and type(runtime[1]) is str and re.fullmatch('[a-f0-9]{64}', runtime[1]))
         self.nonce, self.deadline, self.runtime = nonce, deadline, runtime
+        self.case = case
         self.run_root = _qualification_root(run_root)
         _need(type(handles) is tuple and len(handles) == (1 if role is _PARENT_ROLE else 4)
               and len(handles) == len(set(handles))
@@ -138,15 +151,15 @@ class _OriginalSourceEntry:
 
         self.dispatch = (read_dispatch, mark_dispatch)
         self.original = (role, nonce, self.hashes, self.digest, deadline, runtime,
-                         self.run_root, handles, self.pid, self.hash_facts, self.dispatch)
+                         self.run_root, handles, self.pid, self.hash_facts, self.dispatch, self.case)
 
     def assert_original(self):
         _private_environment()
         _need(type(self) is _OriginalSourceEntry and self.__origin is self
-              and _ENTRY_CONTEXT is self and type(self.original) is tuple and len(self.original) == 11
+              and _ENTRY_CONTEXT is self and type(self.original) is tuple and len(self.original) == 12
               and all(a is b for a, b in zip(
                   (self.role, self.nonce, self.hashes, self.digest, self.deadline, self.runtime,
-                   self.run_root, self.handles, self.pid, self.hash_facts, self.dispatch), self.original))
+                   self.run_root, self.handles, self.pid, self.hash_facts, self.dispatch, self.case), self.original))
               and tuple(sorted(self.hashes.items())) == self.hash_facts
               and self.pid == os.getpid())
 
@@ -684,6 +697,40 @@ def _message(value, nonce, source, deadline, *, response=False):
     return value
 
 
+def _denial_witness(value):
+    """Validate diagnostic data only; this supplies no exit or cleanup proof."""
+    _need(type(value) is dict and value.keys() == {
+        'schema_version', 'phase', 'control_code',
+        'requested_level', 'native_return', 'win32_error',
+        'target_identity_sha256', 'source_call_count'})
+    for field, expected in (
+            ('schema_version', 'source-native-denial-v1'),
+            ('phase', 'prepare-source')):
+        _need(type(value[field]) is str and value[field] == expected)
+    for field, expected in (('control_code', 0x90240), ('requested_level', 1),
+                            ('native_return', 0), ('win32_error', 801)):
+        _need(type(value[field]) is int and value[field] == expected)
+    _need(type(value['target_identity_sha256']) is str
+          and re.fullmatch('[a-f0-9]{64}', value['target_identity_sha256']) is not None
+          and type(value['source_call_count']) is int
+          and 0 < value['source_call_count'] <= 16320)
+    return value
+
+
+def _denial_message(value, nonce, source, deadline):
+    """Separate qualification response; the old v2 parser stays unchanged."""
+    _need(type(value) is dict and type(value.get('body')) is dict)
+    body = value['body']
+    _need(body.keys() == {'error', 'source_retired', 'denial'}
+          and body['source_retired'] is False)
+    # Reuse every old header/error check. The parsed negative body remains data.
+    _message({**value, 'body': {'error': body['error'], 'source_retired': False}},
+             nonce, source, deadline, response=True)
+    _need(value['seq'] == 0)
+    _denial_witness(body['denial'])
+    return value
+
+
 def _edge(state, sequence):
     _need(type(state) is str and type(sequence) is int
           and (state, sequence) in {('new', 0), ('source-prepared', 1),
@@ -745,6 +792,376 @@ class _SourceFrameIo:
 
 
 
+class _MappedRegion(C.Structure):
+    # MEMORY_BASIC_INFORMATION64. Use fixed Windows widths, not c_ulong.
+    _fields_ = [('base', C.c_void_p), ('allocation_base', C.c_void_p),
+                ('allocation_protect', C.c_uint32), ('partition', C.c_uint16),
+                ('padding', C.c_uint16), ('region_size', C.c_size_t),
+                ('state', C.c_uint32), ('protect', C.c_uint32),
+                ('kind', C.c_uint32)]
+
+
+def _mapper_fit(api, directories):
+    """Pure graph bound against existing tickets, before mapper acquisition."""
+    _need(type(directories) is int and 1 <= directories <= 24)
+    api.rows.assert_reserved(api.engine_normal)
+    api.rows.assert_reserved(api.engine_final)
+    normal = sum(row.binding is None for row in api.engine_normal.rows)
+    final = sum(row.binding is None for row in api.engine_final.rows)
+    _need(normal >= 3 * directories + 16 + 256
+          and final >= directories + 3 + 16)
+
+
+class _MapperResource:
+    """An original output slot, retained even on a partial Native failure."""
+    def __init__(self, mapper, kind):
+        _need(type(self) is _MapperResource and not hasattr(self, 'origin')
+              and kind in ('ancestor', 'writer', 'section', 'view'))
+        self.origin, self.mapper, self.kind = self, mapper, kind
+        self.slot = C.c_void_p()
+        self.original = (mapper, kind, self.slot)
+        self.acquire = self.close = None
+        self.close_started = self.closed = False
+
+    def number(self):
+        mapper = self.mapper
+        mapper.live()
+        _need(type(self) is _MapperResource and self.origin is self
+              and self.original == (mapper, self.kind, self.slot)
+              and any(item is self for item in mapper.resources)
+              and not self.close_started and not self.closed)
+        call = self.acquire
+        mapper.acknowledged(call)
+        _need(call['output'] is self and type(call['known']) is tuple
+              and len(call['known']) == 4 and self.slot.value == call['known'][3]
+              and type(self.slot.value) is int
+              and 0 < self.slot.value < C.c_void_p(-1).value)
+        return self.slot.value
+
+
+class _SourceMappedDenial:
+    """One closed, section-only fixture in the original Source parent.
+
+    This is diagnostic composition, not an application source/worker port. Its
+    calls debit the existing parent table. Unknown partial outputs stay held.
+    """
+    def __init__(self, parent):
+        _need(type(self) is _SourceMappedDenial and not hasattr(self, 'origin')
+              and _original_actor(parent) is _PARENT_ROLE
+              and parent.entry.case == _MAP_DENIAL_CASE and parent.current.seq == 0
+              and parent.mapper is self and id(parent) not in _MAPPER_OWNERS)
+        self.origin, self.parent, self.api = self, parent, parent.api
+        self.resources, self.buffers, self.calls = [], [], []
+        self.functions = self.dll = self.dll_facts = None
+        self.prepared = self.retirement_started = self.retired = False
+        self.identity = self.content = self.size = None
+        # Independent originals retain call/output custody before dispatch.
+        originals = []
+        self.original = (parent, self.api, self.resources, self.buffers, self.calls, originals)
+        _MAPPER_OWNERS[id(parent)] = (parent, self, self.original, None)
+        _MAPPER_RESOURCES[id(self)] = ()
+        self.live()
+        path = PureWindowsPath(str(parent.entry.run_root / 'inputs'))
+        _need(re.fullmatch(r'[A-Za-z]:\\', path.anchor) is not None)
+        self.parts = path.parts
+        for name in self.parts[1:]:core._name(name)
+        _mapper_fit(self.api, len(self.parts))
+        self.dll = self.invoke(C.WinDLL, ('ntdll.dll',), (),
+                               variant='system-library', library='ntdll.dll')
+        self.dll_facts = (self.dll, self.dll._name, self.dll._handle)
+        self._configure()
+        self._prepare()
+
+    def live(self):
+        _need(type(self) is _SourceMappedDenial and self.origin is self
+              and type(_MAPPER_OWNERS.get(id(self.parent))) is tuple
+              and len(_MAPPER_OWNERS[id(self.parent)]) == 4
+              and all(a is b for a, b in zip(_MAPPER_OWNERS[id(self.parent)][:3],
+                                              (self.parent, self, self.original)))
+              and self.functions is _MAPPER_OWNERS[id(self.parent)][3]
+              and self.parent.mapper is self and type(self.original) is tuple and len(self.original) == 6
+              and all(a is b for a, b in zip((self.parent, self.api, self.resources,
+                                             self.buffers, self.calls), self.original[:5]))
+              and get_ident() == self.parent.thread and not self.retired)
+        originals = self.original[5]
+        _need(len(self.calls) == len(originals)
+              and all(call is facts[0] for call, facts in zip(self.calls, originals)))
+        resources = _MAPPER_RESOURCES.get(id(self))
+        _need(type(resources) is tuple and len(resources) == len(self.resources)
+              and all(actual is item and item.original is facts
+                      and item.slot is facts[2] and item.kind is facts[1]
+                      for actual, (item, facts) in zip(self.resources, resources)))
+        if self.prepared:
+            _need(self.prepared_facts is _MAPPER_PREPARED.get(id(self))
+                  and (self.parts, self.size, self.identity, self.content) == self.prepared_facts[:4])
+        self.api.live()
+        _need(self.api is self.parent.api and self.api.role is _PARENT_ROLE
+              and self.parent.current is self.parent.requests[0]
+              and self.parent.entry.case == _MAP_DENIAL_CASE)
+        if self.dll_facts is not None:
+            _need(self.dll is self.dll_facts[0] and self.dll._name == self.dll_facts[1]
+                  and self.dll._handle == self.dll_facts[2])
+        if self.functions is not None:
+            for dll, name, function, args, result in self.functions:
+                _need(getattr(dll, name) is function and tuple(function.argtypes) == args
+                      and function.restype is result)
+
+    def _configure(self):
+        ptr, u32, i32 = C.c_void_p, C.c_uint32, C.c_int32
+        specs = (
+            (self.dll, 'NtCreateFile', (C.POINTER(ptr), u32, ptr, ptr, ptr,
+                                       u32, u32, u32, u32, ptr, u32), i32),
+            (self.api.k, 'GetFileInformationByHandleEx', (ptr, i32, ptr, u32), i32),
+            (self.api.k, 'CreateFileMappingW', (ptr, ptr, u32, u32, u32, C.c_wchar_p), ptr),
+            (self.api.k, 'MapViewOfFile', (ptr, u32, u32, u32, C.c_size_t), ptr),
+            (self.api.k, 'VirtualQuery', (ptr, ptr, C.c_size_t), C.c_size_t),
+            (self.api.k, 'UnmapViewOfFile', (ptr,), i32),
+            (self.api.k, 'CloseHandle', (ptr,), i32),
+        )
+        values = []
+        for dll, name, args, result in specs:
+            function = getattr(dll, name)
+            function.argtypes, function.restype = list(args), result
+            values.append((dll, name, function, args, result))
+        self.functions = tuple(values)
+        _need(_MAPPER_OWNERS[id(self.parent)][3] is None)
+        _MAPPER_OWNERS[id(self.parent)] = (self.parent, self, self.original, self.functions)
+        # Freeze this table independently of its inspectable field.
+        self.function_origin = self.functions
+
+    def invoke(self, function, args, keep, *, output=None, terminal=False,
+               variant='scalar', library=None):
+        self.live()
+        _need(type(args) is tuple and type(keep) is tuple and type(terminal) is bool)
+        if variant == 'system-library':
+            _need(self.dll is None and self.functions is None and not self.calls
+                  and function is C.WinDLL and args == ('ntdll.dll',) and not terminal)
+        else:
+            _need(variant == 'scalar' and library is None
+                  and self.functions is self.function_origin
+                  and any(function is row[2] for row in self.functions))
+        _need(output is None or type(output) is _MapperResource
+              and output.mapper is self and output.acquire is None
+              and any(item is output for item in self.resources))
+        known_return = None
+        def retain_known(value):
+            nonlocal known_return
+            _need(known_return is None)
+            known_return = value
+        def read_known():return known_return
+        custody = (retain_known, read_known)
+        output_slot = None if output is None else output.original[2]
+        is_indirect = output_slot is not None and function is self.dll.NtCreateFile
+        call = {'function': function, 'args': args, 'keep': keep, 'output': output,
+                'terminal': terminal, 'row': None, 'known': None}
+        facts = (call, function, args, keep, output, terminal)
+        _MAPPER_RETURNS[id(call)] = (call, self, custody, output_slot)
+        self.original[5].append(facts)
+        self.calls.append(call)
+        if output is not None:output.acquire = call
+        arena = self.api.rows
+        row = arena.begin(self.api.engine_final if terminal else self.api.engine_normal,
+                          'source-mapper-native', function, args, (self.parent, self, call, keep, custody),
+                          terminal=terminal, variant=variant, library=library)
+        call['row'] = row
+        try:
+            if variant == 'system-library':
+                value = function(*args, use_last_error=True, winmode=0x800)
+            else:value = function(*args)
+            error = C.get_last_error() & 0xffffffff
+            indirect = output_slot.value if is_indirect else value
+            # Known return/output remains in independent originals before validation/ACK.
+            known = (value, error, get_ident(), indirect)
+            retain_known(known)
+            # The prebound closure is also held in the physical row and global
+            # original registry. Observation-list drift cannot lose the return.
+            if output_slot is not None and not is_indirect:
+                output_slot.value = value
+            arena.returned(row, value, error)
+            _need(self.original[5] and self.original[5][-1] is facts)
+            self.original[5][-1] = facts + (row, known)
+            call['known'] = known
+            self._call_original(call)
+            _need(variant == 'system-library' or type(value) is int
+                  and (value == 0 if function is self.dll.NtCreateFile else value != 0))
+            arena.acknowledge(row)
+            return value
+        except BaseException:
+            arena.fenced = self.api.uncertain = True
+            raise
+
+    def _call_original(self, call):
+        self.live()
+        originals = [v for v in self.original[5] if v[0] is call]
+        _need(len(originals) == 1 and len(originals[0]) == 8)
+        _, function, args, keep, output, terminal, row, known = originals[0]
+        _need(any(item is call for item in self.calls)
+              and call.keys() == {'function', 'args', 'keep', 'output', 'terminal', 'row', 'known'}
+              and all(call[key] is value for key, value in
+                      (('function', function), ('args', args), ('keep', keep), ('output', output),
+                       ('terminal', terminal), ('row', row), ('known', known))))
+        self.api.rows.member(row)
+        binding = row.binding
+        completion = self.api.rows.completions[row.index]
+        retained = _MAPPER_RETURNS.get(id(call))
+        _need(type(retained) is tuple and len(retained) == 4
+              and retained[0] is call and retained[1] is self
+              and retained[2][1]() is known)
+        _need(binding is self.api.rows.bindings[row.index]
+              and binding[0] is (self.api.engine_final if terminal else self.api.engine_normal)
+              and binding[1] == 'source-mapper-native' and binding[2] is function
+              and binding[3] is args and binding[4] == (self.parent, self, call, keep, retained[2])
+              and binding[5] == known[2] == get_ident()
+              and completion is row.completion and type(completion) is tuple
+              and completion[0] is binding and completion[1] is known[0]
+              and completion[2:] == (known[1], known[2]))
+        return row
+
+    def acknowledged(self, call):
+        row = self._call_original(call)
+        _need(row.payload is self.api.rows.payloads[row.index]
+              and row.payload['acknowledged'] is True
+              and row.payload['result'] is call['known'][0]
+              and row.payload['os_error'] == call['known'][1])
+
+    def _new(self, kind):
+        self.live()
+        resource = _MapperResource(self, kind)
+        self.resources.append(resource)
+        _MAPPER_RESOURCES[id(self)] += ((resource, resource.original),)
+        return resource
+
+    def _open(self, parent, name, directory):
+        self.live()
+        text = C.create_unicode_buffer(name)
+        string = core._Unicode(len(name.encode('utf-16-le')), C.sizeof(text), C.cast(text, C.c_void_p))
+        attrs = core._Attributes(C.sizeof(core._Attributes),
+                                 None if parent is None else parent.number(),
+                                 C.pointer(string), 0x40, None, None)
+        status = core._Io()
+        handle = self._new('ancestor' if directory else 'writer')
+        keep = (handle, text, string, attrs, status, parent)
+        self.buffers.append(keep)
+        self.invoke(self.dll.NtCreateFile,
+                    (C.byref(handle.slot), 0x100081 if directory else 0x100083,
+                     C.byref(attrs), C.byref(status), None, 0x80, 1, 1,
+                     0x200000 | (1 if directory else 0x40), None, 0), keep, output=handle)
+        _need(status.status in (None, 0) and status.information == 1)
+        tags = (C.c_uint32 * 2)()
+        self._information(handle, 9, tags)
+        _need(bool(tags[0] & 0x10) is directory
+              and not tags[0] & (0x400 | 0x200 | 0x800 | 0x4000 | 0x1000) and tags[1] == 0)
+        return handle
+
+    def _information(self, handle, kind, buffer):
+        self.buffers.append(buffer)
+        self.invoke(self.api.k.GetFileInformationByHandleEx,
+                    (handle.number(), kind, C.byref(buffer), C.sizeof(buffer)), (handle, buffer))
+
+    def _identity(self, handle):
+        buffer = (C.c_ubyte * 24)()
+        self._information(handle, 18, buffer)
+        raw = bytes(buffer)
+        _need(any(raw[:8]) and any(raw[8:]))
+        return raw
+
+    def _close(self, resource):
+        number = resource.number()
+        resource.close_started = True
+        function = self.api.k.UnmapViewOfFile if resource.kind == 'view' else self.api.k.CloseHandle
+        self.invoke(function, (number,), (resource,), terminal=True)
+        resource.close = self.calls[-1]
+        self.acknowledged(resource.close)
+        _need(id(resource) not in _MAPPER_CLOSED)
+        _MAPPER_CLOSED[id(resource)] = (self, resource, resource.close)
+        resource.closed = True
+
+    def _prepare(self):
+        ancestors = []
+        for index, part in enumerate(self.parts):
+            handle = self._open(None if not ancestors else ancestors[-1],
+                                '\\??\\' + part if index == 0 else part, True)
+            ancestors.append(handle)
+            self._identity(handle)
+        writer = self._open(ancestors[-1], 'model.safetensors', False)
+        identity = self._identity(writer)
+        standard = core._Standard()
+        self._information(writer, 1, standard)
+        _need(0 < standard.size <= 4096 and 0 <= standard.allocated <= 65536
+              and standard.links == 1 and not standard.directory and not standard.delete_pending)
+        self.size = standard.size
+        section = self._new('section')
+        self.invoke(self.api.k.CreateFileMappingW, (writer.number(), None, 4, 0, 0, None),
+                    (writer,), output=section)
+        view = self._new('view')
+        self.invoke(self.api.k.MapViewOfFile, (section.number(), 2, 0, 0, self.size),
+                    (section,), output=view)
+        region = _MappedRegion()
+        self.buffers.append(region)
+        address = view.number()
+        result = self.invoke(self.api.k.VirtualQuery,
+                             (address, C.byref(region), C.sizeof(region)), (view, section, region))
+        _need(C.sizeof(region) == 48 and result == 48
+              and region.base == region.allocation_base == address
+              and region.allocation_protect == region.protect == 4
+              and region.state == 0x1000 and region.kind == 0x40000
+              and self.size <= region.region_size <= 65536)
+        _need(view.number() == address and section.number() > 0 and writer.number() > 0)
+        raw = C.string_at(address, self.size)
+        self.content = hashlib.sha256(raw).hexdigest()
+        self.identity = hashlib.sha256(identity).hexdigest()
+        self._close(writer)  # Must ACK before the Source child is launched.
+        self.prepared_facts = (self.parts, self.size, self.identity, self.content,
+                               tuple(ancestors), writer, section, view)
+        _MAPPER_PREPARED[id(self)] = self.prepared_facts
+        self.prepared = True
+
+    def retire_after_child(self):
+        self.live()
+        _need(self.prepared and not self.retirement_started)
+        self.parent._assert_child_retired_for_mapper(self)
+        _need(self.parent.denial['target_identity_sha256'] == self.identity)
+        self.retirement_started = True
+        ancestors, writer, section, view = self.prepared_facts[4:]
+        _need(writer.closed and writer.close_started)
+        self.acknowledged(writer.close)
+        for resource in (view, section, *reversed(ancestors)):
+            self._close(resource)
+        for resource in self.resources:
+            _need(resource.closed and resource.close_started)
+            _need(_MAPPER_CLOSED.get(id(resource)) == (self, resource, resource.close))
+            self.acknowledged(resource.close)
+        self.retired = True
+
+    def report(self):
+        binding = _MAPPER_OWNERS.get(id(self.parent))
+        _need(type(binding) is tuple and len(binding) == 4
+              and all(a is b for a, b in zip(binding[:3], (self.parent, self, self.original)))
+              and self.parent is self.original[0] and self.api is self.original[1]
+              and self.parent.mapper is self and self.api is self.parent.api
+              and get_ident() == self.parent.thread)
+        self.parent.origin()
+        self.api.origin()
+        proof = _PARENT_RETIREMENTS.get(id(self.parent))
+        _need(type(proof) is tuple and len(proof) == 8
+              and proof[:4] == (self.parent, self, self.parent.process, self.parent.job)
+              and proof[5:] == (9, 0, 1))
+        _need(self.retired and self.prepared and self.retirement_started
+              and self.prepared_facts is _MAPPER_PREPARED.get(id(self))
+              and (self.parts, self.size, self.identity, self.content) == self.prepared_facts[:4])
+        graph = _MAPPER_RESOURCES.get(id(self))
+        _need(type(graph) is tuple and len(graph) == len(self.resources)
+              and all(actual is item and item.original is facts and item.slot is facts[2]
+                      and item.closed is True and item.close_started is True
+                      and _MAPPER_CLOSED.get(id(item)) == (self, item, item.close)
+                      for actual, (item, facts) in zip(self.resources, graph)))
+        return {'schema_version': 'source-shared-write-view-v1',
+                'target_identity_sha256': self.identity, 'content_sha256': self.content,
+                'size': self.size, 'writer_closed_before_child': True,
+                'view_held_through_child_exit': True, 'view_unmapped': True,
+                'section_and_ancestors_closed': True}
+
+
 class _SourceRequest:
     def __init__(self, owner, sequence):
         _need(type(self) is _SourceRequest and not hasattr(self, 'origin'))
@@ -788,7 +1205,8 @@ class _SourceSessionContract:
     def bootstrap(folder, hashes, nonce, handles, deadline, runtime):
         _PARENT.origin()
         return _source_bootstrap(folder, hashes, nonce, deadline, runtime,
-                                 str(_PARENT.entry.run_root), handles=handles)
+                                 str(_PARENT.entry.run_root), handles=handles,
+                                 case=_PARENT.entry.case)
 
 
 class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
@@ -815,6 +1233,8 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
         self.process = self.primary_thread = self.job = None
         self.source_values = self.source_hashes = self.source_digest = None
         self.runtime = self.runtime_hash = None
+        self.denial = self.observed_child_exit = None
+        self.mapper = None
         self.original = (entry, self.nonce, self.deadline, self.thread, self.buffers,
                          self.calls, self.handles, self.requests, self.handle_bindings,
                          self.channels, self.process_info)
@@ -882,25 +1302,74 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
         self._write_bytes(self.channels['request-write'], _frame(message))
         size = struct.unpack('<I', self._read_bytes(self.channels['response-read'], 4))[0]
         _need(0 < size <= _FRAME_BYTES)
-        reply = _message(_decode(self._read_bytes(self.channels['response-read'], size)),
-                         self.nonce, self.source_digest, self.deadline, response=True)
+        raw = _decode(self._read_bytes(self.channels['response-read'], size))
+        if self.entry.case == _MAP_DENIAL_CASE:
+            reply = _denial_message(raw, self.nonce, self.source_digest, self.deadline)
+        else:
+            reply = _message(raw, self.nonce, self.source_digest, self.deadline, response=True)
         _need(all(reply[name] == message[name] for name in _FIELDS - {'body'}))
-        _need(reply['body'] == {'state': _STATES[request.seq]})
+        if self.entry.case == _MAP_DENIAL_CASE:
+            _need(request.seq == 0 and self.denial is None)
+            self.denial = reply['body']['denial']
+        else:
+            _need(reply['body'] == {'state': _STATES[request.seq]})
 
-    def _retire_child(self):
+    def _retire_child(self, *, expected_exit=0):
+        _need(type(expected_exit) is int and expected_exit in (0, 9))
+        if expected_exit == 9:
+            _need(self.entry.case == _MAP_DENIAL_CASE and self.current.seq == 0)
+            _denial_witness(self.denial)
         api = self.api
         _need(api.wait((self.process,), self.deadline) == 0)
         code, accounting = C.c_uint32(259), native._Accounting()
         accounting.active = accounting.total = 0xffffffff
         self.buffers.extend((code, accounting))
         api.call(api.k.GetExitCodeProcess, self.process.value, C.byref(code), keep=(self.process, code))
+        exit_snapshot, exit_row = code.value, api.rows.order[-1]
         api.call(api.k.QueryInformationJobObject, self.job.value, 1, C.byref(accounting),
                  C.sizeof(accounting), None, keep=(self.job, accounting))
-        _need(code.value == 0 and accounting.active == 0 and accounting.total == 1)
+        job_snapshot = (accounting.active, accounting.total)
+        _need(code.value == exit_snapshot == expected_exit and job_snapshot == (0, 1))
+        if expected_exit == 9:
+            _need(id(self) not in _PARENT_RETIREMENTS)
+            rows = api.rows.order[-3:]
+            _need(len(rows) == 3)
+            for row in rows:
+                api.rows.member(row)
+                record = row.binding[4][1]
+                _need(type(record) is _EngineCall)
+                record.assert_original(api)
+                _need(row.payload['acknowledged'] is True
+                      and row.completion is api.rows.completions[row.index])
+            _need(rows[0].binding[2] is api.k.WaitForMultipleObjects
+                  and rows[0].completion[1] == 0
+                  and rows[0].binding[4][2][0] == (self.process,)
+                  and rows[1].binding[2] is api.k.GetExitCodeProcess
+                  and rows[1] is exit_row
+                  and rows[1].binding[4][2] == (self.process, code)
+                  and rows[2].binding[2] is api.k.QueryInformationJobObject
+                  and rows[2].binding[4][2] == (self.job, accounting))
+            _PARENT_RETIREMENTS[id(self)] = (self, self.mapper, self.process, self.job,
+                                            rows, exit_snapshot, *job_snapshot)
+        self.observed_child_exit = code.value
         for handle in (self.process, self.primary_thread, self.job, *self.channels.values()):
             if not handle.closed:
                 api.close(handle)
             handle.assert_closed(api)
+
+    def _assert_child_retired_for_mapper(self, mapper):
+        self._live(self.current)
+        proof = _PARENT_RETIREMENTS.get(id(self))
+        _need(type(proof) is tuple and len(proof) == 8
+              and proof[:4] == (self, mapper, self.process, self.job)
+              and self.mapper is mapper and self.finishing and proof[5:] == (9, 0, 1))
+        for row in proof[4]:
+            self.api.rows.member(row)
+            row.binding[4][1].assert_original(self.api)
+            _need(row.completion is self.api.rows.completions[row.index]
+                  and row.payload['acknowledged'] is True)
+        for handle in (self.process, self.primary_thread, self.job, *self.channels.values()):
+            handle.assert_closed(self.api)
 
     def _call(self, sequence):
         self.origin()
@@ -916,8 +1385,28 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
                 _need(self.api is None)
                 _SourceNative(self)
                 self._close_outer_dispatch()
+                if self.entry.case == _MAP_DENIAL_CASE:
+                    _need(self.mapper is None)
+                    self.mapper = object.__new__(_SourceMappedDenial)
+                    self.buffers.append(self.mapper)
+                    _SourceMappedDenial.__init__(self.mapper, self)
                 self._launch(request)
             self._exchange_source(request)
+            if self.entry.case == _MAP_DENIAL_CASE:
+                # A diagnostic negative response never proves retirement. Wait
+                # on our original child and Job before closing the owned graph.
+                _need(sequence == 0)
+                self.finishing = True
+                self._retire_child(expected_exit=9)
+                self.mapper.retire_after_child()
+                self.api.timer.retire()
+                for handle in self.handles:
+                    handle.assert_closed(self.api)
+                self.retired = True
+                self._live(request)
+                self.state = 'source-denied'
+                self.current = None
+                return None
             if sequence == 3:
                 self.finishing = True
                 self._retire_child()
@@ -968,6 +1457,24 @@ def _entry():
     try:
         _publish_ready(entry.run_root, raw)
         _PARENT.prepare()
+        if entry.case == _MAP_DENIAL_CASE:
+            _need(_PARENT.retired and _PARENT.state == 'source-denied'
+                  and _PARENT.observed_child_exit == 9)
+            _denial_witness(_PARENT.denial)
+            report = {'schema_version': 'owned-source-parent-denial-v1', 'status': 'denied',
+                      'source_digest': entry.digest, 'denial': _PARENT.denial,
+                      'mapping': _PARENT.mapper.report(),
+                      'native_calls': len(_PARENT.calls),
+                      'terminal_calls': sum(row.terminal for row in _PARENT.api.rows.order),
+                      'child_exit_code': _PARENT.observed_child_exit,
+                      'child_exit_confirmed': True, 'job_active_zero': True,
+                      'source_released_by_owned_exit': True, 'source_retired_unused': False,
+                      'original_handles_closed': True, 'timer_callbacks_retired': True,
+                      'model_started': False, 'borrower_started': False,
+                      'production_composed': False, 'parent_qualification_granted': False}
+            output = json.dumps(report, sort_keys=True, separators=(',', ':')).encode() + b'\n'
+            _need(len(output) <= 4096 and os.write(1, output) == len(output))
+            raise SystemExit(0)
         _PARENT.check()
         _PARENT.retire_unused()
         _PARENT.finish()

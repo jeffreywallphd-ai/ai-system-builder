@@ -20,7 +20,7 @@ class ChildJourneyTests(unittest.TestCase):
     """Actual child admission and sequencing; Native calls are fixed fakes."""
     def setUp(self):
         entry=object.__new__(source._OriginalSourceEntry)
-        entry.role=source._CHILD_ROLE;entry.nonce='a'*32;entry.digest='b'*64
+        entry.role=source._CHILD_ROLE;entry.nonce='a'*32;entry.digest='b'*64;entry.case=None
         entry.deadline=time.monotonic_ns()+120*10**9;entry.run_root=Path('C:/synthetic/source-session')
         entry.handles=(101,102,103,104)
         child=object.__new__(child_module._OriginalSourceChild);self.events=[];outer=self
@@ -334,6 +334,92 @@ class SourcePortReservationTests(unittest.TestCase):
         with self.assertRaises(OffloadAdmissionError):self.port.assert_bound(self.source)
         self.assertIs(self.port.ticket,ticket)
         self.assertTrue(all(row.reservation is ticket.native.normal for row in ticket.native.normal.rows))
+
+    def test_port_cannot_reinitialize_its_original_identity_custody(self):
+        ticket=self.reserve();original=self.port.original;custody=self.port.identity_custody
+        with self.assertRaises(OffloadAdmissionError):
+            child_module._SourceExecution.__init__(self.port,self.child,self.source)
+        self.assertIs(self.port.original,original);self.assertIs(self.port.identity_custody,custody)
+        self.assertIs(self.port.ticket,ticket);self.assertEqual(self.effects,[])
+
+
+class OriginalSourceDenialTests(unittest.TestCase):
+    """Actual Source prepare and producer with memory-only Windows replies."""
+    def setUp(self):
+        SourcePortReservationTests.setUp(self)
+        from modules.adapters.runtime.python.worker.tests.test_windows_offload_sources import FakeSourceNative
+        self.native=FakeSourceNative();native=self.native
+        self.last_error=0
+        class Dll:
+            def __init__(self,name,**kwargs):self._name=name;self._handle=1 if name=='kernel32.dll'else 2
+            def __getattr__(self,name):return native.functions[name]
+        def set_error(value):self.last_error=value
+        for scope in (patch.object(C,'WinDLL',Dll,create=True),
+                      patch.object(C,'set_last_error',side_effect=set_error,create=True),
+                      patch.object(C,'get_last_error',side_effect=lambda:self.last_error,create=True)):
+            scope.start();self.addCleanup(scope.stop)
+        self.child.entry=SimpleNamespace(case=source._MAP_DENIAL_CASE)
+        self.child.requests=[self.child.current]
+        sources._OriginalModelSources.__init__(self.source,self.native.value(),_execution=self.port)
+        def fault(name,args):
+            if name=='DeviceIoControl':
+                leaf=native.handles[args[0]][0]
+                native.native_error=801 if leaf=='model.safetensors'else 997
+        native.fault=fault
+        self.addCleanup(lambda:sources._SOURCE_CUSTODY.pop(id(self.source),None))
+        self.addCleanup(lambda:sources._SOURCE_RETIREMENTS.pop(id(self.source),None))
+
+    def denied(self):
+        with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertTrue(self.port.failed);self.assertTrue(self.source._uncertain)
+        self.assertFalse(self.api.uncertain)
+        return self.child._original_source_denial()
+
+    def test_witness_is_from_actual_prepared_guard_and_original_physical_completion(self):
+        witness=self.denied()
+        self.assertEqual(witness['win32_error'],801)
+        self.assertEqual(witness['source_call_count'],len(self.source._calls))
+        target=self.source._guards[-1].handle.installed
+        raw=(1).to_bytes(8,'little')+target.to_bytes(16,'little')
+        self.assertEqual(witness['target_identity_sha256'],source.hashlib.sha256(raw).hexdigest())
+        self.assertFalse(self.source._pending.acknowledged)
+        row=self.child._source_call_return(self.source._pending)
+        self.assertEqual(row.completion[1:3],(0,801));self.assertTrue(row.payload['acknowledged'])
+        effects=len(self.native.calls)
+        self.assertEqual(self.child._original_source_denial(),witness)
+        self.assertEqual(len(self.native.calls),effects)
+
+    def test_wrong_error_or_generic_source_failure_has_no_witness(self):
+        self.native.fault=lambda name,args:setattr(self.native,'native_error',32)if name=='DeviceIoControl'else None
+        with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+
+    def test_mutated_identity_buffer_cannot_rewrite_the_original_return(self):
+        self.denied();handle=self.source._guards[-1].handle.installed
+        record=next(record for record in reversed(self.source._calls)
+                    if len(record.args)==4 and record.args[:2]==(handle,18))
+        row=self.child._source_call_return(record)
+        original=self.port.identity_custody[1](record,row)
+        record.keep[1][0]^=1
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+        self.assertEqual(self.port.identity_custody[1](record,row),original)
+
+    def test_return_observation_or_original_operation_drift_is_not_denial_proof(self):
+        self.denied();record=self.source._pending;row=self.child._source_call_return(record)
+        row.payload['os_error']=32
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+        row.payload['os_error']=801;self.source._op.finished=True
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+
+    def test_wrong_case_rebound_function_or_guard_level_does_not_qualify(self):
+        self.denied();self.child.entry.case=None
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+        self.child.entry.case=source._MAP_DENIAL_CASE
+        guard=self.source._guards[-1];guard.incoming.level=7
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+        guard.incoming.level=1
+        self.source._api.k.DeviceIoControl=lambda *args:0
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
 
 
 if __name__=='__main__':unittest.main()
