@@ -1176,3 +1176,26 @@ Reports and hashes remain. This housekeeping supplied no production disk credit.
 The tested code is not connected to model loading yet. Folder protection,
 mapping, safe file discovery, shared accounting, model-worker recovery, guarded
 restart, optional-mode UI checks and actual offload resources remain agent work.
+
+## Reviewed Windows reader and private-copy results
+
+No user action is needed. All 70 focused source tests passed. A separately
+reviewed Windows run passed all four source and reader cases in 17.4 seconds.
+See the [versioned reader results](windows-offload-source-reader-qualification.json).
+
+The reader opened the same file with read access. Write access was refused.
+The private mapped copy changed while the original file bytes stayed unchanged.
+The original view, section and reader closed in order. The Source file guards
+and handles then completed their separate cleanup checks.
+
+The earlier Windows trial remains failed. It exposed a timestamp-comparison
+bug, which is fixed in the qualified source. Only the 24 generated inputs from
+these two completed trials were removed, reclaiming about 48 MiB. Reports, logs,
+file hashes and both trial histories remain. No model cache or existing
+temporary model files were changed, and no staging capacity was credited.
+
+The agent still needs to connect safe file access to actual model loading,
+protect model folders and optional-file discovery, finish shared temporary-file
+accounting and restart, and confirm worker shutdown and real offload resources.
+These results do not complete the parent roadmap. Accepted model accuracy and
+OCR stay closed. Full-system testing follows the remaining feature work.

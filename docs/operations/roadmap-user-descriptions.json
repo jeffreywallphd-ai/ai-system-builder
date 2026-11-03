@@ -14331,6 +14331,43 @@
           "Existing limits and the full 12 GiB charge for unknown temporary files stay in force."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "497a7c8568bb7e68dfc2a34e3a620a432f63aec86b2eb4a1d23996a6ea23c3dc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent completed the Windows reader and private-copy checks.",
+          "All 70 focused source tests passed.",
+          "A separately reviewed Windows run passed all four cases in 17.4 seconds.",
+          "The code is not connected to model loading yet."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e83a041dd555b9570e94c3eb991867e2ee8d7d57a470bdee182a3018f62f059e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "The agent must connect the checked file reader to model loading, protect model folders, count temporary files across runs, and finish worker shutdown, restart and resource checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c380d42ccee7e59c2c8f32939f08b8d335cf150e036a7e85c1df6cc2cb17602a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks use generated files.",
+          "They do not measure model memory or inference speed.",
+          "Low-memory mode remains unavailable until the remaining checks pass.",
+          "The full 12 GiB charge for unknown temporary model files stays in force."
+        ]
+      }
     }
   ]
 }

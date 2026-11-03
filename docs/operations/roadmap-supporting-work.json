@@ -9131,6 +9131,46 @@
         "No user action is needed. The agent must connect safe file access to model loading and finish folder protection, safe file discovery, shared disk accounting, worker shutdown, restart and offload resource tests.",
         "These Windows checks use generated test files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. Existing limits and the full 12 GiB charge for unknown temporary files stay in force."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "fix-windows-fresh-source-verification",
+      "work_criteria": [
+        "windows-common-file-facts",
+        "truthful-bounded-failure-progress",
+        "focused-regressions-reviewed-checkpoint"
+      ],
+      "receipt_digest": "f07703ef267e5ca508bb5a91f8f7a2a19cc5672307297203f08cd146b189105f",
+      "review_digest": "a719f018f5c64ad49659f31abecbb9bd8a37b92dc163e239956fdcc841d0873c",
+      "scope": "The agent completed the Windows reader and private-copy checks. All 70 focused source tests passed. A separately reviewed Windows run passed all four cases in 17.4 seconds. The code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must connect the checked file reader to model loading, protect model folders, count temporary files across runs, and finish worker shutdown, restart and resource checks.",
+        "These checks use generated files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. The full 12 GiB charge for unknown temporary model files stays in force."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "fix-windows-fresh-source-verification",
+      "work_criteria": [
+        "windows-common-file-facts",
+        "truthful-bounded-failure-progress",
+        "focused-regressions-reviewed-checkpoint"
+      ],
+      "receipt_digest": "f07703ef267e5ca508bb5a91f8f7a2a19cc5672307297203f08cd146b189105f",
+      "review_digest": "a719f018f5c64ad49659f31abecbb9bd8a37b92dc163e239956fdcc841d0873c",
+      "scope": "The agent completed the Windows reader and private-copy checks. All 70 focused source tests passed. A separately reviewed Windows run passed all four cases in 17.4 seconds. The code is not connected to model loading yet.",
+      "limitations": [
+        "This records reviewed work at its saved source version. It does not complete the parent roadmap or qualify a later source version.",
+        "Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign is still pending.",
+        "No user action is needed. The agent must connect the checked file reader to model loading, protect model folders, count temporary files across runs, and finish worker shutdown, restart and resource checks.",
+        "These checks use generated files. They do not measure model memory or inference speed. Low-memory mode remains unavailable until the remaining checks pass. The full 12 GiB charge for unknown temporary model files stays in force."
+      ]
     }
   ]
 }
