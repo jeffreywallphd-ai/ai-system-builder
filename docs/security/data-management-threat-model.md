@@ -2316,3 +2316,30 @@ Focused original-graph, copy/rebinding, exhaustion, return-custody, failure
 redaction and routing regressions cover the source boundary. Source-only session,
 borrower, shared-domain and owned model-worker composition remain pending. Old
 retained trees remain untouched and fully charged; no parent qualification follows.
+
+### Closed Source runtime composition
+
+The private Source parent/child consume the same concrete launch and ownership
+mechanics as the existing IO session. The separate v2 protocol cannot select v1
+operations. Fixed source buffers, runtime identity, nonce, exact sequence and a
+nonrenewable deadline bind the synthetic session. Original inventory and Source
+objects are constructed inside the child. Production entry and shared-worker use
+deny; no serialized response grants Source, process or filesystem authority.
+
+One physical Source table per actor reserves engine, Source and terminal work.
+Reinitialization, copy and rebinding do not create a new budget. Known native
+returns remain in original custody when acknowledgement fails. Uncertainty
+prevents replay or retirement claims. The creator's original-handle watchdog
+precedes its unnamed inherited dispatch signal; a ready file cannot admit native
+work. The source timer and bounded frame attempts add internal lifetime bounds.
+Healthy retirement still requires actual child exit, Job zero, original closes
+and callback quiescence. Forced exit is not cleanup evidence.
+
+The controlled collector retains partial acquisition results and reader objects,
+publishes complete readiness telemetry, bounds captured output and records exact
+input-deletion progress. Failure summaries omit raw stream text and exception
+payloads. Only newly created fixed synthetic inputs may be removed after healthy
+shutdown and unchanged-identity/hash checks. Source tests are model-free; current
+Windows effects remain separately reviewable and pending. Borrower/cache lifetime,
+shared durable journal domain, owned model workers and actual offload resources
+remain unqualified. Old staging and the full 12 GiB charge remain unchanged.

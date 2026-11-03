@@ -29,7 +29,7 @@ _MEMORY_BYTES = 512 * 1024**2  # Only the model-free child, not its parent.
 _MAX_CALLS, _TERMINAL_CALLS = 16384, 64
 _OWNERS, _LOCK = {}, RLock()
 _PTR, _U32, _I32 = C.c_void_p, C.c_uint32, C.c_int32
-_SOURCE_NAMES = ('local_model_offload.py', 'offload_recovery.py', 'windows_offload_core.py',
+_SOURCE_NAMES = ('local_model_offload.py', 'windows_offload_native_session.py', 'offload_recovery.py', 'windows_offload_core.py',
                  'windows_offload_backend.py', 'windows_offload_execution.py',
                  'windows_offload_execution_child.py')
 _OPERATIONS = {0: 'initialize', 1: 'bind-read', 2: 'retire-unused-read', 3: 'finish'}
@@ -145,29 +145,9 @@ def _sources():
     return values, hashes, hashlib.sha256(json.dumps(hashes, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-class _BasicLimits(C.Structure):
-    _fields_ = [('process_time', C.c_int64), ('job_time', C.c_int64), ('flags', _U32),
-                ('minimum_working_set', C.c_size_t), ('maximum_working_set', C.c_size_t),
-                ('active_process_limit', _U32), ('affinity', C.c_size_t), ('priority', _U32), ('scheduling', _U32)]
-class _IoCounters(C.Structure):
-    _fields_ = [(n, C.c_uint64) for n in ('read_ops','write_ops','other_ops','read_bytes','write_bytes','other_bytes')]
-class _ExtendedLimits(C.Structure):
-    _fields_ = [('basic', _BasicLimits), ('io', _IoCounters), ('process_memory_limit', C.c_size_t),
-                ('job_memory_limit', C.c_size_t), ('peak_process_memory', C.c_size_t), ('peak_job_memory', C.c_size_t)]
-class _Security(C.Structure):
-    _fields_ = [('length', _U32), ('descriptor', _PTR), ('inherit', _I32)]
-class _Startup(C.Structure):
-    _fields_ = [('cb', _U32), ('reserved', C.c_wchar_p), ('desktop', C.c_wchar_p), ('title', C.c_wchar_p),
-                *[(n, _U32) for n in ('x','y','width','height','chars_x','chars_y','fill','flags')],
-                ('show', C.c_uint16), ('reserved_size', C.c_uint16), ('reserved_bytes', _PTR),
-                ('stdin', _PTR), ('stdout', _PTR), ('stderr', _PTR)]
-class _StartupEx(C.Structure):
-    _fields_ = [('startup', _Startup), ('attributes', _PTR)]
-class _Process(C.Structure):
-    _fields_ = [('process', _PTR), ('thread', _PTR), ('pid', _U32), ('tid', _U32)]
-class _Accounting(C.Structure):
-    _fields_ = [(n, C.c_int64) for n in ('user','kernel','period_user','period_kernel')] + [
-        (n, _U32) for n in ('faults','total','active','terminated')]
+from .windows_offload_native_session import (
+    _BasicLimits, _IoCounters, _ExtendedLimits, _Security,
+    _Startup, _StartupEx, _Process, _Accounting, _NativePrimitives, _SessionMechanics)
 
 
 class _Handle:
@@ -212,6 +192,8 @@ class _IntentChanged(OffloadAdmissionError):pass
 class _Ledger:
     """One lifetime allocation; reserve normal and terminal rows before effects."""
     def __init__(self, owner):
+        _need(type(self) is _Ledger and not hasattr(self, '_Ledger__origin')
+              and getattr(owner, 'ledger', None) is None and getattr(owner, 'api', None) is None)
         self.__origin=self;self.owner=owner
         self.lock = RLock()
         self.normal = [_Call() for _ in range(_MAX_CALLS)]
@@ -321,7 +303,8 @@ class _Ledger:
                 raise
 
 
-class _Native:
+class _Native(_NativePrimitives):
+    _handle_type = _Handle
     def __new__(cls, owner):
         _native_owner(owner)
         _need(owner.api is None); value = super().__new__(cls); owner.api = value; return value
@@ -435,36 +418,10 @@ class _Native:
         # gate over native IO or mistake its return for operation success.
         return self._perform(row)
 
-    def acquire(self, name, function, *args, keep=()):
-        self.origin()
-        owner=self.owner;h=_Handle(owner,name);owner.handles.append(h)
-        value=self.call(function,*args,valid=lambda v:type(v) is int and 0<v<C.c_void_p(-1).value,keep=(h,*keep))
-        h.slot.value=value
-        h.acknowledge()
-        _need(all(old is h or old.closed or old.slot.value!=value for old in owner.handles))
-        return h
-
-    def close(self,h):
-        self.origin()
-        _need(type(h) is _Handle and h.owner is self.owner and not h.close_started and not h.closed)
-        value=h.value;h.close_started=True
-        row=self._call_row(self.k.CloseHandle,value,keep=(h,h.slot),terminal=True)
-        self._perform(row)
-        h.close_record=row;h.closed=True
-
-    def wait(self, handles, deadline):
-        self.origin()
-        _need(type(handles) is tuple and 1<=len(handles)<=3 and len({id(h) for h in handles})==len(handles))
-        for h in handles:_need(type(h) is _Handle and h.owner is self.owner and not h.closed and not h.close_started)
-        values=(_PTR*len(handles))(*(h.value for h in handles));self.owner.buffers.append(values)
-        value=self.call(self.k.WaitForMultipleObjects,len(handles),values,0,0,
-                        valid=lambda v:type(v) is int and (0<=v<len(handles) or v==258),keep=(handles,values),
-                        terminal=True,_wait_deadline=deadline)
-        return value
 
     def origin(self):
         _need(type(self) is _Native and getattr(self,'_Native__origin',None) is self
-              and self.owner.api is self)
+              and self.owner.api is self and self._handle_type is _Handle)
         _native_owner(self.owner)
 
 
@@ -532,7 +489,27 @@ def _amd64_image(raw):
           and struct.unpack_from('<H',raw,offset+24)[0]==0x20b)
 
 
-class _WindowsOffloadIoSession:
+class _IoSessionContract:
+    """Fixed trusted IO binding; no constructor or serialized selector."""
+    memory_bytes = _MEMORY_BYTES
+
+    @staticmethod
+    def sources(): return _sources()
+
+    @staticmethod
+    def runtime_image(): return _runtime_image()
+
+    @staticmethod
+    def read_source(path, maximum): return _read_source(path, maximum)
+
+    @staticmethod
+    def root(value): return _root(value)
+
+    @staticmethod
+    def bootstrap(*args): return _bootstrap(*args)
+
+
+class _WindowsOffloadIoSession(_SessionMechanics):
     """One explicit private host session; no public caller-selected root."""
     def __init__(self, root):
         self.__origin=self
@@ -564,6 +541,10 @@ class _WindowsOffloadIoSession:
               and getattr(self,'_WindowsOffloadIoSession__origin',None) is self
               and self.initialized is True
               and _OWNERS.get(id(self)) is self)
+
+    def _session_contract(self):
+        self.origin()
+        return _IoSessionContract
 
     def _live(self, request):
         self.origin()
@@ -601,85 +582,6 @@ class _WindowsOffloadIoSession:
         self._live(request)
         return self.api.call(function,*args,**kwargs)
 
-    def _channel(self,name):
-        a=self.api;security=_Security(C.sizeof(_Security),None,1)
-        read=_Handle(self,name+'-read');write=_Handle(self,name+'-write')
-        self.handles.extend((read,write));self.buffers.append(security)
-        a.call(a.k.CreatePipe,C.byref(read.slot),C.byref(write.slot),C.byref(security),16384,keep=(read,write,security))
-        read.acknowledge();write.acknowledge()
-        _need(read.value!=write.value)
-        self.channels[name+'-read']=read;self.channels[name+'-write']=write
-
-    def _flags(self,h,inherit):
-        a=self.api;value=_U32();self.buffers.append(value)
-        a.call(a.k.SetHandleInformation,h.value,1,int(inherit),keep=(h,))
-        a.call(a.k.GetHandleInformation,h.value,C.byref(value),keep=(h,value))
-        _need(value.value&1==int(inherit))
-
-    def _job_readback(self):
-        a=self.api;inside=_I32();limits=_ExtendedLimits();self.buffers.extend((inside,limits))
-        a.call(a.k.IsProcessInJob,self.process.value,self.job.value,C.byref(inside),keep=(self.process,self.job,inside))
-        _need(inside.value==1)
-        a.call(a.k.QueryInformationJobObject,self.job.value,9,C.byref(limits),C.sizeof(limits),None,keep=(self.job,limits))
-        _need(limits.basic.flags==0x2308 and limits.basic.active_process_limit==1
-              and limits.process_memory_limit==limits.job_memory_limit==_MEMORY_BYTES)
-        _need(a.call(a.k.GetProcessId,self.process.value,keep=(self.process,))==self.process_info.pid)
-        text=C.create_unicode_buffer(32768);length=_U32(len(text));self.buffers.extend((text,length))
-        a.call(a.k.QueryFullProcessImageNameW,self.process.value,0,text,C.byref(length),keep=(self.process,text,length))
-        _need(0<length.value<len(text) and length.value==len(text.value)
-              and _root(text.value).casefold()==str(self.runtime).casefold()
-              and hashlib.sha256(_read_source(self.runtime,64*1024**2)).hexdigest()==self.runtime_hash)
-
-    def _launch(self,request):
-        self._live(request);a=self.api
-        self.source_values,self.source_hashes,self.source_digest=_sources()
-        self.runtime,self.runtime_hash=_runtime_image();self.buffers.extend((self.source_values,self.source_hashes,self.runtime))
-        self._live(request)
-        self._channel('request');self._channel('response')
-        self.channels['ready']=a.acquire('child-ready',a.k.CreateEventW,None,1,0,None)
-        self.channels['dispatch']=a.acquire('child-dispatch',a.k.CreateEventW,None,1,0,None)
-        inherited=tuple(self.channels[n] for n in ('request-read','response-write','ready','dispatch'))
-        for name,h in self.channels.items():
-            self._live(request);self._flags(h,any(v is h for v in inherited))
-            if name not in ('ready','dispatch'):_need(a.call(a.k.GetFileType,h.value,keep=(h,))==3)
-        self.job=a.acquire('io-job',a.k.CreateJobObjectW,None,None)
-        limits=_ExtendedLimits();limits.basic.flags=0x2308;limits.basic.active_process_limit=1
-        limits.process_memory_limit=limits.job_memory_limit=_MEMORY_BYTES;self.buffers.append(limits)
-        a.call(a.k.SetInformationJobObject,self.job.value,9,C.byref(limits),C.sizeof(limits),keep=(self.job,limits))
-        size=C.c_size_t();self.buffers.append(size)
-        a.call(a.k.InitializeProcThreadAttributeList,None,2,0,C.byref(size),valid=lambda n:n==0 and C.get_last_error()==122,keep=(size,))
-        _need(0<size.value<=65536)
-        self.attributes=C.create_string_buffer(size.value);self.buffers.append(self.attributes)
-        a.call(a.k.InitializeProcThreadAttributeList,self.attributes,2,0,C.byref(size),keep=(self.attributes,size))
-        self.attribute_started=True
-        jobs=(_PTR*1)(self.job.value);handles=(_PTR*4)(*(h.value for h in inherited));self.buffers.extend((jobs,handles))
-        a.call(a.k.UpdateProcThreadAttribute,self.attributes,0,0x2000d,jobs,C.sizeof(jobs),None,None,keep=(self.attributes,jobs,self.job))
-        a.call(a.k.UpdateProcThreadAttribute,self.attributes,0,0x20002,handles,C.sizeof(handles),None,None,keep=(self.attributes,handles,inherited))
-        bootstrap=_bootstrap(Path(__file__).absolute().parent,self.source_hashes,self.nonce,tuple(h.value for h in inherited),
-                             request.deadline,(str(self.runtime),self.runtime_hash))
-        arguments=[str(self.runtime),'-I','-S','-B','-c',bootstrap]
-        command=C.create_unicode_buffer(subprocess.list2cmdline(arguments))
-        windows=a.location(a.k.GetWindowsDirectoryW)
-        env={'SystemRoot':windows,'WINDIR':windows,'PATH':str(PureWindowsPath(windows)/'System32')+';'+windows}
-        environment=C.create_unicode_buffer('\0'.join(k+'='+v for k,v in sorted(env.items()))+'\0\0')
-        startup=_StartupEx();startup.startup.cb=C.sizeof(startup);startup.attributes=C.cast(self.attributes,_PTR)
-        self.buffers.extend((arguments,bootstrap,command,environment,startup,self.process_info))
-        self.process=_Handle(self,'io-process');self.primary_thread=_Handle(self,'io-main-thread');self.handles.extend((self.process,self.primary_thread))
-        self._native_intent(request,a.k.CreateProcessW,str(self.runtime),command,None,None,1,0x80000|4|0x400|8,environment,
-                            str(Path(__file__).absolute().parent),C.byref(startup),C.byref(self.process_info),
-                            keep=(self.runtime,command,environment,startup,self.process_info,self.process,self.primary_thread))
-        self.process.slot.value=self.process_info.process;self.primary_thread.slot.value=self.process_info.thread
-        self.process.acknowledge();self.primary_thread.acknowledge()
-        _need(self.process.value!=self.primary_thread.value)
-        self._live(request);self._job_readback()
-        a.call(a.k.DeleteProcThreadAttributeList,self.attributes,valid=lambda n:n is None,keep=(self.attributes,jobs,handles))
-        self.attribute_retired=True
-        for name in ('request-read','response-write'):a.close(self.channels[name])
-        self._native_intent(request,a.k.ResumeThread,self.primary_thread.value,valid=lambda n:type(n) is int and n==1,keep=(self.primary_thread,))
-        _need(a.wait((self.channels['ready'],),request.deadline)==0)
-        self._live(request);self._job_readback()
-        self._native_intent(request,a.k.SetEvent,self.channels['dispatch'].value,keep=(self.channels['dispatch'],))
-        self._live(request);self.launch_complete=True
 
     def _write(self,handle,raw,request):
         _need(type(raw) is bytes and 0<len(raw)<=_FRAME_BYTES+4)

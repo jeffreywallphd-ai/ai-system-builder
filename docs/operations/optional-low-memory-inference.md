@@ -1351,3 +1351,26 @@ or owned model worker. The concrete protected journal is retained. Earlier Nativ
 results keep their recorded source versions; new physical qualification requires
 a separate committed-source effect review. Unknown staging remains fully charged
 at 12 GiB. Accepted accuracy/OCR stay closed; shared full testing stays deferred.
+
+## Source-session implementation and remaining checks
+
+The agent added a private runtime session for a small synthetic source fixture.
+It reuses the existing process and channel machinery. The child checks the files
+itself, checks them once more, releases unused sources, and exits. The parent must
+observe that exit and complete its shutdown checks. A response message alone is
+not proof that files, processes or timers are safe to release.
+
+The test launcher retains partial setup results and records failures. It starts
+an independent watchdog before it allows native work. Its deadline cannot be
+extended. The ready file becomes visible only after the complete message is
+written. Output capture is bounded. Cleanup checks all four new input files before
+deleting any of them and records each actual deletion separately from test status.
+Unknown or changed files are retained. No old staging directory is accessed.
+
+The new source definitions and focused tests do not complete native qualification.
+The agent must review the committed source and run the separately authorized
+Windows check. Model borrowers, protected shared accounting, model-worker
+exit/crash/restart and real-model offload measurements remain pending. Production
+offload stays unavailable. Unknown staging usage remains charged at 12 GiB.
+No user action is needed. Accepted accuracy and OCR checks stay closed. The shared
+whole-software campaign remains deferred until open feature work is implemented.

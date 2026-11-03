@@ -2028,3 +2028,22 @@ checks cover the new source and missing-declaration fallback. Source refactoring
 is not current Native, model, restart or parent qualification. Keep physical
 execution behind a separately reviewed committed-source effect plan. Do not
 rerun accepted model accuracy/OCR or the deferred shared full-software campaign.
+
+### Fixed Source runtime session check
+
+`qualify_windows_offload_source_session.py --plan` is inert. Its separate native
+entry requires the base Windows interpreter with `-I -S -B`; imported calls and
+arbitrary paths, limits or commands are refused. The fixed collector loads checked
+source buffers, creates four tiny synthetic input files and launches only the
+private source-only runtime. An original-handle watchdog is active before the
+inherited dispatch event is signaled. It retains partial setup and output-reader
+state. Evidence includes bounded stream hashes and byte counts, safe failure
+stages and exact cleanup progress; raw stream text is not persisted.
+
+Ordinary `offload-resource-lifecycle` checks now contain 25 model-free files.
+They do not run this native entry, import model frameworks or repeat accepted
+model accuracy/OCR. Source/fixture/routing tests cover the closed manifests,
+source-buffer loading, sequencing, finite shared rows, timer ownership, watchdog
+failures, ready-file publication and cleanup reporting. Native execution requires
+a separately reviewed effect plan for the committed source. Collected evidence
+still needs review and never completes its parent roadmap automatically.

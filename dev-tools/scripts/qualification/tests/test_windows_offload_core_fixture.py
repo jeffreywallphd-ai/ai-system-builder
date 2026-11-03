@@ -340,7 +340,8 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(p.runs.name,p.schema)
         self.assertEqual([Path(n).stem for n in p.task_files],
             ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',
-             'windows_offload_source_ledger','windows_offload_execution','windows_offload_execution_child'])
+             'windows_offload_source_ledger','windows_offload_native_session',
+             'windows_offload_execution','windows_offload_execution_child'])
         self.assertEqual(len(p.tool_files),3)
         with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
         with self.assertRaises(subject.FixtureError):subject._component(p,{})
@@ -368,7 +369,8 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(p.runs.name,p.schema)
         self.assertEqual([Path(n).stem for n in p.task_files],
             ['local_model_offload','offload_recovery','windows_offload_core','windows_offload_backend',
-             'windows_offload_source_ledger','windows_offload_execution','windows_offload_sources'])
+             'windows_offload_source_ledger','windows_offload_native_session',
+             'windows_offload_execution','windows_offload_sources'])
         self.assertNotIn('windows_offload_execution_child',[Path(n).stem for n in p.task_files])
         with self.assertRaises(subject.FixtureError):subject._canonical_profile(copy.copy(p))
         hashes={subject.TOOL_FILES[1]:'a'*64}

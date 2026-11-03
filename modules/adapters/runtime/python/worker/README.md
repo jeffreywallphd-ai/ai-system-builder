@@ -984,3 +984,27 @@ source-only runtime session. It enables no production source/model borrower,
 shared journal domain, model worker or staging recovery. Native qualification
 remains separate. Existing v1 wire, 512 MiB/120-second limits, accepted accuracy
 and OCR stay unchanged; full-software testing remains deferred.
+
+### Closed source-only runtime session
+
+`windows_offload_native_session.py` shares concrete launch, Job, handle and
+channel mechanics between the existing v1 IO session and the new private Source
+parent/child. The v1 wire and defaults remain unchanged. The Source role has a
+separate v2 four-operation sequence: prepare, one check, retire unused sources,
+and finish. It accepts only newly created synthetic qualification inputs, not
+production models or retained staging. The child constructs its own original
+inventory and Source execution port; replies do not create authority.
+
+Each Source actor owns one 16,384-row table, including one 64-row terminal tail.
+Engine and Source debts share those rows. Reinitialization cannot replace an
+existing table or replenish the old IO ledger. The Source lifetime is one frozen
+120-second deadline, including startup and idle time. An original-process
+watchdog must be active before the creator signals the inherited dispatch event.
+Source timers, bounded frame transfers, actual child exit, Job accounting, original
+handle closes and callback retirement remain separate obligations.
+
+The 25-file model-free lifecycle profile checks source definitions and failure
+paths. The controlled Source roundtrip is not run by ordinary checks. Its actual
+Windows execution requires committed definitions and a separate exact-source
+effect review. Production offload, borrowers, protected shared accounting,
+owned model workers and actual offload resources remain pending.

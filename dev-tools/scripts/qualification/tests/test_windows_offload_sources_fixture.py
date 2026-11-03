@@ -105,6 +105,27 @@ class SourceSlotsTests(unittest.TestCase):
         self.deny(lambda:self.invoke_data(ticket,terminal=True))
         self.assertTrue(all(row.reservation is ticket for row in rows))
 
+    def test_reinitializing_the_consumer_cannot_replace_used_rows_or_deadline(self):
+        ticket=self.arena.reserve('already-used',1,1)
+        first=self.invoke_data(ticket);last=self.invoke_data(ticket,terminal=True)
+        original=self.arena.original;deadline=self.arena.deadline;order=self.arena.order
+        self.deny(lambda:e._SourceSlots.__init__(self.arena,self.owner,e._SOURCE_CHILD))
+        self.assertIs(self.arena.original,original)
+        self.assertEqual(self.arena.deadline,deadline);self.assertIs(self.arena.order,order)
+        self.assertIs(first.completion,self.arena.completions[first.index])
+        self.assertIs(last.completion,self.arena.completions[last.index])
+        self.deny(lambda:self.invoke_data(ticket))
+        self.deny(lambda:self.invoke_data(ticket,terminal=True))
+
+    def test_reinitializing_the_shared_mechanism_cannot_create_a_new_budget(self):
+        ticket=self.arena.reserve('already-used',1,0)
+        row=self.invoke_data(ticket);original=self.arena.original;order=self.arena.order
+        self.deny(lambda:e._shared_source_ledger._SourceRows._initialize_rows(
+            self.arena,self.owner,e._SOURCE_CHILD))
+        self.assertIs(self.arena.original,original);self.assertIs(self.arena.order,order)
+        self.assertIs(row,self.arena.rows[row.index])
+        self.deny(lambda:self.invoke_data(ticket))
+
     def test_in_place_list_clear_cannot_drop_original_intent_or_ack(self):
         ticket=self.arena.reserve('source',1,0)
         row=self.arena.begin(ticket,'synthetic-native',lambda:None,(),(object(),))

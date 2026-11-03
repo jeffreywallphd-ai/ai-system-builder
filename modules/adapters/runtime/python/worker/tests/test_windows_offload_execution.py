@@ -5,6 +5,8 @@ import json
 import hashlib
 from pathlib import Path
 import struct
+import sys
+from io import BytesIO
 from threading import Event, Thread, get_ident
 from types import SimpleNamespace
 import unittest
@@ -754,6 +756,20 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(x.OffloadAdmissionError):x._WindowsOffloadIoSession('C:\\another')
         self.assertIs(x._OWNERS[id(owner)],owner)
 
+    def test_ledger_reinitialization_preserves_existing_capacity_and_rows(self):
+        owner=self.session();ledger=owner.ledger
+        row=ledger.reserve(owner.calls,lambda:1,(),lambda n:n==1,(),False)
+        original=ledger.rows
+        with self.assertRaises(x.OffloadAdmissionError):x._Ledger.__init__(ledger,owner)
+        self.assertIs(ledger.rows,original);self.assertIs(ledger.rows[0],row)
+        self.assertEqual(ledger.used,1);self.assertEqual(ledger.terminal_used,0)
+
+    def test_an_existing_inert_owner_cannot_receive_a_fresh_ledger(self):
+        owner=self.session();original=owner.ledger
+        self.assertIsNone(owner.api)
+        with self.assertRaises(x.OffloadAdmissionError):x._Ledger(owner)
+        self.assertIs(owner.ledger,original)
+
     def test_api_copy_and_handle_generation_change_deny_before_close(self):
         owner=self.session();a=self.api(owner);calls=[]
         a.k=SimpleNamespace(CloseHandle=lambda n:calls.append(n) or 1)
@@ -768,6 +784,48 @@ class SessionTests(unittest.TestCase):
         h.slot.value=11
         with self.assertRaises(x.OffloadAdmissionError):a.close(h)
         self.assertEqual(calls,[])
+
+    def test_rebound_shared_handle_factory_is_denied_before_constructor_or_call(self):
+        owner=self.session();a=self.api(owner);effects=[]
+        class ForeignHandle:
+            def __init__(self,*args):effects.append('foreign-constructor')
+        a._handle_type=ForeignHandle
+        a.call=lambda *args,**kwargs:effects.append('native-call')
+        with self.assertRaises(x.OffloadAdmissionError):a.acquire('foreign',lambda:1)
+        self.assertEqual(effects,[]);self.assertEqual(owner.handles,[])
+
+    def test_source_buffer_bootstrap_loads_shared_dependency_before_import(self):
+        # Execute the actual fixed bootstrap with safe synthetic dependency
+        # bytes and the actual pure shared module. No file or Native API runs.
+        prefix='_aisb_owned_io'
+        buffers={name:b'# fixed synthetic source\n'for name in x._SOURCE_NAMES}
+        buffers['local_model_offload.py']=b'class OffloadAdmissionError(RuntimeError): pass\n'
+        buffers['windows_offload_native_session.py']=(Path(x.__file__).parent/'windows_offload_native_session.py').read_bytes()
+        buffers['windows_offload_execution_child.py']=b'''def _entry():
+    from .windows_offload_native_session import _NativePrimitives
+    from .local_model_offload import OffloadAdmissionError
+    global _OBSERVED
+    try: _NativePrimitives().origin()
+    except OffloadAdmissionError: _OBSERVED = True
+'''
+        hashes={name:hashlib.sha256(raw).hexdigest()for name,raw in buffers.items()}
+        code=x._bootstrap(Path.cwd(),hashes,'a'*32,(10,11,12,13),1,
+                          ('C:\\Python\\python.exe','b'*64))
+        reads=[]
+        def fixed_open(path,mode):
+            self.assertEqual(mode,'rb');name=Path(path).name
+            self.assertIn(name,buffers);reads.append(name);return BytesIO(buffers[name])
+        class NoImplicitImport:
+            def find_spec(self,fullname,path=None,target=None):
+                if fullname.startswith(prefix+'.'):
+                    raise AssertionError('A repository dependency was imported before source verification')
+        with patch.dict(sys.modules),patch('builtins.open',side_effect=fixed_open), \
+             patch.object(sys,'meta_path',[NoImplicitImport(),*sys.meta_path]):
+            for name in tuple(sys.modules):
+                if name==prefix or name.startswith(prefix+'.'):sys.modules.pop(name)
+            exec(compile(code,'<fixed-synthetic-bootstrap>','exec'),{})
+            self.assertIs(sys.modules[prefix+'.windows_offload_execution_child']._OBSERVED,True)
+        self.assertEqual(reads,list(x._SOURCE_NAMES))
 
     def test_false_or_lost_close_ack_keeps_exact_slot_and_never_retries(self):
         for fault in ('false','interrupt'):

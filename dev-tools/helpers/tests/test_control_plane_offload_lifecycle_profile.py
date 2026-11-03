@@ -40,6 +40,19 @@ TESTS = [
     "dev-tools/scripts/qualification/tests/test_windows_offload_sources_fixture.py",
     "dev-tools/scripts/qualification/tests/test_offload_supplier_boundary.py",
     "modules/adapters/runtime/python/worker/tests/test_bounded_model_inputs.py",
+    "modules/adapters/runtime/python/worker/tests/test_windows_offload_source_session.py",
+    "modules/adapters/runtime/python/worker/tests/test_windows_offload_source_session_child.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_source_session_qualification.py",
+    "dev-tools/scripts/qualification/tests/test_windows_offload_source_session_fixture.py",
+]
+
+SOURCE_SESSION = [
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_native_session.py",
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_source_session.py",
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_source_session_child.py",
+    "dev-tools/scripts/qualification/qualify_windows_offload_source_session.py",
+    "dev-tools/scripts/qualification/windows_offload_source_session_fixture.py",
+    *TESTS[-4:],
 ]
 
 
@@ -53,7 +66,7 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             path.write_bytes((ROOT / name).read_bytes())
         (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {PROFILE: profile}}))
 
-    def test_fixed_profile_executes_only_twenty_one_model_free_files(self):
+    def test_fixed_profile_executes_only_twenty_five_model_free_files(self):
         self.assertEqual(self.profile()["test_paths"], TESTS)
         expected = [run_focused_checks.python_test_command(ROOT, name) for name in sorted(TESTS)]
         self.assertEqual(run_focused_checks.profile_commands(ROOT, PROFILE), expected)
@@ -61,6 +74,24 @@ class OffloadLifecycleProfileTests(unittest.TestCase):
             self.assertEqual(command[:5], [sys.executable, "-B", "-m", "unittest", "discover"])
         self.assertNotIn("modules/adapters/runtime/python/worker/tests/test_bounded_model_loader.py", TESTS)
         self.assertNotIn("modules/adapters/runtime/python/worker/tests/test_bounded_model_loader_native.py", TESTS)
+
+    def test_every_closed_source_session_path_is_owned_and_missing_declarations_keep_fallback(self):
+        for name in SOURCE_SESSION:
+            with self.subTest(path=name):
+                selected={row['id']for row in catalog.plan(ROOT,[name],['documentation'],'synthetic')['selected']}
+                self.assertIn(PROFILE,selected);self.assertNotIn('focused-tests',selected)
+                with tempfile.TemporaryDirectory()as directory:
+                    root=Path(directory);profile=copy.deepcopy(self.profile())
+                    profile['source_paths'].remove(name);self.fixture(root,profile)
+                    selected={row['id']for row in catalog.plan(root,[name],['documentation'],'synthetic')['selected']}
+                    self.assertIn(PROFILE,selected)
+                    self.assertEqual('focused-tests'in selected,name not in profile['test_paths'])
+        for name in TESTS[-4:]:
+            with self.subTest(test=name),tempfile.TemporaryDirectory()as directory:
+                root=Path(directory);profile=copy.deepcopy(self.profile())
+                profile['test_paths'].remove(name);profile['source_paths'].remove(name);self.fixture(root,profile)
+                selected={row['id']for row in catalog.plan(root,[name],['documentation'],'synthetic')['selected']}
+                self.assertIn('focused-tests',selected)
 
     def test_full_unknown_explicit_and_borrowed_coverage_preserve_fallback(self):
         with tempfile.TemporaryDirectory() as directory:

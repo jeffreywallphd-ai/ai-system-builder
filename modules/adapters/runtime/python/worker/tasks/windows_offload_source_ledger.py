@@ -71,6 +71,8 @@ class _SourceRows:
     def __reduce_ex__(self, protocol): raise SourceLedgerError('source-reservation-transfer')
 
     def _initialize_rows(self, owner, role):
+        self._require(not any(hasattr(self, name) for name in ('origin', 'rows', 'original')),
+                      'source-slot-reuse')
         self.origin, self.owner, self.role = self, owner, role
         self.deadline = owner.deadline_ns
         self.case = self.case_origin = getattr(owner,'source_case',None)

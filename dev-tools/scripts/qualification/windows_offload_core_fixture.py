@@ -36,7 +36,7 @@ ENTRY = ROOT / 'dev-tools/scripts/qualification/qualify_windows_offload_core.py'
 RUNS = ROOT / '.local-codex/windows-offload-core-native-v2'
 TASK_FILES = tuple('modules/adapters/runtime/python/worker/tasks/' + name for name in (
     'local_model_offload.py', 'offload_recovery.py', 'windows_offload_core.py', 'windows_offload_backend.py',
-    'windows_offload_source_ledger.py'))
+    'windows_offload_source_ledger.py', 'windows_offload_native_session.py'))
 TOOL_FILES = (
     'dev-tools/scripts/qualification/qualify_windows_offload_core.py',
     'dev-tools/scripts/qualification/windows_offload_core_fixture.py',
