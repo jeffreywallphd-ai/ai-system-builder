@@ -1,5 +1,6 @@
 """Synthetic original-handle watchdog tests; no process or Native qualification."""
 import importlib.util
+import contextlib
 import io
 import json
 import hashlib
@@ -33,6 +34,37 @@ class InputAndEvidenceTests(unittest.TestCase):
             self.assertEqual((size,digest),(manifest[name]['bytes'],manifest[name]['sha256']))
         subject._cleanup_exact_inputs(self.root,manifest)
         self.assertFalse((self.root/'inputs').exists())
+
+    def test_actual_parent_launcher_uses_detached_fixed_form_and_retains_prelaunch_failure(self):
+        runtime=self.root/'fixed-python.exe';runs=self.root/'runs'
+        source=SimpleNamespace(io=SimpleNamespace(_runtime_image=lambda:(runtime,'a'*64)),
+            _source_bootstrap=lambda *args,**kwargs:'fixed-reviewed-bootstrap')
+        class Event:
+            def __init__(self):self.handle=111;self.closed=self.close_started=False
+        output=io.StringIO()
+        with patch.object(subject,'_entry_environment',lambda:None), \
+             patch.object(subject,'_load_runtime_sources',return_value=(source,self.root,{'fixed.py':'b'*64})), \
+             patch.object(subject,'_OriginalDispatchEvent',Event), \
+             patch.object(subject,'_ParentFenceApi',return_value=SimpleNamespace(terminate=lambda *args:None)), \
+             patch.object(subject,'_COLLECTION_OWNERS',[]),patch.object(subject,'ROOT',self.root), \
+             patch.object(subject,'RUNS',runs), \
+             patch.object(subject.uuid,'uuid4',return_value=SimpleNamespace(hex='a'*32)), \
+             patch.object(subject.subprocess,'STARTUPINFO',return_value=SimpleNamespace(),create=True), \
+             patch.object(subject.subprocess,'Popen',side_effect=RuntimeError('stop before process'))as launch, \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(subject.run_native(),9)
+        args,kwargs=launch.call_args
+        self.assertEqual(args[0],[str(runtime),'-I','-S','-B','-c','fixed-reviewed-bootstrap'])
+        self.assertEqual(kwargs['creationflags'],0x8)
+        self.assertEqual(kwargs['startupinfo'].lpAttributeList,{'handle_list':[111]})
+        self.assertTrue(kwargs['close_fds']);self.assertEqual(kwargs['stdin'],subprocess.DEVNULL)
+        self.assertEqual((kwargs['stdout'],kwargs['stderr']),(subprocess.PIPE,subprocess.PIPE))
+        self.assertNotIn('shell',kwargs)
+        summary=json.loads((runs/('a'*32)/'summary.json').read_bytes())
+        self.assertEqual(summary['status'],'failed');self.assertEqual(summary['failure_stage'],'parent-launch')
+        self.assertFalse(summary['owned_inputs_removed']);self.assertIsNone(summary['exit_code'])
+        self.assertIs(summary['parent_qualification_granted'],False)
+        self.assertEqual(json.loads(output.getvalue())['status'],'failed')
 
     def test_changed_input_or_unexpected_file_prevents_all_cleanup(self):
         manifest=subject._synthetic_source_inputs(self.root)

@@ -2368,3 +2368,25 @@ namespace, exact Source bindings, inner report and original outer retirement.
 Definitions and portable tests grant no actual Native or parent pass. Model
 borrowers, protected shared accounting, model-worker recovery and actual resources
 remain pending. Unknown staging remains untouched and fully charged at 12 GiB.
+
+### Detached Source parent after the failed count check
+
+The actual first Source trial observed the intended unused-source sequence and
+natural retirement, but its outer Job counted four processes instead of three.
+The whole trial remains failed. The fourth identity is unknown; no PID was opened
+or adopted. Inner Source success and outer cleanup do not waive that count or
+qualify the parent, production mode or another source version.
+
+Only the Source qualification parent's Popen form changes from CREATE_NO_WINDOW
+to DETACHED_PROCESS, matching the established pipe-only outer helper practice.
+DETACHED_PROCESS grants no Job breakaway. The original fixed image, command,
+environment, event/stdio inheritance, watchdog, inner Job/timers, expected count
+and limits remain. The legacy v1 and inner-child launch paths are untouched.
+Portable tests intercept the real collector launch before process creation and
+check the detached flag, fixed arguments and retained prelaunch failure state.
+
+The versioned partial report preserves exact failed-tool, source/runtime, inner
+observation and independent-audit hashes. Its safe copy states that a fresh check
+is pending. Console allocation is a candidate explanation, not measured identity.
+There is no automatic retry or Native effect in this correction. All retained old
+staging and its full 12 GiB charge remain unchanged.

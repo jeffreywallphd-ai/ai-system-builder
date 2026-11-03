@@ -2047,3 +2047,20 @@ source-buffer loading, sequencing, finite shared rows, timer ownership, watchdog
 failures, ready-file publication and cleanup reporting. Native execution requires
 a separately reviewed effect plan for the committed source. Collected evidence
 still needs review and never completes its parent roadmap automatically.
+
+### Source launch-count correction
+
+The first owned Windows Source trial retired its whole Job and completed its
+inner file-checking sequence, but the outer total was four rather than the
+required three. The trial remains failed; the extra process is unidentified.
+The [partial evidence](../docs/operations/windows-offload-source-runtime-session-qualification.json)
+retains actual source, runtime, tool and audit hashes without granting Native or
+parent completion.
+
+Only the Source qualifier's parent Popen now uses DETACHED_PROCESS. It retains
+the fixed image, isolated arguments, explicit event/stdio inheritance and all
+original ownership checks. It enables no breakaway and changes neither legacy IO
+nor the inner-child form. A fake-process regression reaches the real collector
+launch and confirms these arguments before any process exists. A fresh separately
+reviewed Source trial is still required; the expected total stays three. No model
+accuracy, OCR or full-software suite is rerun for this source correction.

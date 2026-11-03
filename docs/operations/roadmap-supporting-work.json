@@ -9346,7 +9346,8 @@
       "limitations": [
         "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
         "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
-        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending.",
+        "The recorded Windows launch test counted 4 processes instead of 3. The agent changed the launch setting. A fresh test is pending."
       ]
     },
     {
@@ -9365,7 +9366,8 @@
       "limitations": [
         "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
         "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
-        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending.",
+        "The recorded Windows launch test counted 4 processes instead of 3. The agent changed the launch setting. A fresh test is pending."
       ]
     }
   ]

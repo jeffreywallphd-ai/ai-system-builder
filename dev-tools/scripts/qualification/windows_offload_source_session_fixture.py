@@ -546,7 +546,7 @@ def run_native():
         owner.retain_launch(subprocess.Popen([str(runtime[0]), '-I', '-S', '-B', '-c', code],
                                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                    close_fds=True, startupinfo=startup, env=env,
-                                   creationflags=0x08000000))
+                                   creationflags=0x8))  # DETACHED_PROCESS; no Job breakaway.
         process = owner.process
         stage = 'fence-start'
         owner.fence = object.__new__(_OriginalParentFence)

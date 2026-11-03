@@ -14515,6 +14515,18 @@
           "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9c5b30df79804e91c782f54e66cf42b830f8668fd39eea0865b991c90c61c44f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The recorded Windows launch test counted 4 processes instead of 3.",
+          "The agent changed the launch setting.",
+          "A fresh test is pending."
+        ]
+      }
     }
   ]
 }

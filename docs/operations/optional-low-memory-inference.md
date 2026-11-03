@@ -1395,3 +1395,24 @@ needs a separate review and one-use attempt record. No user action is needed.
 Low-memory mode remains unavailable while file protection, shared temporary-file
 accounting, model-worker recovery and real-model resource checks are pending.
 Accepted accuracy and OCR remain closed. Full-software testing remains deferred.
+
+## First Windows Source run: partial result
+
+The first run finished its file-checking sequence and removed all four synthetic
+input files. It confirmed child exit, file and timer retirement, and closure of
+the whole outer test tree. The outer tree counted four processes where the plan
+required three. The complete trial therefore failed. The extra process was not
+identified. See the [recorded component evidence](windows-offload-source-runtime-session-qualification.json).
+
+The agent changed only the Source parent's launch setting to the established
+detached form. A hidden console companion is a possible cause of the extra count;
+it is not an observed identity. The change keeps the expected count at three and
+retains every Job, handle, wire, lifetime and resource check. The legacy IO and
+inner-child launch forms are unchanged. A focused fake-process test checks the
+actual launch arguments without starting a process.
+
+The earlier run remains failed. The original attempt is consumed. A fresh test
+needs a new exact-source effect review; the source correction alone is not Native
+qualification. No user action is needed. Low-memory mode and the remaining model,
+shared accounting, recovery and resource checks stay pending. Accepted accuracy
+and OCR remain closed, and the shared system campaign remains deferred.
