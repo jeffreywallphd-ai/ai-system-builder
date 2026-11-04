@@ -14553,6 +14553,64 @@
           "The agent must find and fix the failed step before that check can close."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b108ad3d76ab458b995f7b91ee923a929be5abe00a421b9a58ed2e2cce020d1c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added and tested safe failure details.",
+          "The new Windows check used those details to narrow the failed step.",
+          "Normal file access passed.",
+          "The unsafe-access check still needs work."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "323776646f0b02ed5ab9f1f2e9416b5579bb292a97911ac03836c155d674d73d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is reviewed supporting work at its saved version.",
+          "It does not complete the parent roadmap or qualify a later version."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "eaac7661482eac400c4f6a9fdb2bf46292bee51a14d69adf8b6556f6810d8a46",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The unsafe-access test failed before the expected file-lock result.",
+          "The agent must fix and test the earlier file-open check."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f87b76290f3d4b64e548995736e745135201bd16cc7c186dc3b8d69bf2029da3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Low-memory mode remains unavailable.",
+          "File protection, disk accounting, model-worker shutdown and restart, and resource checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7a3cffa1742572f7433ee7a7362c2b155424e7baf058bae5f96581c86b0cfccb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "Accepted model accuracy and OCR checks stay closed.",
+          "Whole-software testing remains deferred."
+        ]
+      }
     }
   ]
 }

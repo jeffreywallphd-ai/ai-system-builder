@@ -1481,3 +1481,22 @@ The exact earlier cause is still unknown. Normal/default failure bytes and the
 strict original error801 denial oracle stay unchanged. No user action is needed.
 Accepted accuracy and text-recognition results stay closed. Whole-system tests
 remain deferred until the open feature work is implemented.
+
+## Reviewed diagnostic Windows observations
+
+The refusal check failed again on the committed diagnostic source. The separate
+normal file-access control passed. The mapping qualification JSON preserves both
+new observations, their exact source and independent reviews, and all earlier
+checks. The failed check retained its own four synthetic files, totaling313B.
+The normal control removed only its own four files. Neither result enables
+optional offload or completes the parent roadmap.
+
+The failed-child detail identifies the denial-attribution phase and an original
+file-open nonzero return. It does not contain the actual NTSTATUS or target, so
+it cannot prove the expected error801. Source opens omit FILE_SHARE_WRITE.
+Microsoft documents that an existing writable mapping can therefore reject the
+open before the later oplock request. This is a likely cause, not a qualified
+Native result. The agent must independently review and fix that earlier-refusal
+witness without changing the safe open policy. No user action is needed. All
+resource limits, retained data and genuine qualification gaps remain. Accepted
+model accuracy and OCR stay closed; the combined system campaign stays deferred.

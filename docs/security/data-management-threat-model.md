@@ -2461,3 +2461,24 @@ witness and capture threads settle. Nonzero or forced exit never becomes healthy
 retirement, input removal or credit. Simulated failure tests supply no physical
 pass. Rollback removes only new diagnostic reporting; default behavior and all
 fail-closed staging, journal, borrower, model-worker and parent gaps remain.
+
+### Actual Source diagnostic collection
+
+On committed064eeda86, the negative check still failed while its separate
+unused-Source control passed. The failed original child supplied a closed
+attribute-denial/open-file/nonzero/Win32-error0 diagnostic. Its alternative
+response remained failed. It proves neither the original NTSTATUS nor target
+identity nor the801 denial, and grants no input cleanup or retained-tree credit.
+The original outer Job settled at total3/active0/terminated0 without forced
+termination, with original handle and drain acknowledgements. Those facts do
+not turn a failed inner check into healthy retirement.
+
+The current source uses read-only sharing. Microsoft documents a writable-map
+conflict when FILE_SHARE_WRITE is absent. An earlier NtCreateFile refusal is
+therefore a supported hypothesis, not a newly qualified native status. Follow-up
+work must retain original call/argument/return custody and target attribution
+before any new witness can qualify. Do not weaken file sharing, accept generic
+nonzero failure, reinterpret Win32-error0 as NT success, or delete retained
+inputs to complete this test. Both one-use effect references are consumed.
+All old evidence, unknown staging charged full12GiB, production denial and
+model/borrower/journal/restart/resource gaps remain unchanged.

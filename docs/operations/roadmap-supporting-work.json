@@ -9411,6 +9411,48 @@
         "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "diagnose-source-refusal-with-safe-failure-details",
+      "work_criteria": [
+        "bounded-original-failure-diagnostics",
+        "failure-is-never-qualified",
+        "preserve-audited-observations-and-gaps",
+        "focused-security-checks-and-owned-checkpoint"
+      ],
+      "receipt_digest": "23f7799f5dd1597d05e295af18629114944b82349a8f93d1361674d485b94476",
+      "review_digest": "991483058b13011d23c45f758db9fcd61d05c4b55bb3b2426617b08903bf2568",
+      "scope": "The agent added and tested safe failure details. The new Windows check used those details to narrow the failed step. Normal file access passed. The unsafe-access check still needs work.",
+      "limitations": [
+        "This is reviewed supporting work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "The unsafe-access test failed before the expected file-lock result. The agent must fix and test the earlier file-open check.",
+        "Low-memory mode remains unavailable. File protection, disk accounting, model-worker shutdown and restart, and resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "diagnose-source-refusal-with-safe-failure-details",
+      "work_criteria": [
+        "bounded-original-failure-diagnostics",
+        "failure-is-never-qualified",
+        "preserve-audited-observations-and-gaps",
+        "focused-security-checks-and-owned-checkpoint"
+      ],
+      "receipt_digest": "23f7799f5dd1597d05e295af18629114944b82349a8f93d1361674d485b94476",
+      "review_digest": "991483058b13011d23c45f758db9fcd61d05c4b55bb3b2426617b08903bf2568",
+      "scope": "The agent added and tested safe failure details. The new Windows check used those details to narrow the failed step. Normal file access passed. The unsafe-access check still needs work.",
+      "limitations": [
+        "This is reviewed supporting work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "The unsafe-access test failed before the expected file-lock result. The agent must fix and test the earlier file-open check.",
+        "Low-memory mode remains unavailable. File protection, disk accounting, model-worker shutdown and restart, and resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

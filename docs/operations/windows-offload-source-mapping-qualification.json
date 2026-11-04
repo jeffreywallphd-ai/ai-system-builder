@@ -1,22 +1,22 @@
 {
   "schema_version": "windows-source-mapping-component-evidence-v1",
   "status": "refusal-check-failed-normal-control-passed",
-  "source_commit": "167ae56e2ed89bc620f94ce8f86c4f0270bf064e",
-  "source_digest": "b5d180c771c20c58d4ccdc405f53b39560481c1221dc2e6994274ce140016a0f",
-  "scope": "Two separate model-free Windows component checks at the saved source version. The refusal case failed; only the unused-Source normal control passed. The later diagnostic source changes have no physical qualification yet.",
+  "source_commit": "064eeda869e934a0629613c68b4460335c5bb7e3",
+  "source_digest": "d525d1db0e8e96d97a7eeb846ea32b679008eed148f627f3fc1dc751eb613c18",
+  "scope": "Two separate model-free Windows component checks on the committed diagnostic source. The refusal case failed; only the unused-Source normal control passed. Exact earlier observations remain in prior_checks.",
   "observations": {
     "negative": {
       "case": "shared-write-map-denial",
       "status": "failed",
-      "outer_run_id": "3a29b45fc68049d69e280ba39f8e27e8",
-      "inner_run_id": "ab7cf8eba53244ffbce74bdbef7c1413",
+      "outer_run_id": "702ba07a331043128b7b74a310138948",
+      "inner_run_id": "06aeb88a120f428d9f0f232c402de0ce",
       "actual_tool": {
-        "launch_tool": "88d075",
-        "session_id": 49212,
-        "completion_tool": "4d8755",
+        "launch_tool": "08ad63",
+        "session_id": 92956,
+        "completion_tool": "ccb256",
         "actual_exit": 1
       },
-      "elapsed_seconds": 4.406,
+      "elapsed_seconds": 3.578,
       "effect_allowance_remaining": 0,
       "automatic_retry_allowed": false,
       "outer": {
@@ -33,8 +33,8 @@
           "process_bytes": 1073741824
         },
         "peak_commit": {
-          "job_commit_bytes": 125714432,
-          "process_commit_bytes": 88608768
+          "job_commit_bytes": 125591552,
+          "process_commit_bytes": 87805952
         },
         "cleanup_confirmed": true,
         "all_owned_handles_close_acknowledged": true,
@@ -56,10 +56,10 @@
         "owned_inputs_removed": false,
         "streams": [
           {
-            "bytes": 141,
+            "bytes": 560,
             "failed": false,
             "overflow": false,
-            "sha256": "af19d0912844f3d7b0149f71c31b5a77b838d265e9979f37aa8846abd17fa954",
+            "sha256": "70a21169c9634e3524cf6c44d7c54391ecfed32912c350a288de0c8c3c544f93",
             "start_attempted": true,
             "started": true
           },
@@ -71,7 +71,33 @@
             "start_attempted": true,
             "started": true
           }
-        ]
+        ],
+        "failure_diagnostic": {
+          "child_diagnostic": {
+            "actor": "child",
+            "api": "open-file",
+            "error_kind": "admission",
+            "phase": "attribute-denial",
+            "result_class": "nonzero",
+            "returned": true,
+            "schema_version": "source-failure-diagnostic-v1",
+            "win32_error": 0
+          },
+          "diagnostic": {
+            "actor": "parent",
+            "api": "read-file",
+            "error_kind": "admission",
+            "phase": "source-exchange",
+            "result_class": "nonzero",
+            "returned": true,
+            "schema_version": "source-failure-diagnostic-v1",
+            "win32_error": 0
+          },
+          "failure_stage": "source-operation",
+          "parent_qualification_granted": false,
+          "schema_version": "owned-source-parent-failure-v1",
+          "status": "failed"
+        }
       },
       "synthetic_inputs": {
         "count": 4,
@@ -79,26 +105,26 @@
         "state": "retained-unqualified-no-cleanup-authority"
       },
       "evidence_hashes": {
-        "independent_outcome_reference": "845420e248a6566450ebefb4e3872a333e5293a487486eb4a18daadf0186ac2b",
-        "independent_outcome_report": "092b58e931747349c2b2827e627850f9e5dc23ee0a175c7a3142fde00d86b748",
-        "summary": "a577bdeccf9ed7a9036ea8b7ee208be0e9345908a0ae23ce2117a742a07888e2",
-        "input_manifest": "722d90b243bf29c47b7da8a530d786c886d9f32d4ec4fdb415ed175534971590",
-        "outer_observation": "7749bd22ca6999e17a62ec33321cdda008b11f5e9dbdce2e6f87bb6ebe70d428",
-        "driver_result": "c2a225623180e746cad39ff7c6a398c44814a7e3a71c04299fc6e104499dcfc2"
+        "independent_outcome_reference": "3ffbd6f0ab4b41c1d6d788ca627f37514f19d15d1dfa007551dbc05ae17c0438",
+        "independent_outcome_report": "0c40c2d480aaa341f12f33be0021cdaff8fd8239069902f9d84f25c6ef6f2912",
+        "summary": "43cde31751cdf4699d0bde7c7d07f7cf08a03ed647646198eb3a97b183bbaec2",
+        "input_manifest": "00663347004e2e436be9ee47542f467de668f8227cf93ef65245c9bd66a8f667",
+        "outer_observation": "b88b220346865636949ab8279abe59f60d59224210e19e423e13324744c592fe",
+        "driver_result": "b8bf920459f3d9732cb799b3bff71752a4074484c3c91103275e9104abbe50f1"
       }
     },
     "control": {
       "case": "source-roundtrip",
       "status": "unused-source-control-passed",
-      "outer_run_id": "a0044450d7a047fa95ca8a702eb66ba0",
-      "inner_run_id": "8fd8afe60d444e4ba168ba31c9982ee9",
+      "outer_run_id": "b7a3b5196a2840d897ebc4211ce45e8d",
+      "inner_run_id": "3cfdac25b37a457cb200410b2ae5c1f2",
       "actual_tool": {
-        "launch_tool": "426e3c",
-        "session_id": 92422,
-        "completion_tool": "43c0fc",
+        "launch_tool": "c1a26f",
+        "session_id": 71727,
+        "completion_tool": "d1919f",
         "actual_exit": 0
       },
-      "elapsed_seconds": 35.141,
+      "elapsed_seconds": 37.453,
       "effect_allowance_remaining": 0,
       "automatic_retry_allowed": false,
       "outer": {
@@ -115,8 +141,8 @@
           "process_bytes": 1073741824
         },
         "peak_commit": {
-          "job_commit_bytes": 124555264,
-          "process_commit_bytes": 88305664
+          "job_commit_bytes": 126902272,
+          "process_commit_bytes": 88817664
         },
         "cleanup_confirmed": true,
         "all_owned_handles_close_acknowledged": true,
@@ -139,7 +165,7 @@
           "parent_qualification_granted": false,
           "production_composed": false,
           "schema_version": "owned-source-parent-result-v1",
-          "source_digest": "57ba568355350d52ac8f58581752abb31b3b94cc007bdf0b71d2a3905b0a1acc",
+          "source_digest": "6ee611e0153206af8a063e85f9d659f84a8ffd4ebf112b62056f1bb469dc7653",
           "source_retired": true,
           "status": "passed",
           "terminal_calls": 15,
@@ -156,7 +182,7 @@
             "bytes": 437,
             "failed": false,
             "overflow": false,
-            "sha256": "73161b964b38656032aa857af72e6164122f615429be511d06e04d5f0d16a465",
+            "sha256": "40a0d64cb0dd90280a9e282b00a178c0f3836cfb7a6382d42a46d374a04984fc",
             "start_attempted": true,
             "started": true
           },
@@ -176,17 +202,17 @@
         "state": "removed-by-original-qualified-collector"
       },
       "evidence_hashes": {
-        "independent_outcome_reference": "114f9f9a27954245845a9e693483171f3cc8d5fed4262a4ab421ef08fae95df5",
-        "independent_outcome_report": "36b63880696eb5e2adc99d194da9b212882f95da1f1c79bb70aa75cf2bf2cdaa",
-        "summary": "8e01f5f87e877af26105f2af465a77c4a71c7c711e5e95e95f1aa26e58ccc7e3",
-        "input_manifest": "60fca497b0fabb4fc2c662f5d5e53f655ec345026e2a45529a4c4559465e9839",
-        "outer_observation": "3798b724b5426bc49301955c411265866d57a1cec7ef50e20cf66b2435ed10bf",
-        "driver_result": "9aabe03a47d4f3af1a8a172694db179deeeee0fa3260323c5e76da852b3064ac"
+        "independent_outcome_reference": "aef79cfa0d41ec53c175e276f52f67b6bb1387157f5dc4c62fdc2f19888b80ec",
+        "independent_outcome_report": "39ebea2b8e3640082b235691728f6531a2fa5db9428a347cce6435f4a4b00717",
+        "summary": "1d278686834f1627dbac5f33c6fe68470d73e36fe8da8bb420b728a7eac7123a",
+        "input_manifest": "4edbd8ae3bc81d03730b442d8fbbf400353e0c3426218216ec01bbaa55552795",
+        "outer_observation": "9e9380ab015f258d67837c80862c4e81e4228d8acf4510b81a097afcfceaa99f",
+        "driver_result": "ffdeb4b4fe4f29680042a6000e3615bb533154ab454dabe50acdd32889f052b4"
       }
     }
   },
-  "diagnostic_limit": "The failed parent emitted only the fixed141-byte source-operation failure. Its hash and process count do not prove the exact failed step, child identity, mapping setup or original denial. No exact cause is established.",
-  "next_agent_action": "Use the reviewed fixed failure details to identify and fix the failed step. Obtain a fresh exact-source effect review before another physical check. No user action is needed.",
+  "diagnostic_limit": "The new failed-child diagnostic reached attribute-denial and retained an original file-open nonzero return with immediate Win32 error0. It does not expose the actual NTSTATUS, exact target or original prepare exception. It cannot prove error801 or qualify denial, retirement or cleanup. NtCreateFile reports success only with status0. Immediate Win32 error0 does not establish NT success.",
+  "next_agent_action": "Repair the test attribution for the earlier file-open refusal using an independently reviewed exact Native status and target witness. Preserve the earlier801 case and all failed outcomes, resource limits and production denial. No user action is needed.",
   "source_bindings": {
     "local_model_offload.py": "99114a954d1865290d70eb239e69d6ba5797fa55ad85492d22f94862fcb74cc5",
     "offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
@@ -196,8 +222,8 @@
     "windows_offload_native_session.py": "c9a9b494b4c6b380fbff8db4995b40f4985193b30910fcc5699f05e836d29e3e",
     "windows_offload_execution.py": "f22b80dec395c2ab8cd04d72239ef2fe5f2ecfccda31710288dd4a92282df2c0",
     "windows_offload_sources.py": "9876aa738098bb070affeb1519353625a0363844418e5848c037d96e938c1f56",
-    "windows_offload_source_session.py": "936dc94d9b88bac2bc06a1b839255abeb989cd0a01c6a182c07f9625b8b7f498",
-    "windows_offload_source_session_child.py": "346350834266d7f7125bf2337b4ade548861d5557a8b9fece56f3c5cf790855d"
+    "windows_offload_source_session.py": "5ae7c6e4ccb892fbb5fd73480d69fd5693c9b88f65ce8e3c40f5a55d194260b6",
+    "windows_offload_source_session_child.py": "ff8673952b84f14a5f6fd8b3df7fe694234ce517752d3f54a9d29a4605e950b6"
   },
   "runtime_witnesses": {
     "python.exe": "1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5",
@@ -222,5 +248,242 @@
   "all_source_adversarial_paths_qualified": false,
   "actual_native_source_session_qualified": false,
   "production_composed": false,
-  "parent_qualification_granted": false
+  "parent_qualification_granted": false,
+  "prior_checks": [
+    {
+      "schema_version": "windows-source-mapping-component-evidence-v1",
+      "status": "refusal-check-failed-normal-control-passed",
+      "source_commit": "167ae56e2ed89bc620f94ce8f86c4f0270bf064e",
+      "source_digest": "b5d180c771c20c58d4ccdc405f53b39560481c1221dc2e6994274ce140016a0f",
+      "scope": "Two separate model-free Windows component checks at the saved source version. The refusal case failed; only the unused-Source normal control passed. The later diagnostic source changes have no physical qualification yet.",
+      "observations": {
+        "negative": {
+          "case": "shared-write-map-denial",
+          "status": "failed",
+          "outer_run_id": "3a29b45fc68049d69e280ba39f8e27e8",
+          "inner_run_id": "ab7cf8eba53244ffbce74bdbef7c1413",
+          "actual_tool": {
+            "launch_tool": "88d075",
+            "session_id": 49212,
+            "completion_tool": "4d8755",
+            "actual_exit": 1
+          },
+          "elapsed_seconds": 4.406,
+          "effect_allowance_remaining": 0,
+          "automatic_retry_allowed": false,
+          "outer": {
+            "root_exit_code": 9,
+            "job_accounting": {
+              "active": 0,
+              "terminated": 0,
+              "total": 3
+            },
+            "limits": {
+              "active_limit": 32,
+              "flags": 8968,
+              "job_bytes": 2147483648,
+              "process_bytes": 1073741824
+            },
+            "peak_commit": {
+              "job_commit_bytes": 125714432,
+              "process_commit_bytes": 88608768
+            },
+            "cleanup_confirmed": true,
+            "all_owned_handles_close_acknowledged": true,
+            "forced_owned_job_termination": false,
+            "fence_required": false,
+            "observed_limit_messages": [],
+            "observed_limit_notifications": []
+          },
+          "inner": {
+            "status": "failed",
+            "failure_stage": "parent-running",
+            "exit_code": 9,
+            "parent_report": null,
+            "original_parent_exit_observed": true,
+            "watchdog_expired": false,
+            "watchdog_failed": false,
+            "watchdog_termination_attempted": true,
+            "dispatch_event_closed": true,
+            "owned_inputs_removed": false,
+            "streams": [
+              {
+                "bytes": 141,
+                "failed": false,
+                "overflow": false,
+                "sha256": "af19d0912844f3d7b0149f71c31b5a77b838d265e9979f37aa8846abd17fa954",
+                "start_attempted": true,
+                "started": true
+              },
+              {
+                "bytes": 0,
+                "failed": false,
+                "overflow": false,
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "start_attempted": true,
+                "started": true
+              }
+            ]
+          },
+          "synthetic_inputs": {
+            "count": 4,
+            "bytes": 313,
+            "state": "retained-unqualified-no-cleanup-authority"
+          },
+          "evidence_hashes": {
+            "independent_outcome_reference": "845420e248a6566450ebefb4e3872a333e5293a487486eb4a18daadf0186ac2b",
+            "independent_outcome_report": "092b58e931747349c2b2827e627850f9e5dc23ee0a175c7a3142fde00d86b748",
+            "summary": "a577bdeccf9ed7a9036ea8b7ee208be0e9345908a0ae23ce2117a742a07888e2",
+            "input_manifest": "722d90b243bf29c47b7da8a530d786c886d9f32d4ec4fdb415ed175534971590",
+            "outer_observation": "7749bd22ca6999e17a62ec33321cdda008b11f5e9dbdce2e6f87bb6ebe70d428",
+            "driver_result": "c2a225623180e746cad39ff7c6a398c44814a7e3a71c04299fc6e104499dcfc2"
+          }
+        },
+        "control": {
+          "case": "source-roundtrip",
+          "status": "unused-source-control-passed",
+          "outer_run_id": "a0044450d7a047fa95ca8a702eb66ba0",
+          "inner_run_id": "8fd8afe60d444e4ba168ba31c9982ee9",
+          "actual_tool": {
+            "launch_tool": "426e3c",
+            "session_id": 92422,
+            "completion_tool": "43c0fc",
+            "actual_exit": 0
+          },
+          "elapsed_seconds": 35.141,
+          "effect_allowance_remaining": 0,
+          "automatic_retry_allowed": false,
+          "outer": {
+            "root_exit_code": 0,
+            "job_accounting": {
+              "active": 0,
+              "terminated": 0,
+              "total": 3
+            },
+            "limits": {
+              "active_limit": 32,
+              "flags": 8968,
+              "job_bytes": 2147483648,
+              "process_bytes": 1073741824
+            },
+            "peak_commit": {
+              "job_commit_bytes": 124555264,
+              "process_commit_bytes": 88305664
+            },
+            "cleanup_confirmed": true,
+            "all_owned_handles_close_acknowledged": true,
+            "forced_owned_job_termination": false,
+            "fence_required": false,
+            "observed_limit_messages": [],
+            "observed_limit_notifications": []
+          },
+          "inner": {
+            "status": "observed",
+            "failure_stage": "none",
+            "exit_code": 0,
+            "parent_report": {
+              "borrower_started": false,
+              "child_exit_confirmed": true,
+              "job_active_zero": true,
+              "model_started": false,
+              "native_calls": 76,
+              "original_handles_closed": true,
+              "parent_qualification_granted": false,
+              "production_composed": false,
+              "schema_version": "owned-source-parent-result-v1",
+              "source_digest": "57ba568355350d52ac8f58581752abb31b3b94cc007bdf0b71d2a3905b0a1acc",
+              "source_retired": true,
+              "status": "passed",
+              "terminal_calls": 15,
+              "timer_callbacks_retired": true
+            },
+            "original_parent_exit_observed": true,
+            "watchdog_expired": false,
+            "watchdog_failed": false,
+            "watchdog_termination_attempted": false,
+            "dispatch_event_closed": true,
+            "owned_inputs_removed": true,
+            "streams": [
+              {
+                "bytes": 437,
+                "failed": false,
+                "overflow": false,
+                "sha256": "73161b964b38656032aa857af72e6164122f615429be511d06e04d5f0d16a465",
+                "start_attempted": true,
+                "started": true
+              },
+              {
+                "bytes": 0,
+                "failed": false,
+                "overflow": false,
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "start_attempted": true,
+                "started": true
+              }
+            ]
+          },
+          "synthetic_inputs": {
+            "count": 4,
+            "bytes": 313,
+            "state": "removed-by-original-qualified-collector"
+          },
+          "evidence_hashes": {
+            "independent_outcome_reference": "114f9f9a27954245845a9e693483171f3cc8d5fed4262a4ab421ef08fae95df5",
+            "independent_outcome_report": "36b63880696eb5e2adc99d194da9b212882f95da1f1c79bb70aa75cf2bf2cdaa",
+            "summary": "8e01f5f87e877af26105f2af465a77c4a71c7c711e5e95e95f1aa26e58ccc7e3",
+            "input_manifest": "60fca497b0fabb4fc2c662f5d5e53f655ec345026e2a45529a4c4559465e9839",
+            "outer_observation": "3798b724b5426bc49301955c411265866d57a1cec7ef50e20cf66b2435ed10bf",
+            "driver_result": "9aabe03a47d4f3af1a8a172694db179deeeee0fa3260323c5e76da852b3064ac"
+          }
+        }
+      },
+      "diagnostic_limit": "The failed parent emitted only the fixed141-byte source-operation failure. Its hash and process count do not prove the exact failed step, child identity, mapping setup or original denial. No exact cause is established.",
+      "next_agent_action": "Use the reviewed fixed failure details to identify and fix the failed step. Obtain a fresh exact-source effect review before another physical check. No user action is needed.",
+      "source_bindings": {
+        "local_model_offload.py": "99114a954d1865290d70eb239e69d6ba5797fa55ad85492d22f94862fcb74cc5",
+        "offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+        "windows_offload_core.py": "6148878a16ec28e4a8d0c255301d2a18165cce4b655b7855cf42ac79bff66cb0",
+        "windows_offload_backend.py": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+        "windows_offload_source_ledger.py": "eb8b7e2d92ded7063256750f191904ab5892003aa808c3297c8707a98e80d173",
+        "windows_offload_native_session.py": "c9a9b494b4c6b380fbff8db4995b40f4985193b30910fcc5699f05e836d29e3e",
+        "windows_offload_execution.py": "f22b80dec395c2ab8cd04d72239ef2fe5f2ecfccda31710288dd4a92282df2c0",
+        "windows_offload_sources.py": "9876aa738098bb070affeb1519353625a0363844418e5848c037d96e938c1f56",
+        "windows_offload_source_session.py": "936dc94d9b88bac2bc06a1b839255abeb989cd0a01c6a182c07f9625b8b7f498",
+        "windows_offload_source_session_child.py": "346350834266d7f7125bf2337b4ade548861d5557a8b9fece56f3c5cf790855d"
+      },
+      "runtime_witnesses": {
+        "python.exe": "1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5",
+        "python312.dll": "3b56fa10d3797c231468cee42caeaaaff40dbede7bc0d142ec4878493f48e07d"
+      },
+      "pending": [
+        "physical shared-write refusal and complete native failure/race matrix",
+        "shared protected accounting and mutation fence",
+        "cached model actor and borrower/storage lifetime",
+        "model-worker crash/shutdown/restart",
+        "actual optional offload resource measurements",
+        "production composition and parent qualification"
+      ],
+      "prior_unused_component_evidence_sha256": "a10988c60a99129e8c7d5b02b670ef794043428ca317c4fded53c8b0c3f14092",
+      "accepted_model_accuracy_reopened": false,
+      "ocr_reopened": false,
+      "model_started": false,
+      "old_staging_accessed": false,
+      "unknown_retained_staging_charge_bytes": 12884901888,
+      "source_denial_qualified": false,
+      "unused_source_control_qualified_at_saved_version": true,
+      "all_source_adversarial_paths_qualified": false,
+      "actual_native_source_session_qualified": false,
+      "production_composed": false,
+      "parent_qualification_granted": false
+    }
+  ],
+  "likely_cause": {
+    "classification": "inference-not-qualified",
+    "description": "The Source opens with FILE_SHARE_READ only. Microsoft documents that omitting FILE_SHARE_WRITE rejects an existing writable mapping. This likely rejects the target at NtCreateFile before the later oplock request. The exact NTSTATUS and target still need original-call attribution.",
+    "sources": [
+      "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+      "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntcreatefile"
+    ]
+  },
+  "prior_mapping_evidence_sha256": "107341203caaea8eee3539bfba7fa6008f6ce71538a5be3b74da7c2e3a030e5c"
 }
