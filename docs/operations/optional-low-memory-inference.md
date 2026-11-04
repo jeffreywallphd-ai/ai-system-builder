@@ -1527,3 +1527,28 @@ credit. No new physical attempt is part of this change. The agent next needs
 concrete shared accounting, original Core execution and owned cached-model
 lifetime integration. Accepted accuracy/OCR stay closed; whole-system tests
 remain deferred. No user action is needed.
+
+## Keep partial default-Core startup owned
+
+The default Core could previously lose its partially initialized Windows API
+when a later DLL load failed before the factory returned. It now retains one
+original API/loader/library record on the already retained Core before loading.
+Each actual returned library enters a preallocated slot before mutable
+observation checks or assignment. A failed or interrupted constructor becomes
+terminal. The same original completed constructor alone can publish the API.
+
+Focused fake-DLL tests cover first/second/third load and signature failures,
+observer/factory/loader drift, direct/reinit/copy/wrong-owner/thread denial,
+retained references and existing custom constructor compatibility. These tests
+use actual Core control flow with synthetic execution and library facts. They
+are not physical Windows qualification or a model run.
+
+The scope is the exact default Core factory. Other factories keep their own
+__new__ and constructor paths. The three fixed loaders/kwargs remain unchanged.
+No new registry, lifetime-ever counter, Native cleanup, capacity credit or
+readiness is added. A record follows its Core lifetime and surviving Journal
+references; ordinary reference behavior does not prove DLL unload or process
+retirement. Low-memory mode remains unavailable until its real finite
+Core/Journal/domain and owned cached-model lifetime compose and qualify.
+Unknown historical staging stays untouched and charged full12GiB. Accepted
+accuracy/OCR stay closed and whole-system tests remain deferred.

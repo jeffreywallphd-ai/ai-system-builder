@@ -1,11 +1,13 @@
 """Model-free Core/ABI fault tests. All native and directory facts are synthetic."""
 import ctypes as C
 import copy
+import gc
 from pathlib import Path
 import struct
 from types import MethodType, SimpleNamespace
 from threading import Thread
 import unittest
+import weakref
 from unittest.mock import Mock, patch
 
 from modules.adapters.runtime.python.worker.tasks import windows_offload_core as c
@@ -1216,6 +1218,203 @@ class FixedProtectionTests(unittest.TestCase):
                 with self.assertRaises(c.OffloadAdmissionError):
                     core._run(lambda: api.assert_protected(handle, argument))
                 callback.assert_not_called(); self.assertEqual(api.security.call_count, queries)
+
+
+class DefaultConstructionTests(unittest.TestCase):
+    """Actual default constructor, with memory-only DLLs and execution facts."""
+    def setUp(self):
+        scope=patch.dict(c._CUSTODY,{},clear=True);scope.start();self.addCleanup(scope.stop)
+        self.loads=[];self.libraries=[];self.fail_at=None;self.signature_failure=False;self.hook=None
+        case=self
+        class Function:
+            def __init__(self,name):object.__setattr__(self,'name',name)
+            def __setattr__(self,name,value):
+                if case.signature_failure and self.name=='NtCreateFile'and name=='argtypes':
+                    raise OSError('synthetic signature failure')
+                object.__setattr__(self,name,value)
+        class Dll:
+            def __init__(self,name,**kwargs):
+                case.loads.append((name,kwargs))
+                if name==case.fail_at:raise OSError('synthetic library failure')
+                self._name=name;self.functions={};case.libraries.append(self)
+                if case.hook:case.hook(name,self)
+            def __getattr__(self,name):
+                if name not in self.functions:self.functions[name]=Function(name)
+                return self.functions[name]
+        self.dll=Dll
+        loader=patch.object(C,'WinDLL',Dll,create=True);loader.start();self.addCleanup(loader.stop)
+        class Execution(c._NativeExecutionPort):
+            def assert_bound(self,core):c._require(core is self.core)
+            def execute(self,core,operation):self.assert_bound(core);return operation()
+        self.execution_type=Execution
+
+    def core(self,**kwargs):
+        execution=self.execution_type()
+        core=c.WindowsOffloadCore(Path.cwd()/'synthetic-default-native-construction',_execution=execution,**kwargs)
+        execution.core=core
+        return core
+
+    @staticmethod
+    def record(core):return vars(core).get('_WindowsOffloadCore__api_construction')
+
+    def prepare_without_file_io(self,core):
+        handle=c._Handle();handle.slot.value=81
+        with patch.object(c._WindowsApi,'prepare',return_value=((handle,b'v'*24),)), \
+             patch.object(core,'_check_bound',return_value=None):core.prepare_fresh_binding()
+
+    def test_default_second_library_failure_keeps_original_construction(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record)
+        self.assertEqual(record.phase,'failed');self.assertIs(record.loader,self.dll)
+        self.assertIs(record.api.owner,core);self.assertIsNone(core._api)
+        self.assertEqual(len(record.libraries),1);self.assertIs(record.libraries[0],self.libraries[0])
+        self.assertIs(c._CUSTODY[id(core)],core);self.assertTrue(core._uncertain)
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(len(self.loads),count)
+
+    def test_first_third_and_signature_failures_retain_exact_returned_prefix(self):
+        for failure,signature,expected in(('kernel32',False,0),('ntdll',False,2),(None,True,3)):
+            with self.subTest(failure=failure,signature=signature):
+                self.loads.clear();self.libraries.clear();self.fail_at=failure;self.signature_failure=signature
+                core=self.core()
+                with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+                record=self.record(core);self.assertIsNotNone(record)
+                self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),expected)
+                self.assertTrue(all(a is b for a,b in zip(record.libraries,self.libraries)))
+                self.assertIsNone(core._api);self.assertTrue(core._uncertain)
+
+    def test_default_success_publishes_only_complete_original_api_and_fixed_loads(self):
+        core=self.core();self.prepare_without_file_io(core);record=self.record(core)
+        self.assertIsNotNone(record);self.assertEqual(record.phase,'complete')
+        self.assertIs(core._api,record.api)
+        self.assertTrue(all(a is b for a,b in zip(record.libraries,(core._api.k,core._api.a,core._api.n))))
+        self.assertEqual(self.loads,[(name,{'use_last_error':True})for name in('kernel32','advapi32','ntdll')])
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):c._WindowsApi.__init__(core._api,core)
+        self.assertEqual(len(self.loads),count)
+
+    def test_default_direct_and_wrapped_raw_constructor_deny_before_any_library(self):
+        core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):c._WindowsApi(core)
+        self.assertEqual(self.loads,[])
+        wrapped=self.core(_api_factory=lambda owner:c._WindowsApi(owner))
+        with self.assertRaises(c.OffloadAdmissionError):wrapped.prepare_fresh_binding()
+        self.assertEqual(self.loads,[])
+
+    def test_return_is_retained_before_observation_drift_can_fail_admission(self):
+        for alias in('constructing','published','owner','library','factory'):
+            with self.subTest(alias=alias):
+                self.loads.clear();self.libraries.clear();core=self.core()
+                def drift(name,value):
+                    if name!='kernel32':return
+                    api=core._constructing_api
+                    if alias=='constructing':core._constructing_api=object()
+                    elif alias=='published':core._api=SimpleNamespace(owner=core)
+                    elif alias=='owner':api.owner=object()
+                    elif alias=='library':api.k=object()
+                    else:core._factory=lambda owner:SimpleNamespace(owner=owner)
+                self.hook=drift
+                with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+                record=self.record(core);self.assertIsNotNone(record)
+                self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),1)
+                self.assertIs(record.libraries[0],self.libraries[0]);self.assertEqual(len(self.loads),1)
+                self.assertTrue(core._uncertain);self.assertIs(c._CUSTODY[id(core)],core)
+        self.hook=None
+
+    def test_alias_restoration_or_factory_demotion_cannot_retry_failed_constructor(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record);count=len(self.loads)
+        core._api=None;core._constructing_api=record.api;core._uncertain=False
+        core._factory=lambda owner:SimpleNamespace(owner=owner)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertIs(self.record(core),record);self.assertEqual(len(self.loads),count)
+        self.assertEqual(record.phase,'failed')
+
+    def test_private_record_keeps_library_after_observation_references_are_removed(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record)
+        observed=weakref.ref(self.libraries[0]);self.libraries.clear()
+        record.api.k=None;core._constructing_api=None
+        gc.collect();self.assertIs(observed(),record.libraries[0])
+
+    def test_custom_subclass_keeps_its_new_hook_and_original_constructor_behavior(self):
+        roots=[]
+        class Pinned(c._WindowsApi):
+            def __new__(cls,owner):
+                value=object.__new__(cls);roots.append((owner,value));return value
+        core=self.core(_api_factory=Pinned);self.prepare_without_file_io(core)
+        self.assertIsNone(self.record(core));self.assertIs(core._api,roots[0][1])
+        self.assertEqual(self.loads,[(name,{'use_last_error':True})for name in('kernel32','advapi32','ntdll')])
+
+    def test_foreign_thread_reinit_has_no_effect_on_original_constructor(self):
+        core=self.core();results=[]
+        def observe(name,value):
+            if name!='kernel32':return
+            def foreign():
+                try:c._WindowsApi.__init__(core._constructing_api,core)
+                except c.OffloadAdmissionError:results.append('denied')
+            thread=Thread(target=foreign);thread.start();thread.join(2)
+            self.assertFalse(thread.is_alive())
+        self.hook=observe;self.prepare_without_file_io(core)
+        self.assertEqual(results,['denied']);self.assertEqual(len(self.loads),3)
+        self.assertEqual(self.record(core).phase,'complete');self.assertFalse(core._uncertain)
+
+    def test_copied_or_wrong_owner_construction_cannot_redirect_original_record(self):
+        core=self.core();other=self.core();denials=[]
+        def observe(name,value):
+            if name!='kernel32':return
+            api=core._constructing_api;record=self.record(core)
+            clone=object.__new__(c._WindowsApi);clone._default_core_construction=record
+            for operation in(lambda:copy.copy(record),lambda:copy.deepcopy(record),
+                             lambda:c._WindowsApi.__init__(clone,core),
+                             lambda:c._WindowsApi.__init__(api,other)):
+                with self.assertRaises(c.OffloadAdmissionError):operation()
+                denials.append(True)
+        self.hook=observe;self.prepare_without_file_io(core)
+        self.assertEqual(len(denials),4);self.assertEqual(len(self.loads),3)
+        self.assertEqual(self.record(core).phase,'complete');self.assertIsNone(self.record(other))
+
+    def test_loader_rebinding_after_return_retains_original_value_and_stops_next_load(self):
+        core=self.core()
+        def observe(name,value):
+            if name=='kernel32':C.WinDLL=lambda *args,**kwargs:None
+        self.hook=observe
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core)
+        self.assertEqual(record.phase,'failed');self.assertIs(record.loader,self.dll)
+        self.assertIs(record.libraries[0],self.libraries[0]);self.assertEqual(len(self.loads),1)
+
+    def test_interrupted_library_load_keeps_terminal_custody_without_retry(self):
+        core=self.core()
+        def interrupt(name,value):
+            if name=='advapi32':raise KeyboardInterrupt()
+        self.hook=interrupt
+        with self.assertRaises(KeyboardInterrupt):core.prepare_fresh_binding()
+        record=self.record(core)
+        self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),1)
+        self.assertIs(record.libraries[0],self.libraries[0]);self.assertIsNone(core._api)
+        self.assertIs(c._CUSTODY[id(core)],core);self.assertTrue(core._uncertain)
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(len(self.loads),count)
+
+    def test_reentrant_library_slot_denies_before_a_second_original_load(self):
+        core=self.core();attempted=[];denied=[]
+        def observe(name,value):
+            if name!='kernel32'or attempted:return
+            attempted.append(True)
+            try:self.record(core).load(0)
+            except c.OffloadAdmissionError:denied.append(True)
+        self.hook=observe
+        try:self.prepare_without_file_io(core)
+        except c.OffloadAdmissionError:pass
+        self.assertEqual(sum(name=='kernel32'for name,_ in self.loads),1)
+        self.assertEqual(denied,[True]);self.assertEqual(self.record(core).phase,'complete')
+        self.assertTrue(all(a is b for a,b in zip(self.record(core).libraries,self.libraries)))
 
 
 if __name__ == '__main__': unittest.main()

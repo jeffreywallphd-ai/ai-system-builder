@@ -14657,6 +14657,40 @@
           "Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "75a9dc9ce02f18ce0bc46500a056e542f5c5bba13f743e58ac0892e9e1ae2f7f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent improved Windows file-open error details and tested compatibility.",
+          "Failed results still remain failed.",
+          "These source tests did not run a model or enable low-memory mode."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b73ab447c7213585ac2d32d91fe27dafc87bc0ab8588d562f537c3990f1c2ecc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records reviewed source work at its saved version.",
+          "It does not complete the parent roadmap or qualify later code."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f08d492818339079b0d700fea8d0502e43522d634b8f7a42f8f9633d501eb63b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "An error number cannot identify the failed file.",
+          "The Windows unsafe-access test still needs its own evidence."
+        ]
+      }
     }
   ]
 }

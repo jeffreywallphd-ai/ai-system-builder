@@ -2510,3 +2510,38 @@ remain strict. Existing failed trials and retained inputs are not reclassified
 or deleted. A path/hash/status cannot supply the missing same-file-object proof.
 Production remains unavailable; shared domain/Core/cache/borrower/restart and
 resource qualification, including the unknown full12GiB charge, remain pending.
+
+### Default Core partial API and library retention
+
+The exact default Core prepare branch now retains an original one-shot
+constructor record/API before initialization. It is rooted by the existing
+Core custody and separately retains original factory/dispatch/thread/loader
+bindings and each actual returned library object. Three preallocated return
+slots are written before drift checks or k/a/n observer exposure. Partial DLL
+or later signature failure therefore preserves the known prefix and unknown
+failed call. The record becomes failed before fallible Core observer
+bookkeeping; failed construction grants no automatic retry or cleanup.
+
+At constructor entry the registered-default or existing custom path is selected
+once. API-to-original-record binding prevents owner/factory observation drift
+from demoting a registered construction to the legacy path. Canonical default
+direct/reinit/copy/wrong-owner/foreign-context calls deny before DLL effects.
+Only complete original initialization publishes _api. Custom subclass factories,
+PinnedApi, TrackedApi and diagnostic Journal owners keep their prior hooks and
+contracts and receive no new qualification from this narrow change. All three
+literal library names/order/kwargs stay the same. No arbitrary library path,
+Native query, Source-ledger widening or new execution producer is added.
+
+One record follows each existing admitted Core lifetime; there is no new global
+ever-counter or release hook. Existing successful Core retirement may release
+its prior custody entry, while surviving Core/Journal references still retain
+that record. This is Python retention, not FreeLibrary, process exit, staging
+credit or a process-lifetime resource budget. Arbitrary trusted in-process
+private-field/module tampering is not claimed to be isolated.
+
+Local fake consumers test failure/interruption and observation redirection; no
+physical Native effect ran for this checkpoint. General per-call known-return
+and finite whole-graph/terminal accounting, shared mutation/domain fences,
+owned worker/model/cache/borrower lifetime and actual resources remain pending.
+Unknown old staging remains untouched and charges full12GiB. Neither retained
+objects nor completed model quality admit optional offload or close its parent.

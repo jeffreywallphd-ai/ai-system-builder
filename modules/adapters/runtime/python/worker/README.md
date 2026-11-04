@@ -1075,3 +1075,29 @@ unused-Source control results remain exact historical observations. A status
 does not identify the failed target object. Concrete shared accounting/Core
 and owned cached-generator borrowing still need implementation/qualification.
 Accepted model accuracy and OCR are not rerun.
+
+## Default Core API construction custody
+
+The exact default WindowsOffloadCore factory now registers an original partial
+API record before its first existing DLL load. The already retained Core owns
+that record independently of _constructing_api, _api and k/a/n observations.
+Three preallocated slots retain actual library returns before post-return
+validation or observer assignment. The original factory, execution callback,
+thread, loader and API bindings must agree. Only the complete same constructor
+can publish _api. Failure marks the record terminal before observer bookkeeping;
+retry/reinit/copy/wrong-owner/foreign-context paths cannot restart that load.
+
+This guarantee is default-Core-only. Custom factory calls and overridden
+__new__ hooks stay intact. PinnedApi, TrackedApi, Journal and its diagnostic
+owner retain their existing construction contracts; this change does not newly
+qualify them. The three literal kernel32/advapi32/ntdll targets and
+use_last_error=True remain unchanged. There is no new path/kwargs selector,
+global constructor counter, release hook, FreeLibrary or cleanup credit.
+
+The record follows surviving Core/Journal references through the existing Core
+lifetime. Existing custody admission and retirement behavior stay unchanged.
+This bounds added references per Core, not total process-lifetime DLL loads.
+Fake-DLL actual-consumer/denial and related constructor tests are local evidence
+only. General finite Native return/call accounting, direct ancillary calls,
+shared domain/fence, owned cached-model/borrower/storage lifetime and actual
+offload resource/crash/restart qualification remain pending.

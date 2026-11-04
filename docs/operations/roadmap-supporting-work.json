@@ -9493,6 +9493,46 @@
         "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-exact-file-open-status-diagnostics",
+      "work_criteria": [
+        "exact-api-specific-status-with-versioned-reader",
+        "failed-observation-and-default-compatibility",
+        "focused-reviewed-owned-source-checkpoint"
+      ],
+      "receipt_digest": "6868ac176562f1693c0700594fc4957f99995ab587f7df052702b680f6609ed6",
+      "review_digest": "e74eade857cd075785386ae79fa5f6aca097de98cb0b99d91f6e1e2fa674859f",
+      "scope": "The agent improved Windows file-open error details and tested compatibility. Failed results still remain failed. These source tests did not run a model or enable low-memory mode.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "An error number cannot identify the failed file. The Windows unsafe-access test still needs its own evidence.",
+        "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-exact-file-open-status-diagnostics",
+      "work_criteria": [
+        "exact-api-specific-status-with-versioned-reader",
+        "failed-observation-and-default-compatibility",
+        "focused-reviewed-owned-source-checkpoint"
+      ],
+      "receipt_digest": "6868ac176562f1693c0700594fc4957f99995ab587f7df052702b680f6609ed6",
+      "review_digest": "e74eade857cd075785386ae79fa5f6aca097de98cb0b99d91f6e1e2fa674859f",
+      "scope": "The agent improved Windows file-open error details and tested compatibility. Failed results still remain failed. These source tests did not run a model or enable low-memory mode.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "An error number cannot identify the failed file. The Windows unsafe-access test still needs its own evidence.",
+        "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

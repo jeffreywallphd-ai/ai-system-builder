@@ -521,10 +521,106 @@ class _Protection:
                  and self.expected == (_acl(self.original[0], deny=True), _PRIVATE_CONTROL))
 
 
+class _DefaultApiConstruction:
+    """Passive default-Core custody, not Native execution or release authority."""
+    __slots__ = ('__origin', '__core', '__api', '__factory', '__call', '__thread',
+                 '__execution', '__loader', '__libraries', '__returned', '__next', '__phase', '__inflight')
+
+    def __init__(self, core, api, factory, call):
+        self.__origin, self.__core, self.__api = self, core, api
+        self.__factory, self.__call, self.__thread = factory, call, get_ident()
+        self.__execution, self.__loader = core._execution, getattr(C, 'WinDLL', None)
+        self.__libraries, self.__returned = [None]*3, [False]*3
+        self.__next, self.__phase, self.__inflight = 0, 'registered', False
+
+    def __repr__(self):return '<retained default Windows API construction>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self, memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self, protocol):raise OffloadAdmissionError()
+
+    @property
+    def api(self):return self.__api
+    @property
+    def loader(self):return self.__loader
+    @property
+    def libraries(self):return tuple(value for value, returned in zip(self.__libraries,self.__returned) if returned)
+    @property
+    def phase(self):return self.__phase
+
+    def _check(self, api, owner):
+        _require(type(self) is _DefaultApiConstruction and self.__origin is self
+                 and api is self.__api and owner is self.__core
+                 and get_ident() == self.__thread
+                 and getattr(api, '_default_core_construction', None) is self)
+        owner._assert_default_api_construction(self, api, self.__factory,
+                                               self.__call, self.__thread, self.__execution)
+
+    def begin(self, api, owner):
+        self._check(api,owner)
+        _require(self.__phase == 'registered' and self.__next == 0 and self.__inflight is False
+                 and callable(self.__loader) and C.WinDLL is self.__loader)
+        self.__phase = 'constructing'
+
+    def _observations(self, next_slot):
+        _require(self.__api.owner is self.__core)
+        for index, name in enumerate(('k','a','n')):
+            expected = self.__libraries[index] if index < next_slot else None
+            _require(getattr(self.__api,name) is expected)
+
+    def load(self, slot):
+        self._check(self.__api,self.__core)
+        _require(self.__phase == 'constructing' and type(slot) is int
+                 and 0 <= slot < 3 and slot == self.__next
+                 and self.__inflight is False and C.WinDLL is self.__loader)
+        self._observations(slot)
+        try:
+            self.__inflight = True  # Nested denial cannot clear the original call's latch.
+            value = self.__loader(('kernel32','advapi32','ntdll')[slot], use_last_error=True)
+            # Preallocated slots retain the actual return before any observer
+            # readback or k/a/n assignment. A failed call grants no cleanup.
+            self.__libraries[slot] = value
+            self.__returned[slot] = True
+            _require(type(value) is self.__loader)
+            self._check(self.__api,self.__core)
+            self._observations(slot)
+            _require(C.WinDLL is self.__loader)
+            self.__next += 1
+            self.__inflight = False
+            return value
+        except BaseException:
+            self.fail()
+            raise
+
+    def complete(self, api, owner):
+        self._check(api,owner)
+        _require(self.__phase == 'constructing' and self.__next == 3 and self.__inflight is False
+                 and all(value is True for value in self.__returned))
+        self._observations(3)
+        self.__phase = 'complete'
+
+    def fail(self):
+        # Terminal custody precedes observer bookkeeping, which may itself fail.
+        self.__phase = 'failed'
+        try:self.__core._uncertain = True
+        except BaseException:pass
+
+
 class _WindowsApi:
     """Narrow actual OS implementation; Core retains every call and output slot."""
     def __init__(self, owner):
         _require(os.name == 'nt' and struct.calcsize('P') == 8)
+        construction = getattr(self, '_default_core_construction', None)
+        if construction is not None:
+            _require(type(construction) is _DefaultApiConstruction)
+            construction.begin(self,owner)
+        else:
+            # Raw/custom subclass and Journal consumers keep their existing
+            # construction contracts. An unregistered exact default API on a
+            # canonical Core cannot enter that legacy route.
+            _require(not (type(self) is _WindowsApi and type(owner) is WindowsOffloadCore))
+        def library(slot):
+            if construction is not None:return construction.load(slot)
+            return C.WinDLL(('kernel32','advapi32','ntdll')[slot], use_last_error=True)
         self.owner = owner
         self._protection_origin = self
         self._protections = []
@@ -533,9 +629,10 @@ class _WindowsApi:
         self._construction_generation = self._construction_generation_origin = object()
         self._directory_creations = []
         self._directory_creation_rows = self._directory_creations
-        self.k = C.WinDLL('kernel32', use_last_error=True)
-        self.a = C.WinDLL('advapi32', use_last_error=True)
-        self.n = C.WinDLL('ntdll', use_last_error=True)
+        if construction is not None:self.k = self.a = self.n = None
+        self.k = library(0)
+        self.a = library(1)
+        self.n = library(2)
         signatures = [
             (self.n, 'NtCreateFile', [C.POINTER(_PTR), _U32, C.POINTER(_Attributes), C.POINTER(_Io), _PTR, _U32, _U32, _U32, _U32, _PTR, _U32], _I32),
             (self.n, 'NtCreateEvent', [C.POINTER(_PTR), _U32, _PTR, _I32, C.c_ubyte], _I32),
@@ -873,6 +970,9 @@ class WindowsOffloadCore:
         self.__origin = self
         self.cache_root = cache_root
         self._factory, self._api = _api_factory, None
+        self.__factory = _api_factory
+        self.__api_construction = None
+        self._constructing_api = None
         self._execution = _execution
         self._execution_calls = []
         self._dispatch = None
@@ -894,6 +994,36 @@ class WindowsOffloadCore:
         self._assert_origin()
         self._accounting._assert_origin()
         return self._accounting
+
+    def _assert_default_api_construction(self, record, api, factory, call, thread, execution):
+        _require(self._api is None)  # Refuse a published observer before reading it.
+        self._assert_origin()
+        _require(self.__factory is factory is _WindowsApi and self._factory is factory
+                 and self.__api_construction is record and self._constructing_api is api
+                 and self._api is None and self._execution is execution
+                 and isinstance(execution,_NativeExecutionPort)
+                 and self._busy is True and self._uncertain is False and self._retired is False
+                 and type(call) is _ExecutionCall and self._dispatch is call
+                 and call.started is True and call.finished is False
+                 and call.thread == thread == get_ident()
+                 and type(self._execution_calls) is list and self._execution_calls
+                 and self._execution_calls[-1] is call)
+
+    def _construct_default_api(self):
+        _require(self.__factory is self._factory is _WindowsApi
+                 and self.__api_construction is None and self._constructing_api is None)
+        api = object.__new__(_WindowsApi)
+        record = _DefaultApiConstruction(self,api,self.__factory,self._dispatch)
+        self.__api_construction = record  # Core was retained before this callback.
+        try:
+            api._default_core_construction = record
+            self._constructing_api = api
+            _require(_WindowsApi.__init__(api,self) is None)
+            record.complete(api,self)
+            self._api = api
+        except BaseException:
+            record.fail()  # Uses original references before fallible observers.
+            raise
 
     def _assert_origin(self):
         _require(type(self) is WindowsOffloadCore and getattr(self, '_WindowsOffloadCore__origin', None) is self)
@@ -972,7 +1102,8 @@ class WindowsOffloadCore:
         """Explicit private native read-handle preparation; never a passive read."""
         def prepare():
             _require(self._api is None and not self._chain)
-            self._api = self._factory(self)
+            if self.__factory is _WindowsApi:self._construct_default_api()
+            else:self._api = self._factory(self)  # Preserve custom __new__/factory hooks.
             self._chain = self._api.prepare(self.cache_root)
             _require(type(self._chain) is tuple and 1 <= len(self._chain) <= _MAX_DEPTH)
             self._check_bound()
