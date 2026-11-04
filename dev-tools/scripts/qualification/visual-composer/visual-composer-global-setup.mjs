@@ -190,7 +190,7 @@ export function buildPackagedDesktopFromCurrentWorktree(
 }
 
 export function prepareThinClientQualificationIdentity(launchPlan, purpose = "standard") {
-  if (purpose !== "standard" && purpose !== "image-generation" && purpose !== "settings" && purpose !== "functional-data") throw new Error("Unsupported qualification credential purpose.");
+  if (purpose !== "standard" && purpose !== "image-generation" && purpose !== "settings" && purpose !== "functional-data" && purpose !== "settings-public-values") throw new Error("Unsupported qualification credential purpose.");
   const bearerToken = randomBytes(32).toString("base64url");
   const tokenHashSecret = randomBytes(32).toString("base64url");
   const credentialPath = path.join(
@@ -214,7 +214,12 @@ export function prepareThinClientQualificationIdentity(launchPlan, purpose = "st
               .update(bearerToken)
               .digest("hex"),
             tokenHashAlgorithm: "sha256",
-            scopes: [
+            scopes: purpose === "settings-public-values" ? [
+              "settings:read",
+              "settings:write",
+              "workspace:read",
+              "workspace:write",
+            ] : [
               ...(purpose === "functional-data" ? ["provider-credential:use"] : []),
               ...(purpose === "image-generation" ? ["image-generation:read", "image-generation:write"] : []),
               ...(purpose === "settings" ? ["settings:read", "settings:write", "provider-credential:read", "provider-credential:write"] : []),

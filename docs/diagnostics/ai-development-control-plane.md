@@ -1734,3 +1734,24 @@ Only separately reviewed committed-source/effect execution can supply actual
 Windows evidence. Production source/ancestor/mapping/discovery, shared accounting,
 model-worker/crash/restart and offload resources remain pending agent work. No
 parent criterion passes from this definition. Accepted accuracy/OCR stay closed.
+
+## Public Settings credential fixture checks
+
+The existing `host-setup-policy` profile also checks the fixed
+`settings-public-values` test identity. It runs two Node files: the original
+synthetic host lifecycle tests and the new disposable identity tests. One Python
+file checks contributor routing and the actual selected runners. This profile
+starts no app, browser, native worker, package build, model or provider.
+
+The public Settings purpose has exactly Settings read/write and workspace
+read/write scopes. Original identity purposes and their permissions stay intact.
+The tests check the actual hashed credential file, expiry, independent random
+tokens, unknown-purpose refusal and preservation of an occupied identity file.
+Known source ownership removes only an unnecessary generic check. An explicit
+generic requirement, an unknown source or incomplete coverage keeps that check.
+
+Actual UI qualification remains separate. Select only the public-values case in
+each fixed reviewed consumer. Use a new source/package witness and separate
+one-use reviews for package, desktop and thin-client execution. Preserve existing
+freshness, source checks, bounded capture and owned shutdown. This source result
+does not complete a parent criterion or replace deferred combined testing.

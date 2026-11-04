@@ -300,14 +300,20 @@ isVitestOwnedTestSource('import { it } from "vitest";');
     def test_host_setup_policy_profile_is_exact_and_keeps_unknown_impact(self):
         import run_focused_checks
         root=HELPERS.parents[1];config="dev-tools/config/contributor-check-profiles.json"
-        tests="dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+        lifecycle="dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+        identity="dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs"
+        routing="dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
+        tests=[lifecycle,identity,routing]
         source="dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs"
         setup="dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"
         profiles=read_json(root/config);profile=profiles["profiles"]["host-setup-policy"]
-        self.assertEqual(profile["test_paths"],[tests])
-        self.assertEqual(run_focused_checks.profile_commands(root,"host-setup-policy"),[["node","--test","--",tests]])
+        self.assertEqual(profile["test_paths"],tests)
+        self.assertEqual(run_focused_checks.profile_commands(root,"host-setup-policy"),[
+            ["node","--test","--",identity,lifecycle],
+            [sys.executable,"-B","-m","unittest","discover","-s","dev-tools/helpers/tests","-p",Path(routing).name],
+        ])
         self.put(config,json.dumps(profiles))
-        for path in (source,setup,tests):
+        for path in (source,setup,*tests):
             ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
             self.assertIn("host-setup-policy",ids)
             self.assertNotIn("native-host-policy",ids)

@@ -162,6 +162,8 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs",
         "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs",
         "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs",
+        "dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py",
     ],
     "native-host-policy": [
         "dev-tools/helpers/native-qualification/owned_command_job.py",

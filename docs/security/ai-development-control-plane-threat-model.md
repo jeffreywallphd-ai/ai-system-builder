@@ -663,3 +663,29 @@ Portable tests perform no Native effect. New support references identify only
 already completed source work and retain hash-bound plain descriptions. They grant
 no parent, production, retained-staging, model, memory or later-source pass.
 Actual nested execution and remaining recovery/resource checks stay pending.
+
+## Public Settings test identity delta
+
+The fixed `settings-public-values` qualification purpose removes unnecessary
+declared permissions from the disposable test token. Its exact scopes are
+Settings read/write and workspace read/write. Workspace creation supports the
+existing public UI journey. The four previous purposes retain their exact scope
+lists. In particular, synthetic secret/defaults tests still use their separately
+selected broader Settings purpose.
+
+Unknown purposes fail before the helper reads a launch plan or creates a file.
+The helper retains random independent bearer/HMAC values, a hashed token record,
+the original 30-minute expiry and exclusive creation. An existing credential file
+is never overwritten, and a failed create does not publish a new hash secret.
+Tests use owned temporary files and synthetic data; no real provider or user
+credential is read. No token or hash secret enters public reports.
+
+These are coarse test transport scopes, not a new field-level security boundary.
+The dedicated host's application role and existing Settings authorization still
+apply. A denied sibling feature request must not trigger permission expansion.
+Actual Settings usability with this token needs the separately reviewed host run.
+The fixed source profile checks real fixture behavior and contributor routing;
+explicit, unknown and incomplete impact keep their generic verification guards.
+It performs no app, package, browser, native, model or provider effect. Separate
+current-source package and single-case host reviews remain required. Source tests
+grant no parent pass, physical shutdown proof or later-candidate qualification.

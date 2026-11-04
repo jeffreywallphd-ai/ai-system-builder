@@ -195,7 +195,9 @@
     },
     "host-setup-policy": {
       "test_paths": [
-        "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+        "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs",
+        "dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
       ],
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs",
@@ -206,7 +208,9 @@
         "dev-tools/config/contributor-check-profiles.json",
         "dev-tools/helpers/tests/test_control_plane_delivery.py",
         "docs/diagnostics/ai-development-control-plane.md",
-        "docs/security/ai-development-control-plane-threat-model.md"
+        "docs/security/ai-development-control-plane-threat-model.md",
+        "dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs",
+        "dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
       ]
     },
     "native-host-policy": {
