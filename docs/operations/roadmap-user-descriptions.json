@@ -14772,6 +14772,18 @@
           "This reviewed source work did not qualify a real low-memory model run."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "539a23e9cf616038336278e18ec13ecdf56ba85dade080d21c47b049663eebba",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent reserved cleanup tracking space before worker startup.",
+          "Focused tests filled ordinary tracking space and checked the existing cleanup methods.",
+          "This saved source work does not qualify a real low-memory model run."
+        ]
+      }
     }
   ]
 }

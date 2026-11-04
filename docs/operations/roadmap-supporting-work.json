@@ -9737,6 +9737,48 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "reserve-parent-retirement-before-startup",
+      "work_criteria": [
+        "reserve-original-parent-retirement-capacity",
+        "exclusive-existing-retirement-consumer",
+        "frontier-and-feature-compatibility",
+        "security-reviewed-focused-checkpoint"
+      ],
+      "receipt_digest": "6b29cb5a7da4a05848f4bcab5b0a5971c8c2579953bbdec0856bb561f65df4fe",
+      "review_digest": "be5e53dc5577c02452b4ca00e4a2a0606a28d7210136728ba8fc800e16b44706",
+      "scope": "The agent reserved cleanup tracking space before worker startup. Focused tests filled ordinary tracking space and checked the existing cleanup methods. This saved source work does not qualify a real low-memory model run.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "reserve-parent-retirement-before-startup",
+      "work_criteria": [
+        "reserve-original-parent-retirement-capacity",
+        "exclusive-existing-retirement-consumer",
+        "frontier-and-feature-compatibility",
+        "security-reviewed-focused-checkpoint"
+      ],
+      "receipt_digest": "6b29cb5a7da4a05848f4bcab5b0a5971c8c2579953bbdec0856bb561f65df4fe",
+      "review_digest": "be5e53dc5577c02452b4ca00e4a2a0606a28d7210136728ba8fc800e16b44706",
+      "scope": "The agent reserved cleanup tracking space before worker startup. Focused tests filled ordinary tracking space and checked the existing cleanup methods. This saved source work does not qualify a real low-memory model run.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

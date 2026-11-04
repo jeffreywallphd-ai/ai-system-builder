@@ -2713,3 +2713,31 @@ startup, the complete engine lifetime, shared disk protection/accounting,
 cached model/worker/borrower/storage or actual resource/restart behavior.
 Production remains denied; old staging stays untouched and fully charged
 12 GiB. Accepted model accuracy/OCR and prior failure history remain intact.
+
+### Original file-open status observed without protection qualification
+
+One fresh exact-source diagnostic on committed88301cf46 observed the original
+child NtCreateFile return as unsigned0xC0000043. The closed nine-field v2 frame
+retains open-file/attribute-denial/returned/nonzero/Win32-error0 with that status;
+the parent read-file frame has null NTSTATUS. Microsoft defines the code as
+[STATUS_SHARING_VIOLATION](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55).
+Win32 last-error0 is a separate fact. The omitted FILE_SHARE_WRITE and held
+writable mapping are a possible cause; no original successful target handle,
+same-object identity or mapping completion report establishes that causal link.
+This supersedes the earlier absence of an exact open status, not the801 oracle.
+
+The negative Source case stays failed. Outer original Job total3/active0/
+terminated0, nonforced exit and all outer handle/drain acknowledgements settle
+the owned test tree only. The inner parent report remains absent; watchdog
+termination was attempted and input cleanup did not occur. The manifest records
+four unremoved files/313B; reviewers did not inspect any old or new input leaf.
+All69 earlier references remain exact through their original manifest, while
+only admitted old metadata is rehashed. No prior input is adopted or deleted.
+
+The fixed1GiB process/2GiB Job/32-member/180s outer and512MiB/120s inner limits,
+read-only role, original source access/share rules, strict801/same-object/
+mapping/retirement predicates and production denial remain. The one-use effect
+is consumed; no unchanged-oracle retry is planned. Actual shared protection,
+accounting, cached model/worker/borrower/storage and resource/restart/production
+qualification remain pending. Unknown old staging stays untouched and fully
+charged12GiB. Accepted model accuracy/OCR and all prior failures remain intact.

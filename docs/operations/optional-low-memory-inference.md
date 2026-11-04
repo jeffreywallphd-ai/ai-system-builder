@@ -1653,3 +1653,22 @@ a real low-memory model run. Shared disk accounting, file protection, the full
 worker lifetime and real resource/restart checks remain pending. Accepted model
 accuracy and OCR checks stay closed. Old temporary files remain untouched and
 count against the full 12 GiB limit.
+
+## Observed Windows file-open status
+
+The new diagnostic captured a Windows sharing conflict during a file-open call.
+The test stopped before the later protection check. The logging now records
+the original status. It does not identify the exact file or prove that a
+writable file view caused this particular failure. The protection test remains
+failed. The earlier normal control remains a result for its saved source.
+
+An independent review confirmed that the owned test process group exited and
+its outer handles and output streams were closed. Four small input files remain
+recorded as unremoved, totaling 313 bytes. The reviewers did not open those
+input files or old retained inputs. No cleanup authority follows from the test.
+
+No user action is needed. The agent will keep the existing access rules and
+will not repeat this unchanged test. File protection, shared disk accounting,
+cached model and worker ownership, and restart/resource checks remain pending.
+Accepted accuracy and OCR checks stay closed. Whole-software testing stays
+deferred until the open feature work is implemented.
