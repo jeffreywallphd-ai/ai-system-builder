@@ -294,7 +294,7 @@ def _observe(control):
             and not o.uncertain and o.stop_requested and not x._OWNERS, 'retirement-proof')
     completion=o.ledger.settled(row,o.api)
     require(completion[0] is control.binding and row is control.read_row,'original-read-completion')
-    for old in t.original_rows:o.ledger.settled(old,o.api)
+    for old in t.original_rows:o.ledger._assert_completed_physical(old,o.api)
     for old in t.calls:o.ledger.settled(old,o.api);require(old.acknowledged,'terminal-row')
     require(all(h.closed and h.close_started for h in o.handles),'all-handles-closed')
     cancel=t.used.get('cancel-io')
@@ -303,8 +303,11 @@ def _observe(control):
     def scalars(label):
         r=t.used[label];v=o.ledger.settled(r,o.api)
         require(r.acknowledged and v[0][5] is t,'terminal-output-binding')
-        output=r.keep[-1]
-        return (output.active,output.total) if label == 'job-empty' else output.value
+        raw=o.ledger._retained_return(r,o.api).outputs
+        if label=='job-empty':
+            output=x._Accounting.from_buffer_copy(raw[0]);return output.active,output.total
+        require(type(raw)is tuple and len(raw)==1 and type(raw[0])is int,'terminal-output-facts')
+        return raw[0]
     before=(o.ledger.used,o.ledger.terminal_used,len(o.handles))
     require(o.retire_failed() is None and before == (o.ledger.used,o.ledger.terminal_used,len(o.handles)),
             'retirement-replay')
@@ -354,6 +357,22 @@ def failure_diagnostics(control):
     return value
 
 
+def _retire_failed_startup(x,owner,native):
+    """Consume only a known failed startup; no replay or qualification pass."""
+    require(type(owner)is x._WindowsOffloadIoSession and not owner.launch_complete
+            and owner.uncertain and owner.stop_requested and not owner.session_retired,
+            'startup-failure-state')
+    native.live()  # The qualifier's original outer containment must remain live.
+    require(owner.retire_failed()is None,'startup-retirement-return')
+    terminal=owner.terminal
+    require(type(terminal)is x._TerminalRetirement and terminal.owner is owner
+            and terminal.has_final_proof()and terminal.body_done and not terminal.failed
+            and owner.session_retired and owner.terminal_retired and all(h.closed for h in owner.handles),
+            'startup-retirement-proof')
+    return {'attempted':True,'retired':True,'owned_handles':len(owner.handles),
+            'closed_handles':sum(h.closed for h in owner.handles),'parent_qualification_granted':False}
+
+
 def collect(native, base, hashes, folder, rows):
     """Fixed engine only. Own all test graphs through self-exit, including errors."""
     require(type(native) is base._Native and native.profile is base._EXECUTION_PROFILE
@@ -397,6 +416,11 @@ def collect(native, base, hashes, folder, rows):
             row.clear();row.update(value)
         except BaseException as error:
             row['failure_stage']=error.stage if type(error) is ReadSessionFixtureError else phase
+            if phase=='prepare'and control is None and not o.launch_complete:
+                try:row['startup_retirement']=_retire_failed_startup(x,o,native)
+                except BaseException:
+                    row['startup_retirement']={'attempted':True,'retired':False,
+                                               'parent_qualification_granted':False}
             if control is not None:
                 row['fault_diagnostics']=[{'label':r['label'],'started':r['started'],'returned':r['returned'],
                     'acknowledged':r['acknowledged'],'result':r['result'],'error':r['error']} for r in control.rows]

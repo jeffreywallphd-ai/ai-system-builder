@@ -189,16 +189,175 @@ class _Call:
 class _IntentChanged(OffloadAdmissionError):pass
 
 
+class _NativeOutputs:
+    """Prebound existing IO ABI buffers; copies are facts, never release authority."""
+    __slots__=('__origin','__args','__keep','__outputs','__read','__input','__before','__verify',
+               '__inout','__inout_before','__inout_after')
+    def __init__(self,api,function,args,keep):
+        _need(type(self)is _NativeOutputs and not hasattr(self,'_NativeOutputs__origin'))
+        self.__origin,self.__args,self.__keep=self,args,keep
+        self.__outputs=None;self.__read=lambda:();self.__input=lambda:();self.__verify=lambda:None
+        self.__inout=lambda:();self.__inout_after=None
+        name=api._output_function_name(function)
+        def retained(value):_need(any(item is value for item in keep));return value
+        def ref(value,kind):
+            _need(type(value)is type(C.byref(_U32()))and type(value._obj)is kind)
+            return retained(value._obj)
+        def wide(value):
+            _need(isinstance(value,C.Array)and type(value)._type_ is C.c_wchar and 1<=len(value)<=32768)
+            return retained(value)
+        def cell(value,kind):
+            output=ref(value,kind);self.__read=lambda:(output.value,)
+        if name=='CreateProcessW':
+            _need(len(args)==10)
+            p=ref(args[9],_Process);startup=ref(args[8],_StartupEx)
+            command,environment=wide(args[1]),wide(args[6])
+            self.__read=lambda:(p.process,p.thread,p.pid,p.tid)
+            self.__input=lambda:(bytes(startup),bytes(environment))
+            # CreateProcessW explicitly permits modification of lpCommandLine.
+            # Preserve its pre-call input and actual post-call bytes separately.
+            self.__inout=lambda:bytes(command)
+            attributes=api.owner.attributes
+            _need(isinstance(attributes,C.Array)and type(attributes)._type_ is C.c_char
+                  and startup.attributes==C.addressof(attributes))
+            api._original_ledger()._assert_attribute_input(attributes,api)
+            fixed=self.__input
+            self.__input=lambda:(fixed(),bytes(attributes))
+            process,primary=keep[-2:]
+            _need(type(process)is type(primary)is _Handle)
+            process_slot,primary_slot=process.slot,primary.slot
+            def verify():
+                _need(api.owner.process_info is p and api.owner.process is process
+                      and api.owner.primary_thread is primary and api.owner.attributes is attributes
+                      and process.slot is process._original_slot is process_slot
+                      and primary.slot is primary._original_slot is primary_slot)
+            self.__verify=verify
+        elif name=='CreatePipe':
+            _need(len(args)==4 and len(keep)==3 and type(keep[0])is _Handle and type(keep[1])is _Handle)
+            first,second=keep[:2];left,right=first.slot,second.slot
+            _need(type(left)is type(right)is _PTR and args[0]._obj is left and args[1]._obj is right)
+            security=ref(args[2],_Security)
+            self.__read=lambda:(left.value,right.value)
+            self.__input=lambda:bytes(security)
+            def verify():
+                _need(first.slot is first._original_slot is left and second.slot is second._original_slot is right
+                      and args[0]._obj is left and args[1]._obj is right)
+            self.__verify=verify
+        elif name=='_beginthreadex':
+            _need(len(args)==6);cell(args[5],_U32)
+            _need(len(keep)==3 and type(keep[2])is _Handle)
+            callback,thread_id,handle=keep
+            def verify():
+                if handle.name=='controller-thread':
+                    _need(api.owner.controller is handle and api.owner.callback is callback
+                          and api.owner.thread_id is thread_id)
+            self.__verify=verify
+        elif name in('GetSystemDirectoryW','GetWindowsDirectoryW','GetModuleFileNameW'):
+            at=1 if name=='GetModuleFileNameW'else 0
+            _need(len(args)==at+2);text=wide(args[at]);capacity=args[at+1]
+            _need(type(capacity)is int and capacity==len(text))
+            self.__read=lambda:(bytes(text),)
+        elif name=='QueryFullProcessImageNameW':
+            _need(len(args)==4);text=wide(args[2]);size=ref(args[3],_U32);capacity=size.value
+            _need(0<capacity<=len(text))
+            self.__read=lambda:(bytes(text),size.value)
+        elif name=='IsProcessInJob':
+            _need(len(args)==3);cell(args[2],_I32)
+        elif name in('GetHandleInformation','GetExitCodeThread','GetExitCodeProcess'):
+            _need(len(args)==2);cell(args[1],_U32)
+        elif name=='QueryInformationJobObject':
+            _need(len(args)==5 and type(args[1])is int and args[1]in(1,9))
+            kind=_Accounting if args[1]==1 else _ExtendedLimits
+            output=ref(args[2],kind);_need(args[3]==C.sizeof(output)and args[4]is None)
+            self.__read=lambda:(bytes(output),)
+        elif name=='SetInformationJobObject':
+            _need(len(args)==4 and args[1]==9)
+            value=ref(args[2],_ExtendedLimits);_need(args[3]==C.sizeof(value))
+            self.__input=lambda:bytes(value)
+        elif name=='InitializeProcThreadAttributeList':
+            _need(len(args)==4 and args[1:3]==(2,0))
+            size=ref(args[3],C.c_size_t);buffer=args[0]
+            if buffer is not None:
+                _need(isinstance(buffer,C.Array)and type(buffer)._type_ is C.c_char)
+                retained(buffer);_need(0<size.value<=C.sizeof(buffer)<=65536)
+                self.__inout=lambda:bytes(buffer)
+            self.__read=lambda:(size.value,)
+            def verify():
+                if self.__outputs is not None:
+                    _need(0<size.value<=65536 and(buffer is None or size.value<=C.sizeof(buffer)))
+            self.__verify=verify
+        elif name=='UpdateProcThreadAttribute':
+            _need(len(args)==7 and args[1]==0 and args[2]in(131085,131074))
+            buffer,values=args[0],args[3]
+            _need(isinstance(buffer,C.Array)and type(buffer)._type_ is C.c_char
+                  and isinstance(values,C.Array)and type(values)._type_ is _PTR
+                  and len(values)==(1 if args[2]==131085 else 4)and args[4]==C.sizeof(values)
+                  and args[5]is args[6]is None)
+            retained(buffer);retained(values)
+            self.__input=lambda:tuple(values)
+            api._original_ledger()._assert_attribute_input(buffer,api)
+            self.__inout=lambda:bytes(buffer)
+        elif name=='DeleteProcThreadAttributeList':
+            _need(len(args)==1 and isinstance(args[0],C.Array)and type(args[0])._type_ is C.c_char)
+            buffer=retained(args[0]);api._original_ledger()._assert_attribute_input(buffer,api)
+            self.__inout=lambda:bytes(buffer)
+        elif name in('ReadFile','WriteFile'):
+            _need(len(args)==5 and len(keep)==3 and type(keep[0])is _Handle
+                  and isinstance(keep[1],C.Array)and type(keep[1])._type_ is C.c_char)
+            data=keep[1];count=ref(args[3],_U32)
+            _need(type(args[1])is type(C.byref(_U32()))and args[1]._obj is data
+                  and type(args[2])is int and 0<args[2]<=_FRAME_BYTES+4 and args[4]is None)
+            address=C.cast(args[1],_PTR).value
+            _need(C.addressof(data)<=address and address+args[2]<=C.addressof(data)+C.sizeof(data))
+            self.__read=(lambda:(bytes(data),count.value))if name=='ReadFile'else(lambda:(count.value,))
+            if name=='WriteFile':self.__input=lambda:bytes(data)
+        elif name=='CreateTimerQueueTimer':
+            _need(len(args)==7 and len(keep)==5 and type(keep[1])is _PTR and args[0]._obj is keep[1])
+            timer,slot=keep[:2];self.__read=lambda:(slot.value,)
+            def verify():
+                module=sys.modules.get(__package__+'.windows_offload_execution_child')
+                _need(module is not None and type(timer)is module._Timer and timer.child is api.owner
+                      and timer.slot is timer.original_slot is slot and timer.callback is keep[2])
+            self.__verify=verify
+        elif name=='WaitForMultipleObjects':
+            _need(len(args)==4 and type(args[0])is int and 1<=args[0]<=3
+                  and type(args[1])is _PTR*args[0]and args[2]==0
+                  and type(args[3])is int and 0<args[3]<=120000)
+            values=args[1];retained(values);self.__input=lambda:tuple(values)
+        self.__before=self.__input()
+        self.__inout_before=self.__inout()
+    def __repr__(self):return '<original IO typed outputs>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    @property
+    def outputs(self):return self.__outputs
+    @property
+    def inout(self):return self.__inout_after
+    def capture(self):
+        _need(self.__origin is self and self.__outputs is None)
+        self.__outputs=self.__read()  # Pure original-buffer copy before any observer/getter.
+        self.__inout_after=self.__inout()
+    def verify(self):
+        _need(self.__origin is self and self.__input()==self.__before)
+        self.__verify()
+        if self.__outputs is not None:
+            _need(self.__read()==self.__outputs and self.__inout()==self.__inout_after)
+        else:_need(self.__inout()==self.__inout_before)
+
+
 class _NativeReturn:
     """Original scalar-call custody, independent of mutable row observations."""
     __slots__=('__origin','__ledger','__row','__api','__binding','__index','__reader',
                '__started','__value','__error','__value_known','__error_returned',
-               '__error_known','__acknowledged','__completion')
+               '__error_known','__acknowledged','__completion','__outputs')
     def __init__(self,ledger,row,api,binding,index):
         _need(type(self)is _NativeReturn and not hasattr(self,'_NativeReturn__origin'))
         self.__origin=self
         self.__ledger,self.__row,self.__api,self.__binding,self.__index=ledger,row,api,binding,index
-        self.__reader=getattr(C,'get_last_error',None)
+        bootstrap=getattr(api,'_Native__bootstrap',None)
+        self.__reader=bootstrap.error_reader if bootstrap is not None else getattr(C,'get_last_error',None)
+        self.__outputs=_NativeOutputs(api,binding[0],binding[1],binding[3])
         self.__started=self.__value_known=self.__error_returned=False
         self.__error_known=self.__acknowledged=False
         self.__value=self.__error=None
@@ -222,6 +381,10 @@ class _NativeReturn:
     def acknowledged(self):return self.__acknowledged
     @property
     def completion(self):return self.__completion
+    @property
+    def outputs(self):return self.__outputs.outputs
+    @property
+    def inout(self):return self.__outputs.inout
 
     def identity(self,ledger):
         _need(type(self)is _NativeReturn and self.__origin is self and self.__ledger is ledger)
@@ -230,19 +393,23 @@ class _NativeReturn:
     def invoke(self):
         _need(not self.__started and callable(self.__reader))
         self.__ledger._assert_return_dispatch(self)
+        self.__outputs.verify()
         self.__started=True
         self.__value=self.__binding[0](*self.__binding[1])
         self.__value_known=True  # No reader, observer or type check before this.
+        self.__outputs.capture()
         self.__error=self.__reader()
         self.__error_returned=True
         _need(type(self.__error)is int and 0<=self.__error<2**32)
         self.__error_known=True
+        self.__outputs.verify()
         return self.__value
 
     def acknowledge(self,ledger):
         self.identity(ledger)
         _need(self.__started and self.__value_known and self.__error_known
               and self.__completion is not None and not self.__acknowledged)
+        self.__outputs.verify()
         self.__acknowledged=True
 
     def publish_completion(self,ledger,value):
@@ -251,6 +418,169 @@ class _NativeReturn:
               and type(value)is tuple and len(value)==4 and value[0]is self.__binding
               and value[1]is self.__value and value[2]is self.__error and value[3]==self.__binding[9])
         self.__completion=value
+
+
+class _BootstrapLibraryCall:
+    """One fixed loader entry in an original physical row; no unload authority."""
+    __slots__=('__origin','__construction','__slot','__row','__loader','__getter',
+               '__target','__kwargs','__started','__value','__handle','__error',
+               '__returned','__error_returned','__error_known','__acknowledged')
+    def __init__(self,construction,slot,row,loader,getter,target,kwargs):
+        _need(type(self)is _BootstrapLibraryCall and not hasattr(self,'_BootstrapLibraryCall__origin'))
+        self.__origin,self.__construction,self.__slot,self.__row=self,construction,slot,row
+        self.__loader,self.__getter,self.__target,self.__kwargs=loader,getter,target,kwargs
+        self.__started=self.__returned=self.__error_returned=self.__error_known=self.__acknowledged=False
+        self.__value=self.__handle=self.__error=None
+    def __repr__(self):return '<original IO loader outcome>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    @property
+    def value(self):return self.__value
+    @property
+    def returned(self):return self.__returned
+    @property
+    def acknowledged(self):return self.__acknowledged
+    def invoke(self):
+        _need(self.__origin is self and not self.__started and callable(self.__loader)and callable(self.__getter))
+        self.__construction._assert_loader(self,self.__slot,self.__row)
+        self.__started=True
+        self.__value=self.__loader(self.__target,**self.__kwargs);self.__returned=True
+        _need(type(self.__value)is self.__loader)
+        self.__handle=self.__value._handle  # Original actual library before reader/aliases.
+        self.__error=self.__getter();self.__error_returned=True
+        _need(type(self.__error)is int and type(self.__handle)is int and self.__handle>0)
+        self.__error_known=True
+        self.__construction._assert_loader(self,self.__slot,self.__row)
+        _need(self.__value._handle==self.__handle and self.__value._name==self.__target)
+        self.__acknowledged=True
+        return self.__value
+    def assert_known(self):
+        _need(self.__origin is self and self.__returned and self.__error_known and self.__acknowledged
+              and self.__value._handle==self.__handle and self.__value._name==self.__target)
+
+
+class _BootstrapCustody:
+    """Concrete constructor producer, consumed by the original IO API only."""
+    __slots__=('__origin','__api','__owner','__ledger','__custody','__thread',
+               '__loaders','__getters','__rows','__calls','__libraries',
+               '__published','__metadata','__next','__busy','__failed','__complete',
+               '__request','__deadline','__child_bootstrap')
+    def __init__(self,api,ledger):
+        _need(type(self)is _BootstrapCustody and not hasattr(self,'_BootstrapCustody__origin')
+              and type(api)is _Native and api._Native__bootstrap is None)
+        self.__origin,self.__api,self.__owner,self.__ledger=self,api,api.owner,ledger
+        self.__custody=self.__owner._Native__custody;self.__thread=get_ident()
+        self.__request=self.__child_bootstrap=None
+        if type(self.__owner)is _WindowsOffloadIoSession:
+            self.__request=self.__owner.active
+            _need(type(self.__request)is _Request and self.__request.seq==0)
+            self.__request.origin(self.__owner);self.__deadline=self.__request.deadline
+        else:
+            module=sys.modules.get(__package__+'.windows_offload_execution_child')
+            _need(module is not None and module._CHILD is self.__owner)
+            boot=module._BOOTSTRAP
+            _need(type(boot)is tuple and len(boot)==5 and boot[0]==self.__owner.nonce
+                  and boot[3]is self.__owner.hashes and boot[4]is self.__owner.runtime)
+            self.__child_bootstrap=boot;self.__deadline=boot[2]
+        _remaining(self.__deadline)
+        self.__loaders=(getattr(C,'WinDLL',None),C.CDLL)
+        self.__getters=(getattr(C,'get_last_error',None),C.get_errno)
+        _need(all(callable(v)for v in self.__loaders+self.__getters))
+        self.__calls=[None,None];self.__libraries=[None,None];self.__published=[False,False]
+        self.__metadata=[];self.__next=0;self.__busy=self.__failed=self.__complete=False
+        api._Native__bootstrap=self  # Retain partial reservation before any effect.
+        self.__rows=ledger._register_bootstrap(self,api)
+    def __repr__(self):return '<original IO bootstrap custody>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    @property
+    def error_reader(self):return self.__getters[0]
+    def fail(self):self.__failed=True
+    def _origin(self):
+        a,o=self.__api,self.__owner
+        _need(self.__origin is self and type(a)is _Native and a._Native__bootstrap is self
+              and a.owner is o and o.api is a and o.ledger is self.__ledger
+              and o._Native__custody is self.__custody and self.__custody==(o,a,self.__ledger))
+        self.__ledger._original_storage()
+    def assert_api(self):
+        self._origin();_need(not self.__failed)
+        for i,name in enumerate(('k','crt')):
+            if self.__published[i]:
+                _need(getattr(self.__api,name,None)is self.__libraries[i]);self.__calls[i].assert_known()
+        for name,function,arguments,types,result in self.__metadata:
+            library=self.__libraries[1]if name=='_beginthreadex'else self.__libraries[0]
+            _need(getattr(library,name)is function and function.argtypes is arguments
+                  and type(arguments)is list and len(arguments)==len(types)
+                  and all(a is b for a,b in zip(arguments,types))
+                  and function.restype is result and getattr(function,'errcheck',None)is None)
+    def _assert_loader(self,call,slot,row):
+        self.assert_api()
+        if self.__request is not None:
+            _need(self.__request.deadline==self.__deadline);self.__owner._live(self.__request)
+        else:
+            module=sys.modules.get(__package__+'.windows_offload_execution_child')
+            _need(module is not None and module._BOOTSTRAP is self.__child_bootstrap)
+            _remaining(self.__deadline)
+        _need(get_ident()==self.__thread and not self.__complete and self.__busy
+              and type(slot)is int and slot==self.__next and self.__calls[slot]is call
+              and self.__rows[slot]is row and self.__ledger._bootstrap_row(self,row)
+              and C.WinDLL is self.__loaders[0]and C.CDLL is self.__loaders[1]
+              and getattr(C,'get_last_error',None)is self.__getters[0]and C.get_errno is self.__getters[1]
+              and getattr(self.__api,('k','crt')[slot],None)is None)
+    def load(self,slot,target):
+        self.assert_api()
+        _need(get_ident()==self.__thread and type(slot)is int and slot in(0,1)
+              and slot==self.__next and not self.__busy and not self.__complete)
+        if slot==0:_need(target=='kernel32'and not self.__metadata)
+        else:
+            _need(self.__published[0]and self.__metadata)
+            row,binding,value=self.__ledger._scalar_at(2,self.__api)
+            _need(binding[0]is self.__libraries[0].GetSystemDirectoryW and row.acknowledged
+                  and type(value.outputs)is tuple and len(value.outputs)==1)
+            text=binding[3][0];_need(isinstance(text,C.Array)and bytes(text)==value.outputs[0])
+            _need(target==str(PureWindowsPath(_root(text.value))/'ucrtbase.dll'))
+        call=_BootstrapLibraryCall(self,slot,self.__rows[slot],self.__loaders[slot],self.__getters[slot],
+                                   target,{'use_last_error':True}if slot==0 else{'use_errno':True})
+        self.__calls[slot]=call;self.__busy=True
+        try:
+            value=call.invoke();self.__libraries[slot]=value
+            self.__next+=1;self.__busy=False
+            return value
+        except BaseException:self.fail();raise
+    def _bind(self,name,function,arguments,result):
+        _need(type(arguments)is list and function.argtypes is arguments
+              and function.restype is result and getattr(function,'errcheck',None)is None)
+        self.__metadata.append((name,function,arguments,tuple(arguments),result))
+    def bind_kernel(self,signatures):
+        self._origin()
+        _need(get_ident()==self.__thread and self.__next==1 and not self.__published[0]
+              and self.__api.k is self.__libraries[0]and not self.__metadata)
+        self.__published[0]=True
+        for name,args,result in signatures:self._bind(name,getattr(self.__libraries[0],name),args,result)
+        self.assert_api()
+    def bind_crt(self):
+        self._origin()
+        _need(get_ident()==self.__thread and self.__next==2 and not self.__published[1]
+              and self.__api.crt is self.__libraries[1])
+        self.__published[1]=True;self.assert_api()
+    def complete(self):
+        self.assert_api();_need(get_ident()==self.__thread and self.__next==2 and all(self.__published)
+                                and not self.__busy and not self.__complete)
+        fn=self.__api.begin;_need(fn is self.__libraries[1]._beginthreadex)
+        self._bind('_beginthreadex',fn,fn.argtypes,C.c_size_t)
+        self.__complete=True;self.assert_api()
+    def function_name(self,function):
+        self.assert_api()
+        found=[name for name,fn,*_ in self.__metadata if fn is function]
+        _need(len(found)==1);return found[0]
+    def owns(self,row):return any(row is value for value in self.__rows)
+    def assert_completed(self,row,api):
+        self.assert_api();_need(api is self.__api and self.__complete and self.owns(row))
+        for original,call in zip(self.__rows,self.__calls):
+            if row is original:call.assert_known();return
+        raise OffloadAdmissionError()
 
 
 class _CoreReadRows:
@@ -322,12 +652,86 @@ class _Ledger:
         self.__returns=[None]*len(self.__rows)  # Same physical rows, no new pool.
         self.__core_rows=None
         self.__core_owners=[None]*len(self.__rows)
+        self.__bootstrap=None
 
     def _original_storage(self):
         _need(type(self)is _Ledger and self.__origin is self
               and self.owner is self.__owner and self.rows is self.__rows
               and self.normal is self.__normal and self.terminal is self.__terminal
               and self.bindings is self.__bindings and self.completions is self.__completions)
+
+    def _register_bootstrap(self,construction,api):
+        with self.lock:
+            self._original_storage()
+            _need(type(construction)is _BootstrapCustody and type(api)is _Native
+                  and api.owner is self.__owner and self.__owner.api is api
+                  and api._Native__bootstrap is construction and self.__bootstrap is None
+                  and self.used==self.terminal_used==0 and self.__core_rows is None)
+            rows=self.__rows[:2]
+            for i,row in enumerate(rows):
+                self.member(row)
+                _need(row.index==i and self.normal[i]is row and self.__intents[i]is None
+                      and self.__claims[i]is self.__returns[i]is self.__core_owners[i]is None
+                      and not row.committed and not row.started)
+            self.__bootstrap=construction;self.used=2
+            return rows
+
+    def _bootstrap_row(self,construction,row):
+        self._original_storage();self.member(row)
+        _need(self.__bootstrap is construction and row.index in(0,1)
+              and self.__rows[row.index]is row and self.normal[row.index]is row
+              and self.__intents[row.index]is self.__claims[row.index]is self.__returns[row.index]is None
+              and self.__core_owners[row.index]is None)
+        return True
+
+    def _completed_bootstrap(self,row,api):
+        if self.__bootstrap is not None and self.__bootstrap.owns(row):
+            self._bootstrap_row(self.__bootstrap,row)
+            self.__bootstrap.assert_completed(row,api);return True
+        return False
+
+    def _assert_completed_physical(self,row,api):
+        self._original_storage();self.member(row)
+        if not self._completed_bootstrap(row,api):self.settled(row,api)
+
+    def _scalar_at(self,index,api):
+        self._original_storage()
+        _need(type(index)is int and 0<=index<len(self.__rows))
+        row=self.__rows[index];binding=self.__claims[index]
+        _need(type(binding)is tuple and binding[4]is api)
+        self.settled(row,api)
+        return row,binding,self._retained_return(row,api)
+
+    def _assert_attribute_input(self,buffer,api):
+        """Latest original opaque Native output, not a fresh observer snapshot."""
+        self._original_storage()
+        _need(api.owner is self.__owner and self.__owner.api is api)
+        functions=(api.k.InitializeProcThreadAttributeList,api.k.UpdateProcThreadAttribute,
+                   api.k.DeleteProcThreadAttributeList)
+        for i in range(len(self.__claims)-1,-1,-1):
+            binding=self.__claims[i]
+            if binding is not None and binding[4]is api and any(binding[0]is fn for fn in functions):
+                if binding[1][0]is not buffer:continue
+                original=self.__returns[i]
+                # The currently constructing call has no return yet; it is
+                # not an earlier completed attribute-list transition.
+                if original is None:continue
+                _need(binding[0]is not api.k.DeleteProcThreadAttributeList)
+                self.settled(self.__rows[i],api)
+                _need(original.acknowledged and type(original.inout)is bytes and bytes(buffer)==original.inout)
+                return
+        raise OffloadAdmissionError()
+
+    def _acknowledged_history(self,api,thread=None):
+        """Original private scalar chronology; pending other threads are not facts."""
+        self._original_storage();_need(api.owner is self.__owner and self.__owner.api is api)
+        values=[]
+        for i,binding in enumerate(self.__claims):
+            if binding is None or(thread is not None and binding[9]!=thread):continue
+            value=self.__returns[i]
+            if value is None or not value.acknowledged:continue
+            values.append(self._scalar_at(i,api))
+        return tuple(values)
 
     def _core_graph_origin(self,graph):
         module=sys.modules.get(__package__+'.windows_offload_execution_child')
@@ -351,6 +755,8 @@ class _Ledger:
                     row=self.__rows[i];self.member(row)
                     _need(row.index==i and self.__core_owners[i]is None
                           and (self.normal[i]if i<_MAX_CALLS else self.terminal[i-_MAX_CALLS])is row)
+                    if self._completed_bootstrap(row,self.__owner.api):
+                        _need(not gap);count+=1;continue
                     if self.__intents[i]is None:
                         gap=True
                         _need(self.__claims[i]is self.__returns[i]is None
@@ -450,7 +856,8 @@ class _Ledger:
             self.member(row)
             index=self.__locations.get(id(row))
             _need(type(index)is int and self.__rows[index]is row and self.__intents[index]is None
-                  and self.__core_owners[index]is None)
+                  and self.__core_owners[index]is None
+                  and(self.__bootstrap is None or not self.__bootstrap.owns(row)))
             self.__intents[index]=(function,args,valid,keep)
             row.function, row.args, row.valid, row.keep = function, args, valid, keep
             rows.append(row)
@@ -568,13 +975,20 @@ class _Native(_NativePrimitives):
         _native_owner(owner)
         _need(owner.api is None); value = super().__new__(cls); owner.api = value; return value
     def __init__(self, owner):
+        _need(type(self)is _Native and not hasattr(self,'_Native__origin'))
         self.__origin=self
+        self.__bootstrap=None
         self.owner = owner
         _need(os.name == 'nt' and C.sizeof(_PTR) == 8 and sys.implementation.name == 'cpython'
               and sysconfig.get_platform() == 'win-amd64'
               and (C.sizeof(_BasicLimits),C.sizeof(_ExtendedLimits),C.sizeof(_StartupEx),C.sizeof(_Process)) == (64,144,112,24))
         self._original_ledger()  # Root the original API/ledger before DLL effects.
-        self.k = C.WinDLL('kernel32', use_last_error=True)
+        construction=_BootstrapCustody(self,self._original_ledger())
+        try:self._construct(construction)
+        except BaseException:construction.fail();raise
+
+    def _construct(self,construction):
+        self.k = construction.load(0,'kernel32')
         ptr, u32, i32 = _PTR, _U32, _I32
         signatures = [
             ('CreateEventW',[ptr,i32,i32,C.c_wchar_p],ptr),('SetEvent',[ptr],i32),('ResetEvent',[ptr],i32),
@@ -597,18 +1011,21 @@ class _Native(_NativePrimitives):
             ('ExitProcess',[u32],None),('Sleep',[u32],None)]
         for name,args,result in signatures:
             fn=getattr(self.k,name);fn.argtypes,fn.restype=args,result
-        if type(owner) is not _WindowsOffloadIoSession:
-            owner.exit_function,owner.park_function=self.k.ExitProcess,self.k.Sleep
+        if type(self.owner) is not _WindowsOffloadIoSession:
+            self.owner.exit_function,self.owner.park_function=self.k.ExitProcess,self.k.Sleep
         self.thread_callback = C.WINFUNCTYPE(u32,ptr)
         self.timer_callback = C.WINFUNCTYPE(None,ptr,C.c_ubyte)
         self.k.CreateTimerQueueTimer.argtypes=[C.POINTER(ptr),ptr,self.timer_callback,ptr,u32,u32,u32]
         self.k.CreateTimerQueueTimer.restype=i32
         self.k.DeleteTimerQueueTimer.argtypes=[ptr,ptr,ptr]
         self.k.DeleteTimerQueueTimer.restype=i32
+        construction.bind_kernel(signatures+[
+            ('CreateTimerQueueTimer',self.k.CreateTimerQueueTimer.argtypes,i32),
+            ('DeleteTimerQueueTimer',self.k.DeleteTimerQueueTimer.argtypes,i32)])
         system = self.location(self.k.GetSystemDirectoryW)
         crt_path = str(PureWindowsPath(system)/'ucrtbase.dll')
-        self.crt = C.CDLL(crt_path, use_errno=True)
-        loaded=C.create_unicode_buffer(32768);owner.buffers.append(loaded)
+        self.crt = construction.load(1,crt_path);construction.bind_crt()
+        loaded=C.create_unicode_buffer(32768);self.owner.buffers.append(loaded)
         length=self.call(self.k.GetModuleFileNameW,self.crt._handle,loaded,len(loaded),
                          valid=lambda n:type(n) is int and 0<n<len(loaded),keep=(self.crt,loaded))
         _need(length==len(loaded.value) and _root(loaded.value).casefold()==crt_path.casefold())
@@ -616,6 +1033,7 @@ class _Native(_NativePrimitives):
         self.begin = self.crt._beginthreadex
         self.begin.argtypes = [ptr,u32,self.thread_callback,ptr,u32,C.POINTER(u32)]
         self.begin.restype = C.c_size_t
+        construction.complete()
 
     def location(self, function):
         text=C.create_unicode_buffer(32768);self.owner.buffers.append(text)
@@ -635,6 +1053,23 @@ class _Native(_NativePrimitives):
         _need(type(custody)is tuple and len(custody)==3
               and custody[0]is owner and custody[1]is self and custody[2]is owner.ledger)
         return custody[2]
+
+    def _output_function_name(self,function):
+        construction=getattr(self,'_Native__bootstrap',None)
+        if construction is not None:return construction.function_name(function)
+        # Explicitly synthetic APIs use cached memory-only function objects.
+        names=('CreateProcessW','CreatePipe','GetSystemDirectoryW','GetWindowsDirectoryW',
+               'GetModuleFileNameW','QueryFullProcessImageNameW','IsProcessInJob',
+               'GetHandleInformation','GetExitCodeThread','GetExitCodeProcess',
+               'QueryInformationJobObject','SetInformationJobObject',
+               'InitializeProcThreadAttributeList','UpdateProcThreadAttribute','DeleteProcThreadAttributeList',
+               'ReadFile','WriteFile','CreateTimerQueueTimer','WaitForMultipleObjects')
+        kernel=getattr(self,'k',None)
+        for name in names:
+            observed=getattr(kernel,name,None)
+            if function is observed:return name
+        if function is getattr(self,'begin',None):return '_beginthreadex'
+        return None
 
     def _call_row(self, function, *args, valid=lambda v:type(v) is int and v!=0, keep=(), terminal=False, _wait_deadline=None):
         self.origin();owner=self.owner;ledger=self._original_ledger()
@@ -696,6 +1131,8 @@ class _Native(_NativePrimitives):
         _need(type(self) is _Native and getattr(self,'_Native__origin',None) is self
               and self.owner.api is self and self._handle_type is _Handle)
         _native_owner(self.owner)
+        construction=getattr(self,'_Native__bootstrap',None)
+        if construction is not None:construction.assert_api()
 
 
 def _native_owner(owner):
@@ -782,6 +1219,127 @@ class _IoSessionContract:
     def bootstrap(*args): return _bootstrap(*args)
 
 
+class _KnownStartup:
+    """Original Resume-before-ready custody, not a child-ready or exit witness."""
+    __slots__=('__origin','__owner','__api','__ledger','__request','__thread','__valid',
+               '__handles','__generations','__fields','__process_info','__process_values',
+               '__attributes','__runtime','__runtime_hash','__callback','__thread_id',
+               '__thread_value','__controller_native','__rows','__ready_rows')
+    def __init__(self,owner,request):
+        _need(type(self)is _KnownStartup and not hasattr(self,'_KnownStartup__origin')
+              and owner._WindowsOffloadIoSession__startup is self)
+        self.__origin,self.__owner,self.__api,self.__ledger=self,owner,owner.api,owner.ledger
+        self.__valid=False;self.__request=request;self.__thread=get_ident();self.__ready_rows=None
+        _need(type(request)is _Request and request.seq==0 and owner.controller_ident==self.__thread
+              and len(owner.handles)==len(owner._handle_bindings)==13)
+        request.origin(owner)
+        self.__handles=tuple(owner.handles)
+        self.__generations=tuple(_known_handle(owner,h)for h in self.__handles)
+        self.__fields=(owner.start_event,owner.request_event,owner.completion_event,owner.controller,
+                       owner.job,owner.process,owner.primary_thread,
+                       *(owner.channels[n]for n in('request-read','request-write','response-read','response-write','ready','dispatch')))
+        _need(len({id(h)for h in self.__fields})==13 and set(self.__fields)==set(self.__handles))
+        self.__process_info,self.__attributes=owner.process_info,owner.attributes
+        self.__runtime,self.__runtime_hash=owner.runtime,owner.runtime_hash
+        self.__callback,self.__thread_id=owner.callback,owner.thread_id
+        self.__thread_value=owner.thread_id.value
+        self.__controller_native=owner._WindowsOffloadIoSession__controller_native
+        _need(type(self.__controller_native)is tuple and len(self.__controller_native)==3)
+        _,thread_binding,thread_value=self.__controller_native
+        _need(thread_binding[0]is self.__api.k.GetCurrentThreadId and thread_binding[9]==self.__thread
+              and thread_value.acknowledged and thread_value.value==self.__thread_value)
+        history=self.__ledger._acknowledged_history(self.__api)
+        controller=tuple(v for v in history if v[1][9]==self.__thread)
+        _need(len(controller)>=8);tail=controller[-8:];a=self.__api
+        _need([b[0]for _,b,_ in tail]==[a.k.IsProcessInJob,a.k.QueryInformationJobObject,a.k.GetProcessId,
+              a.k.QueryFullProcessImageNameW,a.k.DeleteProcThreadAttributeList,a.k.CloseHandle,a.k.CloseHandle,a.k.ResumeThread])
+        self.__rows=history
+        self._readback(tail[:4])
+        _need(tail[4][1][1]==(self.__attributes,)and tail[4][2].value is None
+              and owner.attribute_started and owner.attribute_retired
+              and tail[5][1][3][0]is owner.channels['request-read']
+              and tail[6][1][3][0]is owner.channels['response-write']
+              and owner.channels['request-read'].closed and owner.channels['response-write'].closed
+              and tail[7][1][1]==(owner.primary_thread._number,)and tail[7][2].value==1
+              and tail[7][1][3]==(owner.primary_thread,))
+        process_rows=[v for v in history if v[1][0]is a.k.CreateProcessW]
+        _need(len(process_rows)==1);_,process_binding,process_value=process_rows[0]
+        self.__process_values=process_value.outputs
+        _need(type(self.__process_values)is tuple and len(self.__process_values)==4
+              and process_binding[1][-1]._obj is self.__process_info
+              and process_binding[3][-2:] ==(owner.process,owner.primary_thread)
+              and process_binding[1][4:6]==(1,524288|4|1024|8)
+              and process_binding[1][8]._obj.attributes==C.addressof(self.__attributes))
+        # Derive each generation from its original Native return and original
+        # pre-call output slot, not the later handle-observation dictionary.
+        for h,slot,number in self.__generations:
+            born=[]
+            for row,binding,value in history:
+                fn,keep=binding[0],binding[3];expected=None
+                if fn in(a.k.CreateEventW,a.k.CreateJobObjectW)and keep and keep[0]is h:expected=value.value
+                elif fn is a.k.CreatePipe and len(keep)==3:
+                    if keep[0]is h:expected=value.outputs[0]
+                    elif keep[1]is h:expected=value.outputs[1]
+                elif fn is a.k.CreateProcessW:
+                    if keep[-2]is h:expected=value.outputs[0]
+                    elif keep[-1]is h:expected=value.outputs[1]
+                elif fn is a.begin and len(keep)==3 and keep[-1]is h:
+                    expected=value.value
+                    _need(keep[0]is self.__callback and keep[1]is self.__thread_id
+                          and value.outputs==(self.__thread_value,))
+                if expected is not None:
+                    facts=[v for v in binding[8]if v[0]is h]
+                    _need(len(facts)==1 and facts[0][1]is slot and facts[0][2]is facts[0][3]is None
+                          and expected==number)
+                    born.append(row)
+            _need(len(born)==1)
+        for name,h in owner.channels.items():
+            flags=[v for v in history if v[1][0]is a.k.GetHandleInformation and v[1][3][0]is h]
+            _need(len(flags)==1 and flags[0][2].outputs[0]&1==int(name in('request-read','response-write','ready','dispatch')))
+        self.__valid=True;self.check()
+    def __repr__(self):return '<original known child startup>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    def _readback(self,rows):
+        o=self.__owner
+        _need(rows[0][1][1][:2]==(o.process._number,o.job._number)and rows[0][2].outputs==(1,)
+              and rows[1][1][1][:2]==(o.job._number,9)and rows[2][1][1]==(o.process._number,)
+              and rows[2][2].value==o.process_info.pid and rows[3][1][1][0]==o.process._number)
+        limits=_ExtendedLimits.from_buffer_copy(rows[1][2].outputs[0])
+        _need(limits.basic.flags==8968 and limits.basic.active_process_limit==1
+              and limits.process_memory_limit==limits.job_memory_limit==_MEMORY_BYTES)
+        text=type(rows[3][1][3][1]).from_buffer_copy(rows[3][2].outputs[0]).value
+        _need(rows[3][2].outputs[1]==len(text)and _root(text).casefold()==str(self.__runtime).casefold())
+    def ready(self):
+        self.check();_need(self.__ready_rows is None and get_ident()==self.__thread)
+        rows=self.__ledger._acknowledged_history(self.__api,self.__thread)[-6:];a=self.__api;o=self.__owner
+        _need(len(rows)==6 and[entry[1][0]for entry in rows]==[a.k.WaitForMultipleObjects,
+              a.k.IsProcessInJob,a.k.QueryInformationJobObject,a.k.GetProcessId,a.k.QueryFullProcessImageNameW,a.k.SetEvent]
+              and rows[0][1][3][0]==(o.channels['ready'],)and rows[0][2].value==0
+              and rows[-1][1][1]==(o.channels['dispatch']._number,))
+        self._readback(rows[1:5]);self.__ready_rows=rows
+    def check(self):
+        o=self.__owner;o.origin()
+        _need(self.__origin is self and self.__valid and o._WindowsOffloadIoSession__startup is self
+              and o.api is self.__api and o.ledger is self.__ledger and o.controller_ident==self.__thread
+              and o.process_info is self.__process_info and o.attributes is self.__attributes
+              and o.runtime is self.__runtime and o.runtime_hash==self.__runtime_hash
+              and o.callback is self.__callback and o.thread_id is self.__thread_id
+              and o.thread_id.value==self.__thread_value
+              and o._WindowsOffloadIoSession__controller_native is self.__controller_native)
+        _need((o.start_event,o.request_event,o.completion_event,o.controller,o.job,o.process,o.primary_thread,
+              *(o.channels[n]for n in('request-read','request-write','response-read','response-write','ready','dispatch')))==self.__fields
+              and tuple(o.handles[:13])==self.__handles
+              and (o.process_info.process,o.process_info.thread,o.process_info.pid,o.process_info.tid)==self.__process_values)
+        for h,slot,number in self.__generations:
+            generation=_known_handle(o,h)
+            _need(generation[0]is h and generation[1]is slot and generation[2]==number)
+        for row,binding,value in self.__rows:
+            _need(self.__ledger.settled(row,self.__api)[0]is binding and value.acknowledged)
+        if o.launch_complete:_need(self.__ready_rows is not None)
+
+
 class _WindowsOffloadIoSession(_SessionMechanics):
     """One explicit private host session; no public caller-selected root."""
     def __init__(self, root):
@@ -805,6 +1363,7 @@ class _WindowsOffloadIoSession(_SessionMechanics):
         self.job=self.process=self.primary_thread=None
         self.channels={};self.source_values=self.source_hashes=self.source_digest=None
         self.launch_complete=False;self.terminal=None;self.terminal_retired=False
+        self.__startup=self.__controller_native=None
         self.runtime=None;self.runtime_hash=None
         self._state_lock=RLock()
         self.initialized=True
@@ -853,7 +1412,15 @@ class _WindowsOffloadIoSession(_SessionMechanics):
 
     def _native_intent(self, request, function, *args, **kwargs):
         self._live(request)
-        return self.api.call(function,*args,**kwargs)
+        value=self.api.call(function,*args,**kwargs)
+        if function is self.api.k.ResumeThread and self.__controller_native is not None:
+            _need(self.__startup is None)
+            marker=object.__new__(_KnownStartup);self.__startup=marker
+            _KnownStartup.__init__(marker,self,request)
+        elif(function is self.api.k.SetEvent and self.__startup is not None
+             and args==(self.channels['dispatch']._number,)):
+            self.__startup.ready()
+        return value
 
 
     def _write(self,handle,raw,request):
@@ -908,6 +1475,7 @@ class _WindowsOffloadIoSession(_SessionMechanics):
             _need(a.wait((self.start_event,),request.deadline)==0)
             self._live(request)
             _need(a.call(a.k.GetCurrentThreadId)==self.thread_id.value)
+            self.__controller_native=self.ledger._acknowledged_history(a,get_ident())[-1]
             while True:
                 request=self.active;self._live(request);request.started=True
                 if request.seq==0:self._launch(request)
@@ -1068,11 +1636,19 @@ def _terminal_frontier(owner):
     """Pure preadmission. Unknown construction or late admission stays pinned."""
     owner.origin();a=owner.api
     _need(owner.uncertain and owner.stop_requested and not owner.session_retired
-          and owner.launch_complete and owner.attribute_started and owner.attribute_retired
+          and owner.attribute_started and owner.attribute_retired
           and type(a) is _Native and type(owner.controller_ident) is int
           and len(owner.handles)==13 and len({id(h) for h in owner.handles})==13
           and len(owner._handle_bindings)==13)
     a.origin()
+    startup=owner._WindowsOffloadIoSession__startup
+    if startup is not None:
+        _need(type(startup)is _KnownStartup);startup.check()
+    else:
+        # Existing explicitly synthetic full-launch fixtures have no production
+        # constructor/controller producer. They cannot admit a partial startup.
+        _need(owner.launch_complete and getattr(a,'_Native__bootstrap',None)is None
+              and owner._WindowsOffloadIoSession__controller_native is None)
     generations=tuple(_known_handle(owner,h) for h in owner.handles)
     for h in (owner.controller,owner.process,owner.job,owner.request_event):
         _need(any(h is old for old in owner.handles) and not h.closed)
@@ -1093,6 +1669,7 @@ def _terminal_frontier(owner):
         rows=tuple(ledger.normal[:ledger.used])+tuple(ledger.terminal[:ledger.terminal_used])
         for row in rows:
             ledger.member(row);binding=ledger.bindings[row.index]
+            if ledger._completed_bootstrap(row,a):continue
             _need(row.committed and type(binding) is tuple and len(binding)==10
                   and binding[4] is a and row.payload is binding and not row.integrity_lost
                   and row.function is binding[0] and row.args is binding[1]
@@ -1108,6 +1685,15 @@ def _terminal_frontier(owner):
                 _need(binding[6] in ('idle-live','idle-consumed') and request.idle_intent is row
                       and binding[1]==(h._number,0xffffffff) and binding[3]==(request,h,h.slot))
                 kind='idle'
+            elif binding[0]is a.k.WaitForMultipleObjects:
+                _need(type(startup)is _KnownStartup and request.seq==0 and not owner.launch_complete
+                      and binding[6]=='operation'and len(binding[3])==2)
+                handles,values=binding[3]
+                _need(type(handles)is tuple and handles==(owner.channels['ready'],)
+                      and type(values)is _PTR*1 and tuple(values)==(handles[0]._number,)
+                      and binding[1][0]==1 and binding[1][1]is values and binding[1][2]==0
+                      and type(binding[1][3])is int and 0<binding[1][3]<=120000)
+                kind='ready'
             else:
                 _need(binding[6]=='operation' and len(binding[3])==3)
                 h=binding[3][0]
@@ -1167,6 +1753,8 @@ class _TerminalRetirement:
         owner=self.owner
         _need(tuple(owner.handles)==self.original+(self.start,self.reaper)
               and owner.uncertain and owner.stop_requested and not owner.session_retired)
+        startup=owner._WindowsOffloadIoSession__startup
+        if startup is not None:startup.check()
         for generation in self.generations:
             h,slot,number=generation
             _need(owner._handle_bindings.get(id(h)) is generation and h.slot is slot
@@ -1266,10 +1854,14 @@ class _TerminalRetirement:
                 _need(output is self.query_outputs[output_index] and any(item is output for item in row.keep)
                       and row.acknowledged)
                 owner.ledger.settled(row,self.api)
+                facts=owner.ledger._retained_return(row,self.api).outputs
+                _need(type(facts)is tuple and len(facts)==1)
                 if output_index==3:
-                    _need(type(output) is _Accounting);scalars=(output.active,output.total)
+                    _need(type(output) is _Accounting and type(facts[0])is bytes
+                          and len(facts[0])==C.sizeof(_Accounting))
+                    original=_Accounting.from_buffer_copy(facts[0]);scalars=(original.active,original.total)
                 else:
-                    _need(type(output) is _U32);scalars=(output.value,)
+                    _need(type(output) is _U32);scalars=facts
                 _need(all(type(value) is int and 0<=value<2**32 for value in scalars))
                 # Return observations from the exact native row/output object,
                 # never a later reread of replaceable instance attributes.
@@ -1304,7 +1896,7 @@ class _TerminalRetirement:
             _need(controller==9 or controller==0 and self.owner.controller_finished)
             self.issue('wait-process');process=self.issue('process-code')[3][0];_need(process!=259)
             accounting=self.issue('job-empty')[3];_need(accounting==(0,1))
-            for row in self.original_rows:self.owner.ledger.settled(row,self.api)
+            for row in self.original_rows:self.owner.ledger._assert_completed_physical(row,self.api)
             for i,h in enumerate(self.original):
                 if not h.closed:self.issue('close-original-'+str(i))
             _need(all(h.closed for h in self.original))
@@ -1351,7 +1943,7 @@ class _TerminalRetirement:
             with self.owner._state_lock:
                 self._snapshot();_remaining(self.deadline)
                 _need(all(h.closed for h in self.owner.handles))
-                for row in self.original_rows:self.owner.ledger.settled(row,self.api)
+                for row in self.original_rows:self.owner.ledger._assert_completed_physical(row,self.api)
                 for row in self.calls:
                     self.owner.ledger.settled(row,self.api);_need(row.acknowledged)
                 _remaining(self.deadline)

@@ -87,6 +87,9 @@ class ChildTests(unittest.TestCase):
     def core_api(self):
         case=self;self.core_opened=[];self.core_libraries=[];self.core_functions={}
         def native(name,args):
+            if name=='GetSystemDirectoryW':args[0].value='C:\\Windows\\System32';return len(args[0].value)
+            if name=='GetModuleFileNameW'and args[0]==8000:
+                args[1].value='C:\\Windows\\System32\\ucrtbase.dll';return len(args[1].value)
             if name=='GetDriveTypeW':return 3
             if name=='NtCreateFile':
                 number=500+len(case.core_opened);case.core_opened.append(number)
@@ -99,6 +102,8 @@ class ChildTests(unittest.TestCase):
                 raw=b'volume00'+args[0].to_bytes(16,'little');C.memmove(value,raw,24)
                 case.events.append(('identity',args[0]));return 1
             if name=='CloseHandle':case.events.append(('close',args[0]));return 1
+            function=getattr(case.k,name,None)
+            if function is not None:return function(*args)
             raise AssertionError('Unexpected synthetic Core operation')
         class Function:
             def __init__(self,name):self.name=name;self.calls=[]
@@ -109,7 +114,8 @@ class ChildTests(unittest.TestCase):
                 return value
         class Library:
             def __init__(self,name,**kwargs):
-                case.assertEqual(kwargs,{'use_last_error':True});self.name=name;self.functions={}
+                case.assertEqual(kwargs,{'use_last_error':True});self.name=self._name=name;self.functions={}
+                self._handle=9000+len(case.core_libraries)
                 case.core_libraries.append(self)
             def __getattr__(self,name):
                 if name not in self.functions:
@@ -120,6 +126,32 @@ class ChildTests(unittest.TestCase):
     def bind_core(self):
         self.core_api();self.child.execute(self.request(0));self.child.current=self.child.timer=None
         return self.child.execute(self.request(1))
+
+    def test_actual_io_bootstrap_rows_compose_with_core_original_spent_frontier(self):
+        self.core_api();c=self.child;c.api=None
+        class Function:
+            def __call__(self,*args):raise AssertionError('No CRT thread starts in this source test')
+        class Crt:
+            _handle=8000
+            def __init__(self,name,**kwargs):
+                self._name=name;self._beginthreadex=Function()
+                case.assertEqual(kwargs,{'use_errno':True})
+        case=self;original=x._read_source
+        image=bytearray(512);image[:2]=b'MZ';struct.pack_into('<I',image,0x3c,128)
+        image[128:132]=b'PE\0\0';struct.pack_into('<H',image,132,0x8664);struct.pack_into('<H',image,152,0x20b)
+        def read(path,maximum=2*1024**2):
+            return bytes(image)if str(path).casefold().endswith('ucrtbase.dll')else original(path,maximum)
+        bootstrap=(c.nonce,(10,11,12,13),x.time.monotonic_ns()+x._BUDGET_NS,c.hashes,c.runtime)
+        with patch.object(C,'CDLL',Crt),patch.object(x,'_read_source',side_effect=read), \
+             patch.object(y,'_BOOTSTRAP',bootstrap):
+            a=x._Native(c)
+            self.assertEqual(c.ledger.used,4)
+            self.assertEqual(len(c.calls),2)
+            for row in c.ledger.rows[:2]:c.ledger._assert_completed_physical(row,a)
+            self.child.execute(self.request(0));self.child.current=self.child.timer=None
+            self.child.execute(self.request(1));self.child.current=self.child.timer=None
+            self.child.execute(self.request(2))
+        self.assertTrue(c.core_retired);self.assertEqual(len(self.core_libraries),4)
 
     def graph_rows(self):return self.child.core_graph._CoreReadGraph__records
 

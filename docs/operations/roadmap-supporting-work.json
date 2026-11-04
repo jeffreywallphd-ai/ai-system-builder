@@ -9653,6 +9653,48 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "bind-finite-core-read-subgraph",
+      "work_criteria": [
+        "one-original-pool-core-read-admission",
+        "original-constructor-and-typed-call-custody",
+        "actual-read-prepare-retirement-compatibility",
+        "focused-reviewed-core-read-checkpoint"
+      ],
+      "receipt_digest": "6f1334186b33367b6575228aa19231ccccdf321486470ec0509d143abafcceb5",
+      "review_digest": "908fddf015a7eb077cccc1cbc19f1f75b3b85c75cf82793c17c5ed87b3d002d2",
+      "scope": "The agent added file-binding checks and tested the existing worker. The worker reserves tracking space before it loads Windows libraries. This source work did not run or qualify a low-memory model.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "bind-finite-core-read-subgraph",
+      "work_criteria": [
+        "one-original-pool-core-read-admission",
+        "original-constructor-and-typed-call-custody",
+        "actual-read-prepare-retirement-compatibility",
+        "focused-reviewed-core-read-checkpoint"
+      ],
+      "receipt_digest": "6f1334186b33367b6575228aa19231ccccdf321486470ec0509d143abafcceb5",
+      "review_digest": "908fddf015a7eb077cccc1cbc19f1f75b3b85c75cf82793c17c5ed87b3d002d2",
+      "scope": "The agent added file-binding checks and tested the existing worker. The worker reserves tracking space before it loads Windows libraries. This source work did not run or qualify a low-memory model.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

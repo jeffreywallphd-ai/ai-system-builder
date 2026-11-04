@@ -25,6 +25,11 @@ class LaunchKernel:
         self.owner=owner;self.next=100;self.flags={};self.events={};self.updates=[];self.creations=[]
         self.error=0;self.resumes=[];self.closed=[];self.delete_attributes=0;self.late=False;self.lost=False
         self.runtime=Path('C:/Python/python.exe');self.image=b'synthetic runtime image'
+        for name in('CreateProcessW','CreatePipe','GetHandleInformation','SetInformationJobObject',
+                    'IsProcessInJob','QueryInformationJobObject','QueryFullProcessImageNameW',
+                    'InitializeProcThreadAttributeList','UpdateProcThreadAttribute',
+                    'DeleteProcThreadAttributeList','GetWindowsDirectoryW','GetProcessId','ResumeThread'):
+            setattr(self,name,getattr(self,name))
     def handle(self):self.next+=1;self.flags[self.next]=0;return self.next
     def CreateEventW(self,*_):
         h=self.handle();self.events[h]=Event();return h
@@ -192,6 +197,28 @@ class RetirementKernel(LaunchKernel):
         for thread in self.threads.values():thread.join(2)
 
 
+class StartupKernel(RetirementKernel):
+    """Real parent controller/launch flow, with a child that never signals ready."""
+    def __init__(self,owner):
+        super().__init__(owner);self.ready_entered=Event();self.ready_release=Event();self.hold_ready=False;self.signal_ready=False
+    def WaitForMultipleObjects(self,count,handles,all_,timeout):
+        numbers=tuple(handles[:count]);owner=self.owner
+        if owner.terminal is None and count==2:
+            thread=self.threads.get(owner.controller._number)
+            if thread is not None:
+                thread.join(1)
+                return 1 if not thread.is_alive()else 258
+            return 258
+        ready=owner.channels.get('ready')
+        if ready is not None and count==1 and numbers==(ready._number,):
+            self.ready_entered.set()
+            if self.hold_ready:self.ready_release.wait(10)
+            return 0 if self.signal_ready else 258
+        return super().WaitForMultipleObjects(count,handles,all_,timeout)
+    def finish_test_threads(self):
+        self.ready_release.set();super().finish_test_threads()
+
+
 class SessionTests(unittest.TestCase):
     def setUp(self):
         p=patch.dict(x._OWNERS,{},clear=True);p.start();self.addCleanup(p.stop)
@@ -249,6 +276,96 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(owner.launch_complete and owner.uncertain)
         self.assertEqual(len(owner.handles),13)
         return owner,a,k
+
+    def failed_startup_session(self,hold_ready=False,ready=False,owner=None):
+        owner=self.session()if owner is None else owner;k=StartupKernel(owner)
+        k.hold_ready=hold_ready;k.signal_ready=ready
+        self.addCleanup(k.finish_test_threads)
+        def construct(api,original):
+            api._Native__origin=api;api.owner=original;api.k=k
+            api.thread_callback=lambda fn:fn;api.timer_callback=lambda fn:fn;api.begin=k.begin
+            api._original_ledger()
+        for scope in(patch.object(x._Native,'__init__',construct),
+                     patch.object(x,'_runtime_image',return_value=(k.runtime,hashlib.sha256(k.image).hexdigest())),
+                     patch.object(x,'_read_source',return_value=k.image),
+                     patch.object(C,'get_last_error',side_effect=lambda:k.errors.get(get_ident(),k.error),create=True)):
+            self.enterContext(scope)
+        if ready:self.enterContext(patch.object(owner,'_exchange',side_effect=x.OffloadAdmissionError))
+        with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
+        self.assertIs(owner.launch_complete,ready);self.assertTrue(owner.uncertain and owner.stop_requested)
+        self.assertEqual(len(owner.handles),13);self.assertTrue(k.ready_entered.is_set())
+        return owner,owner.api,k
+
+    def test_real_parent_can_explicitly_retire_known_child_failure_before_ready(self):
+        owner,a,k=self.failed_startup_session()
+        self.assertFalse(any(isinstance(v,tuple)and v[0]=='terminate'for v in k.effects))
+        self.assertIsNone(owner.retire_failed())
+        self.assertTrue(owner.session_retired and owner.terminal_retired)
+        self.assertEqual(owner.state,'failed-retired');self.assertNotIn(id(owner),x._OWNERS)
+        self.assertEqual(k.effects.count(('terminate',owner.job._number,9)),1)
+        self.assertFalse(any(isinstance(v,tuple)and v[0]=='cancel'for v in k.effects))
+        self.assertEqual(len(owner.handles),15);self.assertTrue(all(h.closed for h in owner.handles))
+
+    def test_original_ready_and_dispatch_proof_preserves_real_full_launch_retirement(self):
+        owner,a,k=self.failed_startup_session(ready=True)
+        marker=owner._WindowsOffloadIoSession__startup
+        self.assertIsNotNone(marker._KnownStartup__ready_rows);self.assertTrue(owner.launch_complete)
+        self.assertIsNone(owner.retire_failed());self.assertTrue(owner.session_retired)
+
+    def test_startup_public_flags_missing_resume_or_slot_drift_cannot_admit_cleanup(self):
+        for mode in('forged-launch','missing-marker','resume-result','slot-generation','effect-exit'):
+            with self.subTest(mode=mode),patch.dict(x._OWNERS,{},clear=True):
+                owner,a,k=self.failed_startup_session();before=list(k.effects)
+                if mode=='forged-launch':owner.launch_complete=True
+                elif mode=='missing-marker':owner._WindowsOffloadIoSession__startup=None;owner.launch_complete=True
+                elif mode=='resume-result':next(r for r in owner.calls if r.function is a.k.ResumeThread).result=0
+                elif mode=='slot-generation':
+                    h=owner.process;h.slot=h._original_slot=x._PTR(h._number)
+                    owner._handle_bindings[id(h)]=(h,h.slot,h._number)
+                else:
+                    request=owner.requests[0];entry=owner._effect_exits[id(request)]
+                    owner._effect_exits[id(request)]=(*entry[:3],False)
+                with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+                self.assertIsNone(owner.terminal);self.assertEqual(k.effects,before)
+
+    def test_pending_ready_wait_is_not_cancelled_or_treated_as_controller_exit(self):
+        owner,a,k=self.failed_startup_session(hold_ready=True)
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertFalse(owner.session_retired or owner.terminal.has_final_proof())
+        self.assertTrue(any(kind=='ready'for _,kind in owner.terminal.pending))
+        self.assertFalse(any(isinstance(v,tuple)and v[0]in('cancel','close')for v in k.effects))
+        self.assertEqual(k.effects.count(('terminate',owner.job._number,9)),1)
+        self.assertFalse(k.ready_release.is_set())
+
+    def test_retirement_getter_cannot_turn_actual_active_job_into_empty_job(self):
+        owner,a,k=self.failed_startup_session();k.bad_active=True;changed=[]
+        def reader():
+            terminal=owner.terminal
+            if terminal is not None and 'job-empty'in terminal.used and not changed:
+                row=terminal.used['job-empty']
+                if row.started and not row.returned:
+                    changed.append(1);terminal.accounting.active=0
+            return k.errors.get(get_ident(),k.error)
+        C.get_last_error.side_effect=reader
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(changed,[1]);self.assertFalse(owner.session_retired)
+        row=owner.terminal.used['job-empty'];raw=owner.ledger._retained_return(row,a)
+        self.assertEqual(x._Accounting.from_buffer_copy(raw.outputs[0]).active,1)
+        self.assertFalse(row.acknowledged)
+        self.assertFalse(any(isinstance(v,tuple)and v[0]=='close'for v in k.effects))
+
+    def test_retirement_uses_original_output_after_perform_observer_changes_same_buffer(self):
+        owner,a,k=self.failed_startup_session();k.bad_active=True;perform=a._perform
+        def changed(row):
+            value=perform(row)
+            if row.function is a.k.QueryInformationJobObject and row.args[1]==1:
+                row.keep[-1].active=0
+            return value
+        with patch.object(a,'_perform',side_effect=changed),self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertFalse(owner.session_retired)
+        row=owner.terminal.used['job-empty'];raw=owner.ledger._retained_return(row,a)
+        self.assertEqual(x._Accounting.from_buffer_copy(raw.outputs[0]).active,1)
+        self.assertFalse(any(isinstance(v,tuple)and v[0]=='close'for v in k.effects))
 
     def test_terminal_retirement_closes_only_the_original_failed_session(self):
         owner,a,k=self.failed_retirement_session();request=owner.requests[-1]
@@ -1206,6 +1323,162 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(k.closed,[owner.channels['request-read']._number,owner.channels['response-write']._number])
         self.assertFalse(owner.uncertain);self.assertTrue(owner.channels['dispatch'].value in k.events)
 
+    def test_original_process_output_cannot_be_changed_by_error_reader_before_adoption(self):
+        owner,k=self.launch();self.launch_scopes(owner,k);original=[]
+        # Real ctypes functions are cached objects. Preserve that identity here.
+        k.CreateProcessW=k.CreateProcessW
+        def reader():
+            if k.creations and not original:
+                p=owner.process_info;original.append((p.process,p.thread,p.pid,p.tid));p.process=99999
+            return k.error
+        C.get_last_error.side_effect=reader
+        with self.assertRaises(x.OffloadAdmissionError):owner._launch(owner.active)
+        self.assertEqual(len(original),1);self.assertIsNone(owner.process._number)
+        row=next(r for r in owner.calls if r.function is k.CreateProcessW)
+        retained=owner.ledger._retained_return(row,owner.api)
+        self.assertEqual(retained.outputs,original[0]);self.assertTrue(retained.value_known)
+        self.assertFalse(row.acknowledged);self.assertEqual(k.resumes,[])
+
+    def test_create_process_may_modify_command_buffer_during_original_call(self):
+        owner,k=self.launch();self.launch_scopes(owner,k);original=k.CreateProcessW
+        def create(*args):
+            result=original(*args);args[1][0]='X';return result
+        k.CreateProcessW=create
+        owner._launch(owner.active)
+        self.assertTrue(owner.launch_complete);self.assertEqual(len(k.creations),1)
+
+    def test_native_constructor_reinit_denies_before_any_loader(self):
+        owner=self.session();a=self.api(owner)
+        loader=Mock(side_effect=AssertionError('No loader effect permitted'))
+        with patch.object(C,'WinDLL',loader,create=True),self.assertRaises(x.OffloadAdmissionError):
+            x._Native.__init__(a,owner)
+        loader.assert_not_called();self.assertIs(owner.api,a)
+
+    def bootstrap_fixture(self):
+        """Only cached memory ABI objects; the actual constructor/ledger runs."""
+        case=self;owner=self.session();self.activate(owner);libraries=[];calls=[]
+        class Function:
+            def __init__(self,name):self.name=name;self.calls=[]
+            def __call__(self,*args):
+                self.calls.append(args)
+                if self.name=='GetSystemDirectoryW':args[0].value='C:\\Windows\\System32';value=len(args[0].value)
+                elif self.name=='GetModuleFileNameW':args[1].value='C:\\Windows\\System32\\ucrtbase.dll';value=len(args[1].value)
+                else:value=1
+                hook=getattr(case,'bootstrap_call_hook',None)
+                if hook is not None:hook(self.name,args,value)
+                return value
+        class Library:
+            def __init__(self,name,**kwargs):
+                self._name=name;self._handle=800+len(libraries);self.functions={}
+                libraries.append(self);calls.append((name,dict(kwargs)))
+                hook=getattr(case,'bootstrap_library_hook',None)
+                if hook is not None:hook(name,self)
+            def __getattr__(self,name):
+                if name not in self.functions:self.functions[name]=Function(name)
+                return self.functions[name]
+        class KernelLibrary(Library):pass
+        class CrtLibrary(Library):pass
+        image=bytearray(512);image[:2]=b'MZ';struct.pack_into('<I',image,0x3c,128)
+        image[128:132]=b'PE\0\0';struct.pack_into('<H',image,132,0x8664);struct.pack_into('<H',image,152,0x20b)
+        self.enterContext(patch.object(C,'WinDLL',KernelLibrary))
+        self.enterContext(patch.object(C,'CDLL',CrtLibrary))
+        self.enterContext(patch.object(x,'_read_source',return_value=bytes(image)))
+        return owner,libraries,calls
+
+    def test_original_bootstrap_two_rows_fixed_loaders_and_no_scalar_tuple_widening(self):
+        owner,libraries,calls=self.bootstrap_fixture();a=x._Native(owner)
+        self.assertEqual(calls,[('kernel32',{'use_last_error':True}),
+                               ('C:\\Windows\\System32\\ucrtbase.dll',{'use_errno':True})])
+        self.assertEqual(owner.ledger.used,4);self.assertEqual(len(owner.calls),2)
+        for row in owner.ledger.rows[:2]:
+            owner.ledger._assert_completed_physical(row,a)
+            with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(row,a)
+        self.assertTrue(all(len(owner.ledger.settled(row,a))==4 for row in owner.calls))
+        self.assertIs(a.k,libraries[0]);self.assertIs(a.crt,libraries[1])
+
+    def test_bootstrap_original_library_survives_reader_interruption_without_retry(self):
+        owner,libraries,calls=self.bootstrap_fixture()
+        C.get_last_error.side_effect=KeyboardInterrupt()
+        with self.assertRaises(KeyboardInterrupt):x._Native(owner)
+        record=owner.api._Native__bootstrap;outcome=record._BootstrapCustody__calls[0]
+        self.assertTrue(outcome.returned);self.assertIs(outcome.value,libraries[0])
+        self.assertFalse(outcome.acknowledged);self.assertEqual(owner.ledger.used,2)
+        with self.assertRaises(x.OffloadAdmissionError):x._Native.__init__(owner.api,owner)
+        self.assertEqual(len(calls),1)
+
+    def test_bootstrap_same_slot_reentry_denies_without_poisoning_original(self):
+        owner,libraries,calls=self.bootstrap_fixture();denied=[]
+        def hook(name,library):
+            if name=='kernel32':
+                record=owner.api._Native__bootstrap
+                with self.assertRaises(x.OffloadAdmissionError):record.load(0,'kernel32')
+                denied.append(1)
+        self.bootstrap_library_hook=hook;a=x._Native(owner)
+        self.assertEqual(denied,[1]);self.assertEqual(len(calls),2)
+        owner.ledger._assert_completed_physical(owner.ledger.rows[0],a)
+
+    def test_bootstrap_locator_consuming_deadline_cannot_start_second_loader(self):
+        owner,libraries,calls=self.bootstrap_fixture();clock=[x.time.monotonic_ns()]
+        def hook(name,args,value):
+            if name=='GetSystemDirectoryW':clock[0]=owner.active.deadline+1
+        self.bootstrap_call_hook=hook
+        with patch.object(x.time,'monotonic_ns',side_effect=lambda:clock[0]),self.assertRaises(x.OffloadAdmissionError):x._Native(owner)
+        self.assertEqual([name for name,_ in calls],['kernel32'])
+        self.assertEqual(owner.ledger.used,3)
+        raw=owner.ledger._retained_return(owner.calls[-1],owner.api)
+        self.assertTrue(raw.value_known);self.assertTrue(owner.calls[-1].acknowledged)
+
+    def test_bootstrap_original_callable_metadata_drift_denies_before_native(self):
+        for field in('argtypes','argtypes-item','restype','errcheck'):
+            with self.subTest(field=field),patch.dict(x._OWNERS,{},clear=True):
+                owner,libraries,calls=self.bootstrap_fixture();a=x._Native(owner);fn=a.k.GetSystemDirectoryW
+                before=len(fn.calls);used=owner.ledger.used
+                if field=='argtypes':fn.argtypes=list(fn.argtypes)
+                elif field=='argtypes-item':fn.argtypes[0]=x._PTR
+                elif field=='restype':fn.restype=x._PTR
+                else:fn.errcheck=lambda value,*_:value
+                with self.assertRaises(x.OffloadAdmissionError):a.location(fn)
+                self.assertEqual(len(fn.calls),before);self.assertEqual(owner.ledger.used,used)
+
+    def test_bootstrap_physical_rows_cannot_be_reused_by_public_counter_reset(self):
+        owner,libraries,calls=self.bootstrap_fixture();a=x._Native(owner);fn=a.k.GetSystemDirectoryW
+        before=len(fn.calls);owner.ledger.used=0
+        with self.assertRaises(x.OffloadAdmissionError):a.location(fn)
+        self.assertEqual(len(fn.calls),before);self.assertEqual(len(owner.calls),2)
+
+    def test_native_attribute_output_cannot_be_changed_by_getter_before_update(self):
+        owner,k=self.launch();self.launch_scopes(owner,k);mutated=[]
+        k.InitializeProcThreadAttributeList=k.InitializeProcThreadAttributeList
+        k.UpdateProcThreadAttribute=k.UpdateProcThreadAttribute
+        def reader():
+            if owner.calls:
+                row=owner.calls[-1]
+                if row.function is k.InitializeProcThreadAttributeList and row.args[0]is not None and not mutated:
+                    mutated.append(1);owner.attributes[0]=b'\x7f'
+            return k.error
+        C.get_last_error.side_effect=reader
+        with self.assertRaises(x.OffloadAdmissionError):owner._launch(owner.active)
+        self.assertEqual(mutated,[1]);self.assertEqual(k.updates,[]);self.assertEqual(k.creations,[])
+
+    def test_native_attribute_drift_during_readback_denies_before_delete(self):
+        owner,k=self.launch();self.launch_scopes(owner,k);mutated=[]
+        k.DeleteProcThreadAttributeList=k.DeleteProcThreadAttributeList
+        def reader():
+            if owner.calls and owner.calls[-1].function is k.GetProcessId and not mutated:
+                owner.attributes[0]=b'\x7f';mutated.append(1)
+            return k.error
+        C.get_last_error.side_effect=reader
+        with self.assertRaises(x.OffloadAdmissionError):owner._launch(owner.active)
+        self.assertEqual(mutated,[1]);self.assertEqual(k.delete_attributes,0);self.assertEqual(k.resumes,[])
+
+    def test_deleted_attribute_buffer_cannot_be_deleted_or_used_again(self):
+        owner,k=self.launch();self.launch_scopes(owner,k);owner._launch(owner.active)
+        self.assertEqual(k.delete_attributes,1)
+        with self.assertRaises(x.OffloadAdmissionError):
+            owner.api.call(k.DeleteProcThreadAttributeList,owner.attributes,valid=lambda value:value is None,
+                           keep=(owner.attributes,))
+        self.assertEqual(k.delete_attributes,1)
+
     def test_late_create_completion_never_issues_resume_or_new_child_dispatch(self):
         owner,k=self.launch(late=True);self.launch_scopes(owner,k)
         with self.assertRaises(x.OffloadAdmissionError):owner._launch(owner.active)
@@ -1367,19 +1640,22 @@ class SessionTests(unittest.TestCase):
                 return 1
         class Library:
             _handle=20
+            def __init__(self,name,**kwargs):self._name=name;instances[type(self).__name__]=self
             def __getattr__(self,name):value=Function(name);setattr(self,name,value);return value
+        class KernelLibrary(Library):pass
+        class CrtLibrary(Library):_handle=21
         image=bytearray(512);image[:2]=b'MZ';struct.pack_into('<I',image,0x3c,128)
         image[128:132]=b'PE\0\0';struct.pack_into('<H',image,132,0x8664);struct.pack_into('<H',image,152,0x20b)
         loaded=['C:\\Windows\\System32\\ucrtbase.dll']
         for mismatch in (False,True):
             with patch.dict(x._OWNERS,{},clear=True):
-                owner=self.session();self.activate(owner);kernel=Library();crt=Library()
+                owner=self.session();self.activate(owner);instances={}
                 loaded[0]='C:\\wrong\\ucrtbase.dll' if mismatch else 'C:\\Windows\\System32\\ucrtbase.dll'
-                with patch.object(C,'WinDLL',return_value=kernel),patch.object(C,'CDLL',return_value=crt), \
+                with patch.object(C,'WinDLL',KernelLibrary),patch.object(C,'CDLL',CrtLibrary), \
                      patch.object(x,'_read_source',return_value=bytes(image)):
                     if mismatch:
                         with self.assertRaises(x.OffloadAdmissionError):x._Native(owner)
-                        self.assertIs(owner.api.crt,crt);continue
+                        self.assertIs(owner.api.crt,instances['CrtLibrary']);continue
                     a=x._Native(owner)
                 self.assertIs(a.begin.restype,C.c_size_t)
                 self.assertEqual(a.begin.argtypes,[x._PTR,x._U32,a.thread_callback,x._PTR,x._U32,C.POINTER(x._U32)])

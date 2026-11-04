@@ -1610,3 +1610,27 @@ The wider worker lifetime, file protection, shared disk accounting and real
 low-memory resource checks remain pending. No user action is needed for this
 coding work. Accepted model accuracy and OCR results stay closed. Unknown old
 temporary files stay untouched and count against the full 12 GiB limit.
+
+## Keep startup results and retire a known failed startup
+
+The private Windows worker now keeps the original library and process-call
+results before later checks run. It rejects changed output buffers before using
+them. It also prevents repeated library construction. These checks use the
+existing tracking space and resource limits.
+
+The parent can now retire a known child that fails before it reports ready.
+It first checks the original process, Job and handle records. It must confirm
+that the original wait, controller, child and cleanup thread have finished.
+It then closes the original handles. Unknown or incomplete startup records
+remain owned. A timeout or a changed status flag does not prove cleanup.
+
+Focused simulated Windows tests exercise the real constructor, controller,
+launch and retirement methods. They cover successful resource handling and
+failure cases. The qualification collector uses this cleanup path after a
+failed startup, while preserving the failed test result. No real model or
+Native qualification pass follows from these source tests.
+
+No user action is needed for this coding work. Shared disk accounting, file
+protection, the full worker lifetime and actual low-memory resource/restart
+checks remain pending. Accepted accuracy and OCR checks stay closed. Old
+temporary model files remain untouched and count against the full 12 GiB limit.

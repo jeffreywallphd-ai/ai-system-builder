@@ -2637,3 +2637,48 @@ composition. Actual Native/resource/restart qualification remains pending.
 Production admission stays denied. No old retained tree is inspected or changed;
 unknown historical usage stays charged the full 12 GiB. Accepted model accuracy
 and OCR checks stay closed and the combined full-software campaign stays deferred.
+
+### Original IO bootstrap, typed outputs and known startup handoff
+
+An exact one-shot IO constructor producer now owns two original normal physical
+loader rows before its first DLL entry. Fixed original loaders/readers/kwargs,
+library handles, API/owner/thread and Kernel/CRT function identities, original
+argtype lists plus immutable entries/result/no-errcheck metadata stay retained.
+Loader admission uses the original request/private child-bootstrap deadline.
+Unknown library construction stays pinned; no unload or replacement is granted.
+
+A closed existing-ABI output graph captures original values before the error
+reader, then checks original input/output observations before publication/ACK
+or dependent use. It covers pipe/process/controller output slots, locator and
+image buffers, flags, attribute size and opaque attribute-list bytes, timer/IO
+outputs and process/thread/Job retirement readbacks. Attribute inputs must match
+their last original acknowledged output. CreateProcessW permits command-buffer
+mutation during the call; pre-call input and actual post-call bytes are retained
+separately, as specified by the [Windows API contract](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw).
+No snapshot of a later mutable buffer supplies the missing original output.
+
+The original controller thread-ID row and actual Resume ACK bind the concrete
+known-startup first consumer. All 13 original handle numbers and slots derive
+from original scalar or typed returns, with process/Job/readback/attribute-delete/
+two pipe-close chronology. Only original ready/second-readback/dispatch records
+establish full launch for this production/controller path. Public flags, copied
+slots or current process_info cannot admit a known pre-ready cleanup.
+
+The existing explicit parent-owned Job reaper consumes that narrow generation.
+An outstanding ready-only wait retains its exact original array/thread/deadline;
+no pipe cancellation, artificial ready signal or protocol change is added.
+Actual wait/controller/process/Job/reaper exit and every original close remain
+mandatory. The qualification collector attempts this same drain after failed
+prepare returns, only while its own outer containment is live; failure stays a
+failure, including when no safe drain can be proved. Reports expose bounded
+counts/status only, not Native handles, source buffers or file contents.
+
+Strict scalar completion tuples and original after-deadline/fenced cleanup
+behavior remain. The same IO 16384+64 physical pool counts the extra two loader
+entries; Core 8908 future normal demand and Source total/inside-tail remain.
+The existing 48-entry late retirement check is not a complete lifetime reserve.
+Child Exit/Sleep/park, blocked reply writes, earlier unknown construction, whole
+parent/child lifetime, protected shared domain and cached model/borrower/storage
+composition and actual Native/resource/restart/production qualification remain
+pending. Production admission stays denied. Unknown old staging is not inspected
+or changed and remains fully charged 12 GiB. Accepted accuracy/OCR are not rerun.

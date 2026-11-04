@@ -14748,6 +14748,18 @@
           "These source tests did not qualify low-memory mode."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "37076566c43b9b65ce33fe28471a5fb4aded01f9a0594c0e48a31b5a6bdd7c63",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added file-binding checks and tested the existing worker.",
+          "The worker reserves tracking space before it loads Windows libraries.",
+          "This source work did not run or qualify a low-memory model."
+        ]
+      }
     }
   ]
 }

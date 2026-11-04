@@ -49,6 +49,57 @@ class FixtureTests(unittest.TestCase):
             scope.start();self.addCleanup(scope.stop)
         self.addCleanup(base._NATIVE_OWNERS.clear)
 
+    def test_failed_startup_consumer_drains_real_parent_path_without_case_or_parent_pass(self):
+        from modules.adapters.runtime.python.worker.tests.test_windows_offload_execution import SessionTests
+        case=SessionTests('test_real_parent_can_explicitly_retire_known_child_failure_before_ready');case.setUp()
+        try:
+            owner,api,kernel=case.failed_startup_session();live=[]
+            value=subject._retire_failed_startup(x,owner,SimpleNamespace(live=lambda:live.append(1)))
+            self.assertEqual(value,{'attempted':True,'retired':True,'owned_handles':15,
+                                    'closed_handles':15,'parent_qualification_granted':False})
+            self.assertEqual(live,[1]);self.assertNotIn('accepted',value)
+            before=list(kernel.effects)
+            with self.assertRaises(subject.ReadSessionFixtureError):
+                subject._retire_failed_startup(x,owner,SimpleNamespace(live=lambda:self.fail('No replay')))
+            self.assertEqual(kernel.effects,before)
+        finally:case.doCleanups()
+
+    def test_failed_startup_consumer_keeps_unknown_and_expired_qualifier_owned(self):
+        owner=x._WindowsOffloadIoSession('C:\\synthetic-unknown-startup')
+        owner.uncertain=owner.stop_requested=True;before=list(owner.handles)
+        with self.assertRaises(x.OffloadAdmissionError):
+            subject._retire_failed_startup(x,owner,SimpleNamespace(live=lambda:None))
+        self.assertEqual(owner.handles,before);self.assertIsNone(owner.terminal)
+        def expired():raise subject.ReadSessionFixtureError('native-deadline')
+        with self.assertRaises(subject.ReadSessionFixtureError):
+            subject._retire_failed_startup(x,owner,SimpleNamespace(live=expired))
+        self.assertIsNone(owner.terminal);self.assertFalse(owner.session_retired)
+
+    def test_existing_collector_routes_prepare_failure_to_real_startup_consumer(self):
+        from modules.adapters.runtime.python.worker.tests.test_windows_offload_execution import SessionTests
+        case=SessionTests('test_real_parent_can_explicitly_retire_known_child_failure_before_ready');case.setUp()
+        try:
+            owners=[];original_init=x._WindowsOffloadIoSession.__init__
+            def construct(owner,root):
+                original_init(owner,root)
+                case.failed_startup_session(owner=owner);owners.append(owner)
+            native=object.__new__(base._Native);native._Native__origin=native
+            native._Native__profile=base._EXECUTION_PROFILE;native.buffers=[]
+            native.uncertain=native.expired=False;native.deadline_ns=x.time.monotonic_ns()+x._BUDGET_NS
+            base._NATIVE_OWNERS.append(native);rows=[]
+            with patch.object(base,'__name__','_standalone_windows_read_session_engine'), \
+                 patch.object(base,'_private_core_package',return_value={'windows_offload_execution':x}), \
+                 patch.object(base,'_fresh_directory'), \
+                 patch.object(x._WindowsOffloadIoSession,'__init__',construct):
+                self.assertFalse(subject.collect(native,base,{},Path('C:/synthetic-test-cache'),rows))
+            self.assertEqual(len(owners),1);owner=owners[0]
+            self.assertEqual(len(rows),1);self.assertFalse(rows[0]['accepted'])
+            self.assertEqual(rows[0]['failure_stage'],'prepare')
+            self.assertTrue(rows[0]['startup_retirement']['retired'])
+            self.assertFalse(rows[0]['startup_retirement']['parent_qualification_granted'])
+            self.assertTrue(owner.session_retired)
+        finally:case.doCleanups()
+
     def control(self,case=subject.CASES[0]):
         o=x._WindowsOffloadIoSession('C:\\synthetic-fresh-cache')
         api=object.__new__(x._Native);api._Native__origin=api;api.owner=o;o.api=api

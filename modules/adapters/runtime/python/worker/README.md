@@ -1176,3 +1176,47 @@ separate ledger/lifetime remain outside this proof. Protected shared accounting,
 cached worker/model/borrower/storage lifetime and actual resource/restart checks
 remain pending. No Native/model/accuracy/OCR/full-software test is implied, and
 unknown historical staging stays untouched and charged the full 12 GiB.
+
+## Original IO bootstrap and known startup retirement
+
+The actual IO constructor now reserves two original normal physical rows for its
+fixed kernel32 and system ucrtbase loader entries. Actual DLL objects/handles,
+original readers/kwargs/thread/owner and fixed Kernel/CRT function prototypes
+stay retained across partial construction. Reinitialization and replay deny.
+The original request or private bootstrap startup deadline gates each loader.
+There is no unload, retry, new pool or capacity refund.
+
+Existing typed IO outputs are copied from original buffers before the error
+reader. Original pipe slots, process information, controller thread ID, locator
+buffers, inheritance flags, attribute capacity, timers, IO counts and exit/Job
+readbacks remain distinct from mutable observations. Fixed inputs and original
+outputs must still match before ACK or adoption. Native-permitted command and
+attribute-list changes retain separate before/actual-after bytes. Each dependent
+attribute operation uses its last original acknowledged bytes. Scalar settled
+tuples remain four values. Bootstrap rows compose through a private closed
+completed-physical check with Core/frontier/retirement; they are not scalar tuples.
+
+The actual controller's original thread-ID record and Resume ACK now bind a
+known startup record. It derives all 13 handle generations from original scalar
+or typed returns and pre-call slots, plus the original process/Job/readback,
+attribute deletion and inherited-pipe close chronology. Only original ready,
+second readback and dispatch facts establish full launch. Public launch flags
+cannot establish that production/controller record.
+
+Explicit failed retirement can consume this known pre-ready generation. A pending
+ready-only wait is retained with its original array/deadline; it is not cancelled
+as pipe IO or woken by Job termination. Its real return/controller exit and the
+existing process/Job/reaper/all-close proof remain required. The read-session
+fixture consumes this explicit drain after a failed prepare caller returns,
+subject to its original live outer containment. It preserves the failed case
+and grants no Native qualification or model/resource credit.
+
+Two bootstrap rows are already spent before Core admission. The existing IO
+16384 normal plus 64 extra rows, Core 8908 future normal envelope and Source's
+different total/inside-tail profile remain unchanged. Existing 48-row retirement
+admission is not a pre-effect lifetime reserve. Child Exit/Sleep/park, blocked
+reply timing, earlier unknown construction and full engine lifetime remain
+pending. Protected shared accounting and cached model/worker/borrower/storage
+composition and actual Native/resource/restart qualification remain separate.
+Unknown old staging stays untouched and charged the full 12 GiB; accepted
+accuracy/OCR stay closed and whole-software testing stays deferred.
