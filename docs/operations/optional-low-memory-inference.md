@@ -1570,3 +1570,25 @@ resource retirement, a safe restart or low-memory model delivery. Shared disk
 accounting, stable protection and owned cached-worker/borrower lifetime remain
 pending. Unknown historical staging remains untouched and charged full12GiB.
 Accepted accuracy/OCR stay closed; whole-software testing remains deferred.
+
+## Keep process-call results when later checks fail
+
+The existing Windows IO dispatcher could lose a call result if reading its
+error failed. A validator could also replace the observed result before it
+reached the caller. Both parent and child now retain the original value before
+error capture and check the same original completion before acknowledgement.
+Mutable row indices, result fields or ledger observations cannot redirect that
+retention or return a foreign handle. The original graph stays owned even when
+several observations change. These internal records are not public diagnostics.
+
+Focused fake-call tests cover reader failure/interruption, malformed/opaque
+values, both IO roles, row/table/owner drift, original-reader identity, output
+buffers, copying/reinit/replay and original after-deadline/terminal regressions.
+Known physical completion is distinct from a healthy task or confirmed exit.
+The existing physical-row counts and strict settled tuple remain unchanged.
+
+Complete Core constructor/output graph and finite engine escape handling, shared
+disk accounting/protection, owned cached-worker/model/storage lifetime and actual
+resource/restart qualification remain pending. Unknown old staging stays
+untouched and charged full12GiB. Accepted accuracy/OCR stay closed; whole-software
+testing remains deferred. This source work enables no new offload lease.

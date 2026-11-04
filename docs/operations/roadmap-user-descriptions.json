@@ -14724,6 +14724,18 @@
           "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "19381f47f9cf0dcd62d41d26d0923ff14cc472ac93c72d8abdf43e7776a58aa4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed runtime call failure handling and tested existing behavior.",
+          "Windows call results now stay owned when later checks fail.",
+          "These source tests did not run or qualify a low-memory model."
+        ]
+      }
     }
   ]
 }

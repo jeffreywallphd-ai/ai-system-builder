@@ -9573,6 +9573,46 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-original-native-call-outcomes",
+      "work_criteria": [
+        "original-known-call-outcome-retention",
+        "terminal-failure-and-operation-acknowledgement",
+        "focused-reviewed-compatible-source-checkpoint"
+      ],
+      "receipt_digest": "1fbff9c885afeae6d18ae0c3003ce0f3917a470e5c9af965626ad3c476c10983",
+      "review_digest": "d3fc88c247cd61657b85bdd3d2ffb8f6ba95034e8782614ca70bc9b17e5ef3a4",
+      "scope": "The agent fixed runtime call failure handling and tested existing behavior. Windows call results now stay owned when later checks fail. These source tests did not run or qualify a low-memory model.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-original-native-call-outcomes",
+      "work_criteria": [
+        "original-known-call-outcome-retention",
+        "terminal-failure-and-operation-acknowledgement",
+        "focused-reviewed-compatible-source-checkpoint"
+      ],
+      "receipt_digest": "1fbff9c885afeae6d18ae0c3003ce0f3917a470e5c9af965626ad3c476c10983",
+      "review_digest": "d3fc88c247cd61657b85bdd3d2ffb8f6ba95034e8782614ca70bc9b17e5ef3a4",
+      "scope": "The agent fixed runtime call failure handling and tested existing behavior. Windows call results now stay owned when later checks fail. These source tests did not run or qualify a low-memory model.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

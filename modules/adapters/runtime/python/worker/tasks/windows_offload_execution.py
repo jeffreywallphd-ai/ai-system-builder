@@ -189,6 +189,70 @@ class _Call:
 class _IntentChanged(OffloadAdmissionError):pass
 
 
+class _NativeReturn:
+    """Original scalar-call custody, independent of mutable row observations."""
+    __slots__=('__origin','__ledger','__row','__api','__binding','__index','__reader',
+               '__started','__value','__error','__value_known','__error_returned',
+               '__error_known','__acknowledged','__completion')
+    def __init__(self,ledger,row,api,binding,index):
+        _need(type(self)is _NativeReturn and not hasattr(self,'_NativeReturn__origin'))
+        self.__origin=self
+        self.__ledger,self.__row,self.__api,self.__binding,self.__index=ledger,row,api,binding,index
+        self.__reader=getattr(C,'get_last_error',None)
+        self.__started=self.__value_known=self.__error_returned=False
+        self.__error_known=self.__acknowledged=False
+        self.__value=self.__error=None
+        self.__completion=None
+
+    def __repr__(self):return '<original native return>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    @property
+    def value(self):return self.__value
+    @property
+    def error(self):return self.__error
+    @property
+    def value_known(self):return self.__value_known
+    @property
+    def error_returned(self):return self.__error_returned
+    @property
+    def error_known(self):return self.__error_known
+    @property
+    def acknowledged(self):return self.__acknowledged
+    @property
+    def completion(self):return self.__completion
+
+    def identity(self,ledger):
+        _need(type(self)is _NativeReturn and self.__origin is self and self.__ledger is ledger)
+        return self.__row,self.__api,self.__binding,self.__index
+
+    def invoke(self):
+        _need(not self.__started and callable(self.__reader))
+        self.__ledger._assert_return_dispatch(self)
+        self.__started=True
+        self.__value=self.__binding[0](*self.__binding[1])
+        self.__value_known=True  # No reader, observer or type check before this.
+        self.__error=self.__reader()
+        self.__error_returned=True
+        _need(type(self.__error)is int and 0<=self.__error<2**32)
+        self.__error_known=True
+        return self.__value
+
+    def acknowledge(self,ledger):
+        self.identity(ledger)
+        _need(self.__started and self.__value_known and self.__error_known
+              and self.__completion is not None and not self.__acknowledged)
+        self.__acknowledged=True
+
+    def publish_completion(self,ledger,value):
+        self.identity(ledger)
+        _need(self.__started and self.__value_known and self.__error_known and self.__completion is None
+              and type(value)is tuple and len(value)==4 and value[0]is self.__binding
+              and value[1]is self.__value and value[2]is self.__error and value[3]==self.__binding[9])
+        self.__completion=value
+
+
 class _Ledger:
     """One lifetime allocation; reserve normal and terminal rows before effects."""
     def __init__(self, owner):
@@ -203,14 +267,85 @@ class _Ledger:
         self.bindings=[None]*len(self.rows)
         self.completions=[None]*len(self.rows)
         for index,row in enumerate(self.rows):row.pool=self;row.index=index
+        self.__owner=owner
+        self.__rows,self.__bindings,self.__completions=self.rows,self.bindings,self.completions
+        self.__locations={id(row):index for index,row in enumerate(self.__rows)}
+        self.__intents=[None]*len(self.__rows)
+        self.__claims=[None]*len(self.__rows)
+        self.__returns=[None]*len(self.__rows)  # Same physical rows, no new pool.
+
+    def _original_storage(self):
+        _need(type(self)is _Ledger and self.__origin is self
+              and self.owner is self.__owner and self.rows is self.__rows
+              and self.bindings is self.__bindings and self.completions is self.__completions)
+
+    def _retained_return(self,row,api):
+        # Passive facts remain reachable even if an index/payload/table observer
+        # changes after the target returned. This grants no execution or credit.
+        _need(type(self)is _Ledger and self.__origin is self and type(row)is _Call)
+        index=self.__locations.get(id(row))
+        _need(type(index)is int and self.__rows[index]is row)
+        value=self.__returns[index]
+        _need(type(value)is _NativeReturn)
+        original,original_api,_,original_index=value.identity(self)
+        _need(original is row and original_api is api and original_index==index)
+        return value
+
+    def _begin_return(self,row,api,binding):
+        with self.lock:
+            self._original_storage();self.member(row)
+            index=self.__locations.get(id(row))
+            _need(type(index)is int and index==row.index and self.__rows[index]is row
+                  and self.__claims[index]is self.__bindings[index]is binding
+                  and self.__returns[index]is None)
+            value=_NativeReturn(self,row,api,binding,index)
+            self.__returns[index]=value
+            return value
+
+    def _assert_return_dispatch(self,value):
+        with self.lock:
+            self._original_storage()
+            row,api,binding,index=value.identity(self)
+            _need(self.__returns[index]is value and self.__rows[index]is row
+                  and self.__claims[index]is self.__bindings[index]is binding
+                  and self.__completions[index]is None)
+            self.member(row)
+            _need(type(api)is _Native and api.owner is self.__owner
+                  and self.__owner.api is api and self.__owner.ledger is self
+                  and type(binding)is tuple and len(binding)==10
+                  and binding[4]is api and binding[9]==get_ident()
+                  and row.started is True and row.native_thread==binding[9]
+                  and row.payload is binding and row.function is binding[0]
+                  and row.args is binding[1]and row.valid is binding[2]and row.keep is binding[3]
+                  and not row.returned and not row.acknowledged and not row.integrity_lost
+                  and row.result is row.error is row.completion is None)
+            _Native.origin(api)
+            custody=getattr(self.__owner,'_Native__custody',None)
+            _need(type(custody)is tuple and len(custody)==3
+                  and custody[0]is self.__owner and custody[1]is api and custody[2]is self)
+
+    def _acknowledge_return(self,row,api):
+        with self.lock:
+            value=self._retained_return(row,api)
+            completion=self.settled(row,api)
+            _need(completion[1]is value.value and completion[2]is value.error
+                  and row.acknowledged is False and api.owner is self.__owner
+                  and self.__owner.api is api and self.__owner.ledger is self)
+            value.acknowledge(self)
+            row.acknowledged=True
 
     def reserve(self, rows, function, args, valid, keep, terminal):
         with self.lock:
+            self._original_storage()
             if self.used < len(self.normal):
                 row = self.normal[self.used]; self.used += 1
             else:
                 _need(terminal and self.terminal_used < len(self.terminal))
                 row = self.terminal[self.terminal_used]; self.terminal_used += 1
+            self.member(row)
+            index=self.__locations.get(id(row))
+            _need(type(index)is int and self.__rows[index]is row and self.__intents[index]is None)
+            self.__intents[index]=(function,args,valid,keep)
             row.function, row.args, row.valid, row.keep = function, args, valid, keep
             rows.append(row)
             return row
@@ -222,8 +357,12 @@ class _Ledger:
 
     def commit(self,row,api,request,kind,wait_deadline=None):
         with self.lock:
-            self.member(row)
-            _need(api.owner is self.owner and self.bindings[row.index] is None and not row.committed and not row.started)
+            self._original_storage();self.member(row)
+            _need(api.owner is self.owner and self.__claims[row.index]is None
+                  and self.bindings[row.index] is None and not row.committed and not row.started)
+            intent=self.__intents[row.index]
+            _need(type(intent)is tuple and len(intent)==4 and row.function is intent[0]
+                  and row.args is intent[1]and row.valid is intent[2]and row.keep is intent[3])
             facts=[]
             def capture(value,depth=0):
                 _need(depth<=3)
@@ -243,16 +382,18 @@ class _Ledger:
             tick=time.monotonic_ns()
             if request is not None and kind!='idle-consumed':_need(0<request.deadline-tick<=_BUDGET_NS)
             binding=(row.function,row.args,row.valid,row.keep,api,request,kind,tick,tuple(facts),get_ident())
+            self.__claims[row.index]=binding  # Immutable intent before observer exposure.
             self.bindings[row.index]=binding;row.payload=binding;row.committed=True
 
     def claim(self,row,api):
         with self.lock:
-            self.member(row);binding=self.bindings[row.index]
+            self._original_storage();self.member(row);binding=self.__claims[row.index]
             _need(type(binding) is tuple and binding[4] is api and api.owner is self.owner
                   and row.committed and not row.started and not row.integrity_lost
                   and len(binding)==10 and binding[9]==get_ident())
             try:
-                _need(row.payload is binding and not row.returned and not row.acknowledged
+                _need(self.bindings[row.index]is binding and row.payload is binding
+                      and not row.returned and not row.acknowledged
                       and row.function is binding[0] and row.args is binding[1]
                       and row.valid is binding[2] and row.keep is binding[3])
                 for h,slot,number,generation,closing,closed in binding[8]:
@@ -270,27 +411,39 @@ class _Ledger:
     def returned_native(self,row,api,result,error):
         """Publish a known return, independently of normal success validation."""
         with self.lock:
-            self.member(row);binding=self.bindings[row.index]
-            _need(type(binding) is tuple and len(binding)==10 and binding[4] is api and row.started
-                  and row.native_thread==get_ident() and self.completions[row.index] is None
+            value=self._retained_return(row,api)
+            _,_,binding,index=value.identity(self)
+            _need(value.value_known and value.error_known and result is value.value and error is value.error
+                  and(type(result)is int or result is None)and type(error)is int and 0<=error<2**32
+                  and self.__completions[index]is None)
+            completion=(binding,result,error,binding[9])
+            value.publish_completion(self,completion)
+            self.__completions[index]=completion  # Original facts before observer validation.
+            self._original_storage();self.member(row)
+            _need(self.__claims[index]is self.__bindings[index]is binding and api.owner is self.__owner
+                  and self.__owner.api is api and self.__owner.ledger is self
+                  and row.native_thread==binding[9]==get_ident() and row.started is True
                   and row.completion is None and not row.returned and not row.integrity_lost
                   and row.payload is binding and row.function is binding[0]
-                  and row.args is binding[1] and row.valid is binding[2] and row.keep is binding[3]
-                  and type(result) in (int,type(None)) and type(error) is int and 0<=error<2**32)
-            completion=(binding,result,error,row.native_thread)
-            # An interruption anywhere in publication leaves the exact row
-            # retained. Both canonical references and all values must agree.
-            self.completions[row.index]=completion
+                  and row.args is binding[1]and row.valid is binding[2]and row.keep is binding[3]
+                  and row.result is row.error is None and row.acknowledged is False)
             row.completion=completion;row.result=result;row.error=error;row.returned=True
 
     def settled(self,row,api):
         """Known native completion is not a successful request or close ACK."""
         with self.lock:
-            self.member(row);binding=self.bindings[row.index]
+            self._original_storage()
+            self.member(row);binding=self.__claims[row.index]
             try:
+                original=self._retained_return(row,api)
+                _,_,original_binding,original_index=original.identity(self)
                 value=self.completions[row.index]
                 _need(type(binding) is tuple and len(binding)==10
+                      and self.bindings[row.index]is binding
                       and type(value) is tuple and len(value)==4 and value is row.completion
+                      and original.value_known and original.error_known and original.completion is value
+                      and original_binding is binding and original_index==row.index
+                      and value[1]is original.value and value[2]is original.error
                       and value[0] is binding and binding[4] is api
                       and row.payload is binding and row.function is binding[0]
                       and row.args is binding[1] and row.valid is binding[2] and row.keep is binding[3]
@@ -314,6 +467,7 @@ class _Native(_NativePrimitives):
         _need(os.name == 'nt' and C.sizeof(_PTR) == 8 and sys.implementation.name == 'cpython'
               and sysconfig.get_platform() == 'win-amd64'
               and (C.sizeof(_BasicLimits),C.sizeof(_ExtendedLimits),C.sizeof(_StartupEx),C.sizeof(_Process)) == (64,144,112,24))
+        self._original_ledger()  # Root the original API/ledger before DLL effects.
         self.k = C.WinDLL('kernel32', use_last_error=True)
         ptr, u32, i32 = _PTR, _U32, _I32
         signatures = [
@@ -362,37 +516,50 @@ class _Native(_NativePrimitives):
         n=self.call(function,text,len(text),valid=lambda n:type(n) is int and 0<n<len(text),keep=(text,))
         _need(n==len(text.value));return _root(text.value)
 
-    def _call_row(self, function, *args, valid=lambda v:type(v) is int and v!=0, keep=(), terminal=False, _wait_deadline=None):
+    def _original_ledger(self):
         self.origin();owner=self.owner
+        custody=getattr(owner,'_Native__custody',None)
+        if custody is None:
+            _need(not hasattr(owner,'_Native__custody'))
+            ledger=owner.ledger
+            _need(type(ledger)is _Ledger and ledger.owner is owner)
+            ledger._original_storage()
+            custody=(owner,self,ledger)
+            owner._Native__custody=custody  # Existing owner roots even rebound observers.
+        _need(type(custody)is tuple and len(custody)==3
+              and custody[0]is owner and custody[1]is self and custody[2]is owner.ledger)
+        return custody[2]
+
+    def _call_row(self, function, *args, valid=lambda v:type(v) is int and v!=0, keep=(), terminal=False, _wait_deadline=None):
+        self.origin();owner=self.owner;ledger=self._original_ledger()
         if type(owner) is _WindowsOffloadIoSession:
             with owner._state_lock:
                 request=owner.active;owner._live(request)
-                row=owner.ledger.reserve(owner.calls,function,args,valid,keep,terminal)
+                row=ledger.reserve(owner.calls,function,args,valid,keep,terminal)
                 owner._live(request)
-                owner.ledger.commit(row,self,request,'operation',_wait_deadline)
+                ledger.commit(row,self,request,'operation',_wait_deadline)
         else:
-            row=owner.ledger.reserve(owner.calls,function,args,valid,keep,terminal)
-            owner.ledger.commit(row,self,None,'child',_wait_deadline)
+            row=ledger.reserve(owner.calls,function,args,valid,keep,terminal)
+            ledger.commit(row,self,None,'child',_wait_deadline)
         return row
 
     def call(self, function, *args, **kwargs):
         return self._perform(self._call_row(function,*args,**kwargs))
 
     def _perform(self,row):
-        self.origin();owner=self.owner
-        try:binding=owner.ledger.claim(row,self)
+        self.origin();owner=self.owner;ledger=self._original_ledger()
+        try:binding=ledger.claim(row,self)
         except _IntentChanged:
             if type(owner) is _WindowsOffloadIoSession:owner._fence()
             else:owner.uncertain=True
             raise
         try:
-            result=binding[0](*binding[1]);error=C.get_last_error()
-            if type(owner) is _WindowsOffloadIoSession:
-                owner.ledger.returned_native(row,self,result,error)
-            else:
-                row.result=result;row.error=error;row.returned=True
-            _need(binding[2](row.result));row.acknowledged=True
-            return row.result
+            original=ledger._begin_return(row,self,binding)
+            result=original.invoke()
+            ledger.returned_native(row,self,result,original.error)
+            _need(binding[2](result))
+            ledger._acknowledge_return(row,self)
+            return result
         except BaseException:
             if type(owner) is _WindowsOffloadIoSession:owner._fence()
             else:owner.uncertain=True

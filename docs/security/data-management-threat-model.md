@@ -2573,3 +2573,37 @@ and mutation fence, cached worker/model/storage borrower lifetime and resource
 restart qualification remain pending. No new Native effect, release, disk credit,
 model/cache quota or production readiness is granted. Historical unknown staging
 remains untouched and fully charged12GiB; accepted model quality stays closed.
+
+### Original IO scalar-return custody and strict acknowledgement
+
+The existing IO parent/child Native dispatcher now prebinds a private return
+record to an original physical row location, claim, API/owner, function/args/
+validator/keep/thread and error reader. Original identity tables route retention
+without trusting mutable row.index/pool/payload after the call. An owner-private
+passive owner/API/ledger tuple roots that graph before DLL effects or the first
+trusted synthetic consumer; dispatch uses the captured ledger afterward. It
+changes no constructor loader target, kwargs, role or selection policy.
+
+Actual opaque return is stored before error capture or any observer/type checks.
+Reader-returned and valid-error flags preserve uncertainty without fabricated
+zero, coercion, exception/traceback retention or public serialization. Known raw
+facts remain independently reachable when observer validation fails. Only valid
+complete scalar facts produce the original strict four-value settled tuple.
+After the original validator, unchanged completion/intent and pure owner/API/
+ledger identity are checked before ACK. The caller receives the actual original
+value. A validator cannot supply a substituted handle through row.result.
+
+No new post-Native healthy-owner/deadline gate discards an original committed
+completion or blocks legitimate fenced-owner cancellation/retirement. Native
+completion/ACK remains distinct from task success, output adoption, actual process
+exit and capacity credit. The same16384 normal plus64 terminal physical rows
+and existing constructor/Source roles remain. Unknown outputs and original
+keep objects stay owned; no retry, reset, new global counter or release hook is
+added. This is trusted internal failure custody, not arbitrary Python isolation.
+
+Fake actual-consumer tests retain red/green evidence. No physical Native/model
+run occurred. Core three-library/typed-output subreservation, enclosing engine
+terminal escape/debt, protected shared domain/mutation fence and owned cached
+worker/model/borrower/storage lifetime and resource qualification remain pending.
+Unknown historical staging stays untouched and fully charged12GiB; completed
+model quality does not enable optional offload or qualify its parent.

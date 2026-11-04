@@ -1124,3 +1124,27 @@ Handles, allocations, guards and IRPs keep their existing ownership. Inner
 wrappers can hide a return before this boundary; direct ancillary calls and
 finite execution remain separate. No public serialization, cleanup, credit,
 new quota, worker topology or optional-mode readiness follows from this work.
+
+## Original IO physical-row returns
+
+Both existing IO roles now bind one original invocation/return record to each
+used physical row before its Native target. An owner-private passive tuple keeps
+the original owner/API/ledger graph reachable across public observation drift.
+The same original ledger is used after dispatch. Actual opaque value is retained
+before its captured error reader; known value, error-returned and valid-error
+facts remain separate. Missing reader denies before target; failure never retries
+the target or reader. No opaque value is formatted or serialized.
+
+Strict canonical publication and ACK reject row/table/result or owner-binding
+drift, including mutation by a validator. Success returns the original actual
+value. Existing four-value settled tuples remain strict. Originally committed
+completion after deadline/fence and legitimate terminal cancellation/retirement
+remain supported; physical return is distinct from task success and cleanup.
+The existing16384 normal plus64 terminal rows are unchanged. One private return
+slot per physical row adds no second pool, reset or process-lifetime counter.
+
+This is existing scalar IO custody, not complete Core DLL/output subreservation,
+enclosing-engine escape/debt closure, protected domain or cached-model readiness.
+All DLL targets/kwargs, Source roles and model/cache policies remain unchanged.
+Fake parent/child tests qualify source handling only; no physical Native/model
+execution, resource retirement, disk credit or parent qualification follows.

@@ -1,8 +1,10 @@
 """Model-free private session/ABI regressions; no Windows qualification."""
 import copy
 import ctypes as C
+import gc
 import json
 import hashlib
+import pickle
 from pathlib import Path
 import struct
 import sys
@@ -10,9 +12,11 @@ from io import BytesIO
 from threading import Event, Thread, get_ident
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+import weakref
+from unittest.mock import Mock, patch
 
 from modules.adapters.runtime.python.worker.tasks import windows_offload_execution as x
+from modules.adapters.runtime.python.worker.tasks import windows_offload_execution_child as child_module
 
 
 class LaunchKernel:
@@ -204,6 +208,17 @@ class SessionTests(unittest.TestCase):
         if owner.active is None:self.activate(owner)
         value=object.__new__(x._Native);value._Native__origin=value;value.owner=owner;owner.api=value
         return value
+
+    def return_case(self,role):
+        if role=='parent':
+            owner=self.session();return owner,self.api(owner)
+        # An explicit new synthetic child origin; no constructor/OS effect.
+        owner=object.__new__(child_module._Child);owner._Child__origin=owner
+        owner.api=None;owner.calls=[];owner.handles=[];owner.buffers=[];owner.uncertain=False
+        owner.ledger=x._Ledger(owner)
+        self.enterContext(patch.object(child_module,'_CHILD',owner))
+        a=object.__new__(x._Native);a._Native__origin=a;a.owner=owner;owner.api=a
+        return owner,a
 
     def activate(self,owner,seq=0):
         request=x._Request(owner,seq);owner.requests.append(request);owner.active=request;return request
@@ -862,6 +877,247 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(copy.copy(row),a)
         self.assertFalse(row.integrity_lost)
         self.assertIs(owner.ledger.settled(row,a),value)
+
+    def test_original_native_return_survives_error_reader_failure(self):
+        owner=self.session();a=self.api(owner);value=object();calls=[]
+        row=a._call_row(lambda:calls.append('once')or value,valid=lambda _:True)
+        with patch.object(C,'get_last_error',side_effect=RuntimeError('synthetic error reader')):
+            with self.assertRaises(RuntimeError):a._perform(row)
+        original=owner.ledger._retained_return(row,a)
+        self.assertIs(original.value,value)
+        self.assertTrue(original.value_known)
+        self.assertFalse(original.error_returned or original.error_known)
+        self.assertEqual(calls,['once']);self.assertTrue(owner.uncertain)
+
+    def test_validator_cannot_substitute_the_returned_native_value(self):
+        owner=self.session();a=self.api(owner);calls=[];row=None
+        def validator(value):
+            self.assertEqual(value,10)
+            row.result=11
+            return True
+        row=a._call_row(lambda:calls.append('once')or 10,valid=validator)
+        with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+        original=owner.ledger._retained_return(row,a)
+        self.assertEqual(original.value,10);self.assertFalse(row.acknowledged)
+        self.assertEqual(calls,['once']);self.assertTrue(owner.uncertain)
+
+    def test_both_io_roles_keep_unknown_and_malformed_reader_facts(self):
+        class Opaque:
+            def __repr__(self):raise AssertionError('No formatting')
+            def __int__(self):raise AssertionError('No coercion')
+        for role in ('parent','child'):
+            for reply in (RuntimeError('synthetic reader'),KeyboardInterrupt(),None,True,-1,2**32,Opaque()):
+                with self.subTest(role=role,kind=type(reply).__name__),patch.dict(x._OWNERS,{},clear=True):
+                    owner,a=self.return_case(role);value=object();native=Mock(return_value=value)
+                    validator=Mock(return_value=True);row=a._call_row(native,valid=validator)
+                    reader=Mock(side_effect=reply)if isinstance(reply,BaseException)else Mock(return_value=reply)
+                    with patch.object(C,'get_last_error',reader):
+                        with self.assertRaises(BaseException):a._perform(row)
+                    original=owner.ledger._retained_return(row,a)
+                    self.assertIs(original.value,value);self.assertTrue(original.value_known)
+                    self.assertFalse(original.error_known or original.acknowledged or row.acknowledged)
+                    self.assertEqual(original.error_returned,not isinstance(reply,BaseException))
+                    if not isinstance(reply,BaseException):self.assertIs(original.error,reply)
+                    native.assert_called_once_with();reader.assert_called_once_with();validator.assert_not_called()
+                    self.assertTrue(owner.uncertain)
+
+    def test_both_io_roles_retain_returns_after_row_and_table_drift(self):
+        for role in ('parent','child'):
+            for alias in ('index','pool','payload','function','args','valid','keep','result','completion','rows','bindings','completions'):
+                with self.subTest(role=role,alias=alias),patch.dict(x._OWNERS,{},clear=True):
+                    owner,a=self.return_case(role);ledger=owner.ledger;value=12345;row=None
+                    validator=Mock(return_value=True)
+                    def native():
+                        setattr(ledger if alias in('rows','bindings','completions')else row,alias,object())
+                        return value
+                    row=a._call_row(native,valid=validator)
+                    with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                    original=ledger._retained_return(row,a)
+                    self.assertIs(original.value,value)
+                    self.assertTrue(original.value_known and original.error_known)
+                    self.assertFalse(original.acknowledged or row.acknowledged);validator.assert_not_called()
+
+    def test_owner_private_custody_keeps_original_graph_after_combined_alias_loss(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);ledger=owner.ledger;value=12345;row=None
+                ledger_ref=weakref.ref(ledger);api_ref=weakref.ref(a)
+                def native():
+                    row.pool=row.payload=None
+                    owner.calls=[];owner.api=object();owner.ledger=object()
+                    return value
+                row=a._call_row(native,valid=lambda _:True)
+                with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                original=ledger._retained_return(row,a)
+                self.assertIs(original.value,value);self.assertTrue(original.value_known)
+                self.assertIs(owner._Native__custody[1],a);self.assertIs(owner._Native__custody[2],ledger)
+                del original,row,a,ledger
+                gc.collect()
+                self.assertIsNotNone(ledger_ref());self.assertIsNotNone(api_ref())
+
+    def test_original_reader_and_real_none_return_are_preserved_in_both_roles(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);first=Mock(return_value=17);foreign=Mock(return_value=18)
+                def native():C.get_last_error=foreign;return None
+                with patch.object(C,'get_last_error',first):
+                    self.assertIsNone(a.call(native,valid=lambda value:value is None))
+                row=owner.calls[-1];original=owner.ledger._retained_return(row,a)
+                self.assertIsNone(original.value)
+                self.assertTrue(original.value_known and original.error_known and original.acknowledged)
+                self.assertEqual(original.error,17);first.assert_called_once_with();foreign.assert_not_called()
+                self.assertEqual(len(owner.ledger.settled(row,a)),4)
+
+    def test_callable_interruption_keeps_preowned_output_without_invented_return(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);output=C.c_void_p();reader=Mock(return_value=0)
+                def native():output.value=193;raise KeyboardInterrupt()
+                row=a._call_row(native,keep=(output,))
+                with patch.object(C,'get_last_error',reader),self.assertRaises(KeyboardInterrupt):a._perform(row)
+                original=owner.ledger._retained_return(row,a)
+                self.assertFalse(original.value_known or original.error_returned or original.acknowledged)
+                self.assertIs(row.keep[0],output);self.assertEqual(output.value,193);reader.assert_not_called()
+
+    def test_missing_reader_and_unregistered_return_deny_before_target(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=1)
+                row=a._call_row(native)
+                with patch.object(C,'get_last_error',None),self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                native.assert_not_called()
+                retained=owner.ledger._retained_return(row,a)
+                self.assertFalse(retained.value_known)
+                binding=owner.ledger.bindings[row.index]
+                forged=x._NativeReturn(owner.ledger,row,a,binding,row.index)
+                with self.assertRaises(x.OffloadAdmissionError):forged.invoke()
+                native.assert_not_called()
+
+    def test_original_return_cannot_be_reinitialized_copied_or_replayed(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=31)
+                self.assertEqual(a.call(native),31)
+                row=owner.calls[-1];original=owner.ledger._retained_return(row,a)
+                binding=owner.ledger.bindings[row.index]
+                with self.assertRaises(x.OffloadAdmissionError):x._NativeReturn.__init__(original,owner.ledger,row,a,binding,row.index)
+                for action in (copy.copy,copy.deepcopy,pickle.dumps):
+                    with self.assertRaises(x.OffloadAdmissionError):action(original)
+                with self.assertRaises(x.OffloadAdmissionError):original.invoke()
+                with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                self.assertEqual(original.value,31);self.assertTrue(original.acknowledged and row.acknowledged)
+                self.assertEqual(repr(original),'<original native return>');native.assert_called_once_with()
+
+    def test_failure_hook_does_not_drop_the_original_known_return(self):
+        owner,a=self.return_case('parent');value=object()
+        row=a._call_row(lambda:value,valid=lambda _:True)
+        with patch.object(C,'get_last_error',side_effect=ValueError('synthetic reader')), \
+             patch.object(owner,'_fence',side_effect=RuntimeError('synthetic observer')),self.assertRaises(RuntimeError):
+            a._perform(row)
+        original=owner.ledger._retained_return(row,a)
+        self.assertIs(original.value,value);self.assertTrue(original.value_known)
+
+    def test_opaque_scalar_return_is_retained_without_metaclass_callbacks(self):
+        class Meta(type):
+            def __eq__(self,other):raise AssertionError('No class comparison callback')
+            def __hash__(self):raise AssertionError('No class hashing callback')
+        class Opaque(metaclass=Meta):
+            def __repr__(self):raise AssertionError('No formatting')
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);value=Opaque();validator=Mock(return_value=True)
+                row=a._call_row(lambda:value,valid=validator)
+                with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                original=owner.ledger._retained_return(row,a)
+                self.assertIs(original.value,value);self.assertTrue(original.value_known and original.error_known)
+                self.assertFalse(original.acknowledged);validator.assert_not_called()
+
+    def test_preinvoke_identity_drift_denies_before_target_in_both_roles(self):
+        invoke=x._NativeReturn.invoke
+        for role in ('parent','child'):
+            for alias in ('api','ledger','payload','index'):
+                with self.subTest(role=role,alias=alias),patch.dict(x._OWNERS,{},clear=True):
+                    owner,a=self.return_case(role);native=Mock(return_value=1);row=a._call_row(native)
+                    def drift(value):
+                        setattr(owner if alias in('api','ledger')else row,alias,object())
+                        return invoke(value)
+                    with patch.object(x._NativeReturn,'invoke',drift),self.assertRaises(x.OffloadAdmissionError):
+                        a._perform(row)
+                    native.assert_not_called()
+
+    def test_foreign_invocation_cannot_dispatch_or_poison_the_original(self):
+        invoke=x._NativeReturn.invoke
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=1)
+                def probe(value):
+                    errors=[]
+                    def foreign():
+                        try:invoke(value)
+                        except BaseException as error:errors.append(error)
+                    thread=Thread(target=foreign);thread.start();thread.join(timeout=2)
+                    self.assertFalse(thread.is_alive());self.assertEqual(len(errors),1)
+                    self.assertIs(type(errors[0]),x.OffloadAdmissionError)
+                    native.assert_not_called()
+                    return invoke(value)
+                with patch.object(x._NativeReturn,'invoke',probe):self.assertEqual(a.call(native),1)
+                self.assertFalse(owner.uncertain);native.assert_called_once_with()
+                self.assertTrue(owner.ledger._retained_return(owner.calls[-1],a).acknowledged)
+
+    def test_validator_owner_binding_drift_cannot_acknowledge_original_call(self):
+        for role in ('parent','child'):
+            for alias in ('api','ledger'):
+                with self.subTest(role=role,alias=alias),patch.dict(x._OWNERS,{},clear=True):
+                    owner,a=self.return_case(role);ledger=owner.ledger;native=Mock(return_value=10)
+                    def validator(value):
+                        self.assertEqual(value,10);setattr(owner,alias,object());return True
+                    row=a._call_row(native,valid=validator)
+                    with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                    original=ledger._retained_return(row,a)
+                    self.assertEqual(original.value,10);self.assertFalse(original.acknowledged or row.acknowledged)
+                    native.assert_called_once_with()
+
+    def test_coherent_observer_replacement_cannot_replace_the_original_committed_intent(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=1);foreign=Mock(return_value=1)
+                row=a._call_row(native);old=row.payload
+                replacement=(foreign,old[1],old[2],old[3],*old[4:])
+                owner.ledger.bindings[row.index]=replacement
+                row.function=foreign;row.payload=replacement
+                with self.assertRaises(x.OffloadAdmissionError):a._perform(row)
+                native.assert_not_called();foreign.assert_not_called()
+
+    def test_reserved_intent_cannot_be_changed_before_commit(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=1);foreign=Mock(return_value=1)
+                reserve=owner.ledger.reserve
+                def changed(*args):
+                    row=reserve(*args);row.function=foreign;return row
+                with patch.object(owner.ledger,'reserve',side_effect=changed),self.assertRaises(x.OffloadAdmissionError):
+                    a.call(native)
+                native.assert_not_called();foreign.assert_not_called()
+
+    def test_uninvoked_observers_cannot_forge_a_native_settlement(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);native=Mock(return_value=1);row=a._call_row(native)
+                binding=row.payload;forged=(binding,1,0,get_ident())
+                owner.ledger.completions[row.index]=row.completion=forged
+                row.started=row.returned=True;row.native_thread=get_ident();row.result=1;row.error=0
+                with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(row,a)
+                native.assert_not_called();self.assertFalse(row.acknowledged)
+
+    def test_both_public_completion_aliases_cannot_replace_original_completion(self):
+        for role in ('parent','child'):
+            with self.subTest(role=role),patch.dict(x._OWNERS,{},clear=True):
+                owner,a=self.return_case(role);self.assertEqual(a.call(lambda:1),1)
+                row=owner.calls[-1];original=owner.ledger._retained_return(row,a)
+                saved=original.completion;replacement=tuple(list(saved))
+                owner.ledger.completions[row.index]=row.completion=replacement
+                with self.assertRaises(x.OffloadAdmissionError):owner.ledger.settled(row,a)
+                self.assertIs(original.completion,saved);self.assertEqual(original.value,1)
 
     def test_native_completion_identity_loss_is_sticky_without_repeating_the_call(self):
         owner=self.session();a=self.api(owner);calls=[]
