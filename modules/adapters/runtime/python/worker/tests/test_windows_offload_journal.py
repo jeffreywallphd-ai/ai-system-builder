@@ -16,7 +16,7 @@ from modules.adapters.runtime.python.worker.tasks import windows_offload_core as
 from modules.adapters.runtime.python.worker.tasks import windows_offload_backend as b
 from modules.adapters.runtime.python.worker.tasks import offload_recovery as r
 from modules.adapters.runtime.python.worker.tasks.local_model_offload import OwnedOffloadLease, OffloadAdmissionError, STAGING_LIMIT
-from modules.adapters.runtime.python.worker.tests.test_windows_offload_core import fresh_core
+from modules.adapters.runtime.python.worker.tests.test_windows_offload_core import NativeOutcomeContract, fresh_core
 from modules.adapters.runtime.python.worker.tests.test_windows_offload_backend import SyntheticWorker
 
 
@@ -145,6 +145,7 @@ def prepared(other=0):
 
 class JournalTableTestCase(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
         for table in (c._CUSTODY, b._BACKENDS, r._RETAINED_OWNERS, j._OWNERS):
             scope = patch.dict(table, {}, clear=True); scope.start(); self.addCleanup(scope.stop)
 
@@ -380,8 +381,65 @@ class FrameTests(unittest.TestCase):
             with self.assertRaises(OffloadAdmissionError): j._validate_prefix(raw, **values)
 
 
-class NativeIoTests(JournalTableTestCase):
+class NativeIoTests(NativeOutcomeContract, JournalTableTestCase):
     """Invoke real API methods against typed synthetic function replies only."""
+    def outcome_case(self):
+        _, journal, _, _ = prepared()
+        return journal, journal._api
+
+    def test_manual_anchor_ack_rejects_terminal_call_after_observers_reset(self):
+        core = fresh_core(); trace = []; domain = SyntheticDomain(core, trace)
+        native = Mock(return_value=1)
+        class AnchorIo(SyntheticIo):
+            def duplicate_anchor(self, source, identity):
+                super().duplicate_anchor(source, identity)
+                self.call(native)
+                self.owner._fail()
+                # A mutable status reset is not the private call's authority.
+                self.owner._uncertain = core._uncertain = domain.frozen = False
+        journal = j.WindowsProtectedJournal(core, domain, _api_factory=AnchorIo)
+        with self.assertRaises(OffloadAdmissionError): journal.prepare()
+        record = self.outcome(journal)
+        self.assertTrue(record.value_known and record.acknowledged and record.failed)
+        self.assertEqual(record.value, 1); native.assert_called_once_with()
+        self.assertNotIn('journal-prepare', trace)
+        self.assertFalse(journal._dispatch.finished)
+
+    def test_preinvoke_journal_binding_drift_denies_before_target(self):
+        invoke = c._NativeCallOutcome.invoke
+        for alias in ('_core', '_domain', '_binding'):
+            with self.subTest(alias=alias):
+                _, journal, _, _ = prepared(); native = Mock(return_value=1)
+                api = journal._api
+                def drift(record):
+                    setattr(journal, alias, object())
+                    return invoke(record)
+                with patch.object(c._NativeCallOutcome, 'invoke', drift):
+                    with self.assertRaises(OffloadAdmissionError): journal._run(lambda: api.call(native))
+                native.assert_not_called()
+
+    def test_return_is_retained_when_validation_raises(self):
+        core, journal, domain, trace = prepared()
+        result, argument, buffer = object(), object(), object()
+        native = Mock(return_value=result)
+        def reject(value):
+            self.assertIs(value, result)
+            raise RuntimeError('synthetic validator failure')
+        with patch.object(C, 'get_last_error', return_value=122, create=True):
+            with self.assertRaises(OffloadAdmissionError):
+                journal._run(lambda: journal._api.call(native, argument, valid=reject, keep=(buffer,)))
+        outcome = journal._WindowsProtectedJournal__native_outcome
+        self.assertIs(outcome.owner, journal)
+        self.assertIs(outcome.function, native)
+        self.assertIs(outcome.args[0], argument)
+        self.assertIs(outcome.keep[0], buffer)
+        self.assertIs(outcome.value, result)
+        self.assertTrue(outcome.value_known and outcome.error_known and outcome.failed)
+        self.assertEqual(outcome.error, 122)
+        self.assertFalse(outcome.acknowledged)
+        self.assertTrue(domain.frozen)
+        native.assert_called_once_with(argument)
+
     def kernel(self, journal, *, reply=0x103, wait=0, short=False, status=None, close=1):
         # These tests isolate IRP settlement/call budgets. Concrete parent
         # admission and its mandatory write/flush paths are tested below.

@@ -183,6 +183,106 @@ class _ExecutionCall:
         self.thread = self.value = None
 
 
+class _NativeCallOutcome:
+    """One passive callable outcome; never Native completion or release proof."""
+    __slots__ = ('__origin', '__owner', '__api', '__dispatch', '__thread',
+                 '__function', '__args', '__valid', '__keep', '__error_reader',
+                 '__registered', '__pending',
+                 '__value', '__error', '__started', '__value_known',
+                 '__error_returned', '__error_known', '__acknowledged', '__failed',
+                 '__weakref__')
+
+    def __init__(self, owner, dispatch, function, args, valid, keep):
+        _require(not hasattr(self, '_NativeCallOutcome__origin'))
+        self.__origin, self.__owner, self.__api = self, owner, owner._api
+        self.__dispatch, self.__thread = dispatch, get_ident()
+        self.__function, self.__args, self.__valid, self.__keep = function, args, valid, keep
+        self.__registered = owner._assert_native_outcome_current
+        self.__pending = (function, args, valid, keep)
+        self.__error_reader = getattr(C, 'get_last_error', None)
+        self.__value = self.__error = None
+        self.__started = self.__value_known = self.__error_returned = False
+        self.__error_known = self.__acknowledged = self.__failed = False
+        _require(callable(self.__error_reader))  # No invented error on unsupported hosts.
+
+    def __repr__(self):
+        return '<native-call-outcome>'
+
+    def __copy__(self):
+        raise TypeError('Native call outcomes cannot be copied')
+
+    def __deepcopy__(self, memo):
+        raise TypeError('Native call outcomes cannot be copied')
+
+    def __reduce_ex__(self, protocol):
+        raise TypeError('Native call outcomes cannot be serialized')
+
+    @property
+    def owner(self): return self.__owner
+    @property
+    def function(self): return self.__function
+    @property
+    def args(self): return self.__args
+    @property
+    def keep(self): return self.__keep
+    @property
+    def pending(self): return self.__pending
+    @property
+    def value(self): return self.__value
+    @property
+    def error(self): return self.__error
+    @property
+    def value_known(self): return self.__value_known
+    @property
+    def error_returned(self): return self.__error_returned
+    @property
+    def error_known(self): return self.__error_known
+    @property
+    def acknowledged(self): return self.__acknowledged
+    @property
+    def failed(self): return self.__failed
+
+    def fail(self, owner):
+        # A copied owner cannot poison the original owner's retained result.
+        if self.__origin is self and self.__owner is owner:
+            self.__failed = True
+
+    def assert_current(self, owner, dispatch):
+        _require(self.__origin is self and self.__owner is owner
+                 and self.__api is owner._api and self.__dispatch is dispatch is owner._dispatch
+                 and self.__pending is owner._pending
+                 and dispatch is not None
+                 and dispatch.started is True and dispatch.finished is False
+                 and dispatch.thread == self.__thread
+                 and self.__thread == get_ident() and not self.__failed)
+        self.__registered(self)
+
+    def assert_settled(self, owner):
+        _require(self.__origin is self and self.__owner is owner
+                 and self.__acknowledged and not self.__failed)
+
+    def invoke(self):
+        _require(self.__origin is self and not self.__started and not self.__failed)
+        self.assert_current(self.__owner, self.__owner._dispatch)
+        self.__started = True
+        self.__value = self.__function(*self.__args)
+        self.__value_known = True  # Before the reader or any caller validation.
+        self.__error = self.__error_reader()
+        self.__error_returned = True  # Retain even malformed opaque results first.
+        _require(type(self.__error) is int and 0 <= self.__error <= 0xffffffff)
+        self.__error_known = True
+        return self.__value
+
+    def validate(self):
+        _require(self.__value_known and self.__error_known and not self.__failed)
+        _require(self.__valid(self.__value))
+
+    def acknowledge(self, owner, dispatch):
+        self.assert_current(owner, dispatch)
+        _require(self.__value_known and self.__error_known and not self.__acknowledged)
+        self.__acknowledged = True
+
+
 class _JournalAnchorReceiver(ABC):
     """Private accounting consumer; its native custody stays outside Core."""
     @abstractmethod
@@ -981,6 +1081,7 @@ class WindowsOffloadCore:
         self._retirement_kind = None
         self._read_retirement = None
         self._pending = None
+        self.__native_outcome = None
         self._handles, self._guards, self._chain = [], [], ()
         self._allocations = []
         self._namespace = self._stage = self._index = None
@@ -1036,26 +1137,54 @@ class WindowsOffloadCore:
             _CUSTODY[id(self)] = self
 
     def retain_failure(self):
+        self._retain_native_outcome_failure()
         self._retain()
         self._uncertain = True
 
+    def _retain_native_outcome_failure(self):
+        if self.__origin is self and self.__native_outcome is not None:
+            self.__native_outcome.fail(self)
+
+    def _assert_native_outcome_settled(self):
+        if self.__native_outcome is not None:
+            self.__native_outcome.assert_settled(self)
+
+    def _assert_native_outcome_current(self, outcome):
+        _require(self.__origin is self and self.__native_outcome is outcome
+                 and self._busy is True and not self._uncertain and not self._retired)
+        self._assert_origin()
+
     def _native_call(self, function, args, valid, keep):
-        self._retain()
-        _require(type(self._dispatch) is _ExecutionCall and self._dispatch.started
-                 and not self._dispatch.finished and self._dispatch.thread == get_ident())
-        _require(self._pending is None and not self._uncertain)
-        self._pending = (function, args, valid, keep)
         try:
-            value = function(*args)
-            _require(valid(value) and not self._uncertain)
+            self._retain()
+            call = self._dispatch
+            _require(type(call) is _ExecutionCall and call.started
+                     and not call.finished and call.thread == get_ident())
+            _require(self._pending is None and not self._uncertain)
+            self._assert_native_outcome_settled()
+            outcome = _NativeCallOutcome(self, call, function, args, valid, keep)
+            self.__native_outcome = outcome
+            pending = outcome.pending
+            self._pending = pending
+            value = outcome.invoke()
+            self._assert_origin()
+            outcome.assert_current(self, self._dispatch)
+            _require(self.__native_outcome is outcome and self._pending is pending and not self._uncertain)
+            outcome.validate()
+            self._assert_origin()
+            outcome.assert_current(self, self._dispatch)
+            _require(self.__native_outcome is outcome and self._pending is pending and not self._uncertain)
+            outcome.acknowledge(self, call)
             self._pending = None
             return value
         except BaseException:
+            self._retain_native_outcome_failure()
             self.retain_failure()
             raise
 
     def _run(self, function):
         self._assert_origin()
+        self._assert_native_outcome_settled()
         _require(isinstance(self._execution, _NativeExecutionPort)
                  and self._retired is False and self._uncertain is False)
         self._retain()  # Before lock entry and every callback/acquisition.
@@ -1080,6 +1209,7 @@ class WindowsOffloadCore:
                         self._dispatch = call
                     value = function()
                     _require(not self._uncertain)
+                    self._assert_native_outcome_settled()
                     call.value, call.finished = value, True
                     return value
                 except BaseException:
@@ -1088,6 +1218,7 @@ class WindowsOffloadCore:
             result = self._execution.execute(self, invoke)
             with self._lock:
                 _require(call.started and call.finished and result is call.value and not self._uncertain)
+                self._assert_native_outcome_settled()
                 self._dispatch = None
                 self._busy = False
                 self._execution_calls.remove(call)

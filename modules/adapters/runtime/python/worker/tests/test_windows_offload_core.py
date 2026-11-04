@@ -2,6 +2,7 @@
 import ctypes as C
 import copy
 import gc
+import pickle
 from pathlib import Path
 import struct
 from types import MethodType, SimpleNamespace
@@ -186,8 +187,227 @@ def read_binding_core():
     return core, events
 
 
-class CoreTests(unittest.TestCase):
+class NativeOutcomeContract:
+    """Shared black-box failure journeys for the two concrete call consumers."""
+    def outcome(self, owner):
+        return getattr(owner, '_' + type(owner).__name__ + '__native_outcome')
+
+    def test_unregistered_outcome_denies_before_target(self):
+        owner, _ = self.outcome_case(); native = Mock(return_value=1)
+        record = c._NativeCallOutcome(owner, None, native, (), lambda _: True, ())
+        with self.assertRaises(c.OffloadAdmissionError): record.invoke()
+        native.assert_not_called()
+
+    def test_preinvoke_observer_drift_denies_before_target(self):
+        invoke = c._NativeCallOutcome.invoke
+        for alias in ('_pending', '_dispatch', '_api', 'api_owner'):
+            with self.subTest(alias=alias):
+                owner, api = self.outcome_case(); native = Mock(return_value=1)
+                def drift(record):
+                    if alias == 'api_owner': api.owner = object()
+                    else: setattr(owner, alias, SimpleNamespace(owner=owner))
+                    return invoke(record)
+                with patch.object(c._NativeCallOutcome, 'invoke', drift):
+                    with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(native))
+                native.assert_not_called()
+
+    def test_foreign_thread_denies_before_target_invocation(self):
+        owner, api = self.outcome_case(); native = Mock(return_value=1)
+        invoke = c._NativeCallOutcome.invoke
+        def wrong_thread(record):
+            errors = []
+            def attempt():
+                try: invoke(record)
+                except BaseException as error: errors.append(error)
+            thread = Thread(target=attempt)
+            thread.start(); thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(errors), 1)
+            raise errors[0]
+        with patch.object(c._NativeCallOutcome, 'invoke', wrong_thread):
+            with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(native))
+        native.assert_not_called()
+        record = self.outcome(owner)
+        self.assertTrue(record.failed); self.assertFalse(record.value_known)
+
+    def test_missing_error_reader_denies_before_target(self):
+        owner, api = self.outcome_case()
+        native = Mock(return_value=1)
+        with patch.object(C, 'get_last_error', None, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                owner._run(lambda: api.call(native))
+        native.assert_not_called()
+
+    def test_error_reader_failure_keeps_actual_return_and_never_retries(self):
+        for interruption in (RuntimeError('synthetic reader failure'), KeyboardInterrupt()):
+            with self.subTest(kind=type(interruption).__name__):
+                owner, api = self.outcome_case()
+                value = object(); native = Mock(return_value=value); validator = Mock(return_value=True)
+                reader = Mock(side_effect=interruption)
+                with patch.object(C, 'get_last_error', reader, create=True):
+                    with self.assertRaises(BaseException):
+                        owner._run(lambda: api.call(native, valid=validator))
+                record = self.outcome(owner)
+                self.assertTrue(record.value_known and record.failed)
+                self.assertIs(record.value, value)
+                self.assertFalse(record.error_returned or record.error_known or record.acknowledged)
+                reader.assert_called_once_with(); native.assert_called_once_with(); validator.assert_not_called()
+                owner._pending = None; owner._uncertain = False; owner._busy = False
+                with self.assertRaises(c.OffloadAdmissionError):
+                    owner._run(lambda: api.call(native))
+                native.assert_called_once_with()
+                self.assertIs(self.outcome(owner), record)
+
+    def test_malformed_error_is_retained_without_coercion(self):
+        class Opaque:
+            def __repr__(self): raise AssertionError('No formatting')
+            def __int__(self): raise AssertionError('No coercion')
+        for error in (None, True, -1, 0x100000000, Opaque()):
+            with self.subTest(kind=type(error).__name__):
+                owner, api = self.outcome_case(); value = object(); validator = Mock(return_value=True)
+                with patch.object(C, 'get_last_error', return_value=error, create=True):
+                    with self.assertRaises(c.OffloadAdmissionError):
+                        owner._run(lambda: api.call(lambda: value, valid=validator))
+                record = self.outcome(owner)
+                self.assertIs(record.error, error); self.assertIs(record.value, value)
+                self.assertTrue(record.value_known and record.error_returned and record.failed)
+                self.assertFalse(record.error_known or record.acknowledged); validator.assert_not_called()
+
+    def test_callable_interruption_never_invents_a_return_or_reads_error(self):
+        for error in (RuntimeError('synthetic call failure'), KeyboardInterrupt()):
+            with self.subTest(kind=type(error).__name__):
+                owner, api = self.outcome_case(); native = Mock(side_effect=error); reader = Mock(return_value=0)
+                with patch.object(C, 'get_last_error', reader, create=True):
+                    with self.assertRaises(BaseException): owner._run(lambda: api.call(native))
+                record = self.outcome(owner)
+                self.assertTrue(record.failed)
+                self.assertFalse(record.value_known or record.error_returned or record.acknowledged)
+                native.assert_called_once_with(); reader.assert_not_called()
+
+    def test_actual_none_return_is_distinct_from_unknown_return(self):
+        owner, api = self.outcome_case()
+        self.assertIsNone(owner._run(lambda: api.call(lambda: None, valid=lambda value: value is None)))
+        record = self.outcome(owner)
+        self.assertIsNone(record.value)
+        self.assertTrue(record.value_known and record.acknowledged)
+        self.assertFalse(record.failed)
+
+    def test_original_reader_is_captured_before_callable_rebinds_it(self):
+        owner, api = self.outcome_case(); original = Mock(return_value=19); replacement = Mock(return_value=20)
+        def native():
+            C.get_last_error = replacement
+            return 1
+        with patch.object(C, 'get_last_error', original, create=True):
+            self.assertEqual(owner._run(lambda: api.call(native)), 1)
+        self.assertEqual(self.outcome(owner).error, 19)
+        original.assert_called_once_with(); replacement.assert_not_called()
+
+    def test_observer_drift_keeps_original_return_before_validation(self):
+        for alias in ('_pending', '_dispatch', '_api', 'finished', 'thread'):
+            with self.subTest(alias=alias):
+                owner, api = self.outcome_case(); result = object(); validator = Mock(return_value=True)
+                def native():
+                    if alias == '_api': owner._api = SimpleNamespace(owner=owner)
+                    elif alias == 'finished': owner._dispatch.finished = True
+                    elif alias == 'thread': owner._dispatch.thread = -1
+                    else: setattr(owner, alias, object())
+                    return result
+                with self.assertRaises(c.OffloadAdmissionError):
+                    owner._run(lambda: api.call(native, valid=validator))
+                record = self.outcome(owner)
+                self.assertIs(record.value, result); self.assertTrue(record.value_known and record.failed)
+                self.assertFalse(record.acknowledged); validator.assert_not_called()
+
+    def test_swallowed_reentry_cannot_replace_original_even_with_pending_reset(self):
+        owner, api = self.outcome_case(); nested = Mock(return_value=1); value = object()
+        def native():
+            original_pending = owner._pending
+            owner._pending = None
+            try: api.call(nested)
+            except c.OffloadAdmissionError: pass
+            owner._pending = original_pending; owner._uncertain = False
+            return value
+        with self.assertRaises(c.OffloadAdmissionError):
+            owner._run(lambda: api.call(native, valid=lambda _: True))
+        record = self.outcome(owner)
+        self.assertIs(record.function, native); self.assertIs(record.value, value)
+        self.assertTrue(record.value_known and record.failed); self.assertFalse(record.acknowledged)
+        nested.assert_not_called()
+
+    def test_failure_bookkeeping_raises_after_private_return_is_pinned(self):
+        owner, api = self.outcome_case(); value = object()
+        method = 'retain_failure' if type(owner) is c.WindowsOffloadCore else '_fail'
+        with patch.object(owner, method, side_effect=RuntimeError('synthetic observer failure')):
+            with self.assertRaises(RuntimeError):
+                owner._run(lambda: api.call(lambda: value, valid=lambda _: False))
+        record = self.outcome(owner)
+        self.assertIs(record.value, value); self.assertTrue(record.value_known and record.failed)
+
+    def test_later_operation_failure_keeps_truthful_successful_call_facts(self):
+        owner, api = self.outcome_case()
+        def operation():
+            self.assertEqual(api.call(lambda: 1), 1)
+            raise RuntimeError('synthetic operation failure after call ACK')
+        with self.assertRaises(c.OffloadAdmissionError): owner._run(operation)
+        record = self.outcome(owner)
+        self.assertTrue(record.value_known and record.acknowledged and record.failed)
+        self.assertEqual(record.value, 1)
+
+    def test_producer_failure_after_callback_ack_retains_the_last_call(self):
+        owner, api = self.outcome_case()
+        core = owner if type(owner) is c.WindowsOffloadCore else owner._core
+        def execute(_core, operation):
+            operation()
+            raise RuntimeError('synthetic producer failure after callback')
+        with patch.object(core._execution, 'execute', side_effect=execute):
+            with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(lambda: 1))
+        record = self.outcome(owner)
+        self.assertEqual(record.value, 1)
+        self.assertTrue(record.value_known and record.acknowledged and record.failed)
+
+    def test_error_reader_reentry_cannot_acknowledge_the_outer_call(self):
+        owner, api = self.outcome_case(); nested = Mock(return_value=1); validator = Mock(return_value=True)
+        def reader():
+            try: api.call(nested)
+            except c.OffloadAdmissionError: pass
+            owner._uncertain = False
+            return 37
+        with patch.object(C, 'get_last_error', reader, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                owner._run(lambda: api.call(lambda: 1, valid=validator))
+        record = self.outcome(owner)
+        self.assertTrue(record.value_known and record.error_known and record.failed)
+        self.assertEqual(record.error, 37); self.assertFalse(record.acknowledged)
+        nested.assert_not_called(); validator.assert_not_called()
+
+    def test_repeated_acknowledged_calls_keep_one_passive_record(self):
+        owner, api = self.outcome_case(); previous = []
+        for _ in range(100):
+            self.assertEqual(owner._run(lambda: api.call(lambda: 1)), 1)
+            previous.append(weakref.ref(self.outcome(owner)))
+        gc.collect()
+        self.assertTrue(all(ref() is None for ref in previous[:-1]))
+        self.assertIs(previous[-1](), self.outcome(owner))
+        self.assertTrue(self.outcome(owner).acknowledged)
+
+    def test_copy_and_serialization_cannot_supply_original_record(self):
+        owner, api = self.outcome_case(); owner._run(lambda: api.call(lambda: 1))
+        record = self.outcome(owner)
+        self.assertEqual(repr(record), '<native-call-outcome>')
+        for operation in (copy.copy, copy.deepcopy, pickle.dumps):
+            with self.assertRaises(TypeError): operation(record)
+        duplicate = copy.copy(owner)
+        method = 'retain_failure' if type(owner) is c.WindowsOffloadCore else '_fail'
+        with self.assertRaises(c.OffloadAdmissionError): getattr(duplicate, method)()
+        self.assertFalse(record.failed or owner._uncertain)
+
+
+class CoreTests(NativeOutcomeContract, unittest.TestCase):
+    def outcome_case(self):
+        return raw_api_core()
+
     def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
         # Synthetic test process only; restore the previous table on exit.
         self.scope = patch.dict(c._CUSTODY, {}, clear=True)
         self.scope.start()
@@ -830,6 +1050,27 @@ class CoreTests(unittest.TestCase):
             self.assertIs(c._CUSTODY[id(core)], core)
             self.assertIsNotNone(core._pending)
 
+    def test_return_is_retained_when_validation_raises(self):
+        core, api = raw_api_core()
+        result, argument, buffer = object(), object(), object()
+        native = Mock(return_value=result)
+        def reject(value):
+            self.assertIs(value, result)
+            raise RuntimeError('synthetic validator failure')
+        with patch.object(C, 'get_last_error', return_value=122, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                core._run(lambda: api.call(native, argument, valid=reject, keep=(buffer,)))
+        outcome = core._WindowsOffloadCore__native_outcome
+        self.assertIs(outcome.owner, core)
+        self.assertIs(outcome.function, native)
+        self.assertIs(outcome.args[0], argument)
+        self.assertIs(outcome.keep[0], buffer)
+        self.assertIs(outcome.value, result)
+        self.assertTrue(outcome.value_known and outcome.error_known and outcome.failed)
+        self.assertEqual(outcome.error, 122)
+        self.assertFalse(outcome.acknowledged)
+        native.assert_called_once_with(argument)
+
     def test_confirmed_native_close_is_idempotent_and_keeps_exact_attempt(self):
         core, api = raw_api_core()
         api.k = SimpleNamespace(CloseHandle=Mock(return_value=1))
@@ -903,6 +1144,7 @@ class CoreTests(unittest.TestCase):
 class DirectoryConstructionTests(unittest.TestCase):
     """Actual create/open methods with explicit typed synthetic native replies."""
     def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
         self.enterContext(patch.dict(c._CUSTODY, {}, clear=True))
 
     def test_core_keeps_its_existing_two_directory_and_protection_targets(self):
@@ -1003,6 +1245,7 @@ class DirectoryConstructionTests(unittest.TestCase):
 class FixedProtectionTests(unittest.TestCase):
     """Actual protection/security methods with typed synthetic replies only."""
     def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
         scope = patch.dict(c._CUSTODY, {}, clear=True); scope.start(); self.addCleanup(scope.stop)
 
     def acl(self):

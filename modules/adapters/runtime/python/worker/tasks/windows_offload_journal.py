@@ -410,6 +410,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
         self._lock = RLock()
         self._handles, self._guards, self._allocations, self._irps, self._calls = [], [], [], [], []
         self._dispatch = self._pending = self._request_thread = self._native_thread = None
+        self.__native_outcome = None
         self._retiring_io = None
         self._busy = self._uncertain = self._domain_failure_started = self._credit_started = False
         self._phase, self._history, self._pending_frame = 'new', b'', None
@@ -432,6 +433,8 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
             _OWNERS[id(self)] = self
 
     def _fail(self):
+        _need(self.__origin is self)
+        self._retain_native_outcome_failure()
         self._uncertain = True
         try: self._binding._retain_failure()
         except BaseException: pass  # Journal already retains the exact Core.
@@ -439,6 +442,20 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
             self._domain_failure_started = True
             try: self._domain.retain_failure(self)
             except BaseException: pass  # Never retry unknown bookkeeping.
+
+    def _retain_native_outcome_failure(self):
+        if self.__origin is self and self.__native_outcome is not None:
+            self.__native_outcome.fail(self)
+
+    def _assert_native_outcome_settled(self):
+        if self.__native_outcome is not None:
+            self.__native_outcome.assert_settled(self)
+
+    def _assert_native_outcome_current(self, outcome):
+        # Anchor borrowing dispatches before Journal._run sets _busy.
+        _need(self.__origin is self and self.__native_outcome is outcome
+              and self._native_thread == get_ident() and not self._uncertain)
+        self._assert_origin()
 
     def _ack(self, function, *args):
         _need(function(*args) is None and not self._uncertain)
@@ -490,6 +507,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
         self._ack(self._api.duplicate_anchor, handle, identity)
         _need(not self._uncertain and self._pending is None)
         binding.assert_borrow_callback(self)
+        self._assert_native_outcome_settled()
         call.result, call.finished = None, True
         self._dispatch = None
         self._calls.remove(call)
@@ -503,17 +521,30 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
                   and self._pending is None and not self._uncertain
                   and self._native_call_count < _MAX_CALLS)
             self._native_call_count += 1
-            self._pending = (function, args, valid, keep)
-            result = function(*args)
-            _need(valid(result) and not self._uncertain)
+            self._assert_native_outcome_settled()
+            outcome = w._NativeCallOutcome(self, call, function, args, valid, keep)
+            self.__native_outcome = outcome
+            pending = outcome.pending
+            self._pending = pending
+            result = outcome.invoke()
+            self._assert_origin()
+            outcome.assert_current(self, self._dispatch)
+            _need(self.__native_outcome is outcome and self._pending is pending and not self._uncertain)
+            outcome.validate()
+            self._assert_origin()
+            outcome.assert_current(self, self._dispatch)
+            _need(self.__native_outcome is outcome and self._pending is pending and not self._uncertain)
+            outcome.acknowledge(self, call)
             self._pending = None
             return result
         except BaseException:
+            self._retain_native_outcome_failure()
             self._fail()
             raise
 
     def _run(self, operation, *, retired=False):
         self._require_dependencies()
+        self._assert_native_outcome_settled()
         self._retain()
         try:
             _need(self._request_thread == get_ident())
@@ -532,6 +563,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
                         self._dispatch = call
                     result = operation()
                     _need(not self._uncertain and self._pending is None)
+                    self._assert_native_outcome_settled()
                     call.result, call.finished = result, True
                     return result
                 except BaseException:
@@ -541,6 +573,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
             with self._lock:
                 _need(call.started and call.finished and result is call.result
                       and not self._uncertain and self._pending is None)
+                self._assert_native_outcome_settled()
                 self._dispatch = None
                 self._busy = False
                 self._calls.remove(call)

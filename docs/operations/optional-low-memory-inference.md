@@ -1552,3 +1552,21 @@ retirement. Low-memory mode remains unavailable until its real finite
 Core/Journal/domain and owned cached-model lifetime compose and qualify.
 Unknown historical staging stays untouched and charged full12GiB. Accepted
 accuracy/OCR stay closed and whole-system tests remain deferred.
+
+## Preserve a call result when later runtime work fails
+
+The Core and Journal now keep the latest Windows callable result before reading
+its error value or checking it. A known None return differs from an interrupted
+call with no known return. Failed validation, error capture, reentry or later
+operation failure keeps the original references. Failed records cannot be
+replaced by resetting visible status fields. Successful calls can replace one
+settled record, so this adds no unbounded success history.
+
+Focused synthetic tests cover the real dispatch and manual anchor paths, failure
+bookkeeping, reader identity, aliases and repeated calls. They load no DLL or
+model. Existing output handles and asynchronous IO records retain their own
+responsibilities. This change does not prove every Native result, finite runtime,
+resource retirement, a safe restart or low-memory model delivery. Shared disk
+accounting, stable protection and owned cached-worker/borrower lifetime remain
+pending. Unknown historical staging remains untouched and charged full12GiB.
+Accepted accuracy/OCR stay closed; whole-software testing remains deferred.

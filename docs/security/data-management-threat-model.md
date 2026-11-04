@@ -2545,3 +2545,31 @@ and finite whole-graph/terminal accounting, shared mutation/domain fences,
 owned worker/model/cache/borrower lifetime and actual resources remain pending.
 Unknown old staging remains untouched and charges full12GiB. Neither retained
 objects nor completed model quality admit optional offload or close its parent.
+
+### Original callable outcomes survive later failure
+
+The concrete Core and Journal dispatch consumers retain one private original
+current/last callable record, rooted through existing owner custody. Exact
+function/args/validator/keep, API, dispatch/thread and ctypes error-reader
+references precede invocation. A private registration/pending/phase check denies
+unattached or rebound entry before the callable. Actual opaque return and error
+objects are retained before validation; returned, valid-error and call-ACK facts
+remain distinct from terminal owner failure. Error absence is never fabricated
+zero. No opaque object is coerced, formatted or publicly serialized.
+
+Failure marks the original record before fallible origin/custody/domain
+callbacks; copied owners cannot mark another owner record. A terminal record
+prevents call replacement and real operation acknowledgement, including the
+manual Journal anchor path. Only acknowledged nonterminal records can be
+replaced. Existing four-field pending observations, API predicates and Journal
+per-operation call bound remain compatible. This is trusted internal failure
+retention, not isolation from arbitrary private Python/module mutation.
+
+One last record is not all prior output provenance or ownership transfer.
+Inner wrappers may fail before returning; direct GetCurrentProcess and library
+construction are not covered finite rows. Existing handles/allocations/guards/
+IRPs remain owners. Actual finite whole-graph/terminal execution, shared domain
+and mutation fence, cached worker/model/storage borrower lifetime and resource
+restart qualification remain pending. No new Native effect, release, disk credit,
+model/cache quota or production readiness is granted. Historical unknown staging
+remains untouched and fully charged12GiB; accepted model quality stays closed.

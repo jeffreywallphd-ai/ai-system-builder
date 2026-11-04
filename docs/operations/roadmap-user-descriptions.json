@@ -14691,6 +14691,39 @@
           "The Windows unsafe-access test still needs its own evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "934ff3f0e9cf6d42b718dcc4cfe337a68c1761c36b2c883b1aa1d03c7f2bb3be",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed a Windows startup failure path.",
+          "The default runtime now keeps partially loaded library objects when startup fails.",
+          "Focused source tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6bb68f26c95945760755aed0ffaa2ca54efe1d66f11aa19fee9d3dd9dd994bd6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests used synthetic Windows facts.",
+          "They did not run a model or enable low-memory mode."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "247b27436d606dc614f4c748e9dc1ed1c0b5dd11d2b94e8ac7e64099bb83b19b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending."
+        ]
+      }
     }
   ]
 }

@@ -1101,3 +1101,26 @@ Fake-DLL actual-consumer/denial and related constructor tests are local evidence
 only. General finite Native return/call accounting, direct ancillary calls,
 shared domain/fence, owned cached-model/borrower/storage lifetime and actual
 offload resource/crash/restart qualification remain pending.
+
+## Passive Native callable outcome retention
+
+Core and Journal keep one private current or last acknowledged callable record.
+It retains original arguments, keep objects, API, dispatch, thread and error
+reader. The actual opaque return is stored before error capture or validation.
+A missing reader denies before the target; a raising or malformed reader leaves
+the known return retained and error availability explicit. Existing API-specific
+predicates remain unchanged. The captured Win32 error is not an explanation of
+a nonzero NTSTATUS and may be stale or zero.
+
+Private registration, pending identity and dispatch phase are checked before
+the callable. Return and error are retained before post-return checks. Owner
+failure pins the record before fallible observer/domain bookkeeping. Core and
+Journal operation acknowledgements, including manual Journal anchor borrowing,
+reject terminal records. Only acknowledged nonterminal predecessors can be
+replaced. A later owner failure preserves the earlier call acknowledgement.
+
+This is bounded passive evidence, not an all-call ledger or resource transfer.
+Handles, allocations, guards and IRPs keep their existing ownership. Inner
+wrappers can hide a return before this boundary; direct ancillary calls and
+finite execution remain separate. No public serialization, cleanup, credit,
+new quota, worker topology or optional-mode readiness follows from this work.

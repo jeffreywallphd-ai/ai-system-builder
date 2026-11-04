@@ -9533,6 +9533,46 @@
         "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-default-core-api-construction-custody",
+      "work_criteria": [
+        "original-default-construction-retention",
+        "default-only-context-and-factory-compatibility",
+        "focused-owned-reviewed-construction-checkpoint"
+      ],
+      "receipt_digest": "7aaee1077452e55c0fe455a5df98c2da54aa44c5ad90e72c3971096514ce3fb0",
+      "review_digest": "6c582daa8ea5a47a23d683808e6ab042288ed3aa03e2c860f7daec5792a2ad6c",
+      "scope": "The agent fixed a Windows startup failure path. The default runtime now keeps partially loaded library objects when startup fails. Focused source tests and independent review passed.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-default-core-api-construction-custody",
+      "work_criteria": [
+        "original-default-construction-retention",
+        "default-only-context-and-factory-compatibility",
+        "focused-owned-reviewed-construction-checkpoint"
+      ],
+      "receipt_digest": "7aaee1077452e55c0fe455a5df98c2da54aa44c5ad90e72c3971096514ce3fb0",
+      "review_digest": "6c582daa8ea5a47a23d683808e6ab042288ed3aa03e2c860f7daec5792a2ad6c",
+      "scope": "The agent fixed a Windows startup failure path. The default runtime now keeps partially loaded library objects when startup fails. Focused source tests and independent review passed.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }
