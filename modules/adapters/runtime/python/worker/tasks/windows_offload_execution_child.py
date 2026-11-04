@@ -17,6 +17,293 @@ _CHILD = None
 _RESERVED_MS = 5000
 
 
+class _CoreReadCall:
+    """One prebound actual call and its original output graph, not release credit."""
+    __slots__=('__origin','__graph','__function','__args','__keep','__snapshot','__verify',
+               '__before','__row','__reservation','__terminal','__started',
+               '__value','__value_known','__output','__error','__error_returned',
+               '__error_known','__acknowledged','__reader','__kwargs')
+    def __init__(self,graph,function,args,keep,snapshot,verify,terminal,kwargs):
+        x._need(type(self)is _CoreReadCall and not hasattr(self,'_CoreReadCall__origin')
+                and type(graph)is _CoreReadGraph)
+        self.__origin,self.__graph=self,graph
+        self.__function,self.__args,self.__keep=function,args,keep
+        self.__kwargs=kwargs
+        self.__snapshot,self.__verify=snapshot,verify;self.__before=snapshot()
+        self.__reader=getattr(C,'get_last_error',None)
+        x._need(callable(function)and callable(self.__reader))
+        self.__row=self.__reservation=None;self.__terminal=terminal
+        self.__started=self.__value_known=self.__error_returned=False
+        self.__error_known=self.__acknowledged=False
+        self.__value=self.__output=self.__error=None
+    def __repr__(self):return '<original Core read call>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    @property
+    def value(self):return self.__value
+    @property
+    def output(self):return self.__output
+    @property
+    def value_known(self):return self.__value_known
+    @property
+    def error_known(self):return self.__error_known
+    @property
+    def acknowledged(self):return self.__acknowledged
+    def _accept_original_row(self,reservation,row,terminal):
+        x._need(self.__origin is self and self.__reservation is self.__row is None
+                and terminal is self.__terminal)
+        self.__reservation,self.__row=reservation,row
+    def _check(self):
+        x._need(self.__origin is self and self.__reservation is not None)
+        self.__reservation.assert_record(self.__graph,self,self.__row)
+        self.__graph._assert_current_call(self)
+    def invoke(self,*args):
+        self._check()
+        self.__verify()
+        x._need(not self.__started and len(args)==len(self.__args)
+                and all(a is b for a,b in zip(args,self.__args))
+                and self.__snapshot()==self.__before)
+        self.__started=True
+        self.__value=self.__function(*self.__args,**self.__kwargs)
+        self.__value_known=True  # Before copying outputs or calling the error reader.
+        self.__output=self.__snapshot()  # Original buffers, before any observer checks.
+        self.__error=self.__reader();self.__error_returned=True
+        x._need(type(self.__error)is int and 0<=self.__error<2**32)
+        self.__error_known=True
+        self._check()
+        self.__verify()
+        return self.__value
+    def acknowledge(self,value):
+        self._check()
+        self.__verify()
+        x._need(self.__started and self.__value_known and self.__error_known
+                and not self.__acknowledged and value is self.__value
+                and self.__snapshot()==self.__output)
+        self.__acknowledged=True
+
+
+class _CoreReadGraph:
+    """Closed read-only producer in the original child's physical IO ledger."""
+    __slots__=('__origin','__child','__ledger','__thread','__root','__parts',
+               '__rows','__core','__port','__factory','__api','__loader','__load',
+               '__libraries','__phase','__sequence','__next','__current',
+               '__records','__handles','__dispatch','__getter','__failed','__functions','__prototypes')
+    _HEADROOM=8908
+    def __init__(self,child):
+        x._need(type(self)is _CoreReadGraph and not hasattr(self,'_CoreReadGraph__origin'))
+        child.live()
+        x._need(child.core_graph is None and child.core is child.port is child.factory is None
+                and child.current['op']=='bind-read')
+        root=x._root(child.root);parts=Path(root).parts;n=len(parts)
+        x._need(1<=n<=w._MAX_DEPTH and n<=x._TERMINAL_CALLS)
+        self.__origin,self.__child,self.__ledger,self.__thread=self,child,child.ledger,get_ident()
+        self.__root,self.__parts=root,parts
+        self.__rows=self.__core=self.__port=self.__factory=self.__api=None
+        self.__loader=getattr(C,'WinDLL',None);self.__getter=getattr(C,'get_last_error',None)
+        x._need(callable(self.__loader)and callable(self.__getter))
+        self.__libraries=[None]*3;self.__phase='reserved';self.__next=0
+        self.__current=self.__dispatch=None;self.__records=[];self.__handles=[];self.__failed=False
+        self.__functions=self.__prototypes=None
+        seq=[('dll',i)for i in range(3)]+[('drive',0),('open',0),('kind',0),('volume',0)]
+        for i in range(1,n):seq.extend((('open',i),('kind',i)))
+        seq.extend(('identity',i)for i in range(n))
+        seq.extend(('identity',i)for i in range(n))
+        seq.extend(('identity',i)for i in range(n))
+        for i in reversed(range(n)):seq.extend((('identity',i),('close',i)))
+        self.__sequence=tuple(seq);self.__load=self._load
+        child.core_graph=self;child.buffers.append(self)
+        self.__rows=self.__ledger._carve_core_read(self)
+    def __repr__(self):return '<original Core read subgraph>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    def _assert_row_owner(self,ledger):
+        c=self.__child
+        x._need(self.__origin is self and self.__ledger is ledger and c.ledger is ledger
+                and c.core_graph is self and self.__thread==get_ident()==c.thread
+                and c.root==self.__root and not self.__failed)
+        c.live()
+    def _reservation_shape(self,ledger):
+        self._assert_row_owner(ledger)
+        x._need(self.__phase=='reserved'and self.__rows is None)
+        n=len(self.__parts)
+        return 6*n+5,n,self._HEADROOM
+    def bind(self,core,port,factory):
+        self._assert_row_owner(self.__ledger)
+        x._need(self.__core is self.__port is self.__factory is None
+                and core is self.__child.core and port is self.__child.port
+                and factory is self.__child.factory and type(core)is w.WindowsOffloadCore)
+        self.__core,self.__port,self.__factory=core,port,factory
+    def register(self,api,core):
+        self._assert_row_owner(self.__ledger)
+        x._need(self.__phase=='reserved'and self.__api is None and core is self.__core
+                and type(api)is self.__factory and core._api is None)
+        self.__api=api;self.__phase='constructing';self.__dispatch=core._dispatch
+    def _api_origin(self,constructing=False):
+        self._assert_row_owner(self.__ledger)
+        c,k,a=self.__child,self.__core,self.__api
+        x._need(c.core is k and c.port is self.__port and c.factory is self.__factory
+                and c.api_constructing is a and type(a)is self.__factory and a.owner is k
+                and k._factory is self.__factory and k._execution is self.__port
+                and k._busy is True and not k._uncertain and not k._retired
+                and type(k._dispatch)is w._ExecutionCall and k._dispatch.started
+                and not k._dispatch.finished and k._dispatch.thread==self.__thread
+                and C.WinDLL is self.__loader and C.get_last_error is self.__getter)
+        x._need(k._api is None if constructing else k._api is a)
+        for i,name in enumerate(('k','a','n')):
+            x._need(getattr(a,name,None)is self.__libraries[i])
+        if not constructing:
+            observed=(a.k.GetDriveTypeW,a.n.NtCreateFile,a.k.GetFileInformationByHandleEx,
+                      a.k.GetVolumeInformationByHandleW,a.k.CloseHandle)
+            x._need(type(self.__functions)is tuple
+                    and all(a is b for a,b in zip(observed,self.__functions)))
+            self._assert_prototypes()
+    def _assert_prototypes(self):
+        x._need(type(self.__prototypes)is tuple and len(self.__prototypes)==5)
+        for function,arguments,types,result in self.__prototypes:
+            x._need(type(arguments)is list and function.argtypes is arguments
+                    and len(arguments)==len(types)and all(a is b for a,b in zip(arguments,types))
+                    and function.restype is result and getattr(function,'errcheck',None)is None)
+    def loader(self,api):
+        # Base selects this pure hook before it assigns api.owner.
+        self._assert_row_owner(self.__ledger)
+        x._need(api is self.__api is self.__child.api_constructing
+                and self.__phase=='constructing'and self.__next==0
+                and self.__core._api is None and self.__core._dispatch is self.__dispatch)
+        return self.__load
+    def _assert_current_call(self,record):
+        self._api_origin(self.__phase=='constructing')
+        x._need(type(record)is _CoreReadCall and self.__current is record
+                and self.__records and self.__records[-1]is record)
+        x._need(self.__core._dispatch is self.__dispatch)
+    def _execute(self,function,args,keep,snapshot,terminal=False,valid=None,kwargs=None,verify=lambda:None):
+        x._need(self.__current is None and self.__next<len(self.__sequence))
+        self.__dispatch=self.__core._dispatch
+        row=_CoreReadCall(self,function,args,keep,snapshot,verify,terminal,{}if kwargs is None else kwargs)
+        self.__records.append(row);self.__current=row
+        try:
+            self.__rows.take(self,row,terminal)
+            if self.__phase=='constructing':value=row.invoke(*args)
+            else:value=w._WindowsApi.call(self.__api,row.invoke,*args,valid=valid,keep=keep)
+            row.acknowledge(value)
+            self.__next+=1;self.__current=None
+            return value
+        except BaseException:
+            self.__failed=True
+            raise
+    def _load(self,slot):
+        self._api_origin(True)
+        x._need(type(slot)is int and self.__sequence[self.__next]==('dll',slot))
+        value=self._execute(self.__loader,(('kernel32','advapi32','ntdll')[slot],),(),
+                            lambda:(),valid=None,kwargs={'use_last_error':True})
+        # Keep the actual return in its row before any library observer is published.
+        self.__libraries[slot]=value
+        x._need(type(value)is self.__loader)
+        return value
+    def constructed(self,api):
+        self._api_origin(True)
+        x._need(api is self.__api and self.__next==3 and self.__current is None)
+        self.__functions=(api.k.GetDriveTypeW,api.n.NtCreateFile,api.k.GetFileInformationByHandleEx,
+                          api.k.GetVolumeInformationByHandleW,api.k.CloseHandle)
+        x._need(all(callable(value)for value in self.__functions))
+        ptr,u32,i32=w._PTR,w._U32,w._I32
+        signatures=((C.c_wchar_p,),
+                    (C.POINTER(ptr),u32,C.POINTER(w._Attributes),C.POINTER(w._Io),ptr,u32,u32,u32,u32,ptr,u32),
+                    (ptr,i32,ptr,u32),
+                    (ptr,C.c_wchar_p,u32,ptr,ptr,C.POINTER(u32),C.c_wchar_p,u32),
+                    (ptr,))
+        self.__prototypes=tuple((function,function.argtypes,types,result)
+                                for function,types,result in zip(self.__functions,signatures,(u32,i32,i32,i32,i32)))
+        self._assert_prototypes()
+        self.__phase='reading'
+    def handle(self,api,handle):
+        self._api_origin()
+        x._need(api is self.__api and self.__sequence[self.__next]==('open',len(self.__handles))
+                and type(handle)is w._Handle and type(handle.slot)is w._PTR
+                and handle.slot.value is None and not handle.closed and not handle.close_started
+                and self.__core._handles==[entry[0]for entry in self.__handles]+[handle])
+        self.__handles.append((handle,handle.slot,None))
+    def _handle(self,index,closing=False):
+        x._need(index<len(self.__handles))
+        h,slot,number=self.__handles[index]
+        x._need(self.__core._handles[index]is h and type(h)is w._Handle and h.slot is slot
+                and type(slot)is w._PTR and not h.closed and h.close_started is closing
+                and not h.delete_started and slot.value==number)
+        return h,slot
+    def call(self,api,function,args,valid,keep):
+        self._api_origin()
+        x._need(api is self.__api and self.__phase=='reading'and self.__next<len(self.__sequence)
+                and type(args)is tuple and type(keep)is tuple)
+        op,index=self.__sequence[self.__next];a=self.__api
+        # Each branch accepts one fixed ABI and exact original typed buffers.
+        verify=lambda:None
+        if op=='drive':
+            x._need(function is self.__functions[0]and args==(Path(self.__root).anchor,)and not keep)
+            snapshot=lambda:()
+        elif op=='open':
+            h,slot=self._handle(index)
+            x._need(function is self.__functions[1]and len(args)==11 and len(keep)==6
+                    and keep[0]is h and keep[5]is None and args[0]._obj is slot)
+            text,string,attributes,io=keep[1:5]
+            x._need(type(string)is w._Unicode and type(attributes)is w._Attributes and type(io)is w._Io
+                    and type(text)is type(C.create_unicode_buffer(len(text)))
+                    and args[2]._obj is attributes and args[3]._obj is io
+                    and args[1]==0x200a0 and args[4:]==(None,0x80,3,1,0x200001,None,0))
+            name='\\??\\'+Path(self.__root).anchor if index==0 else self.__parts[index]
+            parent=None if index==0 else self._handle(index-1)[1].value
+            expected=(C.sizeof(w._Attributes),parent,C.addressof(string),0x40,None,None)
+            def verify():
+                x._need(type(h)is w._Handle and h.slot is slot and args[0]._obj is slot
+                        and keep[0]is h and args[2]._obj is attributes and args[3]._obj is io)
+                facts=(attributes.length,attributes.root,C.cast(attributes.name,w._PTR).value,
+                       attributes.flags,attributes.security,attributes.quality)
+                x._need(facts==expected and text.value==name and string.buffer==C.addressof(text)
+                        and string.length==len(name.encode('utf-16-le'))and string.maximum==C.sizeof(text))
+            snapshot=lambda:(slot.value,io.status,io.information)
+        elif op in('kind','identity'):
+            h,slot=self._handle(index);size=8 if op=='kind'else 24;info=9 if op=='kind'else 18
+            x._need(function is self.__functions[2]and len(args)==4 and len(keep)==2
+                    and keep[0]is h and type(keep[1])is (w._U32*2 if op=='kind'else C.c_ubyte*24)
+                    and args[0]==slot.value and args[1]==info and args[2]._obj is keep[1]and args[3]==size)
+            output=keep[1];number=slot.value
+            def verify():
+                x._need(self._handle(index)[1]is slot and slot.value==number)
+            snapshot=lambda:bytes(output)
+        elif op=='volume':
+            h,slot=self._handle(0)
+            x._need(function is self.__functions[3]and len(args)==8 and len(keep)==2
+                    and type(keep[0])is type(C.create_unicode_buffer(32))and type(keep[1])is w._U32
+                    and args[0]==slot.value and args[1:5]==(None,0,None,None)
+                    and args[5]._obj is keep[1]and args[6]is keep[0]and args[7]==32)
+            filesystem,flags=keep;number=slot.value
+            def verify():
+                x._need(self._handle(0)[1]is slot and slot.value==number)
+            snapshot=lambda:(bytes(filesystem),flags.value)
+        else:
+            x._need(op=='close');h,slot=self._handle(index,True);number=slot.value
+            x._need(function is self.__functions[4]and args==(number,)and len(keep)==1 and keep[0]is h)
+            def verify():
+                x._need(self._handle(index,True)[1]is slot and slot.value==number)
+            snapshot=lambda:slot.value
+        value=self._execute(function,args,keep,snapshot,op=='close',valid,verify=verify)
+        if op=='open':
+            number=slot.value
+            x._need(type(number)is int and 0<number<C.c_void_p(-1).value
+                    and all(other is h or old!=number for other,_,old in self.__handles))
+            self.__handles[index]=(h,slot,number)
+        return value
+    def assert_retired(self):
+        self._assert_row_owner(self.__ledger)
+        x._need(not self.__failed and self.__next==len(self.__sequence)and self.__current is None
+                and len(self.__handles)==len(self.__parts)
+                and all(r.acknowledged for r in self.__records)
+                and all(h.slot is slot and h.closed and h.close_started and not h.delete_started
+                        and slot.value==number for h,slot,number in self.__handles))
+        self.__rows.assert_consumed(self)
+        self.__phase='retired'
+
+
 class _Timer:
     def __init__(self, child, request):
         x._need(type(self) is _Timer and not hasattr(self,'_Timer__origin')
@@ -120,7 +407,7 @@ class _Child:
         self.api=None;self.buffers=[];self.calls=[];self.handles=[];self.uncertain=False;self.ledger=x._Ledger(self)
         self.channels={};self.timers=[];self.timer=None;self.current=None;self.state='new'
         self.root=None;self.core=None;self.core_retired=False;self.api_constructing=None
-        self.port=self.factory=None;self.thread=get_ident();self.job_observed=False
+        self.port=self.factory=None;self.core_graph=None;self.thread=get_ident();self.job_observed=False
         self.exit_function=self.park_function=None;self.exit_started=False;self.exit_lock=RLock()
         self.runtime=runtime
         values,current_hashes,self.source_digest=x._sources();self.buffers.extend((values,current_hashes))
@@ -185,18 +472,25 @@ class _Child:
 
     def _bind(self):
         self.live();x._need(self.core is None and self.root is not None)
+        graph=_CoreReadGraph(self)
         self.port=_Port(self)
         child=self
         class PinnedApi(w._WindowsApi):
             def __new__(cls,core):
                 x._need(cls is child.factory and core is child.core and child.api_constructing is None)
-                value=object.__new__(cls);child.api_constructing=value;return value
-            def call(self,*args,**kwargs):
+                value=object.__new__(cls);child.api_constructing=value;graph.register(value,core);return value
+            def _constructor_library_loader(self):return graph.loader(self)
+            def __init__(self,core):
+                w._WindowsApi.__init__(self,core);graph.constructed(self)
+            def handle(self):
+                value=w._WindowsApi.handle(self);graph.handle(self,value);return value
+            def call(self,function,*args,valid=lambda value:type(value)is int and value!=0,keep=()):
                 child.live()
                 x._need(self is child.api_constructing and self.owner is child.core)
-                return w._WindowsApi.call(self,*args,**kwargs)
+                return graph.call(self,function,args,valid,keep)
         self.factory=PinnedApi
         self.core=object.__new__(w.WindowsOffloadCore);self.buffers.append(self.core);self.port.core=self.core
+        graph.bind(self.core,self.port,self.factory)
         w.WindowsOffloadCore.__init__(self.core,Path(self.root),_api_factory=self.factory,_execution=self.port)
         x._need(self.core.prepare_fresh_binding() is None and self.core._api is self.api_constructing
                 and not self.core._uncertain)
@@ -218,6 +512,7 @@ class _Child:
                     and self.core._retirement_kind=='read-binding' and id(self.core) not in w._CUSTODY
                     and id(self.core) not in w._READ_RETIREMENTS)
             self.core_retired=True
+            self.core_graph.assert_retired()
         else:x._need(self.core is None or self.core_retired)
         self.live();timer.complete()
         x._need(timer.retired and not self.uncertain)

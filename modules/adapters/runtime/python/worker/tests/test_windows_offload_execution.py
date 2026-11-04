@@ -809,6 +809,22 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(x.OffloadAdmissionError):a.acquire('foreign',lambda:1)
         self.assertEqual(effects,[]);self.assertEqual(owner.handles,[])
 
+    def test_core_reservation_rejects_non_child_owner_and_foreign_graph(self):
+        owner=self.session();a=self.api(owner);ledger=owner.ledger
+        before=(ledger.used,ledger.terminal_used,tuple(ledger.rows))
+        for graph in (object(),SimpleNamespace(),object.__new__(child_module._CoreReadGraph)):
+            with self.assertRaises(x.OffloadAdmissionError):ledger._carve_core_read(graph)
+            self.assertEqual((ledger.used,ledger.terminal_used,tuple(ledger.rows)),before)
+        self.assertEqual(owner.calls,[])
+
+    def test_replaced_normal_or_terminal_table_denies_scalar_effect(self):
+        for field in('normal','terminal'):
+            with self.subTest(field=field),patch.dict(x._OWNERS,{},clear=True):
+                owner=self.session();a=self.api(owner);native=Mock(return_value=1)
+                setattr(owner.ledger,field,list(getattr(owner.ledger,field)))
+                with self.assertRaises(x.OffloadAdmissionError):a.call(native)
+                native.assert_not_called();self.assertEqual(owner.calls,[])
+
     def test_source_buffer_bootstrap_loads_shared_dependency_before_import(self):
         # Execute the actual fixed bootstrap with safe synthetic dependency
         # bytes and the actual pure shared module. No file or Native API runs.

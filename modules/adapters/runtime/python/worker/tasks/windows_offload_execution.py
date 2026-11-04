@@ -253,6 +253,52 @@ class _NativeReturn:
         self.__completion=value
 
 
+class _CoreReadRows:
+    """Irrevocable original IO rows for the one closed child Core consumer."""
+    __slots__=('__origin','__ledger','__graph','__normal','__tail','__used','__closed','__records')
+    def __init__(self,ledger,graph,normal,tail):
+        _need(type(self)is _CoreReadRows and not hasattr(self,'_CoreReadRows__origin'))
+        self.__origin,self.__ledger,self.__graph=self,ledger,graph
+        self.__normal,self.__tail=normal,tail
+        self.__used=self.__closed=0
+        self.__records=[None]*(len(normal)+len(tail))
+    def __repr__(self):return '<original Core read rows>'
+    def __copy__(self):raise OffloadAdmissionError()
+    def __deepcopy__(self,memo):raise OffloadAdmissionError()
+    def __reduce_ex__(self,protocol):raise OffloadAdmissionError()
+    def _identity(self,ledger,graph):
+        _need(self.__origin is self and self.__ledger is ledger and self.__graph is graph)
+        return self.__normal,self.__tail
+    def take(self,graph,record,terminal):
+        with self.__ledger.lock:
+            normal,tail=self._identity(self.__ledger,graph)
+            self.__ledger._assert_core_rows(self,graph)
+            graph._assert_current_call(record)
+            _need(type(terminal)is bool)
+            if terminal:
+                _need(self.__closed<len(tail));offset=len(normal)+self.__closed
+                row=tail[self.__closed];self.__closed+=1
+            else:
+                _need(self.__used<len(normal));offset=self.__used
+                row=normal[self.__used];self.__used+=1
+            _need(self.__records[offset]is None)
+            self.__records[offset]=record  # Retain partial binding before producer checks.
+            record._accept_original_row(self,row,terminal)
+            return row
+    def assert_record(self,graph,record,row):
+        with self.__ledger.lock:
+            normal,tail=self._identity(self.__ledger,graph)
+            self.__ledger._assert_core_rows(self,graph)
+            index=next((i for i,value in enumerate(normal+tail)if value is row),None)
+            _need(type(index)is int and self.__records[index]is record)
+    def assert_consumed(self,graph):
+        with self.__ledger.lock:
+            self._identity(self.__ledger,graph)
+            self.__ledger._assert_core_rows(self,graph)
+            _need(self.__used==len(self.__normal)and self.__closed==len(self.__tail)
+                  and all(value is not None for value in self.__records))
+
+
 class _Ledger:
     """One lifetime allocation; reserve normal and terminal rows before effects."""
     def __init__(self, owner):
@@ -262,6 +308,7 @@ class _Ledger:
         self.lock = RLock()
         self.normal = [_Call() for _ in range(_MAX_CALLS)]
         self.terminal = [_Call() for _ in range(_TERMINAL_CALLS)]
+        self.__normal,self.__terminal=self.normal,self.terminal
         self.used = self.terminal_used = 0
         self.rows=tuple(self.normal)+tuple(self.terminal)
         self.bindings=[None]*len(self.rows)
@@ -273,11 +320,69 @@ class _Ledger:
         self.__intents=[None]*len(self.__rows)
         self.__claims=[None]*len(self.__rows)
         self.__returns=[None]*len(self.__rows)  # Same physical rows, no new pool.
+        self.__core_rows=None
+        self.__core_owners=[None]*len(self.__rows)
 
     def _original_storage(self):
         _need(type(self)is _Ledger and self.__origin is self
               and self.owner is self.__owner and self.rows is self.__rows
+              and self.normal is self.__normal and self.terminal is self.__terminal
               and self.bindings is self.__bindings and self.completions is self.__completions)
+
+    def _core_graph_origin(self,graph):
+        module=sys.modules.get(__package__+'.windows_offload_execution_child')
+        _need(module is not None and type(graph)is module._CoreReadGraph
+              and type(self.__owner)is module._Child and module._CHILD is self.__owner
+              and self.__owner.core_graph is graph)
+        graph._assert_row_owner(self)
+
+    def _carve_core_read(self,graph):
+        """Closed first-consumer reservation; never a caller-selected budget."""
+        with self.lock:
+            self._original_storage();self._core_graph_origin(graph)
+            normal,tail,headroom=graph._reservation_shape(self)
+            _need(self.__core_rows is None)
+            # Validate a contiguous original spent frontier, including rows
+            # removed from the child's observation list after acknowledgement.
+            spent=[]
+            for start,end in((0,_MAX_CALLS),(_MAX_CALLS,len(self.__rows))):
+                count=0;gap=False
+                for i in range(start,end):
+                    row=self.__rows[i];self.member(row)
+                    _need(row.index==i and self.__core_owners[i]is None
+                          and (self.normal[i]if i<_MAX_CALLS else self.terminal[i-_MAX_CALLS])is row)
+                    if self.__intents[i]is None:
+                        gap=True
+                        _need(self.__claims[i]is self.__returns[i]is None
+                              and not row.committed and not row.started)
+                    else:
+                        _need(not gap and self.__claims[i]is not None)
+                        value=self._retained_return(row,self.__owner.api)
+                        _need(value.acknowledged and row.acknowledged is True)
+                        self.settled(row,self.__owner.api);count+=1
+                spent.append(count)
+            _need(type(self.used)is int and type(self.terminal_used)is int
+                  and self.used==spent[0]and self.terminal_used==spent[1]
+                  and spent[0]+normal+headroom<=_MAX_CALLS
+                  and spent[1]+tail<=_TERMINAL_CALLS)
+            selected=self.__rows[spent[0]:spent[0]+normal]
+            terminal=self.__rows[_MAX_CALLS+spent[1]:_MAX_CALLS+spent[1]+tail]
+            value=_CoreReadRows(self,graph,selected,terminal)
+            self.__core_rows=value  # No rollback/refund if a later assignment fails.
+            for row in selected+terminal:
+                self.__core_owners[row.index]=value
+            self.used=spent[0]+normal;self.terminal_used=spent[1]+tail
+            return value
+
+    def _assert_core_rows(self,value,graph):
+        self._original_storage();self._core_graph_origin(graph)
+        _need(self.__core_rows is value)
+        normal,tail=value._identity(self,graph)
+        for row in normal+tail:
+            self.member(row)
+            _need(self.__core_owners[row.index]is value and self.__intents[row.index]is None
+                  and self.__claims[row.index]is self.__returns[row.index]is None
+                  and (self.normal[row.index]if row.index<_MAX_CALLS else self.terminal[row.index-_MAX_CALLS])is row)
 
     def _retained_return(self,row,api):
         # Passive facts remain reachable even if an index/payload/table observer
@@ -344,7 +449,8 @@ class _Ledger:
                 row = self.terminal[self.terminal_used]; self.terminal_used += 1
             self.member(row)
             index=self.__locations.get(id(row))
-            _need(type(index)is int and self.__rows[index]is row and self.__intents[index]is None)
+            _need(type(index)is int and self.__rows[index]is row and self.__intents[index]is None
+                  and self.__core_owners[index]is None)
             self.__intents[index]=(function,args,valid,keep)
             row.function, row.args, row.valid, row.keep = function, args, valid, keep
             rows.append(row)

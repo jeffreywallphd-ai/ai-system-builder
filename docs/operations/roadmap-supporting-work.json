@@ -9613,6 +9613,46 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-original-io-native-returns",
+      "work_criteria": [
+        "original-physical-row-return-custody",
+        "strict-ack-and-original-result-compatibility",
+        "focused-reviewed-io-return-checkpoint"
+      ],
+      "receipt_digest": "e5ecdf9e785d1cbab5442762217a801d4ace98d190460d7cca06b2b002a66c62",
+      "review_digest": "2e95da81834004da69071a8059964677bf99726ddfdded4ac302e2c86c0aea95",
+      "scope": "The agent fixed process-call result tracking and tested both existing process roles. Original results now remain available when later checks fail. These source tests did not qualify low-memory mode.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-original-io-native-returns",
+      "work_criteria": [
+        "original-physical-row-return-custody",
+        "strict-ack-and-original-result-compatibility",
+        "focused-reviewed-io-return-checkpoint"
+      ],
+      "receipt_digest": "e5ecdf9e785d1cbab5442762217a801d4ace98d190460d7cca06b2b002a66c62",
+      "review_digest": "2e95da81834004da69071a8059964677bf99726ddfdded4ac302e2c86c0aea95",
+      "scope": "The agent fixed process-call result tracking and tested both existing process roles. Original results now remain available when later checks fail. These source tests did not qualify low-memory mode.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

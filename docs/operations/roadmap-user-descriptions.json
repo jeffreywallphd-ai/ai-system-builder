@@ -14736,6 +14736,18 @@
           "These source tests did not run or qualify a low-memory model."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "083bafb5429d2d2ef89fac467e8a096b4b39d38f2538949869d49e181f7f133b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed process-call result tracking and tested both existing process roles.",
+          "Original results now remain available when later checks fail.",
+          "These source tests did not qualify low-memory mode."
+        ]
+      }
     }
   ]
 }

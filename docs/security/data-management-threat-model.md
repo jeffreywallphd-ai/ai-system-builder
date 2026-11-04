@@ -2607,3 +2607,33 @@ terminal escape/debt, protected shared domain/mutation fence and owned cached
 worker/model/borrower/storage lifetime and resource qualification remain pending.
 Unknown historical staging stays untouched and fully charged12GiB; completed
 model quality does not enable optional offload or qualify its parent.
+
+### Original finite Core read-subgraph reservation
+
+The existing IO child's bind-read frontier now consumes a concrete closed Core
+read graph in the original physical ledger. Original private row locations,
+intents, claims, known returns and acknowledgements establish the spent frontier;
+public counters or replacement pool tables cannot refund it. Before the first
+Core DLL it irreversibly reserves normal `6*n+5`, fixed terminal `n`, and requires
+8908 additional normal positive-path engine entries. Fixed closes consume the
+carved terminal rows directly; normal-first terminal dispatch is not a reserve.
+The existing IO 16384+64 and Source 16384-total/64-inside roles remain distinct.
+
+The original Child/Core/Port/factory/API/thread/dispatch and constructor phases
+bind the first consumer. The pure default-None loader hook preserves registered
+default-Core guarding and custom/Journal constructor compatibility. Original
+three-DLL returns and the five fixed read ABI functions, original handle/slot,
+Unicode/attributes/parent/IOSB, kind8-byte, identity24-byte, volume buffers and
+close debt remain in original physical records. Actual return/output facts are
+captured before the error reader and live-observer validation. Unknown outcomes
+are retained without retry, adoption or capacity credit. Only the unchanged
+canonical prepare/check/unused-retirement sequence acknowledges the subgraph.
+
+This is trusted failure custody, not arbitrary Python isolation. Focused fake
+ABI evidence is source-level only. It does not prove the enclosing park/exit or
+response-write deadline, parent ledger/lifetime, production Core+Journal, shared
+protected domain/journal mutation fence or cached actor/model/borrower/storage
+composition. Actual Native/resource/restart qualification remains pending.
+Production admission stays denied. No old retained tree is inspected or changed;
+unknown historical usage stays charged the full 12 GiB. Accepted model accuracy
+and OCR checks stay closed and the combined full-software campaign stays deferred.

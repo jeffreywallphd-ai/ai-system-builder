@@ -1593,6 +1593,33 @@ class DefaultConstructionTests(unittest.TestCase):
         self.assertIsNone(self.record(core));self.assertIs(core._api,roots[0][1])
         self.assertEqual(self.loads,[(name,{'use_last_error':True})for name in('kernel32','advapi32','ntdll')])
 
+    def test_registered_default_constructor_never_selects_custom_loader_hook(self):
+        core=self.core()
+        with patch.object(c._WindowsApi,'_constructor_library_loader',side_effect=AssertionError('default bypass'))as hook:
+            self.prepare_without_file_io(core)
+        hook.assert_not_called();self.assertEqual(self.record(core).phase,'complete')
+        self.assertEqual(len(self.loads),3)
+
+    def test_custom_loader_hook_is_selected_once_before_owner_assignment(self):
+        selections=[];slots=[];loader=self.dll
+        class Pinned(c._WindowsApi):
+            def _constructor_library_loader(api):
+                selections.append(api);self.assertFalse(hasattr(api,'owner'))
+                def load(slot):
+                    slots.append(slot)
+                    return loader(('kernel32','advapi32','ntdll')[slot],use_last_error=True)
+                return load
+        core=self.core(_api_factory=Pinned);self.prepare_without_file_io(core)
+        self.assertEqual(selections,[core._api]);self.assertEqual(slots,[0,1,2])
+        self.assertIsNone(self.record(core))
+
+    def test_invalid_custom_loader_selection_denies_before_fixed_libraries(self):
+        class Pinned(c._WindowsApi):
+            def _constructor_library_loader(api):return object()
+        core=self.core(_api_factory=Pinned)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(self.loads,[]);self.assertTrue(core._uncertain)
+
     def test_foreign_thread_reinit_has_no_effect_on_original_constructor(self):
         core=self.core();results=[]
         def observe(name,value):

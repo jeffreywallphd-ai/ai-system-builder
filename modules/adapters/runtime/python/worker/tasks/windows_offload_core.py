@@ -707,6 +707,10 @@ class _DefaultApiConstruction:
 
 class _WindowsApi:
     """Narrow actual OS implementation; Core retains every call and output slot."""
+    def _constructor_library_loader(self):
+        """Pure closed-producer selection; existing custom factories use None."""
+        return None
+
     def __init__(self, owner):
         _require(os.name == 'nt' and struct.calcsize('P') == 8)
         construction = getattr(self, '_default_core_construction', None)
@@ -718,8 +722,11 @@ class _WindowsApi:
             # construction contracts. An unregistered exact default API on a
             # canonical Core cannot enter that legacy route.
             _require(not (type(self) is _WindowsApi and type(owner) is WindowsOffloadCore))
+        selected=None if construction is not None else self._constructor_library_loader()
+        _require(selected is None or callable(selected))
         def library(slot):
             if construction is not None:return construction.load(slot)
+            if selected is not None:return selected(slot)
             return C.WinDLL(('kernel32','advapi32','ntdll')[slot], use_last_error=True)
         self.owner = owner
         self._protection_origin = self

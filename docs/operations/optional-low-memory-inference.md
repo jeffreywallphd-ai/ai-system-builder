@@ -1592,3 +1592,21 @@ disk accounting/protection, owned cached-worker/model/storage lifetime and actua
 resource/restart qualification remain pending. Unknown old staging stays
 untouched and charged full12GiB. Accepted accuracy/OCR stay closed; whole-software
 testing remains deferred. This source work enables no new offload lease.
+
+## Reserve model-folder tracking before Windows calls
+
+The private read-only test worker now checks that it can track the whole folder
+chain before it loads the Windows libraries. It reserves space for each call
+and each handle close. Paths that need more tracking space fail before opening
+folders. This does not change the existing global path or resource limits.
+
+The worker retains the original call result and output buffers when a later
+check fails. It uses the existing preparation and reverse-order close paths.
+Focused simulated-call tests cover deep paths, exact capacity, changed tracking
+tables, partial library loading, output errors and attempts to repeat a call.
+These are feature-level source tests. They do not qualify a real model run.
+
+The wider worker lifetime, file protection, shared disk accounting and real
+low-memory resource checks remain pending. No user action is needed for this
+coding work. Accepted model accuracy and OCR results stay closed. Unknown old
+temporary files stay untouched and count against the full 12 GiB limit.

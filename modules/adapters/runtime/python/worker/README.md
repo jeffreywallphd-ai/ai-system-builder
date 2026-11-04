@@ -1148,3 +1148,31 @@ enclosing-engine escape/debt closure, protected domain or cached-model readiness
 All DLL targets/kwargs, Source roles and model/cache policies remain unchanged.
 Fake parent/child tests qualify source handling only; no physical Native/model
 execution, resource retirement, disk credit or parent qualification follows.
+
+## Finite original Core read-binding subgraph
+
+The existing private IO child now admits its entire Core read-only binding at
+`_bind`, after the original initialize/bind input and timer calls. It validates
+the ledger's private spent frontier and irreversibly carves `6*n+5` normal rows
+and `n` fixed-tail close rows from the same original physical pool. It also
+requires 8908 remaining normal rows for the child positive path. The existing
+16384 normal plus 64 additional terminal profile is unchanged. Core structural
+depth 128 is unchanged; chains above available terminal capacity deny before
+Core DLL loading. The Source role's different total/inside-tail profile is unchanged.
+
+The immediate Child/Port/PinnedApi consumer preserves custom constructor hooks.
+A pure default-None Base loader hook lets only the original Pinned constructor
+record its three fixed DLL returns; the registered default Core bypasses it.
+The concrete graph binds five original read-only ABI functions, typed handle
+slots, parent/name/attributes/IOSB and kind/identity/volume outputs before each
+call. An original row retains the actual return and original output before its
+error reader or observer checks. One-shot phases, original-thread checks and
+exact physical rows reject substitution and replay. Canonical Core prepare/check
+and reverse unused-read retirement consume every reserved row before graph ACK.
+
+This is a Core read-only subgraph, not an enclosing-engine bound or production
+offload qualification. Park loops, response-write timing and the parent's
+separate ledger/lifetime remain outside this proof. Protected shared accounting,
+cached worker/model/borrower/storage lifetime and actual resource/restart checks
+remain pending. No Native/model/accuracy/OCR/full-software test is implied, and
+unknown historical staging stays untouched and charged the full 12 GiB.
