@@ -2064,3 +2064,15 @@ nor the inner-child form. A fake-process regression reaches the real collector
 launch and confirms these arguments before any process exists. A fresh separately
 reviewed Source trial is still required; the expected total stays three. No model
 accuracy, OCR or full-software suite is rerun for this source correction.
+
+### Settings qualifier loopback listener
+
+The dedicated Settings test Server listens only on `127.0.0.1`, including
+its initial bootstrap before token enforcement. An occupied port or failed
+listen rejects startup; there is no alternate address. Existing token enforcement
+and canonical task, listener and persistence shutdown remain required.
+
+The `host-setup-policy` profile includes disposable local HTTP, occupied-port
+and synchronous-failure fixtures. They close their own sockets and test startup
+handler cleanup. They do not launch an application, browser, model or provider,
+and they do not qualify the actual Settings UI or the parent roadmap.

@@ -54,7 +54,7 @@ class FunctionalHostProfile(unittest.TestCase):
         # Training use-case and fake-only worker tests with exact borrowed sources; automatic routing stays fixed.
         self.assertEqual(len(configuration["operational-ui"]["source_paths"]),193)
         self.assertEqual(configuration["operational-ui"]["source_paths"][-7:], ["apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx", 'modules/application/use-cases/model/train-model.use-case.ts', 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts', 'modules/application/use-cases/README.md', 'modules/adapters/runtime/python/worker/tasks/train_model.py', 'modules/adapters/runtime/python/worker/tests/test_train_model_task.py', 'modules/adapters/runtime/python/worker/README.md'])
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]),76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]),75)
         self.assertNotIn(BORROWED,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
         commands=run_focused_checks.commands(ROOT,profile["test_paths"],exact=True)
         flattened=[item for command in commands for item in command]

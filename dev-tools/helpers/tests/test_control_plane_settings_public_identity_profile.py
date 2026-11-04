@@ -17,6 +17,9 @@ SOURCE = "dev-tools/scripts/qualification/visual-composer/visual-composer-global
 IDENTITY_TEST = "dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs"
 ROUTING_TEST = "dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
 LIFECYCLE_TEST = "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+LISTENER_TEST = "dev-tools/scripts/qualification/tests/settings-host-listener.unit.test.mjs"
+LISTENER_SOURCE = "dev-tools/scripts/qualification/visual-composer/settings-host-listener.mjs"
+LISTENER_ENTRY = "dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts"
 
 
 class PublicSettingsIdentityProfile(unittest.TestCase):
@@ -40,6 +43,9 @@ class PublicSettingsIdentityProfile(unittest.TestCase):
             self.fixture(root, profile)
             for paths, required, generic in (
                 ([SOURCE, IDENTITY_TEST, ROUTING_TEST], ["documentation"], False),
+                ([LISTENER_SOURCE, LISTENER_TEST], ["documentation"], False),
+                ([LISTENER_ENTRY], ["documentation"], False),
+                ([LISTENER_ENTRY, "modules/unknown/new.ts"], ["documentation"], True),
                 ([SOURCE], ["focused-tests"], True),
                 ([SOURCE, "modules/unknown/new.ts"], ["documentation"], True),
             ):
@@ -56,7 +62,7 @@ class PublicSettingsIdentityProfile(unittest.TestCase):
 
     def test_profile_runs_real_fixture_and_existing_lifecycle_tests_without_host_effects(self):
         profile = self.profile()
-        self.assertEqual(set(profile["test_paths"]), {IDENTITY_TEST, ROUTING_TEST, LIFECYCLE_TEST})
+        self.assertEqual(set(profile["test_paths"]), {IDENTITY_TEST, ROUTING_TEST, LIFECYCLE_TEST, LISTENER_TEST})
         self.assertTrue(set(catalog.QUALIFICATION_PROFILE_PATTERNS["host-setup-policy"]).issubset(profile["source_paths"]))
         # The registered runner requires a real source snapshot. Use this
         # repository rather than pretending the routing-only fixture is Git.
@@ -64,7 +70,7 @@ class PublicSettingsIdentityProfile(unittest.TestCase):
         self.assertEqual(len(commands), 2)
         node = next(c for c in commands if "--test" in c)
         python = next(c for c in commands if "unittest" in c)
-        self.assertEqual(node, ["node", "--test", "--", IDENTITY_TEST, LIFECYCLE_TEST])
+        self.assertEqual(node, ["node", "--test", "--", LISTENER_TEST, IDENTITY_TEST, LIFECYCLE_TEST])
         self.assertEqual(python, [sys.executable, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", Path(ROUTING_TEST).name])
         text = json.dumps(commands)
         for forbidden in ("playwright", "npm", "test:all", "test:standardande2e", "--native", "package"):

@@ -8,6 +8,7 @@ import {createVisualComposerQualificationRuntimeDatabase} from "./visual-compose
 import {createControlledRuntimeEnvironmentPreparer} from "./controlled-runtime-preparation.mjs";
 import {settingsHostLayout} from "./settings-host-launch-plan.mjs";
 import {installOwnedHostShutdown} from "./owned-host-shutdown.mjs";
+import {listenSettingsHostOnLoopback} from "./settings-host-listener.mjs";
 
 let owner:Awaited<ReturnType<typeof createServer>>|undefined,listener:ReturnType<typeof createServerListener>|undefined,closing:Promise<void>|undefined;
 async function close(){
@@ -26,7 +27,7 @@ async function start(){
       pythonRuntimeEnvironmentPreparer:createControlledRuntimeEnvironmentPreparer({repoRoot:process.cwd(),runRoot:layout.serverRuntimeRoot,environment:process.env})});
     if(owner.config.storageRootDirectory!==path.resolve(layout.serverStorageRoot))throw new Error("Fixed Settings storage root is required.");
     listener=createServerListener(owner);const active=listener;
-    await new Promise<void>((resolve,reject)=>{active.once("error",reject);active.listen(owner!.config.port,()=>{active.off("error",reject);resolve();});});
+    await listenSettingsHostOnLoopback(active,owner.config.port);
   }catch{await close();throw new Error("Settings Server startup did not complete.");}
 }
 const started=start();started.catch(()=>{});

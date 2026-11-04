@@ -303,13 +303,14 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         lifecycle="dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
         identity="dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs"
         routing="dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
-        tests=[lifecycle,identity,routing]
+        listener="dev-tools/scripts/qualification/tests/settings-host-listener.unit.test.mjs"
+        tests=[lifecycle,identity,routing,listener]
         source="dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs"
         setup="dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"
         profiles=read_json(root/config);profile=profiles["profiles"]["host-setup-policy"]
         self.assertEqual(profile["test_paths"],tests)
         self.assertEqual(run_focused_checks.profile_commands(root,"host-setup-policy"),[
-            ["node","--test","--",identity,lifecycle],
+            ["node","--test","--",listener,identity,lifecycle],
             [sys.executable,"-B","-m","unittest","discover","-s","dev-tools/helpers/tests","-p",Path(routing).name],
         ])
         self.put(config,json.dumps(profiles))

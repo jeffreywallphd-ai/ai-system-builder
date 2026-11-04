@@ -689,3 +689,19 @@ explicit, unknown and incomplete impact keep their generic verification guards.
 It performs no app, package, browser, native, model or provider effect. Separate
 current-source package and single-case host reviews remain required. Source tests
 grant no parent pass, physical shutdown proof or later-candidate qualification.
+
+## Settings qualifier listener containment
+
+The dedicated Settings test Server binds IPv4 loopback explicitly before its
+temporary bootstrap mode accepts any requests. The helper has no caller-selected
+host or alternate-interface fallback. Bind failure rejects startup and retains
+the existing canonical owner cleanup. Temporary listening/error handlers are
+removed on success, asynchronous bind error and synchronous listen failure.
+
+Real ephemeral HTTP and occupied-port fixtures verify local request handling,
+the observed socket address and denial without fallback. These fixtures do not
+qualify an actual application or Native run. Loopback is not authentication
+against other local processes: the original synthetic identity, organization
+authorization and token-enforcement lifecycle are still required. No production
+listener or product network policy changes. Actual current-source UI execution
+and complete owned-process retirement remain pending.

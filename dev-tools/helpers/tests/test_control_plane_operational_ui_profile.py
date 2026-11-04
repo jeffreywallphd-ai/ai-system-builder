@@ -440,7 +440,7 @@ class OperationalUiProfile(unittest.TestCase):
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -473,7 +473,7 @@ class OperationalUiProfile(unittest.TestCase):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -499,7 +499,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -676,8 +676,13 @@ class OperationalUiProfile(unittest.TestCase):
         v="dev-tools/scripts/qualification/visual-composer/"
         core=v+"e2e/settings-host-journey.ts"
         declarations=[v+"owned-host-shutdown.d.mts",v+"settings-host-launch-plan.d.mts"]
-        additions=SETTINGS_AUTOMATIC
-        self.assertEqual(len(additions),12)
+        entry=v+"settings-host-server-entry.ts"
+        self.assertIn(entry,SETTINGS_AUTOMATIC)
+        self.assertIn(entry,self.profile()["source_paths"])
+        self.assertIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["host-setup-policy"])
+        self.assertNotIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        additions=[source for source in SETTINGS_AUTOMATIC if source != entry]
+        self.assertEqual(len(additions),11)
         self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:],additions)
         for source in additions:
             self.assertIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])

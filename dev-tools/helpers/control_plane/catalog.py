@@ -109,7 +109,6 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs",
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs",
         "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
-        "dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts",
         "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
         "dev-tools/config/playwright.settings-host-desktop.config.ts",
@@ -164,6 +163,10 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs",
         "dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-listener.mjs",
+        "dev-tools/scripts/qualification/visual-composer/settings-host-listener.d.mts",
+        "dev-tools/scripts/qualification/tests/settings-host-listener.unit.test.mjs",
     ],
     "native-host-policy": [
         "dev-tools/helpers/native-qualification/owned_command_job.py",
