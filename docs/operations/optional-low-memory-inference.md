@@ -1634,3 +1634,22 @@ No user action is needed for this coding work. Shared disk accounting, file
 protection, the full worker lifetime and actual low-memory resource/restart
 checks remain pending. Accepted accuracy and OCR checks stay closed. Old
 temporary model files remain untouched and count against the full 12 GiB limit.
+
+## Keep cleanup space available before the worker starts
+
+The private Windows worker now reserves its cleanup tracking space before it
+loads Windows libraries. Ordinary work cannot use this reserved space. The
+existing total tracking limit stays the same. The child worker keeps its
+existing capacity.
+
+Focused tests fill all ordinary tracking space, then run the real parent cleanup
+methods with simulated Windows calls. Cleanup uses only its reserved space.
+Tests also interrupt cleanup and change tracking records. These cases must keep
+the original records and reject repeated calls. Cleanup still needs confirmed
+worker exit and confirmed handle closes.
+
+No user action is needed for this coding work. These source tests do not qualify
+a real low-memory model run. Shared disk accounting, file protection, the full
+worker lifetime and real resource/restart checks remain pending. Accepted model
+accuracy and OCR checks stay closed. Old temporary files remain untouched and
+count against the full 12 GiB limit.

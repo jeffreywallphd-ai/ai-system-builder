@@ -14760,6 +14760,18 @@
           "This source work did not run or qualify a low-memory model."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ca8d3c4f5cd2c4c0d710700033fec2582ec9c06746f8ff1a7bb4bb321be4c897",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added checks for original worker startup results and cleanup after a known startup failure.",
+          "Focused tests used simulated Windows calls.",
+          "This reviewed source work did not qualify a real low-memory model run."
+        ]
+      }
     }
   ]
 }

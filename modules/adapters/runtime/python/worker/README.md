@@ -1220,3 +1220,33 @@ pending. Protected shared accounting and cached model/worker/borrower/storage
 composition and actual Native/resource/restart qualification remain separate.
 Unknown old staging stays untouched and charged the full 12 GiB; accepted
 accuracy/OCR stay closed and whole-software testing stays deferred.
+
+## Reserve parent cleanup rows before startup
+
+The parent session now irreversibly reserves the first 48 original terminal
+rows during inert ledger construction. This replaces the late free-capacity
+check described above. The remaining 16 terminal rows retain ordinary overflow;
+all 16384 normal rows remain available. Exact child construction still starts
+with zero spent terminal rows and keeps its existing 64-row Core/tail profile.
+No new physical pool or capacity refund is introduced.
+
+Bootstrap validates the original private parent reservation before its first
+DLL entry. A numeric counter alone cannot supply that identity. The pre-cleanup
+frontier validates actual original normal/general calls and every pristine
+reserved slot. It does not call unused reserved rows completed or acknowledged.
+Generic calls cannot borrow the reserve after counter or table changes.
+
+Only the existing original one-shot retirement consumes these reserved rows.
+Its exact owner, API, caller, call list, thread and prior label-to-row bindings
+must match. Private consumption precedes exposed intent, append and commit;
+interruption never refunds or retries the row. Existing original output,
+controller/process/Job/reaper exit, handle close and deadline checks still apply.
+Focused tests execute the actual parent controller and retirement methods with
+a synthetic Windows ABI after all normal and 16 overflow rows are used.
+
+This is a cleanup-capacity component, not a finite enclosing engine or actual
+Native/resource/restart qualification. Earlier unknown startup, child terminal
+park and reply timing, protected shared accounting, mutation fences and cached
+model/worker/borrower/storage ownership remain pending. Production stays denied.
+Unknown historical staging stays untouched and fully charged 12 GiB. Accepted
+accuracy/OCR stay closed; whole-software testing remains deferred.

@@ -9695,6 +9695,48 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-known-io-startup-and-retire-failure",
+      "work_criteria": [
+        "original-io-bootstrap-and-output-custody",
+        "known-pre-ready-generation-retirement",
+        "actual-consumer-and-capacity-compatibility",
+        "focused-reviewed-known-startup-checkpoint"
+      ],
+      "receipt_digest": "5d1460fc8b5d58d694e126e848cc2b530e69c015484412808af9d3f22bc8b9ef",
+      "review_digest": "b28555dc03e849f0d5f0de5107c5cfc9d187f8736c4ffb5f152c6c1efa6b4c8f",
+      "scope": "The agent added checks for original worker startup results and cleanup after a known startup failure. Focused tests used simulated Windows calls. This reviewed source work did not qualify a real low-memory model run.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-known-io-startup-and-retire-failure",
+      "work_criteria": [
+        "original-io-bootstrap-and-output-custody",
+        "known-pre-ready-generation-retirement",
+        "actual-consumer-and-capacity-compatibility",
+        "focused-reviewed-known-startup-checkpoint"
+      ],
+      "receipt_digest": "5d1460fc8b5d58d694e126e848cc2b530e69c015484412808af9d3f22bc8b9ef",
+      "review_digest": "b28555dc03e849f0d5f0de5107c5cfc9d187f8736c4ffb5f152c6c1efa6b4c8f",
+      "scope": "The agent added checks for original worker startup results and cleanup after a known startup failure. Focused tests used simulated Windows calls. This reviewed source work did not qualify a real low-memory model run.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "These tests used synthetic Windows facts. They did not run a model or enable low-memory mode.",
+        "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

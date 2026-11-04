@@ -2682,3 +2682,34 @@ parent/child lifetime, protected shared domain and cached model/borrower/storage
 composition and actual Native/resource/restart/production qualification remain
 pending. Production admission stays denied. Unknown old staging is not inspected
 or changed and remains fully charged 12 GiB. Accepted accuracy/OCR are not rerun.
+
+### Pre-effect reservation of original parent cleanup capacity
+
+The exact private IO parent irreversibly reserves 48 references to original
+terminal rows before Native bootstrap. This supersedes the late combined-free
+capacity check described above; the original 16384 normal plus 64 extra profile
+is unchanged. Only 16 extra rows remain available for general overflow. Exact
+child/Core and the separate Source total/inside-tail contracts are unchanged.
+
+Original reservation identity, physical slot/table identity and untouched
+private intent/claim/return facts gate bootstrap and the failed-retirement
+frontier. Reserved occupancy is distinct from actual completed calls. The
+frontier derives actual normal/general use from original physical facts and
+rejects hidden, replaced or inconsistent observed counters and rows.
+
+The existing original TerminalRetirement is the sole consumer. Its original
+owner/API/caller/call-list/thread and label chronology bind consumption. Private
+consumption precedes exposed row intent, observer map, append and commit. Lost
+publication or interrupted dispatch keeps the same row and denies retry; no
+normal-row fallback, second pool, quota reset or cleanup credit is provided.
+The original process/Job/controller/reaper/close proof and deadline remain.
+An exact owner-type check also denies foreign-owner substitution before reflection.
+
+Actual-parent synthetic ABI tests exhaust normal and general capacity before
+the real retirement consumer, and exercise original reservation, interruption,
+counter/table/row/call-list/map changes, reentry, wrong-thread and copy denials.
+These are source checks. They do not qualify Native execution, earlier unknown
+startup, the complete engine lifetime, shared disk protection/accounting,
+cached model/worker/borrower/storage or actual resource/restart behavior.
+Production remains denied; old staging stays untouched and fully charged
+12 GiB. Accepted model accuracy/OCR and prior failure history remain intact.

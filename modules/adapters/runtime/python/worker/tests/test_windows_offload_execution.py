@@ -201,12 +201,13 @@ class StartupKernel(RetirementKernel):
     """Real parent controller/launch flow, with a child that never signals ready."""
     def __init__(self,owner):
         super().__init__(owner);self.ready_entered=Event();self.ready_release=Event();self.hold_ready=False;self.signal_ready=False
+        self.startup_join_seconds=1
     def WaitForMultipleObjects(self,count,handles,all_,timeout):
         numbers=tuple(handles[:count]);owner=self.owner
         if owner.terminal is None and count==2:
             thread=self.threads.get(owner.controller._number)
             if thread is not None:
-                thread.join(1)
+                thread.join(min(timeout/1000,self.startup_join_seconds))
                 return 1 if not thread.is_alive()else 258
             return 258
         ready=owner.channels.get('ready')
@@ -250,6 +251,24 @@ class SessionTests(unittest.TestCase):
     def activate(self,owner,seq=0):
         request=x._Request(owner,seq);owner.requests.append(request);owner.active=request;return request
 
+    def test_parent_cleanup_capacity_exists_before_the_first_library_entry(self):
+        owner,libraries,calls=self.bootstrap_fixture();seen=[]
+        def before_library(name,library):
+            seen.append(name)
+            self.assertEqual(owner.ledger.terminal_used,48)
+            self.assertTrue(all(not row.started and not row.committed for row in owner.ledger.terminal[:48]))
+        self.bootstrap_library_hook=before_library
+        x._Native(owner)
+        self.assertEqual(len(seen),2);self.assertEqual(owner.ledger.used,4)
+
+    def test_general_parent_calls_cannot_borrow_the_cleanup_reserve(self):
+        owner=self.session();a=self.api(owner);owner.ledger.used=x._MAX_CALLS
+        for _ in range(16):self.assertEqual(a.call(lambda:1,terminal=True),1)
+        target=Mock(return_value=1)
+        with self.assertRaises(x.OffloadAdmissionError):a.call(target,terminal=True)
+        target.assert_not_called()
+        self.assertTrue(all(not row.started for row in owner.ledger.terminal[:48]))
+
     def handle(self,owner,name,number):
         h=x._Handle(owner,name);owner.handles.append(h);h.slot.value=number;h.acknowledge();return h
 
@@ -277,9 +296,9 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(len(owner.handles),13)
         return owner,a,k
 
-    def failed_startup_session(self,hold_ready=False,ready=False,owner=None):
+    def failed_startup_session(self,hold_ready=False,ready=False,owner=None,before_exchange_failure=None,startup_join_seconds=1):
         owner=self.session()if owner is None else owner;k=StartupKernel(owner)
-        k.hold_ready=hold_ready;k.signal_ready=ready
+        k.hold_ready=hold_ready;k.signal_ready=ready;k.startup_join_seconds=startup_join_seconds
         self.addCleanup(k.finish_test_threads)
         def construct(api,original):
             api._Native__origin=api;api.owner=original;api.k=k
@@ -290,7 +309,11 @@ class SessionTests(unittest.TestCase):
                      patch.object(x,'_read_source',return_value=k.image),
                      patch.object(C,'get_last_error',side_effect=lambda:k.errors.get(get_ident(),k.error),create=True)):
             self.enterContext(scope)
-        if ready:self.enterContext(patch.object(owner,'_exchange',side_effect=x.OffloadAdmissionError))
+        if ready:
+            def fail_exchange(request):
+                if before_exchange_failure is not None:before_exchange_failure(owner,k)
+                raise x.OffloadAdmissionError()
+            self.enterContext(patch.object(owner,'_exchange',side_effect=fail_exchange))
         with self.assertRaises(x.OffloadAdmissionError):owner.prepare()
         self.assertIs(owner.launch_complete,ready);self.assertTrue(owner.uncertain and owner.stop_requested)
         self.assertEqual(len(owner.handles),13);self.assertTrue(k.ready_entered.is_set())
@@ -311,6 +334,164 @@ class SessionTests(unittest.TestCase):
         marker=owner._WindowsOffloadIoSession__startup
         self.assertIsNotNone(marker._KnownStartup__ready_rows);self.assertTrue(owner.launch_complete)
         self.assertIsNone(owner.retire_failed());self.assertTrue(owner.session_retired)
+
+    def test_real_parent_retirement_has_capacity_after_all_general_rows_are_spent(self):
+        def exhaust(owner,kernel):
+            while owner.ledger.used<x._MAX_CALLS:owner.api.call(kernel.GetCurrentThreadId)
+            for _ in range(16):owner.api.call(kernel.GetCurrentThreadId,terminal=True)
+            target=Mock(return_value=1)
+            with self.assertRaises(x.OffloadAdmissionError):owner.api.call(target,terminal=True)
+            target.assert_not_called()
+        owner,a,k=self.failed_startup_session(ready=True,before_exchange_failure=exhaust,startup_join_seconds=30)
+        self.assertEqual((owner.ledger.used,owner.ledger.terminal_used),(x._MAX_CALLS,64))
+        self.assertIsNone(owner.retire_failed());self.assertTrue(owner.session_retired)
+        self.assertLessEqual(len(owner.terminal.calls),29)
+        self.assertTrue(all(row is owner.ledger.terminal[i] for i,row in enumerate(owner.terminal.calls)))
+        self.assertEqual((owner.ledger.used,owner.ledger.terminal_used),(x._MAX_CALLS,64))
+        self.assertTrue(all(h.closed for h in owner.handles))
+        self.assertFalse(any(row.started for row in owner.ledger.terminal[len(owner.terminal.calls):48]))
+
+    def test_actual_pre_ready_retirement_uses_only_original_reserved_rows(self):
+        owner,a,k=self.failed_startup_session();normal=owner.ledger.used
+        self.assertIsNone(owner.retire_failed())
+        self.assertEqual(owner.ledger.used,normal);self.assertEqual(owner.ledger.terminal_used,48)
+        self.assertTrue(all(row is owner.ledger.terminal[i] for i,row in enumerate(owner.terminal.calls)))
+        self.assertTrue(all(not row.started and not row.committed for row in owner.ledger.terminal[len(owner.terminal.calls):48]))
+
+    def test_unused_reservation_is_not_a_completed_physical_call(self):
+        owner=self.session();a=self.api(owner)
+        for row in owner.ledger.terminal[:48]:
+            self.assertFalse(row.started or row.returned or row.acknowledged)
+            with self.assertRaises(x.OffloadAdmissionError):owner.ledger._assert_completed_physical(row,a)
+
+    def test_child_keeps_all_64_general_terminal_rows(self):
+        owner,a=self.return_case('child');owner.ledger.used=x._MAX_CALLS
+        self.assertEqual(owner.ledger.terminal_used,0)
+        for i in range(64):
+            self.assertEqual(a.call(lambda:1,terminal=True),1)
+            self.assertIs(owner.calls[-1],owner.ledger.terminal[i])
+        target=Mock(return_value=1)
+        with self.assertRaises(x.OffloadAdmissionError):a.call(target,terminal=True)
+        target.assert_not_called()
+
+    def test_counter_reset_or_reserved_slot_change_cannot_admit_general_effect(self):
+        for mode in('counter','row','table','row-index'):
+            with self.subTest(mode=mode),patch.dict(x._OWNERS,{},clear=True):
+                owner=self.session();a=self.api(owner);owner.ledger.used=x._MAX_CALLS
+                if mode=='counter':owner.ledger.terminal_used=0
+                elif mode=='row':owner.ledger.terminal[0]=x._Call()
+                elif mode=='table':owner.ledger.terminal=list(owner.ledger.terminal)
+                else:owner.ledger.terminal[0].index=1
+                target=Mock(return_value=1)
+                with self.assertRaises(x.OffloadAdmissionError):a.call(target,terminal=True)
+                target.assert_not_called();self.assertEqual(owner.calls,[])
+
+    def test_reserved_slot_observer_change_denies_before_bootstrap_library(self):
+        owner,libraries,calls=self.bootstrap_fixture();owner.ledger.terminal[0].acknowledged=True
+        with self.assertRaises(x.OffloadAdmissionError):x._Native(owner)
+        self.assertEqual(libraries,[]);self.assertEqual(calls,[])
+
+    def test_interrupted_reserved_intent_is_retained_without_retry_or_fallback(self):
+        owner,a,k=self.failed_startup_session();ledger=owner.ledger;first=ledger.terminal[0]
+        original_setattr=x._Call.__setattr__;interrupted=[];before=list(k.effects)
+        def interrupt(row,name,value):
+            if row is first and name=='function'and not interrupted:
+                interrupted.append(1);raise KeyboardInterrupt()
+            return original_setattr(row,name,value)
+        with patch.object(x._Call,'__setattr__',interrupt),self.assertRaises(KeyboardInterrupt):owner.retire_failed()
+        attempt=owner.terminal;self.assertEqual(interrupted,[1])
+        self.assertEqual(ledger._Ledger__retirement_used,1);self.assertEqual(attempt.calls,[])
+        self.assertIsNotNone(ledger._Ledger__intents[first.index]);self.assertFalse(first.started)
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertEqual(k.effects,before);self.assertEqual(ledger.terminal_used,48)
+
+    def test_interrupted_reserved_commit_keeps_the_original_row(self):
+        owner,a,k=self.failed_startup_session();ledger=owner.ledger;before=list(k.effects)
+        original=ledger.commit
+        def interrupt(row,api,request,kind,*args):
+            if kind=='retirement':raise KeyboardInterrupt()
+            return original(row,api,request,kind,*args)
+        with patch.object(ledger,'commit',side_effect=interrupt),self.assertRaises(KeyboardInterrupt):owner.retire_failed()
+        attempt=owner.terminal;row=attempt.used['create-start']
+        self.assertIs(row,ledger.terminal[0]);self.assertEqual(ledger._Ledger__retirement_used,1)
+        self.assertFalse(row.committed or row.started)
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+        self.assertEqual(k.effects,before);self.assertFalse(owner.session_retired)
+
+    def test_interrupted_reserved_observer_map_cannot_refund_the_original_row(self):
+        owner,a,k=self.failed_startup_session();before=list(k.effects)
+        with patch.object(x._TerminalRetirement,'run',return_value=None):owner.retire_failed()
+        attempt=owner.terminal
+        class InterruptedMap(dict):
+            def __setitem__(self,key,value):raise KeyboardInterrupt()
+        attempt.used=InterruptedMap()
+        with self.assertRaises(KeyboardInterrupt):attempt.issue('create-start')
+        self.assertEqual(owner.ledger._Ledger__retirement_used,1)
+        self.assertEqual(attempt.calls,[owner.ledger.terminal[0]])
+        self.assertEqual(attempt.used,{});self.assertFalse(attempt.calls[0].started)
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+        self.assertEqual(k.effects,before)
+
+    def test_changed_observed_label_map_cannot_redirect_the_next_reserved_row(self):
+        owner,a,k=self.failed_startup_session()
+        with patch.object(x._TerminalRetirement,'run',return_value=None):owner.retire_failed()
+        attempt=owner.terminal;attempt._bind(attempt.start,attempt.issue('create-start'))
+        first=attempt.used['create-start'];before=list(k.effects)
+        attempt.used['create-start']=owner.calls[0]
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('begin')
+        self.assertIs(attempt.calls[0],first);self.assertEqual(len(attempt.calls),1)
+        self.assertEqual(owner.ledger._Ledger__retirement_used,1);self.assertEqual(k.effects,before)
+
+    def test_duplicate_reentry_and_foreign_thread_cannot_repeat_reserved_entry(self):
+        owner,a,k=self.failed_startup_session();attempts=[];original=k.CreateEventW
+        def enter(*args):
+            attempt=owner.terminal
+            with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+            attempts.append('reentry-denied')
+            return original(*args)
+        a.k.CreateEventW=enter
+        with patch.object(x._TerminalRetirement,'run',return_value=None):owner.retire_failed()
+        attempt=owner.terminal;attempt._bind(attempt.start,attempt.issue('create-start'))
+        self.assertEqual(attempts,['reentry-denied']);before=list(k.effects);results=[]
+        def foreign():
+            try:attempt.issue('begin');results.append('admitted')
+            except x.OffloadAdmissionError:results.append('denied')
+        thread=Thread(target=foreign);thread.start();thread.join(2)
+        self.assertFalse(thread.is_alive());self.assertEqual(results,['denied'])
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+        self.assertEqual(owner.ledger._Ledger__retirement_used,1);self.assertEqual(k.effects,before)
+
+    def test_replaced_calls_or_copied_retirement_cannot_consume_original_capacity(self):
+        for mode in('calls','copy','api','owner'):
+            with self.subTest(mode=mode),patch.dict(x._OWNERS,{},clear=True):
+                owner,a,k=self.failed_startup_session()
+                with patch.object(x._TerminalRetirement,'run',return_value=None):owner.retire_failed()
+                attempt=owner.terminal;target=attempt;before=list(k.effects)
+                if mode=='calls':attempt.calls=list(attempt.calls)
+                elif mode=='copy':target=copy.copy(attempt)
+                elif mode=='api':attempt.api=object()
+                else:attempt.owner=object()
+                with self.assertRaises(x.OffloadAdmissionError):target.issue('create-start')
+                self.assertEqual(owner.ledger._Ledger__retirement_used,0)
+                self.assertEqual(k.effects,before)
+
+    def test_exhausted_reserved_cursor_never_uses_general_or_normal_rows(self):
+        owner,a,k=self.failed_startup_session()
+        with patch.object(x._TerminalRetirement,'run',return_value=None):owner.retire_failed()
+        attempt=owner.terminal;ledger=owner.ledger;before=list(k.effects);normal=ledger.used
+        # Synthetic exhausted private cursor. The real closed label graph uses
+        # at most29 rows; this does not fabricate48 completed Native calls.
+        ledger._Ledger__retirement_used=48
+        with self.assertRaises(x.OffloadAdmissionError):attempt.issue('create-start')
+        self.assertEqual(attempt.calls,[]);self.assertEqual(ledger.used,normal)
+        self.assertEqual(ledger.terminal_used,48);self.assertEqual(k.effects,before)
+
+    def test_hidden_spent_row_cannot_be_removed_from_the_original_frontier(self):
+        owner,a,k=self.failed_startup_session();before=list(k.effects)
+        owner.ledger.used-=1
+        with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
+        self.assertIsNone(owner.terminal);self.assertEqual(k.effects,before)
 
     def test_startup_public_flags_missing_resume_or_slot_drift_cannot_admit_cleanup(self):
         for mode in('forged-launch','missing-marker','resume-result','slot-generation','effect-exit'):
@@ -516,7 +697,7 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(len(k.events),before+1);self.assertEqual(set(attempt.used),{'create-start'})
         self.assertIsNone(attempt.start.slot.value);self.assertIs(x._OWNERS[id(owner)],owner)
 
-    def test_reserved_capacity_denial_has_no_new_terminal_metadata_or_effect(self):
+    def test_changed_reserved_occupancy_denies_before_terminal_metadata_or_effect(self):
         owner,a,k=self.failed_retirement_session();owner.ledger.used=x._MAX_CALLS;owner.ledger.terminal_used=17
         with self.assertRaises(x.OffloadAdmissionError):owner.retire_failed()
         self.assertIsNone(owner.terminal);self.assertEqual(k.effects,[])
@@ -894,7 +1075,7 @@ class SessionTests(unittest.TestCase):
         original=ledger.rows
         with self.assertRaises(x.OffloadAdmissionError):x._Ledger.__init__(ledger,owner)
         self.assertIs(ledger.rows,original);self.assertIs(ledger.rows[0],row)
-        self.assertEqual(ledger.used,1);self.assertEqual(ledger.terminal_used,0)
+        self.assertEqual(ledger.used,1);self.assertEqual(ledger.terminal_used,48)
 
     def test_an_existing_inert_owner_cannot_receive_a_fresh_ledger(self):
         owner=self.session();original=owner.ledger
@@ -1510,9 +1691,9 @@ class SessionTests(unittest.TestCase):
         for t in threads:t.join(1);self.assertFalse(t.is_alive())
         self.assertCountEqual(results,['admitted','denied'])
         self.assertIs(owner.calls[0],owner.ledger.normal[-1])
-        for i in range(x._TERMINAL_CALLS):
+        for i in range(x._TERMINAL_CALLS-x._RETIREMENT_CALLS):
             self.assertEqual(a.call(lambda:1,terminal=True),1)
-            self.assertIs(owner.calls[-1],owner.ledger.terminal[i])
+            self.assertIs(owner.calls[-1],owner.ledger.terminal[i+x._RETIREMENT_CALLS])
         called=[]
         with self.assertRaises(x.OffloadAdmissionError):a.call(lambda:called.append(True),terminal=True)
         self.assertEqual(called,[])

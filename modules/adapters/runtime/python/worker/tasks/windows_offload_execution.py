@@ -27,6 +27,7 @@ _BUDGET_NS = 120 * 10**9
 _FRAME_BYTES = 4096
 _MEMORY_BYTES = 512 * 1024**2  # Only the model-free child, not its parent.
 _MAX_CALLS, _TERMINAL_CALLS = 16384, 64
+_RETIREMENT_CALLS = 48  # Existing fixed parent retirement bound, within the64.
 _OWNERS, _LOCK = {}, RLock()
 _PTR, _U32, _I32 = C.c_void_p, C.c_uint32, C.c_int32
 _SOURCE_NAMES = ('local_model_offload.py', 'windows_offload_native_session.py', 'offload_recovery.py', 'windows_offload_core.py',
@@ -653,12 +654,104 @@ class _Ledger:
         self.__core_rows=None
         self.__core_owners=[None]*len(self.__rows)
         self.__bootstrap=None
+        # Occupancy is irreversible and precedes every parent Native effect.
+        # These are references into the original pool, never additional rows.
+        self.__retirement_rows=(tuple(self.__terminal[:_RETIREMENT_CALLS])
+                                if type(owner)is _WindowsOffloadIoSession else ())
+        self.__retirement_consumer=None;self.__retirement_used=0
+        self.__retirement_labels=[]
+        self.terminal_used=len(self.__retirement_rows)
 
     def _original_storage(self):
         _need(type(self)is _Ledger and self.__origin is self
               and self.owner is self.__owner and self.rows is self.__rows
               and self.normal is self.__normal and self.terminal is self.__terminal
               and self.bindings is self.__bindings and self.completions is self.__completions)
+        if self.__retirement_rows:
+            _need(type(self.__owner)is _WindowsOffloadIoSession
+                  and len(self.__retirement_rows)==_RETIREMENT_CALLS
+                  and type(self.terminal_used)is int and _RETIREMENT_CALLS<=self.terminal_used<=_TERMINAL_CALLS
+                  and type(self.__retirement_used)is int and 0<=self.__retirement_used<=_RETIREMENT_CALLS)
+            for i,row in enumerate(self.__retirement_rows):
+                _need(self.__terminal[i]is row and self.__rows[_MAX_CALLS+i]is row)
+                self.member(row)
+        else:_need(type(self.__owner)is not _WindowsOffloadIoSession)
+
+    def _pristine(self,row):
+        self.member(row);i=row.index
+        _need(self.__intents[i]is self.__claims[i]is self.__returns[i]is self.__core_owners[i]is None
+              and self.__bindings[i]is self.__completions[i]is None
+              and row.function is row.args is row.valid is row.keep is None
+              and row.payload is row.result is row.error is row.native_thread is row.completion is None
+              and not row.committed and not row.started and not row.returned
+              and not row.acknowledged and not row.integrity_lost)
+
+    def _unconsumed_retirement(self):
+        self._original_storage()
+        _need(type(self.__owner)is _WindowsOffloadIoSession and self.__owner.ledger is self
+              and len(self.__retirement_rows)==_RETIREMENT_CALLS
+              and self.__retirement_consumer is None and self.__retirement_used==0
+              and not self.__retirement_labels)
+        for row in self.__retirement_rows:self._pristine(row)
+
+    def _retirement_frontier(self,api):
+        """Reserved unused rows are occupancy, never completed Native calls."""
+        with self.lock:
+            self._unconsumed_retirement()
+            _need(type(api)is _Native and api.owner is self.__owner and self.__owner.api is api)
+            rows=[];counts=[]
+            for start,end in((0,_MAX_CALLS),(_MAX_CALLS+_RETIREMENT_CALLS,len(self.__rows))):
+                count=0;gap=False
+                for i in range(start,end):
+                    row=self.__rows[i];self.member(row)
+                    _need(row.index==i and self.__core_owners[i]is None
+                          and (self.__normal[i]if i<_MAX_CALLS else self.__terminal[i-_MAX_CALLS])is row)
+                    if self._completed_bootstrap(row,api):
+                        _need(not gap);count+=1;rows.append(row)
+                    elif self.__intents[i]is None:
+                        gap=True;self._pristine(row)
+                    else:
+                        _need(not gap and type(self.__claims[i])is tuple)
+                        count+=1;rows.append(row)
+                counts.append(count)
+            _need(type(self.used)is int and self.used==counts[0]
+                  and self.terminal_used==_RETIREMENT_CALLS+counts[1])
+            return tuple(rows)
+
+    def _bind_retirement(self,attempt):
+        with self.lock:
+            self._unconsumed_retirement()
+            _need(type(attempt)is _TerminalRetirement and attempt.owner is self.__owner
+                  and self.__owner.terminal is attempt and attempt.initialized
+                  and attempt._TerminalRetirement__origin is attempt
+                  and attempt.api is self.__owner.api and type(attempt.calls)is list
+                  and not attempt.calls and not attempt.used and attempt.caller_ident==get_ident())
+            self.__retirement_consumer=(attempt,attempt.calls,attempt.api,attempt.caller_ident)
+
+    def _reserve_retirement(self,attempt,label,function,args,valid,keep):
+        with self.lock:
+            self._original_storage();binding=self.__retirement_consumer
+            _need(type(binding)is tuple and len(binding)==4 and binding[0]is attempt
+                  and type(attempt)is _TerminalRetirement and self.__owner.terminal is attempt
+                  and attempt.owner is self.__owner and attempt.api is binding[2]is self.__owner.api
+                  and attempt.calls is binding[1]and attempt.caller_ident==binding[3])
+            attempt.origin()
+            caller=label in('create-start','begin','signal-start','wait-reaper','reaper-code','close-reaper','close-start')
+            _need(get_ident()==(binding[3]if caller else attempt.reaper_ident))
+            index=self.__retirement_used
+            _need(index<_RETIREMENT_CALLS and len(attempt.calls)==len(attempt.used)==len(self.__retirement_labels)==index
+                  and type(label)is str and label not in self.__retirement_labels)
+            for i,old_label in enumerate(self.__retirement_labels):
+                old=self.__retirement_rows[i]
+                _need(attempt.calls[i]is old and attempt.used.get(old_label)is old
+                      and self.__intents[old.index]is not None)
+            row=self.__retirement_rows[index];self._pristine(row)
+            self.__retirement_used=index+1  # No refund after any later interruption.
+            self.__retirement_labels.append(label)
+            self.__intents[row.index]=(function,args,valid,keep)
+            row.function,row.args,row.valid,row.keep=function,args,valid,keep
+            attempt.calls.append(row)
+            return row
 
     def _register_bootstrap(self,construction,api):
         with self.lock:
@@ -666,7 +759,10 @@ class _Ledger:
             _need(type(construction)is _BootstrapCustody and type(api)is _Native
                   and api.owner is self.__owner and self.__owner.api is api
                   and api._Native__bootstrap is construction and self.__bootstrap is None
-                  and self.used==self.terminal_used==0 and self.__core_rows is None)
+                  and self.used==0 and self.__core_rows is None)
+            if type(self.__owner)is _WindowsOffloadIoSession:
+                self._unconsumed_retirement();_need(self.terminal_used==_RETIREMENT_CALLS)
+            else:_need(self.terminal_used==0 and not self.__retirement_rows)
             rows=self.__rows[:2]
             for i,row in enumerate(rows):
                 self.member(row)
@@ -857,6 +953,7 @@ class _Ledger:
             index=self.__locations.get(id(row))
             _need(type(index)is int and self.__rows[index]is row and self.__intents[index]is None
                   and self.__core_owners[index]is None
+                  and not any(row is old for old in self.__retirement_rows)
                   and(self.__bootstrap is None or not self.__bootstrap.owns(row)))
             self.__intents[index]=(function,args,valid,keep)
             row.function, row.args, row.valid, row.keep = function, args, valid, keep
@@ -1664,9 +1761,7 @@ def _terminal_frontier(owner):
         exits.append(entry)
     pending=[];ledger=owner.ledger
     with ledger.lock:
-        _need(0<=ledger.used<=_MAX_CALLS and 0<=ledger.terminal_used<=_TERMINAL_CALLS
-              and _MAX_CALLS-ledger.used+_TERMINAL_CALLS-ledger.terminal_used>=48)
-        rows=tuple(ledger.normal[:ledger.used])+tuple(ledger.terminal[:ledger.terminal_used])
+        rows=ledger._retirement_frontier(a)
         for row in rows:
             ledger.member(row);binding=ledger.bindings[row.index]
             if ledger._completed_bootstrap(row,a):continue
@@ -1735,10 +1830,12 @@ class _TerminalRetirement:
         owner.buffers.extend((self,self.thread_id,self.thread_output,self.controller_code,self.process_code,
                               self.reaper_code,self.accounting,self.callback,self.start,self.reaper))
         self.initialized=True
+        owner.ledger._bind_retirement(self)
 
     def origin(self):
         _need(type(self) is _TerminalRetirement and getattr(self,'_TerminalRetirement__origin',None) is self
-              and self.initialized and self.owner.terminal is self and self.owner.api is self.api)
+              and self.initialized and type(self.owner)is _WindowsOffloadIoSession
+              and self.owner.terminal is self and self.owner.api is self.api)
         self.owner.origin();self.api.origin()
         _need(self.deadline==self._original_deadline and self.caller_ident==self._caller_ident
               and self.native_functions is self._canonical_functions
@@ -1835,7 +1932,7 @@ class _TerminalRetirement:
         self.origin();owner=self.owner
         with owner._state_lock:
             _need(not self.failed and self.proof is None and type(label) is str
-                  and 1<=len(label)<=64 and label not in self.used and len(self.used)<48)
+                  and 1<=len(label)<=64 and label not in self.used and len(self.used)<_RETIREMENT_CALLS)
             caller=label in ('create-start','begin','signal-start','wait-reaper','reaper-code','close-reaper','close-start')
             _need(get_ident()==(self.caller_ident if caller else self.reaper_ident))
             self._snapshot();_remaining(self.deadline)
@@ -1843,7 +1940,7 @@ class _TerminalRetirement:
             output_index={'controller-code':0,'process-code':1,'reaper-code':2,'job-empty':3}.get(label)
             output=None if output_index is None else self.query_outputs[output_index]
             if closing is not None:closing.close_started=True
-            row=owner.ledger.reserve(self.calls,function,args,valid,keep,True)
+            row=owner.ledger._reserve_retirement(self,label,function,args,valid,keep)
             self.used[label]=row
             owner.ledger.commit(row,self.api,self,'retirement',self.deadline if wait else None)
         # Retain committed exact intent over foreign execution, never a lock.
