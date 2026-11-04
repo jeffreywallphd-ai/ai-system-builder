@@ -147,12 +147,16 @@ class _SourceExecution(sources._SourceExecutionPort):
         row = arena.begin(allocation.terminal if terminal else allocation.normal,
                            'source-native', record.function, record.args, (owner, record, invoke, self),
                            terminal=terminal, variant=variant, library=library, source_record=record)
+        functions = () if variant == 'system-library' else owner._api._origin[3]
+        label = x._failure_api(record.function, functions)
+        x._failure_native(self.child, label)
         try:
             value = invoke()
             record.assert_original(owner)
             x._need(record.started and record.returned and record.thread == self.thread
                     and value is record.value)
             arena.returned(row, value, record.error)
+            x._failure_native(self.child, label, True, value, record.error)
             arena.acknowledge(row)
             if variant == 'system-library':
                 self.bootstraps.append(value)
@@ -190,6 +194,7 @@ class _OriginalSourceChild(x._SourceFrameIo):
         self.job_bound = self.dispatched = False
         self.original = (entry, self.nonce, self.deadline, self.thread, self.buffers,
                          self.calls, self.handles, self.requests, self.handle_bindings, self.channels)
+        x._init_failure_state(self, 'child')
         x._SourceNative(self)
         api = self.api
         for name, number in zip(('request', 'response', 'ready', 'dispatch'), entry.handles):
@@ -367,6 +372,7 @@ class _OriginalSourceChild(x._SourceFrameIo):
         self.current = message
         try:
             if sequence == 0:
+                x._failure_phase(self, 'prepare-source')
                 self._prepare_source(message['body']['model_root'])
             elif sequence == 1:
                 x._need(self.source.assert_bound() is None)
@@ -383,19 +389,35 @@ class _OriginalSourceChild(x._SourceFrameIo):
             self._live()
             self.state = next_state
             return {**message, 'body': {'state': next_state}}
-        except BaseException:
+        except BaseException as original_error:
             if self.entry.case == x._MAP_DENIAL_CASE and sequence == 0:
                 # A failed prepare keeps its uncertain custody. Only emit
                 # original-call observations; the parent still must observe
                 # this exact child's exit before reporting the expected case.
+                reply_started = False
                 try:
+                    x._failure_phase(self, 'attribute-denial')
                     denial = self._original_source_denial()
                     reply = {**message, 'body': {'error': 'source-session-unavailable',
                              'source_retired': False, 'denial': denial}}
                     x._denial_message(reply, self.nonce, self.entry.digest, self.deadline)
+                    x._failure_phase(self, 'write-denial')
+                    reply_started = True
                     self._write_bytes(self.channels['response'], x._frame(reply))
-                except BaseException:
-                    pass  # No witness means a generic failed case, never a pass.
+                except BaseException as diagnostic_error:
+                    # A separate informational error cannot qualify the denial.
+                    # Existing actor/budget guards still own response dispatch.
+                    try:
+                        if reply_started:raise original_error
+                        diagnostic = x._read_failure(self, diagnostic_error)
+                        if diagnostic is None:raise original_error
+                        reply = {**message, 'body': {'error': 'source-session-unavailable',
+                                 'source_retired': False, 'diagnostic': diagnostic}}
+                        x._failure_message(reply, self.nonce, self.entry.digest, self.deadline)
+                        x._failure_phase(self, 'write-diagnostic')
+                        self._write_bytes(self.channels['response'], x._frame(reply))
+                    except BaseException:
+                        pass  # Uncertain actors cannot bypass their guards to log.
             self.failed = True
             raise
 

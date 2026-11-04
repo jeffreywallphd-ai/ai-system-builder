@@ -458,6 +458,35 @@ def _validate_denial_report(value, digest, manifest, source):
     return dict(value)
 
 
+def _retain_parent_failure(owner, source):
+    """Keep only fixed diagnostics after original exit and completed capture.
+
+    This permits observation of nonzero/aborted exit, never healthy retirement,
+    input cleanup, an expected-denial pass or another dispatch.
+    """
+    try:
+        fence = owner.fence
+        _need(type(fence) is _OriginalParentFence, 'fence-owner')
+        fence._assert_original()
+        known = fence._bound_facts[9]()
+        _need(fence.thread is fence.thread_origin and fence.thread is not None
+              and not fence.thread.is_alive() and type(known) is tuple and len(known) == 5
+              and known[0] == fence.original[2] and type(known[1]) is int
+              and 0 <= known[1] <= 0xffffffff and known[1] != 259
+              and fence.exit_observed is True and fence.code == known[1], 'fence-exit')
+        _need(type(owner.captures) is list and len(owner.captures) == 2, 'entry')
+        for capture in owner.captures:
+            _need(type(capture) is _StreamCapture and capture.started is True
+                  and capture.start_attempted is True and capture.failed is False
+                  and capture.overflow is False and not capture.thread.is_alive(), 'entry')
+        data = owner.captures[0].data
+        _need(type(data) is bytearray and 0 < len(data) <= 4096
+              and owner.captures[0].bytes == len(data), 'entry')
+        return source._parent_failure(_json_object(bytes(data)))
+    except BaseException:
+        return None
+
+
 def _cleanup_exact_inputs(run_root, manifest, removed=None):
     root = run_root / 'inputs'
     _need({p.name for p in root.iterdir()} == set(manifest), 'entry')
@@ -651,6 +680,8 @@ def run_native():
               'qualification_complete': False, 'quality_tests_executed': False,
               'model_started': False, 'old_staging_accessed': False,
               'production_composed': False, 'parent_qualification_granted': False}
+    if case == 'shared-write-map-denial':
+        result['failure_diagnostic'] = None if passed else _retain_parent_failure(owner, source)
     with (run_root / 'summary.json').open('x', encoding='utf8') as stream:
         json.dump(result, stream, sort_keys=True, indent=2)
         stream.write('\n')

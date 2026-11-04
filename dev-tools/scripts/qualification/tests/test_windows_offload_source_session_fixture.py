@@ -302,6 +302,48 @@ class FenceTests(unittest.TestCase):
         self.fence=subject._OriginalParentFence(self.process,self.now+10*10**9)
         self.fence.arm();self.assertTrue(self.entered.wait(1));return self.fence
 
+    def failed_capture(self, raw):
+        from modules.adapters.runtime.python.worker.tasks import windows_offload_source_session as source
+        self.code=9;fence=self.arm();self.release.set();fence.thread.join(2)
+        with self.assertRaises(subject.SourceSessionFixtureError):fence.join_observed()
+        captures=[]
+        for payload in (raw,b''):
+            capture=subject._StreamCapture(io.BytesIO(payload),lambda:None)
+            capture.start();capture.join();captures.append(capture)
+        return SimpleNamespace(fence=fence,captures=captures),source
+
+    @staticmethod
+    def failure_body():
+        return {'schema_version':'owned-source-parent-failure-v1','status':'failed',
+                'failure_stage':'source-operation','diagnostic':{
+                    'schema_version':'source-failure-diagnostic-v1','actor':'parent',
+                    'phase':'source-exchange','error_kind':'admission','api':'read-file',
+                    'returned':True,'result_class':'zero','win32_error':109},
+                'child_diagnostic':None,'parent_qualification_granted':False}
+
+    def test_nonzero_original_exit_keeps_only_closed_failure_without_qualifying_it(self):
+        body=self.failure_body();owner,source=self.failed_capture(json.dumps(body).encode())
+        self.assertEqual(subject._retain_parent_failure(owner,source),body)
+        self.assertEqual(owner.fence.code,9)
+        with self.assertRaises(subject.SourceSessionFixtureError):owner.fence.join_observed()
+        self.assertFalse(owner.fence.kill_started)
+
+    def test_mutable_exit_flags_cannot_replace_original_exit_for_diagnostic_collection(self):
+        body=self.failure_body();owner,source=self.failed_capture(json.dumps(body).encode())
+        owner.fence._bound_facts=(*owner.fence._bound_facts[:9],lambda:None)
+        self.assertIsNone(subject._retain_parent_failure(owner,source))
+
+    def test_malformed_or_uncertain_capture_is_omitted_without_raw_fallback(self):
+        owner,source=self.failed_capture(b'{"raw":"private C:/sensitive"}')
+        self.assertIsNone(subject._retain_parent_failure(owner,source))
+        body=self.failure_body();body['diagnostic']['win32_error']=True
+        owner.captures[0].data[:]=json.dumps(body).encode()
+        owner.captures[0].bytes=len(owner.captures[0].data)
+        self.assertIsNone(subject._retain_parent_failure(owner,source))
+        body=self.failure_body();owner.captures[0].data[:]=json.dumps(body).encode()
+        owner.captures[0].bytes=len(owner.captures[0].data);owner.captures[1].failed=True
+        self.assertIsNone(subject._retain_parent_failure(owner,source))
+
     def test_default_imported_entry_denies_before_api_construction(self):
         with patch.object(subject,'_entry_environment',side_effect=subject.SourceSessionFixtureError('entry')), \
              patch.object(subject,'_ParentFenceApi',side_effect=AssertionError('No API construction')) as api:

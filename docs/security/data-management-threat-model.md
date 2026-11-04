@@ -2435,3 +2435,29 @@ only this diagnostic case; the unused-Source/v1 defaults and all guards remain.
 No accepted accuracy/OCR check is reopened. Protected shared accounting, borrower
 and cache lifetime, model-worker crash/restart, actual resources, production and
 parent qualification remain pending; unknown old staging keeps its full12GiB charge.
+
+### Unqualified Source failure diagnostics
+
+The saved-source shared-write refusal trial failed; the separate unused-Source
+control passed. Both one-use allowances are consumed. Independent audits retain
+the failed four-file313B input set, all original outcomes and the earlier history.
+The failed process count and generic141-byte output do not prove the mapper
+frontier, child identity or original denial. Unknown old staging is untouched
+and still charges the full12GiB.
+
+The negative-only reporting delta uses exactly eight closed scalar fields.
+Original dispatch boundaries retain only fixed API identity labels, return
+classes and immediate errors after physical completion custody. Reporting issues
+no Native query or extra ownership/cleanup operation. Closed semantic phases
+and error kinds are informational. No raw exception display, path, stack,
+content, pointer or handle is serialized. A separate unqualified response must
+retain the original sequence0/nonce/source/deadline header and still fails.
+The original denial witness and all resource/retirement predicates stay strict.
+After any denial write starts, no diagnostic write retry is permitted. If actor
+health refuses the existing response path, the detail remains unavailable.
+
+The collector admits only the fixed failure shape after its original exit
+witness and capture threads settle. Nonzero or forced exit never becomes healthy
+retirement, input removal or credit. Simulated failure tests supply no physical
+pass. Rollback removes only new diagnostic reporting; default behavior and all
+fail-closed staging, journal, borrower, model-worker and parent gaps remain.

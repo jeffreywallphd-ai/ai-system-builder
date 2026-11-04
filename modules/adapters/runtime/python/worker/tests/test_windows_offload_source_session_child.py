@@ -270,6 +270,22 @@ class NativeTimerTests(unittest.TestCase):
         self.assertFalse(thread.is_alive());self.assertEqual(results,['denied'])
         self.assertEqual(len(self.effects),effects);self.assertEqual(len(self.api.calls),calls)
 
+    def test_rebound_engine_diagnostic_table_cannot_mislabel_original_native_call(self):
+        with patch.dict(source._FAILURE_STATES,{},clear=True):
+            self.owner.entry=SimpleNamespace(case=source._MAP_DENIAL_CASE)
+            source._init_failure_state(self.owner,'child')
+            function=self.api.k.CloseHandle
+            table=((self.api.k,'CloseHandle',function,tuple(function.argtypes),function.restype),)
+            self.api.diagnostic_bindings=table
+            source._bind_failure_api(self.owner,self.api,table)
+            self.api.call(function,111)
+            self.assertEqual(source._read_failure(self.owner,OffloadAdmissionError())['api'],'close-handle')
+            self.api.diagnostic_bindings=((self.api.k,'DeviceIoControl',function,table[0][3],table[0][4]),)
+            self.api.call(function,111)
+            self.assertEqual(source._read_failure(self.owner,OffloadAdmissionError())['api'],'unknown')
+            with self.assertRaises(OffloadAdmissionError):
+                source._bind_failure_api(self.owner,self.api,self.api.diagnostic_bindings)
+
 
 class SourcePortReservationTests(unittest.TestCase):
     def setUp(self):
@@ -286,6 +302,7 @@ class SourcePortReservationTests(unittest.TestCase):
             if value is not child or get_ident()!=child.thread:raise OffloadAdmissionError()
         def actor(value):live(value);return source._CHILD_ROLE
         for scope in (patch.object(child_module,'_CHILD',child),
+                      patch.dict(source._FAILURE_STATES,{},clear=True),
                       patch.object(child_module._OriginalSourceChild,'_live',live),
                       patch.object(source,'_original_actor',side_effect=actor)):
             scope.start();self.addCleanup(scope.stop)
@@ -359,6 +376,7 @@ class OriginalSourceDenialTests(unittest.TestCase):
                       patch.object(C,'get_last_error',side_effect=lambda:self.last_error,create=True)):
             scope.start();self.addCleanup(scope.stop)
         self.child.entry=SimpleNamespace(case=source._MAP_DENIAL_CASE)
+        source._init_failure_state(self.child, 'child')
         self.child.requests=[self.child.current]
         sources._OriginalModelSources.__init__(self.source,self.native.value(),_execution=self.port)
         def fault(name,args):
@@ -420,6 +438,43 @@ class OriginalSourceDenialTests(unittest.TestCase):
         guard.incoming.level=1
         self.source._api.k.DeviceIoControl=lambda *args:0
         with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+
+
+    def execute_denial(self, *, wrong_error=False, write_fails=False):
+        self.child.current=None;self.child.requests=[];self.child.state='new';self.child.failed=False
+        self.child.nonce='a'*32;self.child.entry.digest='b'*64
+        message={'v':2,'nonce':self.child.nonce,'source_digest':self.child.entry.digest,
+                 'deadline_ns':self.child.deadline,'seq':0,'op':'prepare-source',
+                 'body':{'model_root':'C:\\synthetic'}}
+        if wrong_error:
+            self.native.fault=lambda name,args:setattr(self.native,'native_error',32)if name=='DeviceIoControl'else None
+        frames=[];self.child.channels={'response':object()}
+        def write(owner,handle,raw):
+            frames.append(raw)
+            if write_fails:raise OffloadAdmissionError()
+        with patch.object(child_module._OriginalSourceChild,'_prepare_source',lambda owner,root:self.source.prepare()), \
+             patch.object(child_module._OriginalSourceChild,'_write_bytes',write):
+            with self.assertRaises(OffloadAdmissionError):self.child.execute(message)
+        self.assertTrue(self.child.failed);self.assertFalse(self.source._retired)
+        self.assertEqual(len(frames),1)
+        return source._decode(frames[0][4:])
+
+    def test_actual_source_execute_sends_expected_denial_once(self):
+        reply=self.execute_denial()
+        source._denial_message(reply,'a'*32,'b'*64,self.child.deadline)
+        self.assertNotIn('diagnostic',reply['body'])
+
+    def test_actual_wrong_native_error_is_only_unqualified_diagnostic(self):
+        reply=self.execute_denial(wrong_error=True)
+        diagnostic=source._failure_message(reply,'a'*32,'b'*64,self.child.deadline)
+        self.assertEqual(diagnostic['phase'],'attribute-denial')
+        self.assertEqual(diagnostic['api'],'read-oplock');self.assertEqual(diagnostic['win32_error'],32)
+        self.assertEqual(diagnostic['result_class'],'zero')
+        with self.assertRaises(OffloadAdmissionError):source._denial_message(reply,'a'*32,'b'*64,self.child.deadline)
+
+    def test_started_denial_reply_is_not_retried_as_a_diagnostic(self):
+        reply=self.execute_denial(write_fails=True)
+        self.assertIn('denial',reply['body']);self.assertNotIn('diagnostic',reply['body'])
 
 
 if __name__=='__main__':unittest.main()

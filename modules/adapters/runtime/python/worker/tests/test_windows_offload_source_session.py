@@ -214,6 +214,7 @@ class SourceMapperTests(unittest.TestCase):
         for scope in (patch.object(source,'_ENTRY_CONTEXT',entry),patch.object(source,'_PARENT',parent),
                       patch.object(source._OriginalSourceEntry,'assert_original',lambda e:None),
                       patch.dict(source._NATIVE_OWNERS,{},clear=True),
+                      patch.dict(source._FAILURE_STATES,{},clear=True),
                       patch.dict(source._MAPPER_OWNERS,{},clear=True),
                       patch.dict(source._MAPPER_RETURNS,{},clear=True),
                       patch.dict(source._MAPPER_RESOURCES,{},clear=True),
@@ -706,6 +707,115 @@ class SourceFrameTests(unittest.TestCase):
                        lambda:actor._read_bytes(handle,4097),lambda:actor._read_bytes(handle,True)):
             with self.assertRaises(OffloadAdmissionError):action()
         self.assertEqual(effects,[])
+
+
+class FailureDiagnosticTests(unittest.TestCase):
+    def setUp(self):
+        scope=patch.dict(source._FAILURE_STATES,{},clear=True)
+        scope.start();self.addCleanup(scope.stop)
+        self.owner=object.__new__(source._OriginalSourceParent)
+        self.owner.entry=SimpleNamespace(case=source._MAP_DENIAL_CASE)
+        self.owner.child_diagnostic=None
+        source._init_failure_state(self.owner,'parent')
+
+    def diagnostic(self):
+        source._failure_phase(self.owner,'mapper-prepare')
+        source._failure_native(self.owner,'create-section',True,987654321,5)
+        return source._read_failure(self.owner,OffloadAdmissionError())
+
+    def test_pointer_return_is_only_a_class_and_exception_display_is_never_used(self):
+        class Sensitive(Exception):
+            def __str__(self):raise AssertionError('secret display hook')
+            def __repr__(self):raise AssertionError('secret display hook')
+        self.diagnostic()
+        value=source._read_failure(self.owner,Sensitive('private C:/secret/model'))
+        self.assertEqual(value['api'],'create-section')
+        self.assertEqual(value['result_class'],'nonzero');self.assertEqual(value['win32_error'],5)
+        self.assertEqual(value['error_kind'],'other')
+        text=json.dumps(value);self.assertNotIn('987654321',text);self.assertNotIn('private',text)
+        self.assertEqual(len(value),8)
+
+    def test_hostile_exception_metaclass_cannot_run_classification_hooks(self):
+        calls=[]
+        class Meta(type):
+            def __hash__(cls):calls.append('hash');raise AssertionError('sensitive hook')
+            def __eq__(cls,other):calls.append('equal');raise AssertionError('sensitive hook')
+        class Sensitive(Exception,metaclass=Meta):
+            def __str__(self):calls.append('string');raise AssertionError('sensitive hook')
+            def __repr__(self):calls.append('repr');raise AssertionError('sensitive hook')
+        value=source._read_failure(self.owner,Sensitive('private content'))
+        self.assertEqual(calls,[])
+        self.assertEqual(value['error_kind'],'other')
+
+    def test_unknown_extra_boolean_and_inconsistent_fields_are_refused(self):
+        value=self.diagnostic()
+        for key in value:
+            wrong={**value,key:object()}
+            with self.subTest(key=key),self.assertRaises(OffloadAdmissionError):source._failure_diagnostic(wrong)
+        for key,item in (('api','private C:/secret'),('phase','arbitrary'),('win32_error',True),
+                         ('returned',1),('win32_error',2**32),('returned',False)):
+            with self.subTest(key=key,value=item),self.assertRaises(OffloadAdmissionError):
+                source._failure_diagnostic({**value,key:item})
+        with self.assertRaises(OffloadAdmissionError):source._failure_diagnostic({**value,'extra':'private'})
+        for fields in ({'api':None},{'result_class':None},{'returned':None}):
+            with self.subTest(fields=fields),self.assertRaises(OffloadAdmissionError):
+                source._failure_diagnostic({**value,**fields})
+
+    def test_inflight_fact_has_no_result_or_error_and_does_not_change_old_snapshot(self):
+        old=self.diagnostic();source._failure_native(self.owner,'map-view')
+        current=source._read_failure(self.owner,TypeError())
+        self.assertIs(current['returned'],False);self.assertIsNone(current['result_class'])
+        self.assertIsNone(current['win32_error']);self.assertEqual(old['win32_error'],5)
+        self.assertEqual(current['error_kind'],'type')
+
+    def test_normal_failure_bytes_remain_exact_and_negative_bytes_are_closed(self):
+        value=self.diagnostic()
+        negative=source._parent_failure_bytes(self.owner,ValueError('sensitive'))
+        parsed=source._parent_failure(json.loads(negative))
+        self.assertEqual(parsed['diagnostic']['phase'],'mapper-prepare')
+        self.assertIs(parsed['parent_qualification_granted'],False)
+        self.assertNotIn(b'sensitive',negative);self.assertLessEqual(len(negative),4096)
+        self.owner.entry.case=None
+        self.assertEqual(source._parent_failure_bytes(self.owner,RuntimeError('sensitive')),
+            b'{"schema_version":"owned-source-parent-result-v1","status":"failed","failure_stage":"source-operation","parent_qualification_granted":false}\n')
+        self.assertEqual(value['actor'],'parent')
+
+    def test_unqualified_child_error_keeps_header_checks_and_cannot_be_denial(self):
+        diagnostic={**self.diagnostic(),'actor':'child'}
+        value={'v':2,'nonce':'a'*32,'source_digest':'b'*64,'deadline_ns':123456789,
+               'seq':0,'op':'prepare-source','body':{'error':'source-session-unavailable',
+               'source_retired':False,'diagnostic':diagnostic}}
+        self.assertEqual(source._failure_message(value,'a'*32,'b'*64,123456789),diagnostic)
+        with self.assertRaises(OffloadAdmissionError):source._denial_message(value,'a'*32,'b'*64,123456789)
+        for key,item in (('nonce','c'*32),('deadline_ns',123456790),('seq',1)):
+            with self.subTest(key=key),self.assertRaises(OffloadAdmissionError):
+                source._failure_message({**value,key:item},'a'*32,'b'*64,123456789)
+        with self.assertRaises(OffloadAdmissionError):
+            source._failure_message({**value,'seq':1,'op':'check-source'},'a'*32,'b'*64,123456789)
+
+    def test_parent_retains_unqualified_reply_but_still_rejects_it(self):
+        diagnostic={**self.diagnostic(),'actor':'child'}
+        reply={'v':2,'nonce':'a'*32,'source_digest':'b'*64,'deadline_ns':123456789,
+               'seq':0,'op':'prepare-source','body':{'error':'source-session-unavailable',
+               'source_retired':False,'diagnostic':diagnostic}}
+        writes=[]
+        actor=SimpleNamespace(entry=SimpleNamespace(case=source._MAP_DENIAL_CASE,
+            run_root=Path('C:/synthetic/source-session')),nonce='a'*32,source_digest='b'*64,
+            deadline=123456789,channels={'request-write':object(),'response-read':object()},
+            child_diagnostic=None,denial=None,_write_bytes=lambda handle,raw:writes.append(raw))
+        request=SimpleNamespace(seq=0,op='prepare-source')
+        def attempt(value):
+            raw=source._frame(value);parts=iter((raw[:4],raw[4:]))
+            actor._read_bytes=lambda handle,size:next(parts)
+            with self.assertRaises(OffloadAdmissionError):
+                source._OriginalSourceParent._exchange_source(actor,request)
+        attempt(reply)
+        self.assertEqual(actor.child_diagnostic,diagnostic);self.assertIsNone(actor.denial)
+        self.assertEqual(len(writes),1)
+        actor.child_diagnostic=None
+        attempt({**reply,'body':{'state':'source-prepared'}})
+        self.assertIsNone(actor.child_diagnostic);self.assertIsNone(actor.denial)
+        self.assertEqual(len(writes),2)
 
 
 if __name__ == '__main__':unittest.main()

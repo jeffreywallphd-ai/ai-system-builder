@@ -14529,6 +14529,30 @@
           "This result does not qualify model offloading."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "88466ecae54064a7036072486294689fab58ce6afdbcbd6159f467ff2fcee400",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At its saved version, this work added a check for unsafe file access.",
+          "It used simulated Windows tests.",
+          "The later Windows results are recorded separately."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8e3fec5bc25399fac6d3bc8ad3155508c7e6a80f13a2d8ad95f00e77d19949d3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows refusal check failed.",
+          "Normal file access passed.",
+          "The agent must find and fix the failed step before that check can close."
+        ]
+      }
     }
   ]
 }

@@ -24,6 +24,25 @@ from .local_model_offload import OffloadAdmissionError
 
 _VERSION = 2
 _MAP_DENIAL_CASE = 'shared-write-map-denial'
+_FAILURE_STATES = {}
+_FAILURE_PHASES = frozenset((
+    'initializing', 'parent-native', 'mapper-prepare', 'child-launch',
+    'source-exchange', 'child-retirement', 'mapper-retirement',
+    'timer-retirement', 'report-publication', 'prepare-source',
+    'attribute-denial', 'write-denial', 'write-diagnostic', 'unknown'))
+_FAILURE_APIS = {
+    'NtCreateFile': 'open-file', 'NtCreateEvent': 'create-event',
+    'NtReadFile': 'read-file', 'ReadFile': 'read-file', 'WriteFile': 'write-file',
+    'GetFileInformationByHandleEx': 'file-information',
+    'GetVolumeInformationByHandleW': 'volume-information',
+    'GetDriveTypeW': 'drive-type', 'DeviceIoControl': 'read-oplock',
+    'CreateFileMappingW': 'create-section', 'MapViewOfFile': 'map-view',
+    'VirtualQuery': 'query-view', 'UnmapViewOfFile': 'unmap-view',
+    'CloseHandle': 'close-handle', 'WaitForMultipleObjects': 'wait',
+    'WaitForSingleObject': 'wait', 'GetExitCodeProcess': 'process-exit',
+    'QueryInformationJobObject': 'job-information', 'CreateProcessW': 'create-process',
+    'ResumeThread': 'resume-thread', 'DeleteTimerQueueTimer': 'retire-timer',
+    'CancelIoEx': 'cancel-io', 'GetOverlappedResult': 'io-result'}
 _OPERATIONS = {0: 'prepare-source', 1: 'check-source',
                2: 'retire-unused-source', 3: 'finish-source'}
 _STATES = {0: 'source-prepared', 1: 'source-checked',
@@ -435,12 +454,16 @@ class _SourceNative(native._NativePrimitives):
             ('ExitProcess', (u32,), None), ('Sleep', (u32,), None),
         )
         bindings = []
+        diagnostic_bindings = []
         for name, args, result in specs:
             function = getattr(self.k, name)
             function.argtypes, function.restype = list(args), result
             bindings.append((function, args, result))
+            diagnostic_bindings.append((self.k, name, function, args, result))
+        self.diagnostic_bindings = tuple(diagnostic_bindings)
         self.function_bindings = tuple(bindings)
         self.rows.api_bindings = self.rows.api_origin = self.function_bindings
+        _bind_failure_api(self.owner, self, self.diagnostic_bindings)
 
     def _call_row(self, function, *args, valid=lambda n: type(n) is int and n != 0,
                   keep=(), terminal=False, _wait_deadline=None):
@@ -463,11 +486,14 @@ class _SourceNative(native._NativePrimitives):
         call.assert_original(self)
         arena, row = self.rows, call.row
         function, args, valid = call.facts[2:5]
+        label = _failure_engine_api(self, function)
+        _failure_native(self.owner, label)
         try:
             value = function(*args)
             error = C.get_last_error() & 0xffffffff
             call.known_return = (value, error, get_ident())
             arena.returned(row, value, error)
+            _failure_native(self.owner, label, True, value, error)
             call.assert_original(self)
             _need(valid(value))
             arena.acknowledge(row)
@@ -651,6 +677,183 @@ class _SourceLifetimeTimer:
 def _need(value):
     if not value:
         raise OffloadAdmissionError()
+
+
+def _init_failure_state(owner, actor):
+    """Negative-only observations. These functions provide no native authority."""
+    if owner.entry.case != _MAP_DENIAL_CASE:
+        return
+    _need(type(actor) is str and actor in ('parent', 'child')
+          and id(owner) not in _FAILURE_STATES and len(_FAILURE_STATES) < 2)
+    phase, native, engine = 'initializing', (None, None, None, None), None
+
+    def set_phase(value):
+        nonlocal phase
+        phase = value if type(value) is str and value in _FAILURE_PHASES else 'unknown'
+
+    def capture(api, returned, value, error):
+        nonlocal native
+        if type(api) is not str or api not in (*_FAILURE_APIS.values(), 'system-library', 'unknown'):
+            api = 'unknown'
+        if type(returned) is not bool:
+            native = (None, None, None, None)
+            return
+        result = ('zero' if value == 0 else 'nonzero') if type(value) is int else (
+            'null' if value is None else 'opaque')
+        native = (api, returned, result if returned else None,
+                  error if returned and type(error) is int and 0 <= error <= 0xffffffff else None)
+
+    def read(error):
+        # Exact exception types only; do not invoke exception display hooks.
+        kind = 'other'
+        for original, label in ((OffloadAdmissionError, 'admission'), (TypeError, 'type'),
+                                (ValueError, 'value'), (OSError, 'os')):
+            if type(error) is original:
+                kind = label
+                break
+        api, returned, result, os_error = native
+        return {'schema_version': 'source-failure-diagnostic-v1', 'actor': actor,
+                'phase': phase, 'error_kind': kind, 'api': api, 'returned': returned,
+                'result_class': result, 'win32_error': os_error}
+
+    def bind_api(api, functions):
+        nonlocal engine
+        _need(engine is None and type(api) is _SourceNative
+              and api.owner is owner and owner.api is api
+              and type(functions) is tuple and 0 < len(functions) <= 64
+              and api.diagnostic_bindings is functions)
+        for row in functions:
+            _need(type(row) is tuple and len(row) == 5 and type(row[1]) is str
+                  and row[0] is api.k and getattr(api.k, row[1]) is row[2]
+                  and any(row[2] is f and row[3] == args and row[4] is result
+                          for f, args, result in api.function_bindings))
+        engine = (api, functions)
+
+    def engine_api(api, function):
+        if (engine is None or engine[0] is not api
+                or api.__dict__.get('diagnostic_bindings') is not engine[1]):
+            return 'unknown'
+        return _failure_api(function, engine[1])
+
+    _FAILURE_STATES[id(owner)] = (owner, set_phase, capture, read, bind_api, engine_api)
+
+
+def _failure_phase(owner, phase):
+    state = _FAILURE_STATES.get(id(owner))
+    if type(state) is tuple and len(state) == 6 and state[0] is owner:
+        state[1](phase)
+
+
+def _failure_native(owner, api, returned=False, value=None, error=None):
+    state = _FAILURE_STATES.get(id(owner))
+    if type(state) is tuple and len(state) == 6 and state[0] is owner:
+        state[2](api, returned, value, error)
+
+
+def _bind_failure_api(owner, api, functions):
+    state = _FAILURE_STATES.get(id(owner))
+    if type(state) is tuple and len(state) == 6 and state[0] is owner:
+        state[4](api, functions)
+
+
+def _failure_engine_api(api, function):
+    state = _FAILURE_STATES.get(id(api.owner))
+    if type(state) is tuple and len(state) == 6 and state[0] is api.owner:
+        return state[5](api, function)
+    return 'unknown'
+
+
+def _failure_api(function, functions):
+    """Read only the caller's already retained fixed signature table."""
+    if function is C.__dict__.get('WinDLL'):
+        return 'system-library'
+    if type(functions) is tuple and len(functions) <= 64:
+        for row in functions:
+            if type(row) is tuple and len(row) == 5 and row[2] is function and type(row[1]) is str:
+                return _FAILURE_APIS.get(row[1], 'unknown')
+    return 'unknown'
+
+
+def _failure_diagnostic(value):
+    """A closed informational shape; never an original-call denial witness."""
+    _need(type(value) is dict and value.keys() == {
+        'schema_version', 'actor', 'phase', 'error_kind', 'api', 'returned',
+        'result_class', 'win32_error'})
+    for key, choices in (
+            ('schema_version', ('source-failure-diagnostic-v1',)),
+            ('actor', ('parent', 'child')), ('phase', _FAILURE_PHASES),
+            ('error_kind', ('admission', 'type', 'value', 'os', 'other'))):
+        _need(type(value[key]) is str and value[key] in choices)
+    _need(value['api'] is None or type(value['api']) is str
+          and value['api'] in (*_FAILURE_APIS.values(), 'system-library', 'unknown'))
+    _need(value['returned'] is None or type(value['returned']) is bool)
+    _need(value['result_class'] is None or type(value['result_class']) is str
+          and value['result_class'] in ('zero', 'nonzero', 'null', 'opaque'))
+    _need(value['win32_error'] is None or type(value['win32_error']) is int
+          and 0 <= value['win32_error'] <= 0xffffffff)
+    _need(value['returned'] is True or value['result_class'] is value['win32_error'] is None)
+    if value['api'] is None:
+        _need(value['returned'] is value['result_class'] is value['win32_error'] is None)
+    else:
+        _need(type(value['returned']) is bool
+              and (value['result_class'] is not None if value['returned'] else value['result_class'] is None))
+    return dict(value)
+
+
+def _read_failure(owner, error):
+    """Best effort, with no Native readback, writes, retirement or retries."""
+    try:
+        state = _FAILURE_STATES.get(id(owner))
+        _need(type(state) is tuple and len(state) == 6 and state[0] is owner)
+        return _failure_diagnostic(state[3](error))
+    except BaseException:
+        return None
+
+
+def _failure_message(value, nonce, source, deadline):
+    _need(type(value) is dict and type(value.get('body')) is dict)
+    body = value['body']
+    _need(body.keys() == {'error', 'source_retired', 'diagnostic'}
+          and body['error'] == 'source-session-unavailable' and type(body['error']) is str
+          and body['source_retired'] is False)
+    diagnostic = _failure_diagnostic(body['diagnostic'])
+    _need(diagnostic['actor'] == 'child')
+    # The old strict header and error contract still owns the envelope.
+    _message({**value, 'body': {'error': body['error'], 'source_retired': False}},
+             nonce, source, deadline, response=True)
+    _need(type(value['seq']) is int and value['seq'] == 0)
+    return diagnostic
+
+
+def _parent_failure(value):
+    _need(type(value) is dict and value.keys() == {
+        'schema_version', 'status', 'failure_stage', 'diagnostic',
+        'child_diagnostic', 'parent_qualification_granted'}
+        and value['schema_version'] == 'owned-source-parent-failure-v1'
+        and type(value['schema_version']) is str and value['status'] == 'failed'
+        and type(value['status']) is str and value['failure_stage'] == 'source-operation'
+        and type(value['failure_stage']) is str and value['parent_qualification_granted'] is False)
+    own, child = value['diagnostic'], value['child_diagnostic']
+    if own is not None:_need(_failure_diagnostic(own)['actor'] == 'parent')
+    if child is not None:_need(_failure_diagnostic(child)['actor'] == 'child')
+    return {**value, 'diagnostic': None if own is None else dict(own),
+            'child_diagnostic': None if child is None else dict(child)}
+
+
+def _parent_failure_bytes(owner, error):
+    legacy = b'{"schema_version":"owned-source-parent-result-v1","status":"failed","failure_stage":"source-operation","parent_qualification_granted":false}\n'
+    try:
+        if type(owner) is not _OriginalSourceParent or owner.entry.case != _MAP_DENIAL_CASE:
+            return legacy
+        value = _parent_failure({
+            'schema_version': 'owned-source-parent-failure-v1', 'status': 'failed',
+            'failure_stage': 'source-operation', 'diagnostic': _read_failure(owner, error),
+            'child_diagnostic': owner.child_diagnostic, 'parent_qualification_granted': False})
+        raw = json.dumps(value, sort_keys=True, separators=(',', ':')).encode() + b'\n'
+        if len(raw) <= 4096:return raw
+    except BaseException:
+        pass
+    return legacy
 
 
 def _model_root(value):
@@ -960,6 +1163,8 @@ class _SourceMappedDenial:
         self.calls.append(call)
         if output is not None:output.acquire = call
         arena = self.api.rows
+        label = _failure_api(function, self.functions)
+        _failure_native(self.parent, label)
         row = arena.begin(self.api.engine_final if terminal else self.api.engine_normal,
                           'source-mapper-native', function, args, (self.parent, self, call, keep, custody),
                           terminal=terminal, variant=variant, library=library)
@@ -978,6 +1183,7 @@ class _SourceMappedDenial:
             if output_slot is not None and not is_indirect:
                 output_slot.value = value
             arena.returned(row, value, error)
+            _failure_native(self.parent, label, True, value, error)
             _need(self.original[5] and self.original[5][-1] is facts)
             self.original[5][-1] = facts + (row, known)
             call['known'] = known
@@ -1234,10 +1440,12 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
         self.source_values = self.source_hashes = self.source_digest = None
         self.runtime = self.runtime_hash = None
         self.denial = self.observed_child_exit = None
+        self.child_diagnostic = None
         self.mapper = None
         self.original = (entry, self.nonce, self.deadline, self.thread, self.buffers,
                          self.calls, self.handles, self.requests, self.handle_bindings,
                          self.channels, self.process_info)
+        _init_failure_state(self, 'parent')
 
     def origin(self):
         _need(type(self) is _OriginalSourceParent and self.__origin is self and _PARENT is self
@@ -1304,6 +1512,9 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
         _need(0 < size <= _FRAME_BYTES)
         raw = _decode(self._read_bytes(self.channels['response-read'], size))
         if self.entry.case == _MAP_DENIAL_CASE:
+            if type(raw.get('body')) is dict and 'diagnostic' in raw['body']:
+                self.child_diagnostic = _failure_message(raw, self.nonce, self.source_digest, self.deadline)
+                raise OffloadAdmissionError()
             reply = _denial_message(raw, self.nonce, self.source_digest, self.deadline)
         else:
             reply = _message(raw, self.nonce, self.source_digest, self.deadline, response=True)
@@ -1383,22 +1594,29 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
             self._live(request)
             if sequence == 0:
                 _need(self.api is None)
+                _failure_phase(self, 'parent-native')
                 _SourceNative(self)
                 self._close_outer_dispatch()
                 if self.entry.case == _MAP_DENIAL_CASE:
+                    _failure_phase(self, 'mapper-prepare')
                     _need(self.mapper is None)
                     self.mapper = object.__new__(_SourceMappedDenial)
                     self.buffers.append(self.mapper)
                     _SourceMappedDenial.__init__(self.mapper, self)
+                _failure_phase(self, 'child-launch')
                 self._launch(request)
+            _failure_phase(self, 'source-exchange')
             self._exchange_source(request)
             if self.entry.case == _MAP_DENIAL_CASE:
                 # A diagnostic negative response never proves retirement. Wait
                 # on our original child and Job before closing the owned graph.
                 _need(sequence == 0)
                 self.finishing = True
+                _failure_phase(self, 'child-retirement')
                 self._retire_child(expected_exit=9)
+                _failure_phase(self, 'mapper-retirement')
                 self.mapper.retire_after_child()
+                _failure_phase(self, 'timer-retirement')
                 self.api.timer.retire()
                 for handle in self.handles:
                     handle.assert_closed(self.api)
@@ -1458,6 +1676,7 @@ def _entry():
         _publish_ready(entry.run_root, raw)
         _PARENT.prepare()
         if entry.case == _MAP_DENIAL_CASE:
+            _failure_phase(_PARENT, 'report-publication')
             _need(_PARENT.retired and _PARENT.state == 'source-denied'
                   and _PARENT.observed_child_exit == 9)
             _denial_witness(_PARENT.denial)
@@ -1493,8 +1712,8 @@ def _entry():
         raise SystemExit(0)
     except SystemExit:
         raise
-    except BaseException:
-        failure = b'{"schema_version":"owned-source-parent-result-v1","status":"failed","failure_stage":"source-operation","parent_qualification_granted":false}\n'
+    except BaseException as error:
+        failure = _parent_failure_bytes(_PARENT, error)
         try:os.write(1, failure)
         except BaseException:pass
         api = getattr(_PARENT, 'api', None)

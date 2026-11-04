@@ -9369,6 +9369,48 @@
         "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending.",
         "The first Windows launch test failed with 4 processes. The corrected file handoff test passed with 3 processes. This result does not qualify model offloading."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "add-attributed-shared-map-source-denial",
+      "work_criteria": [
+        "original-denial-witness-and-retirement",
+        "owned-section-only-fixture-and-closed-runner",
+        "focused-source-and-failure-regressions",
+        "security-impact-reviewed-and-truthful-checkpoint"
+      ],
+      "receipt_digest": "8f86a00f3b59e192eba75af07a94d6c50f6791deb5cb2919dea7309e00be446f",
+      "review_digest": "3130760a61d736885626accd1cb3e2004e08cde13be76cc903990d0ad4331499",
+      "scope": "At its saved version, this work added a check for unsafe file access. It used simulated Windows tests. The later Windows results are recorded separately.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "The Windows refusal check failed. Normal file access passed. The agent must find and fix the failed step before that check can close.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "add-attributed-shared-map-source-denial",
+      "work_criteria": [
+        "original-denial-witness-and-retirement",
+        "owned-section-only-fixture-and-closed-runner",
+        "focused-source-and-failure-regressions",
+        "security-impact-reviewed-and-truthful-checkpoint"
+      ],
+      "receipt_digest": "8f86a00f3b59e192eba75af07a94d6c50f6791deb5cb2919dea7309e00be446f",
+      "review_digest": "3130760a61d736885626accd1cb3e2004e08cde13be76cc903990d0ad4331499",
+      "scope": "At its saved version, this work added a check for unsafe file access. It used simulated Windows tests. The later Windows results are recorded separately.",
+      "limitations": [
+        "This records completed source work at its saved version. It does not complete the parent roadmap or qualify a later version.",
+        "The Windows refusal check failed. Normal file access passed. The agent must find and fix the failed step before that check can close.",
+        "Low-memory mode remains unavailable. File protection, temporary-file accounting, model-worker shutdown and restart, and real-model resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. The shared system test campaign remains pending."
+      ]
     }
   ]
 }

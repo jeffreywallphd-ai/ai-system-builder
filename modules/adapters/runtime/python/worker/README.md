@@ -1033,3 +1033,22 @@ and mapper paths. They supply no Windows qualification. Only a separately
 reviewed committed-source attempt may run the fixed negative case. The default
 unused-Source sequence and legacy v1 wire remain unchanged. Accepted model
 accuracy/OCR stay closed; production and parent qualification remain pending.
+
+## Source refusal diagnostics
+
+The private negative Source case can send an unqualified eight-field diagnostic
+through its existing response channel. Fixed phase/error/API labels, return
+classes and original immediate Windows errors contain no raw exception text,
+paths, content, handles or addresses. The parent preserves strict request
+headers and fails that alternative response; it cannot become the original
+error801 denial witness. A started denial response is not retried. Uncertain
+actor dispatch may leave detail unavailable. No Native query or authority is
+added for logging. The negative parent failure body has a separate closed schema;
+normal/default four-field failure bytes and old success protocols stay unchanged.
+
+The fixed collector can retain validated failed-parent details after original
+exit and capture retirement. It preserves failed status and grants no cleanup
+or staging credit. The saved-source Windows refusal test failed, while its
+unused-file control passed. The versioned mapping qualification report preserves
+both independently reviewed outcomes. Later diagnostic source work has no
+physical qualification yet. Accepted model accuracy and OCR are not rerun.

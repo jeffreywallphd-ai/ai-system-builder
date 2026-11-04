@@ -1456,3 +1456,28 @@ unused-file pass and failed history remain unchanged. No old staging, model
 weights or accepted accuracy/OCR tests are used. All existing resource ceilings,
 security controls and production defaults remain in force. This check does not
 complete the shared-accounting, borrower, worker-recovery or resource work.
+
+## Windows refusal check and failure details
+
+The new refusal check failed on the saved source version. A separate normal file
+access check passed on that version. The versioned mapping qualification JSON
+records both results and their independent reviews. The failed check kept its
+four tiny synthetic inputs. Their 313 bytes remain preserved for diagnosis.
+The successful control removed its own four inputs. Neither result qualifies
+model offloading or completes the parent roadmap.
+
+The old failure output did not identify the failed step. The negative-only
+diagnostic path now uses fixed phase, error-kind and API labels, plus a return
+class and the original immediate Windows error. It excludes exception text,
+paths, file content, handles and addresses. These details explain observations;
+they are not denial or retirement evidence. A child can send an alternative
+unqualified error only through its existing healthy response path. A started
+denial reply is never retried as a diagnostic. An uncertain actor may provide
+no detail. The collector retains only validated details after original exit
+and completed capture, while keeping the failed status and no cleanup credit.
+
+The agent must use a fresh reviewed check to identify and fix the failed step.
+The exact earlier cause is still unknown. Normal/default failure bytes and the
+strict original error801 denial oracle stay unchanged. No user action is needed.
+Accepted accuracy and text-recognition results stay closed. Whole-system tests
+remain deferred until the open feature work is implemented.
