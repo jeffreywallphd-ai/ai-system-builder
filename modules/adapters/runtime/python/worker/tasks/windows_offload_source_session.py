@@ -685,7 +685,7 @@ def _init_failure_state(owner, actor):
         return
     _need(type(actor) is str and actor in ('parent', 'child')
           and id(owner) not in _FAILURE_STATES and len(_FAILURE_STATES) < 2)
-    phase, native, engine = 'initializing', (None, None, None, None), None
+    phase, native, engine = 'initializing', (None, None, None, None, None), None
 
     def set_phase(value):
         nonlocal phase
@@ -696,12 +696,19 @@ def _init_failure_state(owner, actor):
         if type(api) is not str or api not in (*_FAILURE_APIS.values(), 'system-library', 'unknown'):
             api = 'unknown'
         if type(returned) is not bool:
-            native = (None, None, None, None)
+            native = (None, None, None, None, None)
             return
         result = ('zero' if value == 0 else 'nonzero') if type(value) is int else (
             'null' if value is None else 'opaque')
+        # This label is unique to the already-bound NtCreateFile function,
+        # whose original ABI returns signed32-bit NTSTATUS, never a handle.
+        # Other scalar returns must remain classes, including ReadFile BOOLs.
+        status = (value & 0xffffffff) if (
+            returned and api == 'open-file' and type(value) is int
+            and -0x80000000 <= value <= 0x7fffffff) else None
         native = (api, returned, result if returned else None,
-                  error if returned and type(error) is int and 0 <= error <= 0xffffffff else None)
+                  error if returned and type(error) is int and 0 <= error <= 0xffffffff else None,
+                  status)
 
     def read(error):
         # Exact exception types only; do not invoke exception display hooks.
@@ -711,10 +718,10 @@ def _init_failure_state(owner, actor):
             if type(error) is original:
                 kind = label
                 break
-        api, returned, result, os_error = native
-        return {'schema_version': 'source-failure-diagnostic-v1', 'actor': actor,
+        api, returned, result, os_error, status = native
+        return {'schema_version': 'source-failure-diagnostic-v2', 'actor': actor,
                 'phase': phase, 'error_kind': kind, 'api': api, 'returned': returned,
-                'result_class': result, 'win32_error': os_error}
+                'result_class': result, 'win32_error': os_error, 'ntstatus': status}
 
     def bind_api(api, functions):
         nonlocal engine
@@ -776,11 +783,16 @@ def _failure_api(function, functions):
 
 def _failure_diagnostic(value):
     """A closed informational shape; never an original-call denial witness."""
-    _need(type(value) is dict and value.keys() == {
+    _need(type(value) is dict and all(type(key) is str for key in value))
+    version = value.get('schema_version')
+    _need(type(version) is str and version in (
+        'source-failure-diagnostic-v1', 'source-failure-diagnostic-v2'))
+    fields = {
         'schema_version', 'actor', 'phase', 'error_kind', 'api', 'returned',
-        'result_class', 'win32_error'})
+        'result_class', 'win32_error'}
+    if version == 'source-failure-diagnostic-v2':fields.add('ntstatus')
+    _need(value.keys() == fields)
     for key, choices in (
-            ('schema_version', ('source-failure-diagnostic-v1',)),
             ('actor', ('parent', 'child')), ('phase', _FAILURE_PHASES),
             ('error_kind', ('admission', 'type', 'value', 'os', 'other'))):
         _need(type(value[key]) is str and value[key] in choices)
@@ -797,6 +809,11 @@ def _failure_diagnostic(value):
     else:
         _need(type(value['returned']) is bool
               and (value['result_class'] is not None if value['returned'] else value['result_class'] is None))
+    status = value.get('ntstatus')
+    _need(status is None or type(status) is int and 0 <= status <= 0xffffffff)
+    if status is not None:
+        _need(value['api'] == 'open-file' and value['returned'] is True
+              and value['result_class'] == ('zero' if status == 0 else 'nonzero'))
     return dict(value)
 
 
@@ -943,7 +960,36 @@ def _edge(state, sequence):
 
 # These helpers frame bytes only; neither selects the v1 or Source actor.
 _frame = io._frame
-_decode = io._decode
+def _decode(raw):
+    # Preserve the shared eight-field/depth decoder for every existing frame.
+    try:return io._decode(raw)
+    except OffloadAdmissionError:pass
+    _need(type(raw) is bytes and 0 < len(raw) <= _FRAME_BYTES)
+    def pairs(rows):
+        value = {}
+        for key, item in rows:
+            _need(key not in value)
+            value[key] = item
+        return value
+    def bad(_):raise OffloadAdmissionError()
+    try:value = json.loads(raw.decode('utf8'), object_pairs_hook=pairs, parse_constant=bad)
+    except (UnicodeError, ValueError, RecursionError):raise OffloadAdmissionError() from None
+    _need(type(value) is dict and value.keys() == _FIELDS)
+    body = value['body']
+    _need(type(body) is dict and body.keys() == {'error', 'source_retired', 'diagnostic'}
+          and type(body['error']) is str and body['error'] == 'source-session-unavailable'
+          and body['source_retired'] is False)
+    diagnostic = _failure_diagnostic(body['diagnostic'])
+    _need(diagnostic['schema_version'] == 'source-failure-diagnostic-v2'
+          and diagnostic['actor'] == 'child')
+    # Admit only this closed v2 diagnostic. Revalidate its legacy projection
+    # with the unchanged shared decoder; no other nine-field/deeper frame gains
+    # an exception. The original actor's frozen header is checked by its caller.
+    legacy = {k:v for k,v in diagnostic.items() if k != 'ntstatus'}
+    legacy['schema_version'] = 'source-failure-diagnostic-v1'
+    projection = {**value, 'body': {**body, 'diagnostic': legacy}}
+    io._decode(json.dumps(projection, separators=(',', ':')).encode())
+    return value
 
 
 class _SourceFrameIo:

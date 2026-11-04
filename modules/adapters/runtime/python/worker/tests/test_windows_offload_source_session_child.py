@@ -476,5 +476,29 @@ class OriginalSourceDenialTests(unittest.TestCase):
         reply=self.execute_denial(write_fails=True)
         self.assertIn('denial',reply['body']);self.assertNotIn('diagnostic',reply['body'])
 
+    def test_original_file_open_status_survives_failed_attribution_and_record_mutation(self):
+        original=self.native.call
+        def refuse_weight(name,args):
+            if name=='NtCreateFile':
+                attrs=self.native.pointer(args[2],sources.w._Attributes)
+                text=attrs.name.contents
+                if C.wstring_at(text.buffer,text.length//2)=='model.safetensors':
+                    self.native.calls.append((name,args))
+                    return -1073741757  # STATUS_SHARING_VIOLATION, signed NTSTATUS.
+            return original(name,args)
+        with patch.object(self.native,'call',side_effect=refuse_weight):reply=self.execute_denial()
+        diagnostic=source._failure_message(reply,'a'*32,'b'*64,self.child.deadline)
+        self.assertEqual(diagnostic['schema_version'],'source-failure-diagnostic-v2')
+        self.assertEqual(diagnostic['api'],'open-file')
+        self.assertEqual(diagnostic['ntstatus'],0xc0000043)
+        self.assertEqual(diagnostic['win32_error'],0)
+        self.assertEqual(diagnostic['phase'],'attribute-denial')
+        count=len(self.native.calls)
+        self.source._pending.value=0  # Mutable observations cannot rewrite retained return.
+        self.assertEqual(source._read_failure(self.child,OffloadAdmissionError())['ntstatus'],0xc0000043)
+        self.assertEqual(len(self.native.calls),count)
+        with self.assertRaises(OffloadAdmissionError):source._denial_message(reply,'a'*32,'b'*64,self.child.deadline)
+        self.assertTrue(self.child.failed);self.assertFalse(self.source._retired)
+
 
 if __name__=='__main__':unittest.main()

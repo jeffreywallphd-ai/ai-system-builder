@@ -14611,6 +14611,52 @@
           "Whole-software testing remains deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "26c05c40541b80e5d402fbbe29f9273b5e7a281de2464bba880d99e80bb7996c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent checked and recorded both Windows test results.",
+          "Normal file access passed.",
+          "The unsafe-access test failed and supplied clearer error details.",
+          "Its failure remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0dad3f8e556601b1821cfdad8fe98ae45e8a20c2c3466b7ee63b7d5b6ea3abdf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This supporting record covers reviewed results at the saved version.",
+          "It does not complete the parent roadmap or qualify later code."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1b33bdd6ac29972b4a30d3445c76d5b4bc6e7e6c48401ea1390e51994e46325b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to prove which file the failed open reached.",
+          "An error number alone cannot prove that fact."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0ba26480fdd4d5385362a8313544e561e06cdc8b7cdea48f8080d222dafe5e2f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Low-memory mode remains unavailable.",
+          "Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending."
+        ]
+      }
     }
   ]
 }

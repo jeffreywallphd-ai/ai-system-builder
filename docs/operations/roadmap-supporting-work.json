@@ -9453,6 +9453,46 @@
         "Low-memory mode remains unavailable. File protection, disk accounting, model-worker shutdown and restart, and resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "collect-original-source-refusal-diagnostics",
+      "work_criteria": [
+        "reviewed-original-source-observations",
+        "preserve-native-scope-and-real-gaps",
+        "truthful-published-results-and-checkpoint"
+      ],
+      "receipt_digest": "6c2a662b3f3db12f444d326192cbebc2d9544a8279d5c777cea2f55cb7a83e0b",
+      "review_digest": "9f455665a0241b8fd3b52c9eacaadde556583c70eb4c78ceeb9dfe2ed0b56a7a",
+      "scope": "The agent checked and recorded both Windows test results. Normal file access passed. The unsafe-access test failed and supplied clearer error details. Its failure remains open.",
+      "limitations": [
+        "This supporting record covers reviewed results at the saved version. It does not complete the parent roadmap or qualify later code.",
+        "The agent still needs to prove which file the failed open reached. An error number alone cannot prove that fact.",
+        "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "collect-original-source-refusal-diagnostics",
+      "work_criteria": [
+        "reviewed-original-source-observations",
+        "preserve-native-scope-and-real-gaps",
+        "truthful-published-results-and-checkpoint"
+      ],
+      "receipt_digest": "6c2a662b3f3db12f444d326192cbebc2d9544a8279d5c777cea2f55cb7a83e0b",
+      "review_digest": "9f455665a0241b8fd3b52c9eacaadde556583c70eb4c78ceeb9dfe2ed0b56a7a",
+      "scope": "The agent checked and recorded both Windows test results. Normal file access passed. The unsafe-access test failed and supplied clearer error details. Its failure remains open.",
+      "limitations": [
+        "This supporting record covers reviewed results at the saved version. It does not complete the parent roadmap or qualify later code.",
+        "The agent still needs to prove which file the failed open reached. An error number alone cannot prove that fact.",
+        "Low-memory mode remains unavailable. Shared disk accounting, file protection, model-worker lifetime and actual resource checks remain pending.",
+        "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
+      ]
     }
   ]
 }

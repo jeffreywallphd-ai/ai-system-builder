@@ -1500,3 +1500,30 @@ Native result. The agent must independently review and fix that earlier-refusal
 witness without changing the safe open policy. No user action is needed. All
 resource limits, retained data and genuine qualification gaps remain. Accepted
 model accuracy and OCR stay closed; the combined system campaign stays deferred.
+
+## Separate native file-open status
+
+The negative-only diagnostic now emits source-failure-diagnostic-v2. Its nine
+closed fields add nullable ntstatus to the earlier eight observations. Only the
+known original NtCreateFile signed32-bit return can populate that field, after
+the existing original completion custody. The value is normalized to uint32.
+Other APIs, in-flight calls, unknown binding, bool, overflow and opaque returns
+leave it null. Win32 last-error remains separate; zero is not NTSTATUS success.
+No new Native query, raw path, exception text, handle or address is recorded.
+
+The strict eight-field v1 reader and normal/default failure bytes stay intact.
+The shared IO decoder still rejects nine-field objects. Only the Source reader
+can admit the exact closed child-v2 diagnostic envelope. It rechecks the legacy
+projection through the unchanged shared decoder. Other extra fields, versions,
+duplicate keys, depth, nonfinite values and frame-size violations still fail.
+The original frozen header and negative-only actor checks remain mandatory.
+
+The actual fake Source producer and collector regressions pass. This source
+change has no fresh physical Windows qualification. The saved refusal trials
+remain failed, and the separately passed unused-file controls remain historical.
+A status cannot establish the failed call's target-file identity. Parent and
+collector still fail an alternative diagnostic without cleanup or admission
+credit. No new physical attempt is part of this change. The agent next needs
+concrete shared accounting, original Core execution and owned cached-model
+lifetime integration. Accepted accuracy/OCR stay closed; whole-system tests
+remain deferred. No user action is needed.

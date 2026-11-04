@@ -328,6 +328,23 @@ class FenceTests(unittest.TestCase):
         with self.assertRaises(subject.SourceSessionFixtureError):owner.fence.join_observed()
         self.assertFalse(owner.fence.kill_started)
 
+    def test_versioned_ntstatus_detail_remains_failed_without_cleanup_authority(self):
+        body=self.failure_body();body['child_diagnostic']={
+            'schema_version':'source-failure-diagnostic-v2','actor':'child',
+            'phase':'attribute-denial','error_kind':'admission','api':'open-file',
+            'returned':True,'result_class':'nonzero','win32_error':0,'ntstatus':0xc0000043}
+        owner,source=self.failed_capture(json.dumps(body).encode())
+        self.assertEqual(subject._retain_parent_failure(owner,source),body)
+        self.assertEqual(owner.fence.code,9)
+        self.assertIs(body['parent_qualification_granted'],False)
+        with self.assertRaises(subject.SourceSessionFixtureError):owner.fence.join_observed()
+
+    def test_status_for_wrong_api_is_rejected_without_raw_failure_fallback(self):
+        body=self.failure_body();body['diagnostic'].update(
+            schema_version='source-failure-diagnostic-v2',ntstatus=0xc0000043)
+        owner,source=self.failed_capture(json.dumps(body).encode())
+        self.assertIsNone(subject._retain_parent_failure(owner,source))
+
     def test_mutable_exit_flags_cannot_replace_original_exit_for_diagnostic_collection(self):
         body=self.failure_body();owner,source=self.failed_capture(json.dumps(body).encode())
         owner.fence._bound_facts=(*owner.fence._bound_facts[:9],lambda:None)

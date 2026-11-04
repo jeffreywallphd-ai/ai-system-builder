@@ -1052,3 +1052,26 @@ or staging credit. The saved-source Windows refusal test failed, while its
 unused-file control passed. The versioned mapping qualification report preserves
 both independently reviewed outcomes. Later diagnostic source work has no
 physical qualification yet. Accepted model accuracy and OCR are not rerun.
+
+## Source diagnostic status versions
+
+Negative Source failures now emit the closed nine-field diagnostic v2 with an
+API-specific nullable ntstatus. It retains only the already completed original
+NtCreateFile signed32-bit status as uint32. Win32 last-error is separate. Other
+API/in-flight/unknown/bool/overflow/opaque returns cannot expose a status. No
+Native query, raw exception, path, content, handle or address is added. Strict
+v1 diagnostic reading and normal/default failure bytes remain compatible.
+
+The generic IO decoder keeps its eight-field/depth/frame limits. Only the
+Source decoder admits an exact closed child-v2 diagnostic and validates its
+legacy projection through that same decoder before original actor/header
+checks. Other ninth fields, duplicate/nonfinite values and unknown envelopes
+remain refused. Parent and collector still reject the alternative as failed;
+there is no original-denial, healthy-retirement, cleanup or staging credit.
+
+The fake-ABI Source producer and collector checks are local source evidence.
+No new physical Native trial ran for v2. Earlier failed refusal and passed
+unused-Source control results remain exact historical observations. A status
+does not identify the failed target object. Concrete shared accounting/Core
+and owned cached-generator borrowing still need implementation/qualification.
+Accepted model accuracy and OCR are not rerun.

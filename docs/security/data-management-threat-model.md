@@ -2482,3 +2482,31 @@ nonzero failure, reinterpret Win32-error0 as NT success, or delete retained
 inputs to complete this test. Both one-use effect references are consumed.
 All old evidence, unknown staging charged full12GiB, production denial and
 model/borrower/journal/restart/resource gaps remain unchanged.
+
+### API-specific NTSTATUS diagnostic extension
+
+The private negative Source diagnostic v2 has nine exact fields. Its added
+nullable ntstatus is captured only for the unique original NtCreateFile label
+and an exact signed32-bit return already retained by the original completion
+path. Signed values normalize to uint32 without invoking conversion hooks.
+Other API returns remain only classes; no handle/address or raw exception is
+serialized, and no additional Native query, file operation or retry is issued.
+Immediate Win32-error0 is distinct from NTSTATUS0. Missing or uncertain facts
+remain null. The closed legacy v1 reader remains available for saved evidence.
+
+Focused tests exposed the shared decoder's eight-field object limit. That
+decoder is unchanged. A Source-only fallback admits just the exact child-v2
+error envelope after closed diagnostic validation and validates its eight-field
+legacy projection through the unchanged shared decoder. It gives no other
+object a ninth field, larger frame, deeper nesting or duplicate/nonfinite
+exception. Frozen sequence/nonce/source/deadline and actor admission still run
+against the original owner. This is non-authoritative failed observation data.
+
+Actual fake-ABI Source/collector tests cover signed status, wrong API, in-flight
+and malformed returns, record mutation, legacy compatibility and unchanged
+failed retirement. No physical Native effect occurred in this source checkpoint.
+The original801 denial, target/mapping identity and resource/retirement guards
+remain strict. Existing failed trials and retained inputs are not reclassified
+or deleted. A path/hash/status cannot supply the missing same-file-object proof.
+Production remains unavailable; shared domain/Core/cache/borrower/restart and
+resource qualification, including the unknown full12GiB charge, remain pending.

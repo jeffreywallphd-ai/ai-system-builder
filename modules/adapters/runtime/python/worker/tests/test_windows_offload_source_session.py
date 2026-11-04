@@ -733,7 +733,7 @@ class FailureDiagnosticTests(unittest.TestCase):
         self.assertEqual(value['result_class'],'nonzero');self.assertEqual(value['win32_error'],5)
         self.assertEqual(value['error_kind'],'other')
         text=json.dumps(value);self.assertNotIn('987654321',text);self.assertNotIn('private',text)
-        self.assertEqual(len(value),8)
+        self.assertEqual(len(value),9)
 
     def test_hostile_exception_metaclass_cannot_run_classification_hooks(self):
         calls=[]
@@ -816,6 +816,82 @@ class FailureDiagnosticTests(unittest.TestCase):
         attempt({**reply,'body':{'state':'source-prepared'}})
         self.assertIsNone(actor.child_diagnostic);self.assertIsNone(actor.denial)
         self.assertEqual(len(writes),2)
+
+
+class NtStatusFailureDiagnosticTests(unittest.TestCase):
+    def setUp(self):
+        FailureDiagnosticTests.setUp(self)
+
+    def observed(self, value, *, api='open-file', returned=True):
+        source._failure_native(self.owner,api,returned,value,0)
+        return source._read_failure(self.owner,OffloadAdmissionError())
+
+    def test_known_signed_nt_status_is_retained_separately_from_win32_error(self):
+        for native,expected in ((-1073741757,0xc0000043),(-2147483648,0x80000000),
+                                (0,0),(259,259),(2147483647,2147483647)):
+            with self.subTest(native=native):
+                value=self.observed(native)
+                self.assertEqual(value['schema_version'],'source-failure-diagnostic-v2')
+                self.assertEqual(value['ntstatus'],expected)
+                self.assertEqual(value['win32_error'],0)
+                self.assertEqual(len(value),9)
+
+    def test_no_status_from_other_api_inflight_bool_overflow_or_opaque_return(self):
+        class Opaque:
+            def __int__(self):raise AssertionError('conversion hook')
+            def __str__(self):raise AssertionError('display hook')
+        for api,returned,native in (
+                ('close-handle',True,-1073741757),('read-file',True,-1073741757),
+                ('unknown',True,-1073741757),('open-file',False,-1073741757),
+                ('open-file',True,True),('open-file',True,2**31),
+                ('open-file',True,-2**31-1),('open-file',True,None),('open-file',True,Opaque())):
+            with self.subTest(api=api,returned=returned,kind=type(native).__name__):
+                self.assertIsNone(self.observed(native,api=api,returned=returned)['ntstatus'])
+
+    def test_closed_versions_reject_status_confusion_and_keep_legacy_reader(self):
+        value=self.observed(-1073741757)
+        legacy={k:v for k,v in value.items()if k!='ntstatus'}
+        legacy['schema_version']='source-failure-diagnostic-v1'
+        self.assertEqual(source._failure_diagnostic(legacy),legacy)
+        for changes in ({'ntstatus':True},{'ntstatus':-1},{'ntstatus':2**32},
+                        {'api':'read-file'},{'returned':False},{'result_class':'zero'},
+                        {'schema_version':'source-failure-diagnostic-v1'},
+                        {'schema_version':'source-failure-diagnostic-v3'}, {'extra':0}):
+            with self.subTest(fields=tuple(changes)),self.assertRaises(OffloadAdmissionError):
+                source._failure_diagnostic({**value,**changes})
+        missing={k:v for k,v in value.items()if k!='ntstatus'}
+        with self.assertRaises(OffloadAdmissionError):source._failure_diagnostic(missing)
+
+    def test_status_snapshot_does_not_change_when_next_call_is_inflight(self):
+        old=self.observed(-1073741757)
+        source._failure_native(self.owner,'read-file')
+        current=source._read_failure(self.owner,OffloadAdmissionError())
+        self.assertEqual(old['ntstatus'],0xc0000043)
+        self.assertIsNone(current['ntstatus'])
+
+    def test_only_closed_child_v2_frame_extends_the_shared_eight_field_bound(self):
+        diagnostic={**self.observed(-1073741757),'actor':'child'}
+        value={'v':2,'nonce':'a'*32,'source_digest':'b'*64,'deadline_ns':123456789,
+               'seq':0,'op':'prepare-source','body':{'error':'source-session-unavailable',
+               'source_retired':False,'diagnostic':diagnostic}}
+        encode=lambda v:json.dumps(v,separators=(',',':')).encode()
+        raw=encode(value)
+        with self.assertRaises(OffloadAdmissionError):source.io._decode(raw)
+        self.assertEqual(source._decode(raw),value)
+        source._failure_message(source._decode(raw),'a'*32,'b'*64,123456789)
+        for changed in (
+                {**value,'extra':None},
+                {**value,'body':{**value['body'],'extra':None}},
+                {**value,'body':{**value['body'],'source_retired':True}},
+                {**value,'body':{**value['body'],'diagnostic':{**diagnostic,'extra':0}}},
+                {**value,'body':{**value['body'],'diagnostic':{**diagnostic,'actor':'parent'}}},
+                {**value,'body':{str(i):i for i in range(9)}}):
+            with self.subTest(body_keys=tuple(changed['body'])),self.assertRaises(OffloadAdmissionError):
+                source._decode(encode(changed))
+        duplicate=raw.replace(b'"ntstatus":3221225539',b'"ntstatus":3221225539,"ntstatus":0')
+        self.assertNotEqual(duplicate,raw)
+        with self.assertRaises(OffloadAdmissionError):source._decode(duplicate)
+        with self.assertRaises(OffloadAdmissionError):source._decode(b'x'*4097)
 
 
 if __name__ == '__main__':unittest.main()
