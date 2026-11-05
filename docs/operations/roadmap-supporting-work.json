@@ -10100,6 +10100,82 @@
         "Token and model-default checks, desktop checks and physical app restart remain pending. The later failed token test is preserved separately.",
         "No provider operation, model loading, model accuracy or text-recognition check was performed. Production worker, low-memory restart and final combined checks remain separate."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "fix-settings-unconfigured-host-expectations",
+      "work_criteria": [
+        "saved-setting-oracle-matches-real-ui",
+        "faithful-failed-observation-and-next-action",
+        "safe-exact-source-coverage-checkpoint"
+      ],
+      "receipt_digest": "8960841f84914b9caac6677361b43fe8c738baa9fabfeadbc4fe154ba787a58a",
+      "review_digest": "6525b6bf2f09ac68e1092e7c5d48ea06831cc69fa3fbc970f9d359c9ea58de9f",
+      "scope": "The Settings test now matches an empty saved model setting. The real component passed empty, saved and cleared state checks. The original nine browser phases and existing security controls remain required.",
+      "limitations": [
+        "This records reviewed source and component tests at the saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Settings report records the fresh browser case. Desktop, physical restart, production worker and low-memory restart checks remain pending.",
+        "No provider, model accuracy or text-recognition check was rerun. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-settings-unconfigured-host-expectations",
+      "work_criteria": [
+        "saved-setting-oracle-matches-real-ui",
+        "faithful-failed-observation-and-next-action",
+        "safe-exact-source-coverage-checkpoint"
+      ],
+      "receipt_digest": "8960841f84914b9caac6677361b43fe8c738baa9fabfeadbc4fe154ba787a58a",
+      "review_digest": "6525b6bf2f09ac68e1092e7c5d48ea06831cc69fa3fbc970f9d359c9ea58de9f",
+      "scope": "The Settings test now matches an empty saved model setting. The real component passed empty, saved and cleared state checks. The original nine browser phases and existing security controls remain required.",
+      "limitations": [
+        "This records reviewed source and component tests at the saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Settings report records the fresh browser case. Desktop, physical restart, production worker and low-memory restart checks remain pending.",
+        "No provider, model accuracy or text-recognition check was rerun. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "fix-settings-unconfigured-host-expectations",
+      "work_criteria": [
+        "saved-setting-oracle-matches-real-ui",
+        "faithful-failed-observation-and-next-action",
+        "safe-exact-source-coverage-checkpoint"
+      ],
+      "receipt_digest": "8960841f84914b9caac6677361b43fe8c738baa9fabfeadbc4fe154ba787a58a",
+      "review_digest": "6525b6bf2f09ac68e1092e7c5d48ea06831cc69fa3fbc970f9d359c9ea58de9f",
+      "scope": "The Settings test now matches an empty saved model setting. The real component passed empty, saved and cleared state checks. The original nine browser phases and existing security controls remain required.",
+      "limitations": [
+        "This records reviewed source and component tests at the saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Settings report records the fresh browser case. Desktop, physical restart, production worker and low-memory restart checks remain pending.",
+        "No provider, model accuracy or text-recognition check was rerun. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "fix-settings-unconfigured-host-expectations",
+      "work_criteria": [
+        "saved-setting-oracle-matches-real-ui",
+        "faithful-failed-observation-and-next-action",
+        "safe-exact-source-coverage-checkpoint"
+      ],
+      "receipt_digest": "8960841f84914b9caac6677361b43fe8c738baa9fabfeadbc4fe154ba787a58a",
+      "review_digest": "6525b6bf2f09ac68e1092e7c5d48ea06831cc69fa3fbc970f9d359c9ea58de9f",
+      "scope": "The Settings test now matches an empty saved model setting. The real component passed empty, saved and cleared state checks. The original nine browser phases and existing security controls remain required.",
+      "limitations": [
+        "This records reviewed source and component tests at the saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Settings report records the fresh browser case. Desktop, physical restart, production worker and low-memory restart checks remain pending.",
+        "No provider, model accuracy or text-recognition check was rerun. Full-system testing remains deferred."
+      ]
     }
   ]
 }

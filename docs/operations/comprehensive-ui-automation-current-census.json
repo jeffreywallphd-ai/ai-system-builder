@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "d912fb70da8cda8b723187126c31a0e9da850955",
+ "source_baseline": "50598508c3c53cc22ef249736448d24c9cf8ba26",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -13864,7 +13864,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "1123885b23b145587de35375abe9eb1566196bdcffa9f43fae6f1e8c1d5dee71"
+   "committed_sha256": "f678bd76d838cb5c541a9a87b5a4f0ac052b17909c905e6828366439b6258ffb"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
@@ -13900,7 +13900,7 @@
     "assertionExamples": [],
     "modifiers": []
    },
-   "committed_sha256": "4f5bc720af17a7680cac25a374a3bdd43577184bd4f71d6f8c46d455aa3c8b90"
+   "committed_sha256": "4f35a506f0226de7ee0a1c283859ee60765c6cae8b33dd3263987c3c6f7a6260"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",

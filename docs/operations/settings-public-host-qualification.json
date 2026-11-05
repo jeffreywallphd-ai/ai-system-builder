@@ -4,7 +4,7 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The public Settings browser case passed. The separate token and model-default case failed during its initial-value check. A focused regression found a mismatch in the test expectations. The agent is correcting that test. All test-owned processes and handles closed; no model was loaded.",
+  "summary": "The token and model-setting browser test passed all nine steps on the corrected source. The earlier public Settings test remains passed at its recorded version. All test processes stopped. Desktop and wider technical checks remain pending.",
   "observed_source": {
     "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
     "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786",
@@ -42,6 +42,14 @@
       "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
       "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
       "source_digest": "46aaca6f496d69f3453ae4ae75fd1c4d3e810c1dbbd5fe1059bcdb422e234988"
+    },
+    {
+      "work_id": "fix-settings-unconfigured-host-expectations",
+      "commit": "50598508c3c53cc22ef249736448d24c9cf8ba26",
+      "at": "2026-11-05T08:06:57Z",
+      "receipt_digest": "8960841f84914b9caac6677361b43fe8c738baa9fabfeadbc4fe154ba787a58a",
+      "review_digest": "6525b6bf2f09ac68e1092e7c5d48ea06831cc69fa3fbc970f9d359c9ea58de9f",
+      "source_digest": "df58fc921f3b57449f0e1a87bf60d5155a33bd83be8a84169c981d41c8589d7e"
     }
   ],
   "attempts": [
@@ -282,11 +290,78 @@
         "settings-setup-closed": "5e66f8f9a456072242f14b49d5234e73591433be37990b6d0c505841c83c2135",
         "settings-runner-result": "8230f941678ad779d61932812d8ca1517c9a1b531eb21f689724590d6276aeda"
       }
+    },
+    {
+      "run_id": "d35763d0615147d29a1eb1fe44560b4d",
+      "host": "thin-chrome",
+      "scenario": "secret-defaults",
+      "status": "passed",
+      "observed_source": {
+        "source_digest": "df58fc921f3b57449f0e1a87bf60d5155a33bd83be8a84169c981d41c8589d7e",
+        "source_revision": "source.52a39c45f86c8c1423b03d67149688e7141fb4d33f11c16e31881060e4797194",
+        "commit": "50598508c3c53cc22ef249736448d24c9cf8ba26"
+      },
+      "selected_tests": 1,
+      "finished_tests": 1,
+      "global_errors": 0,
+      "case_status": "passed",
+      "case_retry": 0,
+      "case_errors": 0,
+      "journey_attachment_present": true,
+      "root_exit_code": 0,
+      "ui_qualification_passed": true,
+      "qualified_scope": "One corrected thin-client token and model-default case at its recorded source only. Desktop, physical app restart, production workers, model/provider operations, native offload and parent qualification remain pending.",
+      "phases": [
+        "settings-opened",
+        "fresh-values-confirmed",
+        "secret-save-confirmed",
+        "secret-reload-masked",
+        "model-default-save-confirmed",
+        "model-default-reload-confirmed",
+        "secret-clear-confirmed",
+        "model-default-clear-confirmed",
+        "clear-reload-confirmed"
+      ],
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "cleanup": {
+        "confirmed": true,
+        "all_owned_handles_closed": true,
+        "active_owned_processes": 0,
+        "total_owned_processes": 27,
+        "outer_job_forced_termination": false,
+        "server_shutdown_acknowledged": true,
+        "test_credential_removed": true,
+        "source_unchanged": true,
+        "streams_complete": true,
+        "pending_and_live_registries_clear": true
+      },
+      "limits": {
+        "process_bytes": 1073741824,
+        "job_bytes": 3221225472,
+        "members": 32,
+        "seconds": 420
+      },
+      "observed_peaks": {
+        "process_commit_bytes": 541659136,
+        "job_commit_bytes": 2508402688
+      },
+      "evidence_digests": {
+        "native_observation": "8fc5599c16a660070d86690722620f7e39afbe3fb23f8a43160257913dee79a6",
+        "observed_result": "1f16431876ed9ab79173551271c28ec8c5165b2e072a1d46e9399e8aafe3f68b",
+        "effect_reference": "9872de75b818adf1ace94c4fa5b286e7d18065ff950fd3281652baf70c07f1e3",
+        "independent_outcome_reference": "c87da3bfccd8970eda02eff68daf3ec67b5317fec0aab97472138a8e25cf78cc",
+        "independent_outcome_report": "7ce91c344b755c0fd4ad9192f416221a565d0e59a6717287d655fcc8dbca5ae2",
+        "settings-setup-started": "009e23e48b2044520f7fa75fdddbd49c513d8050829f078b47df91cfac005540",
+        "settings-setup-ready": "8801b32c8d1729aa5f483192987a2bf0acb46005c7b70601d51caf5bd5021a02",
+        "settings-setup-closed": "b6f991f771317b2260e36b5c9296d364331c6c8c0efc567e4c5eef7dbb887e54",
+        "settings-runner-result": "c000ca67851f1466fe387d928b6a3cbdb0b2f6be2e899ed690a46a2789b429d6"
+      }
     }
   ],
-  "next_action": "The agent will review and commit the corrected Settings test, then run one fresh token and model-default case. The earlier public Settings pass stays closed. Desktop and wider technical checks remain pending. No user action is needed.",
+  "next_action": "The agent will move to the next pending roadmap feature. Earlier failed attempts remain in history. Full-system testing stays deferred until open feature work is ready. No user action is needed.",
   "scope_limits": [
-    "The public browser case passed. The later token and model-default case failed and remains failed. A source test correction supplies no actual host or parent pass.",
+    "The public browser case passed at its recorded source. The fresh token and model-default case passed on the corrected source. Earlier failures remain recorded. Desktop and final current-source qualification remain pending.",
     "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
     "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
     "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
@@ -294,9 +369,9 @@
   ],
   "parent_qualification_granted": false,
   "latest_observed_source": {
-    "commit": "8999fc5b2373c92ee05aa7b8e748fbf80c391bff",
-    "source_digest": "c2a1b8706486bd0eabc8e5de5978fcc3ffa67743a33f7624bdaa27903b9a63b0",
-    "source_revision": "source.3db80689a233a5cde9d5e85101af1bff0651f4d31cb3ebac7cf6fdb50ae46d3f"
+    "source_digest": "df58fc921f3b57449f0e1a87bf60d5155a33bd83be8a84169c981d41c8589d7e",
+    "source_revision": "source.52a39c45f86c8c1423b03d67149688e7141fb4d33f11c16e31881060e4797194",
+    "commit": "50598508c3c53cc22ef249736448d24c9cf8ba26"
   },
   "scope_history": [
     {
@@ -313,6 +388,16 @@
       "last_run_id": "aa18655ad47c4a6589f40b82d718a251",
       "scope_limits": [
         "The latest thin-client public Settings case passed. Earlier failures remain recorded. Desktop, other Settings and parent checks remain pending.",
+        "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
+        "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
+        "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
+        "The shared full-system campaign remains pending until open feature work is ready."
+      ]
+    },
+    {
+      "last_run_id": "107844ebeeb44ac99aa0dacf00d1bddd",
+      "scope_limits": [
+        "The public browser case passed. The later token and model-default case failed and remains failed. A source test correction supplies no actual host or parent pass.",
         "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
         "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
         "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
