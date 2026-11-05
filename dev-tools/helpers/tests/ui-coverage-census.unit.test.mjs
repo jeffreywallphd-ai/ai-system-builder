@@ -10,8 +10,8 @@ const file = "dev-tools/example.unit.test.ts", host = "dev-tools/scripts/qualifi
 const code = Buffer.from('import {test,expect} from "fixture"; test("retains scoped records",()=>{expect(1).toBe(1)});');
 const inventoryFile = "modules/contracts/example.ts", inventory = Buffer.from('export const TYPES = ["first", "second"] as const;');
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
-// Immutable full-commit Git objects are read once per test invocation. Keep
-// fresh defensive bytes for every assertion; never cache current working files.
+// Cache recent immutable Git witnesses without making the number of tested
+// versions a memory limit. Never cache current working files.
 const historicalGitBytes = new Map();
 let historicalGitTotalBytes = 0;
 function historicalSource(commit, source) {
@@ -19,15 +19,21 @@ function historicalSource(commit, source) {
   censusPath(source);
   const key = JSON.stringify([commit, source]);
   let bytes = historicalGitBytes.get(key);
-  if (!bytes) {
-    assert(historicalGitBytes.size < 64);
+  if (bytes) {
+    historicalGitBytes.delete(key);
+  } else {
     const original = execFileSync("git", ["show", `${commit}:${source}`], { timeout: 5000, maxBuffer: CENSUS_LIMITS.sourceBytes });
     assert(original.length <= CENSUS_LIMITS.sourceBytes);
-    assert(historicalGitTotalBytes + original.length <= CENSUS_LIMITS.totalBytes);
+    while (historicalGitBytes.size >= 64 || historicalGitTotalBytes + original.length > CENSUS_LIMITS.totalBytes) {
+      const oldest = historicalGitBytes.keys().next().value;
+      assert(oldest !== undefined);
+      historicalGitTotalBytes -= historicalGitBytes.get(oldest).length;
+      historicalGitBytes.delete(oldest);
+    }
     bytes = Buffer.from(original);
     historicalGitTotalBytes += bytes.length;
-    historicalGitBytes.set(key, bytes);
   }
+  historicalGitBytes.set(key, bytes);
   return Buffer.from(bytes);
 }
 
@@ -293,6 +299,11 @@ const pendingContrastV2Diagnostics = Object.freeze([
   { path: "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts", baseline: "abdc24509d7cec4aa7013fe5ec369fecb5cf95f0",
     committed: "4e704f91748a5a0f742075c7e166bc74df49525f5f3a960bffde45db5cf0bfd8", candidate: "1da80cf54e7f25a032ad3381549c37e16b7464e529f2bae63dd3f1752a013cea", facts_sha256: "472fe262d3356e392872f09387f98f3d969fae960c09f4c6a28494351956fe0f" },
 ].map(Object.freeze));
+const pendingContrastRegionDefinitions = Object.freeze([
+  {"path":"dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts","baseline":"6d0e47cdf158622844df28dc9583fe610c6ab096","committed":"6b2a80ecee2b8d140e0a9f5e36abd4ff442a1f7666a0a08720a775d7b4e4bb0a","candidate":"58755f977afe80b299dd54295588b4ad96968a87db0d295fa91d0aba7b8d1c31","facts_sha256":"5d46e18a141d40d1f2d14c6154bd2f95c26101248459dcca7b3228776fe65a2d"},
+  {"path":"dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts","baseline":"6d0e47cdf158622844df28dc9583fe610c6ab096","committed":"95edaff0b97824d7ffce1bfdedb2b2fa973fc1c498d497a8f56b71d8528fedf4","candidate":"23c94fc3ab45639929a4d18ce137b775335c49d66abdda0969cfbf947a40ba09","facts_sha256":"d270d691741f71c4fe83f31b07a3600b5c454429ff326a965f87c2d571c13ed2"},
+  {"path":"dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts","baseline":"6d0e47cdf158622844df28dc9583fe610c6ab096","committed":"1da80cf54e7f25a032ad3381549c37e16b7464e529f2bae63dd3f1752a013cea","candidate":"a88771a6b8d8eb54502192149ded65efe2c10a610b7aa33f394d1940a582426e","facts_sha256":"4788d544ebe034e457f8d9c9f73353a678dc6403036d6c5bc170dc3f8581d756"},
+].map(Object.freeze));
 function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDiagnostics) {
   assert.equal(map.source_baseline,definitions[0].baseline);
   const expected=[];
@@ -309,6 +320,7 @@ function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDia
   return {...result,gaps:result.gaps.filter(g=>!owned(g))};
 }
 function assertCurrentSourceDrift(map, result) {
+  if(map.source_baseline===pendingContrastRegionDefinitions[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastRegionDefinitions);
   if(map.source_baseline===pendingContrastV2Diagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastV2Diagnostics);
   if(map.source_baseline===pendingContrastDiagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result);
   if(map.source_baseline===pendingSettingsEmptyDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsEmptyDefinitions[1].path))result=assertSettingsEmptySourceDrift(map,result);
@@ -850,7 +862,9 @@ for(const [title,readMap,definitions]of[
   ["pending contrast diagnostic facts reject forged future missing duplicate and unrelated drift",
     ()=>JSON.parse(historicalSource(pendingContrastV2Diagnostics[0].baseline,"docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastDiagnostics],
   ["pending v2 contrast diagnostic facts reject forged future missing duplicate and unrelated drift",
-    ()=>JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastV2Diagnostics],
+    ()=>JSON.parse(historicalSource(pendingContrastRegionDefinitions[0].baseline,"docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastV2Diagnostics],
+  ["pending contrast region definitions reject forged future missing duplicate and unrelated drift",
+    ()=>JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastRegionDefinitions],
 ])test(title,()=>{
   const map=readMap();
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};

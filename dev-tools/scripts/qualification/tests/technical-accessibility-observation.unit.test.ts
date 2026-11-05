@@ -53,8 +53,48 @@ describe("closed failed-contrast diagnostic projection", () => {
     if (kind === "non-engine-contributor") value = { ...value, reasons: { ...diagnosticV2().reasons, fgOnBgColor: 0 } };
     if (kind === "successful-only-reason") value = { ...value, reasons: { ...diagnosticV2().reasons, hidden: 0 } };
     if (kind === "oversized-partition") value = { ...value, reasons: { ...diagnosticV2().reasons, pseudoContent: 2 } };
-    if (kind === "future-version") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v3" };
+    if (kind === "future-version") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v4" };
     expect(() => readContrastRetryDiagnostics(value)).toThrow("Invalid contrast retry diagnostics.");
+  });
+  it("keeps the exact v2 wire shape", () => {
+    const wire = JSON.stringify(diagnosticV2());
+    expect(JSON.stringify(readContrastRetryDiagnostics(JSON.parse(wire)))).toBe(wire);
+  });
+  const regionFixture = () => {
+    const v2 = diagnosticV2();
+    const emptyRegions = () => ({ glossaryHelp: 0, notificationBadge: 0, workspaceControl: 0, pageDashboard: 0, shellMenu: 0,
+      shellHeader: 0, shellSidebar: 0, homeCard: 0, homeContent: 0, other: 0 });
+    const reasonRegions = Object.fromEntries(Object.keys(v2.reasons).map(reason => [reason, emptyRegions()]));
+    reasonRegions.pseudoContent!.homeContent = 1;
+    return { ...v2, schemaVersion: "contrast-retry-diagnostics-v3", reasonRegions };
+  };
+  it("accepts an exact bounded region partition without changing core qualification", () => {
+    const input = regionFixture();
+    const core = { ...base(), incomplete: [{ rule: "color-contrast", nodes: 1 }], retries: { attempted: 1, passed: 0 } };
+    const result = readTechnicalAccessibilityObservation({ audit: core, diagnostics: input });
+    expect(result.audit.status).toBe("failed");
+    expect(result.audit.failures).toContain("unresolved-contrast-retry");
+    const diagnostic = result.diagnostics;
+    expect(diagnostic.schemaVersion).toBe("contrast-retry-diagnostics-v3");
+    if (diagnostic.schemaVersion !== "contrast-retry-diagnostics-v3") throw new Error();
+    expect(diagnostic.reasonRegions.pseudoContent.homeContent).toBe(1);
+    input.reasonRegions.pseudoContent!.homeContent = 0;
+    expect(diagnostic.reasonRegions.pseudoContent.homeContent).toBe(1);
+    expect(Object.isFrozen(diagnostic.reasonRegions.pseudoContent)).toBe(true);
+    expect(Object.isFrozen(diagnostic.reasonRegions)).toBe(true);
+  });
+  it.each(["foreign", "missing", "partition", "mixed-version", "getter", "proxy"])("rejects invalid region data: %s", mode => {
+    const input = regionFixture();
+    let hooks = 0;
+    const row = input.reasonRegions.pseudoContent!;
+    if (mode === "foreign") Object.assign(row, { "synthetic-private-selector": 0 });
+    if (mode === "missing") Reflect.deleteProperty(row, "other");
+    if (mode === "partition") row.glossaryHelp = 1;
+    if (mode === "mixed-version") input.schemaVersion = "contrast-retry-diagnostics-v2";
+    if (mode === "getter") Object.defineProperty(row, "homeContent", { get() { hooks++; return 1; } });
+    if (mode === "proxy") input.reasonRegions.pseudoContent = new Proxy(row, { ownKeys() { hooks++; return []; } });
+    expect(() => readContrastRetryDiagnostics(input)).toThrow("Invalid contrast retry diagnostics.");
+    expect(hooks).toBe(0);
   });
   it.each(["getter", "proxy"])("rejects a current-version %s without reading private hooks", kind => {
     const input = diagnosticV2(); let hooks = 0;
@@ -355,6 +395,40 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     expect(value.diagnostics.hints).toMatchObject({ backgroundImage: 1, reducedOpacity: 1, clippedAncestor: 1, ancestorLimit: 0, reasonScanLimit: 0 });
     expect(Object.isFrozen(value.diagnostics.hints)).toBe(true);
     expect(JSON.stringify(value)).not.toMatch(/synthetic-private|Synthetic private|selector|messageKey|fgColor|linear-gradient/);
+  });
+  it("pairs actual retry reasons with the nearest fixed region without disclosing target details", async () => {
+    const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main);
+    main.innerHTML = '<header class="ui-shell__header"><div class="ui-glossary-hint"><span id="synthetic-private-1">x</span></div></header>'
+      + '<section class="home-page"><div class="page-dashboard"><span id="synthetic-private-2">4</span></div></section>'
+      + '<div class="synthetic-private-region"><span id="synthetic-private-3">Synthetic private text</span></div>';
+    const reasons = ["shortTextContent", "elmPartiallyObscuring", "synthetic-private-reason"];
+    const targets = reasons.map((_, index) => ({ target: [`#synthetic-private-${index + 1}`] }));
+    for (const item of targets) {
+      const element = document.querySelector(item.target[0]!)!;
+      Object.defineProperty(element, "scrollIntoView", { value: vi.fn() });
+      Object.defineProperty(element, "getClientRects", { value: () => [{ width: 1, height: 1 }] });
+      Object.defineProperty(element, "getBoundingClientRect", { value: () => ({ width: 1, height: 1 }) });
+    }
+    let calls = 0;
+    install(async context => {
+      const retry = calls++ - 1;
+      if (retry < 0) return { ...result(), incomplete: [{ id: "color-contrast", nodes: targets }] };
+      expect(context).toEqual({ include: [targets[retry]!.target] });
+      const data = { messageKey: reasons[retry], fgColor: "synthetic-private-color" };
+      return { ...result(), incomplete: [{ id: "color-contrast", nodes: [{ ...targets[retry], any: [{ id: "color-contrast", data }] }] }] };
+    });
+    const value = await collectDocumentAccessibilityObservation(page, 1440);
+    expect(value.audit.status).toBe("failed");
+    expect(calls).toBe(4);
+    expect(value.diagnostics).toMatchObject({
+      schemaVersion: "contrast-retry-diagnostics-v3",
+      reasonRegions: {
+        shortTextContent: { glossaryHelp: 1, shellHeader: 0 },
+        elmPartiallyObscuring: { pageDashboard: 1, homeContent: 0 },
+        other: { other: 1 },
+      },
+    });
+    expect(JSON.stringify(value)).not.toMatch(/synthetic-private|Synthetic private|ui-shell|page-dashboard|messageKey|fgColor/);
   });
   it.each(["violation", "unresolved", "noPositiveSample"] as const)("partitions the actual %s retry without adding an audit, scroll or wait", async outcome => {
     const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main); main.append(document.querySelector(".system-builder")!);

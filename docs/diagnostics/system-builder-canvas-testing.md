@@ -473,11 +473,12 @@ separate. Accepted model accuracy and OCR are not repeated for this update.
 
 ## Failed contrast measurement diagnostics
 
-New collectors emit `contrast-retry-diagnostics-v2`. Its 16 fixed reason keys
+New collectors emit `contrast-retry-diagnostics-v3`. The 16 fixed reason keys introduced in v2
 include the installed engine's emoji-only, pseudo-element, complex-shadow and
 shadow-contribution cases. The v1 reader, original 11-key constant and serialized
-v1 shape remain compatible. Each version requires its own exact keys; mixed,
-missing, unknown or excessive values fail. Saved v1 reports are not rewritten.
+v1 shape remain compatible. The v2 reader retains its exact aggregate shape.
+Each version requires its own exact keys; mixed, missing, unknown or excessive
+values fail. Saved v1 and v2 reports are not rewritten.
 
 Home reading panels use opaque palette surfaces, and readable cards no longer
 carry the large decorative pseudo-element. Accent icons, actions and responsive
@@ -500,6 +501,11 @@ fields and attachments. Missing diagnostics do not make an audit pass.
 - Engine reason counts keep only known `color-contrast` check reason codes.
   Each failed retry contributes one recognized reason, or `other`. These are
   engine-reported hints, not proof of the cause.
+- Region counts assign each failed retry to its nearest fixed UI region, such as
+  the glossary help, page summary, shell or Home content. If no known region
+  is found, the retry is counted as other. For each engine reason, the region
+  counts must add up to the original reason count. A region identifies where
+  the target was found; it does not identify what made the measurement fail.
 - Style hints count background images, reduced opacity, clipping, non-RGB
   computed text colors and truncated inspection. Counts contain no CSS values.
   The collector inspects at most 64 ancestors and 64 node/check slots per failed
@@ -526,8 +532,17 @@ tests reject forged, future, missing, duplicate or unrelated versions. The map
 still records 39 unrun host families, seven conditional modifier gaps, one
 pending feature check and no execution or parent pass.
 
-A fresh, separately reviewed host run must use these diagnostics to check the
-Home repair and identify any remaining unresolved measurement. Preserve
+The [contrast region census history](../operations/comprehensive-ui-automation-contrast-regions-census-history.json)
+preserves the preceding v2 map and its three replaced source rows. All earlier
+history remains intact. The new map records three current definitions and keeps
+the same bounds and open execution gaps. The history test keeps its existing
+cache limits and evicts old entries when it checks more versions.
+
+A separately reviewed browser run recorded 60 direct passing samples and two
+unresolved retries at its first audit. The engine tagged one as partial
+obscuring and one as very short text. No contrast violation was measured, and
+no full audit or operational phase passed. A later reviewed feature check can
+use the fixed region counts to narrow the investigation. Preserve
 the earlier failed runs and every genuine remaining qualification gap. Keep
 completed accuracy and OCR checks closed. Full-system testing remains deferred
 until the open implementation work is ready.

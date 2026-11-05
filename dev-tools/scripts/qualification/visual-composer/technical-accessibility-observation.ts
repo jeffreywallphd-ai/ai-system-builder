@@ -40,6 +40,24 @@ export const CONTRAST_RETRY_REASON_IDS = Object.freeze(["bgGradient", "bgImage",
   "elmPartiallyObscured", "bgOverlap", "colorParse", "equalRatio", "shortTextContent", "other"] as const);
 export const CONTRAST_RETRY_V2_REASON_IDS = Object.freeze([...CONTRAST_RETRY_REASON_IDS,
   "nonBmp", "pseudoContent", "complexTextShadows", "shadowOnBgColor", "fgOnShadowColor"] as const);
+// These source-owned markers classify location, never user labels or the reason for obscuring.
+export const CONTRAST_RETRY_REGION_MARKERS = Object.freeze({
+  glossaryHelp: "ui-glossary-hint",
+  notificationBadge: "ui-notification__badge",
+  workspaceControl: "workspace-switcher--header",
+  pageDashboard: "page-dashboard",
+  shellMenu: "ui-shell__menu",
+  shellHeader: "ui-shell__header",
+  shellSidebar: "ui-shell__sidebar",
+  homeCard: "home-area-card",
+  homeContent: "home-page",
+} as const);
+type ContrastRetryRegion = keyof typeof CONTRAST_RETRY_REGION_MARKERS | "other";
+const CONTRAST_RETRY_REGION_IDS: readonly ContrastRetryRegion[] = Object.freeze([
+  ...Object.keys(CONTRAST_RETRY_REGION_MARKERS) as Array<keyof typeof CONTRAST_RETRY_REGION_MARKERS>, "other",
+]);
+type ContrastRetryV2Reason = typeof CONTRAST_RETRY_V2_REASON_IDS[number];
+type ContrastRetryReasonRegions = Readonly<Record<ContrastRetryV2Reason, Readonly<Record<ContrastRetryRegion, number>>>>;
 export const CONTRAST_RETRY_HINT_IDS = Object.freeze(["backgroundImage", "reducedOpacity", "clippedAncestor", "nonRgbColor", "ancestorLimit", "reasonScanLimit"] as const);
 const CONTRAST_RETRY_OUTCOMES = ["violation", "unresolved", "noPositiveSample"] as const;
 interface ContrastRetryCounts {
@@ -49,28 +67,40 @@ interface ContrastRetryCounts {
 }
 export type ContrastRetryDiagnostics = ContrastRetryCounts & (
   { readonly schemaVersion: "contrast-retry-diagnostics-v1"; readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_REASON_IDS[number], number>> }
-  | { readonly schemaVersion: "contrast-retry-diagnostics-v2"; readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_V2_REASON_IDS[number], number>> }
+  | { readonly schemaVersion: "contrast-retry-diagnostics-v2"; readonly reasons: Readonly<Record<ContrastRetryV2Reason, number>> }
+  | { readonly schemaVersion: "contrast-retry-diagnostics-v3"; readonly reasons: Readonly<Record<ContrastRetryV2Reason, number>>;
+      readonly reasonRegions: ContrastRetryReasonRegions }
 );
 /** A diagnostic projection supplies no accessibility status or qualification. */
 export function readContrastRetryDiagnostics(value: unknown): ContrastRetryDiagnostics {
   try {
-    const data = record(value, ["schemaVersion", "attempted", "passed", "outcomes", "reasons", "hints"]);
-    if (data.schemaVersion !== "contrast-retry-diagnostics-v1" && data.schemaVersion !== "contrast-retry-diagnostics-v2") throw new Error();
+    if (!value || typeof value !== "object" || types.isProxy(value) || Object.getPrototypeOf(value) !== Object.prototype) throw new Error();
+    const version: unknown = Object.getOwnPropertyDescriptor(value, "schemaVersion")?.value;
+    if (version !== "contrast-retry-diagnostics-v1" && version !== "contrast-retry-diagnostics-v2" && version !== "contrast-retry-diagnostics-v3") throw new Error();
+    const keys = ["schemaVersion", "attempted", "passed", "outcomes", "reasons", "hints"];
+    const data = record(value, version === "contrast-retry-diagnostics-v3" ? [...keys, "reasonRegions"] : keys);
     const attempted = count(data.attempted, ACCESSIBILITY_RETRY_NODE_LIMIT), passed = count(data.passed, attempted), failed = attempted - passed;
-    function counters<K extends string>(value: unknown, keys: readonly K[]) {
+    function counters<K extends string>(value: unknown, keys: readonly K[], limit = failed) {
       const fields = record(value, keys);
-      return Object.freeze(Object.fromEntries(keys.map(key => [key, count(fields[key], failed)]))) as Readonly<Record<K, number>>;
+      return Object.freeze(Object.fromEntries(keys.map(key => [key, count(fields[key], limit)]))) as Readonly<Record<K, number>>;
     }
     const outcomes = counters(data.outcomes, CONTRAST_RETRY_OUTCOMES), hints = counters(data.hints, CONTRAST_RETRY_HINT_IDS);
     if (Object.values(outcomes).reduce((a, b) => a + b, 0) !== failed) throw new Error();
-    function versioned<V extends "contrast-retry-diagnostics-v1" | "contrast-retry-diagnostics-v2", K extends string>(schemaVersion: V, keys: readonly K[]) {
+    function versioned<V extends ContrastRetryDiagnostics["schemaVersion"], K extends string>(schemaVersion: V, keys: readonly K[]) {
       const reasons = counters(data.reasons, keys);
       if (keys.reduce((sum, key) => sum + reasons[key], 0) !== failed) throw new Error();
       return Object.freeze({ schemaVersion, attempted, passed, outcomes, reasons, hints });
     }
-    return data.schemaVersion === "contrast-retry-diagnostics-v1"
-      ? versioned("contrast-retry-diagnostics-v1", CONTRAST_RETRY_REASON_IDS)
-      : versioned("contrast-retry-diagnostics-v2", CONTRAST_RETRY_V2_REASON_IDS);
+    if (version === "contrast-retry-diagnostics-v1") return versioned(version, CONTRAST_RETRY_REASON_IDS);
+    if (version === "contrast-retry-diagnostics-v2") return versioned(version, CONTRAST_RETRY_V2_REASON_IDS);
+    const core = versioned(version, CONTRAST_RETRY_V2_REASON_IDS);
+    const regions = record(data.reasonRegions, CONTRAST_RETRY_V2_REASON_IDS);
+    const reasonRegions = Object.freeze(Object.fromEntries(CONTRAST_RETRY_V2_REASON_IDS.map(reason => {
+      const row = counters(regions[reason], CONTRAST_RETRY_REGION_IDS, core.reasons[reason]);
+      if (Object.values(row).reduce((sum, value) => sum + value, 0) !== core.reasons[reason]) throw new Error();
+      return [reason, row];
+    }))) as ContrastRetryReasonRegions;
+    return Object.freeze({ ...core, reasonRegions });
   } catch { throw new Error("Invalid contrast retry diagnostics."); }
 }
 function observedAudit<T extends { retries: { attempted: number; passed: number } }>(value: unknown, read: (audit: unknown) => T) {

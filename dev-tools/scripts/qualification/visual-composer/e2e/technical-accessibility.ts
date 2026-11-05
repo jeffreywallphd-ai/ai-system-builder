@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
-  CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS,
+  CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS, CONTRAST_RETRY_REGION_MARKERS,
   type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type Native400Frame } from "../technical-accessibility-observation";
 
 // Inputs belong to this source checkout. Output paths remain case-owned CWD paths.
@@ -58,7 +58,7 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
     if (frame.status !== "passed" || await page.evaluate(expected => matchMedia("(prefers-reduced-motion: reduce)").matches &&
       matchMedia("(forced-colors: active)").matches === (expected === "forced-colors"), media) !== true) throw new Error("Native audit admission failed.");
   }
-  const observation = await page.evaluate(async ({ width, ruleIds, scope, reasonIds, hintIds }) => {
+  const observation = await page.evaluate(async ({ width, ruleIds, scope, reasonIds, hintIds, regionMarkers }) => {
     try {
       type Item = { id: string; nodes: Array<{ target: string[]; any?: unknown[]; all?: unknown[]; none?: unknown[] }> };
       type Result = { violations: Item[]; incomplete: Item[]; passes: Item[] };
@@ -81,6 +81,9 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
       const outcomes = { violation: 0, unresolved: 0, noPositiveSample: 0 };
       const reasons = Object.fromEntries(reasonIds.map(key => [key, 0]));
       const hints = Object.fromEntries(hintIds.map(key => [key, 0]));
+      const markers = Object.entries(regionMarkers);
+      const regionIds = [...Object.keys(regionMarkers), "other"];
+      const reasonRegions = Object.fromEntries(reasonIds.map(reason => [reason, Object.fromEntries(regionIds.map(region => [region, 0]))]));
       function diagnose(target: Element, measured: Result) {
         // Bound inspection independently of the engine's larger rule/node bounds.
         // A reason is one allowlisted messageKey, never a message or CSS value.
@@ -102,9 +105,14 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
           }
         }
         reasons[reason]!++; if (limited) hints.reasonScanLimit!++;
-        let ancestor: Element | null = target, depth = 0;
+        let ancestor: Element | null = target, depth = 0, region = "other";
         const found = { backgroundImage: false, reducedOpacity: false, clippedAncestor: false, nonRgbColor: false };
         while (ancestor && depth++ < 64) {
+          if (region === "other") {
+            for (const [id, marker] of markers) {
+              if (ancestor.classList.contains(marker)) { region = id; break; }
+            }
+          }
           const style = getComputedStyle(ancestor);
           if (style.backgroundImage && style.backgroundImage !== "none") found.backgroundImage = true;
           const opacity = Number(style.opacity); if (style.opacity && Number.isFinite(opacity) && opacity < 1) found.reducedOpacity = true;
@@ -112,6 +120,7 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
           if (style.color && !/^rgba?\(/i.test(style.color)) found.nonRgbColor = true;
           ancestor = ancestor.parentElement;
         }
+        reasonRegions[reason]![region]!++;
         if (ancestor) hints.ancestorLimit!++;
         for (const key of Object.keys(found) as Array<keyof typeof found>) if (found[key]) hints[key]!++;
       }
@@ -141,9 +150,9 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
       }
       const facts = { violations, incomplete, contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
       return { audit: width === "native400" ? facts : { schemaVersion: "technical-accessibility-audit-v1", width, ...facts },
-        diagnostics: { schemaVersion: "contrast-retry-diagnostics-v2", attempted, passed, outcomes, reasons, hints } };
+        diagnostics: { schemaVersion: "contrast-retry-diagnostics-v3", attempted, passed, outcomes, reasons, hints, reasonRegions } };
     } catch { throw new Error("Computed accessibility audit failed."); }
-  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope, reasonIds: [...CONTRAST_RETRY_V2_REASON_IDS], hintIds: [...CONTRAST_RETRY_HINT_IDS] });
+  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope, reasonIds: [...CONTRAST_RETRY_V2_REASON_IDS], hintIds: [...CONTRAST_RETRY_HINT_IDS], regionMarkers: CONTRAST_RETRY_REGION_MARKERS });
   if (width === "native400") {
     const frame = await collectNative400Frame(page, scope === "runtime");
     return readNativeAccessibilityObservation(observation, media, rawNativeFrame(frame));

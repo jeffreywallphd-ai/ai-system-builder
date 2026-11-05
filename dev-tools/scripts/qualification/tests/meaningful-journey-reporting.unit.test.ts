@@ -87,6 +87,8 @@ const diagnosticHistoryPath="docs/operations/comprehensive-ui-automation-contras
 const diagnosticBaseline="1e5fd6b76e30025b4571787573b09a3f8b413103";
 const contrastV2HistoryPath="docs/operations/comprehensive-ui-automation-contrast-v2-census-history.json";
 const contrastV2Baseline="abdc24509d7cec4aa7013fe5ec369fecb5cf95f0";
+const contrastRegionsHistoryPath="docs/operations/comprehensive-ui-automation-contrast-regions-census-history.json";
+const contrastRegionsBaseline="6d0e47cdf158622844df28dc9583fe610c6ab096";
 const diagnosticSources=["dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
   "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"];
@@ -179,6 +181,25 @@ function checkedContrastV2History(bundle:CensusBundle,map:CensusMap,history:Cens
   for(const name of [oldHistoryPath,historyPath])expect(bundle.read(name)).toEqual(gitSource(contrastV2Baseline,name));
   for(const name of diagnosticSources) {const row=map.sources.find(row=>row.path===name)!;expect(row.facts.sha256).not.toBe(row.committed_sha256);}
 }
+function historicalContrastV2Map() {
+  return JSON.parse(gitSource(contrastRegionsBaseline,censusPath).toString("utf8")) as CensusMap;
+}
+function checkedContrastRegionsHistory(bundle:CensusBundle,map:CensusMap,history:CensusHistory) {
+  expect(Object.keys(history).sort()).toEqual(["schema_version","scope","roadmap_id","prior_commit","prior_census_path",
+    "prior_census_git_sha256","prior_census_working_sha256","prior_source_baseline","source_baseline","old_archive","prior_history",
+    "reason","preserved_fields_sha256","qualification_effect","sources"].sort());
+  expect(history.prior_commit).toBe(contrastRegionsBaseline);expect(history.source_baseline).toBe(contrastRegionsBaseline);
+  checkedHistory(bundle,map,history,3);expect(history.sources.map(row=>row.path)).toEqual(diagnosticSources);
+  const prior=bundle.read(contrastV2HistoryPath);
+  expect(history.prior_history).toEqual({path:contrastV2HistoryPath,sha256:sha(prior),bytes:prior.length});
+  for(const name of [oldHistoryPath,historyPath,diagnosticHistoryPath,contrastV2HistoryPath]) {
+    expect(bundle.read(name)).toEqual(gitSource(contrastRegionsBaseline,name));
+  }
+  for(const name of diagnosticSources) {
+    const row=map.sources.find(row=>row.path===name)!;
+    expect(row.facts.sha256).not.toBe(row.committed_sha256);
+  }
+}
 it("keeps current coverage definitions bound to real source and preserves unrun qualification",async()=>{
   const bundle=await censusBundle(),result=checkedCensus(bundle,bundle.map);
   expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:180,current_host_spec_files:29,inventory_groups:16,
@@ -189,7 +210,8 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
   expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...diagnosticSources].sort());
   checkedHistory(bundle,historicalOperationalMap(),JSON.parse(bundle.read(historyPath).toString("utf8")) as CensusHistory);
   checkedDiagnosticHistory(bundle,historicalDiagnosticMap(),JSON.parse(bundle.read(diagnosticHistoryPath).toString("utf8")) as CensusHistory);
-  checkedContrastV2History(bundle,bundle.map,JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
+  checkedContrastV2History(bundle,historicalContrastV2Map(),JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
+  checkedContrastRegionsHistory(bundle,bundle.map,JSON.parse(bundle.read(contrastRegionsHistoryPath).toString("utf8")) as CensusHistory);
 });
 it.each(["facts","execution-status","committed-pin","missing-version"] as const)("refuses forged census %s without a host or execution claim",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);const map=structuredClone(bundle.map);
@@ -229,7 +251,7 @@ it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history",
 it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history","prior-map","working-map","source-baseline","committed-working","qualification","extra"] as const)("refuses forged v2 contrast census lineage %s",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);
   const history=JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory;
-  const map=structuredClone(bundle.map);checkedContrastV2History(bundle,map,history);
+  const map=historicalContrastV2Map();checkedContrastV2History(bundle,map,history);
   if(variant === "row-hash")history.sources[0]!.prior_row_sha256="0".repeat(64);
   if(variant === "current-row")history.sources[0]!.current_row_sha256="0".repeat(64);
   if(variant === "missing-row")history.sources.pop();
@@ -242,4 +264,13 @@ it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history",
   if(variant === "qualification")history.qualification_effect.parent_qualification_granted=true;
   if(variant === "extra")(history as unknown as Record<string,unknown>).extra="forged";
   expect(()=>checkedContrastV2History(bundle,map,history)).toThrow();
+});
+
+it.each(["region-row","history-witness","qualification"] as const)("refuses forged region census %s",async variant=>{
+  const bundle=await censusBundle(),history=JSON.parse(bundle.read(contrastRegionsHistoryPath).toString("utf8")) as CensusHistory;
+  const map=structuredClone(bundle.map);checkedContrastRegionsHistory(bundle,map,history);
+  if(variant==="region-row")history.sources[0]!.current_row_sha256="0".repeat(64);
+  if(variant==="history-witness")history.prior_history!.sha256="0".repeat(64);
+  if(variant==="qualification")history.qualification_effect.actual_host_pass=true;
+  expect(()=>checkedContrastRegionsHistory(bundle,map,history)).toThrow();
 });
