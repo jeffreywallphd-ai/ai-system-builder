@@ -1251,3 +1251,21 @@ Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
 remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
 Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
 qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+### Fixed sharing-open refusal composition
+
+The original Source child now has one negative-only four-call held probe as a
+concrete consumer of the existing Source table and original call custody. It
+binds the terminal parent, fixed weight filename, exact typed arguments and
+outputs before effects. A one-use input check in the original Source call runs
+after its error setter and immediately before Native dispatch. The guard adds
+no abstract producer or public runtime capability.
+
+A separate closed case and eight-field witness represent only an unchanged
+share1 open refused with `STATUS_SHARING_VIOLATION`. Existing default and strict
+oplock801 contracts stay separate. The original parent checks child9/Job0 and
+matching mapped-file IDs before mapping retirement. Only this new case shares
+nonterminal mapper directories to permit other readers and writers; the selected directory
+and writer still deny delete and keep their original sharing rules. No new
+principal, process topology, quota, timeout, accounting credit or production
+composition follows. Actual native and restart/resource qualification is pending.

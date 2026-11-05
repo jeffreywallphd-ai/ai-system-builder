@@ -97,6 +97,24 @@ class PortableNativePolicyTests(unittest.TestCase):
             with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
             case.native.assert_not_called()
 
+    def test_sharing_denial_role_is_literal_bounded_and_cannot_select_another_case(self):
+        with self.source_session_subject('source-sharing-open-denial')as case:
+            intent=job._reviewed_source_sharing_denial_intent(**case.args)
+            self.assertEqual(intent.argv,(str(case.base),'-I','-S','-B',
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),'--native-sharing-open-denial'))
+            self.assertEqual((intent.phase,intent.seconds),('source-sharing-open-denial',180))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            self.assertEqual(len(intent.consumer_hashes),14)
+            job._validate_intent(intent,case.folder)
+            for issuer in (job._reviewed_source_session_intent,job._reviewed_source_map_denial_intent):
+                with self.assertRaises(job.NativeFailure):issuer(**case.args)
+            for selector in ('command','case','environment','seconds','job_bytes','process_bytes'):
+                with self.subTest(selector=selector),self.assertRaises(TypeError):
+                    job._reviewed_source_sharing_denial_intent(**case.args,**{selector:'other'})
+            (case.root/job._SOURCE_SESSION_FILES[0]).write_bytes(b'changed')
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+            case.native.assert_not_called()
+
     def test_source_role_requires_exact_source_and_runtime_witness_sets(self):
         with self.source_session_subject() as case:
             for field in ("reviewed_file_hashes","runtime_file_hashes"):

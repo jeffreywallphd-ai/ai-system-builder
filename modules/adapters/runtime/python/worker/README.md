@@ -1296,3 +1296,32 @@ Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
 remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
 Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
 qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+### Separate sharing-open refusal check
+
+The fixed `sharing-open-denial` case tests an earlier file-open refusal. It does
+not change the existing `shared-write-map-denial` case, which still requires the
+exact oplock error 801. Both cases keep the Source file guard read-only with
+share1. Earlier failures retain their original results.
+
+The child reserves four extra normal rows in its existing Source table before
+the Source reader loads its two system libraries. The earlier child-engine
+bootstrap has its own existing reservation. At the fixed mapped-weight open, it uses
+one read-only share3/no-delete probe relative to the original terminal parent.
+The probe checks the file tag, ID and finite single-link size. It holds that
+handle through the original child's exit. Exact types, pointer spans, stage and
+function bindings are checked before each call; original return facts are saved
+before error callbacks. One private Source input guard rechecks the original
+name, parent and arguments after the error setter, immediately before dispatch.
+
+Only an actual original share1 `STATUS_SHARING_VIOLATION`, with a null failed-open
+slot, can produce the separate eight-field witness. The parent must observe its
+original child exit9 and Job active0/total1 before it compares file IDs and closes
+the mapping. The probe releases through that process exit; it has no fabricated
+close or unused-Source retirement acknowledgement. The collector and outer Job
+still require their existing exit, drain, handle and fresh-input cleanup proof.
+
+Source-level fake-ABI tests do not qualify Windows behavior. A real run needs a
+fresh review of the committed source and one fixed launcher intent. This adds
+no production Source/borrower, model run, staging access, quota or deadline.
+Actual worker, shared accounting, restart and resource qualification stay pending.

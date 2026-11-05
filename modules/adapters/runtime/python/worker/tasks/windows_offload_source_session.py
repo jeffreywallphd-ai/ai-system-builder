@@ -24,6 +24,8 @@ from .local_model_offload import OffloadAdmissionError
 
 _VERSION = 2
 _MAP_DENIAL_CASE = 'shared-write-map-denial'
+_SHARING_DENIAL_CASE = 'sharing-open-denial'
+_NEGATIVE_CASES = (_MAP_DENIAL_CASE, _SHARING_DENIAL_CASE)
 _FAILURE_STATES = {}
 _FAILURE_PHASES = frozenset((
     'initializing', 'parent-native', 'mapper-prepare', 'child-launch',
@@ -107,7 +109,7 @@ def _source_bootstrap(folder, hashes, nonce, deadline, runtime, run_root, *, han
           and io._root(runtime[0]) == runtime[0]
           and type(runtime[1]) is str and re.fullmatch('[a-f0-9]{64}', runtime[1]))
     _qualification_root(run_root)
-    _need(case is None or type(case) is str and case == _MAP_DENIAL_CASE)
+    _need(case is None or type(case) is str and case in _NEGATIVE_CASES)
     _need(type(handles) is tuple and len(handles) in (1, 4)
           and len(handles) == len(set(handles))
           and all(type(n) is int and 0 < n < C.c_void_p(-1).value for n in handles))
@@ -138,7 +140,7 @@ class _OriginalSourceEntry:
               and type(bootstrap) is tuple and len(bootstrap) in (6, 7))
         nonce, hashes, deadline, runtime, run_root, handles = bootstrap[:6]
         case = bootstrap[6] if len(bootstrap) == 7 else None
-        _need(len(bootstrap) == 6 or type(case) is str and case == _MAP_DENIAL_CASE)
+        _need(len(bootstrap) == 6 or type(case) is str and case in _NEGATIVE_CASES)
         self.__origin, self.role = self, role
         self.values, self.hashes, self.digest = _source_inputs()
         _need(type(hashes) is dict and hashes == self.hashes
@@ -681,7 +683,7 @@ def _need(value):
 
 def _init_failure_state(owner, actor):
     """Negative-only observations. These functions provide no native authority."""
-    if owner.entry.case != _MAP_DENIAL_CASE:
+    if owner.entry.case not in _NEGATIVE_CASES:
         return
     _need(type(actor) is str and actor in ('parent', 'child')
           and id(owner) not in _FAILURE_STATES and len(_FAILURE_STATES) < 2)
@@ -860,7 +862,7 @@ def _parent_failure(value):
 def _parent_failure_bytes(owner, error):
     legacy = b'{"schema_version":"owned-source-parent-result-v1","status":"failed","failure_stage":"source-operation","parent_qualification_granted":false}\n'
     try:
-        if type(owner) is not _OriginalSourceParent or owner.entry.case != _MAP_DENIAL_CASE:
+        if type(owner) is not _OriginalSourceParent or owner.entry.case not in _NEGATIVE_CASES:
             return legacy
         value = _parent_failure({
             'schema_version': 'owned-source-parent-failure-v1', 'status': 'failed',
@@ -949,6 +951,39 @@ def _denial_message(value, nonce, source, deadline):
     _need(value['seq'] == 0)
     _denial_witness(body['denial'])
     return value
+
+
+
+def _sharing_denial_witness(value):
+    """Exact new case; neither a generic error nor an old oplock witness."""
+    _need(type(value) is dict and value.keys() == {
+        'schema_version', 'phase', 'desired_access', 'share_access',
+        'native_status', 'target_identity_sha256', 'source_call_count', 'probe_call_count'})
+    for field, expected in (('schema_version', 'source-native-sharing-denial-v1'), ('phase', 'prepare-source')):
+        _need(type(value[field]) is str and value[field] == expected)
+    for field, expected in (('desired_access', 0x100081), ('share_access', 1),
+                            ('native_status', 0xc0000043), ('probe_call_count', 4)):
+        _need(type(value[field]) is int and value[field] == expected)
+    _need(type(value['target_identity_sha256']) is str
+          and re.fullmatch('[a-f0-9]{64}', value['target_identity_sha256']) is not None
+          and type(value['source_call_count']) is int and 0 < value['source_call_count'] <= 16320)
+    return value
+
+
+def _sharing_denial_message(value, nonce, source, deadline):
+    _need(type(value) is dict and type(value.get('body')) is dict)
+    body = value['body']
+    _need(body.keys() == {'error', 'source_retired', 'denial'} and body['source_retired'] is False)
+    _message({**value, 'body': {'error': body['error'], 'source_retired': False}},
+             nonce, source, deadline, response=True)
+    _need(value['seq'] == 0)
+    _sharing_denial_witness(body['denial'])
+    return value
+
+
+def _case_denial_witness(case, value):
+    _need(type(case) is str and case in _NEGATIVE_CASES)
+    return (_sharing_denial_witness(value) if case == _SHARING_DENIAL_CASE else _denial_witness(value))
 
 
 def _edge(state, sequence):
@@ -1097,7 +1132,7 @@ class _SourceMappedDenial:
     def __init__(self, parent):
         _need(type(self) is _SourceMappedDenial and not hasattr(self, 'origin')
               and _original_actor(parent) is _PARENT_ROLE
-              and parent.entry.case == _MAP_DENIAL_CASE and parent.current.seq == 0
+              and parent.entry.case in _NEGATIVE_CASES and parent.current.seq == 0
               and parent.mapper is self and id(parent) not in _MAPPER_OWNERS)
         self.origin, self.parent, self.api = self, parent, parent.api
         self.resources, self.buffers, self.calls = [], [], []
@@ -1146,7 +1181,7 @@ class _SourceMappedDenial:
         self.api.live()
         _need(self.api is self.parent.api and self.api.role is _PARENT_ROLE
               and self.parent.current is self.parent.requests[0]
-              and self.parent.entry.case == _MAP_DENIAL_CASE)
+              and self.parent.entry.case in _NEGATIVE_CASES)
         if self.dll_facts is not None:
             _need(self.dll is self.dll_facts[0] and self.dll._name == self.dll_facts[1]
                   and self.dll._handle == self.dll_facts[2])
@@ -1348,8 +1383,9 @@ class _SourceMappedDenial:
         _MAPPER_RESOURCES[id(self)] += ((resource, resource.original),)
         return resource
 
-    def _open(self, parent, name, directory):
+    def _open(self, parent, name, directory, *, ancestor=False):
         self.live()
+        _need(type(ancestor) is bool and (not ancestor or directory and self.parent.entry.case == _SHARING_DENIAL_CASE))
         text = C.create_unicode_buffer(name)
         string = core._Unicode(len(name.encode('utf-16-le')), C.sizeof(text), C.cast(text, C.c_void_p))
         attrs = core._Attributes(C.sizeof(core._Attributes),
@@ -1361,7 +1397,7 @@ class _SourceMappedDenial:
         self.buffers.append(keep)
         self.invoke(self.dll.NtCreateFile,
                     (C.byref(handle.slot), 0x100081 if directory else 0x100083,
-                     C.byref(attrs), C.byref(status), None, 0x80, 1, 1,
+                     C.byref(attrs), C.byref(status), None, 0x80, 3 if ancestor else 1, 1,
                      0x200000 | (1 if directory else 0x40), None, 0), keep, output=handle)
         status = self._observed(self.calls[-1])
         _need(status.status in (None, 0) and status.information == 1)
@@ -1399,7 +1435,8 @@ class _SourceMappedDenial:
         ancestors = []
         for index, part in enumerate(self.parts):
             handle = self._open(None if not ancestors else ancestors[-1],
-                                '\\??\\' + part if index == 0 else part, True)
+                                '\\??\\' + part if index == 0 else part, True,
+                                ancestor=self.parent.entry.case == _SHARING_DENIAL_CASE and index < len(self.parts) - 1)
             ancestors.append(handle)
             self._identity(handle)
         writer = self._open(ancestors[-1], 'model.safetensors', False)
@@ -1625,15 +1662,16 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
         size = struct.unpack('<I', self._read_bytes(self.channels['response-read'], 4))[0]
         _need(0 < size <= _FRAME_BYTES)
         raw = _decode(self._read_bytes(self.channels['response-read'], size))
-        if self.entry.case == _MAP_DENIAL_CASE:
+        if self.entry.case in _NEGATIVE_CASES:
             if type(raw.get('body')) is dict and 'diagnostic' in raw['body']:
                 self.child_diagnostic = _failure_message(raw, self.nonce, self.source_digest, self.deadline)
                 raise OffloadAdmissionError()
-            reply = _denial_message(raw, self.nonce, self.source_digest, self.deadline)
+            reader = _sharing_denial_message if self.entry.case == _SHARING_DENIAL_CASE else _denial_message
+            reply = reader(raw, self.nonce, self.source_digest, self.deadline)
         else:
             reply = _message(raw, self.nonce, self.source_digest, self.deadline, response=True)
         _need(all(reply[name] == message[name] for name in _FIELDS - {'body'}))
-        if self.entry.case == _MAP_DENIAL_CASE:
+        if self.entry.case in _NEGATIVE_CASES:
             _need(request.seq == 0 and self.denial is None)
             self.denial = reply['body']['denial']
         else:
@@ -1642,8 +1680,8 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
     def _retire_child(self, *, expected_exit=0):
         _need(type(expected_exit) is int and expected_exit in (0, 9))
         if expected_exit == 9:
-            _need(self.entry.case == _MAP_DENIAL_CASE and self.current.seq == 0)
-            _denial_witness(self.denial)
+            _need(self.entry.case in _NEGATIVE_CASES and self.current.seq == 0)
+            _case_denial_witness(self.entry.case, self.denial)
         api = self.api
         _need(api.wait((self.process,), self.deadline) == 0)
         code, accounting = C.c_uint32(259), native._Accounting()
@@ -1711,7 +1749,7 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
                 _failure_phase(self, 'parent-native')
                 _SourceNative(self)
                 self._close_outer_dispatch()
-                if self.entry.case == _MAP_DENIAL_CASE:
+                if self.entry.case in _NEGATIVE_CASES:
                     _failure_phase(self, 'mapper-prepare')
                     _need(self.mapper is None)
                     self.mapper = object.__new__(_SourceMappedDenial)
@@ -1721,7 +1759,7 @@ class _OriginalSourceParent(native._SessionMechanics, _SourceFrameIo):
                 self._launch(request)
             _failure_phase(self, 'source-exchange')
             self._exchange_source(request)
-            if self.entry.case == _MAP_DENIAL_CASE:
+            if self.entry.case in _NEGATIVE_CASES:
                 # A diagnostic negative response never proves retirement. Wait
                 # on our original child and Job before closing the owned graph.
                 _need(sequence == 0)
@@ -1789,12 +1827,13 @@ def _entry():
     try:
         _publish_ready(entry.run_root, raw)
         _PARENT.prepare()
-        if entry.case == _MAP_DENIAL_CASE:
+        if entry.case in _NEGATIVE_CASES:
             _failure_phase(_PARENT, 'report-publication')
             _need(_PARENT.retired and _PARENT.state == 'source-denied'
                   and _PARENT.observed_child_exit == 9)
-            _denial_witness(_PARENT.denial)
-            report = {'schema_version': 'owned-source-parent-denial-v1', 'status': 'denied',
+            _case_denial_witness(entry.case, _PARENT.denial)
+            schema = 'owned-source-parent-sharing-denial-v1' if entry.case == _SHARING_DENIAL_CASE else 'owned-source-parent-denial-v1'
+            report = {'schema_version': schema, 'status': 'denied',
                       'source_digest': entry.digest, 'denial': _PARENT.denial,
                       'mapping': _PARENT.mapper.report(),
                       'native_calls': len(_PARENT.calls),

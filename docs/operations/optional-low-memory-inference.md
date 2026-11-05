@@ -1723,3 +1723,24 @@ Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
 remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
 Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
 qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+## Separate file-sharing refusal evidence
+
+The new `sharing-open-denial` check addresses a different Windows refusal from
+the existing oplock test. It keeps the production guard unchanged. Four fixed,
+read-only child calls establish the exact mapped file before the original share1
+open. A new strict witness requires the original sharing-violation status and no
+returned handle. A generic error, an old error801 witness or an unknown target
+cannot satisfy this case.
+
+The parent compares the child's original file ID with its own saved ID only after
+the original child has exited and its Job is empty. It then retires the held
+mapping, original handles and timer. The collector keeps its exact fresh-input
+and process cleanup checks. The child's probe is released by process exit, not
+by an invented close acknowledgement. Unknown historical inputs remain untouched.
+
+The source tests use simulated Windows replies. They are not a native pass or a
+safe-restart pass. Actual source protection, supplier/cache lifetimes, protected
+shared accounting, model-worker shutdown, restart and resource checks stay
+pending. Accepted model-quality and OCR results stay closed. Full-system testing
+remains deferred until the approved open implementation work is ready.

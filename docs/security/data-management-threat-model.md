@@ -2774,3 +2774,23 @@ Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
 remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
 Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
 qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+### Sharing-refusal evidence integrity
+
+The fixed Source negative check now distinguishes a file-sharing refusal from an
+oplock refusal. A held read-only probe uses exactly four precharged calls in the
+original child's physical table. Stage, ABI, layout and pointer checks precede
+every call. Original slot, thread, scalar and typed bytes are retained before
+error callbacks; changed observations deny qualification. An original-custody
+input check runs after the Source error setter and before its target function,
+so a changed parent or filename cannot cross that callback gap.
+
+Only a null-slot original sharing-violation return at that exact frontier can
+produce the new witness. The existing801 witness remains strict. Parent file-ID
+comparison requires original child exit9/Job active0,total1 before any mapping
+retirement. Probe release is by that process exit, never a fabricated close or
+unused-owner pass. Collector and outer ownership, drain, bounds and cleanup
+controls remain. Fake-ABI tests do not establish actual Windows protection or
+production readiness. Old unknown staging stays untouched and fully charged12GiB;
+shared durable accounting, source/cache borrowers, worker recovery and resources
+remain pending. No model-quality or OCR rerun is required for this source change.

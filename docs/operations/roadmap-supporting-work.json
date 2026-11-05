@@ -2250,7 +2250,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2269,7 +2269,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -10175,6 +10175,126 @@
         "This records reviewed source and component tests at the saved version. It does not complete the parent criterion or qualify later source.",
         "The separate Settings report records the fresh browser case. Desktop, physical restart, production worker and low-memory restart checks remain pending.",
         "No provider, model accuracy or text-recognition check was rerun. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "fix-offload-source-ancestor-sharing",
+      "work_criteria": [
+        "nonterminal-sharing-and-selected-input-denial",
+        "truthful-scope-and-compatible-boundary",
+        "owned-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b6d5414c3b8ec8d967f5119f03bde72c09c6869adfee7b9f27ad5eb04774c88f",
+      "review_digest": "43a899ac220d193b66b12a3e68f588a0391917b7387818f59d3de4c5ff404481",
+      "scope": "The source-file tests now allow existing writers on parent folders. The selected folder and exact model files keep their read-only and no-delete checks.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "fix-offload-source-ancestor-sharing",
+      "work_criteria": [
+        "nonterminal-sharing-and-selected-input-denial",
+        "truthful-scope-and-compatible-boundary",
+        "owned-reviewed-checkpoint"
+      ],
+      "receipt_digest": "b6d5414c3b8ec8d967f5119f03bde72c09c6869adfee7b9f27ad5eb04774c88f",
+      "review_digest": "43a899ac220d193b66b12a3e68f588a0391917b7387818f59d3de4c5ff404481",
+      "scope": "The source-file tests now allow existing writers on parent folders. The selected folder and exact model files keep their read-only and no-delete checks.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "fix-source-mapper-original-return-custody",
+      "work_criteria": [
+        "original-mapper-return-and-fixed-output-custody",
+        "strict-pointer-and-observation-consumption",
+        "honest-owned-checkpoint-and-pending-native-proof"
+      ],
+      "receipt_digest": "78d02591ad0b324d7ad7e587be45e92c9742451bac9a32ae0894fcb5ed3c193b",
+      "review_digest": "251e02da7251150d5b8d285dac2fbe1eec5b4a42f9ac7852314c5394b1b92137",
+      "scope": "The test mapper keeps the original handle and file details before callbacks run. Changed outputs and incomplete results cannot supply a passing check.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "fix-source-mapper-original-return-custody",
+      "work_criteria": [
+        "original-mapper-return-and-fixed-output-custody",
+        "strict-pointer-and-observation-consumption",
+        "honest-owned-checkpoint-and-pending-native-proof"
+      ],
+      "receipt_digest": "78d02591ad0b324d7ad7e587be45e92c9742451bac9a32ae0894fcb5ed3c193b",
+      "review_digest": "251e02da7251150d5b8d285dac2fbe1eec5b4a42f9ac7852314c5394b1b92137",
+      "scope": "The test mapper keeps the original handle and file details before callbacks run. Changed outputs and incomplete results cannot supply a passing check.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "fix-source-original-call-return-custody",
+      "work_criteria": [
+        "original-source-physical-return-custody",
+        "fixed-synchronous-facts-and-ack-frontier",
+        "truthful-scoped-documentation-and-checkpoint"
+      ],
+      "receipt_digest": "0e1d48f64ff1ae6ed7010599b3b201d5e306a85fe31275f593876a2eae342469",
+      "review_digest": "2021071500397af470615317c0c0b6f3eb8006ac5a1355808db67637c972277d",
+      "scope": "The source owner keeps the original file-open result and file ID before callbacks run. Getter failures and changed fields retain the original facts and prevent acknowledgement.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "fix-source-original-call-return-custody",
+      "work_criteria": [
+        "original-source-physical-return-custody",
+        "fixed-synchronous-facts-and-ack-frontier",
+        "truthful-scoped-documentation-and-checkpoint"
+      ],
+      "receipt_digest": "0e1d48f64ff1ae6ed7010599b3b201d5e306a85fe31275f593876a2eae342469",
+      "review_digest": "2021071500397af470615317c0c0b6f3eb8006ac5a1355808db67637c972277d",
+      "scope": "The source owner keeps the original file-open result and file ID before callbacks run. Getter failures and changed fields retain the original facts and prevent acknowledgement.",
+      "limitations": [
+        "This records tested, reviewed and committed source work at its saved version. It does not complete the parent criterion or qualify later changes.",
+        "The tests used simulated Windows replies. Actual Windows file protection and the separate sharing-refusal case still need their own evidence.",
+        "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
+        "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
       ]
     }
   ]

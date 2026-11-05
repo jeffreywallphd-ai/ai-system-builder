@@ -966,4 +966,32 @@ class OriginalSourceOwnerTests(unittest.TestCase):
         self.assertTrue(known);self.assertEqual(error,5);self.assertEqual(physical[0],0)
 
 
+    def test_concrete_input_guard_runs_after_setter_and_before_target(self):
+        owner=self.owner();events=[];old=self.port.invoke_native
+        def dispatch(value,reservation,record,invoke):
+            if value._api is not None and hasattr(value._api,'_functions')and record.function is value._api.n.NtCreateFile:
+                record._bind_input_guard(value,lambda:events.append(('guard',len(self.native.calls))))
+            return old(value,reservation,record,invoke)
+        with patch.object(self.port,'invoke_native',side_effect=dispatch):owner.prepare()
+        self.assertTrue(events)
+        self.assertEqual(len(events),sum(name=='NtCreateFile'for name,args in self.native.calls))
+
+    def test_input_guard_cannot_bind_twice_or_after_dispatch(self):
+        for mode in ('twice','late','reject'):
+            case=OriginalSourceOwnerTests('runTest');case.setUp()
+            try:
+                owner=case.owner();old=case.port.invoke_native
+                def dispatch(value,reservation,record,invoke):
+                    guard=(lambda:False)if mode=='reject'else(lambda:None)
+                    if mode!='late':record._bind_input_guard(value,guard)
+                    if mode=='twice':record._bind_input_guard(value,guard)
+                    result=old(value,reservation,record,invoke)
+                    if mode=='late':record._bind_input_guard(value,guard)
+                    return result
+                with patch.object(case.port,'invoke_native',side_effect=dispatch):case.denied(owner.prepare)
+                self.assertFalse(owner._pending.acknowledged)
+                if mode!='late':self.assertFalse(case.native.dll_calls)
+            finally:case.doCleanups()
+
+
 if __name__ == '__main__':unittest.main()

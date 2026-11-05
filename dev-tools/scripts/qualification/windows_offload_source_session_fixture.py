@@ -47,8 +47,9 @@ def _entry_environment():
           and sys.flags.isolated == sys.flags.no_site == 1 and sys.dont_write_bytecode
           and sys.prefix == sys.base_prefix and len(sys.argv) == 2
           and Path(sys.argv[0]).absolute() == ENTRY
-          and sys.argv[1] in ('--native', '--native-shared-write-denial'), 'entry')
-    return 'shared-write-map-denial' if sys.argv[1] == '--native-shared-write-denial' else None
+          and sys.argv[1] in ('--native', '--native-shared-write-denial', '--native-sharing-open-denial'), 'entry')
+    return {'--native': None, '--native-shared-write-denial': 'shared-write-map-denial',
+            '--native-sharing-open-denial': 'sharing-open-denial'}[sys.argv[1]]
 
 
 class _ParentFenceApi:
@@ -428,6 +429,14 @@ def _validate_parent_report(value, digest):
 
 
 def _validate_denial_report(value, digest, manifest, source):
+    return _validate_mapped_report(value, digest, manifest, source, sharing=False)
+
+
+def _validate_sharing_denial_report(value, digest, manifest, source):
+    return _validate_mapped_report(value, digest, manifest, source, sharing=True)
+
+
+def _validate_mapped_report(value, digest, manifest, source, *, sharing):
     """Exact observations only; original process/Job retirement is separate."""
     true_fields = ('child_exit_confirmed', 'job_active_zero', 'source_released_by_owned_exit',
                    'original_handles_closed', 'timer_callbacks_retired')
@@ -436,14 +445,15 @@ def _validate_denial_report(value, digest, manifest, source):
     _need(type(value) is dict and value.keys() == {
         'schema_version', 'status', 'source_digest', 'denial', 'mapping',
         'native_calls', 'terminal_calls', 'child_exit_code', *true_fields, *false_fields}
-        and value['schema_version'] == 'owned-source-parent-denial-v1'
+        and type(sharing) is bool
+        and value['schema_version'] == ('owned-source-parent-sharing-denial-v1' if sharing else 'owned-source-parent-denial-v1')
         and value['status'] == 'denied' and value['source_digest'] == digest
         and type(value['child_exit_code']) is int and value['child_exit_code'] == 9
         and type(value['native_calls']) is int and 0 < value['native_calls'] <= 1024 + 61
         and type(value['terminal_calls']) is int and 0 < value['terminal_calls'] <= 61
         and all(value[name] is True for name in true_fields)
         and all(value[name] is False for name in false_fields), 'fence-exit')
-    source._denial_witness(value['denial'])
+    (source._sharing_denial_witness if sharing else source._denial_witness)(value['denial'])
     mapping = value['mapping']
     flags = ('writer_closed_before_child', 'view_held_through_child_exit',
              'view_unmapped', 'section_and_ancestors_closed')
@@ -637,9 +647,11 @@ def run_native():
         fence.join_observed()
         for capture in owner.captures:capture.join()
         observed = _json_object(bytes(owner.captures[0].data))
-        report = (_validate_denial_report(observed, expected['source_digest'], owner.manifest, source)
-                  if case == 'shared-write-map-denial'
-                  else _validate_parent_report(observed, expected['source_digest']))
+        if case in ('shared-write-map-denial', 'sharing-open-denial'):
+            reader = _validate_sharing_denial_report if case == 'sharing-open-denial' else _validate_denial_report
+            report = reader(observed, expected['source_digest'], owner.manifest, source)
+        else:
+            report = _validate_parent_report(observed, expected['source_digest'])
         stage = 'dispatch-event-close'
         event.close_after_exit(fence)
         stage = 'input-cleanup'
@@ -680,7 +692,7 @@ def run_native():
               'qualification_complete': False, 'quality_tests_executed': False,
               'model_started': False, 'old_staging_accessed': False,
               'production_composed': False, 'parent_qualification_granted': False}
-    if case == 'shared-write-map-denial':
+    if case in ('shared-write-map-denial', 'sharing-open-denial'):
         result['failure_diagnostic'] = None if passed else _retain_parent_failure(owner, source)
     with (run_root / 'summary.json').open('x', encoding='utf8') as stream:
         json.dump(result, stream, sort_keys=True, indent=2)

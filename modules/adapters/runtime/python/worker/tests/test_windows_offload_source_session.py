@@ -1022,4 +1022,74 @@ class NtStatusFailureDiagnosticTests(unittest.TestCase):
         with self.assertRaises(OffloadAdmissionError):source._decode(b'x'*4097)
 
 
+
+def _sharing_witness():
+    return {'schema_version':'source-native-sharing-denial-v1','phase':'prepare-source',
+            'desired_access':0x100081,'share_access':1,'native_status':0xc0000043,
+            'target_identity_sha256':'a'*64,'source_call_count':75,'probe_call_count':4}
+
+
+class SharingProtocolTests(unittest.TestCase):
+    def test_new_envelope_fits_unchanged_decoder_and_old_reader_refuses_it(self):
+        value={'v':2,'nonce':'a'*32,'source_digest':'b'*64,'deadline_ns':2**62,
+               'seq':0,'op':'prepare-source','body':{'error':'source-session-unavailable',
+               'source_retired':False,'denial':_sharing_witness()}}
+        raw=json.dumps(value,separators=(',',':')).encode()
+        self.assertLessEqual(len(raw)+4,4096)
+        self.assertEqual(io._decode(raw),value)
+        self.assertEqual(source._sharing_denial_message(source._decode(raw),'a'*32,'b'*64,2**62),value)
+        with self.assertRaises(OffloadAdmissionError):source._denial_message(value,'a'*32,'b'*64,2**62)
+        old={**value,'body':{**value['body'],'denial':SourceProtocolTests.denial()}}
+        with self.assertRaises(OffloadAdmissionError):source._sharing_denial_message(old,'a'*32,'b'*64,2**62)
+        with self.assertRaises(OffloadAdmissionError):io._decode(raw.replace(b'"probe_call_count":4',b'"probe_call_count":4,"probe_call_count":4'))
+
+    def test_new_witness_rejects_unknown_missing_boolean_and_wrong_fields(self):
+        for field in _sharing_witness():
+            for change in ('missing','boolean','unknown'):
+                value=_sharing_witness()
+                if change=='missing':value.pop(field)
+                elif change=='boolean':value[field]=True
+                else:value['unexpected']=0
+                with self.subTest(field=field,change=change),self.assertRaises(OffloadAdmissionError):source._sharing_denial_witness(value)
+        for field,replacement in (('native_status',801),('native_status',0),('share_access',3),
+                                  ('desired_access',0x100083),('probe_call_count',3),('source_call_count',16321)):
+            with self.subTest(field=field,replacement=replacement),self.assertRaises(OffloadAdmissionError):
+                source._sharing_denial_witness({**_sharing_witness(),field:replacement})
+
+    def test_parent_new_case_requires_exit_then_mapping_and_timer_retirement(self):
+        case=ParentJourneyTests('runTest');case.setUp()
+        try:
+            case.parent.entry.case=source._SHARING_DENIAL_CASE
+            case.denial_reply={'error':'source-session-unavailable','source_retired':False,'denial':_sharing_witness()}
+            case.parent.prepare()
+            self.assertEqual(case.parent.state,'source-denied')
+            self.assertEqual(case.events[-3:],['actual-child-exit-and-job-zero','view-and-section-retired','timer-retired'])
+        finally:case.doCleanups()
+
+    def test_parent_new_case_cannot_use_old_witness_or_unconfirmed_exit(self):
+        for mode in ('old-witness','missing-exit','missing-unmap'):
+            case=ParentJourneyTests('runTest');case.setUp()
+            try:
+                case.parent.entry.case=source._SHARING_DENIAL_CASE
+                case.denial_reply={'error':'source-session-unavailable','source_retired':False,
+                                  'denial':SourceProtocolTests.denial()if mode=='old-witness'else _sharing_witness()}
+                case.fail_finish=mode=='missing-exit';case.fail_mapping_retirement=mode=='missing-unmap'
+                with self.subTest(mode=mode),self.assertRaises(OffloadAdmissionError):case.parent.prepare()
+                self.assertNotIn('timer-retired',case.events)
+            finally:case.doCleanups()
+
+    def test_only_new_mapper_nonterminal_ancestors_share_write_and_every_open_denies_delete(self):
+        for new in (False,True):
+            case=SourceMapperTests('runTest');case.setUp()
+            try:
+                case.parent.entry.case=source._SHARING_DENIAL_CASE if new else source._MAP_DENIAL_CASE
+                mapper=case.mapper()
+                opens=[args for name,args in case.effects if name=='NtCreateFile']
+                self.assertEqual([args[6]for args in opens],([3]*(len(mapper.parts)-1)+[1,1])if new else [1]*len(opens))
+                self.assertTrue(all(args[6]&4==0 for args in opens))
+                self.assertEqual(opens[-1][1],0x100083)
+                self.assertTrue(mapper.prepared_facts[5].closed)
+            finally:case.doCleanups()
+
+
 if __name__ == '__main__':unittest.main()

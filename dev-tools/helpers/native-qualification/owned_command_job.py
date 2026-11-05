@@ -44,7 +44,8 @@ _HOST_UI_PROJECTS={
 }
 _SOURCE_SESSION_ROLE="source-session"
 _SOURCE_MAP_DENIAL_ROLE="source-shared-map-denial"
-_SOURCE_ROLES=(_SOURCE_SESSION_ROLE,_SOURCE_MAP_DENIAL_ROLE)
+_SOURCE_SHARING_DENIAL_ROLE="source-sharing-open-denial"
+_SOURCE_ROLES=(_SOURCE_SESSION_ROLE,_SOURCE_MAP_DENIAL_ROLE,_SOURCE_SHARING_DENIAL_ROLE)
 _SOURCE_SESSION_SECONDS=180
 _SOURCE_SESSION_FILES=tuple("modules/adapters/runtime/python/worker/tasks/"+name for name in (
     "local_model_offload.py", "offload_recovery.py", "windows_offload_core.py",
@@ -497,6 +498,13 @@ def _reviewed_source_map_denial_intent(*,run,folder,reviewed_file_hashes,runtime
         review_digest=review_digest)
 
 
+def _reviewed_source_sharing_denial_intent(*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    """One fixed sharing-open denial; no caller-selected command or budget."""
+    return _source_session_intent(_SOURCE_SHARING_DENIAL_ROLE,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
+        review_digest=review_digest)
+
+
 def _source_session_intent(role,*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
     need(type(role) is str and role in _SOURCE_ROLES,"source-session-fixed-run")
     _assert_no_pending()
@@ -529,7 +537,8 @@ def _source_session_intent(role,*,run,folder,reviewed_file_hashes,runtime_file_h
          "source-session-system-environment")
     env.update({"PATH":os.pathsep.join((str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
                 "TEMP":str(folder/"t"),"TMP":str(folder/"t")})
-    argument="--native" if role==_SOURCE_SESSION_ROLE else "--native-shared-write-denial"
+    argument={_SOURCE_SESSION_ROLE:"--native",_SOURCE_MAP_DENIAL_ROLE:"--native-shared-write-denial",
+              _SOURCE_SHARING_DENIAL_ROLE:"--native-sharing-open-denial"}[role]
     argv=(str(base),"-I","-S","-B",str(_REPO/_SOURCE_SESSION_FILES[-2]),argument)
     return _remember(_Intent(role,argv,folder,MappingProxyType(env),
         _SOURCE_SESSION_SECONDS,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))

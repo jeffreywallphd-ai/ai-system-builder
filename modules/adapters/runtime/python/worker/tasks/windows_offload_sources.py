@@ -389,6 +389,8 @@ def _source_call_capture(row, operation, keywords):
         descriptor = (buffer,C.addressof(buffer),24,'identity')
     physical = typed = None
     error_known, original_error = False,None
+    input_guard = None
+    input_used = False
     def capture(value, slot):
         nonlocal physical,typed
         _need(physical is None)
@@ -418,7 +420,20 @@ def _source_call_capture(row, operation, keywords):
                 buffer, copied = typed
                 _need(C.addressof(buffer) == descriptor[1] and C.sizeof(buffer) == descriptor[2]
                       and C.string_at(descriptor[1],descriptor[2]) == copied)
-    return capture,finish,read,validate
+    def bind_input_guard(guard):
+        nonlocal input_guard
+        _need(input_guard is None and callable(guard) and physical is None
+              and row.started is False and operation.thread == get_ident()
+              and row.owner._op is operation and row.owner._pending is row)
+        input_guard = guard
+    def validate_input_guard():
+        nonlocal input_used
+        if input_guard is not None:
+            _need(not input_used and row.started is True and row.returned is False
+                  and row.thread == operation.thread == get_ident())
+            input_used = True
+            _need(input_guard() is None)
+    return capture,finish,read,validate,bind_input_guard,validate_input_guard
 
 
 class _SourceNativeCall:
@@ -436,9 +451,14 @@ class _SourceNativeCall:
               and all(a is b for a,b in zip((self.function,self.args,self.valid,self.keep,
                     self.terminal,self.expected_error,self.false_errors,self.output),self.binding)))
         entry = _source_call_custody(owner).call_returns.get(id(self))
-        _need(type(entry) is tuple and len(entry) == 6 and entry[0] is self
+        _need(type(entry) is tuple and len(entry) == 7 and entry[0] is self
               and entry[1] is self.binding)
         entry[5]()
+
+    def _bind_input_guard(self, owner, guard):
+        """Trusted original producer installs one concrete pre-dispatch check."""
+        self.assert_original(owner)
+        _source_call_custody(owner).call_returns[id(self)][6](guard)
 
     def original_typed(self, owner, buffer):
         self.assert_original(owner)
@@ -727,7 +747,7 @@ class _SourceCustody:
         # Read retained facts even if current owner/API/observation aliases drift.
         # This accessor supplies no admission, Native action or cleanup credit.
         entry = self.call_returns.get(id(call))
-        _need(type(entry) is tuple and len(entry) == 6 and entry[0] is call)
+        _need(type(entry) is tuple and len(entry) == 7 and entry[0] is call)
         return entry[4]()
 
 
@@ -789,9 +809,9 @@ class _OriginalModelSources:
                   and function is C.WinDLL and args in (('kernel32.dll',),('ntdll.dll',)))
         keywords = () if kwargs is None else tuple(kwargs.items())
         row = _SourceNativeCall(self,function,args,valid,keep,self._terminal,expected_error,false_errors,output)
-        capture,finish,read,validate_capture = _source_call_capture(row,operation,keywords)
+        capture,finish,read,validate_capture,bind_inputs,check_inputs = _source_call_capture(row,operation,keywords)
         custody = self._retain()
-        custody.call_returns[id(row)] = (row,row.binding,operation,keywords,read,validate_capture)
+        custody.call_returns[id(row)] = (row,row.binding,operation,keywords,read,validate_capture,bind_inputs)
         custody.call_origins.append(row)
         self._calls.append(row)
         self._pending = row
@@ -804,6 +824,8 @@ class _OriginalModelSources:
                       and operation.thread == get_ident() and not row.started and not self._uncertain)
                 row.started,row.thread = True,get_ident()
                 error_writer(0)
+                row.assert_original(self)
+                check_inputs()  # Concrete guard runs after setter, immediately before target.
                 value = function(*args,**dict(keywords))
                 slot = None if output is None else output.value
                 capture(value,slot)  # Locals only, before getter/owner/observer work.

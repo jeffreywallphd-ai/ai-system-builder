@@ -24,7 +24,7 @@ class EntryTests(unittest.TestCase):
     def test_plan_and_default_are_inert_and_preserve_scope_limits(self):
         for args,expected in (([],3),(['--plan'],0)):
             code,value=self.request(args);self.assertEqual(code,expected)
-            self.assertEqual(value['cases'],['source-roundtrip','shared-write-map-denial'])
+            self.assertEqual(value['cases'],['source-roundtrip','shared-write-map-denial','sharing-open-denial'])
             self.assertEqual((value['shared_rows_per_actor'],value['terminal_rows_inside_total']),(16384,64))
             self.assertEqual(value['frame_fragment_attempts'],32)
             for field in ('native_effects','native_tests_executed','qualification_complete','model_started',
@@ -33,7 +33,8 @@ class EntryTests(unittest.TestCase):
                 self.assertIs(value[field],False)
 
     def test_imported_native_and_arbitrary_commands_paths_or_limits_are_refused(self):
-        for args in (['--native'],['--native-shared-write-denial'],['--nat'],
+        for args in (['--native'],['--native-shared-write-denial'],['--native-sharing-open-denial'],['--nat'],
+                     ['--native-sharing-open-denial','--native'],['--native-sharing-open-denial','--plan'],
                      ['--native-shared-write-denial','--native'],
                      ['--native-shared-write-denial','--plan'],['--native','--plan'],['--root','synthetic-private'],
                      ['--command','synthetic-private'],['--budget','1'],['--force']):
@@ -64,6 +65,12 @@ class EntryTests(unittest.TestCase):
         with patch.object(subject,'_native_environment',lambda:None), \
              patch.object(subject,'_load_fixture',return_value=fixture)as load:
             self.assertEqual(subject.main(['--native']),9)
+        load.assert_called_once_with()
+
+    def test_new_sharing_case_uses_only_fixed_collector(self):
+        fixture=SimpleNamespace(run_native=lambda:9)
+        with patch.object(subject,'_native_environment',lambda:None),patch.object(subject,'_load_fixture',return_value=fixture)as load:
+            self.assertEqual(subject.main(['--native-sharing-open-denial']),9)
         load.assert_called_once_with()
 
     def test_distinct_denial_branch_returns_only_fixed_collector_result(self):

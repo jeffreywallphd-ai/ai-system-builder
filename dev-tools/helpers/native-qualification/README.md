@@ -280,3 +280,23 @@ generic failure as the expected denial. Default `--native` remains the original
 unused-Source case. Source stderr handling and the live-driver timeout limitation
 remain unchanged. Portable checks never execute either physical case; separate
 exact-source effect review and outcome review remain required.
+
+### Fixed Source sharing-open case
+
+The private `source-sharing-open-denial` intent selects only
+`--native-sharing-open-denial`. The existing Source roundtrip and oplock-denial
+roles keep their exact flags. A literal role-to-flag map has no fallback or
+caller-supplied command, environment, case, runtime or budget selector.
+
+This role uses the same twelve Source/entry/fixture witnesses and two Base Python
+image witnesses. It retains the Standard 1 GiB process, 2 GiB Job, 32-process and
+180-second outer limits. The inner Source actors retain 512 MiB, 120 seconds and
+16,384 total rows, including the 64 terminal rows. Four probe rows are reserved in
+that same table before the Source reader loads. The probe calls use those rows
+at the mapped-weight frontier; they do not create a second pool.
+
+Source checks qualify only this closed issuer and its fixed synthetic consumers.
+Actual execution requires a separate current-source effect review and one-use
+attempt. Root exit, total3/active0, nonforced retirement, complete drains and all
+owned-handle acknowledgements remain necessary. A failed or uncertain attempt
+grants no retry, old-input cleanup, staging credit or parent qualification.

@@ -295,6 +295,7 @@ class SourcePortReservationTests(unittest.TestCase):
         self.api.owner=child
         source._NATIVE_OWNERS[id(self.api)]=(self.api,self.api.rows,child,source._CHILD_ROLE)
         self.child=child
+        child.entry=SimpleNamespace(case=None)
         owner=object.__new__(sources._OriginalModelSources)
         owner._origin=owner;owner._factory=sources._WindowsSourceApi
         child.source=owner;child.current={'seq':0}
@@ -499,6 +500,236 @@ class OriginalSourceDenialTests(unittest.TestCase):
         self.assertEqual(len(self.native.calls),count)
         with self.assertRaises(OffloadAdmissionError):source._denial_message(reply,'a'*32,'b'*64,self.child.deadline)
         self.assertTrue(self.child.failed);self.assertFalse(self.source._retired)
+
+
+class SharingOpenDenialTests(unittest.TestCase):
+    """Real Source owner/child producer; every Windows function is a fake."""
+    def setUp(self):
+        OriginalSourceDenialTests.setUp(self)
+        self.child.entry.case = source._SHARING_DENIAL_CASE
+        self.native.existing_writers.add('model.safetensors')
+        self.native.fault = None
+        for scope in (patch.dict(child_module._SHARING_STATES, {}, clear=True),
+                      patch.dict(child_module._SHARING_INPUTS, {}, clear=True)):
+            scope.start();self.addCleanup(scope.stop)
+        original = self.native.call
+        def call(name, args):
+            result = original(name, args)
+            if name == 'GetFileInformationByHandleEx' and args[1] == 18:
+                leaf = self.native.handles[args[0]][0]
+                if leaf == 'model.safetensors':
+                    C.memmove(args[2], b'volume01' + b'mapped-weight-id', 24)
+            return result
+        self.native.call = call
+
+    def probe(self):
+        return child_module._SHARING_STATES[id(self.port)][1]
+
+    def sharing_denied(self):
+        with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertTrue(self.port.failed);self.assertTrue(self.source._uncertain)
+        return self.child._original_sharing_denial()
+
+    def original_target_calls(self):
+        return [args for name,args in self.native.calls if name == 'NtCreateFile'
+                and args[6] == 1 and args[8] == 0x200040
+                and C.wstring_at(args[2]._obj.name.contents.buffer) == 'model.safetensors']
+
+    def test_four_probe_rows_precede_exact_failed_source_call_without_relaxing_guard(self):
+        witness = self.sharing_denied()
+        self.assertEqual(witness['native_status'],0xc0000043)
+        self.assertEqual(witness['probe_call_count'],4)
+        self.assertEqual(witness['target_identity_sha256'],source.hashlib.sha256(b'volume01'+b'mapped-weight-id').hexdigest())
+        probe=self.probe();self.assertTrue(probe.complete)
+        self.assertIs(probe.arena,self.api.rows)
+        self.assertEqual(len(probe.ticket.rows),4)
+        self.assertTrue(all(not row.terminal for row in probe.ticket.rows))
+        self.assertEqual(len(self.original_target_calls()),1)
+        self.assertEqual(self.original_target_calls()[0][1],0x100081)
+        self.assertFalse(self.source._pending.acknowledged)
+        self.assertFalse(self.source._retired)
+        self.assertEqual([row.binding[1] for row in self.api.rows.order[-5:]],
+                         ['source-sharing-probe']*4+['source-native'])
+        effects=len(self.native.calls)
+        self.assertEqual(probe.identity(self.source._pending),b'volume01'+b'mapped-weight-id')
+        with self.assertRaises(OffloadAdmissionError):probe.run(self.source._pending)
+        with self.assertRaises(OffloadAdmissionError):self.child._original_source_denial()
+        self.assertEqual(len(self.native.calls),effects)
+        self.assertFalse(any(name=='CloseHandle'and args==(probe.slot.value,)for name,args in self.native.calls))
+
+    def test_source_nested_input_drift_during_any_probe_getter_prevents_original_dispatch(self):
+        for index in range(1,5):
+            for field in ('root','name','unicode','flags','generation','output'):
+                with self.subTest(index=index,field=field):
+                    case=SharingOpenDenialTests('runTest');case.setUp()
+                    try:
+                        changed=[]
+                        def getter():
+                            saved=child_module._SHARING_STATES.get(id(case.port))
+                            if saved and saved[1].record is not None and len(saved[1].calls)==index and not changed:
+                                record=case.source._pending
+                                if field=='root':record.keep[3].root+=1
+                                elif field=='name':record.keep[1][0]='x'
+                                elif field=='unicode':record.keep[2].length-=2
+                                elif field=='flags':record.keep[3].flags=0
+                                elif field=='generation':record.keep[5].original_generation=object()
+                                else:record.keep[0].slot.value=8888
+                                changed.append(True)
+                            return case.last_error
+                        with patch.object(C,'get_last_error',side_effect=getter,create=True):
+                            with case.assertRaises(OffloadAdmissionError):case.source.prepare()
+                        case.assertTrue(changed);case.assertEqual(case.original_target_calls(),[])
+                        case.assertFalse(case.probe().complete)
+                    finally:case.doCleanups()
+
+    def test_probe_getter_failure_preserves_raw_handle_and_typed_bytes_without_ack_or_retry(self):
+        def getter():
+            saved=child_module._SHARING_STATES.get(id(self.port))
+            if saved and saved[1].calls:raise RuntimeError('synthetic getter')
+            return self.last_error
+        with patch.object(C,'get_last_error',side_effect=getter,create=True):
+            with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        probe=self.probe();item,row=probe.custody[1]()[0]
+        physical,typed,known=item[3]()
+        self.assertEqual(physical[0],0);self.assertEqual(physical[1],probe.slot.value)
+        self.assertEqual(len(typed),C.sizeof(source.core._Io));self.assertIsNone(known)
+        self.assertIsNone(row.completion);self.assertFalse(row.payload['acknowledged'])
+        self.assertEqual(self.original_target_calls(),[])
+        with self.assertRaises(OffloadAdmissionError):self.child._original_sharing_denial()
+
+    def test_probe_identity_output_mutation_is_not_original_identity(self):
+        original=[]
+        def getter():
+            saved=child_module._SHARING_STATES.get(id(self.port))
+            if saved and len(saved[1].calls)==3:
+                item=saved[1].calls[-1]
+                original.append(item[3]()[1]);item[2][0]^=1
+            return self.last_error
+        with patch.object(C,'get_last_error',side_effect=getter,create=True):
+            with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertEqual(original,[b'volume01'+b'mapped-weight-id'])
+        self.assertEqual(self.original_target_calls(),[])
+
+    def test_nonnull_failed_open_slot_and_other_status_do_not_qualify(self):
+        for mode in ('slot','status'):
+            with self.subTest(mode=mode):
+                case=SharingOpenDenialTests('runTest');case.setUp()
+                try:
+                    original=case.native.call
+                    def call(name,args):
+                        value=original(name,args)
+                        if name=='NtCreateFile'and value==-1073741757:
+                            if mode=='slot':args[0]._obj.value=9999
+                            else:return -1
+                        return value
+                    case.native.call=call
+                    with case.assertRaises(OffloadAdmissionError):case.source.prepare()
+                    with case.assertRaises(OffloadAdmissionError):case.child._original_sharing_denial()
+                    case.assertTrue(case.probe().complete)
+                finally:case.doCleanups()
+
+    def test_changed_probe_observation_or_missing_ack_refuses_without_native_effect(self):
+        self.sharing_denied();probe=self.probe();item,row=probe.custody[1]()[2]
+        effects=len(self.native.calls);row.payload['acknowledged']=False
+        with self.assertRaises(OffloadAdmissionError):self.child._original_sharing_denial()
+        row.payload['acknowledged']=True;probe.calls[2]=tuple(list(item))
+        with self.assertRaises(OffloadAdmissionError):self.child._original_sharing_denial()
+        self.assertEqual(len(self.native.calls),effects)
+
+
+
+
+    def test_original_source_setter_cannot_change_nested_inputs_after_probe(self):
+        changed=[]
+        def setter(value):
+            self.last_error=value
+            saved=child_module._SHARING_STATES.get(id(self.port))
+            if saved and saved[1].complete and self.source._pending.started:
+                self.source._pending.keep[3].root+=1
+                changed.append(True)
+        with patch.object(C,'set_last_error',side_effect=setter,create=True):
+            with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertEqual(changed,[True]);self.assertTrue(self.probe().complete)
+        self.assertEqual(self.original_target_calls(),[])
+        self.assertFalse(self.source._pending.returned)
+        with self.assertRaises(OffloadAdmissionError):self.child._original_sharing_denial()
+
+    def test_probe_dispatch_rejects_wrong_stage_function_layout_access_and_pointer_before_effect(self):
+        for mode in ('function','layout','share','pointer','query'):
+            case=SharingOpenDenialTests('runTest');case.setUp()
+            try:
+                original=child_module._SharingProbe.call;observed=[]
+                def wrong(probe,function,args,buffer,**kwargs):
+                    target=2 if mode=='query'else 0
+                    if len(probe.calls)==target:
+                        effects=len(case.native.calls)
+                        if mode=='function':function=case.source._api.k.CloseHandle
+                        elif mode=='layout':buffer=C.c_uint64()
+                        elif mode=='share':args=(*args[:6],7,*args[7:])
+                        elif mode=='pointer':args=(C.byref(C.c_void_p()),*args[1:])
+                        else:args=(args[0],1,args[2],args[3])
+                        try:return original(probe,function,args,buffer,**kwargs)
+                        finally:observed.append((effects,len(case.native.calls)))
+                    return original(probe,function,args,buffer,**kwargs)
+                with patch.object(child_module._SharingProbe,'call',wrong):
+                    with case.assertRaises(OffloadAdmissionError):case.source.prepare()
+                case.assertEqual(len(observed),1);case.assertEqual(*observed[0])
+                case.assertEqual(case.original_target_calls(),[])
+            finally:case.doCleanups()
+
+    def test_probe_capture_keeps_original_slot_and_thread_when_observer_aliases_change(self):
+        for field in ('slot','thread'):
+            case=SharingOpenDenialTests('runTest');case.setUp()
+            try:
+                original=case.native.call
+                def call(name,args):
+                    value=original(name,args)
+                    if name=='NtCreateFile'and args[6]==3 and args[8]==0x200040:
+                        probe=case.probe()
+                        if field=='slot':probe.slot=C.c_void_p(9999)
+                        else:probe.thread=-1
+                    return value
+                case.native.call=call
+                with case.assertRaises(OffloadAdmissionError):case.source.prepare()
+                probe=case.probe();item,row=probe.original[8][1]()[0]
+                physical,typed,known=item[3]()
+                case.assertEqual(physical[1],probe.original[5].value)
+                case.assertEqual(physical[2],probe.original[3])
+                case.assertEqual(case.original_target_calls(),[])
+                case.assertFalse(row.payload['acknowledged'])
+            finally:case.doCleanups()
+
+
+    def test_rebound_input_checker_is_denied_before_callback_or_further_native_call(self):
+        changed=[];untrusted=[];frontier=[]
+        def getter():
+            saved=child_module._SHARING_STATES.get(id(self.port))
+            if saved and saved[1].calls and not changed:
+                probe=saved[1]
+                probe.snapshot=(*probe.snapshot[:3],lambda:untrusted.append(True))
+                changed.append(True);frontier.append(len(self.native.calls))
+            return self.last_error
+        with patch.object(C,'get_last_error',side_effect=getter,create=True):
+            with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertEqual(changed,[True]);self.assertEqual(untrusted,[])
+        self.assertEqual(len(self.native.calls),frontier[0])
+        self.assertEqual(self.original_target_calls(),[])
+
+
+    def test_cleared_public_record_cannot_disable_original_input_checker_binding(self):
+        changed=[];untrusted=[];frontier=[]
+        def getter():
+            saved=child_module._SHARING_STATES.get(id(self.port))
+            if saved and saved[1].calls and not changed:
+                probe=saved[1];probe.record=None
+                probe.snapshot=(*probe.snapshot[:3],lambda:untrusted.append(True))
+                changed.append(True);frontier.append(len(self.native.calls))
+            return self.last_error
+        with patch.object(C,'get_last_error',side_effect=getter,create=True):
+            with self.assertRaises(OffloadAdmissionError):self.source.prepare()
+        self.assertEqual(changed,[True]);self.assertEqual(untrusted,[])
+        self.assertEqual(len(self.native.calls),frontier[0])
+        self.assertEqual(self.original_target_calls(),[])
 
 
 if __name__=='__main__':unittest.main()

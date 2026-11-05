@@ -160,9 +160,25 @@ class InputAndEvidenceTests(unittest.TestCase):
             with self.subTest(key=key),self.assertRaises(subject.SourceSessionFixtureError):
                 subject._validate_denial_report({**value,key:replacement},'b'*64,manifest,source)
 
+    def test_sharing_report_requires_distinct_schema_witness_and_every_original_exit_fact(self):
+        source,manifest,value=self.denial_report()
+        value={**value,'schema_version':'owned-source-parent-sharing-denial-v1',
+               'denial':{'schema_version':'source-native-sharing-denial-v1','phase':'prepare-source',
+               'desired_access':0x100081,'share_access':1,'native_status':0xc0000043,
+               'target_identity_sha256':'a'*64,'source_call_count':75,'probe_call_count':4}}
+        self.assertEqual(subject._validate_sharing_denial_report(value,'b'*64,manifest,source),value)
+        with self.assertRaises(subject.SourceSessionFixtureError):subject._validate_denial_report(value,'b'*64,manifest,source)
+        for field in value:
+            with self.subTest(field=field),self.assertRaises((subject.SourceSessionFixtureError,source.OffloadAdmissionError)):
+                subject._validate_sharing_denial_report({**value,field:None},'b'*64,manifest,source)
+        for field in value['mapping']:
+            with self.subTest(mapping=field),self.assertRaises(subject.SourceSessionFixtureError):
+                subject._validate_sharing_denial_report({**value,'mapping':{**value['mapping'],field:None}},'b'*64,manifest,source)
+
     def test_entry_selects_only_two_closed_native_cases(self):
         flags=SimpleNamespace(isolated=1,no_site=1)
-        for argument,expected in (('--native',None),('--native-shared-write-denial','shared-write-map-denial')):
+        for argument,expected in (('--native',None),('--native-shared-write-denial','shared-write-map-denial'),
+                                  ('--native-sharing-open-denial','sharing-open-denial')):
             with patch.object(subject,'__name__','_standalone_source_session_qualification'), \
                  patch.object(subject,'_NATIVE_ENTRY',subject._ENTRY_TOKEN), \
                  patch.object(subject.sys,'flags',flags),patch.object(subject.sys,'dont_write_bytecode',True), \
