@@ -815,5 +815,155 @@ class OriginalSourceOwnerTests(unittest.TestCase):
         self.assertEqual(len(self.native.dll_calls),1)
         self.assertFalse(self.native.calls)
 
+    def test_original_scalar_and_slot_survive_getter_failure_without_final_fields(self):
+        owner=self.owner()
+        def getter():
+            if self.native.calls and self.native.calls[-1][0]=='NtCreateFile':raise OSError('synthetic-getter')
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):self.denied(owner.prepare)
+        custody=s._SOURCE_CUSTODY[id(owner)];call=owner._pending
+        physical,typed,known,error=custody.original_call_return(call)
+        self.assertEqual(physical[0],0);self.assertGreater(physical[1],0)
+        self.assertEqual(physical[1],call.output.value);self.assertFalse(known)
+        self.assertFalse(call.returned or call.acknowledged);self.assertIsNone(call.value)
+        owner._api=None;owner._calls=[]
+        self.assertEqual(custody.original_call_return(call),(physical,typed,known,error))
+        before=len(self.native.calls);self.denied(owner.prepare)
+        self.assertEqual(len(self.native.calls),before)
+
+    def test_getter_cannot_replace_acquired_slot_and_its_observed_value(self):
+        owner=self.owner();actual=[]
+        def getter():
+            if self.native.calls and self.native.calls[-1][0]=='NtCreateFile':
+                slot=self.native.calls[-1][1][0]._obj;actual.append(slot.value);slot.value+=1
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):self.denied(owner.prepare)
+        call=owner._pending;physical=s._SOURCE_CUSTODY[id(owner)].original_call_return(call)[0]
+        self.assertEqual(physical[1],actual[-1]);self.assertEqual(call.output.value,actual[-1]+1)
+        self.assertFalse(call.acknowledged)
+
+    def test_getter_cannot_rewrite_original_io_status_into_valid_open(self):
+        owner=self.owner()
+        def fault(name,args):
+            if name=='NtCreateFile':
+                # Fake function fills this later; change it just after return below.
+                pass
+        original=self.native.call
+        def incomplete(name,args):
+            result=original(name,args)
+            if name=='NtCreateFile':args[3]._obj.information=0
+            return result
+        def getter():
+            if self.native.calls and self.native.calls[-1][0]=='NtCreateFile':self.native.calls[-1][1][3]._obj.information=1
+            return 0
+        with patch.object(self.native,'call',side_effect=incomplete),patch.object(C,'get_last_error',side_effect=getter):self.denied(owner.prepare)
+        call=owner._pending;typed=s._SOURCE_CUSTODY[id(owner)].original_call_return(call)[1]
+        self.assertEqual(s.w._Io.from_buffer_copy(typed[1]).information,0)
+        self.assertFalse(call.acknowledged)
+
+    def test_getter_cannot_rewrite_original_identity_before_consumption(self):
+        owner=self.owner();originals=[]
+        def getter():
+            if self.native.calls:
+                name,args=self.native.calls[-1]
+                if name=='GetFileInformationByHandleEx'and args[1]==18:
+                    value=args[2]._obj;originals.append(bytes(value));value[0]^=1
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):self.denied(owner.prepare)
+        call=owner._pending;typed=s._SOURCE_CUSTODY[id(owner)].original_call_return(call)[1]
+        self.assertEqual(typed[1],originals[-1]);self.assertNotEqual(bytes(typed[0]),typed[1])
+        self.assertFalse(call.acknowledged)
+
+    def test_validator_cannot_mutate_public_return_then_receive_ack(self):
+        original=s._WindowsSourceApi._call;owner=self.owner()
+        def wrapped(api,function,*args,**kwargs):
+            if function is api.n.NtCreateFile:
+                valid=kwargs['valid']
+                def change(value):owner._pending.value=999;return valid(value)
+                kwargs['valid']=change
+            return original(api,function,*args,**kwargs)
+        with patch.object(s._WindowsSourceApi,'_call',wrapped):self.denied(owner.prepare)
+        call=owner._pending;physical=s._SOURCE_CUSTODY[id(owner)].original_call_return(call)[0]
+        self.assertEqual(physical[0],0);self.assertEqual(call.value,999)
+        self.assertFalse(call.acknowledged)
+
+    def test_copy_or_binding_replacement_cannot_supply_original_capture(self):
+        owner=self.owner();owner.prepare();call=owner._calls[2]
+        copied=copy.copy(call)
+        with self.assertRaises(m.OffloadAdmissionError):copied.assert_original(owner)
+        binding=call.binding;call.binding=tuple(list(binding))
+        with self.assertRaises(m.OffloadAdmissionError):call.assert_original(owner)
+        call.binding=binding;call.assert_original(owner);owner.retire_unused()
+
+    def test_output_offsets_are_denied_before_the_affected_native_function(self):
+        for target in ('slot','io','identity'):
+            with self.subTest(target=target):
+                case=OriginalSourceOwnerTests('runTest');case.setUp()
+                try:
+                    original=s._WindowsSourceApi._call;owner=case.owner()
+                    def wrapped(api,function,*args,**kwargs):
+                        args=list(args)
+                        if function is api.n.NtCreateFile and target in ('slot','io'):
+                            pos=0 if target=='slot'else 3
+                            args[pos]=C.byref(args[pos]._obj,1)
+                        elif function is api.k.GetFileInformationByHandleEx and args[1]==18 and target=='identity':
+                            args[2]=C.byref(args[2]._obj,1)
+                        return original(api,function,*args,**kwargs)
+                    with patch.object(s._WindowsSourceApi,'_call',wrapped):case.denied(owner.prepare)
+                    if target in ('slot','io'):self.assertFalse(any(name=='NtCreateFile'for name,_ in case.native.calls))
+                    else:self.assertFalse(any(name=='GetFileInformationByHandleEx'and args[1]==18 for name,args in case.native.calls))
+                finally:case.doCleanups()
+
+    def test_dll_keyword_copy_is_fixed_before_the_producer_callback(self):
+        owner=self.owner();options=[]
+        original=s._OriginalModelSources._native_call;invoke=self.port.invoke_native
+        def observe(instance,function,args,valid,keep,**kwargs):
+            if function is C.WinDLL:options.append(kwargs['kwargs'])
+            return original(instance,function,args,valid,keep,**kwargs)
+        def before(instance,reservation,record,callback):
+            if record.function is C.WinDLL:options[-1]['winmode']=0
+            return invoke(instance,reservation,record,callback)
+        with patch.object(s._OriginalModelSources,'_native_call',observe),patch.object(self.port,'invoke_native',before):owner.prepare()
+        self.assertEqual(len(self.native.dll_calls),2)
+        self.assertTrue(all(kwargs=={'use_last_error':True,'winmode':0x800}for _,kwargs in self.native.dll_calls))
+        self.assertTrue(all(item['winmode']==0 for item in options))
+        owner.retire_unused()
+
+    def test_validator_cannot_finish_or_rethread_operation_before_ack(self):
+        for field,value in (('finished',True),('thread',-1)):
+            with self.subTest(field=field):
+                case=OriginalSourceOwnerTests('runTest');case.setUp()
+                try:
+                    owner=case.owner();original=s._WindowsSourceApi._call
+                    def wrapped(api,function,*args,**kwargs):
+                        if function is api.n.NtCreateFile:
+                            valid=kwargs['valid']
+                            def change(result):setattr(owner._op,field,value);return valid(result)
+                            kwargs['valid']=change
+                        return original(api,function,*args,**kwargs)
+                    with patch.object(s._WindowsSourceApi,'_call',wrapped):case.denied(owner.prepare)
+                    self.assertFalse(owner._pending.acknowledged)
+                finally:case.doCleanups()
+
+    def test_fixed_return_custody_is_precharged_inside_existing_memory_ceiling(self):
+        owner=self.owner()
+        minimum=2*s._READ_BYTES+(s.execution._MAX_CALLS+s.execution._TERMINAL_CALLS)*12288
+        self.assertGreaterEqual(owner._plan.buffer_bytes,minimum)
+        self.assertLessEqual(owner._plan.buffer_bytes+104*1024**2,512*1024**2)
+        self.assertFalse(self.native.calls or self.native.dll_calls)
+
+    def test_original_error_reader_is_bound_before_target_alias_replacement(self):
+        owner=self.owner();self.native.native_error=5;original=self.native.call
+        def replace(name,args):
+            value=original(name,args)
+            if name=='DeviceIoControl':C.get_last_error=lambda:997
+            return value
+        with patch.object(C,'get_last_error',C.get_last_error),patch.object(self.native,'call',side_effect=replace):self.denied(owner.prepare)
+        call=owner._pending
+        self.assertEqual(call.error,5)
+        self.assertFalse(call.acknowledged)
+        physical,typed,known,error=s._SOURCE_CUSTODY[id(owner)].original_call_return(call)
+        self.assertTrue(known);self.assertEqual(error,5);self.assertEqual(physical[0],0)
+
 
 if __name__ == '__main__':unittest.main()

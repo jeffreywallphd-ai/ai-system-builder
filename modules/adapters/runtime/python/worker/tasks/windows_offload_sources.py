@@ -231,7 +231,7 @@ def _source_graph_plan(inventory, binding):
     handles = ancestors + 2 * files + 1
     memory = (2 * _READ_BYTES + len(inventory._config_bytes)
               + len(inventory.tensors) * 2048
-              + (execution._MAX_CALLS + execution._TERMINAL_CALLS) * 8192)
+              + (execution._MAX_CALLS + execution._TERMINAL_CALLS) * 12288)
     _need(execution._MAX_CALLS == 16384 and execution._TERMINAL_CALLS == 64
           and execution._MEMORY_BYTES == 512 * 1024**2
           and execution._BUDGET_NS == 120 * 10**9)
@@ -357,6 +357,70 @@ class _SourceRead:
               and self.offset.value == self._offset_value)
 
 
+def _source_output_pointer(argument, buffer):
+    _need(type(argument) is type(C.byref(C.c_ubyte()))
+          and getattr(argument, '_obj', None) is buffer
+          and C.cast(argument,C.c_void_p).value == C.addressof(buffer))
+
+
+def _source_call_capture(row, operation, keywords):
+    # Created by the original owner before Native dispatch. These closures are
+    # retained independently of subsequently mutable public call observations.
+    binding, output, thread = row.binding, row.output, get_ident()
+    _need(type(operation) is w._ExecutionCall and operation.thread == thread)
+    if output is not None:
+        _need(type(output) is C.c_void_p and len(row.args) > 0)
+        _source_output_pointer(row.args[0],output)
+    descriptor = None
+    api = row.owner._api
+    functions = getattr(api,'_functions',())
+    names = [entry[1] for entry in functions if entry[2] is row.function]
+    if names == ['NtCreateFile']:
+        _need(len(row.args) == 11 and output is not None)
+        buffer = getattr(row.args[3],'_obj',None)
+        _need(type(buffer) is w._Io and any(value is buffer for value in row.keep))
+        _source_output_pointer(row.args[3],buffer)
+        descriptor = (buffer,C.addressof(buffer),C.sizeof(buffer),'io')
+    elif names == ['GetFileInformationByHandleEx'] and len(row.args) == 4 and row.args[1] == 18:
+        buffer = getattr(row.args[2],'_obj',None)
+        _need(type(buffer) is C.c_ubyte * 24 and row.args[3] == 24
+              and any(value is buffer for value in row.keep))
+        _source_output_pointer(row.args[2],buffer)
+        descriptor = (buffer,C.addressof(buffer),24,'identity')
+    physical = typed = None
+    error_known, original_error = False,None
+    def capture(value, slot):
+        nonlocal physical,typed
+        _need(physical is None)
+        physical = (value,slot,thread)
+        # Only synchronously successful fixed outputs are complete here.
+        # Pending reads, OVERLAPPED guards and arbitrary buffers are excluded.
+        copy = descriptor is not None and type(value) is int and (
+            value == 0 if descriptor[3] == 'io' else value != 0)
+        typed = ((descriptor[0],C.string_at(descriptor[1],descriptor[2])) if copy else ())
+    def finish(error):
+        nonlocal error_known,original_error
+        _need(physical is not None and not error_known and typed is not None
+              and type(error) is int and 0 <= error <= 0xffffffff)
+        original_error,error_known = error,True
+    def read():return (physical,typed,error_known,original_error)
+    def validate():
+        _need(row.binding is binding)
+        if physical is None:
+            _need(not row.returned and row.value is row.output_value is row.error is None)
+            return
+        _need(row.started and row.thread == physical[2])
+        if row.returned:
+            _need(error_known and typed is not None and row.value is physical[0]
+                  and row.output_value == physical[1] and row.error == original_error)
+            if output is not None:_need(output.value == physical[1])
+            if typed:
+                buffer, copied = typed
+                _need(C.addressof(buffer) == descriptor[1] and C.sizeof(buffer) == descriptor[2]
+                      and C.string_at(descriptor[1],descriptor[2]) == copied)
+    return capture,finish,read,validate
+
+
 class _SourceNativeCall:
     def __init__(self, owner, function, args, valid, keep, terminal, expected_error, false_errors, output):
         self.origin, self.owner = self, owner
@@ -371,6 +435,17 @@ class _SourceNativeCall:
               and type(self.binding) is tuple and len(self.binding) == 8
               and all(a is b for a,b in zip((self.function,self.args,self.valid,self.keep,
                     self.terminal,self.expected_error,self.false_errors,self.output),self.binding)))
+        entry = _source_call_custody(owner).call_returns.get(id(self))
+        _need(type(entry) is tuple and len(entry) == 6 and entry[0] is self
+              and entry[1] is self.binding)
+        entry[5]()
+
+    def original_typed(self, owner, buffer):
+        self.assert_original(owner)
+        physical,typed,known,error = _source_call_custody(owner).original_call_return(self)
+        _need(self.returned and known and type(typed) is tuple and len(typed) == 2
+              and typed[0] is buffer)
+        return type(buffer).from_buffer_copy(typed[1])
 
 
 class _WindowsSourceApi:
@@ -470,6 +545,7 @@ class _WindowsSourceApi:
             C.byref(attrs),C.byref(io),None,0x80,3 if ancestor else 1,1,0x200000|(1 if directory else 0x40),None,0,
             valid=lambda status:type(status) is int and status == 0,
             keep=(handle,text,string,attrs,io,parent),output=handle.original_slot)
+        io = self.owner._calls[-1].original_typed(self.owner,io)
         _need(io.status in (None,0) and io.information == 1)
         self._installed(handle)
         self.kind(handle,directory)
@@ -490,7 +566,7 @@ class _WindowsSourceApi:
     def identity(self, handle):
         value = (C.c_ubyte*24)()
         self._call(self.k.GetFileInformationByHandleEx,self._number(handle),18,C.byref(value),C.sizeof(value),keep=(handle,value))
-        result = bytes(value)
+        result = bytes(self.owner._calls[-1].original_typed(self.owner,value))
         _need(any(result[:8]) and any(result[8:]))
         return result
 
@@ -589,12 +665,23 @@ class _WindowsSourceApi:
         row.retired = True
 
 
+def _source_call_custody(owner):
+    custody = _SOURCE_CUSTODY.get(id(owner))
+    if custody is None:
+        graph = _SOURCE_RETIREMENTS.get(id(owner))
+        _need(type(graph) is tuple and len(graph) == 11)
+        custody = graph[0]
+    _need(type(custody) is _SourceCustody and custody.owner is owner)
+    return custody
+
+
 class _SourceCustody:
     """Original references independent of subsequently replaceable owner fields."""
     def __init__(self, owner):
         self.owner = owner
+        self.call_returns = {}
         self.refs = (owner._inventory,owner._binding,owner._execution,owner._factory,
-            owner._plan,owner._handles,owner._guards,owner._reads,owner._calls,owner._operations)
+            owner._plan,owner._handles,owner._guards,owner._reads,owner._calls,owner._operations,self.call_returns)
         self.api = self.reservation = self.buffer = self.event = None
         self.chain = self.files = None
         self.sealed_handles = self.sealed_guards = None
@@ -608,7 +695,7 @@ class _SourceCustody:
               and _SOURCE_CUSTODY.get(id(owner)) is self
               and all(a is b for a,b in zip((owner._inventory,owner._binding,owner._execution,
                 owner._factory,owner._plan,owner._handles,owner._guards,owner._reads,
-                owner._calls,owner._operations),self.refs)))
+                owner._calls,owner._operations,self.call_returns),self.refs)))
         owner._binding.assert_original(owner._inventory)
         _need(tuple(vars(owner._plan).items()) == self.plan_facts)
         for actual,original in ((owner._handles,[row[0] for row in self.handle_origins]),
@@ -620,7 +707,9 @@ class _SourceCustody:
                   and handle.generation is generation and handle.original_generation is generation)
             if handle.installed is not None:
                 call = handle.acquire_call
-                _need(type(call) is _SourceNativeCall and call.output is slot
+                _need(type(call) is _SourceNativeCall)
+                call.assert_original(owner)
+                _need(call.output is slot
                       and call.output_value == handle.installed == slot.value
                       and call.acknowledged and call.returned)
         for expected,actual in ((self.api,owner._api),(self.reservation,owner._reservation),
@@ -632,6 +721,14 @@ class _SourceCustody:
                   and all(a is b for a,b in zip(owner._handles,self.sealed_handles))
                   and len(owner._guards) == len(self.sealed_guards)
                   and all(a is b for a,b in zip(owner._guards,self.sealed_guards)))
+
+
+    def original_call_return(self, call):
+        # Read retained facts even if current owner/API/observation aliases drift.
+        # This accessor supplies no admission, Native action or cleanup credit.
+        entry = self.call_returns.get(id(call))
+        _need(type(entry) is tuple and len(entry) == 6 and entry[0] is call)
+        return entry[4]()
 
 
 class _OriginalModelSources:
@@ -686,10 +783,19 @@ class _OriginalModelSources:
         operation = self._op
         _need(type(operation) is w._ExecutionCall and operation.started and not operation.finished
               and operation.thread == get_ident() and self._pending is None and not self._uncertain)
+        if kwargs is not None:
+            _need(type(kwargs) is dict and kwargs == {'use_last_error':True,'winmode':0x800}
+                  and type(kwargs['use_last_error']) is bool and type(kwargs['winmode']) is int
+                  and function is C.WinDLL and args in (('kernel32.dll',),('ntdll.dll',)))
+        keywords = () if kwargs is None else tuple(kwargs.items())
         row = _SourceNativeCall(self,function,args,valid,keep,self._terminal,expected_error,false_errors,output)
-        self._retain().call_origins.append(row)
+        capture,finish,read,validate_capture = _source_call_capture(row,operation,keywords)
+        custody = self._retain()
+        custody.call_returns[id(row)] = (row,row.binding,operation,keywords,read,validate_capture)
+        custody.call_origins.append(row)
         self._calls.append(row)
         self._pending = row
+        error_reader,error_writer = C.get_last_error,C.set_last_error
         def invoke():
             try:
                 self._reserved()
@@ -697,10 +803,13 @@ class _OriginalModelSources:
                 _need(self._op is operation and self._pending is row and not operation.finished
                       and operation.thread == get_ident() and not row.started and not self._uncertain)
                 row.started,row.thread = True,get_ident()
-                C.set_last_error(0)
-                value = function(*args,**(kwargs or {}))
-                error = C.get_last_error()  # Before any producer bookkeeping.
-                row.output_value = None if row.output is None else row.output.value
+                error_writer(0)
+                value = function(*args,**dict(keywords))
+                slot = None if output is None else output.value
+                capture(value,slot)  # Locals only, before getter/owner/observer work.
+                error = error_reader()
+                finish(error)
+                row.output_value = slot
                 row.value,row.error,row.returned = value,error,True
                 return value
             except BaseException:
@@ -714,6 +823,12 @@ class _OriginalModelSources:
                   and self._pending is row and not self._uncertain)
             _need((valid(value) or (type(value) is int and value == 0 and row.error in false_errors))
                   and (expected_error is None or row.error == expected_error))
+            # A successful validator may still mutate observations or outputs.
+            self._reserved()
+            row.assert_original(self)
+            _need(self._op is operation and self._pending is row and not self._uncertain
+                  and operation.started is True and operation.finished is False
+                  and operation.thread == row.thread == get_ident())
             row.acknowledged = True
             self._pending = None
             return value

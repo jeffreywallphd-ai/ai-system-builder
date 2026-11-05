@@ -1234,3 +1234,20 @@ adds no Native call, new case, wire field, quota or production capability. The
 strict801 witness and all old failed observations stay unchanged. A separate
 sharing-denial same-file proof and actual Windows qualification remain pending.
 Accepted accuracy/OCR stay closed; unknown staging remains fully charged12GiB.
+
+## Original Source call returns
+
+The private Source owner retains original scalar and acquisition-slot returns
+before the last-error getter. It copies only synchronously successful file-open
+IO status and fixed file-ID outputs. Original pointer types,base addresses and
+spans bind those copies. Existing open and identity consumers use captured typed
+bytes; changed slots,buffers,binding or validator observations deny ACK.
+
+Getter or copy failure keeps physical return custody separate from uncompleted
+public fields. Passive access to retained facts does not require healthy current
+owner aliases and grants no Native action or cleanup credit. Pending async IRPs
+and other metadata are not newly qualified. This adds no Native call or quota.
+Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
+remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
+Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
+qualification admission. Model RAM guards and all row/time ceilings are unchanged.
