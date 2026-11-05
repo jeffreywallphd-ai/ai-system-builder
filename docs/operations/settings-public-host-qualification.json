@@ -4,7 +4,7 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The local Settings test server started and shut down correctly. The test runner failed while loading test files. No Settings interface case ran.",
+  "summary": "The test now loads and reaches the app. It stopped at workspace setup because it searched for a control located on Home. No Settings journey phase completed. The test-owned processes and handles closed correctly.",
   "observed_source": {
     "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
     "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786",
@@ -26,6 +26,14 @@
       "receipt_digest": "df617bdfa17059b05651ef13e1e0d18cafab5c0078d9774dbf4f8ceeaae564c2",
       "review_digest": "482205e7b565d8cef729f14c3b46752083a51bb91b128d9ee7e0663777f4e89d",
       "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786"
+    },
+    {
+      "work_id": "load-settings-helpers-after-playwright-setup",
+      "commit": "bd7eae6d54d80b0bbfe6e3c72a1abd5f9e82eb7c",
+      "at": "2026-11-05T04:50:44Z",
+      "receipt_digest": "4d53d89d83835a3e91dfe57bcf441a0ca6ae77d1ee13f29839d659074b7187c1",
+      "review_digest": "4f71e8425b81dac0cb1732e0aa40f5fcd541a65716efaa004e61b708cb7b68fa",
+      "source_digest": "7eaf76e2a54a27d96e2cc1f59228f206aa3b11dd04f4006438bbddb499702a24"
     }
   ],
   "attempts": [
@@ -76,9 +84,69 @@
         "settings-setup-closed": "0961532c631cd5ea0c7d3068b03d40baea38931159ddc741fb99af37ddbf7f90",
         "settings-runner-result": "4561d0119bca35140b8b44233accc1ee8cc85dd216b925fc3d7c8b56c488f035"
       }
+    },
+    {
+      "run_id": "a229f66ec0f14189ba34e91d4e4bb93e",
+      "host": "thin-chrome",
+      "scenario": "public-values",
+      "status": "failed-during-workspace-setup",
+      "observed_source": {
+        "commit": "bd7eae6d54d80b0bbfe6e3c72a1abd5f9e82eb7c",
+        "source_digest": "7eaf76e2a54a27d96e2cc1f59228f206aa3b11dd04f4006438bbddb499702a24",
+        "source_revision": "source.4bf86b3496ed7bcbc3a37c735200b904536dd58632647aba450bab1237d7cfd3"
+      },
+      "selected_tests": 1,
+      "finished_tests": 1,
+      "global_errors": 0,
+      "case_status": "failed",
+      "case_retry": 0,
+      "case_errors": 1,
+      "journey_attachment_present": false,
+      "root_exit_code": 1,
+      "ui_qualification_passed": false,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "diagnosis": "The app displayed its inline workspace form on the Systems page. The test searched for the Create new workspace control, which is on the Home card. The existing shared UI helper already navigates to Home before creating a workspace. This is a test-navigation mismatch; the evidence does not establish an app, authorization or memory defect.",
+      "failure_stage": "workspace-setup",
+      "action": "click",
+      "timeout_ms": 8000,
+      "cleanup": {
+        "confirmed": true,
+        "all_owned_handles_closed": true,
+        "active_owned_processes": 0,
+        "total_owned_processes": 31,
+        "outer_job_forced_termination": false,
+        "server_shutdown_acknowledged": true,
+        "test_credential_removed": true,
+        "source_unchanged": true,
+        "streams_complete": true,
+        "pending_and_live_registries_clear": true
+      },
+      "limits": {
+        "process_bytes": 1073741824,
+        "job_bytes": 3221225472,
+        "members": 32,
+        "seconds": 420
+      },
+      "observed_peaks": {
+        "process_commit_bytes": 555016192,
+        "job_commit_bytes": 2061086720
+      },
+      "evidence_digests": {
+        "native_observation": "10206638deeacd5a1cf027fb6642fc2b46b7f5416d4cadee69a2c4b6aa26be10",
+        "observed_result": "6c6f7ebba3b9ed5e74b96a1e44e189c7467c6733d3a00086b4f96d3705356542",
+        "effect_reference": "1a02a3396c3cf9aeff7650aeae999c0508f7fa5fc0e15d6368f03193566554cc",
+        "independent_outcome_reference": "cfcc5449d21b91d7f22e5eddcb4b902bb15b0d477df8361c755e71c4ee7b818e",
+        "independent_outcome_report": "865036cd971c98d151b48f8f7d42b17c6025705589318c5906d8dcff10f9b631",
+        "separate_known_case_diagnostic": "fc1babe31980f64f8712a3ea2b8db2b568c3295938ee0c3e2e17e470f08fd838",
+        "settings-setup-started": "ccab90f1b023f14ce2a888c62d8fbb74e2da0ab1359524a4071b8a8412a2cc7e",
+        "settings-setup-ready": "296028cd38019b165b429be265487d1809f020c80459aa821367f2f381f104ff",
+        "settings-setup-closed": "399de88baed5596f1c0b9a5500579ef517a1d789dea6248f2f21889a1c6729fc",
+        "settings-runner-result": "1d11319cc12d3c4e2c23b739747657557817128e4eb42025ddb42227bd6aa788"
+      }
     }
   ],
-  "next_action": "The agent must fix test-module loading and add its regression test, then run a new separately reviewed thin-client Settings journey. Desktop Settings needs a fresh package and a separate reviewed journey. No user action is needed.",
+  "next_action": "The agent must correct workspace test navigation, add focused regressions and run a fresh separately reviewed Settings journey. Desktop Settings and final checks remain pending. No user action is needed.",
   "scope_limits": [
     "This report records evidence collection. The failing attempt grants no Settings case, increment or roadmap pass.",
     "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
@@ -86,5 +154,10 @@
     "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
     "The shared full-system campaign remains pending until open feature work is ready."
   ],
-  "parent_qualification_granted": false
+  "parent_qualification_granted": false,
+  "latest_observed_source": {
+    "commit": "bd7eae6d54d80b0bbfe6e3c72a1abd5f9e82eb7c",
+    "source_digest": "7eaf76e2a54a27d96e2cc1f59228f206aa3b11dd04f4006438bbddb499702a24",
+    "source_revision": "source.4bf86b3496ed7bcbc3a37c735200b904536dd58632647aba450bab1237d7cfd3"
+  }
 }

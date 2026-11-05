@@ -9899,6 +9899,66 @@
         "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
         "No user action is needed. Full-system testing remains deferred until open feature work is ready."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "load-settings-helpers-after-playwright-setup",
+      "work_criteria": [
+        "preserve-settings-host-policy-with-direct-esm",
+        "real-setup-worker-loader-regression",
+        "security-and-truthful-checkpoint"
+      ],
+      "receipt_digest": "4d53d89d83835a3e91dfe57bcf441a0ca6ae77d1ee13f29839d659074b7187c1",
+      "review_digest": "4f71e8425b81dac0cb1732e0aa40f5fcd541a65716efaa004e61b708cb7b68fa",
+      "scope": "Source checks passed for Settings test startup. Both host profiles load the JavaScript helpers correctly after setup. The later browser test reached workspace setup and failed there.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The thin-client case did not reach Settings. The agent must correct workspace test navigation and run the journey again.",
+        "The reported cleanup covers only this isolated test. Desktop Settings, low-memory restart and final qualification remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "load-settings-helpers-after-playwright-setup",
+      "work_criteria": [
+        "preserve-settings-host-policy-with-direct-esm",
+        "real-setup-worker-loader-regression",
+        "security-and-truthful-checkpoint"
+      ],
+      "receipt_digest": "4d53d89d83835a3e91dfe57bcf441a0ca6ae77d1ee13f29839d659074b7187c1",
+      "review_digest": "4f71e8425b81dac0cb1732e0aa40f5fcd541a65716efaa004e61b708cb7b68fa",
+      "scope": "Source checks passed for Settings test startup. Both host profiles load the JavaScript helpers correctly after setup. The later browser test reached workspace setup and failed there.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The thin-client case did not reach Settings. The agent must correct workspace test navigation and run the journey again.",
+        "The reported cleanup covers only this isolated test. Desktop Settings, low-memory restart and final qualification remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "load-settings-helpers-after-playwright-setup",
+      "work_criteria": [
+        "preserve-settings-host-policy-with-direct-esm",
+        "real-setup-worker-loader-regression",
+        "security-and-truthful-checkpoint"
+      ],
+      "receipt_digest": "4d53d89d83835a3e91dfe57bcf441a0ca6ae77d1ee13f29839d659074b7187c1",
+      "review_digest": "4f71e8425b81dac0cb1732e0aa40f5fcd541a65716efaa004e61b708cb7b68fa",
+      "scope": "Source checks passed for Settings test startup. Both host profiles load the JavaScript helpers correctly after setup. The later browser test reached workspace setup and failed there.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The thin-client case did not reach Settings. The agent must correct workspace test navigation and run the journey again.",
+        "The reported cleanup covers only this isolated test. Desktop Settings, low-memory restart and final qualification remain pending.",
+        "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. Full-system testing remains deferred."
+      ]
     }
   ]
 }

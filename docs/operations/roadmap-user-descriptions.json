@@ -249,7 +249,7 @@
       "user_description": {
         "purpose": "Preserve everyday settings, navigation, notifications and runtime recovery.",
         "owner": "agent",
-        "next_action": "The thin-client Settings test stopped while loading test files. No Settings case ran. The agent will fix the test loader, rerun this focused journey, then check Desktop Settings. Other app-level and final checks remain pending. No user action is needed.",
+        "next_action": "The test now starts, but it used a workspace-creation control that is on Home. The agent will correct the test navigation, then check Settings saving and clearing. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must cover mounted Settings, thin-client Security, runtime readiness and controls, workspace summaries and shell navigation.",
@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "The failed thin-client attempt shut down all test-owned processes and closed their handles. The agent will fix test loading before a separately reviewed run. Other cleanup and final checks remain pending. No user action is needed.",
+        "next_action": "The failed test closed all test-owned processes and handles. The agent will repair navigation before a fresh reviewed run. Other cleanup and final checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -14839,6 +14839,52 @@
           "Focused checks passed for the Settings test server on the local loopback address.",
           "Bind failures remain failures.",
           "These source checks did not run a Settings interface journey."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "428152ee2a28563911e06c3ba31c2c33a056284f9c829864db21b1919eedea37",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Source checks passed for Settings test startup.",
+          "Both host profiles load the JavaScript helpers correctly after setup.",
+          "The later browser test reached workspace setup and failed there."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d259caa6921f0c9902f1a157d7b9af8dd71010e290a1323582c8345e5b752b93",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The thin-client case did not reach Settings.",
+          "The agent must correct workspace test navigation and run the journey again."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f5a9dfbbd0c7d1303a221df915d3b70b64dcc143eef2d346aaadba6b5bf440a8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The reported cleanup covers only this isolated test.",
+          "Desktop Settings, low-memory restart and final qualification remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "99183a12d3db304c247fbaa09545ddbb2ee6ebe10784e31d86da26dc6cdd1c3f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "Accepted model accuracy and text-recognition checks stay closed.",
+          "Full-system testing remains deferred."
         ]
       }
     }
