@@ -135,7 +135,7 @@ qualification.
 The fixed `operational-ui` profile runs the runtime, notification, task-family,
 shell, dashboard, readiness and qualification-definition test files listed in
 `dev-tools/config/contributor-check-profiles.json`. Automatic selection uses
-only its exact catalog paths, including the shared Home reading stylesheet.
+only its exact catalog paths, including the shared Home and notification stylesheets.
 Shared README files and borrowed regressions do not activate it for another
 feature's profile.
 Node and Vitest files keep

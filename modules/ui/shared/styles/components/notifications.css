@@ -39,9 +39,10 @@
   border: 2px solid rgb(6 16 30);
   border-radius: var(--radius-pill);
   background: var(--color-danger, #ef5b6c);
-  color: #fff;
+  color: var(--color-bg-primary, #06101e);
   font-size: 0.6rem;
   font-weight: 750;
+  line-height: 1;
 }
 
 .ui-notification__panel,

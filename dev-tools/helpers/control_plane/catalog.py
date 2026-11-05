@@ -118,6 +118,7 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs",
         "modules/ui/shared/styles/components/home.css",
+        "modules/ui/shared/styles/components/notifications.css",
         "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts",
     ],
     "security-status-ui": [

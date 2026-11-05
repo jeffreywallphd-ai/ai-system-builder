@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_HOST_TIMEOUT_MS, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost } from "../visual-composer/operational-ui-oracles";
 const input = (host: OperationalHost = "thin-chrome") => ({ schemaVersion: "operational-ui-observation-v1", host, runId: "operational-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, phases: [...operationalPhases(host)] });
@@ -136,4 +138,37 @@ describe("operational UI observation boundaries", () => {
   it.each(["https://example.com/", "file:///private", "http://user:secret@localhost:3000/", "http://localhost:3000/?token=synthetic", "http://localhost:3000/#private", "not a URL"])("refuses an unknown or credential-bearing origin %#", value => {
     expect(() => operationalStatusUrl(value)).toThrow("Operational UI requires an authorized local test origin.");
   });
+});
+
+
+it("keeps unread badge text readable with the shared palette and fallback colors", () => {
+  const styleRoot = path.resolve(__dirname, "../../../../modules/ui/shared/styles");
+  const sheet = readFileSync(path.join(styleRoot, "components/notifications.css"), "utf8");
+  const tokens = readFileSync(path.join(styleRoot, "tokens.css"), "utf8");
+  const badge = [...sheet.matchAll(/^\.ui-notification__badge\s*\{([^}]+)\}/gm)];
+  expect(badge).toHaveLength(1);
+  const hex = "#[a-fA-F0-9]{6}|#[a-fA-F0-9]{3}";
+  const colors = (property: "background" | "color") => {
+    const values = [...badge[0]![1]!.matchAll(new RegExp(`^\\s*${property}:\\s*([^;]+);`, "gm"))];
+    expect(values).toHaveLength(1);
+    const value = values[0]![1]!.trim();
+    if (new RegExp(`^(?:${hex})$`).test(value)) return [value, value] as const;
+    const variable = new RegExp(`^var\\((--[a-z-]+),\\s*((?:${hex}))\\)$`).exec(value);
+    if (!variable) throw new Error("Expected an opaque badge color and fallback.");
+    const declared = [...tokens.matchAll(new RegExp(`^\\s*${variable[1]}:\\s*((?:${hex}));`, "gm"))];
+    expect(declared).toHaveLength(1);
+    return [declared[0]![1]!, variable[2]!] as const;
+  };
+  const luminance = (color: string) => {
+    const hex = color.length === 4 ? color.slice(1).replace(/./g, digit => digit + digit) : color.slice(1);
+    return [0.2126, 0.7152, 0.0722].reduce((sum, weight, index) => {
+      const channel = Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16) / 255;
+      return sum + weight * (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    }, 0);
+  };
+  const foreground = colors("color"), background = colors("background");
+  for (const index of [0, 1] as const) {
+    const a = luminance(foreground[index]), b = luminance(background[index]);
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
+  }
 });

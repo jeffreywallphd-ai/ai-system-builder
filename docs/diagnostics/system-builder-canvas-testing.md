@@ -546,3 +546,17 @@ use the fixed region counts to narrow the investigation. Preserve
 the earlier failed runs and every genuine remaining qualification gap. Keep
 completed accuracy and OCR checks closed. Full-system testing remains deferred
 until the open implementation work is ready.
+
+
+## Notification count contrast
+
+The standard thin-client run grouped one unresolved short-text retry in the
+notification badge region. Separately, the earlier white text and red background
+in the shared palette compute to about 3.10:1. The badge now uses an existing
+dark palette color for text and a shorter line box. The focused check
+reads the actual stylesheet and requires at least 4.5:1 in both the shared
+palette and its fallback. The count, accessible label and controls are unchanged.
+
+This source check does not qualify a rendered browser or desktop result. The
+separate unresolved partial-obscuring measurement still needs diagnosis. Keep
+the original failure and all existing accessibility and host requirements.
