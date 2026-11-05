@@ -110,6 +110,7 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
   let oldAxe: PropertyDescriptor | undefined;
   let oldClientWidth: PropertyDescriptor | undefined, oldScrollWidth: PropertyDescriptor | undefined;
   const page = {
+    viewportSize: () => ({ width: 1440, height: 1000 }),
     evaluate: async (callback: ((value: unknown) => unknown) | string, value: unknown) => typeof callback === "string" ? undefined : callback(value),
     emulateMedia: async (options: { reducedMotion?: string; forcedColors?: string }) => {
       if (probe.restoreFails && options.reducedMotion === "no-preference") throw new Error("synthetic-private-browser-error");
@@ -157,6 +158,53 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(saved.forcedColorsAudits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
     expect(saved["control-access-320"]).toEqual({ width: 320, controls: 1, inaccessible: 0, status: "passed" });
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
+  });
+  it.each([false, true])("restores the caller's narrow viewport after an audit failure=%s", async failure => {
+    probe.auditFails = failure;
+    const narrow = { ...page, viewportSize: () => ({ width: 320, height: 720 }) } as Page;
+    if (failure) await expect(qualifyCriticalSurfaceAccessibility(narrow, info, "settings")).rejects.toThrow("Critical accessibility check failed at audit-1440.");
+    else await qualifyCriticalSurfaceAccessibility(narrow, info, "settings");
+    expect(probe.widths.at(-1)).toBe(320);
+  });
+  it.each([null,undefined,{width:0,height:720},{width:320,height:NaN},{width:320.5,height:720}])("refuses an unavailable or invalid caller viewport %# before any mutation",async viewport=>{
+    const untouched={...page,viewportSize:()=>viewport} as Page;
+    await expect(qualifyCriticalSurfaceAccessibility(untouched,info,"settings")).rejects.toThrow("Critical accessibility check failed at viewport-admission.");
+    expect(probe.flags).toEqual([]);expect(probe.widths).toEqual([]);expect(probe.motion).toBe("no-preference");expect(probe.calls).toBe(0);
+  });
+  it("redacts a viewport capture failure without inventing a restore target",async()=>{
+    const untouched={...page,viewportSize:()=>{throw new Error("synthetic-private-viewport");}} as Page;
+    await expect(qualifyCriticalSurfaceAccessibility(untouched,info,"settings")).rejects.toThrow("Critical accessibility check failed at viewport-admission.");
+    expect(probe.flags).toEqual([]);expect(probe.widths).toEqual([]);
+  });
+  function installNavigation(fault?: "missing" | "duplicate" | "wide-menu" | "narrow-menu" | "forced-menu") {
+    const main=document.querySelector("main")!;
+    for(const [tag,className] of [["aside","ui-shell__sidebar"],["summary","ui-shell__menu-trigger"],["div","ui-shell__menu-panel"]]) {
+      if(fault === "missing" && tag === "aside")continue;
+      const node=document.createElement(tag!);node.className=className!;
+      Object.assign(node.style,{visibility:"visible",transitionDuration:"0s",animationName:"none"});
+      node.setAttribute("aria-expanded","true");
+      Object.defineProperty(node,"getClientRects",{value:()=>{
+        const narrow=(probe.widths.at(-1) ?? (devicePixelRatio === 4 ? 356 : 1440))<=1024;
+        let visible=tag === "aside" ? !narrow : narrow;
+        if(fault === "wide-menu" && !narrow && tag !== "aside")visible=true;
+        if((fault === "narrow-menu" || fault === "forced-menu" && probe.forcedColors === "active") && narrow && tag === "div")visible=false;
+        return visible ? [{width:1,height:1}] : [];
+      }});
+      Object.defineProperty(node,"getBoundingClientRect",{value:()=>({width:1,height:1,left:0,right:1})});
+      main.append(node);
+      if(fault === "duplicate" && tag === "aside")main.append(node.cloneNode(true));
+    }
+  }
+  it("requires wide sidebar and narrow open menu in both media profiles, then restores narrow caller",async()=>{
+    installNavigation();const narrow={...page,viewportSize:()=>({width:320,height:720})} as Page;
+    expect((await qualifyCriticalSurfaceAccessibility(narrow,info,"navigation-menu")).status).toBe("passed");
+    expect(probe.calls).toBe(4);expect(probe.widths).toEqual([1440,320,1440,320,320]);
+  });
+  it.each(["missing","duplicate","wide-menu","narrow-menu","forced-menu"] as const)("refuses wrong responsive navigation %s",async fault=>{
+    installNavigation(fault);
+    const stage=fault === "forced-menu" ? "forced-colors-navigation-layout-320" : fault === "narrow-menu" ? "navigation-layout-320" : "navigation-layout-1440";
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu")).rejects.toThrow(`Critical accessibility check failed at ${stage}.`);
+    expect(JSON.parse(probe.writes.at(-1)!).status).toBe("failed");expect(probe.widths.at(-1)).toBe(1440);
   });
   it("reads fixed source-owned profile and engine inputs from an unrelated working folder",async()=>{
     const inputs=[path.resolve(__dirname,"../../../config/technical-reference-profiles.json"),path.resolve(__dirname,"../../../../node_modules/axe-core/axe.min.js")];
@@ -284,12 +332,19 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     for(const key of ["clientWidth","scrollWidth"])Object.defineProperty(document.documentElement,key,{configurable:true,get:()=>356});
   }
   it.each(["settings","navigation-menu"] as const)("audits native %s at its actual width without any viewport resize",async surface=>{
-    installNativeFrame();const result=await qualifyCriticalSurfaceAccessibility(page,info,surface,"native400");
+    installNativeFrame();if(surface === "navigation-menu")installNavigation();
+    const result=await qualifyCriticalSurfaceAccessibility(page,info,surface,"native400");
     expect(result.scope).toBe("native-ui-observation-only");expect(result.status).toBe("passed");expect(probe.calls).toBe(2);expect(probe.widths).toEqual([]);
     expect(result.audits.map(item=>"frame" in item?item.frame.innerWidth:null)).toEqual([356,356]);
     expect(probe.motion).toBe("no-preference");expect(probe.forcedColors).toBe("none");expect(probe.flags).toEqual(["wx","w","w","w"]);
     expect(JSON.parse(probe.writes[probe.writes.length-1]!).status).toBe("passed");expect(probe.attachments).toHaveLength(1);
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|message/);
+  });
+  it.each(["narrow-menu","forced-menu"] as const)("requires native responsive navigation in %s media",async fault=>{
+    installNativeFrame();installNavigation(fault);
+    const stage=fault === "forced-menu" ? "native-forced-colors-navigation-layout" : "native-normal-navigation-layout";
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu","native400")).rejects.toThrow(`Native accessibility check failed at ${stage}.`);
+    expect(probe.widths).toEqual([]);expect(JSON.parse(probe.writes.at(-1)!).status).toBe("failed");
   });
   it("reads the same source-owned inputs for native observations from an unrelated working folder",async()=>{
     installNativeFrame();

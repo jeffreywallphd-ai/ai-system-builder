@@ -2099,3 +2099,26 @@ grant no actual browser, native zoom, model, provider or parent qualification.
 The source correction must be followed by a fresh source-bound host observation.
 Keep accepted model accuracy and OCR closed and defer whole-software tests until
 the open implementation work is ready.
+
+
+## Responsive operational UI checks
+
+The standard operational journey opens the narrow menu at 320 CSS pixels,
+checks sidebar controls at 1440 pixels and restores the caller's viewport.
+Native 400% keeps the measured window unchanged and uses the responsive menu
+for page changes. Its responsive observations cannot substitute for the
+standard sidebar actions. Both paths retain the applicable accessibility gates.
+
+Home must match the selected fixture workspace. Notification checks verify
+initial focus, mark unread records when needed, clear completed records and
+require an empty panel before checking Escape focus return. Active records
+prevent an empty-state pass. Names, IDs and raw errors stay out of phase reports.
+
+Run the focused `operational-ui` profile. These source tests grant no real-host,
+native, model or parent qualification. See
+[`system-builder-canvas-testing.md`](../docs/diagnostics/system-builder-canvas-testing.md#responsive-operational-journeys)
+for the layout, report-mode and pending source-pin requirements.
+
+Standard callers must provide an explicit valid viewport. An absent restore
+target is refused before UI effects. The automatically sized desktop launcher
+needs a separate explicit standard viewport setup; it is not qualified here.

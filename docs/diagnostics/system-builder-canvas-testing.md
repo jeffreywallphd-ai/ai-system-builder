@@ -386,3 +386,39 @@ grant no actual browser, native zoom, model, provider or parent qualification.
 The source correction must be followed by a fresh source-bound host observation.
 Keep accepted model accuracy and OCR closed and defer whole-software tests until
 the open implementation work is ready.
+
+## Responsive operational journeys
+
+The standard operational journey opens the navigation menu at 320 CSS pixels.
+It returns to 1440 pixels before checking the sidebar's Collapse and Expand
+buttons. The journey restores its caller's viewport after success or failure.
+Each standard accessibility collection also restores its caller's viewport.
+Standard callers must supply an explicit positive integer viewport. An absent
+or invalid restore target fails before layout or media changes. The helper does
+not invent a viewport for an automatically sized Electron window. Establishing
+the standard desktop caller's viewport remains separate launcher work.
+
+The native 400% journey uses the actual zoomed window. It never resizes the
+viewport. It checks that the sidebar is hidden and the navigation trigger is
+visible, then uses that menu for later page changes. Its two responsive phase
+names differ from the standard sidebar actions. The oracle takes the mode from
+the runner, rejects unknown modes and refuses cross-mode phase substitution.
+The standard v1 report and its ordered phases stay compatible.
+
+For navigation accessibility, both normal and forced-color collections require
+the visible wide sidebar or the visible narrow open menu, as applicable. These
+checks add to the existing frame, contrast, reduced-motion, reflow and control
+access checks. They do not replace native zoom measurement.
+
+Home must show the selected fixture workspace's heading and retain that
+selection. Workspace names and IDs stay out of the generated phase reports.
+The notification check first verifies the panel's initial Close focus. It marks
+unread records when needed and clears completed current-session records before
+checking the empty state. An active record prevents that check from passing.
+Escape must close the panel and return focus to the notification button.
+
+Use the focused `operational-ui` profile for these helpers and related feature
+tests. Synthetic Page and DOM fixtures check the test definitions; they do not
+qualify an actual host. Preserve earlier failed runs. A fresh source-bound host
+run is still required, and coverage-ledger source pins need separate current
+reconciliation before aggregate closure.

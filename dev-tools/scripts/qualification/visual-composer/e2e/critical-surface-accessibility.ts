@@ -10,6 +10,17 @@ import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, co
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
 
+async function requireNavigationLayout(page: Page, narrow: boolean) {
+  const observed = await page.evaluate(narrow => {
+    const sidebar = document.querySelectorAll(".ui-shell__sidebar"), trigger = document.querySelectorAll(".ui-shell__menu-trigger"), panel = document.querySelectorAll(".ui-shell__menu-panel");
+    if (sidebar.length !== 1 || trigger.length !== 1 || panel.length !== 1) return false;
+    const visible = (node: Element) => node.getClientRects().length > 0 && getComputedStyle(node).visibility === "visible";
+    return narrow ? !visible(sidebar[0]!) && visible(trigger[0]!) && visible(panel[0]!) && trigger[0]!.getAttribute("aria-expanded") === "true"
+      : visible(sidebar[0]!) && !visible(trigger[0]!) && !visible(panel[0]!);
+  }, narrow);
+  if (observed !== true) throw new Error("Critical navigation layout observation failed.");
+}
+
 /** Actual Page assertions. Synthetic callback tests do not qualify a real host. */
 export async function qualifyCriticalSurfaceAccessibility(page: Page, info: TestInfo, surface: CriticalAccessibilitySurface, mode: CriticalAccessibilityMode = "standard") {
   readCriticalAccessibilityMode(mode);
@@ -24,6 +35,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
   const report: Record<string, unknown> = { ...context, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: context.schemaVersion,
     status: "running", scope: "ui-accessibility-observation-only", audits, forcedColorsAudits };
   let created = false, stage = "reference-profile";
+  let originalViewport: { width: number; height: number } | undefined;
   async function save() {
     const body = JSON.stringify(report, null, 2) + "\n";
     if (Buffer.byteLength(body) > 262144) throw new Error("Critical accessibility evidence exceeded its bound.");
@@ -55,6 +67,10 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
   try {
     const reference = await loadTechnicalAccessibilityReference();
     report.profile = reference.profile.environmentId; report.profileSha256 = reference.profileSha256; report.hardware = reference.hardware;
+    stage = "viewport-admission";
+    const viewport = page.viewportSize();
+    if (!viewport || !Number.isSafeInteger(viewport.width) || viewport.width <= 0 || !Number.isSafeInteger(viewport.height) || viewport.height <= 0) throw new Error();
+    originalViewport = { width: viewport.width, height: viewport.height };
     stage = "evidence-setup"; await mkdir(folder, { recursive: true });
     stage = "evidence-create"; await save();
     stage = "browser-profile";
@@ -72,6 +88,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       stage = `reflow-${width}`; await page.setViewportSize({ width, height: 1000 });
       const overflow: unknown = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       if (typeof overflow !== "number" || !Number.isFinite(overflow) || overflow < 0 || overflow > 1) throw new Error();
+      if (context.surface === "navigation-menu") { stage = `navigation-layout-${width}`; await requireNavigationLayout(page, width === 320); }
       stage = `motion-${width}`;
       const motion = await page.evaluate(() => {
         try {
@@ -102,6 +119,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       stage = `forced-colors-reflow-${width}`; await page.setViewportSize({ width, height: 1000 });
       const overflow: unknown = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       if (typeof overflow !== "number" || !Number.isFinite(overflow) || overflow < 0 || overflow > 1) throw new Error();
+      if (context.surface === "navigation-menu") { stage = `forced-colors-navigation-layout-${width}`; await requireNavigationLayout(page, width === 320); }
       stage = `forced-colors-control-access-${width}`; await controlAccess(width, stage);
       stage = `forced-colors-audit-${width}`;
       const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width);
@@ -118,7 +136,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       () => info.attach(`critical-accessibility-${context.surface}`, { body: JSON.stringify(report), contentType: "application/json" }),
       async () => {
         try { await page.emulateMedia({ reducedMotion: "no-preference", forcedColors: "none" }); }
-        finally { await page.setViewportSize({ width: 1440, height: 1000 }); }
+        finally { if (originalViewport) await page.setViewportSize(originalViewport); }
       });
   }
 }
@@ -167,6 +185,7 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
           return {elements,maximumTransitionMilliseconds,maximumAnimationMilliseconds};
         }catch{throw new Error("Native reduced motion observation failed.");}
       }));
+      if(context.surface === "navigation-menu") { stage=`native-${media}-navigation-layout`;await requireNavigationLayout(page,true); }
       stage=`native-${media}-audit`;
       const audit=await(runtime?collectNativeRuntimeAccessibilityAudit:collectNativeDocumentAccessibilityAudit)(page,media);
       audits.push(raw(audit));await save();if(audit.status!=="passed")throw new Error();

@@ -8,18 +8,44 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
   readCriticalAccessibilityMode(mode);
   const phases: string[] = [];
   const input = () => ({ schemaVersion: "operational-ui-observation-v1", host, runId: process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, phases });
-  failedOperationalObservation(input()); // Refuse invalid identity before any UI effect.
+  failedOperationalObservation(input(), mode); // Refuse invalid identity before any UI effect.
   if (info.project.name !== host) throw new Error("Operational UI host identity does not match its project.");
-  const expected = operationalPhases(host);
+  const expected = operationalPhases(host, mode);
   async function step(phase: string, action: () => Promise<void>) {
     if (expected[phases.length] !== phase) throw new Error("Unexpected operational UI step.");
     await action(); phases.push(phase);
   }
   let failed = false;
+  let originalViewport: { width: number; height: number } | undefined;
   try {
+    if (mode === "standard") {
+      const viewport=page.viewportSize();
+      if(!viewport || !Number.isSafeInteger(viewport.width) || viewport.width<=0 || !Number.isSafeInteger(viewport.height) || viewport.height<=0)throw new Error("Operational UI requires an explicit caller viewport.");
+      originalViewport={width:viewport.width,height:viewport.height};
+    }
     const navigationTrigger=page.getByLabel("Open navigation menu",{exact:true});
     const navigationMenu=page.getByRole("menu",{name:"Application navigation",exact:true});
+    const workspace=page.locator("header.ui-shell__header").getByRole("combobox",{name:"Select current workspace",exact:true});
+    let workspaceId = "", workspaceName = "";
+    async function homeVisible() {
+      await expect(workspace).toHaveValue(workspaceId);
+      const home=page.locator(".home-page");await expect(home).toHaveCount(1);await expect(home).toBeVisible();
+      await expect(home.getByRole("heading",{level:1})).toHaveText(workspaceName);
+    }
+    async function navigate(name: "Models" | "Image Generation" | "Home") {
+      if(mode === "standard") await page.getByRole("button",{name,exact:true}).click();
+      else {
+        await navigationTrigger.press("Enter");await expect(navigationMenu).toBeVisible();
+        await navigationMenu.getByRole("menuitem",{name,exact:true}).press("Enter");await expect(navigationMenu).toBeHidden();
+      }
+    }
     await step("navigation-menu-opened",async()=>{
+      await expect(workspace).toBeEnabled();workspaceId=await workspace.inputValue();
+      const selected=workspace.locator("option:checked");await expect(selected).toHaveCount(1);
+      workspaceName=(await selected.textContent())?.trim() ?? "";
+      if(!workspaceId || !workspaceName)throw new Error("Operational UI requires its selected fixture workspace.");
+      if(mode === "standard") await page.setViewportSize({width:320,height:1000});
+      await expect(navigationTrigger).toBeVisible();
       await navigationTrigger.focus();await navigationTrigger.press("ArrowDown");
       await expect(navigationTrigger).toHaveAttribute("aria-haspopup","menu");await expect(navigationTrigger).toHaveAttribute("aria-expanded","true");
       await expect(navigationMenu).toBeVisible();const home=navigationMenu.getByRole("menuitem",{name:"Home",exact:true});
@@ -34,7 +60,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await navigationMenu.getByRole("menuitem",{name:"Models",exact:true}).press("Enter");
       await expect(page.getByRole("heading",{name:"Model Management",level:1,exact:true})).toBeVisible();await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toBeFocused();
       await navigationTrigger.press("Enter");await expect(navigationMenu.getByRole("menuitem",{name:"Models",exact:true})).toHaveAttribute("aria-current","page");
-      await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Enter");await expect(page.getByRole("heading",{name:"Home",level:1,exact:true})).toBeVisible();
+      await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Enter");await homeVisible();
     });
     await step("navigation-menu-focus-returned",async()=>{
       await navigationTrigger.focus();await navigationTrigger.press("Enter");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Tab");
@@ -42,7 +68,12 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await navigationTrigger.focus();await navigationTrigger.press("Space");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Escape");
       await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toHaveAttribute("aria-expanded","false");await expect(navigationTrigger).toBeFocused();
     });
+    if(mode === "native400") {
+      await step("sidebar-responsive-hidden",async()=>{await expect(page.locator(".ui-shell__sidebar")).toHaveCount(1);await expect(page.locator(".ui-shell__sidebar")).toBeHidden();});
+      await step("navigation-trigger-responsive-visible",async()=>{await expect(navigationTrigger).toBeVisible();await expect(navigationMenu).toBeHidden();});
+    } else {
     await step("sidebar-collapsed", async () => {
+      await page.setViewportSize({width:1440,height:1000});
       await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
       await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
     });
@@ -50,6 +81,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
       await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
     });
+    }
     await step("settings-opened", async () => {
       await page.locator("header.ui-shell__header").getByRole("button", { name: "Settings", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
@@ -138,16 +170,24 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
     const bell = page.getByRole("button", { name: /^Notifications(?:,|$)/ });
     const notifications = page.getByRole("dialog", { name: "Notifications", exact: true });
     await step("notifications-empty", async () => {
-      await bell.click(); await expect(notifications.getByText("No notifications yet.", { exact: true })).toBeVisible();
-      await expect(notifications.getByRole("button", { name: "Clear completed", exact: true })).toBeDisabled();
+      await bell.click();await expect(notifications.getByRole("button",{name:"Close notifications",exact:true})).toBeFocused();
+      await expect(notifications).not.toContainText("synthetic-operational-hidden-detail");
+      const markRead=notifications.getByRole("button",{name:"Mark all read",exact:true});
+      if(await markRead.isEnabled())await markRead.click();
+      await expect(markRead).toBeDisabled();
+      const clear=notifications.getByRole("button",{name:"Clear completed",exact:true});
+      if(await clear.isEnabled())await clear.click();
+      await expect(notifications.getByText("No notifications yet.", { exact: true })).toBeVisible();
+      await expect(clear).toBeDisabled();
       await qualifyCriticalSurfaceAccessibility(page, info, "notifications", mode);
     });
     await step("notifications-focus-returned", async () => {
+      await notifications.getByRole("button", { name: "Close notifications", exact: true }).focus();
       await expect(notifications.getByRole("button", { name: "Close notifications", exact: true })).toBeFocused();
       await notifications.press("Escape"); await expect(notifications).toBeHidden(); await expect(bell).toBeFocused();
     });
     await step("models-discovery-opened", async () => {
-      await page.getByRole("button", { name: "Models", exact: true }).click();
+      await navigate("Models");
       await expect(page.getByRole("heading", { name: "Model Management", level: 1, exact: true })).toBeVisible();
       if (host === "packaged-desktop") {
         await page.getByRole("tab", { name: "Find Models", exact: true }).press("Enter");
@@ -181,7 +221,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await qualifyCriticalSurfaceAccessibility(page, info, "model-training", mode);
     });
     await step("image-configuration-opened", async () => {
-      await page.getByRole("button", { name: "Image Generation", exact: true }).click();
+      await navigate("Image Generation");
       await expect(page.getByRole("heading", { name: "Image Generation", level: 1, exact: true })).toBeVisible();
       await expect(page.getByRole("list", { name: "Image generation workflow", exact: true })).toBeVisible();
       const prompt = page.getByRole("textbox", { name: /^Prompt\b/ });
@@ -190,11 +230,11 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await qualifyCriticalSurfaceAccessibility(page, info, "image-configuration", mode);
     });
     await step("home-returned", async () => {
-      await page.getByRole("button", { name: "Home", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "Home", level: 1, exact: true })).toBeVisible();
+      await navigate("Home");await homeVisible();
     });
   } catch { failed = true; }
-  const report = failed ? failedOperationalObservation(input()) : qualifyOperationalObservation(input());
+  finally { if(originalViewport)try {await page.setViewportSize(originalViewport);}catch {failed=true;} }
+  const report = failed ? failedOperationalObservation(input(), mode) : qualifyOperationalObservation(input(), mode);
   const body = JSON.stringify(report); if (Buffer.byteLength(body) > 8192) throw new Error("Operational UI report exceeded its fixed bound.");
   try { await info.attach("operational-ui", { body, contentType: "application/json" }); }
   catch { throw new Error("Operational UI report could not be saved."); }

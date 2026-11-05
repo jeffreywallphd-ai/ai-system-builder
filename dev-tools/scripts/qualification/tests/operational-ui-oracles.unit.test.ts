@@ -2,6 +2,43 @@ import { describe, expect, it } from "vitest";
 import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_HOST_TIMEOUT_MS, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost } from "../visual-composer/operational-ui-oracles";
 const input = (host: OperationalHost = "thin-chrome") => ({ schemaVersion: "operational-ui-observation-v1", host, runId: "operational-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, phases: [...operationalPhases(host)] });
 describe("operational UI observation boundaries", () => {
+  it.each(["thin-chrome", "packaged-desktop"] as const)("keeps %s standard and native responsive evidence distinct", host => {
+    const standard = operationalPhases(host), native = operationalPhases(host, "native400");
+    expect(native.slice(3, 6)).toEqual(["sidebar-responsive-hidden", "navigation-trigger-responsive-visible", "settings-opened"]);
+    expect(native.length).toBe(standard.length);
+    const value = { ...input(host), phases: [...native] };
+    const result = qualifyOperationalObservation(value, "native400");
+    value.phases.length = 0;
+    expect(result.phases).toEqual(native); expect(Object.isFrozen(result.phases)).toBe(true);
+    for (const [phases, mode] of [[standard, "native400"], [native, "standard"]] as const) {
+      expect(() => qualifyOperationalObservation({ ...input(host), phases }, mode)).toThrow("Invalid operational UI observation.");
+      expect(() => failedOperationalObservation({ ...input(host), phases }, mode)).toThrow("Invalid operational UI observation.");
+    }
+    for (let length = 0; length < native.length; length++) {
+      const partial = { ...input(host), phases: native.slice(0, length) };
+      expect(() => qualifyOperationalObservation(partial, "native400")).toThrow("Invalid operational UI observation.");
+      expect(failedOperationalObservation(partial, "native400").nextPhase).toBe(native[length]);
+    }
+    expect(Object.keys(result).sort()).toEqual(["host", "phases", "runId", "schemaVersion", "scope", "sourceRevision", "status"]);
+    expect(() => qualifyOperationalObservation({ ...input(host), mode: "native400" })).toThrow("Invalid operational UI observation.");
+  });
+  it.each([null, false, 400, "native", "", {}, new Proxy({}, { get() { throw new Error("synthetic-private-mode"); } })])("refuses unknown mode %# without coercion", mode => {
+    for (const read of [qualifyOperationalObservation, failedOperationalObservation]) {
+      expect(() => read(input(), mode as never)).toThrow("Invalid operational UI observation.");
+    }
+    expect(() => operationalPhases("thin-chrome", mode as never)).toThrow("Invalid operational UI observation.");
+  });
+  it.each(["sparse","reordered","duplicate","getter","proxy","extra"] as const)("preserves native phase data guards for %s",variant=>{
+    const phases=[...operationalPhases("thin-chrome","native400")];let calls=0;
+    if(variant === "sparse")delete phases[3];
+    if(variant === "reordered")[phases[3],phases[4]]=[phases[4]!,phases[3]!];
+    if(variant === "duplicate")phases[4]=phases[3]!;
+    if(variant === "getter")Object.defineProperty(phases,"3",{get(){calls++;return "sidebar-responsive-hidden";}});
+    if(variant === "extra")Object.defineProperty(phases,"private",{value:"synthetic-private"});
+    const observed=variant === "proxy" ? new Proxy(phases,{getPrototypeOf(){calls++;return Array.prototype;}}) : phases;
+    for(const read of [qualifyOperationalObservation,failedOperationalObservation])expect(()=>read({...input(),phases:observed},"native400")).toThrow("Invalid operational UI observation.");
+    expect(calls).toBe(0);
+  });
   it.each(["thin-chrome", "packaged-desktop"] as const)("requires opened menu, real navigation and focus return before existing %s phases",host=>{
     const prefix=["navigation-menu-opened","navigation-menu-navigated","navigation-menu-focus-returned"];
     expect(operationalPhases(host).slice(0,3)).toEqual(prefix);
