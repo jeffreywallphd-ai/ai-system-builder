@@ -249,7 +249,7 @@
       "user_description": {
         "purpose": "Preserve everyday settings, navigation, notifications and runtime recovery.",
         "owner": "agent",
-        "next_action": "The test now starts, but it used a workspace-creation control that is on Home. The agent will correct the test navigation, then check Settings saving and clearing. No user action is needed.",
+        "next_action": "Browser Settings saving, recovery after a read failure, reload and clearing passed. The agent will finish the remaining operational feature checks. Desktop and other Settings cases are pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must cover mounted Settings, thin-client Security, runtime readiness and controls, workspace summaries and shell navigation.",
@@ -293,7 +293,7 @@
       "user_description": {
         "purpose": "Prove executed coverage for every supported feature without claiming unrelated qualification.",
         "owner": "agent",
-        "next_action": "All 39 feature families now link to current test definitions. The agent will collect the remaining app-level evidence during the later test campaign. Source inspection does not run those tests. No user action is needed.",
+        "next_action": "The coverage record matches the reviewed Settings navigation tests. It does not mark desktop or other app journeys as passed. The agent will finish the remaining feature checks. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must regenerate the mounted route, tab, action and capability-registry inventory.",
@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "The failed test closed all test-owned processes and handles. The agent will repair navigation before a fresh reviewed run. Other cleanup and final checks remain pending. No user action is needed.",
+        "next_action": "All processes and handles for this browser test closed. The agent will check the remaining test runs. Production worker and low-memory restart checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -14885,6 +14885,51 @@
           "No user action is needed.",
           "Accepted model accuracy and text-recognition checks stay closed.",
           "Full-system testing remains deferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "65c43e22c149b0f39577f91d256ed13e18e58d7fed6ffc60a906f904a82b32e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Source checks passed for Settings test navigation and its coverage record.",
+          "The tests now use Home to create a workspace and select the header Settings button.",
+          "The coverage record keeps unrun app checks separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "96b6bafff386f3a5a846592fe29ad6a49dab6cb140be3ec8b89faf8227d2fbdb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This source checkpoint does not qualify an app journey.",
+          "The separate Settings report records the reviewed browser result."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f9180de5c89cdb5c988ea058621c2125996a0a592ab4ee04db0bc7b77f1738d0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop Settings, other Settings cases and production worker checks remain pending.",
+          "No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "656d5ab3141afb3560b21cdad404efe40ff52e2b2019a17248d4786f680a0ae4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No model accuracy or text-recognition test was rerun.",
+          "Full-system testing remains deferred until open feature work is ready."
         ]
       }
     }

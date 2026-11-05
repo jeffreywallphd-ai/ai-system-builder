@@ -9959,6 +9959,90 @@
         "The reported cleanup covers only this isolated test. Desktop Settings, low-memory restart and final qualification remain pending.",
         "No user action is needed. Accepted model accuracy and text-recognition checks stay closed. Full-system testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-settings-navigation-complete-check-owners",
+      "work_criteria": [
+        "current-public-workspace-navigation",
+        "unique-shell-settings-selection",
+        "bounded-shared-navigation-ownership",
+        "security-and-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
+      "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
+      "scope": "Source checks passed for Settings test navigation and its coverage record. The tests now use Home to create a workspace and select the header Settings button. The coverage record keeps unrun app checks separate.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "This source checkpoint does not qualify an app journey. The separate Settings report records the reviewed browser result.",
+        "Desktop Settings, other Settings cases and production worker checks remain pending. No user action is needed.",
+        "No model accuracy or text-recognition test was rerun. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-settings-navigation-complete-check-owners",
+      "work_criteria": [
+        "current-public-workspace-navigation",
+        "unique-shell-settings-selection",
+        "bounded-shared-navigation-ownership",
+        "security-and-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
+      "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
+      "scope": "Source checks passed for Settings test navigation and its coverage record. The tests now use Home to create a workspace and select the header Settings button. The coverage record keeps unrun app checks separate.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "This source checkpoint does not qualify an app journey. The separate Settings report records the reviewed browser result.",
+        "Desktop Settings, other Settings cases and production worker checks remain pending. No user action is needed.",
+        "No model accuracy or text-recognition test was rerun. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-settings-navigation-complete-check-owners",
+      "work_criteria": [
+        "current-public-workspace-navigation",
+        "unique-shell-settings-selection",
+        "bounded-shared-navigation-ownership",
+        "security-and-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
+      "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
+      "scope": "Source checks passed for Settings test navigation and its coverage record. The tests now use Home to create a workspace and select the header Settings button. The coverage record keeps unrun app checks separate.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "This source checkpoint does not qualify an app journey. The separate Settings report records the reviewed browser result.",
+        "Desktop Settings, other Settings cases and production worker checks remain pending. No user action is needed.",
+        "No model accuracy or text-recognition test was rerun. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-settings-navigation-complete-check-owners",
+      "work_criteria": [
+        "current-public-workspace-navigation",
+        "unique-shell-settings-selection",
+        "bounded-shared-navigation-ownership",
+        "security-and-reviewed-feature-checkpoint"
+      ],
+      "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
+      "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
+      "scope": "Source checks passed for Settings test navigation and its coverage record. The tests now use Home to create a workspace and select the header Settings button. The coverage record keeps unrun app checks separate.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "This source checkpoint does not qualify an app journey. The separate Settings report records the reviewed browser result.",
+        "Desktop Settings, other Settings cases and production worker checks remain pending. No user action is needed.",
+        "No model accuracy or text-recognition test was rerun. Full-system testing remains deferred until open feature work is ready."
+      ]
     }
   ]
 }

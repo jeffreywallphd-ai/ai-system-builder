@@ -4,7 +4,7 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The test now loads and reaches the app. It stopped at workspace setup because it searched for a control located on Home. No Settings journey phase completed. The test-owned processes and handles closed correctly.",
+  "summary": "The thin-client public Settings test passed. It saved a value, recovered after a read failure, reloaded, cleared the value and reloaded again. All test-owned processes and handles closed. Desktop and other Settings checks remain pending.",
   "observed_source": {
     "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
     "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786",
@@ -34,6 +34,14 @@
       "receipt_digest": "4d53d89d83835a3e91dfe57bcf441a0ca6ae77d1ee13f29839d659074b7187c1",
       "review_digest": "4f71e8425b81dac0cb1732e0aa40f5fcd541a65716efaa004e61b708cb7b68fa",
       "source_digest": "7eaf76e2a54a27d96e2cc1f59228f206aa3b11dd04f4006438bbddb499702a24"
+    },
+    {
+      "work_id": "qualify-settings-navigation-complete-check-owners",
+      "commit": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
+      "at": "2026-11-05T06:21:29Z",
+      "receipt_digest": "a6bdb5c94e93a711ee2a857010cccffbad4de66e8e70b4b5809d317b24d6d037",
+      "review_digest": "f77fdd627f53a9f46d516ed93bde2c114c6a00ef5b871390df7d7415bf51fc48",
+      "source_digest": "46aaca6f496d69f3453ae4ae75fd1c4d3e810c1dbbd5fe1059bcdb422e234988"
     }
   ],
   "attempts": [
@@ -144,11 +152,77 @@
         "settings-setup-closed": "399de88baed5596f1c0b9a5500579ef517a1d789dea6248f2f21889a1c6729fc",
         "settings-runner-result": "1d11319cc12d3c4e2c23b739747657557817128e4eb42025ddb42227bd6aa788"
       }
+    },
+    {
+      "run_id": "aa18655ad47c4a6589f40b82d718a251",
+      "host": "thin-chrome",
+      "scenario": "public-values",
+      "status": "passed",
+      "observed_source": {
+        "commit": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
+        "source_digest": "46aaca6f496d69f3453ae4ae75fd1c4d3e810c1dbbd5fe1059bcdb422e234988",
+        "source_revision": "source.3db80689a233a5cde9d5e85101af1bff0651f4d31cb3ebac7cf6fdb50ae46d3f"
+      },
+      "selected_tests": 1,
+      "finished_tests": 1,
+      "global_errors": 0,
+      "case_status": "passed",
+      "case_retry": 0,
+      "case_errors": 0,
+      "journey_attachment_present": true,
+      "root_exit_code": 0,
+      "ui_qualification_passed": true,
+      "qualified_scope": "One thin-client public Settings case only. Desktop, secrets, model defaults, physical restart, production workers and parent qualification remain pending.",
+      "phases": [
+        "settings-opened",
+        "fresh-value-confirmed",
+        "failed-read-denies-write",
+        "explicit-refresh-recovers",
+        "public-save-confirmed",
+        "public-reload-confirmed",
+        "public-clear-confirmed",
+        "clear-reload-confirmed"
+      ],
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "cleanup": {
+        "confirmed": true,
+        "all_owned_handles_closed": true,
+        "active_owned_processes": 0,
+        "total_owned_processes": 27,
+        "outer_job_forced_termination": false,
+        "server_shutdown_acknowledged": true,
+        "test_credential_removed": true,
+        "source_unchanged": true,
+        "streams_complete": true,
+        "pending_and_live_registries_clear": true
+      },
+      "limits": {
+        "process_bytes": 1073741824,
+        "job_bytes": 3221225472,
+        "members": 32,
+        "seconds": 420
+      },
+      "observed_peaks": {
+        "process_commit_bytes": 543027200,
+        "job_commit_bytes": 2265530368
+      },
+      "evidence_digests": {
+        "native_observation": "320ee7c404762265369b62d9a474120ca09d19b5c561af3cd3fe8c1280cd6db4",
+        "observed_result": "8edd62c2d3e0d901bf00ce60e0588c9938a47928af877412ad13f60a8e5e4afc",
+        "effect_reference": "76a88c039825268eee26a2ecf0059785cd9aa1129d7c6a5a686eb478e6a5cb70",
+        "independent_outcome_reference": "7b1e81956917b14448399aed2705b04e68a0f77c06138d2e8953d40997c14484",
+        "independent_outcome_report": "ca77c60364f22feff59a5a14474666d51753509221ad700334a4b0a3abdec0a6",
+        "settings-setup-started": "181d78b2e0becd444de7320bde73047ff2ee21cccc71198a8d61884c813e8664",
+        "settings-setup-ready": "86c91bd3d0bec4ec3f1a386d9c6aef62fd9c184c49c82da6546d53cf156e6cf4",
+        "settings-setup-closed": "dab7baf355f647e8e2d7b658ffd72c84f6ea5013ce840f77820de8ac43ba74d6",
+        "settings-runner-result": "21b491f73dfbd034283f46bf9bea5c85c2f193ae3b2981829af1dd3597d38103"
+      }
     }
   ],
-  "next_action": "The agent must correct workspace test navigation, add focused regressions and run a fresh separately reviewed Settings journey. Desktop Settings and final checks remain pending. No user action is needed.",
+  "next_action": "The agent will continue the remaining operational feature work. Desktop and other Settings cases remain pending. Full-system testing stays deferred until open feature work is ready. No user action is needed.",
   "scope_limits": [
-    "This report records evidence collection. The failing attempt grants no Settings case, increment or roadmap pass.",
+    "The latest thin-client public Settings case passed. Earlier failures remain recorded. Desktop, other Settings and parent checks remain pending.",
     "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
     "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
     "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
@@ -156,8 +230,20 @@
   ],
   "parent_qualification_granted": false,
   "latest_observed_source": {
-    "commit": "bd7eae6d54d80b0bbfe6e3c72a1abd5f9e82eb7c",
-    "source_digest": "7eaf76e2a54a27d96e2cc1f59228f206aa3b11dd04f4006438bbddb499702a24",
-    "source_revision": "source.4bf86b3496ed7bcbc3a37c735200b904536dd58632647aba450bab1237d7cfd3"
-  }
+    "commit": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
+    "source_digest": "46aaca6f496d69f3453ae4ae75fd1c4d3e810c1dbbd5fe1059bcdb422e234988",
+    "source_revision": "source.3db80689a233a5cde9d5e85101af1bff0651f4d31cb3ebac7cf6fdb50ae46d3f"
+  },
+  "scope_history": [
+    {
+      "last_run_id": "a229f66ec0f14189ba34e91d4e4bb93e",
+      "scope_limits": [
+        "This report records evidence collection. The failing attempt grants no Settings case, increment or roadmap pass.",
+        "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
+        "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
+        "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
+        "The shared full-system campaign remains pending until open feature work is ready."
+      ]
+    }
+  ]
 }
