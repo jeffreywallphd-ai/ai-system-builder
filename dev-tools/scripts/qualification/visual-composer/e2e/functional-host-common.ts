@@ -1,7 +1,7 @@
 import {expect,type Page} from "@playwright/test";
 import type {FunctionalHost} from "../functional-host-oracles";
 
-export async function createFunctionalWorkspace(page:Page,name:"Model reference fixture"|"Model isolation fixture"){
+export async function createFunctionalWorkspace(page:Page,name:"Model reference fixture"|"Model isolation fixture"|"Settings public-values fixture"|"Settings secret-defaults fixture"|"Operational browser fixture"){
   const select=page.getByLabel("Select current workspace",{exact:true});
   await expect(select).toBeVisible({timeout:60_000});const previous=await select.inputValue();
   await page.getByRole("button",{name:"Home",exact:true}).click();

@@ -1788,3 +1788,43 @@ separately reviewed app run must still prove save, reload, clear and cleanup.
 The failed attempt and its evidence remain unchanged. Accepted model-accuracy
 and OCR checks stay closed; full-system testing stays deferred until open
 feature implementation is ready.
+
+
+## Settings workspace and shell navigation
+
+The second [Settings observation](../operations/settings-public-host-qualification.json)
+reached the app with one selected test and no global loading errors. It failed
+before the Settings journey: the Systems route showed its inline workspace
+form, while the test searched for a control on the Home workspace card. The
+failed run and confirmed owned-process cleanup remain recorded.
+
+Both Settings host cases and the thin operational prelude reuse the existing
+`createFunctionalWorkspace` UI helper. It navigates to Home, opens the card's
+create form and checks a new selected workspace identity. Its fixture names
+remain a fixed type union. The existing model-reference names remain valid.
+No direct API seed or successful response is substituted for user actions.
+
+Settings entry is scoped to `header.ui-shell__header`, which exists in both
+mounted shells. The page also has a sidebar Settings button. A page-wide exact
+name is ambiguous. These headers are inside `main`, so the test must not assume
+a banner role. The focused regression exercises the actual journey with that
+duplicate-selector condition and verifies safe failed-phase reporting on both
+hosts. Run it with:
+
+```sh
+node --import tsx --test -- dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts
+```
+
+Host and case selection, identity, capture, retries, timeouts and cleanup rules
+stay intact. Existing save, refresh, reload and clear assertions remain required.
+This source correction grants no real UI or parent-roadmap pass. A fresh reviewed
+host run is still required. Accepted model accuracy and OCR stay closed, and
+full-system testing remains deferred until open feature work is ready.
+
+
+The operational profile also declares the shared workspace helper as an exact
+source owner. The functional profile stays selected for its existing consumers.
+The operational test list and the catalog selection algorithm are unchanged.
+Routing regressions retain the generic check for unknown sources, incomplete
+ownership and an explicit generic request. This keeps the feature checks focused
+without changing the deferred full-system testing workflow.

@@ -12,7 +12,7 @@ export async function qualifySettingsHostJourney(page:Page,info:TestInfo,host:Se
   const field=(label:string)=>host==="thin-chrome"?page.getByRole("region",{name:label,exact:true})
     :page.locator("section.settings-panel__field").filter({has:page.getByRole("heading",{name:label,exact:true,level:4})});
   async function open(){
-    await page.getByRole("button",{name:"Settings",exact:true}).click();
+    await page.locator("header.ui-shell__header").getByRole("button",{name:"Settings",exact:true}).click();
     await expect(page.getByRole("heading",{name:"Settings",exact:true,level:1})).toBeVisible();
   }
   let workspace:Locator|undefined,workspaceId:string|undefined;

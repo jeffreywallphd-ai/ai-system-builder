@@ -46,3 +46,28 @@ test("early workspace port failures retain a fixed phase report and expose no pr
     }
   }finally{for(let i=0;i<keys.length;i++)if(prior[i]===undefined)delete process.env[keys[i]!];else process.env[keys[i]!]=prior[i];}
 });
+
+
+test("Settings uses the unique shell header control when the page has another Settings button",async()=>{
+  const keys=["VISUAL_COMPOSER_QUALIFICATION_RUN_ID","VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION"],prior=keys.map(key=>process.env[key]);
+  process.env[keys[0]!]=run;process.env[keys[1]!]=source;
+  try{
+    for(const host of ["thin-chrome","packaged-desktop"] as const){
+      const calls:string[]=[],attachments:string[]=[];
+      const header={getByRole(role:string,options:{name:string;exact:boolean}){
+        assert.equal(role,"button");assert.deepEqual(options,{name:"Settings",exact:true});calls.push("header-settings");
+        return {async click(){calls.push("header-click");throw new Error("synthetic-private-header-detail");}};
+      }};
+      const page={
+        getByLabel(label:string,options:{exact:boolean}){assert.equal(label,"Select current workspace");assert.deepEqual(options,{exact:true});calls.push("workspace-label");return {async inputValue(){calls.push("workspace-read");return "workspace.synthetic";}};},
+        locator(selector:string){assert.equal(selector,"header.ui-shell__header");calls.push("shell-header");return header;},
+        getByRole(){calls.push("ambiguous-page-selector");throw new Error("The synthetic page has two Settings buttons.");},
+      } as unknown as Page;
+      const info={project:{name:host},async attach(name:string,value:{body:string}){assert.equal(name,"settings-functional-host-journey");calls.push("safe-report");attachments.push(value.body);}} as unknown as TestInfo;
+      await assert.rejects(qualifySettingsHostJourney(page,info,host,"public-values"),{message:"Settings functional host journey failed. See its fixed phase report."});
+      assert.deepEqual(calls,["workspace-label","workspace-read","shell-header","header-settings","header-click","safe-report"]);
+      assert.equal(attachments.length,1);assert.doesNotMatch(attachments[0]!,/synthetic-private-header-detail/);
+      const report=JSON.parse(attachments[0]!);assert.equal(report.status,"failed");assert.deepEqual(report.phases,[]);assert.equal(report.nextPhase,"settings-opened");assert.equal(report.parentQualificationGranted,false);
+    }
+  }finally{for(let i=0;i<keys.length;i++)if(prior[i]===undefined)delete process.env[keys[i]!];else process.env[keys[i]!]=prior[i];}
+});

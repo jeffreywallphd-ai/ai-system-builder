@@ -440,7 +440,7 @@ class OperationalUiProfile(unittest.TestCase):
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -473,7 +473,7 @@ class OperationalUiProfile(unittest.TestCase):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -499,7 +499,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 75)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -683,7 +683,7 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertNotIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         additions=[source for source in SETTINGS_AUTOMATIC if source != entry]
         self.assertEqual(len(additions),11)
-        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:],additions)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:75],additions)
         for source in additions:
             self.assertIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
             self.assertIn(source,self.profile()["source_paths"])
@@ -710,7 +710,7 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertEqual(profile["test_paths"][-1], unit)
         self.assertEqual(profile["source_paths"][-3:], [worker, unit, "modules/adapters/runtime/python/worker/README.md"])
         self.assertEqual(len(profile["test_paths"]), 83)
-        self.assertEqual(len(profile["source_paths"]), 193)
+        self.assertEqual(len(profile["source_paths"]), 194)
         self.assertNotIn(worker, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertNotIn(unit, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="training-worker-diagnostic-profile-") as directory:
@@ -731,6 +731,44 @@ class OperationalUiProfile(unittest.TestCase):
             (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
             ids = {check["id"] for check in catalog.plan(root, [core, worker], ["documentation"], "synthetic-candidate")["selected"]}
             self.assertIn("focused-tests", ids)
+
+    def test_shared_workspace_navigation_keeps_complete_and_fallback_ownership(self):
+        common = "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts"
+        paths = [common,
+                 "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+                 "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+                 "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
+                 "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts"]
+        profile = self.profile()
+        functional = json.loads((ROOT / CONFIG).read_bytes())["profiles"]["functional-host-ui"]
+        self.assertEqual(profile["test_paths"], TESTS)
+        self.assertIn(common, profile["source_paths"])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[-1], common)
+        self.assertTrue(any(name not in functional["source_paths"] + functional["test_paths"] for name in paths))
+        for incomplete, required, affected, generic in [
+            (False, ["operational-ui"], paths, False),
+            (False, ["operational-ui", "focused-tests"], paths, True),
+            (True, ["operational-ui"], paths, True),
+            (False, ["operational-ui"], paths + ["dev-tools/scripts/qualification/visual-composer/e2e/unknown-navigation.ts"], True),
+        ]:
+            with self.subTest(incomplete=incomplete, required=required, affected=affected), tempfile.TemporaryDirectory(prefix="workspace-navigation-owner-") as directory:
+                root = Path(directory)
+                selected_profile = self.profile()
+                if incomplete:
+                    selected_profile["source_paths"].remove(common)
+                self.fixture(root, selected_profile)
+                for name in set(functional["source_paths"] + functional["test_paths"]):
+                    target = root / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes((ROOT / name).read_bytes())
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": selected_profile, "functional-host-ui": functional,
+                }}))
+                ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertIn("functional-host-ui", ids)
+                self.assertIn("operational-ui", ids)
+                self.assertEqual("focused-tests" in ids, generic)
+
 
 if __name__ == "__main__":
     unittest.main()

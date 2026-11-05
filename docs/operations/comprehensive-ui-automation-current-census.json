@@ -8191,8 +8191,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8",
-    "bytes": 15543,
+    "sha256": "a1b0dc3df57b063c9e40d58709ebf252db5b55bc7c578e455ec1ea92eeeac21f",
+    "bytes": 15170,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8208,19 +8208,19 @@
      },
      {
       "name": "packaged desktop model reference searches, saves and survives reload and workspace changes",
-      "line": 125
+      "line": 121
      },
      {
       "name": "packaged desktop artifact local lifecycle preserves actual bytes and scope",
-      "line": 138
+      "line": 134
      },
      {
       "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
-      "line": 165
+      "line": 161
      },
      {
       "name": "packaged desktop private artifact publication records local branch and remote commit",
-      "line": 170
+      "line": 166
      }
     ],
     "dynamicCases": 9,
@@ -8231,11 +8231,11 @@
      },
      {
       "name": "runProviderDesktopCase",
-      "line": 154
+      "line": 150
      }
     ],
-    "assertionCount": 7,
-    "assertionDigest": "50921e99848c7fa8cd403b0a48a708b9de48ba82d3145433594e695c7b2bd1ca",
+    "assertionCount": 4,
+    "assertionDigest": "1d2471eaf52f35ca9c92295f1d417a2f7ed8fee5d87cf147cdc36a426de16e81",
     "assertionExamples": [
      {
       "line": 28,
@@ -8248,14 +8248,14 @@
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
      },
      {
-      "line": 111,
+      "line": 163,
       "kind": "expect",
-      "sha256": "4aec4f3cd2e1363691f43dc9b9f2221057e583ee37bc6f7ac1b95514a4dcc117"
+      "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      },
      {
-      "line": 115,
+      "line": 168,
       "kind": "expect",
-      "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
+      "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      }
     ],
     "modifiers": [
@@ -8268,23 +8268,23 @@
       "kind": "skip"
      },
      {
-      "line": 104,
+      "line": 105,
       "kind": "skip"
      },
      {
-      "line": 127,
+      "line": 123,
       "kind": "skip"
      },
      {
-      "line": 140,
+      "line": 136,
       "kind": "skip"
      },
      {
-      "line": 166,
+      "line": 162,
       "kind": "skip"
      },
      {
-      "line": 171,
+      "line": 167,
       "kind": "skip"
      }
     ]
@@ -8930,36 +8930,36 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "98b66cd156a1338528280d03ae76c00e039108d00f6934a8df0840ce0024db7f",
-    "bytes": 10775,
+    "sha256": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9",
+    "bytes": 9962,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
-      "line": 28
+      "line": 24
      },
      {
       "name": "thin client preserves operational controls at native 400 percent zoom",
-      "line": 34
+      "line": 30
      },
      {
       "name": "opens canonical details and linked work without changing qualification",
-      "line": 53
+      "line": 49
      },
      {
       "name": "refreshes a controlled current copy and recovers from connection refusal",
-      "line": 57
+      "line": 53
      },
      {
       "name": "keeps theme, keyboard and narrow review usable when storage refuses access",
-      "line": 61
+      "line": 57
      },
      {
       "name": "thin client model reference searches, saves and survives reload and workspace changes",
-      "line": 105
+      "line": 98
      },
      {
       "name": "thin client provider source registers an exact reference and optional localized bytes",
-      "line": 130
+      "line": 123
      }
     ],
     "dynamicCases": 8,
@@ -8973,49 +8973,44 @@
       "line": 18
      }
     ],
-    "assertionCount": 9,
-    "assertionDigest": "19d984c92caa26353c8df9c41b7c39a52df9299eec230ae3f422e5f1cfc61b74",
+    "assertionCount": 3,
+    "assertionDigest": "568f9b35345cc296902495db8de0d9b59451f24c8c93135db3407b6a20031876",
     "assertionExamples": [
      {
-      "line": 21,
-      "kind": "expect",
-      "sha256": "af6c6e9db57ad8b1899bad425a1a8a0b29a42ce24ff120357570fc30bb40ec93"
-     },
-     {
-      "line": 25,
-      "kind": "expect",
-      "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
-     },
-     {
-      "line": 79,
+      "line": 75,
       "kind": "expect",
       "sha256": "3a1ae67649922b0db4d00006d56227124bea624840c633b78ca501790ef74c73"
      },
      {
-      "line": 80,
+      "line": 76,
       "kind": "expect",
       "sha256": "b11eff56bb97648199edeafbb1b0d800f604be67d532bda2b70a0a0c33717400"
+     },
+     {
+      "line": 132,
+      "kind": "expect",
+      "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      }
     ],
     "modifiers": [
      {
-      "line": 69,
+      "line": 65,
       "kind": "skip"
      },
      {
-      "line": 89,
+      "line": 86,
       "kind": "skip"
      },
      {
-      "line": 107,
+      "line": 100,
       "kind": "skip"
      },
      {
-      "line": 120,
+      "line": 113,
       "kind": "skip"
      },
      {
-      "line": 131,
+      "line": 124,
       "kind": "skip"
      }
     ]
@@ -13805,8 +13800,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
    "facts": {
-    "sha256": "55820ad732c51f9e364cf52119ea2109517ca2373fdd7601f2ba5f5d990edcef",
-    "bytes": 9480,
+    "sha256": "1123885b23b145587de35375abe9eb1566196bdcffa9f43fae6f1e8c1d5dee71",
+    "bytes": 9515,
     "cases": [],
     "dynamicCases": 0,
     "functions": [

@@ -117,6 +117,7 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts",
     ],
     "security-status-ui": [
         "apps/thin-client/src/features/security/hooks/useThinClientSecurity.ts",

@@ -185,10 +185,65 @@ function trainingDefinitionsFor(map) {
   return task;
 }
 
+// Exact Settings navigation definitions retain real older Git pins until
+// their independently reviewed source checkpoint. This is not an execution pass.
+const pendingSettingsNavigationDefinitions=Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "baseline": "5c32b9c4ea15a5229100edd1eb14d2dd1c339734",
+    "committed": "82bb71003ac95c34c286b6d54023ca467e93bd87cbeff05ec4321087f09e59f8",
+    "candidate": "a1b0dc3df57b063c9e40d58709ebf252db5b55bc7c578e455ec1ea92eeeac21f",
+    "facts_sha256": "65d019e171591ad79b88cfa46f11dff7aec93c896cf63eaa44d98c85b7a7ef70"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "baseline": "5c32b9c4ea15a5229100edd1eb14d2dd1c339734",
+    "committed": "98b66cd156a1338528280d03ae76c00e039108d00f6934a8df0840ce0024db7f",
+    "candidate": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9",
+    "facts_sha256": "8a88496d16199e0c4ee90d1b3a8605b40161205eaff7a3bdadfa1fd53410931e"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
+    "baseline": "5c32b9c4ea15a5229100edd1eb14d2dd1c339734",
+    "committed": "55820ad732c51f9e364cf52119ea2109517ca2373fdd7601f2ba5f5d990edcef",
+    "candidate": "1123885b23b145587de35375abe9eb1566196bdcffa9f43fae6f1e8c1d5dee71",
+    "facts_sha256": "ad669e1cd4f35edb9c06ceb085bacca657f3e70fe4da89469b70fe356c3b4c23"
+  }
+].map(Object.freeze));
+function assertSettingsNavigationSourceDrift(map,result){
+  const expected=[];
+  for(const pending of pendingSettingsNavigationDefinitions){
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
+    const row=rows[0];assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
+    assert.equal(row.committed_sha256,sha(historicalSource(map.source_baseline,pending.path)),"Settings pins must be real Git blobs.");
+    if(row.facts.sha256!==row.committed_sha256){
+      assert.equal(map.source_baseline,pending.baseline);
+      assert.equal(row.committed_sha256,pending.committed);
+      assert.equal(row.facts.sha256,pending.candidate);
+      assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256,"Future Settings facts cannot inherit this exact binding.");
+      expected.push({kind:"unreviewed-source-drift",source:pending.path});
+    }
+  }
+  const paths=new Set(pendingSettingsNavigationDefinitions.map(row=>row.path));
+  const isOwned=g=>g.kind==="unreviewed-source-drift"&&paths.has(g.source);
+  const ordered=rows=>[...rows].sort((a,b)=>a.source.localeCompare(b.source));
+  assert.deepEqual(ordered(result.gaps.filter(isOwned)),ordered(expected),"Missing or duplicate Settings drift is refused.");
+  return {...result,gaps:result.gaps.filter(g=>!isOwned(g))};
+}
+
 function assertCurrentSourceDrift(map, result) {
+  const navigationPaths=new Set();
+  if(map.source_baseline===pendingSettingsNavigationDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsNavigationDefinitions[2].path)){
+    result=assertSettingsNavigationSourceDrift(map,result);
+    for(const pending of pendingSettingsNavigationDefinitions){
+      const row=map.sources.find(row=>row.path===pending.path);
+      if(row.facts.sha256!==row.committed_sha256)navigationPaths.add(pending.path);
+    }
+  }
   if(map.sources.some(row=>row.path===pendingTrainingFormDefinition.source)) result=assertTrainingFormSourceDrift(map,result);
   const expected = [];
-  for (const pending of trainingDefinitionsFor(map)) {
+  const trainingDefinitions=trainingDefinitionsFor(map).filter(row=>!navigationPaths.has(row.path));
+  for (const pending of trainingDefinitions) {
     const rows = map.sources.filter(row => row.path === pending.path); assert.equal(rows.length, 1); const source = rows[0];
     assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
     const committed = historicalSource(map.source_baseline,pending.path);
@@ -201,7 +256,7 @@ function assertCurrentSourceDrift(map, result) {
       expected.push({kind: "unreviewed-source-drift", source: pending.path});
     }
   }
-  const paths = new Set(trainingDefinitionsFor(map).map(pending => pending.path));
+  const paths = new Set(trainingDefinitions.map(pending => pending.path));
   const trainingGaps = result.gaps.filter(g => g.kind === "unreviewed-source-drift" && paths.has(g.source));
   const ordered = rows => [...rows].sort((a,b) => a.source.localeCompare(b.source));
   assert.deepEqual(ordered(trainingGaps), ordered(expected), "Missing, duplicate or extra training drift is refused.");
@@ -304,6 +359,7 @@ test("checks the current repository map against original scope and actual source
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  assertSettingsNavigationSourceDrift(map,result);
   const base="dev-tools/scripts/qualification/visual-composer/";
   const linkedFunctional={
     "settings-public-values":["e2e/settings-host-journey.ts","settings-host-oracles.ts"],
@@ -321,6 +377,7 @@ test("checks the current repository map against original scope and actual source
       assert(source,"Each body and oracle must be inventoried.");
       if(name.startsWith("e2e/"))assert(source.facts.assertionCount>0,"Each journey body contains meaningful assertions.");
       else assert(source.facts.functions.length>0,"Inert oracle guards are separate functions, not executed test assertions.");
+      if(!pendingSettingsNavigationDefinitions.some(p=>p.path===source.path&&source.facts.sha256!==source.committed_sha256))
       assert.equal(source.facts.sha256,source.committed_sha256,"Each new definition must already be committed after review.");
       assert(row.behavior_links.every(link=>link.assertion_sources.includes(source.path)));
     }
@@ -546,7 +603,7 @@ test("reintroduced oracle coverage refuses old, missing, duplicate, future or un
 
 test("prospective training form binding rejects forged future missing and extra drift",()=>{
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
-  const map=structuredClone(current),pending=pendingTrainingFormDefinition;
+  const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json")),pending=pendingTrainingFormDefinition;
   const target=m=>m.sources.find(row=>row.path===pending.source);
   target(map).committed_sha256=pending.committed;
   map.source_baseline=pending.baseline;
@@ -574,7 +631,7 @@ test("prospective training form binding rejects forged future missing and extra 
 });
 
 test("pending training-start definitions reject forged missing duplicate and unrelated evidence",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));
   // Rebuild the preceding candidate from its real Git version, not current I facts.
   for(const changed of pendingTrainingTaskDefinitions){
     const row=map.sources.find(value=>value.path===changed.path);assert(row);
@@ -605,7 +662,7 @@ test("pending asynchronous training diagnostics refuse forged future missing dup
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
   // Test pending-only denials against their own real history after legitimate binding.
-  const map=structuredClone(current);
+  const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));
   map.source_baseline=pendingTrainingTaskDefinitions[0].baseline;
   for(const pending of pendingTrainingTaskDefinitions){
     assert.equal(pending.baseline,map.source_baseline);
@@ -640,7 +697,7 @@ test("pending adapter-format definitions refuse forged future missing duplicate 
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
-  const map=structuredClone(current);map.source_baseline=pendingTrainingAdapterDefinitions[0].baseline;
+  const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));map.source_baseline=pendingTrainingAdapterDefinitions[0].baseline;
   for(const pending of pendingTrainingAdapterDefinitions){
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
     const committed=historicalSource(pending.baseline,pending.path);
@@ -675,4 +732,30 @@ test("historical Git lookup keeps commit and path identity and returns defensive
   for(const commit of ["HEAD","HEAD~1","", "a".repeat(39)])assert.throws(()=>historicalSource(commit,first.path));
   for(const name of ["../private.ts","C:/private.ts","docs/../private.ts"])assert.throws(()=>historicalSource(first.baseline,name));
   assert(historicalGitBytes.size<=64);assert(historicalGitTotalBytes<=CENSUS_LIMITS.totalBytes);
+});
+
+test("pending Settings navigation definitions reject forged future missing duplicate and unrelated facts",()=>{
+  const read=repositoryReader(process.cwd());
+  const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  map.source_baseline=pendingSettingsNavigationDefinitions[0].baseline;
+  for(const pending of pendingSettingsNavigationDefinitions){
+    const row=map.sources.find(row=>row.path===pending.path);assert(row);row.committed_sha256=pending.committed;
+  }
+  const result={gaps:pendingSettingsNavigationDefinitions.map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  const target=m=>m.sources.find(row=>row.path===pendingSettingsNavigationDefinitions[0].path);
+  assertCurrentSourceDrift(map,result);
+  for(const mutate of [
+    (m,r)=>{target(m).committed_sha256=target(m).facts.sha256;},
+    (m,r)=>{target(m).facts.sha256="f".repeat(64);},
+    (m,r)=>{target(m).facts.bytes++;},
+    (m,r)=>{m.source_baseline="9585fe7f30a89b616fc8c3121da3080d02ebf6d5";},
+    (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pendingSettingsNavigationDefinitions[0].path);},
+    (m,r)=>{m.sources.push(structuredClone(target(m)));},
+    (m,r)=>{r.gaps.pop();},
+    (m,r)=>{r.gaps.push(structuredClone(r.gaps[0]));},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/example.unit.test.ts"});},
+  ]){
+    const m=structuredClone(map),r=structuredClone(result);mutate(m,r);
+    assert.throws(()=>assertCurrentSourceDrift(m,r));
+  }
 });
