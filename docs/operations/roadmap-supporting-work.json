@@ -10426,6 +10426,94 @@
         "Desktop, native 400-percent zoom, managed persistence, provider operations, other feature families, resource lifecycle and final combined qualification remain pending.",
         "Accepted model accuracy and OCR results stay closed. Shared full-system testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "qualify-versioned-contrast-and-home-source",
+      "work_criteria": [
+        "complete-safe-versioned-reason-codes",
+        "exact-v1-compatibility-and-unchanged-qualification",
+        "opaque-home-source-and-preserved-behavior",
+        "finite-ownership-and-truthful-census",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28bf390e43d15497f3afaabda05fd40168529c80329449e4e698aa2e4db4f7d9",
+      "review_digest": "3a586a449667655c54cddbb4b328322547ee12ef862bffd0428f5eda86595d5f",
+      "scope": "The reviewed Home change uses solid backgrounds on the reading panels and removes the large decorative layer on the cards. The new diagnostic format still reads earlier reports and retains coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed Home and report source changes. They do not pass the current browser or parent check.",
+        "The focused tests checked the source and report behavior. The separate browser run still failed with two unresolved measurements.",
+        "Packaged desktop, native 400-percent zoom, managed persistence, provider and resource lifecycle checks remain open.",
+        "Previously accepted model quality and OCR results stay closed. The wider UI matrix and combined system checks are deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-versioned-contrast-and-home-source",
+      "work_criteria": [
+        "complete-safe-versioned-reason-codes",
+        "exact-v1-compatibility-and-unchanged-qualification",
+        "opaque-home-source-and-preserved-behavior",
+        "finite-ownership-and-truthful-census",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28bf390e43d15497f3afaabda05fd40168529c80329449e4e698aa2e4db4f7d9",
+      "review_digest": "3a586a449667655c54cddbb4b328322547ee12ef862bffd0428f5eda86595d5f",
+      "scope": "The reviewed Home change uses solid backgrounds on the reading panels and removes the large decorative layer on the cards. The new diagnostic format still reads earlier reports and retains coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed Home and report source changes. They do not pass the current browser or parent check.",
+        "The focused tests checked the source and report behavior. The separate browser run still failed with two unresolved measurements.",
+        "Packaged desktop, native 400-percent zoom, managed persistence, provider and resource lifecycle checks remain open.",
+        "Previously accepted model quality and OCR results stay closed. The wider UI matrix and combined system checks are deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-versioned-contrast-and-home-source",
+      "work_criteria": [
+        "complete-safe-versioned-reason-codes",
+        "exact-v1-compatibility-and-unchanged-qualification",
+        "opaque-home-source-and-preserved-behavior",
+        "finite-ownership-and-truthful-census",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28bf390e43d15497f3afaabda05fd40168529c80329449e4e698aa2e4db4f7d9",
+      "review_digest": "3a586a449667655c54cddbb4b328322547ee12ef862bffd0428f5eda86595d5f",
+      "scope": "The reviewed Home change uses solid backgrounds on the reading panels and removes the large decorative layer on the cards. The new diagnostic format still reads earlier reports and retains coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed Home and report source changes. They do not pass the current browser or parent check.",
+        "The focused tests checked the source and report behavior. The separate browser run still failed with two unresolved measurements.",
+        "Packaged desktop, native 400-percent zoom, managed persistence, provider and resource lifecycle checks remain open.",
+        "Previously accepted model quality and OCR results stay closed. The wider UI matrix and combined system checks are deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-versioned-contrast-and-home-source",
+      "work_criteria": [
+        "complete-safe-versioned-reason-codes",
+        "exact-v1-compatibility-and-unchanged-qualification",
+        "opaque-home-source-and-preserved-behavior",
+        "finite-ownership-and-truthful-census",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28bf390e43d15497f3afaabda05fd40168529c80329449e4e698aa2e4db4f7d9",
+      "review_digest": "3a586a449667655c54cddbb4b328322547ee12ef862bffd0428f5eda86595d5f",
+      "scope": "The reviewed Home change uses solid backgrounds on the reading panels and removes the large decorative layer on the cards. The new diagnostic format still reads earlier reports and retains coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed Home and report source changes. They do not pass the current browser or parent check.",
+        "The focused tests checked the source and report behavior. The separate browser run still failed with two unresolved measurements.",
+        "Packaged desktop, native 400-percent zoom, managed persistence, provider and resource lifecycle checks remain open.",
+        "Previously accepted model quality and OCR results stay closed. The wider UI matrix and combined system checks are deferred."
+      ]
     }
   ]
 }

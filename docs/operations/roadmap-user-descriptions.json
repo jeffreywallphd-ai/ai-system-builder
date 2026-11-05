@@ -15215,6 +15215,62 @@
           "Full-system testing stays deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "df1be08214b82979f1b48a9d55b77f1614ed952862d151f4161de04ca04bf68c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Home reading panels use solid backgrounds.",
+          "The large decorative layer was removed from the Home cards.",
+          "The tool still reads earlier reports. Coverage history and audit requirements stay the same."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "04b2884b66912331d44b0d4d1bc5d9f63333024df2d94078236153c0b53e91e8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This links the committed Home and report changes.",
+          "The browser and parent checks remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d668bfe33c48fad955187e1f0bd738abe4e812aae7edc5e2e65c91fa749856e2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused tests checked the source and reports.",
+          "The separate browser test failed with two unresolved measurements."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "84b43838a942caa75a3a3be0d0103bb3244cefb875283d08dfbe7c6d3daea0c3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Packaged desktop and native 400-percent zoom checks remain open.",
+          "Managed persistence, provider and resource lifecycle checks remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e8af918c7b364c3ff783de97d53c347b7087a5e5861bf2fbdfb620e3cd8f1826",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model quality and text recognition results stay closed.",
+          "The wider UI and combined system tests remain deferred."
+        ]
+      }
     }
   ]
 }
