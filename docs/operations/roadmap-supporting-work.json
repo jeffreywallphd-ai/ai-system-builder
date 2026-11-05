@@ -2250,7 +2250,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2269,7 +2269,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -10337,6 +10337,94 @@
         "The separate Windows outcome qualifies only the new exact-file sharing refusal. It does not pass the older oplock test or the full failure matrix.",
         "Cached-model ownership, protected disk accounting, worker restart and model-resource checks remain pending. Unknown staging remains fully charged against 12 GiB.",
         "Accepted model accuracy and OCR checks stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "qualify-safe-contrast-diagnostics-and-support-copy",
+      "work_criteria": [
+        "bounded-private-free-diagnostics",
+        "unchanged-qualification-and-failed-persistence",
+        "truthful-census-and-immutable-lineage",
+        "security-impact-reviewed",
+        "complete-source-bound-support-copy"
+      ],
+      "receipt_digest": "f2816df0d749936173338d4e515984fbccd9f901222b6372760a08da94ccd4dd",
+      "review_digest": "b2aca32702d4f28aa82b361022e5f00b563336f1c4d50fa2edfe34f2381cf30c",
+      "scope": "Reviewed source adds bounded contrast reason counts, preserves the core accessibility checks, records three changed census facts with immutable history, and supplies twelve missing support descriptions.",
+      "limitations": [
+        "This links the reviewed committed source version. It does not qualify the current host, complete a parent criterion, or validate later code changes.",
+        "Helper tests used controlled saved or simulated inputs. The separate real browser attempt remains failed; its reviewed reason counts are diagnostic data only.",
+        "Desktop, native 400-percent zoom, managed persistence, provider operations, other feature families, resource lifecycle and final combined qualification remain pending.",
+        "Accepted model accuracy and OCR results stay closed. Shared full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-safe-contrast-diagnostics-and-support-copy",
+      "work_criteria": [
+        "bounded-private-free-diagnostics",
+        "unchanged-qualification-and-failed-persistence",
+        "truthful-census-and-immutable-lineage",
+        "security-impact-reviewed",
+        "complete-source-bound-support-copy"
+      ],
+      "receipt_digest": "f2816df0d749936173338d4e515984fbccd9f901222b6372760a08da94ccd4dd",
+      "review_digest": "b2aca32702d4f28aa82b361022e5f00b563336f1c4d50fa2edfe34f2381cf30c",
+      "scope": "Reviewed source adds bounded contrast reason counts, preserves the core accessibility checks, records three changed census facts with immutable history, and supplies twelve missing support descriptions.",
+      "limitations": [
+        "This links the reviewed committed source version. It does not qualify the current host, complete a parent criterion, or validate later code changes.",
+        "Helper tests used controlled saved or simulated inputs. The separate real browser attempt remains failed; its reviewed reason counts are diagnostic data only.",
+        "Desktop, native 400-percent zoom, managed persistence, provider operations, other feature families, resource lifecycle and final combined qualification remain pending.",
+        "Accepted model accuracy and OCR results stay closed. Shared full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-safe-contrast-diagnostics-and-support-copy",
+      "work_criteria": [
+        "bounded-private-free-diagnostics",
+        "unchanged-qualification-and-failed-persistence",
+        "truthful-census-and-immutable-lineage",
+        "security-impact-reviewed",
+        "complete-source-bound-support-copy"
+      ],
+      "receipt_digest": "f2816df0d749936173338d4e515984fbccd9f901222b6372760a08da94ccd4dd",
+      "review_digest": "b2aca32702d4f28aa82b361022e5f00b563336f1c4d50fa2edfe34f2381cf30c",
+      "scope": "Reviewed source adds bounded contrast reason counts, preserves the core accessibility checks, records three changed census facts with immutable history, and supplies twelve missing support descriptions.",
+      "limitations": [
+        "This links the reviewed committed source version. It does not qualify the current host, complete a parent criterion, or validate later code changes.",
+        "Helper tests used controlled saved or simulated inputs. The separate real browser attempt remains failed; its reviewed reason counts are diagnostic data only.",
+        "Desktop, native 400-percent zoom, managed persistence, provider operations, other feature families, resource lifecycle and final combined qualification remain pending.",
+        "Accepted model accuracy and OCR results stay closed. Shared full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-safe-contrast-diagnostics-and-support-copy",
+      "work_criteria": [
+        "bounded-private-free-diagnostics",
+        "unchanged-qualification-and-failed-persistence",
+        "truthful-census-and-immutable-lineage",
+        "security-impact-reviewed",
+        "complete-source-bound-support-copy"
+      ],
+      "receipt_digest": "f2816df0d749936173338d4e515984fbccd9f901222b6372760a08da94ccd4dd",
+      "review_digest": "b2aca32702d4f28aa82b361022e5f00b563336f1c4d50fa2edfe34f2381cf30c",
+      "scope": "Reviewed source adds bounded contrast reason counts, preserves the core accessibility checks, records three changed census facts with immutable history, and supplies twelve missing support descriptions.",
+      "limitations": [
+        "This links the reviewed committed source version. It does not qualify the current host, complete a parent criterion, or validate later code changes.",
+        "Helper tests used controlled saved or simulated inputs. The separate real browser attempt remains failed; its reviewed reason counts are diagnostic data only.",
+        "Desktop, native 400-percent zoom, managed persistence, provider operations, other feature families, resource lifecycle and final combined qualification remain pending.",
+        "Accepted model accuracy and OCR results stay closed. Shared full-system testing remains deferred."
       ]
     }
   ]

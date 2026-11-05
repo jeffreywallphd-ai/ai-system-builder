@@ -4,13 +4,13 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The browser test reached the first navigation accessibility audit. That audit could not resolve 34 color-contrast checks. The test processes closed cleanly. All operational phases and complete accessibility checks remain pending. No user action is needed.",
+  "summary": "The browser test still has 34 unresolved contrast checks. It now records safe reason counts. Four checks identify a gradient; one identifies overlap; one identifies short text. The other 28 need further diagnosis. The test processes closed cleanly. No user action is needed.",
   "observed_source": {
-    "source_commit": "4535665e3d073edbf96c5ac086f2e7669d9d8eef",
-    "source_digest": "8683fc484a889ad02e655215a1975ba2ad26089f5f5a7610f5fe7498b69ac9f4",
-    "source_revision": "source.b95e50b5797c4678011186286542789195fb5b82326bbb438cc05e30fbe6698f"
+    "source_commit": "a8e4df3e86fa66d6d0e995922a76127d0d8a0518",
+    "source_digest": "a4367e53a5203ff04ac8b2dbe8682696d6811dc06b4e071b6cbe66bdf5663f9f",
+    "source_revision": "source.16108b5151e64bc9b7abad6963fe56b2cfb5559ef8271cc9b56ebecee59b2a71"
   },
-  "observation_work_id": "observe-responsive-operational-ui-after-reviewed-repairs",
+  "observation_work_id": "observe-operational-contrast-reasons",
   "source_support": {
     "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
     "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
@@ -115,6 +115,78 @@
       "effect_reference_sha256": "9bb336259ddbb002ca08fd2631f586ec22a9fe16c239b532253d1310f9f0834e",
       "outcome_reference_sha256": "0e940cddcdc0ed8d9bc91263cfee0084a1fd125561fdb1953770a440a1a90569",
       "outcome_report_sha256": "9fd9a4c45ebd2fddc72bcd4032e9d9d5715f848f2cc23f33adc0ed849e7f0515"
+    },
+    {
+      "run_id": "operational-thin-f627609fbdf74e15af5bcd24cda72abc",
+      "status": "failed-first-mounted-accessibility-audit-before-first-recorded-phase",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 1,
+      "selection_matches": true,
+      "ended_tests": 1,
+      "global_errors": 0,
+      "case_errors": 1,
+      "retry": 0,
+      "ui_phases_observed": 0,
+      "accessibility_surface_reports_observed": 1,
+      "accessibility_surfaces_passed": 0,
+      "next_phase": "navigation-menu-opened",
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 27,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "failed_accessibility": {
+        "surface": "navigation-menu",
+        "stage": "audit-1440",
+        "normal_widths_recorded": [
+          1440
+        ],
+        "forced_color_widths_recorded": [],
+        "rule_violations": 0,
+        "incomplete_color_contrast_nodes": 34,
+        "retry_attempted": 34,
+        "retry_passed": 0,
+        "contrast_passed_nodes": 28,
+        "motion_and_control_access_1440_passed": true,
+        "raw_sha256": "c5d69380118252f39a6d29bfa1161720db2b164655043c90547060cedfa8484f",
+        "attachment_sha256": "9b57aaac8f5b1a694684e072286f42c48c727da214e67b6598254195d8e1e9c8",
+        "retry_outcomes": {
+          "violation": 0,
+          "unresolved": 34,
+          "noPositiveSample": 0
+        },
+        "retry_reasons": {
+          "bgGradient": 4,
+          "bgImage": 0,
+          "imgNode": 0,
+          "outsideViewport": 0,
+          "elmPartiallyObscuring": 1,
+          "elmPartiallyObscured": 0,
+          "bgOverlap": 0,
+          "colorParse": 0,
+          "equalRatio": 0,
+          "shortTextContent": 1,
+          "other": 28
+        },
+        "style_hints": {
+          "backgroundImage": 34,
+          "reducedOpacity": 0,
+          "clippedAncestor": 33,
+          "nonRgbColor": 0,
+          "ancestorLimit": 0,
+          "reasonScanLimit": 0
+        },
+        "diagnostic_qualification": "diagnostic-only"
+      },
+      "effect_reference_sha256": "a00be134c936f6f5dbba2482878a67e5723b3c973e42a95ff7a6488808cd728a",
+      "outcome_reference_sha256": "c884edfbb236e0065a329b8f0d1f87fbec1d556a6a747d1e7e37f1966ef83281",
+      "outcome_report_sha256": "67b087344432622681d2598411a93a8178a8b4d7d8dd3c7cb0f54d0d94c4c2c0"
     }
   ],
   "diagnosis": {
@@ -122,7 +194,7 @@
     "failed_step": "navigation-menu-opened",
     "failed_surface": "navigation-menu",
     "failed_audit_stage": "audit-1440",
-    "exact_inner_assertion": "Not recorded. The journey wrapper retains only the fixed phase. The mounted report separately records audit-1440; the precise reason for unresolved contrast measurements was not retained.",
+    "exact_inner_assertion": "The original mounted report failed at audit-1440 with unresolved-contrast-retry. All 34 retries remain unresolved; none is recorded as a contrast violation. The broader journey wrapper still records only its fixed failed phase.",
     "measured_facts": {
       "width": 1440,
       "contrast_violations": 0,
@@ -131,17 +203,43 @@
       "contrast_retries_passed": 0,
       "contrast_passed_nodes": 28,
       "motion_and_control_access_passed": true,
-      "narrow_and_forced_color_checks_observed": false
+      "narrow_and_forced_color_checks_observed": false,
+      "retry_outcomes": {
+        "violation": 0,
+        "unresolved": 34,
+        "noPositiveSample": 0
+      },
+      "retry_reasons": {
+        "bgGradient": 4,
+        "bgImage": 0,
+        "imgNode": 0,
+        "outsideViewport": 0,
+        "elmPartiallyObscuring": 1,
+        "elmPartiallyObscured": 0,
+        "bgOverlap": 0,
+        "colorParse": 0,
+        "equalRatio": 0,
+        "shortTextContent": 1,
+        "other": 28
+      },
+      "style_hints": {
+        "backgroundImage": 34,
+        "reducedOpacity": 0,
+        "clippedAncestor": 33,
+        "nonRgbColor": 0,
+        "ancestorLimit": 0,
+        "reasonScanLimit": 0
+      }
     },
-    "cause_limit": "The layout check passed before the audit. Hidden menu visibility alone is not an established cause. The incomplete measurements are not confirmed contrast violations or passing checks.",
+    "cause_limit": "The engine identified four gradient cases, one overlap case and one short-text case. The other 28 reasons are unidentified. Each target or one of its checked ancestors has a background image; this style hint alone does not establish a defect. The incomplete checks are neither confirmed contrast violations nor passes.",
     "implemented_definition_fixes": [
       "Reviewed source fixes cover responsive menu and sidebar states, the selected-workspace Home heading, notification handling, source-owned audit inputs and desktop viewport setup.",
       "The current run reached the first mounted audit. It did not reach the later Home or notification steps. Source fixes do not qualify those steps."
     ],
     "next_agent_actions": [
-      "Find why the 34 contrast checks remain unresolved. Record bounded diagnostic codes and counts without page text, selectors or private values.",
-      "Fix the confirmed cause and add focused regression tests. Keep the current contrast thresholds and evidence requirements.",
-      "Collect a fresh reviewed operational browser result after the source change. Preserve all prior failures and keep unrun checks pending."
+      "Extend the fixed safe reason list to cover the installed engine reasons that are currently reported as other. Keep page content and CSS values out of published diagnostics.",
+      "Investigate the recorded gradient, overlap and short-text reasons. Repair only defects established by further evidence. Add focused regressions and keep the contrast thresholds and required host assertions.",
+      "Collect a fresh reviewed operational result after the source repair. Preserve all earlier failed reports. Keep remaining host and full-system qualification pending."
     ],
     "user_action": "No action needed."
   },
@@ -185,9 +283,53 @@
         }
       },
       "scope": "Prior publication metadata only. Its two unchanged attempts remain in the current attempt list; the original full document remains at this Git witness."
+    },
+    {
+      "source_commit": "a8e4df3e86fa66d6d0e995922a76127d0d8a0518",
+      "document_sha256": "2289681bfca932a0483f31b5f88b4c04931a934ff38d7d58d5e9c0462e7d44d1",
+      "committed_document_sha256": "2289681bfca932a0483f31b5f88b4c04931a934ff38d7d58d5e9c0462e7d44d1",
+      "replaced_fields": {
+        "summary": "The browser test reached the first navigation accessibility audit. That audit could not resolve 34 color-contrast checks. The test processes closed cleanly. All operational phases and complete accessibility checks remain pending. No user action is needed.",
+        "observed_source": {
+          "source_commit": "4535665e3d073edbf96c5ac086f2e7669d9d8eef",
+          "source_digest": "8683fc484a889ad02e655215a1975ba2ad26089f5f5a7610f5fe7498b69ac9f4",
+          "source_revision": "source.b95e50b5797c4678011186286542789195fb5b82326bbb438cc05e30fbe6698f"
+        },
+        "observation_work_id": "observe-responsive-operational-ui-after-reviewed-repairs",
+        "diagnosis": {
+          "confirmed_selection_fix": "The latest attempt selected and ended exactly the intended case, with no global error or retry.",
+          "failed_step": "navigation-menu-opened",
+          "failed_surface": "navigation-menu",
+          "failed_audit_stage": "audit-1440",
+          "exact_inner_assertion": "Not recorded. The journey wrapper retains only the fixed phase. The mounted report separately records audit-1440; the precise reason for unresolved contrast measurements was not retained.",
+          "measured_facts": {
+            "width": 1440,
+            "contrast_violations": 0,
+            "unresolved_contrast_nodes": 34,
+            "contrast_retry_attempts": 34,
+            "contrast_retries_passed": 0,
+            "contrast_passed_nodes": 28,
+            "motion_and_control_access_passed": true,
+            "narrow_and_forced_color_checks_observed": false
+          },
+          "cause_limit": "The layout check passed before the audit. Hidden menu visibility alone is not an established cause. The incomplete measurements are not confirmed contrast violations or passing checks.",
+          "implemented_definition_fixes": [
+            "Reviewed source fixes cover responsive menu and sidebar states, the selected-workspace Home heading, notification handling, source-owned audit inputs and desktop viewport setup.",
+            "The current run reached the first mounted audit. It did not reach the later Home or notification steps. Source fixes do not qualify those steps."
+          ],
+          "next_agent_actions": [
+            "Find why the 34 contrast checks remain unresolved. Record bounded diagnostic codes and counts without page text, selectors or private values.",
+            "Fix the confirmed cause and add focused regression tests. Keep the current contrast thresholds and evidence requirements.",
+            "Collect a fresh reviewed operational browser result after the source change. Preserve all prior failures and keep unrun checks pending."
+          ],
+          "user_action": "No action needed."
+        },
+        "reviewed_at": "2026-11-05T18:00:58.242875+00:00"
+      },
+      "scope": "Previous publication metadata only. All three original attempts remain unchanged. The complete earlier document remains in the recorded Git version."
     }
   ],
-  "reviewed_at": "2026-11-05T18:00:58.242875+00:00",
+  "reviewed_at": "2026-11-05T19:55:49.071143+00:00",
   "reviewed_source_repairs": [
     {
       "work_id": "repair-responsive-operational-journeys",
@@ -209,6 +351,13 @@
       "receipt_digest": "9ac17aea74a70f532e72b3c8d892de6dad62c329993cfc31aa609bf2dec74024",
       "review_digest": "85f7b83805bcc75130954e356acddd69af0f4a1764c636b1076fd04653f33507",
       "scope": "Reviewed source definitions and local checks only. This browser run still qualifies no completed operational phase or accessibility surface."
+    },
+    {
+      "work_id": "qualify-safe-contrast-diagnostics-and-support-copy",
+      "commit": "a8e4df3e86fa66d6d0e995922a76127d0d8a0518",
+      "receipt_digest": "f2816df0d749936173338d4e515984fbccd9f901222b6372760a08da94ccd4dd",
+      "review_digest": "b2aca32702d4f28aa82b361022e5f00b563336f1c4d50fa2edfe34f2381cf30c",
+      "scope": "Reviewed source adds bounded contrast reason counts, preserves the core accessibility checks, records three changed census facts with immutable history, and supplies twelve missing support descriptions. This supplies source support only; the browser attempt remains failed."
     }
   ]
 }

@@ -15156,6 +15156,65 @@
           "Full-system testing stays deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f0057416f684ae6dd821deb5199d093891f8243be4e80ff9967589116b4acb10",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Reviewed source adds bounded contrast reason counts.",
+          "It preserves the core accessibility checks.",
+          "It records three changed source-inventory facts and preserves their history.",
+          "It supplies twelve missing support descriptions."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bcfbc80cd77b3378d4d52bac052314604891d62093882944dbfee3a2c2d24e27",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This links the reviewed source version.",
+          "It does not qualify the current host, close a parent requirement or verify later changes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "44a8cd44c9d100ffd1831e28df4a4cb2af181788370bf2ebc39545139d6895c7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Helper tests used controlled saved or simulated inputs.",
+          "The separate browser test remains failed.",
+          "Its reviewed reason counts provide diagnostic information only."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ac52ec8be652a7c9eaf9875584f742371f87264e96067eb9892af2ac3fc1f04e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and native 400-percent zoom checks remain pending.",
+          "Managed persistence, provider operations and other feature checks remain pending.",
+          "Resource-lifecycle checks and the final combined test run remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3f24533369f15542487be4dd2f8a6bc8466a66b821165b23d11d3cc3296a63d8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model-accuracy and text-recognition results remain closed.",
+          "Full-system testing stays deferred."
+        ]
+      }
     }
   ]
 }
