@@ -1269,3 +1269,13 @@ nonterminal mapper directories to permit other readers and writers; the selected
 and writer still deny delete and keep their original sharing rules. No new
 principal, process topology, quota, timeout, accounting credit or production
 composition follows. Actual native and restart/resource qualification is pending.
+
+### Interrupted optional generation ownership
+
+The existing bounded generator poisons its shared cache owner when any
+BaseException interrupts an entered supplier or constrained-decoder generation
+call. It re-raises the same object without closing or replacing the bundle,
+decoder or lease. Existing and future request views deny reuse. Resource and
+source admission before generation remain separate; completed decoder-output
+validation retains its bounded repair path. This adds no worker-stop authority,
+native protection, borrower-retirement proof or production capability.

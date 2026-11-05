@@ -1325,3 +1325,14 @@ Source-level fake-ABI tests do not qualify Windows behavior. A real run needs a
 fresh review of the committed source and one fixed launcher intent. This adds
 no production Source/borrower, model run, staging access, quota or deadline.
 Actual worker, shared accounting, restart and resource qualification stay pending.
+
+## Interrupted bounded generation
+
+An interrupt during optional model generation now makes the shared cached model
+unavailable to every request view. The same interruption is re-raised. The
+handler retains the model, decoder and lease; it does not retry, unload, rebuild
+weights or claim cleanup. Ordinary resource checks before generation remain
+retryable. Known completed decoder-output validation can still use bounded repair.
+Model-free tests cover ordinary and constrained generation, all shared views,
+original exception identity and retained ownership. Actual native borrower, worker
+and resource qualification remains separate. Standard generation is unchanged.

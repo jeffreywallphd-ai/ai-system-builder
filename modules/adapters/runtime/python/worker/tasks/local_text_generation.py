@@ -1150,9 +1150,10 @@ class BoundedOffloadGenerator(TransformersCausalGenerator):
             if error.code not in {"decoder-output-invalid", "decoder-output-empty", "decoder-output-truncated"}:
                 self._owner._poisoned = True
             raise
-        except Exception:
-            # A failed supplier forward may skip an offload post-hook. Retain
-            # its ownership and refuse another forward until observed unload.
+        except BaseException:
+            # Interrupts can also skip a supplier post-hook. Keep the original
+            # cache owner and deny every view until observed unload. Propagate
+            # the original interruption; this handler grants no cleanup credit.
             self._owner._poisoned = True
             raise
 

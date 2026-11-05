@@ -163,6 +163,51 @@ class BoundedGeneratorTests(unittest.TestCase):
             self.generator.close()
         release.assert_called_once()
 
+    def test_base_exception_forward_failure_poison_is_shared_without_release_or_retry(self):
+        class SupplierAbort(BaseException):
+            pass
+        for failure in (KeyboardInterrupt("synthetic-private-interrupt"),
+                        SystemExit("synthetic-private-exit"),
+                        SupplierAbort("synthetic-private-abort")):
+            with self.subTest(kind=type(failure).__name__):
+                self.generator._poisoned = False
+                first = self.generator.for_request({"max_new_tokens": 32})
+                second = self.generator.for_request({"max_new_tokens": 64})
+                bundle, lease, model = self.generator._bundle, self.generator._bundle.lease, self.model
+                decoder = SimpleNamespace(generate=Mock(side_effect=failure))
+                self.generator._decoder = decoder
+                generation._GENERATOR_CACHE[("synthetic-offload",)] = self.generator
+                # Exercise both the normal supplier and the constrained decoder
+                # boundary. Neither failure permits a second entered forward.
+                for constrained in (False, True):
+                    self.generator._poisoned = False
+                    decoder.generate.reset_mock()
+                    self.model.generate = Mock(side_effect=failure)
+                    with patch.object(generation, "release_offload_lease") as release, \
+                            redirect_stdout(io.StringIO()) as output:
+                        with self.assertRaises(type(failure)) as raised:
+                            first.generate_text("Synthetic request", constrained_json_schema={"type": "object"} if constrained else None)
+                        self.assertIs(raised.exception, failure)
+                        self.assertTrue(self.generator._poisoned)
+                        self.assertFalse(self.generator._closed)
+                        self.assertIs(self.generator._bundle, bundle)
+                        self.assertIs(bundle.lease, lease)
+                        self.assertIs(bundle.model, model)
+                        self.assertIs(self.generator._decoder, decoder)
+                        self.assertIs(generation._GENERATOR_CACHE[("synthetic-offload",)], self.generator)
+                        for action in (lambda: first.generate_text("Synthetic retry"),
+                                       lambda: second.generate_text("Synthetic retry"),
+                                       lambda: self.generator.for_request({"max_new_tokens": 16}),
+                                       self.generator.assert_reusable):
+                            with self.assertRaises(OffloadAdmissionError):
+                                action()
+                        release.assert_not_called()
+                        self.assertEqual(output.getvalue(), "")
+                    self.assertEqual(self.model.generate.call_count, 0 if constrained else 1)
+                    self.assertEqual(decoder.generate.call_count, 1 if constrained else 0)
+                    for method in (model.to, model.cpu, model.state_dict):
+                        method.assert_not_called()
+
     def test_completed_decoder_output_validation_keeps_bounded_repair_available(self):
         for code in ("decoder-output-invalid", "decoder-output-empty", "decoder-output-truncated"):
             decoder = SimpleNamespace(generate=Mock(side_effect=generation.ConstrainedJsonDecoderError(code, "synthetic invalid output")))

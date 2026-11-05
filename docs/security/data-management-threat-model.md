@@ -2794,3 +2794,15 @@ controls remain. Fake-ABI tests do not establish actual Windows protection or
 production readiness. Old unknown staging stays untouched and fully charged12GiB;
 shared durable accounting, source/cache borrowers, worker recovery and resources
 remain pending. No model-quality or OCR rerun is required for this source change.
+
+### Interrupted optional forward
+
+An interrupted supplier call can leave offload post-hooks incomplete. The bounded
+generator therefore treats BaseException, including process-exit and keyboard
+interrupt exceptions, as uncertain execution after generation is entered. It
+poisons the original shared owner and re-raises the same exception. No request
+view may retry, and the handler cannot release a lease, rebuild weights or claim
+cleanup. Fixed completed decoder-output validation remains repairable; failed
+pre-forward admission remains a no-forward result. Synthetic regressions verify
+these boundaries and non-disclosure. Native borrower, worker and accounting
+qualification remains pending, with all existing guards preserved.

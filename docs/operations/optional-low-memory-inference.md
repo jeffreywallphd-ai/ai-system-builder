@@ -1769,3 +1769,14 @@ target-unknown failures keep their original outcomes. The full Source failure
 matrix, cached-model lifetime, protected shared accounting, model-worker restart,
 actual offload resources and production composition remain pending. No user
 action is needed for that remaining agent work.
+
+## Interrupted cached generation
+
+No user action is needed. If an interrupt stops an entered low-memory generation
+call, all views of that cached model now reject further requests. The original
+interrupt is preserved. The model and its temporary-file owner remain retained;
+the failure handler does not attempt cleanup or report a successful unload.
+Pre-generation memory denials and completed decoder-output repair keep their
+existing behavior. These model-free regression checks do not qualify actual
+file protection, cache borrowers, shared disk accounting, worker restart or
+offload resources. Accepted accuracy and OCR results stay closed.
