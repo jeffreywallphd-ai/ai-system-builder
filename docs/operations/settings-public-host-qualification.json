@@ -1,0 +1,90 @@
+{
+  "schema_version": "settings-public-host-qualification-v1",
+  "roadmap_id": "comprehensive-ui-automation",
+  "increment_id": "operational-ui-and-coverage-qualification",
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "summary": "The local Settings test server started and shut down correctly. The test runner failed while loading test files. No Settings interface case ran.",
+  "observed_source": {
+    "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
+    "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786",
+    "source_revision": "source.e0d798b01a311026a5e6cb3d60f2074392155f79502df2e2781ddfbb2def92a0"
+  },
+  "source_support": [
+    {
+      "work_id": "qualify-public-settings-test-identity",
+      "commit": "87f3ff985723bfaf893ef5b72c1de1829fc2a4b5",
+      "at": "2026-11-04T22:10:52Z",
+      "receipt_digest": "361de523a0a3294948297cc041b15359b8cd217a5b34fdb34e86c5f239b2e59c",
+      "review_digest": "f04a3cc86acbc9e5735c747dddeed6d7193498f222588548ad57d598d61538e6",
+      "source_digest": "d3ee624025355e9dc0cae8fd47cbe82fbbcafdb5c78f3e18ac1f9921f5a28b1a"
+    },
+    {
+      "work_id": "qualify-settings-loopback-routing",
+      "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
+      "at": "2026-11-04T23:40:00Z",
+      "receipt_digest": "df617bdfa17059b05651ef13e1e0d18cafab5c0078d9774dbf4f8ceeaae564c2",
+      "review_digest": "482205e7b565d8cef729f14c3b46752083a51bb91b128d9ee7e0663777f4e89d",
+      "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786"
+    }
+  ],
+  "attempts": [
+    {
+      "run_id": "173130742e164bad8e688eb738a84932",
+      "host": "thin-chrome",
+      "scenario": "public-values",
+      "status": "failed-before-test-execution",
+      "selected_tests": 0,
+      "finished_tests": 0,
+      "global_errors": 2,
+      "root_exit_code": 1,
+      "ui_qualification_passed": false,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "diagnosis": "The runner failed before selecting tests and recorded a module-loading warning. A separate model-free reproduction failed with the same Settings setup imports and passed when the existing Playwright module exclusion was applied. This supports the test-loader diagnosis; the original attempt did not retain its exact exception.",
+      "cleanup": {
+        "confirmed": true,
+        "all_owned_handles_closed": true,
+        "active_owned_processes": 0,
+        "total_owned_processes": 17,
+        "outer_job_forced_termination": false,
+        "server_shutdown_acknowledged": true,
+        "test_credential_removed": true,
+        "source_unchanged": true,
+        "streams_complete": true,
+        "pending_and_live_registries_clear": true
+      },
+      "limits": {
+        "process_bytes": 1073741824,
+        "job_bytes": 3221225472,
+        "members": 32,
+        "seconds": 420
+      },
+      "observed_peaks": {
+        "process_commit_bytes": 387162112,
+        "job_commit_bytes": 1197322240
+      },
+      "evidence_digests": {
+        "native_observation": "dfe07ddb4cb9ff657a8f185ebedfab884679d9d448f1cfa0cdb945325a8df5b4",
+        "observed_result": "46f3a41fceceb762054065f9bb1ec451ce87f1358ff132f02f7c93d0465f8b1b",
+        "effect_reference": "e1d9434e916aa0e60f5f124dfdd58a9cfdccd0637969162f8ed8749933c36102",
+        "independent_outcome_reference": "1991bd765ca93642da5494544b7c8acbf319f013ae95b07317214382a59e70dd",
+        "independent_outcome_report": "dad54e60c299f9a69b9df6f64cb2b257b078a0ccbbadf37e241a6d146b853fc7",
+        "model_free_loading_diagnostic": "bcdf9b994539d9c1b4817a038e85253cd2d82e60bb051fef7770e6627647cdca",
+        "settings-setup-started": "c506d0923ff8e4e8d7b2b0b051d1a3c4c1cc8e1a82d3fcd560836188c1ba39bb",
+        "settings-setup-ready": "95efb03ec431c79a426211a5162abd2330e5c32c9c0ca07ed2e3a5404750e9d9",
+        "settings-setup-closed": "0961532c631cd5ea0c7d3068b03d40baea38931159ddc741fb99af37ddbf7f90",
+        "settings-runner-result": "4561d0119bca35140b8b44233accc1ee8cc85dd216b925fc3d7c8b56c488f035"
+      }
+    }
+  ],
+  "next_action": "The agent must fix test-module loading and add its regression test, then run a new separately reviewed thin-client Settings journey. Desktop Settings needs a fresh package and a separate reviewed journey. No user action is needed.",
+  "scope_limits": [
+    "This report records evidence collection. The failing attempt grants no Settings case, increment or roadmap pass.",
+    "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
+    "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
+    "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
+    "The shared full-system campaign remains pending until open feature work is ready."
+  ],
+  "parent_qualification_granted": false
+}

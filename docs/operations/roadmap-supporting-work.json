@@ -9779,6 +9779,126 @@
         "Shared disk accounting, file protection, worker lifetime and actual low-memory resource checks remain pending.",
         "No user action is needed. Accepted model accuracy and OCR checks stay closed. Whole-software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-public-settings-test-identity",
+      "work_criteria": [
+        "narrow-public-settings-identity",
+        "bounded-owning-checks",
+        "security-and-truthful-scope"
+      ],
+      "receipt_digest": "361de523a0a3294948297cc041b15359b8cd217a5b34fdb34e86c5f239b2e59c",
+      "review_digest": "f04a3cc86acbc9e5735c747dddeed6d7193498f222588548ad57d598d61538e6",
+      "scope": "Focused checks passed for the limited Settings test identity. It can read and write Settings and workspaces. Existing test identities and authorization controls stay unchanged.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-public-settings-test-identity",
+      "work_criteria": [
+        "narrow-public-settings-identity",
+        "bounded-owning-checks",
+        "security-and-truthful-scope"
+      ],
+      "receipt_digest": "361de523a0a3294948297cc041b15359b8cd217a5b34fdb34e86c5f239b2e59c",
+      "review_digest": "f04a3cc86acbc9e5735c747dddeed6d7193498f222588548ad57d598d61538e6",
+      "scope": "Focused checks passed for the limited Settings test identity. It can read and write Settings and workspaces. Existing test identities and authorization controls stay unchanged.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-public-settings-test-identity",
+      "work_criteria": [
+        "narrow-public-settings-identity",
+        "bounded-owning-checks",
+        "security-and-truthful-scope"
+      ],
+      "receipt_digest": "361de523a0a3294948297cc041b15359b8cd217a5b34fdb34e86c5f239b2e59c",
+      "review_digest": "f04a3cc86acbc9e5735c747dddeed6d7193498f222588548ad57d598d61538e6",
+      "scope": "Focused checks passed for the limited Settings test identity. It can read and write Settings and workspaces. Existing test identities and authorization controls stay unchanged.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-settings-loopback-routing",
+      "work_criteria": [
+        "fixed-loopback-with-safe-failure",
+        "focused-routing-and-compatibility",
+        "security-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "df617bdfa17059b05651ef13e1e0d18cafab5c0078d9774dbf4f8ceeaae564c2",
+      "review_digest": "482205e7b565d8cef729f14c3b46752083a51bb91b128d9ee7e0663777f4e89d",
+      "scope": "Focused checks passed for the Settings test server on the local loopback address. Bind failures remain failures. These source checks did not run a Settings interface journey.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-settings-loopback-routing",
+      "work_criteria": [
+        "fixed-loopback-with-safe-failure",
+        "focused-routing-and-compatibility",
+        "security-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "df617bdfa17059b05651ef13e1e0d18cafab5c0078d9774dbf4f8ceeaae564c2",
+      "review_digest": "482205e7b565d8cef729f14c3b46752083a51bb91b128d9ee7e0663777f4e89d",
+      "scope": "Focused checks passed for the Settings test server on the local loopback address. Bind failures remain failures. These source checks did not run a Settings interface journey.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-settings-loopback-routing",
+      "work_criteria": [
+        "fixed-loopback-with-safe-failure",
+        "focused-routing-and-compatibility",
+        "security-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "df617bdfa17059b05651ef13e1e0d18cafab5c0078d9774dbf4f8ceeaae564c2",
+      "review_digest": "482205e7b565d8cef729f14c3b46752083a51bb91b128d9ee7e0663777f4e89d",
+      "scope": "Focused checks passed for the Settings test server on the local loopback address. Bind failures remain failures. These source checks did not run a Settings interface journey.",
+      "limitations": [
+        "This records reviewed source work at its saved version. It does not complete the parent roadmap or qualify later code.",
+        "The later thin-client attempt failed before a Settings case ran. Desktop Settings still needs a fresh package and a separate test.",
+        "No model, provider, native file-protection or safe-restart qualification follows. Accepted accuracy and text-recognition checks stay closed.",
+        "No user action is needed. Full-system testing remains deferred until open feature work is ready."
+      ]
     }
   ]
 }

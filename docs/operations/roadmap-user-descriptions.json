@@ -249,7 +249,7 @@
       "user_description": {
         "purpose": "Preserve everyday settings, navigation, notifications and runtime recovery.",
         "owner": "agent",
-        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
+        "next_action": "The thin-client Settings test stopped while loading test files. No Settings case ran. The agent will fix the test loader, rerun this focused journey, then check Desktop Settings. Other app-level and final checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must cover mounted Settings, thin-client Security, runtime readiness and controls, workspace summaries and shell navigation.",
@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "Feature work and focused checks are recorded. The agent will run the remaining app-level and final checks after all open roadmaps have completed feature work. No user action is needed.",
+        "next_action": "The failed thin-client attempt shut down all test-owned processes and closed their handles. The agent will fix test loading before a separately reviewed run. Other cleanup and final checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -14782,6 +14782,63 @@
           "The agent reserved cleanup tracking space before worker startup.",
           "Focused tests filled ordinary tracking space and checked the existing cleanup methods.",
           "This saved source work does not qualify a real low-memory model run."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cf9250a4421ec4927f6594dbf551bd7b689aea7a93dc9b1bceae245b46958398",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused checks passed for the limited Settings test identity.",
+          "It can read and write Settings and workspaces.",
+          "Existing test identities and authorization controls stay unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "01ec13f8995f5d4a3a3ba5f4320ce0c48145f06754f8e59115daacd98f3e6833",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The later thin-client attempt failed before a Settings case ran.",
+          "Desktop Settings still needs a fresh package and a separate test."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e713c779ecf9a67036cbc9c876f60f58e2580baff966afbebfaacb4ab7c3e038",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No model, provider, native file-protection or safe-restart qualification follows.",
+          "Accepted accuracy and text-recognition checks stay closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ab08ff0cdb619fae20e4a8807eac2aa47ffc4d1ddd27ca82019d3277a6aa9a9a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No user action is needed.",
+          "Full-system testing remains deferred until open feature work is ready."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "66b9e556946af45bff97b3927b9e99767327a2a17c140b17e8437820c9ab5898",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused checks passed for the Settings test server on the local loopback address.",
+          "Bind failures remain failures.",
+          "These source checks did not run a Settings interface journey."
         ]
       }
     }
