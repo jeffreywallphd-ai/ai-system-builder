@@ -4,13 +4,13 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The isolated test server started and stopped safely. The browser test selected no cases, so no UI or accessibility check passed. The agent will correct the test filter and repeat this feature check with a fresh run.",
+  "summary": "The corrected filter selected and ran the intended browser case. It failed in the first navigation-menu step. All operational and accessibility checks remain pending. The agent will align the test with the current responsive navigation, workspace heading and notification behavior.",
   "observed_source": {
-    "source_commit": "7eba180c82c005f5b723c522e9505547e22dd982",
-    "source_digest": "418b7d116cc36c01a06007903d1ff3c71cd7f1961157f05fc8e1421bc06ae3ff",
+    "source_commit": "01d230b5a6f1348c0343f6b26c826c288de3f0e5",
+    "source_digest": "0114944a99f7e96d0c14817b4571e3d6fb14b1ceb440ef07a3ec6b940cb26110",
     "source_revision": "source.8c7c5017684c6dd4fab2dda25853b9883de74c1d5497f43d83078c305d629d9d"
   },
-  "observation_work_id": "observe-thin-operational-with-fixed-audit-inputs",
+  "observation_work_id": "collect-operational-ui-after-selection-fix",
   "source_support": {
     "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
     "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
@@ -42,23 +42,58 @@
       "effect_reference_sha256": "20e6f23c88aff6e93bb64265e5f6005d071b3500ed86ecdac398d6e68d1ed5c4",
       "outcome_reference_sha256": "1db1dbf2b5d4e5785366713456446968021cd4e890eb754bd32d87c604b73201",
       "outcome_report_sha256": "1706001d452dfc5fbf2e5c24f37f0378e7ecf931093397003818f08082d6b747"
+    },
+    {
+      "run_id": "operational-thin-01818b44a99745ffaaf5588241075b87",
+      "status": "failed-before-first-recorded-operational-phase",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 1,
+      "selection_matches": true,
+      "ended_tests": 1,
+      "global_errors": 0,
+      "case_errors": 1,
+      "retry": 0,
+      "ui_phases_observed": 0,
+      "accessibility_surfaces_observed": 0,
+      "next_phase": "navigation-menu-opened",
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 31,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "effect_reference_sha256": "e4bfd43b8e8a7f841d36f93b0cf3e92d1fe70db17d619fdac2852a3edd8eb486",
+      "outcome_reference_sha256": "bd80eed0db639f4f1d8b3f647cce2ec45b0010ac87163cd06349bd2a7a60a46a",
+      "outcome_report_sha256": "65441ca4e7cfcfb067cafd3a9e11a394687fe278b356ce47b8457a92d85945ce"
     }
   ],
   "diagnosis": {
-    "confirmed_test_definition_defect": "The test filter matched a bare title. Playwright matches the project, file and title together. The installed matcher reproduced this mismatch in three focused checks.",
-    "original_global_error": "Not recorded by the original reporter. Its exact message cannot be recovered. The filter defect is consistent with the failure; an application defect has not been proved.",
+    "confirmed_selection_fix": "The new attempt selected and ended exactly the intended case, with no global errors or retry.",
+    "failed_step": "navigation-menu-opened",
+    "exact_inner_assertion": "Not recorded. The journey replaced the original exception with a fixed phase error.",
+    "source_supported_test_mismatch": "The test starts at width1440 and targets a menu that the current stylesheet hides above64rem. This is a test precondition mismatch, not a proved application defect.",
+    "prospective_test_expectations": [
+      "Both current Home pages use the selected workspace name as the heading. The journey still expects the literal Home heading.",
+      "The actual isolated page already showed one unread notification. The journey must exercise notification handling instead of assuming an initially empty history."
+    ],
     "next_agent_actions": [
-      "Use the exact project, file and title in the filter.",
-      "Keep bounded safe global-error hints, without raw messages, paths or stack traces.",
-      "Run the changed definition in a fresh isolated test and review its actual UI and shutdown results."
+      "Test the responsive menu at its supported narrow layout and the sidebar at the wide layout. Preserve native zoom proof and all applicable controls.",
+      "Verify the actual contextual Home heading and supported notification clear/read/focus behavior.",
+      "Add focused regressions and safe diagnostic checkpoints, then qualify a changed-source feature run."
     ],
     "user_action": "No action needed."
   },
   "scope_limits": [
-    "This was a controlled local server and thin-client attempt. It does not qualify a managed database, production identity, TLS, external provider or model operation.",
-    "The attempt did not execute a UI test. All 17 operational phases and seven mounted accessibility views remain pending.",
-    "Desktop, native 400 percent zoom, other functional families and remaining parent criteria stay pending.",
-    "Accepted model accuracy and OCR tests stay closed. The shared full-system campaign remains deferred until open implementation work is ready."
+    "The first attempt selected no tests. The second selected and ran one case, but completed no operational phase or mounted accessibility audit. All17standard phases and seven views remain pending.",
+    "This controlled local server/thin-client test does not qualify managed persistence,production identity,TLS,provider operations,model inventory reads or model execution.",
+    "Screenshots,traces and video were disabled. Playwright generated a failure-context file from the isolated synthetic fixture. Its raw payload stays local and is not published.",
+    "Desktop,native400,other functional families and remaining parent criteria stay pending.",
+    "Accepted model accuracy and OCR tests stay closed. Shared full-system testing remains deferred until open implementation work is ready."
   ],
   "parent_qualification_granted": false
 }

@@ -183,6 +183,7 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 ## Operational browser test evidence
 
 [Operational UI host evidence](operations/operational-ui-host-qualification.json)
-records the isolated browser attempt and its safe shutdown. No UI test was
-selected, so the operational and accessibility checks remain pending. The agent
-will correct the test filter and error reporting before a fresh feature test.
+preserves both isolated attempts and their safe shutdown. The corrected filter
+selected one case, which failed in the first navigation-menu step. Operational
+and accessibility checks remain pending. The agent will align the test with the
+current responsive navigation, workspace heading and notification behavior.
