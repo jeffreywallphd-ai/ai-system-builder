@@ -52,6 +52,12 @@ records, labeled separately. Passing criteria never marks a planned chunk
 complete. Legacy roadmap declarations retain their evidence label and never
 gain invented receipts or review attestations.
 
+Delivery times show minutes and seconds, with hours when needed. Increment totals
+sum only completed execution records bound to that exact increment, including
+records outside the bounded execution list. Measured, pending and unavailable
+counts stay separate; summed durations can overlap. Individual chunk timing is
+not recorded because the records contain no execution-to-chunk link.
+
 The support registry accepts up to 1,000 links within its existing 1 MiB document
 limit. All previous links remain versioned. Complete configuration validation
 precedes publication: an oversized file, a 1,001st link, a duplicate, an unknown

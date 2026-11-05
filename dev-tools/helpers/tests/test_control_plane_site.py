@@ -16,7 +16,7 @@ sys.path.insert(0, str(HELPERS))
 from control_plane.common import digest
 from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
 from control_plane.records import Records
-from control_plane import site
+from control_plane import site, projection
 from control_plane.storage import canonical_bytes
 from control_plane.work import Work
 
@@ -431,5 +431,102 @@ class SiteTests(unittest.TestCase):
         self.assertEqual(after["roadmaps"][1]["status"], "completed")
         self.assertNotEqual(before["source_digest"], after["source_digest"])
 
+
+class DeliveryProjectionTests(unittest.TestCase):
+    def work(self, work_id, elapsed=1000, slug='one', increment='same', status='complete', **binding):
+        return {'spec': {'work_id': work_id, 'kind': 'roadmap', 'title': work_id, 'outcome': {},
+            'roadmap': {'state_path': f'.implementation-roadmaps/{slug}/state.json', 'increment_id': increment, **binding}},
+            'status': status, 'events': [{'at': '2026-11-05T00:00:00Z'}], 'receipts': [], 'reviews': [],
+            'fixture_elapsed': elapsed}
+
+    def test_exact_bindings_dedupe_ids_and_exclude_pending_invalid_and_overall(self):
+        targets = {(f'.implementation-roadmaps/{slug}/state.json', 'same'): {} for slug in ['one', 'two']}
+        rows = [self.work('first', 60000), self.work('zero', 0), self.work('pending', 123, status='active'),
+                self.work('missing', None), self.work('negative', -1), self.work('nan', float('nan')),
+                self.work('infinite', float('inf')), self.work('bool', True), self.work('string', '1000'),
+                self.work('overall', 900000, increment='overall'), self.work('foreign', 900000, slug='foreign'),
+                self.work('unknown', 900000, increment='unknown'), self.work('extra', 900000, private='private-fixture'),
+                self.work('other-roadmap', 250, slug='two'), self.work('first', 60000)]
+        with patch.object(projection, 'delivery', side_effect=lambda w: {'elapsed_ms': w['fixture_elapsed']}):
+            projection.add_increment_delivery(targets, {str(n): work for n, work in enumerate(rows)})
+        self.assertEqual(targets[('.implementation-roadmaps/one/state.json', 'same')]['delivery'],
+            {'elapsed_ms': 60000, 'timed_records': 2, 'pending_records': 1, 'unavailable_records': 6})
+        self.assertEqual(targets[('.implementation-roadmaps/two/state.json', 'same')]['delivery'],
+            {'elapsed_ms': 250, 'timed_records': 1, 'pending_records': 0, 'unavailable_records': 0})
+        self.assertNotIn('private-fixture', json.dumps(targets, skipkeys=True))
+
+    def test_empty_and_pending_are_not_zero_measurements(self):
+        target = {}
+        with patch.object(projection, 'delivery', side_effect=lambda w: {'elapsed_ms': w['fixture_elapsed']}):
+            projection.add_increment_delivery({('.implementation-roadmaps/one/state.json', 'same'): target}, {'pending': self.work('pending', None, status='verifying')})
+        self.assertEqual(target['delivery'], {'elapsed_ms': None, 'timed_records': 0, 'pending_records': 1, 'unavailable_records': 0})
+
+    def test_invalid_completion_dates_are_unavailable_without_hiding_valid_measurements(self):
+        target = {}
+        valid = self.work('valid')
+        valid['completion'] = {'at': '2026-11-05T00:00:01Z'}
+        malformed = self.work('malformed')
+        malformed['completion'] = {'at': 'invalid-private-date'}
+        projection.add_increment_delivery({('.implementation-roadmaps/one/state.json', 'same'): target}, {'valid': valid, 'malformed': malformed})
+        self.assertEqual(target['delivery'], {'elapsed_ms': 1000, 'timed_records': 1, 'pending_records': 0, 'unavailable_records': 1})
+        self.assertNotIn('invalid-private-date', json.dumps(target))
+
+    def test_projection_aggregates_completed_and_open_increment_records_before_execution_display_limit(self):
+        with tempfile.TemporaryDirectory(prefix='cp-delivery-') as directory:
+            root = Path(directory)
+            for slug in ('one', 'two'):
+                path = root / f'.implementation-roadmaps/{slug}/state.json'
+                path.parent.mkdir(parents=True)
+                path.write_text(json.dumps({'schemaVersion': 1, 'slug': slug, 'name': slug, 'objective': 'Record delivery',
+                    'status': 'completed' if slug == 'one' else 'executing', 'increments': [{'id': 'same', 'number': 1,
+                    'title': 'Shared ID', 'objective': 'Measure exact work', 'status': 'completed', 'acceptanceCriteria': [],
+                    'completedChunks': ['chunk'], 'plan': {'chunks': [{'id': 'chunk', 'title': 'Completed chunk', 'outcome': 'Useful outcome', 'criteriaIds': []}]}}]}))
+            state = Records.empty()
+            old = self.work('old-measured')
+            old['completion'] = {'at': '2026-11-05T00:02:15Z'}
+            other = self.work('other-measured', slug='two')
+            other['completion'] = {'at': '2026-11-05T00:00:00Z'}
+            pending = self.work('pending', status='active')
+            state['work_items'] = {'old-measured': old, 'other-measured': other, 'pending': pending}
+            for number in range(1001):
+                record = self.work(f'new-{number:04}', status='active')
+                record['spec']['kind'] = 'lightweight'
+                record['spec'].pop('roadmap')
+                record['events'][0]['at'] = '2026-11-05T01:00:00Z'
+                state['work_items'][record['spec']['work_id']] = record
+            with patch.object(Records, 'load', return_value=state):
+                data = projection.project(root)
+            by_id = {roadmap['id']: roadmap for roadmap in data['roadmaps']}
+            self.assertEqual(by_id['one']['increments'][0]['delivery'],
+                {'elapsed_ms': 135000, 'timed_records': 1, 'pending_records': 1, 'unavailable_records': 0})
+            self.assertEqual(by_id['two']['increments'][0]['delivery'],
+                {'elapsed_ms': 0, 'timed_records': 1, 'pending_records': 0, 'unavailable_records': 0})
+            self.assertEqual(by_id['one']['status'], 'completed')
+            self.assertEqual(by_id['one']['increments'][0]['chunks'][0]['status'], 'completed')
+            self.assertNotIn('delivery', by_id['one']['increments'][0]['chunks'][0])
+            self.assertFalse(by_id['one']['increments'][0]['actively_worked'])
+            self.assertNotIn('old-measured', [row['id'] for row in data['work_items']])
+            self.assertEqual(data['inventory']['execution_records_shown'], 1000)
+            self.assertEqual(data['inventory']['execution_records_total'], 1004)
+            self.assertNotIn('.implementation-roadmaps/', json.dumps(data))
+            self.assertNotIn('fixture_elapsed', json.dumps(data))
+
+    def test_ambiguous_or_normalized_increment_identities_receive_no_attributed_duration(self):
+        for identifiers in (['same', 'same'], ['x' * 81]):
+            with self.subTest(identifiers=identifiers), tempfile.TemporaryDirectory(prefix='cp-delivery-') as directory:
+                root = Path(directory)
+                path = root / '.implementation-roadmaps/one/state.json'
+                path.parent.mkdir(parents=True)
+                path.write_text(json.dumps({'schemaVersion': 1, 'slug': 'one', 'name': 'one', 'objective': 'Record exact delivery',
+                    'status': 'completed', 'increments': [{'id': identity, 'number': number, 'title': 'Ambiguous',
+                    'objective': 'Preserve source identity', 'status': 'completed', 'acceptanceCriteria': []}
+                    for number, identity in enumerate(identifiers, 1)]}))
+                state = Records.empty()
+                work = self.work('ambiguous-work', increment=identifiers[0])
+                work['completion'] = {'at': '2026-11-05T00:02:15Z'}
+                state['work_items']['ambiguous-work'] = work
+                with patch.object(Records, 'load', return_value=state):
+                    data = projection.project(root)
+                self.assertTrue(all('delivery' not in increment for increment in data['roadmaps'][0]['increments']))
 
 if __name__ == "__main__": unittest.main()

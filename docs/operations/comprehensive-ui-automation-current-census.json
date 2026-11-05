@@ -9253,8 +9253,8 @@
   {
    "path": "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
    "facts": {
-    "sha256": "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487",
-    "bytes": 67524,
+    "sha256": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9",
+    "bytes": 72467,
     "cases": [
      {
       "name": "contributor control plane passes focused behavioral qualification",
@@ -9347,6 +9347,14 @@
      {
       "name": "nested review controller honors approved progress and preserves bounded refusal",
       "line": 810
+     },
+     {
+      "name": "delivery time formats minutes, hours, precision and rounded carries without treating missing values as zero",
+      "line": 884
+     },
+     {
+      "name": "increment delivery displays measured sums, pending and unavailable counts separately from chunk completion",
+      "line": 906
      }
     ],
     "dynamicCases": 0,
@@ -9372,8 +9380,8 @@
       "line": 849
      }
     ],
-    "assertionCount": 233,
-    "assertionDigest": "c665b3f8f459846ad13535eebb06bb9e845ee3a38a02133e673c22c80bc75c00",
+    "assertionCount": 243,
+    "assertionDigest": "730c8ca1bcaae784405a0bbf08a82976b3d8962466167f3e90d74778a25ce194",
     "assertionExamples": [
      {
       "line": 17,

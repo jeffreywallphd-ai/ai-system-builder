@@ -69,6 +69,13 @@ summaries, with the same redaction and inert text rendering as criteria. It
 preserves the distinction between historical declarations and execution records;
 showing a roadmap chunk cannot manufacture a receipt or reviewer identity.
 
+Delivery totals expose only numeric aggregate facts from exact canonical
+increment bindings. Count each completed work identity once; reject overall,
+unknown or ambiguous targets and invalid or negative durations. Pending values
+are not zero measurements. Aggregate before display truncation, disclose possible
+overlap and never infer chunk timing from criteria, names or dates. No private
+binding path, approval, qualification or chunk-completion fact is added or changed.
+
 The advisory `actively_worked` display bit requires one active, unexpired roadmap
 source claim and an exact, unambiguous canonical state-path/increment match.
 It exposes no private claim or invocation identity or path. Missing, malformed,

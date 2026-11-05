@@ -55,6 +55,14 @@ the Work items tab, or "View parent increment" to navigate back. Criterion
 qualification and chunk completion are tracked independently; legacy chunk
 declarations do not acquire execution receipts.
 
+Delivery times use minutes and seconds, adding hours for long durations and
+retaining tenths of a second. Each exact increment shows the sum of its measured
+completed execution durations, plus measured, pending and unavailable counts.
+Totals use all saved execution records before the display limit; pending or
+invalid durations never become zero measurements. Summed durations can overlap.
+Chunk delivery time says **Not recorded** because execution records do not identify
+individual chunks. Timing changes no completion or qualification result.
+
 Increments start collapsed. Only an increment with a current, unexpired roadmap
 work claim opens automatically. A saved current-increment pointer or an In progress
 label is not enough. Automatic opening ends when that claim ends or expires.

@@ -34,6 +34,26 @@ const readable = value => String(value).replaceAll("-", " ").replaceAll("_", " "
 const textLength = value => Array.from(value).length;
 const badge = status => el("span", readable(["complete", "final-approved"].includes(status) ? "completed" : status), `status ${["completed", "complete", "final-approved", "passed", "accepted"].includes(status) ? "good" : ["failed", "blocked", "rejected", "changes-requested"].includes(status) ? "bad" : ""}`);
 function metric(value, label) { const n = el("div", undefined, "metric"); n.append(el("strong", value), el("span", label)); return n; }
+function formatDeliveryTime(milliseconds) {
+  if (typeof milliseconds !== "number" || !Number.isFinite(milliseconds) || milliseconds < 0 || milliseconds > Number.MAX_SAFE_INTEGER) return null;
+  // Round once before splitting units so a rounded 60 seconds carries correctly.
+  const tenths = Math.round(milliseconds / 100);
+  const hours = Math.floor(tenths / 36000);
+  const minutes = Math.floor(tenths % 36000 / 600);
+  const seconds = (tenths % 600 / 10).toFixed(1).replace(/\.0$/, "");
+  return `${hours ? `${hours}h ` : ""}${minutes}m ${seconds}s`;
+}
+function incrementDelivery(increment) {
+  const timing = increment.delivery;
+  const duration = formatDeliveryTime(timing?.elapsed_ms);
+  if (!["timed_records", "pending_records", "unavailable_records"].every(key => Number.isSafeInteger(timing?.[key]) && timing[key] >= 0) ||
+      (duration === null) !== (timing.timed_records === 0))
+    return el("p", "Delivery time: Not recorded.", "small delivery-time");
+  return el("p", `Delivery time: ${duration ?? "Not recorded"} · ${timing.timed_records} measured · ${timing.pending_records} pending · ${timing.unavailable_records} unavailable.${duration === null ? "" : " Summed execution durations may overlap."}`, "small delivery-time");
+}
+function chunkDelivery() {
+  return el("p", "Delivery time: Not recorded · Execution records do not identify individual chunks.", "small delivery-time");
+}
 function selectView(next, query = "", increment = null) {
   view = next;
   if (next === "roadmaps" && increment !== null) {
@@ -307,7 +327,7 @@ function criteriaList(criteria, chunks = []) {
 function chunkBody(chunk, criteria) {
   const body = el("div", undefined, "chunk-body");
   const linked = criteria.filter(c => chunk.criteria_ids.includes(c.id));
-  body.append(el("p", chunk.outcome, "objective"));
+  body.append(el("p", chunk.outcome, "objective"), chunkDelivery());
   body.append(el("p", `${linked.filter(c => c.outcome === "passed").length} / ${chunk.criteria_ids.length} linked criteria passed${chunk.is_next ? " · Next planned chunk" : ""}${chunk.completed_at ? ` · Recorded complete ${new Date(chunk.completed_at).toLocaleString()}` : ""}`, "small"));
   if (chunk.summary) body.append(el("p", chunk.summary, "objective"));
   const coverage = el("ul", undefined, "chunk-criteria");
@@ -395,11 +415,11 @@ function render() {
         for (const increment of legacy.increments || []) {
           const detail = incrementDisclosure(item.id, increment, legacy.id);
           const heading = el("summary"); heading.append(el("span", `${increment.number}. ${increment.title}`), badge(increment.status === "blocked" ? "archived-pending" : increment.status));
-          detail.append(heading);
+          detail.append(heading, incrementDelivery(increment));
           if (data.presentation_view) detail.append(el("p", increment.objective));
           appendScope(detail, increment);
           const proposal = proposalDetails(increment); if (proposal) detail.append(proposal); detail.append(criteriaList(increment.criteria || []));
-          for (const chunk of increment.chunks || []) detail.append(el("p", `${chunk.title}: ${readable(chunk.status)}${chunk.summary ? ` · ${chunk.summary}` : ""}`, "small"));
+          for (const chunk of increment.chunks || []) detail.append(el("p", `${chunk.title}: ${readable(chunk.status)}${chunk.summary ? ` · ${chunk.summary}` : ""}`, "small"), chunkDelivery());
           for (const owner of (legacy.criterion_owners || []).filter(row => row.increment_id === increment.id)) {
             detail.append(el("p", `${owner.criterion_id} → ${owner.owner_increment_id}/${owner.owner_criterion_id}. ${owner.summary}`, "small"),
               action("View owning increment", () => selectView("roadmaps", item.id, owner.owner_increment_id)));
@@ -416,6 +436,7 @@ function render() {
         const details = incrementDisclosure(item.id, i);
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
         appendScope(details, i);
+        details.append(incrementDelivery(i));
         const planning = i.chunk_plan_pending_approval ? "Implementation chunk plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation chunk plan is created when this increment starts" : null;
         details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} work chunks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
         const proposal = proposalDetails(i); if (proposal) details.append(proposal);
@@ -451,7 +472,7 @@ function render() {
       if (item.metrics) {
         const m = item.metrics;
         card.append(el("p", `${m.check_attempts} check attempts · ${(m.check_duration_ms / 1000).toFixed(2)} seconds checking · ${m.verification_retries} verification retries · ${m.review_corrections} review corrections`, "small"));
-        card.append(el("p", `Delivery time: ${m.elapsed_ms === null ? "pending" : (m.elapsed_ms / 1000).toFixed(1) + " seconds"} · Provider cost and tokens: unavailable`, "small"));
+        card.append(el("p", `Delivery time: ${m.elapsed_ms === null ? "pending" : formatDeliveryTime(m.elapsed_ms) ?? "unavailable"} · Provider cost and tokens: unavailable`, "small"));
       }
       if (item.run) {
         const r = item.run;

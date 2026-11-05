@@ -187,6 +187,16 @@ it never creates local execution authority from historical plans. Parent/child
 navigation follows roadmap/increment/chunk identities. Criterion qualification
 and chunk completion remain independent dimensions.
 
+Increment delivery metrics are derived from complete execution records with exact
+canonical roadmap-state/increment bindings. Each work identity contributes once;
+overall, unknown and ambiguous targets contribute nothing. Only finite nonnegative
+durations enter the sum, preserving a measured zero. Separate measured, pending and
+unavailable counts prevent missing durations from becoming zero measurements.
+Aggregation precedes execution display limits. The response exposes only numeric
+facts, never the binding path. Summed durations can overlap and do not represent
+exclusive elapsed time. Existing records have no execution-to-chunk timing link,
+so chunk timing remains Not recorded without changing completion or qualification.
+
 Increment disclosure defaults to closed. The JSON projection adds only an
 `actively_worked` boolean, mapped from one active, unexpired roadmap source claim
 to its exact canonical state path and increment identity. Missing, malformed,

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from datetime import datetime, timezone
 import json
+import math
 
 from .common import digest, now, read_json, safe_text
 from .contracts import ControlError
@@ -109,6 +110,51 @@ def active_increment_binding(work, current_time):
     return binding["state_path"], binding["increment_id"]
 
 
+def add_increment_delivery(targets, work_items):
+    """Sum exact increment-bound executions once, before display truncation.
+
+    Chunk plans and criterion support links are not execution timing identities.
+    Neither qualifies a chunk for a share of an increment's measured duration.
+    """
+    for target in targets.values():
+        target["delivery"] = {"elapsed_ms": None, "timed_records": 0, "pending_records": 0, "unavailable_records": 0}
+    seen = set()
+    for work in work_items.values():
+        if not isinstance(work, dict):
+            continue
+        spec = work.get("spec", {})
+        if not isinstance(spec, dict):
+            continue
+        binding = spec.get("roadmap")
+        work_id = spec.get("work_id")
+        if (spec.get("kind") != "roadmap" or not isinstance(binding, dict)
+                or set(binding) != {"state_path", "increment_id"}
+                or not all(isinstance(binding[key], str) for key in binding)
+                or binding["increment_id"] == "overall"
+                or not isinstance(work_id, str) or not work_id or work_id in seen):
+            continue
+        seen.add(work_id)
+        target = targets.get((binding["state_path"], binding["increment_id"]))
+        if target is None:
+            continue
+        timing = target["delivery"]
+        if work.get("status") != "complete":
+            timing["pending_records"] += 1
+            continue
+        try:
+            elapsed = delivery(work)["elapsed_ms"]
+        except (AttributeError, IndexError, KeyError, TypeError, ValueError, OverflowError):
+            timing["unavailable_records"] += 1
+            continue
+        total = timing["elapsed_ms"] or 0
+        if (type(elapsed) in (int, float) and 0 <= elapsed <= 9007199254740991 - total
+                and math.isfinite(elapsed)):
+            timing["elapsed_ms"] = round(total + elapsed, 3)
+            timing["timed_records"] += 1
+        else:
+            timing["unavailable_records"] += 1
+
+
 def increment_proposal(increment):
     """Public, bounded proposal content only; never research/authority or execution."""
     def strings(key, limit=1600):
@@ -151,7 +197,7 @@ def open_blocker_details(state):
 
 
 def project(root: Path) -> dict:
-    roadmaps, diagnostics, blocker_sources, increment_targets = [], [], {}, {}
+    roadmaps, diagnostics, blocker_sources, increment_targets, delivery_targets = [], [], {}, {}, {}
     base = confined_path(root, ".implementation-roadmaps")
     if base.is_dir():
         for path in sorted(base.glob("*/state.json"))[:200]:
@@ -200,10 +246,11 @@ def project(root: Path) -> dict:
                     increment["actively_worked"] = False
                     if (relative_path == f".implementation-roadmaps/{s['slug']}/state.json"
                             and isinstance(source["id"], str) and source["id"] == increment["id"]
-                            and identities.get(increment["id"]) == 1
-                            and s["status"] not in {"completed", "complete", "final-approved"}
-                            and source["status"] not in {"completed", "complete", "final-approved"}):
-                        increment_targets[relative_path, source["id"]] = increment
+                            and identities.get(increment["id"]) == 1):
+                        delivery_targets[relative_path, source["id"]] = increment
+                        if (s["status"] not in {"completed", "complete", "final-approved"}
+                                and source["status"] not in {"completed", "complete", "final-approved"}):
+                            increment_targets[relative_path, source["id"]] = increment
             except (ControlError, ValueError, KeyError, TypeError):
                 diagnostics.append({"code": "projection.roadmap-unavailable"})
     # Stable identifiers break equal-date ties; unknown creation dates stay last.
@@ -214,6 +261,7 @@ def project(root: Path) -> dict:
     except ControlError:
         state = Records.empty()
         diagnostics.append({"code": "projection.local-state-unavailable"})
+    add_increment_delivery(delivery_targets, state["work_items"])
     current_time = creation_time(now())
     bindings = [binding for work in state["work_items"].values()
                 if (binding := active_increment_binding(work, current_time)) is not None]

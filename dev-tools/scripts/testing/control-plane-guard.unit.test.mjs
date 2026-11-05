@@ -877,3 +877,59 @@ print(json.dumps({"controller": limits["control-plane"], "outer": limits["review
   assert.equal(budgets.outer, budgets.intermediate + 30);
   assert.deepEqual(budgets.ordinary, [270, 270, 270]);
 });
+
+const deliveryExecution = elapsed => ({ id: "execution", source: "execution", title: "Measured work", status: "complete",
+  metrics: { elapsed_ms: elapsed, check_attempts: 0, check_duration_ms: 0, verification_retries: 0, review_corrections: 0 } });
+
+test("delivery time formats minutes, hours, precision and rounded carries without treating missing values as zero", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const response = { schema_version: "development-review-v1", source_digest: "delivery", roadmaps: [], work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    window.document.querySelector('[data-view="work_items"]').click();
+    for (const [elapsed, expected] of [[0, "0m 0s"], [100, "0m 0.1s"], [135200, "2m 15.2s"], [59900, "0m 59.9s"],
+      [59950, "1m 0s"], [60000, "1m 0s"], [3599900, "59m 59.9s"], [3599950, "1h 0m 0s"],
+      [3800000, "1h 3m 20s"], [86400000, "24h 0m 0s"], [null, "pending"], [undefined, "unavailable"],
+      [-1, "unavailable"], [NaN, "unavailable"], [Infinity, "unavailable"], ["60000", "unavailable"], [false, "unavailable"],
+      [Number.MAX_SAFE_INTEGER + 1, "unavailable"]]) {
+      response.work_items = [deliveryExecution(elapsed)]; response.source_digest += "x";
+      window.document.querySelector("#refresh").click(); await pause();
+      const delivery = [...window.document.querySelectorAll(".card p")].find(row => row.textContent.startsWith("Delivery time:"));
+      assert.equal(delivery.textContent, `Delivery time: ${expected} · Provider cost and tokens: unavailable`, `elapsed ${elapsed}`);
+    }
+  } finally { window.close(); }
+});
+
+test("increment delivery displays measured sums, pending and unavailable counts separately from chunk completion", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const chunk = { id: "chunk", chunk_number: 1, title: "Completed chunk", outcome: "Useful result", status: "completed", criteria_ids: [] };
+  const increment = { id: "one", number: 1, title: "Increment", status: "completed", criteria: [], chunks: [chunk], chunks_complete: 1, chunks_planned: 1,
+    delivery: { elapsed_ms: 3800000, timed_records: 2, pending_records: 1, unavailable_records: 1 } };
+  const response = { schema_version: "development-review-v1", source_digest: "delivery-totals", roadmaps: [{ id: "roadmap", title: "Roadmap", status: "executing", increments: [increment] }],
+    work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    const panel = () => window.document.querySelector("details.increment");
+    assert.equal(panel().open, false);
+    assert.match(panel().querySelector(":scope > .delivery-time").textContent, /^Delivery time: 1h 3m 20s · 2 measured · 1 pending · 1 unavailable\. Summed execution durations may overlap\.$/);
+    assert.match(panel().querySelector(".work-chunk .delivery-time").textContent, /^Delivery time: Not recorded · Execution records do not identify individual chunks\.$/);
+    assert.equal(panel().querySelector(".work-chunk .status").textContent, "completed");
+    panel().querySelector("summary").click(); await pause();
+    increment.delivery = { elapsed_ms: null, timed_records: 0, pending_records: 2, unavailable_records: 1 }; response.source_digest += "x";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(panel().open, true);
+    assert.match(panel().querySelector(":scope > .delivery-time").textContent, /^Delivery time: Not recorded · 0 measured · 2 pending · 1 unavailable\.$/);
+    increment.delivery = { elapsed_ms: 0, timed_records: 1, pending_records: 0, unavailable_records: 0 }; response.source_digest += "x";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(panel().querySelector(":scope > .delivery-time").textContent, /^Delivery time: 0m 0s · 1 measured/);
+    increment.delivery = { elapsed_ms: "<img src=x>", timed_records: 1, pending_records: 0, unavailable_records: 0 }; response.source_digest += "x";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(panel().querySelector(":scope > .delivery-time").textContent, "Delivery time: Not recorded.");
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+  } finally { window.close(); }
+});

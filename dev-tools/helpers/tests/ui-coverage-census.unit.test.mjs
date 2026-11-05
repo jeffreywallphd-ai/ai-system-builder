@@ -38,9 +38,19 @@ const pendingReviewSiteDefinition = Object.freeze({
   candidate: "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487",
   facts: "4009c77b0cab40280b350dcd33637a376e32f74ae8e1d353ab66949ce174fe18",
 });
+// This exact delivery display definition is prospective until its source commit.
+// The original historical review binding above remains independently inspectable.
+const pendingReviewDeliveryDefinition = Object.freeze({
+  "source": "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+  "baseline": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
+  "committed": "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487",
+  "candidate": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9",
+  "facts": "44c5caa7ff048359ed91abf3d712d0d6b57c8deead3a2acaec6684c166a7f747"
+});
 function assertCurrentReviewSiteDrift(map, result) {
-  const pending = pendingReviewSiteDefinition;
-  const source = map.sources.find(row => row.path === pending.source); assert(source);
+  const pending = map.source_baseline === pendingReviewDeliveryDefinition.baseline ? pendingReviewDeliveryDefinition : pendingReviewSiteDefinition;
+  const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length, 1);
+  const source = rows[0];
   assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
   const committed = historicalSource(map.source_baseline,pending.source);
   assert.equal(source.committed_sha256, sha(committed), "The recorded committed pin must be a real blob at the declared baseline.");
@@ -473,7 +483,7 @@ test("checks the current repository map against original scope and actual source
 test("pending review-source binding rejects forged commit pins, future facts and missing or extra drift",()=>{
   const pending = pendingReviewSiteDefinition;
   const map = { source_baseline: pending.baseline, sources: [{ path: pending.source,
-    facts: sourceFacts(pending.source, fs.readFileSync(pending.source)), committed_sha256: pending.committed }] };
+    facts: sourceFacts(pending.source, historicalSource("bb895bef9cd95c2662cbe185c03ea69bda6d938d", pending.source)), committed_sha256: pending.committed }] };
   const result = { gaps: [{ kind: "unreviewed-source-drift", source: pending.source }] };
   assert.doesNotThrow(()=>assertCurrentReviewSiteDrift(map,result));
   for (const mutate of [
@@ -496,7 +506,10 @@ test("pending tiny-training bindings reject forged, future, missing and unrelate
   const paths = [...pendingTrainingDefinitions.map(p=>p.path), pendingReviewSiteDefinition.source];
   const map = {source_baseline: pendingTrainingDefinitions[0].baseline, sources: current.sources.filter(row=>paths.includes(row.path)).map(row=>{
     const pending=pendingTrainingDefinitions.find(p=>p.path===row.path);
-    if(!pending)return row;
+    if(!pending){
+      const original=historicalSource(pendingTrainingDefinitions[0].baseline,row.path);
+      return {...row,facts:sourceFacts(row.path,original),committed_sha256:sha(original)};
+    }
     const original=historicalSource("b3cfef49ea0f3a6cd016f502400b66e0835b339d",row.path);
     const facts=sourceFacts(row.path,original);assert.equal(facts.sha256,pending.candidate);assert.equal(sha(JSON.stringify(facts)),pending.facts_sha256);
     return {...row,facts,committed_sha256:pending.committed};
@@ -738,6 +751,9 @@ test("pending Settings navigation definitions reject forged future missing dupli
   const read=repositoryReader(process.cwd());
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   map.source_baseline=pendingSettingsNavigationDefinitions[0].baseline;
+  const review=map.sources.find(row=>row.path===pendingReviewSiteDefinition.source);assert(review);
+  const originalReview=historicalSource(map.source_baseline,review.path);
+  review.facts=sourceFacts(review.path,originalReview);review.committed_sha256=sha(originalReview);
   for(const pending of pendingSettingsNavigationDefinitions){
     const row=map.sources.find(row=>row.path===pending.path);assert(row);row.committed_sha256=pending.committed;
   }
@@ -757,5 +773,28 @@ test("pending Settings navigation definitions reject forged future missing dupli
   ]){
     const m=structuredClone(map),r=structuredClone(result);mutate(m,r);
     assert.throws(()=>assertCurrentSourceDrift(m,r));
+  }
+});
+
+test("pending delivery display binding rejects forged future missing duplicate and unrelated drift",()=>{
+  const pending=pendingReviewDeliveryDefinition;
+  const map={source_baseline:pending.baseline,sources:[{path:pending.source,
+    facts:sourceFacts(pending.source,fs.readFileSync(pending.source)),committed_sha256:pending.committed}]};
+  const result={gaps:[{kind:"unreviewed-source-drift",source:pending.source}]};
+  assertCurrentReviewSiteDrift(map,result);
+  for(const mutate of [
+    (m,r)=>{m.sources[0].committed_sha256=pending.candidate;},
+    (m,r)=>{m.sources[0].facts.sha256="f".repeat(64);},
+    (m,r)=>{m.sources[0].facts.assertionCount++;},
+    (m,r)=>{m.sources[0].facts.extra="forged";},
+    (m,r)=>{m.source_baseline=pendingReviewSiteDefinition.baseline;},
+    (m,r)=>{m.sources=[];},
+    (m,r)=>{m.sources.push(structuredClone(m.sources[0]));},
+    (m,r)=>{r.gaps=[];},
+    (m,r)=>{r.gaps.push(structuredClone(r.gaps[0]));},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/example.unit.test.ts"});},
+  ]){
+    const m=structuredClone(map),r=structuredClone(result);mutate(m,r);
+    assert.throws(()=>assertCurrentReviewSiteDrift(m,r));
   }
 });
