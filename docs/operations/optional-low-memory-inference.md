@@ -1672,3 +1672,21 @@ will not repeat this unchanged test. File protection, shared disk accounting,
 cached model and worker ownership, and restart/resource checks remain pending.
 Accepted accuracy and OCR checks stay closed. Whole-software testing stays
 deferred until the open feature work is implemented.
+
+## Keep parent folders usable during source admission
+
+No user action is needed. The private source reader now allows unrelated writes
+on parent folders. The selected model folder and its exact input files keep the
+existing write and delete restrictions. All parent folders keep the delete
+restriction. The reader requests no write access. This uses the same split as
+the existing native file-identity helper.
+
+Focused source tests simulate an existing parent-folder writer, confirm successful
+read and retirement, and keep selected-folder and file writers denied. They also
+cover a drive used as the selected folder and invalid sharing requests. These are
+source tests, not real Windows observations. The earlier sharing failure remains
+failed because its exact target was not recorded. No unchanged native test is
+repeated. Source protection, file discovery, shared disk accounting, worker and
+restart checks, and actual offload resources remain pending. Old files stay
+untouched and count against the full 12 GiB limit. Accepted accuracy and OCR
+checks stay closed. Whole-software tests remain deferred.

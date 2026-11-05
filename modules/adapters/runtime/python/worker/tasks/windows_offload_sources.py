@@ -453,12 +453,13 @@ class _WindowsSourceApi:
         _need(not handle.closed and not handle.close_started)
         return handle.installed
 
-    def open(self, parent, name, directory):
+    def open(self, parent, name, directory, *, ancestor=False):
         if parent is None:
             _need(type(name) is str and re.fullmatch(r'\\\?\?\\[A-Za-z]:\\',name) is not None and directory is True)
         else:
             w._name(name)
         _need(type(directory) is bool)
+        _need(type(ancestor) is bool and (not ancestor or directory))
         root = None if parent is None else self._number(parent)
         text = C.create_unicode_buffer(name)
         string = w._Unicode(len(name.encode('utf-16-le')),C.sizeof(text),C.cast(text,C.c_void_p))
@@ -466,7 +467,7 @@ class _WindowsSourceApi:
         io = w._Io()
         handle = self._handle()
         self._call(self.n.NtCreateFile,C.byref(handle.original_slot),0x100081,
-            C.byref(attrs),C.byref(io),None,0x80,1,1,0x200000|(1 if directory else 0x40),None,0,
+            C.byref(attrs),C.byref(io),None,0x80,3 if ancestor else 1,1,0x200000|(1 if directory else 0x40),None,0,
             valid=lambda status:type(status) is int and status == 0,
             keep=(handle,text,string,attrs,io,parent),output=handle.original_slot)
         _need(io.status in (None,0) and io.information == 1)
@@ -495,12 +496,15 @@ class _WindowsSourceApi:
 
     def chain(self, path):
         self._call(self.k.GetDriveTypeW,path.anchor,valid=lambda kind:type(kind) is int and kind == 3)
-        chain = [self.open(None,'\\??\\'+path.anchor,True)]
+        chain = [self.open(None,'\\??\\'+path.anchor,True,ancestor=len(path.parts)>1)]
         filesystem,flags = C.create_unicode_buffer(32),C.c_uint32()
         self._call(self.k.GetVolumeInformationByHandleW,self._number(chain[0]),None,0,None,None,
             C.byref(flags),filesystem,32,keep=(chain[0],filesystem,flags))
         _need(filesystem.value == 'NTFS' and flags.value&8)
-        for part in path.parts[1:]:chain.append(self.open(chain[-1],part,True))
+        # Only nonterminal ancestors may coexist with unrelated writers.
+        # The selected directory and every file retain read-only sharing.
+        for index,part in enumerate(path.parts[1:],1):
+            chain.append(self.open(chain[-1],part,True,ancestor=index<len(path.parts)-1))
         return tuple((handle,self.identity(handle)) for handle in chain)
 
     def facts(self, handle):

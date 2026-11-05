@@ -297,6 +297,7 @@ class FakeSourceNative:
         self.pending_read = False
         self.native_error = 997
         self.open_access = []
+        self.existing_writers = set()
         self.dll_calls = []
 
     def __getattr__(self,name):return self.functions[name]
@@ -313,6 +314,13 @@ class FakeSourceNative:
         self.calls.append((name,args))
         if self.fault:self.fault(name,args)
         if name in ('NtCreateFile','NtCreateEvent'):
+            if name == 'NtCreateFile':
+                attrs = self.pointer(args[2],s.w._Attributes)
+                text = attrs.name.contents
+                leaf = C.wstring_at(text.buffer,text.length//2)
+                # Simulated Windows sharing compatibility, before acquisition.
+                if leaf in self.existing_writers and not args[6]&2:
+                    return -1073741757  # STATUS_SHARING_VIOLATION
             self.next_handle += 1
             self.pointer(args[0],C.c_void_p).value = self.next_handle
             if name == 'NtCreateFile':
@@ -465,13 +473,57 @@ class OriginalSourceOwnerTests(unittest.TestCase):
         owner = self.owner();owner.prepare()
         self.assertEqual([row[0] for row in self.native.dll_calls],['kernel32.dll','ntdll.dll'])
         self.assertTrue(all(row[1] == {'use_last_error':True,'winmode':0x800} for row in self.native.dll_calls))
+        self.assertEqual([row[1] for row in self.native.open_access],
+            [3]*(owner._plan.ancestors-1)+[1]*(owner._plan.files+1))
         for access,share,disposition,options in self.native.open_access:
-            self.assertEqual((access,share,disposition),(0x100081,1,1))
+            self.assertEqual((access,disposition),(0x100081,1))
+            self.assertEqual(share&4,0)  # Every held object denies delete sharing.
             self.assertEqual(options&0x30,0)  # Neither synchronous option.
             self.assertEqual(options&0x200000,0x200000)
         self.assertEqual(len(owner._api.n.NtReadFile.argtypes),9)
         self.assertIs(owner._api.n.NtReadFile.restype,C.c_int32)
         self.assertFalse(hasattr(s._WindowsSourceApi,'delete'))
+
+    def test_nonterminal_ancestor_writers_do_not_block_exact_source_admission(self):
+        value = with_rows(self.native.value(),self.native.value().bindings,
+            root=Path('C:/fixture-parent/fixture-child/model-input'))
+        self.native.existing_writers.update(('\\??\\C:\\','fixture-parent','fixture-child'))
+        owner = s._OriginalModelSources(value,_execution=self.port);self.owners.append(owner)
+        owner.prepare();owner.assert_bound();owner.retire_unused()
+        self.assertEqual([row[1] for row in self.native.open_access],[3,3,3,1,1,1,1,1])
+        self.assertTrue(owner._retired)
+        self.assertTrue(all(row.closed for row in owner._handles))
+
+    def test_selected_directory_and_exact_file_writers_still_deny_and_retain_custody(self):
+        for leaf in ('synthetic-model-input','model.safetensors'):
+            with self.subTest(leaf=leaf):
+                self.native.existing_writers = {leaf}
+                self.port = FakeSourcePort()
+                owner = self.owner();self.denied(owner.prepare)
+                self.assertTrue(owner._uncertain)
+                self.assertIn(id(owner),s._SOURCE_CUSTODY)
+                self.assertFalse(owner._retired)
+                last = owner._calls[-1]
+                self.assertIs(last.function,self.native.functions['NtCreateFile'])
+                self.assertEqual(last.value&0xffffffff,0xc0000043)
+                self.assertEqual(last.args[6],1)
+                before = len(self.native.calls)
+                self.denied(owner.prepare);self.denied(owner.retire_unused)
+                self.assertEqual(len(self.native.calls),before)
+
+    def test_drive_as_selected_directory_never_gets_ancestor_write_sharing(self):
+        value = with_rows(self.native.value(),self.native.value().bindings,root=Path('C:/'))
+        owner = s._OriginalModelSources(value,_execution=self.port);self.owners.append(owner)
+        owner.prepare();owner.retire_unused()
+        self.assertEqual([row[1] for row in self.native.open_access],[1,1,1,1,1])
+
+    def test_file_cannot_request_ancestor_write_sharing(self):
+        owner = self.owner();owner.prepare()
+        before = len(self.native.calls)
+        self.denied(lambda:owner._api.open(owner._chain[-1][0],'model.safetensors',False,ancestor=True))
+        self.denied(lambda:owner._api.open(owner._chain[-1][0],'model.safetensors',False,ancestor=1))
+        self.assertEqual(len(self.native.calls),before)
+        owner.retire_unused()
 
     def test_graph_rounds_each_file_and_terminal_capacity_denies_deep_paths(self):
         owner = self.owner()

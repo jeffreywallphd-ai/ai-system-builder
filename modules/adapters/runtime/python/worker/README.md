@@ -1250,3 +1250,16 @@ park and reply timing, protected shared accounting, mutation fences and cached
 model/worker/borrower/storage ownership remain pending. Production stays denied.
 Unknown historical staging stays untouched and fully charged 12 GiB. Accepted
 accuracy/OCR stay closed; whole-software testing remains deferred.
+
+## Source ancestor sharing
+
+The private source reader permits read/write sharing only for nonterminal
+ancestor directories. Its selected model directory and every exact inventory
+file retain read-only sharing. All held objects deny delete sharing. This matches
+the existing native file-identity helper and avoids unnecessarily excluding an
+unrelated writer on a parent folder. Access rights, relative handle traversal,
+reparse/type/identity checks, file Read oplocks, hashes and original retirement
+stay unchanged. Source tests use simulated ABI replies; they do not resolve the
+earlier target-unknown sharing failure or qualify native protection, discovery,
+shared accounting, worker/restart lifetime or an offload model run. Production
+remains unavailable and unknown retained staging still charges all 12 GiB.

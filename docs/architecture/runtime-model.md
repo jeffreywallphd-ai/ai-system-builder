@@ -1204,3 +1204,17 @@ not a new engine or model-worker design. The existing read-only native protocol
 and unavailable production factory remain unchanged. Source-level tests cannot
 supply original-source custody, lazy-forward lifetime, worker/crash/restart or
 process-memory evidence. Tiny real-supplier parity is a separate qualification.
+
+### Original-source ancestor sharing
+
+The private original-source API uses read/write sharing only for nonterminal
+ancestor directories. The selected inventory directory, including a drive root
+when selected directly, and every exact file retain read-only sharing. Every
+held object denies delete sharing; desired access stays read/list, attributes
+and synchronization only. This matches the existing native file-identity helper.
+Relative original-handle traversal, reparse/type/identity/default-stream checks,
+file Read oplocks, exact hashes, finite reservations and original retirement
+remain unchanged. Synthetic ABI tests establish this split and retained custody
+on selected-directory/file writer denial. They do not identify the target of the
+earlier sharing failure, qualify actual Windows races or supply discovery,
+shared-domain, model-worker, restart, resource or readiness authority.
