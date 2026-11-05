@@ -179,3 +179,10 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - `docs/operations/roadmap-supporting-work.json` maps scoped reviewed local work
   to roadmap criteria for the JSON review site. It distinguishes implementation
   progress from pending parent/current-candidate qualification.
+
+## Operational browser test evidence
+
+[Operational UI host evidence](operations/operational-ui-host-qualification.json)
+records the isolated browser attempt and its safe shutdown. No UI test was
+selected, so the operational and accessibility checks remain pending. The agent
+will correct the test filter and error reporting before a fresh feature test.

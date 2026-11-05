@@ -1,0 +1,64 @@
+{
+  "schema_version": "operational-ui-host-qualification-v1",
+  "roadmap_id": "comprehensive-ui-automation",
+  "increment_id": "operational-ui-and-coverage-qualification",
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "summary": "The isolated test server started and stopped safely. The browser test selected no cases, so no UI or accessibility check passed. The agent will correct the test filter and repeat this feature check with a fresh run.",
+  "observed_source": {
+    "source_commit": "7eba180c82c005f5b723c522e9505547e22dd982",
+    "source_digest": "418b7d116cc36c01a06007903d1ff3c71cd7f1961157f05fc8e1421bc06ae3ff",
+    "source_revision": "source.8c7c5017684c6dd4fab2dda25853b9883de74c1d5497f43d83078c305d629d9d"
+  },
+  "observation_work_id": "observe-thin-operational-with-fixed-audit-inputs",
+  "source_support": {
+    "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
+    "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
+    "receipt_digest": "b7bff740b641b6bcb64a1c4e5a61009d4b50c7b48fd394277dd88d5ed5400bc0",
+    "review_digest": "341394ea22e5b40741bda1c10a02f866877c3a22d3e0fba4e423c922ff2d58ca",
+    "scope": "The corrected Settings selector and source-owned accessibility inputs passed focused source checks. This does not supply a real UI pass."
+  },
+  "attempts": [
+    {
+      "run_id": "operational-thin-75d02e6b382e4d089886ebc6c958df18",
+      "status": "failed-before-test-selection",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 0,
+      "ended_tests": 0,
+      "global_errors": 1,
+      "ui_phases_observed": 0,
+      "accessibility_surfaces_observed": 0,
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 17,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "effect_reference_sha256": "20e6f23c88aff6e93bb64265e5f6005d071b3500ed86ecdac398d6e68d1ed5c4",
+      "outcome_reference_sha256": "1db1dbf2b5d4e5785366713456446968021cd4e890eb754bd32d87c604b73201",
+      "outcome_report_sha256": "1706001d452dfc5fbf2e5c24f37f0378e7ecf931093397003818f08082d6b747"
+    }
+  ],
+  "diagnosis": {
+    "confirmed_test_definition_defect": "The test filter matched a bare title. Playwright matches the project, file and title together. The installed matcher reproduced this mismatch in three focused checks.",
+    "original_global_error": "Not recorded by the original reporter. Its exact message cannot be recovered. The filter defect is consistent with the failure; an application defect has not been proved.",
+    "next_agent_actions": [
+      "Use the exact project, file and title in the filter.",
+      "Keep bounded safe global-error hints, without raw messages, paths or stack traces.",
+      "Run the changed definition in a fresh isolated test and review its actual UI and shutdown results."
+    ],
+    "user_action": "No action needed."
+  },
+  "scope_limits": [
+    "This was a controlled local server and thin-client attempt. It does not qualify a managed database, production identity, TLS, external provider or model operation.",
+    "The attempt did not execute a UI test. All 17 operational phases and seven mounted accessibility views remain pending.",
+    "Desktop, native 400 percent zoom, other functional families and remaining parent criteria stay pending.",
+    "Accepted model accuracy and OCR tests stay closed. The shared full-system campaign remains deferred until open implementation work is ready."
+  ],
+  "parent_qualification_granted": false
+}
