@@ -38,28 +38,39 @@ function count(value: unknown, limit: number, minimum = 0): number {
 }
 export const CONTRAST_RETRY_REASON_IDS = Object.freeze(["bgGradient", "bgImage", "imgNode", "outsideViewport", "elmPartiallyObscuring",
   "elmPartiallyObscured", "bgOverlap", "colorParse", "equalRatio", "shortTextContent", "other"] as const);
+export const CONTRAST_RETRY_V2_REASON_IDS = Object.freeze([...CONTRAST_RETRY_REASON_IDS,
+  "nonBmp", "pseudoContent", "complexTextShadows", "shadowOnBgColor", "fgOnShadowColor"] as const);
 export const CONTRAST_RETRY_HINT_IDS = Object.freeze(["backgroundImage", "reducedOpacity", "clippedAncestor", "nonRgbColor", "ancestorLimit", "reasonScanLimit"] as const);
 const CONTRAST_RETRY_OUTCOMES = ["violation", "unresolved", "noPositiveSample"] as const;
-export interface ContrastRetryDiagnostics {
-  readonly schemaVersion: "contrast-retry-diagnostics-v1";
+interface ContrastRetryCounts {
   readonly attempted: number; readonly passed: number;
   readonly outcomes: Readonly<Record<typeof CONTRAST_RETRY_OUTCOMES[number], number>>;
-  readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_REASON_IDS[number], number>>;
   readonly hints: Readonly<Record<typeof CONTRAST_RETRY_HINT_IDS[number], number>>;
 }
+export type ContrastRetryDiagnostics = ContrastRetryCounts & (
+  { readonly schemaVersion: "contrast-retry-diagnostics-v1"; readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_REASON_IDS[number], number>> }
+  | { readonly schemaVersion: "contrast-retry-diagnostics-v2"; readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_V2_REASON_IDS[number], number>> }
+);
 /** A diagnostic projection supplies no accessibility status or qualification. */
 export function readContrastRetryDiagnostics(value: unknown): ContrastRetryDiagnostics {
   try {
     const data = record(value, ["schemaVersion", "attempted", "passed", "outcomes", "reasons", "hints"]);
-    if (data.schemaVersion !== "contrast-retry-diagnostics-v1") throw new Error();
+    if (data.schemaVersion !== "contrast-retry-diagnostics-v1" && data.schemaVersion !== "contrast-retry-diagnostics-v2") throw new Error();
     const attempted = count(data.attempted, ACCESSIBILITY_RETRY_NODE_LIMIT), passed = count(data.passed, attempted), failed = attempted - passed;
     function counters<K extends string>(value: unknown, keys: readonly K[]) {
       const fields = record(value, keys);
       return Object.freeze(Object.fromEntries(keys.map(key => [key, count(fields[key], failed)]))) as Readonly<Record<K, number>>;
     }
-    const outcomes = counters(data.outcomes, CONTRAST_RETRY_OUTCOMES), reasons = counters(data.reasons, CONTRAST_RETRY_REASON_IDS), hints = counters(data.hints, CONTRAST_RETRY_HINT_IDS);
-    if (Object.values(outcomes).reduce((a, b) => a + b, 0) !== failed || Object.values(reasons).reduce((a, b) => a + b, 0) !== failed) throw new Error();
-    return Object.freeze({ schemaVersion: "contrast-retry-diagnostics-v1", attempted, passed, outcomes, reasons, hints });
+    const outcomes = counters(data.outcomes, CONTRAST_RETRY_OUTCOMES), hints = counters(data.hints, CONTRAST_RETRY_HINT_IDS);
+    if (Object.values(outcomes).reduce((a, b) => a + b, 0) !== failed) throw new Error();
+    function versioned<V extends "contrast-retry-diagnostics-v1" | "contrast-retry-diagnostics-v2", K extends string>(schemaVersion: V, keys: readonly K[]) {
+      const reasons = counters(data.reasons, keys);
+      if (keys.reduce((sum, key) => sum + reasons[key], 0) !== failed) throw new Error();
+      return Object.freeze({ schemaVersion, attempted, passed, outcomes, reasons, hints });
+    }
+    return data.schemaVersion === "contrast-retry-diagnostics-v1"
+      ? versioned("contrast-retry-diagnostics-v1", CONTRAST_RETRY_REASON_IDS)
+      : versioned("contrast-retry-diagnostics-v2", CONTRAST_RETRY_V2_REASON_IDS);
   } catch { throw new Error("Invalid contrast retry diagnostics."); }
 }
 function observedAudit<T extends { retries: { attempted: number; passed: number } }>(value: unknown, read: (audit: unknown) => T) {

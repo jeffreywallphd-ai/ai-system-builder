@@ -202,6 +202,17 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     else await qualifyCriticalSurfaceAccessibility(narrow, info, "settings");
     expect(probe.widths.at(-1)).toBe(320);
   });
+  it("persists current-version reason counters with an unchanged failed core audit", async () => {
+    probe.auditFails = true;
+    await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings")).rejects.toThrow("Critical accessibility check failed at audit-1440.");
+    const saved = JSON.parse(probe.writes.at(-1)!);
+    expect(saved.status).toBe("failed"); expect(saved.audits[0].violations).toEqual([{ rule: "button-name", nodes: 1 }]);
+    expect(saved.audits[0].retries).toEqual({ attempted: 0, passed: 0 });
+    expect(saved.contrastRetryDiagnostics.stage).toBe("audit-1440");
+    expect(saved.contrastRetryDiagnostics.observation.schemaVersion).toBe("contrast-retry-diagnostics-v2");
+    expect(saved.contrastRetryDiagnostics.observation.reasons.pseudoContent).toBe(0);
+    expect(probe.attachments).toHaveLength(1); expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|privateCss/);
+  });
   it.each([null,undefined,{width:0,height:720},{width:320,height:NaN},{width:320.5,height:720}])("refuses an unavailable or invalid caller viewport %# before any mutation",async viewport=>{
     const untouched={...page,viewportSize:()=>viewport} as Page;
     await expect(qualifyCriticalSurfaceAccessibility(untouched,info,"settings")).rejects.toThrow("Critical accessibility check failed at viewport-admission.");

@@ -2284,6 +2284,7 @@
         "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
         "dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts",
         "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
+        "modules/ui/shared/styles/components/home.css",
         "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
         "dev-tools/config/playwright.settings-host-desktop.config.ts",

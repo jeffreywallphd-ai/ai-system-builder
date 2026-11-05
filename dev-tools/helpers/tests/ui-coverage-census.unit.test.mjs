@@ -52,12 +52,13 @@ function assertCurrentReviewSiteDrift(map, result) {
   const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length, 1);
   const source = rows[0];
   assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
+  // Refuse a foreign prospective version before reading another Git object.
+  if(source.facts.sha256 !== source.committed_sha256)assert.equal(map.source_baseline,pending.baseline);
   const committed = historicalSource(map.source_baseline,pending.source);
   assert.equal(source.committed_sha256, sha(committed), "The recorded committed pin must be a real blob at the declared baseline.");
   const expected = source.facts.sha256 === source.committed_sha256 ? [] : [{ kind: "unreviewed-source-drift", source: pending.source }];
   assert.deepEqual(result.gaps.filter(g => g.kind === "unreviewed-source-drift"), expected, "Only the exact pending review-source definition may retain a drift gap.");
   if (expected.length) {
-    assert.equal(map.source_baseline, pending.baseline);
     assert.equal(source.committed_sha256, pending.committed);
     assert.equal(source.facts.sha256, pending.candidate);
     assert.equal(sha(Buffer.from(JSON.stringify(source.facts))), pending.facts, "Future definition changes cannot inherit this pending binding.");
@@ -101,11 +102,11 @@ function assertTrainingFormSourceDrift(map, result) {
   const pending = pendingTrainingFormDefinition;
   const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length,1);
   const row = rows[0]; assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
+  if(row.facts.sha256 !== row.committed_sha256)assert.equal(map.source_baseline,pending.baseline);
   const committed = historicalSource(map.source_baseline,pending.source);
   assert.equal(row.committed_sha256,sha(committed),"Training form pins must be real older Git blobs.");
   const expected = row.facts.sha256 === row.committed_sha256 ? [] : [{kind:"unreviewed-source-drift",source:pending.source}];
   if(expected.length) {
-    assert.equal(map.source_baseline,pending.baseline);
     assert.equal(row.committed_sha256,pending.committed);
     assert.equal(row.facts.sha256,pending.candidate);
     assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256,"Future form assertions cannot inherit the prospective binding.");
@@ -284,22 +285,31 @@ const pendingContrastDiagnostics = Object.freeze([
   { path: "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts", baseline: "1e5fd6b76e30025b4571787573b09a3f8b413103",
     committed: "c08850f9ffbcc829abab3c9223bb04932cc347017348fa560cc7ea3d1d21d4ab", candidate: "4e704f91748a5a0f742075c7e166bc74df49525f5f3a960bffde45db5cf0bfd8", facts_sha256: "3faea20f8f8f2e79fb72d9822ac1de40e7a186bda825b5abbc71e4826f9bf22f" },
 ].map(Object.freeze));
-function assertContrastDiagnosticDrift(map,result) {
-  assert.equal(map.source_baseline,pendingContrastDiagnostics[0].baseline);
+const pendingContrastV2Diagnostics = Object.freeze([
+  { path: "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts", baseline: "abdc24509d7cec4aa7013fe5ec369fecb5cf95f0",
+    committed: "28926b89ee315867857d993dc228463869917681c87dceae7d48c71a6ae3c2cb", candidate: "6b2a80ecee2b8d140e0a9f5e36abd4ff442a1f7666a0a08720a775d7b4e4bb0a", facts_sha256: "2bb4ebe6e6648df4aa85dc5d7a1a35d58d7f92a15c09abc75a69ce0ce642e7d3" },
+  { path: "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts", baseline: "abdc24509d7cec4aa7013fe5ec369fecb5cf95f0",
+    committed: "2f59896ac35870defa416a74986d6974dda6e0d00fbca169be54fb3cf55a880a", candidate: "95edaff0b97824d7ffce1bfdedb2b2fa973fc1c498d497a8f56b71d8528fedf4", facts_sha256: "40ac1c96fdd46bde3f719649b52b3fcd136456f2d66657fe7ba020a14d7d4a95" },
+  { path: "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts", baseline: "abdc24509d7cec4aa7013fe5ec369fecb5cf95f0",
+    committed: "4e704f91748a5a0f742075c7e166bc74df49525f5f3a960bffde45db5cf0bfd8", candidate: "1da80cf54e7f25a032ad3381549c37e16b7464e529f2bae63dd3f1752a013cea", facts_sha256: "472fe262d3356e392872f09387f98f3d969fae960c09f4c6a28494351956fe0f" },
+].map(Object.freeze));
+function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDiagnostics) {
+  assert.equal(map.source_baseline,definitions[0].baseline);
   const expected=[];
-  for(const pending of pendingContrastDiagnostics) {
+  for(const pending of definitions) {
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);const row=rows[0];
     assert.equal(row.committed_sha256,sha(historicalSource(map.source_baseline,pending.path)));
     assert.equal(row.committed_sha256,pending.committed);assert.equal(row.facts.sha256,pending.candidate);
     assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256,"Future diagnostic facts cannot inherit this exact binding.");
     assert.notEqual(row.facts.sha256,row.committed_sha256);expected.push({kind:"unreviewed-source-drift",source:pending.path});
   }
-  const paths=new Set(pendingContrastDiagnostics.map(row=>row.path)),owned=g=>g.kind==="unreviewed-source-drift"&&paths.has(g.source);
+  const paths=new Set(definitions.map(row=>row.path)),owned=g=>g.kind==="unreviewed-source-drift"&&paths.has(g.source);
   const ordered=rows=>[...rows].sort((a,b)=>a.source.localeCompare(b.source));
   assert.deepEqual(ordered(result.gaps.filter(owned)),ordered(expected));
   return {...result,gaps:result.gaps.filter(g=>!owned(g))};
 }
 function assertCurrentSourceDrift(map, result) {
+  if(map.source_baseline===pendingContrastV2Diagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastV2Diagnostics);
   if(map.source_baseline===pendingContrastDiagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result);
   if(map.source_baseline===pendingSettingsEmptyDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsEmptyDefinitions[1].path))result=assertSettingsEmptySourceDrift(map,result);
   const navigationPaths=new Set();
@@ -316,10 +326,10 @@ function assertCurrentSourceDrift(map, result) {
   for (const pending of trainingDefinitions) {
     const rows = map.sources.filter(row => row.path === pending.path); assert.equal(rows.length, 1); const source = rows[0];
     assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
+    if(source.facts.sha256 !== source.committed_sha256)assert.equal(map.source_baseline,pending.baseline);
     const committed = historicalSource(map.source_baseline,pending.path);
     assert.equal(source.committed_sha256, sha(committed), "Training commit pins must reference real Git blobs.");
     if (source.facts.sha256 !== source.committed_sha256) {
-      assert.equal(map.source_baseline, pending.baseline);
       assert.equal(source.committed_sha256, pending.committed);
       assert.equal(source.facts.sha256, pending.candidate);
       assert.equal(sha(JSON.stringify(source.facts)), pending.facts_sha256, "Future training facts cannot inherit this pending binding.");
@@ -836,11 +846,19 @@ test("pending Settings navigation definitions reject forged future missing dupli
   }
 });
 
-test("pending contrast diagnostic facts reject forged future missing duplicate and unrelated drift",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+for(const [title,readMap,definitions]of[
+  ["pending contrast diagnostic facts reject forged future missing duplicate and unrelated drift",
+    ()=>JSON.parse(historicalSource(pendingContrastV2Diagnostics[0].baseline,"docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastDiagnostics],
+  ["pending v2 contrast diagnostic facts reject forged future missing duplicate and unrelated drift",
+    ()=>JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastV2Diagnostics],
+])test(title,()=>{
+  const map=readMap();
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
-  assertCurrentSourceDrift(map,result);
-  for(const pending of pendingContrastDiagnostics) {
+  // Qualify this three-row boundary on each real version. The whole current map
+  // is authenticated separately; do not re-read unrelated old source families.
+  const check=(m,r)=>assert.deepEqual(assertContrastDiagnosticDrift(m,r,definitions).gaps,[]);
+  check(map,result);
+  for(const pending of definitions) {
     const target=m=>m.sources.find(row=>row.path===pending.path);
     for(const mutate of [
       (m,r)=>{target(m).committed_sha256=pending.candidate;},
@@ -853,7 +871,7 @@ test("pending contrast diagnostic facts reject forged future missing duplicate a
       (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.path);},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
-    ]) {const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
+    ]) {const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>check(m,r));}
   }
 });
 

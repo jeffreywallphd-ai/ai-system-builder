@@ -24,8 +24,52 @@ const diagnostic = () => ({ schemaVersion: "contrast-retry-diagnostics-v1", atte
   reasons: { bgGradient: 1, bgImage: 0, imgNode: 0, outsideViewport: 0, elmPartiallyObscuring: 0, elmPartiallyObscured: 0,
     bgOverlap: 0, colorParse: 0, equalRatio: 0, shortTextContent: 0, other: 0 },
   hints: { backgroundImage: 1, reducedOpacity: 0, clippedAncestor: 0, nonRgbColor: 0, ancestorLimit: 0, reasonScanLimit: 0 } });
+const addedReasons = ["nonBmp", "pseudoContent", "complexTextShadows", "shadowOnBgColor", "fgOnShadowColor"] as const;
+const diagnosticV2 = (reason: typeof addedReasons[number] = "pseudoContent") => {
+  const reasons: Record<string, number> = { ...diagnostic().reasons, bgGradient: 0, ...Object.fromEntries(addedReasons.map(key => [key, 0])), [reason]: 1 };
+  return { ...diagnostic(), schemaVersion: "contrast-retry-diagnostics-v2", reasons };
+};
 
 describe("closed failed-contrast diagnostic projection", () => {
+  it("preserves original v1 serialized shape without inserting newer reason keys", () => {
+    const original = diagnostic(), serialized = JSON.stringify(original), value = readContrastRetryDiagnostics(JSON.parse(serialized));
+    expect(JSON.stringify(value)).toBe(serialized); expect(Object.keys(value.reasons)).toEqual(Object.keys(original.reasons));
+    expect(value.reasons).not.toHaveProperty("pseudoContent"); expect(value.schemaVersion).toBe("contrast-retry-diagnostics-v1");
+  });
+  it.each(addedReasons)("retains the installed %s reason only in the new diagnostic version", reason => {
+    const input = diagnosticV2(reason), value = readContrastRetryDiagnostics(input);
+    expect(value.schemaVersion).toBe("contrast-retry-diagnostics-v2");
+    if (value.schemaVersion !== "contrast-retry-diagnostics-v2") throw new Error("Expected current diagnostic version.");
+    expect(value.reasons[reason]).toBe(1); expect(value.reasons.other).toBe(0); expect(Object.keys(value.reasons)).toHaveLength(16);
+    for (const part of [value, value.outcomes, value.reasons, value.hints]) expect(Object.isFrozen(part)).toBe(true);
+    input.reasons[reason] = 0; expect(value.reasons[reason]).toBe(1); expect(value).not.toHaveProperty("status");
+  });
+  it.each(["v1-with-v2-keys", "v2-with-v1-keys", "missing-current-key", "foreign-key", "non-engine-contributor", "successful-only-reason", "oversized-partition", "future-version"])("refuses %s instead of mixing diagnostic versions", kind => {
+    let value: Record<string, unknown> = diagnosticV2();
+    if (kind === "v1-with-v2-keys") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v1" };
+    if (kind === "v2-with-v1-keys") value = { ...value, reasons: diagnostic().reasons };
+    if (kind === "missing-current-key") { const reasons = { ...diagnosticV2().reasons }; Reflect.deleteProperty(reasons, "complexTextShadows"); value = { ...value, reasons }; }
+    if (kind === "foreign-key") value = { ...value, reasons: { ...diagnosticV2().reasons, privateCss: 0 } };
+    if (kind === "non-engine-contributor") value = { ...value, reasons: { ...diagnosticV2().reasons, fgOnBgColor: 0 } };
+    if (kind === "successful-only-reason") value = { ...value, reasons: { ...diagnosticV2().reasons, hidden: 0 } };
+    if (kind === "oversized-partition") value = { ...value, reasons: { ...diagnosticV2().reasons, pseudoContent: 2 } };
+    if (kind === "future-version") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v3" };
+    expect(() => readContrastRetryDiagnostics(value)).toThrow("Invalid contrast retry diagnostics.");
+  });
+  it.each(["getter", "proxy"])("rejects a current-version %s without reading private hooks", kind => {
+    const input = diagnosticV2(); let hooks = 0;
+    if (kind === "getter") Object.defineProperty(input.reasons, "pseudoContent", { get() { hooks++; return 1; } });
+    else input.reasons = new Proxy(input.reasons, { getPrototypeOf() { hooks++; return Object.prototype; } });
+    expect(() => readContrastRetryDiagnostics(input)).toThrow("Invalid contrast retry diagnostics."); expect(hooks).toBe(0);
+  });
+  it("keeps current-version observations failed when their original core retry is unresolved", () => {
+    const core = { ...base(), incomplete: [{ rule: "color-contrast", nodes: 1 }], retries: { attempted: 1, passed: 0 } };
+    const result = readTechnicalAccessibilityObservation({ audit: core, diagnostics: diagnosticV2() });
+    expect(result.audit.status).toBe("failed"); expect(result.audit.failures).toContain("unresolved-contrast-retry");
+    expect(() => readTechnicalAccessibilityObservation({ audit: base(), diagnostics: diagnosticV2() })).toThrow(invalid);
+    const native = readNativeAccessibilityObservation({ audit: { ...nativeAudit().facts, incomplete: core.incomplete, retries: core.retries }, diagnostics: diagnosticV2() }, "normal", nativeFrame());
+    expect(native.audit.status).toBe("failed"); expect(native.diagnostics.schemaVersion).toBe("contrast-retry-diagnostics-v2");
+  });
   it("copies and freezes only finite partitioned counts without qualifying an audit", () => {
     const raw = diagnostic(), value = readContrastRetryDiagnostics(raw);
     raw.reasons.bgGradient = 0; raw.hints.backgroundImage = 0;

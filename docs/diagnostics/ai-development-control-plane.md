@@ -132,9 +132,10 @@ Unknown or explicitly requested generic impact keeps its checks. It starts no
 server, browser, model or provider and grants no TLS, identity, native or parent
 qualification.
 
-The fixed `operational-ui` profile runs 41 fixed runtime, notification,
-task-family, shell, dashboard and readiness files. Automatic selection uses its
-twenty-two specific runtime, notification and host-definition source/test paths.
+The fixed `operational-ui` profile runs the runtime, notification, task-family,
+shell, dashboard, readiness and qualification-definition test files listed in
+`dev-tools/config/contributor-check-profiles.json`. Automatic selection uses
+only its exact catalog paths, including the shared Home reading stylesheet.
 Shared README files and borrowed regressions do not activate it for another
 feature's profile.
 Node and Vitest files keep

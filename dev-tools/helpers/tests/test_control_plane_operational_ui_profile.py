@@ -440,7 +440,7 @@ class OperationalUiProfile(unittest.TestCase):
         collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
         self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 77)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertIn(collection, self.profile()["source_paths"])
@@ -473,7 +473,7 @@ class OperationalUiProfile(unittest.TestCase):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
         core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 77)
         self.assertIn(helper, self.profile()["source_paths"])
         self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
@@ -499,7 +499,7 @@ class OperationalUiProfile(unittest.TestCase):
         declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
         core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
         self.assertEqual(len(self.profile()["test_paths"]), 83)
-        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 76)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 77)
         self.assertIn(declaration, self.profile()["source_paths"])
         self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
@@ -638,6 +638,32 @@ class OperationalUiProfile(unittest.TestCase):
             ids = {check["id"] for check in catalog.plan(root, ["apps/desktop/src/renderer/unrelated.ts"], ["documentation"], "synthetic-candidate")["selected"]}
             self.assertNotIn("operational-ui", ids)
 
+    def test_home_reading_styles_have_finite_ownership_without_hiding_other_style_impact(self):
+        home = "modules/ui/shared/styles/components/home.css"
+        unknown = "modules/ui/shared/styles/components/unreviewed.css"
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        for required, paths, incomplete, generic in [
+            (["documentation"], [home, CONFIG], False, False),
+            (["focused-tests"], [home], False, True),
+            (["documentation"], [home, unknown], False, True),
+            (["documentation"], [home], True, True),
+        ]:
+            with self.subTest(required=required, paths=paths, incomplete=incomplete), tempfile.TemporaryDirectory(prefix="home-style-owner-") as directory:
+                root = Path(directory)
+                profile = self.profile()
+                if incomplete:
+                    profile["source_paths"] = [name for name in profile["source_paths"] if name != home]
+                self.fixture(root, profile)
+                ids = {row["id"] for row in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                self.assertIn("operational-ui", ids)
+                self.assertEqual("focused-tests" in ids, generic)
+        with tempfile.TemporaryDirectory(prefix="unrelated-style-owner-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            ids = {row["id"] for row in catalog.plan(root, [unknown], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertNotIn("operational-ui", ids)
+            self.assertIn("focused-tests", ids)
+
     def test_incomplete_declared_source_coverage_retains_generic_tests(self):
         with tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
             root = Path(directory)
@@ -710,7 +736,7 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertEqual(profile["test_paths"][-1], unit)
         self.assertEqual(profile["source_paths"][-3:], [worker, unit, "modules/adapters/runtime/python/worker/README.md"])
         self.assertEqual(len(profile["test_paths"]), 83)
-        self.assertEqual(len(profile["source_paths"]), 194)
+        self.assertEqual(len(profile["source_paths"]), 195)
         self.assertNotIn(worker, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertNotIn(unit, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="training-worker-diagnostic-profile-") as directory:

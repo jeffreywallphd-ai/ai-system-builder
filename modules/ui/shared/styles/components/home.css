@@ -56,7 +56,7 @@
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
   border-color: var(--color-border-soft);
-  background: linear-gradient(90deg, rgb(15 35 61 / 96%), rgb(11 27 48 / 94%));
+  background: var(--color-bg-panel);
 }
 
 .home-workspace-hint__icon {
@@ -87,7 +87,7 @@
   margin-block-start: calc(-1 * var(--space-xs));
   padding: var(--space-lg);
   border-color: var(--color-border-strong);
-  background: linear-gradient(145deg, rgb(13 31 52 / 97%), rgb(8 22 39 / 97%));
+  background: var(--color-bg-panel);
 }
 
 .home-areas__header h2,
@@ -114,7 +114,7 @@
   padding: var(--space-md);
   overflow: hidden;
   border-color: rgb(var(--home-accent-rgb) / 25%);
-  background: linear-gradient(120deg, rgb(15 36 61 / 96%), rgb(9 24 43 / 94%));
+  background: var(--color-bg-elevated);
   transition:
     border-color var(--transition-normal),
     transform var(--transition-normal),
@@ -139,25 +139,6 @@
 .home-area-card__content > .ui-text-muted {
   margin: 0;
   font-size: var(--font-size-sm);
-}
-
-.home-area-card::after {
-  content: "";
-  position: absolute;
-  inset-inline-end: -0.5rem;
-  inset-block-end: -1rem;
-  inline-size: 48%;
-  block-size: 52%;
-  background-image: radial-gradient(
-    circle,
-    rgb(var(--home-accent-rgb) / 62%) 0 1px,
-    transparent 1.4px
-  );
-  background-size: 0.65rem 0.65rem;
-  mask-image: radial-gradient(ellipse at bottom right, black, transparent 72%);
-  transform: skewY(-8deg);
-  opacity: 0.62;
-  pointer-events: none;
 }
 
 .home-area-card:hover {

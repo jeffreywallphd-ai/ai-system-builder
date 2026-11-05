@@ -473,6 +473,18 @@ separate. Accepted model accuracy and OCR are not repeated for this update.
 
 ## Failed contrast measurement diagnostics
 
+New collectors emit `contrast-retry-diagnostics-v2`. Its 16 fixed reason keys
+include the installed engine's emoji-only, pseudo-element, complex-shadow and
+shadow-contribution cases. The v1 reader, original 11-key constant and serialized
+v1 shape remain compatible. Each version requires its own exact keys; mixed,
+missing, unknown or excessive values fail. Saved v1 reports are not rewritten.
+
+Home reading panels use opaque palette surfaces, and readable cards no longer
+carry the large decorative pseudo-element. Accent icons, actions and responsive
+layout remain. This source repair does not prove that the earlier contrast
+failures are resolved. A separately reviewed current-source browser observation
+must still qualify every required view, width, media state and control.
+
 The browser collector now returns a separate, validated diagnostic value to the
 critical-surface collector. Existing audit entry points still return the same
 core audit. No callback, caller selector or extra argument is accepted by the
@@ -503,18 +515,19 @@ results. They check safe projection, partitioning, bounds, unchanged successful
 core output, extra-argument refusal and failed report persistence through save,
 restore and attachment errors. Fixtures do not qualify an actual browser host.
 
-The [diagnostic census history](../operations/comprehensive-ui-automation-contrast-diagnostics-census-history.json)
-preserves the three previous source rows and binds both unchanged earlier
-histories to real Git versions. The current map records working facts for those
-three files and real committed pins at its source baseline. Three explicit
+The [v2 contrast census history](../operations/comprehensive-ui-automation-contrast-v2-census-history.json)
+preserves the three previous source rows. All three earlier history files remain
+unchanged. Tests authenticate the earlier diagnostic map against its real Git
+version and the current map against its own baseline. The current map records
+working facts for those three files and real committed pins. Three explicit
 source-drift gaps remain until a later reviewed committed-source refresh.
 The map, reader and total input bounds stay unchanged. Both reporting and census
 tests reject forged, future, missing, duplicate or unrelated versions. The map
 still records 39 unrun host families, seven conditional modifier gaps, one
 pending feature check and no execution or parent pass.
 
-A fresh, separately reviewed host run must use these diagnostics to identify
-the unresolved measurement before any color or measurement repair. Preserve
+A fresh, separately reviewed host run must use these diagnostics to check the
+Home repair and identify any remaining unresolved measurement. Preserve
 the earlier failed runs and every genuine remaining qualification gap. Keep
 completed accuracy and OCR checks closed. Full-system testing remains deferred
 until the open implementation work is ready.
