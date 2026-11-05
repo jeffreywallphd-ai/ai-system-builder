@@ -4,13 +4,13 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The corrected filter selected and ran the intended browser case. It failed in the first navigation-menu step. All operational and accessibility checks remain pending. The agent will align the test with the current responsive navigation, workspace heading and notification behavior.",
+  "summary": "The browser test reached the first navigation accessibility audit. That audit could not resolve 34 color-contrast checks. The test processes closed cleanly. All operational phases and complete accessibility checks remain pending. No user action is needed.",
   "observed_source": {
-    "source_commit": "01d230b5a6f1348c0343f6b26c826c288de3f0e5",
-    "source_digest": "0114944a99f7e96d0c14817b4571e3d6fb14b1ceb440ef07a3ec6b940cb26110",
-    "source_revision": "source.8c7c5017684c6dd4fab2dda25853b9883de74c1d5497f43d83078c305d629d9d"
+    "source_commit": "4535665e3d073edbf96c5ac086f2e7669d9d8eef",
+    "source_digest": "8683fc484a889ad02e655215a1975ba2ad26089f5f5a7610f5fe7498b69ac9f4",
+    "source_revision": "source.b95e50b5797c4678011186286542789195fb5b82326bbb438cc05e30fbe6698f"
   },
-  "observation_work_id": "collect-operational-ui-after-selection-fix",
+  "observation_work_id": "observe-responsive-operational-ui-after-reviewed-repairs",
   "source_support": {
     "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
     "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
@@ -70,21 +70,78 @@
       "effect_reference_sha256": "e4bfd43b8e8a7f841d36f93b0cf3e92d1fe70db17d619fdac2852a3edd8eb486",
       "outcome_reference_sha256": "bd80eed0db639f4f1d8b3f647cce2ec45b0010ac87163cd06349bd2a7a60a46a",
       "outcome_report_sha256": "65441ca4e7cfcfb067cafd3a9e11a394687fe278b356ce47b8457a92d85945ce"
+    },
+    {
+      "run_id": "operational-thin-39e206b94038446bbdd6820a6829cae5",
+      "status": "failed-first-mounted-accessibility-audit-before-first-recorded-phase",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 1,
+      "selection_matches": true,
+      "ended_tests": 1,
+      "global_errors": 0,
+      "case_errors": 1,
+      "retry": 0,
+      "ui_phases_observed": 0,
+      "accessibility_surface_reports_observed": 1,
+      "accessibility_surfaces_passed": 0,
+      "next_phase": "navigation-menu-opened",
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 27,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "failed_accessibility": {
+        "surface": "navigation-menu",
+        "stage": "audit-1440",
+        "normal_widths_recorded": [
+          1440
+        ],
+        "forced_color_widths_recorded": [],
+        "rule_violations": 0,
+        "incomplete_color_contrast_nodes": 34,
+        "retry_attempted": 34,
+        "retry_passed": 0,
+        "contrast_passed_nodes": 28,
+        "motion_and_control_access_1440_passed": true,
+        "raw_sha256": "5f8bb88ebe4b47e03a2b76643d02bed8242d445efd6553b4bac6d31e1c00bf3c",
+        "attachment_sha256": "5ad3101aaa235b68f9cca2c031445723b7f7b98a3e1164d8c30e2b2d8b1aef73"
+      },
+      "effect_reference_sha256": "9bb336259ddbb002ca08fd2631f586ec22a9fe16c239b532253d1310f9f0834e",
+      "outcome_reference_sha256": "0e940cddcdc0ed8d9bc91263cfee0084a1fd125561fdb1953770a440a1a90569",
+      "outcome_report_sha256": "9fd9a4c45ebd2fddc72bcd4032e9d9d5715f848f2cc23f33adc0ed849e7f0515"
     }
   ],
   "diagnosis": {
-    "confirmed_selection_fix": "The new attempt selected and ended exactly the intended case, with no global errors or retry.",
+    "confirmed_selection_fix": "The latest attempt selected and ended exactly the intended case, with no global error or retry.",
     "failed_step": "navigation-menu-opened",
-    "exact_inner_assertion": "Not recorded. The journey replaced the original exception with a fixed phase error.",
-    "source_supported_test_mismatch": "The test starts at width1440 and targets a menu that the current stylesheet hides above64rem. This is a test precondition mismatch, not a proved application defect.",
-    "prospective_test_expectations": [
-      "Both current Home pages use the selected workspace name as the heading. The journey still expects the literal Home heading.",
-      "The actual isolated page already showed one unread notification. The journey must exercise notification handling instead of assuming an initially empty history."
+    "failed_surface": "navigation-menu",
+    "failed_audit_stage": "audit-1440",
+    "exact_inner_assertion": "Not recorded. The journey wrapper retains only the fixed phase. The mounted report separately records audit-1440; the precise reason for unresolved contrast measurements was not retained.",
+    "measured_facts": {
+      "width": 1440,
+      "contrast_violations": 0,
+      "unresolved_contrast_nodes": 34,
+      "contrast_retry_attempts": 34,
+      "contrast_retries_passed": 0,
+      "contrast_passed_nodes": 28,
+      "motion_and_control_access_passed": true,
+      "narrow_and_forced_color_checks_observed": false
+    },
+    "cause_limit": "The layout check passed before the audit. Hidden menu visibility alone is not an established cause. The incomplete measurements are not confirmed contrast violations or passing checks.",
+    "implemented_definition_fixes": [
+      "Reviewed source fixes cover responsive menu and sidebar states, the selected-workspace Home heading, notification handling, source-owned audit inputs and desktop viewport setup.",
+      "The current run reached the first mounted audit. It did not reach the later Home or notification steps. Source fixes do not qualify those steps."
     ],
     "next_agent_actions": [
-      "Test the responsive menu at its supported narrow layout and the sidebar at the wide layout. Preserve native zoom proof and all applicable controls.",
-      "Verify the actual contextual Home heading and supported notification clear/read/focus behavior.",
-      "Add focused regressions and safe diagnostic checkpoints, then qualify a changed-source feature run."
+      "Find why the 34 contrast checks remain unresolved. Record bounded diagnostic codes and counts without page text, selectors or private values.",
+      "Fix the confirmed cause and add focused regression tests. Keep the current contrast thresholds and evidence requirements.",
+      "Collect a fresh reviewed operational browser result after the source change. Preserve all prior failures and keep unrun checks pending."
     ],
     "user_action": "No action needed."
   },
@@ -93,7 +150,65 @@
     "This controlled local server/thin-client test does not qualify managed persistence,production identity,TLS,provider operations,model inventory reads or model execution.",
     "Screenshots,traces and video were disabled. Playwright generated a failure-context file from the isolated synthetic fixture. Its raw payload stays local and is not published.",
     "Desktop,native400,other functional families and remaining parent criteria stay pending.",
-    "Accepted model accuracy and OCR tests stay closed. Shared full-system testing remains deferred until open implementation work is ready."
+    "Accepted model accuracy and OCR tests stay closed. Shared full-system testing remains deferred until open implementation work is ready.",
+    "The latest attempt recorded one failed partial navigation audit at width 1440. It recorded zero completed phases, zero passing complete surface audits, no width-320 audit and no forced-color audit. Its clean process shutdown is not a UI or parent-roadmap pass."
   ],
-  "parent_qualification_granted": false
+  "parent_qualification_granted": false,
+  "publication_history": [
+    {
+      "source_commit": "4535665e3d073edbf96c5ac086f2e7669d9d8eef",
+      "document_sha256": "42d2c09a315591c0805ae2b7ddf696d5154d2476ea83a499d26c859cd1c5932a",
+      "committed_document_sha256": "42d2c09a315591c0805ae2b7ddf696d5154d2476ea83a499d26c859cd1c5932a",
+      "replaced_fields": {
+        "summary": "The corrected filter selected and ran the intended browser case. It failed in the first navigation-menu step. All operational and accessibility checks remain pending. The agent will align the test with the current responsive navigation, workspace heading and notification behavior.",
+        "observed_source": {
+          "source_commit": "01d230b5a6f1348c0343f6b26c826c288de3f0e5",
+          "source_digest": "0114944a99f7e96d0c14817b4571e3d6fb14b1ceb440ef07a3ec6b940cb26110",
+          "source_revision": "source.8c7c5017684c6dd4fab2dda25853b9883de74c1d5497f43d83078c305d629d9d"
+        },
+        "observation_work_id": "collect-operational-ui-after-selection-fix",
+        "diagnosis": {
+          "confirmed_selection_fix": "The new attempt selected and ended exactly the intended case, with no global errors or retry.",
+          "failed_step": "navigation-menu-opened",
+          "exact_inner_assertion": "Not recorded. The journey replaced the original exception with a fixed phase error.",
+          "source_supported_test_mismatch": "The test starts at width1440 and targets a menu that the current stylesheet hides above64rem. This is a test precondition mismatch, not a proved application defect.",
+          "prospective_test_expectations": [
+            "Both current Home pages use the selected workspace name as the heading. The journey still expects the literal Home heading.",
+            "The actual isolated page already showed one unread notification. The journey must exercise notification handling instead of assuming an initially empty history."
+          ],
+          "next_agent_actions": [
+            "Test the responsive menu at its supported narrow layout and the sidebar at the wide layout. Preserve native zoom proof and all applicable controls.",
+            "Verify the actual contextual Home heading and supported notification clear/read/focus behavior.",
+            "Add focused regressions and safe diagnostic checkpoints, then qualify a changed-source feature run."
+          ],
+          "user_action": "No action needed."
+        }
+      },
+      "scope": "Prior publication metadata only. Its two unchanged attempts remain in the current attempt list; the original full document remains at this Git witness."
+    }
+  ],
+  "reviewed_at": "2026-11-05T18:00:58.242875+00:00",
+  "reviewed_source_repairs": [
+    {
+      "work_id": "repair-responsive-operational-journeys",
+      "commit": "c1a6b456ffc4580f2158453c3d2aa5f69d3b2ca2",
+      "receipt_digest": "1135de75bf0e0bfd18ee2a14e9b5f7345bc59f8994c7853bad6e68d6557d312c",
+      "review_digest": "dfb354ef7980e3fd595b3a6d158ac3af3b23db8947c23d908b61417c3e787b3b",
+      "scope": "Reviewed source definitions and local checks only. This browser run still qualifies no completed operational phase or accessibility surface."
+    },
+    {
+      "work_id": "prepare-owned-desktop-audits-with-exact-feature-coverage",
+      "commit": "fe931f86597360886ca001807f3141fc06955996",
+      "receipt_digest": "963857c9fc3434c453088e2346692eb3451941a8e56dc036f620e8856627acf3",
+      "review_digest": "7683bf72680df5363b9d290de575619ed0b5b86495100c6867885a6c27755007",
+      "scope": "Reviewed source definitions and local checks only. This browser run still qualifies no completed operational phase or accessibility surface."
+    },
+    {
+      "work_id": "refresh-reviewed-operational-census-source-facts",
+      "commit": "8bc0fa1fa84f24f38d64aa7c3c29d9c817257f9d",
+      "receipt_digest": "9ac17aea74a70f532e72b3c8d892de6dad62c329993cfc31aa609bf2dec74024",
+      "review_digest": "85f7b83805bcc75130954e356acddd69af0f4a1764c636b1076fd04653f33507",
+      "scope": "Reviewed source definitions and local checks only. This browser run still qualifies no completed operational phase or accessibility surface."
+    }
+  ]
 }
