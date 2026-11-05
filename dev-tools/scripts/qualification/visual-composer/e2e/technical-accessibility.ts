@@ -6,6 +6,12 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
   type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type Native400Frame } from "../technical-accessibility-observation";
 
+// Inputs belong to this source checkout. Output paths remain case-owned CWD paths.
+const ACCESSIBILITY_SOURCE_ROOT = path.resolve(__dirname, "../../../../..");
+export async function readTechnicalAccessibilityEngine(): Promise<string> {
+  return readFile(path.join(ACCESSIBILITY_SOURCE_ROOT, "node_modules/axe-core/axe.min.js"), "utf8");
+}
+
 /** Read-only frame/fit facts from a fixed native host case, never caller selectors. */
 export async function collectNative400Frame(page: Page, runtime = false): Promise<Native400Frame> {
   if (typeof runtime !== "boolean") throw new Error("Invalid native accessibility observation.");
@@ -114,7 +120,7 @@ export function collectNativeRuntimeAccessibilityAudit(page: Page, media: "norma
 /** Same named host constraints for Canvas and other critical mounted surfaces. */
 export async function loadTechnicalAccessibilityReference() {
   try {
-    const bytes = await readFile(path.resolve("dev-tools/config/technical-reference-profiles.json"));
+    const bytes = await readFile(path.join(ACCESSIBILITY_SOURCE_ROOT, "dev-tools/config/technical-reference-profiles.json"));
     const value = JSON.parse(bytes.toString("utf8"));
     if (typeof value.environmentId !== "string" || !/^[a-z0-9-]{1,100}$/.test(value.environmentId)
       || typeof value.deviceScaleFactor !== "number" || !Number.isFinite(value.deviceScaleFactor) || value.deviceScaleFactor <= 0) throw new Error();
@@ -199,7 +205,7 @@ export async function qualifyTechnicalAccessibility(page: Page, info: TestInfo) 
     checks.push("status-meaning-independent-of-color");
     await page.setViewportSize({ width: 1440, height: 1000 });
     stage = "audit-engine";
-    const axeSource = await readFile(path.resolve("node_modules/axe-core/axe.min.js"), "utf8");
+    const axeSource = await readTechnicalAccessibilityEngine();
     await page.evaluate(axeSource);
     for (const width of [1440, 320] as const) {
       stage = `computed-audit-${width}`;

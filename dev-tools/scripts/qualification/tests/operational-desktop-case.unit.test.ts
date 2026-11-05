@@ -15,6 +15,14 @@ vi.mock("node:child_process", () => { const spawnSync = (executable: string, arg
 import { prepareIsolatedDesktopCase } from "../visual-composer/e2e/isolated-desktop-case";
 import { applyOwnedDesktopNativeZoom } from "../visual-composer/e2e/native-desktop-zoom";
 import type { ElectronApplication, Page } from "playwright";
+import {qualifyOperationalUiJourney} from "../visual-composer/e2e/operational-ui-journey";
+vi.mock("../visual-composer/e2e/critical-surface-accessibility",()=>({qualifyCriticalSurfaceAccessibility:vi.fn(async()=>undefined)}));
+// Only the unrelated earlier assertions are neutral in this navigation unit.
+// The target locator and the real journey/reporting still execute below.
+vi.mock("@playwright/test",()=>({expect:()=>({
+  toHaveAttribute:async()=>undefined,toBeFocused:async()=>undefined,toBeVisible:async()=>undefined,
+  toBeHidden:async()=>undefined,toHaveCount:async()=>undefined,
+})}));
 const base = path.resolve("artifacts/qualification/visual-composer/d/operational-fixture");
 beforeEach(() => { probe.calls.length = 0; probe.statCalls.length = 0; probe.existing = false; probe.physicalBase = undefined; vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT", base); vi.stubEnv("VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE", "synthetic-electron-node"); });
 afterEach(() => { vi.unstubAllEnvs(); });
@@ -189,5 +197,38 @@ describe("fresh isolated functional model profile",()=>{
     const folder=setup();probe.existing=true;expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("An existing operational profile requires a fresh qualification run.");expect(probe.calls).toEqual([]);
     probe.existing=false;probe.statCalls.length=0;probe.physicalBase=path.resolve(".local-codex/foreign-profile");expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("physical run root");expect(probe.statCalls).toEqual([]);expect(probe.calls).toEqual([]);
     probe.physicalBase=undefined;vi.stubEnv("VISUAL_COMPOSER_DESKTOP_DATA_ROOT",path.join(folder,"lookalike"));expect(()=>prepareIsolatedDesktopCase(slot)).toThrow("exact fresh run root");expect(probe.calls).toEqual([]);
+  });
+});
+
+describe("operational Settings entry with duplicate named buttons",()=>{
+  it.each(["thin-chrome","packaged-desktop"] as const)("uses the real header scope for %s without a page-wide match",async host=>{
+    vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID","operational-routing-fixture-20261105");
+    vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION","source."+"a".repeat(64));
+    const calls:string[]=[],attachments:string[]=[];
+    interface PassiveLocator { focus():Promise<void>; press():Promise<void>; click():Promise<void>; getByRole():PassiveLocator; locator():PassiveLocator; last():PassiveLocator; }
+    const neutral:PassiveLocator={focus:async()=>undefined,press:async()=>undefined,click:async()=>undefined,
+      getByRole:()=>neutral,locator:()=>neutral,last:()=>neutral};
+    const page={getByLabel:()=>neutral,
+      getByRole(role:string,options:{name:string}){
+        if(role==="button"&&options.name==="Settings")throw new Error("synthetic ambiguous Settings buttons");
+        return neutral;
+      },
+      locator(selector:string){
+        if(selector!=="header.ui-shell__header")return neutral;
+        calls.push("header");return {getByRole(role:string,options:unknown){
+          expect(role).toBe("button");expect(options).toEqual({name:"Settings",exact:true});calls.push("settings");
+          return {click:async()=>{calls.push("click");throw new Error("synthetic-private-navigation-detail");}};
+        }};
+      },
+    } as unknown as Page;
+    const info={project:{name:host},attach:async(name:string,value:{body:string})=>{
+      expect(name).toBe("operational-ui");attachments.push(value.body);
+    }} as unknown as import("@playwright/test").TestInfo;
+    await expect(qualifyOperationalUiJourney(page,info,host)).rejects.toThrow("Operational UI step failed: settings-opened.");
+    expect(calls).toEqual(["header","settings","click"]);expect(attachments).toHaveLength(1);
+    const report=JSON.parse(attachments[0]!);expect(report.status).toBe("failed");expect(report.nextPhase).toBe("settings-opened");
+    expect(report.phases).toEqual(["navigation-menu-opened","navigation-menu-navigated","navigation-menu-focus-returned","sidebar-collapsed","sidebar-restored"]);
+    expect(report.scope).toBe("ui-integration-only");expect(attachments[0]).not.toContain("synthetic-private-navigation-detail");
+    expect(probe.calls).toEqual([]);
   });
 });

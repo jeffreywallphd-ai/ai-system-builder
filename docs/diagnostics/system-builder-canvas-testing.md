@@ -366,3 +366,23 @@ Run `system-build-publication-ui` for these cases and the related Build/Publish
 tests. This is focused rendered coverage using the real shared component and
 finite client replies. Product behavior and guards are unchanged. Actual host,
 native and combined qualification remain separate.
+
+## Operational host navigation and audit inputs
+
+The operational journey opens Settings through the unique shell-header button.
+Both shells also have a sidebar button with the same name. Focused regressions
+exercise the real journey with that duplicate-button condition and retain its
+safe failed-phase report on both hosts.
+
+Accessibility qualification reads its fixed reference profile and locked axe
+script from the test source checkout. The process working folder can be a fresh
+isolated test folder. It cannot supply either input. Standard, native and shared
+technical audits use the same argument-free engine reader. Report output remains
+under the original case-owned working folder; its exclusive creation, audit,
+reference, viewport, motion, failure and restoration controls remain intact.
+
+Source tests cover unrelated working folders and missing-engine denial. They
+grant no actual browser, native zoom, model, provider or parent qualification.
+The source correction must be followed by a fresh source-bound host observation.
+Keep accepted model accuracy and OCR closed and defer whole-software tests until
+the open implementation work is ready.

@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
-const probe = vi.hoisted(() => ({ exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
+const probe = vi.hoisted(() => ({ exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
   forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false,
-  writes: [] as string[], flags: [] as string[], attachments: [] as string[], widths: [] as number[], motion: "no-preference" }));
+  reads: [] as string[], writes: [] as string[], flags: [] as string[], attachments: [] as string[], widths: [] as number[], motion: "no-preference" }));
 vi.mock("node:fs/promises", () => {
   const readFile = async (name: string) => {
+    probe.reads.push(name);
+    if (name.endsWith("axe.min.js") && probe.engineReadFails) throw new Error("synthetic-private-engine-path");
     if (probe.readFails) throw new Error("synthetic-private-reference-path");
     if (name.endsWith("axe.min.js")) return "synthetic-audit-engine";
     return Buffer.from(JSON.stringify({ platform: process.platform, architecture: process.arch, logicalProcessors: 20, installedMemoryGiB: 16, deviceScaleFactor: 1, environmentId: "synthetic-reference" }));
@@ -119,8 +122,9 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     if (probe.attachFails) throw new Error("synthetic-private-attachment"); probe.attachments.push(value.body);
   } } as unknown as TestInfo;
   beforeEach(() => {
-    Object.assign(probe, { exists: false, readFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false });
+    Object.assign(probe, { exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false });
     probe.writes.length = probe.flags.length = probe.attachments.length = probe.widths.length = 0;
+    probe.reads.length = 0;
     vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID", context().runId); vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", context().sourceRevision);
     vi.stubGlobal("devicePixelRatio", 1); vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(forced-colors: active)" ? !probe.forcedMediaFails && probe.forcedColors === "active" : probe.motion === "reduce" }));
     oldClientWidth = Object.getOwnPropertyDescriptor(document.documentElement, "clientWidth");
@@ -153,6 +157,19 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(saved.forcedColorsAudits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
     expect(saved["control-access-320"]).toEqual({ width: 320, controls: 1, inaccessible: 0, status: "passed" });
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
+  });
+  it("reads fixed source-owned profile and engine inputs from an unrelated working folder",async()=>{
+    const inputs=[path.resolve(__dirname,"../../../config/technical-reference-profiles.json"),path.resolve(__dirname,"../../../../node_modules/axe-core/axe.min.js")];
+    const unrelated=path.resolve(".local-codex","synthetic-isolated-working-folder");
+    const current=vi.spyOn(process,"cwd").mockReturnValue(unrelated);
+    try{const result=await qualifyCriticalSurfaceAccessibility(page,info,"settings");expect(result.status).toBe("passed");expect(probe.reads).toEqual(inputs);}
+    finally{current.mockRestore();}
+  });
+  it("keeps an unavailable source-owned engine failed and redacted",async()=>{
+    probe.engineReadFails=true;
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"settings")).rejects.toThrow("Critical accessibility check failed at audit-engine.");
+    const result=JSON.parse(probe.writes[probe.writes.length-1]!);expect(result.status).toBe("failed");expect(result.failureStage).toBe("audit-engine");
+    expect(probe.calls).toBe(0);expect(probe.writes.join("")).not.toContain("synthetic-private-engine-path");
   });
   it("audits the actual standalone mount without requiring the builder shell", async () => {
     document.querySelector("main")!.className = "system-runtime-app";
@@ -273,6 +290,14 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(probe.motion).toBe("no-preference");expect(probe.forcedColors).toBe("none");expect(probe.flags).toEqual(["wx","w","w","w"]);
     expect(JSON.parse(probe.writes[probe.writes.length-1]!).status).toBe("passed");expect(probe.attachments).toHaveLength(1);
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|message/);
+  });
+  it("reads the same source-owned inputs for native observations from an unrelated working folder",async()=>{
+    installNativeFrame();
+    const inputs=[path.resolve(__dirname,"../../../config/technical-reference-profiles.json"),path.resolve(__dirname,"../../../../node_modules/axe-core/axe.min.js")];
+    const unrelated=path.resolve(".local-codex","synthetic-native-working-folder");
+    const current=vi.spyOn(process,"cwd").mockReturnValue(unrelated);
+    try{const result=await qualifyCriticalSurfaceAccessibility(page,info,"settings","native400");expect(result.status).toBe("passed");expect(probe.reads).toEqual(inputs);}
+    finally{current.mockRestore();}
   });
   it("supports only the standalone runtime mount for native runtime observations",async()=>{
     installNativeFrame();document.querySelector("main")!.className="system-runtime-app";

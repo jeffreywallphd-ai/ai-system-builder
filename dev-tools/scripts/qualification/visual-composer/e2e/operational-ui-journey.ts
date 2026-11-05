@@ -51,7 +51,7 @@ export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, ho
       await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
     });
     await step("settings-opened", async () => {
-      await page.getByRole("button", { name: "Settings", exact: true }).click();
+      await page.locator("header.ui-shell__header").getByRole("button", { name: "Settings", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
       await qualifyCriticalSurfaceAccessibility(page, info, "settings", mode);
     });

@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, qualifyNativeCriticalAccessibilityReport, readCriticalAccessibilityMode, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation,
   type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit } from "../technical-accessibility-observation";
 import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityAudit,
-  collectNativeRuntimeAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference } from "./technical-accessibility";
+  collectNativeRuntimeAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference, readTechnicalAccessibilityEngine } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
@@ -65,7 +65,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     const mounted = await page.evaluate(runtime => document.querySelectorAll(runtime ? "main.system-runtime-app" : "main.ui-shell").length === 1, runtime);
     if (mounted !== true) throw new Error();
     stage = "audit-engine";
-    await page.evaluate(await readFile(path.resolve("node_modules/axe-core/axe.min.js"), "utf8"));
+    await page.evaluate(await readTechnicalAccessibilityEngine());
     await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "none" });
     if (await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches) !== true) throw new Error();
     for (const width of [1440, 320] as const) {
@@ -148,7 +148,7 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
     if (reference.profile.deviceScaleFactor !== 1) throw new Error();
     report.profile=reference.profile.environmentId;report.profileSha256=reference.profileSha256;report.hardware=reference.hardware;
     stage="evidence-setup";await mkdir(folder,{recursive:true});stage="evidence-create";await save();
-    stage="audit-engine";await page.evaluate(await readFile(path.resolve("node_modules/axe-core/axe.min.js"),"utf8"));
+    stage="audit-engine";await page.evaluate(await readTechnicalAccessibilityEngine());
     for (const media of ["normal","forced-colors"] as const) {
       stage=`native-${media}-media`;await page.emulateMedia({reducedMotion:"reduce",forcedColors:media==="normal"?"none":"active"});
       if (await page.evaluate(expected=>matchMedia("(prefers-reduced-motion: reduce)").matches &&
