@@ -10514,6 +10514,90 @@
         "Packaged desktop, native 400-percent zoom, managed persistence, provider and resource lifecycle checks remain open.",
         "Previously accepted model quality and OCR results stay closed. The wider UI matrix and combined system checks are deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "qualify-safe-contrast-target-regions",
+      "work_criteria": [
+        "fixed-region-counts-without-private-data",
+        "saved-versions-and-audit-behavior-preserved",
+        "definition-history-and-evidence-limits",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ee1f94e5e5b89147ca33284f318b93943f1cd78797b140adc18dddf481d89e81",
+      "review_digest": "fb619d3d7e4f7afa37e41ff0297c2b4cecd6fb1780f9da4993359a19956186a5",
+      "scope": "The reviewed source adds fixed UI region counts for unresolved contrast checks. It preserves the earlier report formats, coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed contrast region reporting. They do not pass the browser or roadmap check.",
+        "Focused tests checked region grouping, old report compatibility and coverage history. The browser test grouped one of two unresolved measurements in the notification badge region and still failed.",
+        "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
+        "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-safe-contrast-target-regions",
+      "work_criteria": [
+        "fixed-region-counts-without-private-data",
+        "saved-versions-and-audit-behavior-preserved",
+        "definition-history-and-evidence-limits",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ee1f94e5e5b89147ca33284f318b93943f1cd78797b140adc18dddf481d89e81",
+      "review_digest": "fb619d3d7e4f7afa37e41ff0297c2b4cecd6fb1780f9da4993359a19956186a5",
+      "scope": "The reviewed source adds fixed UI region counts for unresolved contrast checks. It preserves the earlier report formats, coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed contrast region reporting. They do not pass the browser or roadmap check.",
+        "Focused tests checked region grouping, old report compatibility and coverage history. The browser test grouped one of two unresolved measurements in the notification badge region and still failed.",
+        "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
+        "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-safe-contrast-target-regions",
+      "work_criteria": [
+        "fixed-region-counts-without-private-data",
+        "saved-versions-and-audit-behavior-preserved",
+        "definition-history-and-evidence-limits",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ee1f94e5e5b89147ca33284f318b93943f1cd78797b140adc18dddf481d89e81",
+      "review_digest": "fb619d3d7e4f7afa37e41ff0297c2b4cecd6fb1780f9da4993359a19956186a5",
+      "scope": "The reviewed source adds fixed UI region counts for unresolved contrast checks. It preserves the earlier report formats, coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed contrast region reporting. They do not pass the browser or roadmap check.",
+        "Focused tests checked region grouping, old report compatibility and coverage history. The browser test grouped one of two unresolved measurements in the notification badge region and still failed.",
+        "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
+        "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-safe-contrast-target-regions",
+      "work_criteria": [
+        "fixed-region-counts-without-private-data",
+        "saved-versions-and-audit-behavior-preserved",
+        "definition-history-and-evidence-limits",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ee1f94e5e5b89147ca33284f318b93943f1cd78797b140adc18dddf481d89e81",
+      "review_digest": "fb619d3d7e4f7afa37e41ff0297c2b4cecd6fb1780f9da4993359a19956186a5",
+      "scope": "The reviewed source adds fixed UI region counts for unresolved contrast checks. It preserves the earlier report formats, coverage history and audit requirements.",
+      "limitations": [
+        "These links cover the committed contrast region reporting. They do not pass the browser or roadmap check.",
+        "Focused tests checked region grouping, old report compatibility and coverage history. The browser test grouped one of two unresolved measurements in the notification badge region and still failed.",
+        "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
+        "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
+      ]
     }
   ]
 }

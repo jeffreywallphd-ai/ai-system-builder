@@ -4,13 +4,13 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "In the new browser run, 60 text samples passed the direct contrast check and two checks remained unresolved. In the earlier run, 28 samples passed directly and 34 checks remained unresolved. No contrast violation was measured in the new run. The test still failed at its first audit. Its processes closed cleanly. No user action is needed.",
+  "summary": "The browser run counted one unresolved contrast check in the notification badge region. The location of the other unresolved check is still unknown. Sixty text samples passed directly. The first audit and the test remain failed. All test processes closed. No user action is needed.",
   "observed_source": {
-    "source_commit": "6d0e47cdf158622844df28dc9583fe610c6ab096",
-    "source_digest": "bf971fa9c1e16ea89f4a485defea66d94ef52beecb26e28a97663a1adbdbb15f",
-    "source_revision": "source.d5c30708fe9bb820f3e9f56ef854c65da9ed74deb76752dd869f4ec65e9537c0"
+    "source_commit": "d5fca00e22570898995b687eeed35d1ced2eb241",
+    "source_digest": "762e0ecb32b00a244ef510352619bc653f673690990442dd923ac8bc178e897c",
+    "source_revision": "source.5811dd9c48ded187508c8c2ad9d55769e3cef8ca4fb3d86b10ffdac5d764b40f"
   },
-  "observation_work_id": "qualify-home-contrast-v2-observation",
+  "observation_work_id": "qualify-operational-contrast-target-observation",
   "source_support": {
     "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
     "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
@@ -264,6 +264,277 @@
       "effect_reference_sha256": "9155aa7bb015ade320a40788c2d051efa9edb01468d655fffe9ba6db1ac5e2c6",
       "outcome_reference_sha256": "ad2e4956ba61cc1288ebcb7ea12aeeb61568aa87fff7b7d32e35dfe9bd35b7d7",
       "outcome_report_sha256": "414f0f030de798245f79a672c60bf333fc0bf994d1a05468803922d38c818062"
+    },
+    {
+      "run_id": "operational-thin-a79f1442be554ff4b395f9856cd42f65",
+      "status": "failed-first-mounted-accessibility-audit-before-first-recorded-phase",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 1,
+      "selection_matches": true,
+      "ended_tests": 1,
+      "global_errors": 0,
+      "case_errors": 1,
+      "retry": 0,
+      "ui_phases_observed": 0,
+      "accessibility_surface_reports_observed": 1,
+      "accessibility_surfaces_passed": 0,
+      "next_phase": "navigation-menu-opened",
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 27,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "failed_accessibility": {
+        "surface": "navigation-menu",
+        "stage": "audit-1440",
+        "normal_widths_recorded": [
+          1440
+        ],
+        "forced_color_widths_recorded": [],
+        "rule_violations": 0,
+        "incomplete_color_contrast_nodes": 2,
+        "retry_attempted": 2,
+        "retry_passed": 0,
+        "contrast_passed_nodes": 60,
+        "motion_and_control_access_1440_passed": true,
+        "raw_sha256": "8d2f4107e146db5ff558c6fedb6610a101978468f053d90986be8d29f8a3fc6e",
+        "attachment_sha256": "94cde9b917fa2a5e423d580722340ef571d0a0f2be259e7b974c2697bbb480fb",
+        "retry_outcomes": {
+          "violation": 0,
+          "unresolved": 2,
+          "noPositiveSample": 0
+        },
+        "retry_reasons": {
+          "bgGradient": 0,
+          "bgImage": 0,
+          "imgNode": 0,
+          "outsideViewport": 0,
+          "elmPartiallyObscuring": 1,
+          "elmPartiallyObscured": 0,
+          "bgOverlap": 0,
+          "colorParse": 0,
+          "equalRatio": 0,
+          "shortTextContent": 1,
+          "other": 0,
+          "nonBmp": 0,
+          "pseudoContent": 0,
+          "complexTextShadows": 0,
+          "shadowOnBgColor": 0,
+          "fgOnShadowColor": 0
+        },
+        "reason_regions": {
+          "bgGradient": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "bgImage": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "imgNode": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "outsideViewport": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "elmPartiallyObscuring": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 1
+          },
+          "elmPartiallyObscured": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "bgOverlap": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "colorParse": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "equalRatio": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "shortTextContent": {
+            "glossaryHelp": 0,
+            "notificationBadge": 1,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "other": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "nonBmp": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "pseudoContent": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "complexTextShadows": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "shadowOnBgColor": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          },
+          "fgOnShadowColor": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "other": 0
+          }
+        },
+        "style_hints": {
+          "backgroundImage": 2,
+          "reducedOpacity": 0,
+          "clippedAncestor": 1,
+          "nonRgbColor": 0,
+          "ancestorLimit": 0,
+          "reasonScanLimit": 0
+        },
+        "diagnostic_qualification": "diagnostic-only"
+      },
+      "effect_reference_sha256": "a893ad7ac419c79eef149665a7f42bd6f20615321b83ce9b5d53539f6b198f52",
+      "outcome_reference_sha256": "bb783dd0f4e34104714d90d1d3a973e94fe734afd8bc5dd44ac1ff92e2096ad5",
+      "outcome_report_sha256": "11dd62a9014a5f8951e68537b75937fbba47626d9335973ec85256c6ccda32a0"
     }
   ],
   "diagnosis": {
@@ -271,7 +542,7 @@
     "failed_step": "navigation-menu-opened",
     "failed_surface": "navigation-menu",
     "failed_audit_stage": "audit-1440",
-    "exact_inner_assertion": "The original report failed at the first wide contrast audit. 60 text samples passed the direct contrast check. The audit recorded no contrast violations. The two incomplete measurements stayed unresolved after retry. No full surface or journey step passed.",
+    "exact_inner_assertion": "The original report failed at the first wide contrast audit. 60 text samples passed the direct contrast check. The audit recorded no contrast violations. The two incomplete measurements stayed unresolved after retry. No full surface or journey step passed. The precise inner assertion text was not captured.",
     "measured_facts": {
       "width": 1440,
       "contrast_violations": 0,
@@ -311,16 +582,24 @@
         "nonRgbColor": 0,
         "ancestorLimit": 0,
         "reasonScanLimit": 0
+      },
+      "regions_with_unresolved_measurements": {
+        "elmPartiallyObscuring": {
+          "other": 1
+        },
+        "shortTextContent": {
+          "notificationBadge": 1
+        }
       }
     },
-    "cause_limit": "The engine tagged one unresolved retry as partial obscuring and one as very short text. Each target or one of its checked ancestors has a background image. One target or a checked ancestor can clip content. These hints do not identify the elements or prove a layout or color defect. The two observations show fewer unresolved measurements after the Home source change; they do not identify the causes of the earlier unresolved checks.",
+    "cause_limit": "The engine tagged very short text in the notification count badge region. It tagged the other retry as partial obscuring, but the target did not match a known region. The region counts and style hints do not identify the precise elements or establish why the measurements failed.",
     "implemented_definition_fixes": [
       "Home reading panels now use solid palette colors. The large decorative layer on Home cards was removed.",
-      "The new report format records more fixed engine reasons and still reads saved earlier reports. Core contrast thresholds and all host requirements are unchanged.",
+      "The new report format pairs engine reasons with fixed UI regions. The tool still reads earlier reports. Core contrast thresholds and all host requirements are unchanged.",
       "The latest browser run reached the first audit only. Later steps, narrow audits and forced-color audits remain pending."
     ],
     "next_agent_actions": [
-      "Identify the two affected UI elements with bounded observations. Keep selectors, page text, CSS values and raw engine messages out of the evidence.",
+      "Check the notification count badge first. Identify the second target with bounded observations. Keep selectors, page text, CSS values and raw engine messages out of the evidence.",
       "Repair confirmed layout or contrast problems and add focused checks. Keep the same contrast thresholds and host assertions.",
       "Run the affected browser feature check on the repaired source. Preserve earlier failures. Keep wider host and full-system tests pending until implementation is ready."
     ],
@@ -480,9 +759,85 @@
         "reviewed_at": "2026-11-05T19:55:49.071143+00:00"
       },
       "scope": "Previous publication details only. All four earlier attempts stay unchanged. The complete earlier document remains at the recorded Git version."
+    },
+    {
+      "source_commit": "d5fca00e22570898995b687eeed35d1ced2eb241",
+      "document_sha256": "c12b9d3445fd114d9577ae8dcc74de8bda14bd059a6dfae5b252f285e7f6acb6",
+      "committed_document_sha256": "c12b9d3445fd114d9577ae8dcc74de8bda14bd059a6dfae5b252f285e7f6acb6",
+      "replaced_fields": {
+        "summary": "In the new browser run, 60 text samples passed the direct contrast check and two checks remained unresolved. In the earlier run, 28 samples passed directly and 34 checks remained unresolved. No contrast violation was measured in the new run. The test still failed at its first audit. Its processes closed cleanly. No user action is needed.",
+        "observed_source": {
+          "source_commit": "6d0e47cdf158622844df28dc9583fe610c6ab096",
+          "source_digest": "bf971fa9c1e16ea89f4a485defea66d94ef52beecb26e28a97663a1adbdbb15f",
+          "source_revision": "source.d5c30708fe9bb820f3e9f56ef854c65da9ed74deb76752dd869f4ec65e9537c0"
+        },
+        "observation_work_id": "qualify-home-contrast-v2-observation",
+        "diagnosis": {
+          "confirmed_selection_fix": "The latest attempt selected and ended exactly the intended case, with no global error or retry.",
+          "failed_step": "navigation-menu-opened",
+          "failed_surface": "navigation-menu",
+          "failed_audit_stage": "audit-1440",
+          "exact_inner_assertion": "The original report failed at the first wide contrast audit. 60 text samples passed the direct contrast check. The audit recorded no contrast violations. The two incomplete measurements stayed unresolved after retry. No full surface or journey step passed.",
+          "measured_facts": {
+            "width": 1440,
+            "contrast_violations": 0,
+            "unresolved_contrast_nodes": 2,
+            "contrast_retry_attempts": 2,
+            "contrast_retries_passed": 0,
+            "contrast_passed_nodes": 60,
+            "motion_and_control_access_passed": true,
+            "narrow_and_forced_color_checks_observed": false,
+            "retry_outcomes": {
+              "violation": 0,
+              "unresolved": 2,
+              "noPositiveSample": 0
+            },
+            "retry_reasons": {
+              "bgGradient": 0,
+              "bgImage": 0,
+              "imgNode": 0,
+              "outsideViewport": 0,
+              "elmPartiallyObscuring": 1,
+              "elmPartiallyObscured": 0,
+              "bgOverlap": 0,
+              "colorParse": 0,
+              "equalRatio": 0,
+              "shortTextContent": 1,
+              "other": 0,
+              "nonBmp": 0,
+              "pseudoContent": 0,
+              "complexTextShadows": 0,
+              "shadowOnBgColor": 0,
+              "fgOnShadowColor": 0
+            },
+            "style_hints": {
+              "backgroundImage": 2,
+              "reducedOpacity": 0,
+              "clippedAncestor": 1,
+              "nonRgbColor": 0,
+              "ancestorLimit": 0,
+              "reasonScanLimit": 0
+            }
+          },
+          "cause_limit": "The engine tagged one unresolved retry as partial obscuring and one as very short text. Each target or one of its checked ancestors has a background image. One target or a checked ancestor can clip content. These hints do not identify the elements or prove a layout or color defect. The two observations show fewer unresolved measurements after the Home source change; they do not identify the causes of the earlier unresolved checks.",
+          "implemented_definition_fixes": [
+            "Home reading panels now use solid palette colors. The large decorative layer on Home cards was removed.",
+            "The new report format records more fixed engine reasons and still reads saved earlier reports. Core contrast thresholds and all host requirements are unchanged.",
+            "The latest browser run reached the first audit only. Later steps, narrow audits and forced-color audits remain pending."
+          ],
+          "next_agent_actions": [
+            "Identify the two affected UI elements with bounded observations. Keep selectors, page text, CSS values and raw engine messages out of the evidence.",
+            "Repair confirmed layout or contrast problems and add focused checks. Keep the same contrast thresholds and host assertions.",
+            "Run the affected browser feature check on the repaired source. Preserve earlier failures. Keep wider host and full-system tests pending until implementation is ready."
+          ],
+          "user_action": "No action needed."
+        },
+        "reviewed_at": "2026-11-05T22:03:22.155153+00:00"
+      },
+      "scope": "Previous publication details only. All five earlier attempts stay unchanged. The complete earlier document remains at the recorded Git version."
     }
   ],
-  "reviewed_at": "2026-11-05T22:03:22.155153+00:00",
+  "reviewed_at": "2026-11-05T22:59:54.738663+00:00",
   "reviewed_source_repairs": [
     {
       "work_id": "repair-responsive-operational-journeys",
@@ -518,6 +873,13 @@
       "receipt_digest": "28bf390e43d15497f3afaabda05fd40168529c80329449e4e698aa2e4db4f7d9",
       "review_digest": "3a586a449667655c54cddbb4b328322547ee12ef862bffd0428f5eda86595d5f",
       "scope": "The reviewed Home change uses solid backgrounds on the reading panels and removes the large decorative layer on the cards. The new diagnostic format still reads earlier reports and retains coverage history and audit requirements. This records source support only. The browser case still failed."
+    },
+    {
+      "work_id": "qualify-safe-contrast-target-regions",
+      "commit": "d5fca00e22570898995b687eeed35d1ced2eb241",
+      "receipt_digest": "ee1f94e5e5b89147ca33284f318b93943f1cd78797b140adc18dddf481d89e81",
+      "review_digest": "fb619d3d7e4f7afa37e41ff0297c2b4cecd6fb1780f9da4993359a19956186a5",
+      "scope": "The reviewed source adds fixed UI region counts for unresolved contrast checks. It preserves the earlier report formats, coverage history and audit requirements. This records source support only. The browser case still failed."
     }
   ]
 }

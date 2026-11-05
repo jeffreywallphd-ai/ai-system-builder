@@ -15271,6 +15271,61 @@
           "The wider UI and combined system tests remain deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d69a0fc50f71723702c7e49d767ee288a7c2240414127e74ed3a735802139e03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The report names a fixed UI region for each unresolved contrast check when it can.",
+          "The tool still reads earlier reports. Coverage history and audit requirements stay the same."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "594a5cc35c8fb309527da6ce048d281c0b9252719e1c34f1c678e3eb16af5550",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This links the committed region reporting change.",
+          "The browser and parent checks remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "43e1a51f4793e3091471aec93ac2215cdadee35a4b45422bcf85bf6e4bfb696d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused tests checked region grouping, old reports and coverage history.",
+          "The browser test grouped one of two unresolved measurements in the notification badge region and still failed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "05f34c346a985befb41f0fe8dbdad49be97112cc193771367a87e027282d8758",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result applies to the standard thin client only. Packaged desktop and native zoom checks remain open.",
+          "Managed persistence, provider and resource checks remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f0adad2453b0d460187a0fdabd5fa91f1ab51626a0a92ae6b5b792dc5b501ef1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model quality and text recognition results remain closed.",
+          "The wider UI and combined system tests remain deferred."
+        ]
+      }
     }
   ]
 }
