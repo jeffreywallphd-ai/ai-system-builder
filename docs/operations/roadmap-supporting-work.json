@@ -10043,6 +10043,63 @@
         "Desktop Settings, other Settings cases and production worker checks remain pending. No user action is needed.",
         "No model accuracy or text-recognition test was rerun. Full-system testing remains deferred until open feature work is ready."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "observe-settings-thin-with-current-navigation",
+      "work_criteria": [
+        "one-reviewed-real-thin-observation",
+        "safe-isolation-and-faithful-failure",
+        "publish-reviewed-local-results"
+      ],
+      "receipt_digest": "dba743a638804eaacc1b180677b428bd88e67f7833e8cf65bf25ea6bbc81652b",
+      "review_digest": "9c874196aad676abb84d2c40f374225600bc3aebd4e9df26c5323520805fb430",
+      "scope": "The public Settings browser case passed at its saved version. It saved, reloaded and cleared a public value, and recovered after one failed read. All original test processes and handles closed.",
+      "limitations": [
+        "This supports only the saved public Settings browser case. It does not complete the parent criterion or qualify later source.",
+        "Token and model-default checks, desktop checks and physical app restart remain pending. The later failed token test is preserved separately.",
+        "No provider operation, model loading, model accuracy or text-recognition check was performed. Production worker, low-memory restart and final combined checks remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "observe-settings-thin-with-current-navigation",
+      "work_criteria": [
+        "one-reviewed-real-thin-observation",
+        "safe-isolation-and-faithful-failure",
+        "publish-reviewed-local-results"
+      ],
+      "receipt_digest": "dba743a638804eaacc1b180677b428bd88e67f7833e8cf65bf25ea6bbc81652b",
+      "review_digest": "9c874196aad676abb84d2c40f374225600bc3aebd4e9df26c5323520805fb430",
+      "scope": "The public Settings browser case passed at its saved version. It saved, reloaded and cleared a public value, and recovered after one failed read. All original test processes and handles closed.",
+      "limitations": [
+        "This supports only the saved public Settings browser case. It does not complete the parent criterion or qualify later source.",
+        "Token and model-default checks, desktop checks and physical app restart remain pending. The later failed token test is preserved separately.",
+        "No provider operation, model loading, model accuracy or text-recognition check was performed. Production worker, low-memory restart and final combined checks remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "observe-settings-thin-with-current-navigation",
+      "work_criteria": [
+        "one-reviewed-real-thin-observation",
+        "safe-isolation-and-faithful-failure",
+        "publish-reviewed-local-results"
+      ],
+      "receipt_digest": "dba743a638804eaacc1b180677b428bd88e67f7833e8cf65bf25ea6bbc81652b",
+      "review_digest": "9c874196aad676abb84d2c40f374225600bc3aebd4e9df26c5323520805fb430",
+      "scope": "The public Settings browser case passed at its saved version. It saved, reloaded and cleared a public value, and recovered after one failed read. All original test processes and handles closed.",
+      "limitations": [
+        "This supports only the saved public Settings browser case. It does not complete the parent criterion or qualify later source.",
+        "Token and model-default checks, desktop checks and physical app restart remain pending. The later failed token test is preserved separately.",
+        "No provider operation, model loading, model accuracy or text-recognition check was performed. Production worker, low-memory restart and final combined checks remain separate."
+      ]
     }
   ]
 }

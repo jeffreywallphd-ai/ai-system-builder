@@ -1108,7 +1108,10 @@ required evidence passes and is independently reviewed. See
 The two dedicated Settings selectors each collect two cases from the existing
 Operational host specs. They test a public value and a synthetic token plus a
 passive model default. The checks save, confirm readback, reload and clear the
-values. Clearing the model default restores its built-in value. The Thin Client
+values. A fresh or cleared model setting has an empty model ID and leaves device
+and dtype at Runtime default. Save model default stays disabled until a model ID
+is supplied. Runtime fallback selection is separate from the saved setting; this
+test does not load a model. The Thin Client
 case also fails one read after a real save, checks that further writes are disabled,
 then uses Refresh settings to read the actual saved value.
 

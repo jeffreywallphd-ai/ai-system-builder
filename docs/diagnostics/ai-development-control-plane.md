@@ -1344,8 +1344,13 @@ and borrowed regressions do not activate this profile by themselves. Unknown
 impact, explicit generic checks and incomplete ownership retain their fallback.
 
 Dedicated one-host Settings selectors exercise public Save/readback/reload/Clear,
-masked synthetic credentials, passive model-default restoration and explicit Thin
-read-failure recovery. The existing default/image credential purposes and wire
+masked synthetic credentials, passive model-default save/clear and explicit Thin
+read-failure recovery. Fresh and cleared model settings must show an empty model
+ID, Runtime default device and dtype, and disabled model Save. The model selected
+by a runtime fallback is not a saved setting. A focused regression renders the
+unchanged real field before save, after a saved value and after clearing; it also
+checks that empty Save cannot dispatch. The original nine host phases remain
+required. Source regression passes do not qualify a real host case. The existing default/image credential purposes and wire
 protocol remain intact. A fixed Settings purpose adds only Settings and credential
 management scopes; it grants no provider credential-use or runtime-admin scope.
 Fresh isolated profiles and stripped ambient credentials protect the user token.

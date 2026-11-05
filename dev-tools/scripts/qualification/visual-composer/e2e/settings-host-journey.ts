@@ -1,5 +1,5 @@
 import {expect,type Page,type TestInfo,type Locator} from "@playwright/test";
-import {settingsHostIdentity,settingsHostNamespace,settingsHostPhases,settingsHostReport,isSettingsPanelReadBody,SETTINGS_PASSIVE_MODEL,type SettingsHost,type SettingsHostCase} from "../settings-host-oracles";
+import {settingsHostIdentity,settingsHostNamespace,settingsHostPhases,settingsHostReport,isSettingsPanelReadBody,SETTINGS_PASSIVE_MODEL,SETTINGS_UNCONFIGURED_MODEL,type SettingsHost,type SettingsHostCase} from "../settings-host-oracles";
 import {safeQualificationFailureType} from "../qualification-reporting";
 
 /** Real mounted Settings and production IPC/HTTP. No successful response is injected. */
@@ -77,8 +77,8 @@ export async function qualifySettingsHostJourney(page:Page,info:TestInfo,host:Se
     }else{
       // Public synthetic fixture only; never use or inspect the saved user token.
       const synthetic="qualification-only-not-a-provider-token";
-      const builtin={provider:"transformers",modelId:"google/flan-t5-base",inferenceMode:"auto",device:"auto",torchDtype:"auto"};
-      await step("fresh-values-confirmed",async()=>{await expect(secret().locator("input[type=password]")).toBeEnabled();await expectSecret(false);await expectModel(builtin);await expect(clear(model())).toBeDisabled();});
+      const unconfigured=SETTINGS_UNCONFIGURED_MODEL;
+      await step("fresh-values-confirmed",async()=>{await expect(secret().locator("input[type=password]")).toBeEnabled();await expectSecret(false);await expect(saveModel()).toBeDisabled();await expectModel(unconfigured);await expect(clear(model())).toBeDisabled();});
       await step("secret-save-confirmed",async()=>{await secret().locator("input[type=password]").fill(synthetic);await secret().getByRole("button",{name:"Save secret",exact:true}).click();await expectSecret(true);await expect(secret()).not.toContainText(synthetic);});
       await step("secret-reload-masked",async()=>{await reload();await expect(secret().locator("input[type=password]")).toBeEnabled();await expectSecret(true);await expect(secret()).not.toContainText(synthetic);});
       await step("model-default-save-confirmed",async()=>{
@@ -90,8 +90,8 @@ export async function qualifySettingsHostJourney(page:Page,info:TestInfo,host:Se
       });
       await step("model-default-reload-confirmed",async()=>{await reload();await expect(clear(model())).toBeEnabled();await expectModel(SETTINGS_PASSIVE_MODEL);await expectSecret(true);});
       await step("secret-clear-confirmed",async()=>{await clear(secret()).click();await expect(secret().locator("input[type=password]")).toBeEnabled();await expectSecret(false);});
-      await step("model-default-clear-confirmed",async()=>{await clear(model()).click();await expect(saveModel()).toBeEnabled();await expect(clear(model())).toBeDisabled();await expectModel(builtin);});
-      await step("clear-reload-confirmed",async()=>{await reload();await expect(saveModel()).toBeEnabled();await expect(clear(model())).toBeDisabled();await expectModel(builtin);await expectSecret(false);});
+      await step("model-default-clear-confirmed",async()=>{await clear(model()).click();await expect(saveModel()).toBeDisabled();await expect(clear(model())).toBeDisabled();await expectModel(unconfigured);});
+      await step("clear-reload-confirmed",async()=>{await reload();await expect(saveModel()).toBeDisabled();await expect(clear(model())).toBeDisabled();await expectModel(unconfigured);await expectSecret(false);});
     }
   }catch(error){failed=true;failure=error;}
   const report={...settingsHostReport(run,source,host,scenario,phases,failed),failureTypes:failed?[safeQualificationFailureType(failure)]:[]};

@@ -5,7 +5,7 @@ import path from "node:path";
 const V=path.resolve("dev-tools/scripts/qualification/visual-composer");
 test("Settings definitions bind the actual host UI and only inject one failed readonly response",async()=>{
   const body=await readFile(path.join(V,"e2e/settings-host-journey.ts"),"utf8");
-  for(const value of ['name:"Save"','name:"Clear"','name:"Refresh settings"','await page.reload()','input[type=password]','toHaveText(configured?','await expectModel(builtin)','SETTINGS_PASSIVE_MODEL','r.request().method()==="POST"','failed-read-denies-write','page.unroute(readUrl,fault)'])assert.ok(body.includes(value),value);
+  for(const value of ['name:"Save"','name:"Clear"','name:"Refresh settings"','await page.reload()','input[type=password]','toHaveText(configured?','await expectModel(unconfigured)','SETTINGS_PASSIVE_MODEL','r.request().method()==="POST"','failed-read-denies-write','page.unroute(readUrl,fault)'])assert.ok(body.includes(value),value);
   assert.match(body,/status:503/);assert.doesNotMatch(body,/status:200|status:201|\.request\.post|sessionStorage\.setItem|window\.api|sitecustomize/);
   assert.match(body,/name:"Save model default",exact:true/);assert.match(body,/toHaveValue\(workspaceId!?\)/);
   assert.match(body,/page\.route\(readUrl,fault\)/);assert.equal((body.match(/page\.route\(/g)??[]).length,1);

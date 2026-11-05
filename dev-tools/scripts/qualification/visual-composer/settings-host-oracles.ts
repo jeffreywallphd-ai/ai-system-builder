@@ -5,6 +5,8 @@ export type SettingsHost="packaged-desktop"|"thin-chrome";
 export type SettingsHostCase="public-values"|"secret-defaults";
 export const SETTINGS_HOST_TIMEOUT_MS=120_000;
 export const SETTINGS_PASSIVE_MODEL=Object.freeze({provider:"transformers",modelId:"Qwen/Qwen2.5-0.5B-Instruct",inferenceMode:"chat",device:"cpu",torchDtype:"float32"});
+// Expected saved Settings fields; runtime fallback selection is a different contract.
+export const SETTINGS_UNCONFIGURED_MODEL=Object.freeze({provider:"transformers",modelId:"",inferenceMode:"auto",device:"",torchDtype:""});
 const invalid=()=>new Error("The Settings host observation is invalid.");
 /** Match the panel's unfiltered read, never a dashboard's keyed summary read. */
 export function isSettingsPanelReadBody(text:unknown):boolean{

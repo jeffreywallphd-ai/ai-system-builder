@@ -220,9 +220,44 @@ const pendingSettingsNavigationDefinitions=Object.freeze([
     "facts_sha256": "ad669e1cd4f35edb9c06ceb085bacca657f3e70fe4da89469b70fe356c3b4c23"
   }
 ].map(Object.freeze));
+// Exact saved-value oracle correction; old navigation bindings remain historical.
+const pendingSettingsEmptyDefinitions=Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
+    "baseline": "d912fb70da8cda8b723187126c31a0e9da850955",
+    "committed": "1123885b23b145587de35375abe9eb1566196bdcffa9f43fae6f1e8c1d5dee71",
+    "candidate": "f678bd76d838cb5c541a9a87b5a4f0ac052b17909c905e6828366439b6258ffb",
+    "facts_sha256": "c340afbd63d828ad340001bd9022af2c769adafa4f58f78b0ad9e72af3067187"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
+    "baseline": "d912fb70da8cda8b723187126c31a0e9da850955",
+    "committed": "4f5bc720af17a7680cac25a374a3bdd43577184bd4f71d6f8c46d455aa3c8b90",
+    "candidate": "4f35a506f0226de7ee0a1c283859ee60765c6cae8b33dd3263987c3c6f7a6260",
+    "facts_sha256": "02715c9269a0a512217a2bbe69b3755eb0586987cdbb78aa1117ecd4b5bda23c"
+  }
+].map(Object.freeze));
+function assertSettingsEmptySourceDrift(map,result){
+  const expected=[];
+  for(const pending of pendingSettingsEmptyDefinitions){
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
+    const row=rows[0];assert.equal(row.committed_sha256,sha(historicalSource(map.source_baseline,pending.path)));
+    if(row.facts.sha256!==row.committed_sha256){
+      assert.equal(map.source_baseline,pending.baseline);assert.equal(row.committed_sha256,pending.committed);
+      assert.equal(row.facts.sha256,pending.candidate);assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256);
+      expected.push({kind:"unreviewed-source-drift",source:pending.path});
+    }
+  }
+  const paths=new Set(pendingSettingsEmptyDefinitions.map(row=>row.path));
+  const owns=g=>g.kind==="unreviewed-source-drift"&&paths.has(g.source);
+  const ordered=rows=>[...rows].sort((a,b)=>a.source.localeCompare(b.source));
+  assert.deepEqual(ordered(result.gaps.filter(owns)),ordered(expected));
+  return {...result,gaps:result.gaps.filter(g=>!owns(g))};
+}
 function assertSettingsNavigationSourceDrift(map,result){
   const expected=[];
-  for(const pending of pendingSettingsNavigationDefinitions){
+  for(const original of pendingSettingsNavigationDefinitions){
+    const pending=map.source_baseline===pendingSettingsEmptyDefinitions[0].baseline ? pendingSettingsEmptyDefinitions.find(row=>row.path===original.path)??original : original;
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
     const row=rows[0];assert.match(map.source_baseline,/^[a-f0-9]{40}$/);
     assert.equal(row.committed_sha256,sha(historicalSource(map.source_baseline,pending.path)),"Settings pins must be real Git blobs.");
@@ -242,6 +277,7 @@ function assertSettingsNavigationSourceDrift(map,result){
 }
 
 function assertCurrentSourceDrift(map, result) {
+  if(map.source_baseline===pendingSettingsEmptyDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsEmptyDefinitions[1].path))result=assertSettingsEmptySourceDrift(map,result);
   const navigationPaths=new Set();
   if(map.source_baseline===pendingSettingsNavigationDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsNavigationDefinitions[2].path)){
     result=assertSettingsNavigationSourceDrift(map,result);
@@ -387,7 +423,7 @@ test("checks the current repository map against original scope and actual source
       assert(source,"Each body and oracle must be inventoried.");
       if(name.startsWith("e2e/"))assert(source.facts.assertionCount>0,"Each journey body contains meaningful assertions.");
       else assert(source.facts.functions.length>0,"Inert oracle guards are separate functions, not executed test assertions.");
-      if(!pendingSettingsNavigationDefinitions.some(p=>p.path===source.path&&source.facts.sha256!==source.committed_sha256))
+      if(![...pendingSettingsNavigationDefinitions,...pendingSettingsEmptyDefinitions].some(p=>p.path===source.path&&source.facts.sha256!==source.committed_sha256))
       assert.equal(source.facts.sha256,source.committed_sha256,"Each new definition must already be committed after review.");
       assert(row.behavior_links.every(link=>link.assertion_sources.includes(source.path)));
     }
@@ -755,7 +791,7 @@ test("pending Settings navigation definitions reject forged future missing dupli
   const originalReview=historicalSource(map.source_baseline,review.path);
   review.facts=sourceFacts(review.path,originalReview);review.committed_sha256=sha(originalReview);
   for(const pending of pendingSettingsNavigationDefinitions){
-    const row=map.sources.find(row=>row.path===pending.path);assert(row);row.committed_sha256=pending.committed;
+    const row=map.sources.find(row=>row.path===pending.path);assert(row);row.committed_sha256=pending.committed;row.facts=sourceFacts(pending.path,historicalSource("bb895bef9cd95c2662cbe185c03ea69bda6d938d",pending.path));
   }
   const result={gaps:pendingSettingsNavigationDefinitions.map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   const target=m=>m.sources.find(row=>row.path===pendingSettingsNavigationDefinitions[0].path);
@@ -779,7 +815,7 @@ test("pending Settings navigation definitions reject forged future missing dupli
 test("pending delivery display binding rejects forged future missing duplicate and unrelated drift",()=>{
   const pending=pendingReviewDeliveryDefinition;
   const map={source_baseline:pending.baseline,sources:[{path:pending.source,
-    facts:sourceFacts(pending.source,fs.readFileSync(pending.source)),committed_sha256:pending.committed}]};
+    facts:sourceFacts(pending.source,historicalSource("d912fb70da8cda8b723187126c31a0e9da850955",pending.source)),committed_sha256:pending.committed}]};
   const result={gaps:[{kind:"unreviewed-source-drift",source:pending.source}]};
   assertCurrentReviewSiteDrift(map,result);
   for(const mutate of [
@@ -797,4 +833,22 @@ test("pending delivery display binding rejects forged future missing duplicate a
     const m=structuredClone(map),r=structuredClone(result);mutate(m,r);
     assert.throws(()=>assertCurrentReviewSiteDrift(m,r));
   }
+});
+
+test("saved-value oracle binding refuses stale forged missing duplicate and unrelated drift",()=>{
+  const baseline=pendingSettingsEmptyDefinitions[0].baseline;
+  const map={source_baseline:baseline,sources:pendingSettingsEmptyDefinitions.map(p=>({path:p.path,facts:sourceFacts(p.path,fs.readFileSync(p.path)),committed_sha256:p.committed}))};
+  const result={gaps:pendingSettingsEmptyDefinitions.map(p=>({kind:"unreviewed-source-drift",source:p.path}))};
+  assert.deepEqual(assertSettingsEmptySourceDrift(map,result).gaps,[]);
+  for(const mutate of [
+    (m,r)=>{m.sources[0].committed_sha256=m.sources[0].facts.sha256;},
+    (m,r)=>{m.sources[0].facts.sha256="f".repeat(64);},
+    (m,r)=>{m.sources[0].facts.assertionCount++;},
+    (m,r)=>{m.sources[0].facts.extra="forged";},
+    (m,r)=>{m.source_baseline=pendingSettingsNavigationDefinitions[0].baseline;},
+    (m,r)=>{m.sources.pop();},(m,r)=>{m.sources.push(structuredClone(m.sources[0]));},
+    (m,r)=>{r.gaps.pop();},(m,r)=>{r.gaps.push(structuredClone(r.gaps[0]));},
+  ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertSettingsEmptySourceDrift(m,r));}
+  const foreign={kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"};
+  assert.deepEqual(assertSettingsEmptySourceDrift(map,{gaps:[...result.gaps,foreign]}).gaps,[foreign]);
 });

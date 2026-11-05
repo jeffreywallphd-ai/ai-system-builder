@@ -1,6 +1,10 @@
+import {act,createElement} from "react";
+import {createRoot} from "react-dom/client";
+import {JSDOM} from "jsdom";
+import {ModelDefaultSettingField} from "../../../../modules/ui/shared/settings/ModelDefaultSettingField";
 import test from "node:test";
 import assert from "node:assert/strict";
-import {settingsHostIdentity,settingsHostNamespace,settingsHostPhases,settingsHostReport,isSettingsPanelReadBody,SETTINGS_PASSIVE_MODEL} from "../visual-composer/settings-host-oracles";
+import {settingsHostIdentity,settingsHostNamespace,settingsHostPhases,settingsHostReport,isSettingsPanelReadBody,SETTINGS_PASSIVE_MODEL,SETTINGS_UNCONFIGURED_MODEL} from "../visual-composer/settings-host-oracles";
 import {qualifySettingsHostJourney} from "../visual-composer/e2e/settings-host-journey";
 import type {Page,TestInfo} from "@playwright/test";
 const run="settings-ui-synthetic-20261029",source="source."+"a".repeat(64);
@@ -70,4 +74,30 @@ test("Settings uses the unique shell header control when the page has another Se
       const report=JSON.parse(attachments[0]!);assert.equal(report.status,"failed");assert.deepEqual(report.phases,[]);assert.equal(report.nextPhase,"settings-opened");assert.equal(report.parentQualificationGranted,false);
     }
   }finally{for(let i=0;i<keys.length;i++)if(prior[i]===undefined)delete process.env[keys[i]!];else process.env[keys[i]!]=prior[i];}
+});
+
+
+test("unconfigured model host expectations match real rendered fields before save and after clear",async()=>{
+  const globals=["window","document","navigator","HTMLElement","HTMLInputElement","HTMLSelectElement","Event","IS_REACT_ACT_ENVIRONMENT"] as const;
+  const previous=new Map(globals.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+  const dom=new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>");
+  for(const key of globals)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[key as keyof typeof dom.window]});
+  const container=dom.window.document.getElementById("root")!;
+  const root=createRoot(container),saved:unknown[]=[];
+  const render=async(value?:unknown)=>{await act(async()=>root.render(createElement(ModelDefaultSettingField,{value,onSave:async value=>{saved.push(value);}})));};
+  const read=()=>Object.fromEntries([...container.querySelectorAll("label")].map(label=>[label.textContent!.trim(),(label.control as HTMLInputElement|HTMLSelectElement).value]));
+  const fields=(value:typeof SETTINGS_UNCONFIGURED_MODEL|typeof SETTINGS_PASSIVE_MODEL)=>({Provider:value.provider,"Model ID":value.modelId,"Inference mode":value.inferenceMode,Device:value.device,"Torch dtype":value.torchDtype});
+  const button=()=>container.querySelector<HTMLButtonElement>('[data-testid="model-default-save"]')!;
+  try{
+    await render();assert.deepEqual(read(),fields(SETTINGS_UNCONFIGURED_MODEL));assert.equal(button().disabled,true);
+    await act(async()=>button().click());assert.deepEqual(saved,[]);
+    await render(SETTINGS_PASSIVE_MODEL);assert.deepEqual(read(),fields(SETTINGS_PASSIVE_MODEL));assert.equal(button().disabled,false);
+    await act(async()=>button().click());assert.deepEqual(saved,[SETTINGS_PASSIVE_MODEL]);
+    // A successful clear updates the controlled value. The real effect must reset the saved draft.
+    await render();assert.deepEqual(read(),fields(SETTINGS_UNCONFIGURED_MODEL));assert.equal(button().disabled,true);
+    await act(async()=>button().click());assert.deepEqual(saved,[SETTINGS_PASSIVE_MODEL]);
+  }finally{
+    await act(async()=>root.unmount());dom.window.close();
+    for(const key of globals){const descriptor=previous.get(key);if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}
+  }
 });

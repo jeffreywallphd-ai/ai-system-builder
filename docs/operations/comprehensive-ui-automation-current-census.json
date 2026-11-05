@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
+ "source_baseline": "d912fb70da8cda8b723187126c31a0e9da850955",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -9406,7 +9406,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "40fd07429770fd83fdbb91efcf1a4f3794a9142103e86c5a81f86a1e34f23487"
+   "committed_sha256": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9"
   },
   {
    "path": "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
@@ -13808,8 +13808,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
    "facts": {
-    "sha256": "1123885b23b145587de35375abe9eb1566196bdcffa9f43fae6f1e8c1d5dee71",
-    "bytes": 9515,
+    "sha256": "f678bd76d838cb5c541a9a87b5a4f0ac052b17909c905e6828366439b6258ffb",
+    "bytes": 9525,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -13838,8 +13838,8 @@
       "line": 33
      }
     ],
-    "assertionCount": 44,
-    "assertionDigest": "bd849c0d665d69de233c04eea281d9c6a38529bde66c982dc0196b9c8ae939c5",
+    "assertionCount": 45,
+    "assertionDigest": "c0a43155c0e0fbec2dcb50a65d134e79aa6709432a559b6b8272bfc9dc04c36f",
     "assertionExamples": [
      {
       "line": 16,
@@ -13869,30 +13869,30 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts",
    "facts": {
-    "sha256": "4f5bc720af17a7680cac25a374a3bdd43577184bd4f71d6f8c46d455aa3c8b90",
-    "bytes": 3672,
+    "sha256": "4f35a506f0226de7ee0a1c283859ee60765c6cae8b33dd3263987c3c6f7a6260",
+    "bytes": 3898,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "isSettingsPanelReadBody",
-      "line": 10
+      "line": 12
      },
      {
       "name": "settingsHostIdentity",
-      "line": 17
+      "line": 19
      },
      {
       "name": "settingsHostNamespace",
-      "line": 22
+      "line": 24
      },
      {
       "name": "settingsHostPhases",
-      "line": 26
+      "line": 28
      },
      {
       "name": "settingsHostReport",
-      "line": 34
+      "line": 36
      }
     ],
     "assertionCount": 0,

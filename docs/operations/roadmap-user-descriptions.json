@@ -249,7 +249,7 @@
       "user_description": {
         "purpose": "Preserve everyday settings, navigation, notifications and runtime recovery.",
         "owner": "agent",
-        "next_action": "Browser Settings saving, recovery after a read failure, reload and clearing passed. The agent will finish the remaining operational feature checks. Desktop and other Settings cases are pending. No user action is needed.",
+        "next_action": "The public Settings browser case passed. The token and model-default case stopped at its initial-value check. The agent is correcting its test expectations before a fresh run. Desktop checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must cover mounted Settings, thin-client Security, runtime readiness and controls, workspace summaries and shell navigation.",
@@ -293,7 +293,7 @@
       "user_description": {
         "purpose": "Prove executed coverage for every supported feature without claiming unrelated qualification.",
         "owner": "agent",
-        "next_action": "The coverage record matches the reviewed Settings navigation tests. It does not mark desktop or other app journeys as passed. The agent will finish the remaining feature checks. No user action is needed.",
+        "next_action": "The public Settings pass and the separate failed token test remain distinct. The agent will update the test definitions and run the corrected case. Source tests do not supply an actual host pass. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must regenerate the mounted route, tab, action and capability-registry inventory.",
@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "All processes and handles for this browser test closed. The agent will check the remaining test runs. Production worker and low-memory restart checks remain pending. No user action is needed.",
+        "next_action": "The original processes and handles closed for both Settings browser attempts. The agent will continue the remaining feature checks. Production worker and low-memory restart checks remain pending. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -14930,6 +14930,51 @@
         "sentences": [
           "No model accuracy or text-recognition test was rerun.",
           "Full-system testing remains deferred until open feature work is ready."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8af80abd86b1c274c19aed9e209d9e520bb9497ec7249eb6ab6fcc869dfae373",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The public Settings browser case passed at its saved version.",
+          "It saved, reloaded and cleared a public value, and recovered after one failed read.",
+          "All original test processes and handles closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ef9ec07036622b9c9606c2a97c65ac421dd7e6c46f5daae53d0291eeea510a19",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This supports only the saved public Settings browser case.",
+          "It does not complete the parent criterion or qualify later source."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "79064e77d6a1c7c9064f96730af37ebf0d4dbbdbcb69165a07b0cdebbc7ac1ab",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Token and model-default checks, desktop checks and physical app restart remain pending.",
+          "The later failed token test is preserved separately."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c6ea38765c692b935f5fe80249981bdd44dd462279040746f8eea1d3b74e3ef9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No provider operation, model loading, model accuracy or text-recognition check was performed.",
+          "Production worker, low-memory restart and final combined checks remain separate."
         ]
       }
     }

@@ -4,7 +4,7 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "The thin-client public Settings test passed. It saved a value, recovered after a read failure, reloaded, cleared the value and reloaded again. All test-owned processes and handles closed. Desktop and other Settings checks remain pending.",
+  "summary": "The public Settings browser case passed. The separate token and model-default case failed during its initial-value check. A focused regression found a mismatch in the test expectations. The agent is correcting that test. All test-owned processes and handles closed; no model was loaded.",
   "observed_source": {
     "commit": "3f3291bda49c37708ff0b2d03f29d52912eab209",
     "source_digest": "6c97e379e523d77ebc3bb6f1cb1a059965b2c00135a6befcce34af1cda6e6786",
@@ -218,11 +218,75 @@
         "settings-setup-closed": "dab7baf355f647e8e2d7b658ffd72c84f6ea5013ce840f77820de8ac43ba74d6",
         "settings-runner-result": "21b491f73dfbd034283f46bf9bea5c85c2f193ae3b2981829af1dd3597d38103"
       }
+    },
+    {
+      "run_id": "107844ebeeb44ac99aa0dacf00d1bddd",
+      "host": "thin-chrome",
+      "scenario": "secret-defaults",
+      "status": "failed-during-initial-state-check",
+      "observed_source": {
+        "commit": "8999fc5b2373c92ee05aa7b8e748fbf80c391bff",
+        "source_digest": "c2a1b8706486bd0eabc8e5de5978fcc3ffa67743a33f7624bdaa27903b9a63b0",
+        "source_revision": "source.3db80689a233a5cde9d5e85101af1bff0651f4d31cb3ebac7cf6fdb50ae46d3f"
+      },
+      "selected_tests": 1,
+      "finished_tests": 1,
+      "global_errors": 0,
+      "case_status": "failed",
+      "case_retry": 0,
+      "case_errors": 1,
+      "journey_attachment_present": true,
+      "root_exit_code": 1,
+      "ui_qualification_passed": false,
+      "phases": [
+        "settings-opened"
+      ],
+      "next_phase": "fresh-values-confirmed",
+      "required_phase_count": 9,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "diagnosis": "The test stopped while checking the initial values. The owned initial-state snapshot shows no saved model ID, runtime-default device and dtype, and disabled model Save. The journey instead expected a built-in model and explicit auto values. A separate regression against the unchanged real field reproduced that expectation mismatch. The original fixed report did not capture the exact failing assertion. This does not establish an app or memory defect.",
+      "cleanup": {
+        "confirmed": true,
+        "all_owned_handles_closed": true,
+        "active_owned_processes": 0,
+        "total_owned_processes": 31,
+        "outer_job_forced_termination": false,
+        "server_shutdown_acknowledged": true,
+        "test_credential_removed": true,
+        "source_unchanged": true,
+        "streams_complete": true,
+        "pending_and_live_registries_clear": true
+      },
+      "limits": {
+        "process_bytes": 1073741824,
+        "job_bytes": 3221225472,
+        "members": 32,
+        "seconds": 420
+      },
+      "observed_peaks": {
+        "process_commit_bytes": 551571456,
+        "job_commit_bytes": 2274553856
+      },
+      "evidence_digests": {
+        "native_observation": "576de479218f14f89b8fc905ca71141f6fec6c259f3ea6408cf089d91b58291d",
+        "observed_result": "6f3b5f34c4a7a1e3559dd7bf0ce2f2c97a94dbbad6513a73ed93951815e4c1a1",
+        "effect_reference": "1e60407016c925390f9a0b0d0887a39652954e9cfefed6f1af34fcfc6746b3f4",
+        "independent_outcome_reference": "c8a37f12c8deaaea29e651230417bdb4a9c34cf415d1b26cf8b12adb379e2ef7",
+        "independent_outcome_report": "f52c2c06d38d6d37fea3404e620d11dc12a7b18133b3d4ec0d5b65c005345d26",
+        "owned_initial_state_context": "363602d4850b13472f75ba9c5554e0cd4f727917c53f59daa653cf810bd59532",
+        "separate_real_component_red": "4584e432c0b3bb6f12f8e1497075586b1c21430a2c93551c51b62fdf637fc9be",
+        "separate_real_component_green": "c4bb9d579e14a3f1d28d01a83a9578731602e9bbb4a056526b419e2f34b85708",
+        "settings-setup-started": "b4a4ffb36a8f097ce0cd7c350d2921b979d260c7e474da37623cfc816959bf8d",
+        "settings-setup-ready": "c8278c70ca343b67711f0eeec1ec7ddb50f895baa8245a750420b3e3f3fae0b5",
+        "settings-setup-closed": "5e66f8f9a456072242f14b49d5234e73591433be37990b6d0c505841c83c2135",
+        "settings-runner-result": "8230f941678ad779d61932812d8ca1517c9a1b531eb21f689724590d6276aeda"
+      }
     }
   ],
-  "next_action": "The agent will continue the remaining operational feature work. Desktop and other Settings cases remain pending. Full-system testing stays deferred until open feature work is ready. No user action is needed.",
+  "next_action": "The agent will review and commit the corrected Settings test, then run one fresh token and model-default case. The earlier public Settings pass stays closed. Desktop and wider technical checks remain pending. No user action is needed.",
   "scope_limits": [
-    "The latest thin-client public Settings case passed. Earlier failures remain recorded. Desktop, other Settings and parent checks remain pending.",
+    "The public browser case passed. The later token and model-default case failed and remains failed. A source test correction supplies no actual host or parent pass.",
     "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
     "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
     "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
@@ -230,8 +294,8 @@
   ],
   "parent_qualification_granted": false,
   "latest_observed_source": {
-    "commit": "bb895bef9cd95c2662cbe185c03ea69bda6d938d",
-    "source_digest": "46aaca6f496d69f3453ae4ae75fd1c4d3e810c1dbbd5fe1059bcdb422e234988",
+    "commit": "8999fc5b2373c92ee05aa7b8e748fbf80c391bff",
+    "source_digest": "c2a1b8706486bd0eabc8e5de5978fcc3ffa67743a33f7624bdaa27903b9a63b0",
     "source_revision": "source.3db80689a233a5cde9d5e85101af1bff0651f4d31cb3ebac7cf6fdb50ae46d3f"
   },
   "scope_history": [
@@ -239,6 +303,16 @@
       "last_run_id": "a229f66ec0f14189ba34e91d4e4bb93e",
       "scope_limits": [
         "This report records evidence collection. The failing attempt grants no Settings case, increment or roadmap pass.",
+        "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
+        "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
+        "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
+        "The shared full-system campaign remains pending until open feature work is ready."
+      ]
+    },
+    {
+      "last_run_id": "aa18655ad47c4a6589f40b82d718a251",
+      "scope_limits": [
+        "The latest thin-client public Settings case passed. Earlier failures remain recorded. Desktop, other Settings and parent checks remain pending.",
         "The isolated test uses synthetic data and the limited test identity. It does not use saved user credentials or contact a provider.",
         "No model was loaded. Accepted accuracy and text-recognition checks stay closed.",
         "Server shutdown and the original outer Windows Job were checked. This does not qualify retained files, production worker recovery or low-memory restart.",
