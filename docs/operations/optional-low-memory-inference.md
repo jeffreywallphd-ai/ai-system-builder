@@ -1744,3 +1744,28 @@ safe-restart pass. Actual source protection, supplier/cache lifetimes, protected
 shared accounting, model-worker shutdown, restart and resource checks stay
 pending. Accepted model-quality and OCR results stay closed. Full-system testing
 remains deferred until the approved open implementation work is ready.
+
+## Qualified same-file sharing refusal
+
+The separate `sharing-open-denial` test passed on Windows at source `93cd06c22`.
+Its four read-only probe calls identified the same 81-byte synthetic weight file
+as the parent's writable mapping. The original Source share1 open then returned
+the expected sharing refusal. The owned child exited, its Job became empty, and
+the parent retired its mapping and timer. The outer three-process Job was empty;
+all owned handles and captures completed. The original collector removed its
+four fresh files, which totaled 313 bytes. Independent review accepted this
+narrow result. See [the versioned evidence](windows-offload-source-mapping-qualification.json).
+
+The complete controlled run took 28.406 seconds, including evidence checks.
+Observed peak commit was 88,641,536 bytes for a process and 126,627,840 bytes for
+the Job. Commit is not a process RSS measurement or an upfront RAM requirement.
+The existing process, Job, time and call limits were unchanged. No model or
+accuracy/OCR check ran, and no old input or staging file was accessed.
+
+Windows documents that an open can fail when its sharing rules conflict with an
+existing writable mapping. See [the file-sharing contract](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfile2).
+This result qualifies only the new exact-file case. All earlier strict801 and
+target-unknown failures keep their original outcomes. The full Source failure
+matrix, cached-model lifetime, protected shared accounting, model-worker restart,
+actual offload resources and production composition remain pending. No user
+action is needed for that remaining agent work.

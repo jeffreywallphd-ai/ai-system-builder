@@ -10296,6 +10296,48 @@
         "Shared disk accounting, model-worker shutdown, restart and resource checks remain pending. Unknown historical staging stays untouched and fully charged against the 12 GiB limit.",
         "Accepted model accuracy and OCR results stay closed. Full-system testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "qualify-exact-source-sharing-open-denial",
+      "work_criteria": [
+        "exact-original-probe-and-source-frontier",
+        "distinct-witness-and-owned-retirement",
+        "closed-fixed-issuer-and-unchanged-resource-policy",
+        "truthful-source-support-and-owned-checkpoint"
+      ],
+      "receipt_digest": "eaa6a912e153cd2c6bae07b9af6728f8e15f6e2099c5fbe95ed0b74b81bb7a17",
+      "review_digest": "89d949c6a7024050de5042e35f2c3bb498dff0fc3142e3c3fe435ce5c2450c28",
+      "scope": "The separate file-sharing test is implemented and its source checks passed. It verifies the original file identity and keeps the model-file guard unchanged. The versioned file-protection evidence records its separate Windows result.",
+      "limitations": [
+        "This links the reviewed source implementation at its saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Windows outcome qualifies only the new exact-file sharing refusal. It does not pass the older oplock test or the full failure matrix.",
+        "Cached-model ownership, protected disk accounting, worker restart and model-resource checks remain pending. Unknown staging remains fully charged against 12 GiB.",
+        "Accepted model accuracy and OCR checks stay closed. Full-system testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "qualify-exact-source-sharing-open-denial",
+      "work_criteria": [
+        "exact-original-probe-and-source-frontier",
+        "distinct-witness-and-owned-retirement",
+        "closed-fixed-issuer-and-unchanged-resource-policy",
+        "truthful-source-support-and-owned-checkpoint"
+      ],
+      "receipt_digest": "eaa6a912e153cd2c6bae07b9af6728f8e15f6e2099c5fbe95ed0b74b81bb7a17",
+      "review_digest": "89d949c6a7024050de5042e35f2c3bb498dff0fc3142e3c3fe435ce5c2450c28",
+      "scope": "The separate file-sharing test is implemented and its source checks passed. It verifies the original file identity and keeps the model-file guard unchanged. The versioned file-protection evidence records its separate Windows result.",
+      "limitations": [
+        "This links the reviewed source implementation at its saved version. It does not complete the parent criterion or qualify later source.",
+        "The separate Windows outcome qualifies only the new exact-file sharing refusal. It does not pass the older oplock test or the full failure matrix.",
+        "Cached-model ownership, protected disk accounting, worker restart and model-resource checks remain pending. Unknown staging remains fully charged against 12 GiB.",
+        "Accepted model accuracy and OCR checks stay closed. Full-system testing remains deferred."
+      ]
     }
   ]
 }
