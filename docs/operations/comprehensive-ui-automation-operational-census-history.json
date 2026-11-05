@@ -1,0 +1,800 @@
+{
+ "schema_version": "historical-ui-census-update-v1",
+ "scope": "historical-source-update-only-no-execution",
+ "roadmap_id": "comprehensive-ui-automation",
+ "prior_commit": "fe931f86597360886ca001807f3141fc06955996",
+ "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+ "prior_census_git_sha256": "2731371b6ed3018109c0e9ce7f7ba10c24ced73162a8970f6abb9ad99b5d8f2c",
+ "prior_census_working_sha256": "2731371b6ed3018109c0e9ce7f7ba10c24ced73162a8970f6abb9ad99b5d8f2c",
+ "prior_source_baseline": "50598508c3c53cc22ef249736448d24c9cf8ba26",
+ "source_baseline": "fe931f86597360886ca001807f3141fc06955996",
+ "old_archive": {
+  "path": "docs/operations/comprehensive-ui-automation-census-source-history.json",
+  "sha256": "658a1ec6e35cb74385177abf1a751c306b34b6414456d178b7d7189cad74bf23",
+  "bytes": 13560
+ },
+ "reason": "Refresh ten stale LF-normalized definition facts and real committed pins after reviewed operational source repairs. Preserve all scenario,behavior,pending and execution fields. This update runs no inspected source and grants no actual host,model,security or parent qualification.",
+ "preserved_fields_sha256": "3ac9f066e27f2aa74565cbd2d0a3e0e79ca57220dddfd23f987003f8d7b7e112",
+ "qualification_effect": {
+  "executed_tests": 0,
+  "actual_host_pass": false,
+  "parent_qualification_granted": false,
+  "full_testing_status": "deferred-by-user"
+ },
+ "sources": [
+  {
+   "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+   "prior_row_sha256": "30a0257a4c1b8072a753c401c770b800e0197f76219d7f90ede66e9080f7c349",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "facts": {
+     "sha256": "cdcd20d5eafc25d23d67302783e69a60796764055621da154f958120c6a0eba1",
+     "bytes": 31736,
+     "cases": [
+      {
+       "name": "copies supported %s context and requires both exact ordered widths",
+       "line": 34
+      },
+      {
+       "name": "rejects unsupported or private context %#",
+       "line": 44
+      },
+      {
+       "name": "admits %s only for the desktop host",
+       "line": 51
+      },
+      {
+       "name": "accepts the supported desktop %s observation",
+       "line": 55
+      },
+      {
+       "name": "never qualifies missing, reordered, sparse or failed audits %#",
+       "line": 58
+      },
+      {
+       "name": "refuses executable context and array hooks without invoking them",
+       "line": 62
+      },
+      {
+       "name": "refuses an over-cap array before enumerating its descriptors",
+       "line": 68
+      },
+      {
+       "name": "rejects invalid or excessive reduced motion facts %#",
+       "line": 80
+      },
+      {
+       "name": "copies finite facts and retains a legitimate inaccessible-control failure",
+       "line": 87
+      },
+      {
+       "name": "refuses malformed or private control facts %#",
+       "line": 93
+      },
+      {
+       "name": "refuses executable observation hooks without invoking them",
+       "line": 97
+      },
+      {
+       "name": "audits both declared widths and finalizes only bounded context/rule/count facts",
+       "line": 148
+      },
+      {
+       "name": "audits the actual standalone mount without requiring the builder shell",
+       "line": 157
+      },
+      {
+       "name": "refuses %s instead of auditing a different page",
+       "line": 165
+      },
+      {
+       "name": "rejects a thin runtime before any file or Page effect",
+       "line": 174
+      },
+      {
+       "name": "rechecks runtime identity if the document changes after initial admission",
+       "line": 179
+      },
+      {
+       "name": "refuses a visible %s control even without document overflow",
+       "line": 189
+      },
+      {
+       "name": "scrolls visible controls before measurement and excludes hidden or inert controls",
+       "line": 198
+      },
+      {
+       "name": "retains a failed forced-colors %s check after both baseline widths passed",
+       "line": 214
+      },
+      {
+       "name": "refuses a mounted document without any observable controls",
+       "line": 221
+      },
+      {
+       "name": "refuses an excessive control collection before inspecting its entries",
+       "line": 226
+      },
+      {
+       "name": "denies an existing report without overwriting, inspecting or adopting its bytes",
+       "line": 234
+      },
+      {
+       "name": "rejects unknown context before any file or Page effect",
+       "line": 239
+      },
+      {
+       "name": "preserves failed %s evidence and fixed diagnostics",
+       "line": 243
+      },
+      {
+       "name": "audits native %s at its actual width without any viewport resize",
+       "line": 269
+      },
+      {
+       "name": "supports only the standalone runtime mount for native runtime observations",
+       "line": 277
+      },
+      {
+       "name": "denies invalid native %s before evidence writes or audits",
+       "line": 282
+      },
+      {
+       "name": "keeps the standard device-scale guard unchanged",
+       "line": 296
+      },
+      {
+       "name": "retains failed native %s results and restores media without resizing",
+       "line": 300
+      },
+      {
+       "name": "rejects unsupported native hosts and unknown modes before touching Page or files",
+       "line": 311
+      },
+      {
+       "name": "redacts an initial native Page failure %# before effects",
+       "line": 320
+      },
+      {
+       "name": "rejects missing or invalid mode before Page access %#",
+       "line": 336
+      },
+      {
+       "name": "refuses unsupported or mismatched transport/project before file or Page work %#",
+       "line": 344
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "installNativeFrame",
+       "line": 257
+      }
+     ],
+     "assertionCount": 128,
+     "assertionDigest": "ed024bd3b77dcd33b2d7f2743c8fa3194c6b26ee2b3b693346d638f9f1c547d9",
+     "assertionExamples": [
+      {
+       "line": 41,
+       "kind": "expect",
+       "sha256": "b7b57fb738709440a46ff95659037ea810e00f02b994331a0861e23878ded401"
+      },
+      {
+       "line": 41,
+       "kind": "expect",
+       "sha256": "6285d0647509d10eec48d3e5afc47224e607eab8aefd353a3539dbb773da63aa"
+      },
+      {
+       "line": 42,
+       "kind": "expect",
+       "sha256": "652b766de7c73fbdbce2de81120d6c2c48783847b4c18858d3d72d7609d28916"
+      },
+      {
+       "line": 42,
+       "kind": "expect",
+       "sha256": "82558120afaa1a4d438c5b82ffc967a66ddf1e1c920819ef6deedda0ca8a7d53"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "cdcd20d5eafc25d23d67302783e69a60796764055621da154f958120c6a0eba1"
+   },
+   "current_row_sha256": "627a88b38fbc64a43742c5334dc02548da543ba3810e352a9db8be9b41baf113"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+   "prior_row_sha256": "1cc93fc4577b4c97b0a510d4bb53da9805e734a6af32443f549db9f785fe416a",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+    "facts": {
+     "sha256": "beb31a6b8be1fd9f6a82a9fe59a071065b923afe0626146bc977b90350cd1b65",
+     "bytes": 5229,
+     "cases": [
+      {
+       "name": "rejects unknown mode %# before metadata, Page or file effects",
+       "line": 31
+      },
+      {
+       "name": "rejects unsupported native host/project %# before Page or files",
+       "line": 39
+      },
+      {
+       "name": "preserves both standard names and gives each native cohort a separate exclusive-create destination",
+       "line": 53
+      },
+      {
+       "name": "rejects unsupported or path-like result host %#",
+       "line": 59
+      },
+      {
+       "name": "rejects unsupported result mode %#",
+       "line": 62
+      },
+      {
+       "name": "does not coerce a result host object",
+       "line": 65
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "caught",
+       "line": 28
+      }
+     ],
+     "assertionCount": 20,
+     "assertionDigest": "3155112a7e91f6f07329b97394fbc4983109e058bbb83331cc565a932dacba4d",
+     "assertionExamples": [
+      {
+       "line": 36,
+       "kind": "expect",
+       "sha256": "bc2482c2fce392e8f61a7b1644f77e219819084471a8e76c86b72da2375544df"
+      },
+      {
+       "line": 36,
+       "kind": "expect",
+       "sha256": "6e1ee29483088dbc41931d6742fda66a6bfad50ce90f262cc6a3c2d2b0a86196"
+      },
+      {
+       "line": 37,
+       "kind": "expect",
+       "sha256": "1691ebb634cbf351cda5d79b5acb5f250235a5f49efbfa35d66ba1ccd8db0b46"
+      },
+      {
+       "line": 37,
+       "kind": "expect",
+       "sha256": "48e3b61d78644d16150e5ea9becda62a5dbc9709a8d319b18594e8a8b7ada2ac"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "beb31a6b8be1fd9f6a82a9fe59a071065b923afe0626146bc977b90350cd1b65"
+   },
+   "current_row_sha256": "81c75694504c1aaea4a859009b3d598da88d3a05f3d7e946dcbb25ded468a5a1"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+   "prior_row_sha256": "ebaa92c52ec9ad9a2eb0883577ca79f2f7a18e3ffb4bdfe7a495f0aea12d22ac",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+    "facts": {
+     "sha256": "4613d0e15ddcafb5b55cc5a0e288337735ae094939cb8c33b76c1be95643b86b",
+     "bytes": 4889,
+     "cases": [
+      {
+       "name": "packaged desktop saves dataset versions, source RAG and Context packs across complete app restart",
+       "line": 61
+      },
+      {
+       "name": "packaged desktop completes Data and Context review forms at native 400 percent zoom",
+       "line": 66
+      }
+     ],
+     "dynamicCases": 1,
+     "functions": [
+      {
+       "name": "runDesktopData",
+       "line": 19
+      }
+     ],
+     "assertionCount": 3,
+     "assertionDigest": "376c5600cb38454187d81811155a82c2aecd9560d80b83b2e927e0c2fccec0a6",
+     "assertionExamples": [
+      {
+       "line": 32,
+       "kind": "expect",
+       "sha256": "706f596313c86b07d1a7e12fb1f2e74d877e6f0be455e90aeec365a50993f49d"
+      },
+      {
+       "line": 39,
+       "kind": "expect",
+       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      },
+      {
+       "line": 43,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      }
+     ],
+     "modifiers": [
+      {
+       "line": 16,
+       "kind": "skip"
+      }
+     ]
+    },
+    "committed_sha256": "4613d0e15ddcafb5b55cc5a0e288337735ae094939cb8c33b76c1be95643b86b"
+   },
+   "current_row_sha256": "639430abbe0f7e33699e48cb5203bcaca30e1e23842264a2252b89897c4d8d49"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
+   "prior_row_sha256": "4dc15cf043c511955177bdafcdd3d61c77ebf12cdb10af40bf94499c748931ec",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
+    "facts": {
+     "sha256": "3638e359ca267659e1e1b31ae140ac07855c18ccc215d0e89606991ba34073f4",
+     "bytes": 2831,
+     "cases": [
+      {
+       "name": "packaged desktop imports distinct multi-chunk files through Add data and retains their source records",
+       "line": 37
+      },
+      {
+       "name": "packaged desktop imports files and reviews records at native 400 percent zoom",
+       "line": 42
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "runDesktopImport",
+       "line": 15
+      }
+     ],
+     "assertionCount": 2,
+     "assertionDigest": "f630e023013cecdb2cb0f89db74f062d09610e4ab0a6cabd82fa476a8ff7c741",
+     "assertionExamples": [
+      {
+       "line": 23,
+       "kind": "expect",
+       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      },
+      {
+       "line": 28,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "3638e359ca267659e1e1b31ae140ac07855c18ccc215d0e89606991ba34073f4"
+   },
+   "current_row_sha256": "e242b5e4fb5b8dbb6491a3496e5b03d904abee9348e4101e3ced4faf56c38de9"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
+   "prior_row_sha256": "c6e59317aae3fb2998fb0791afdc7d68eee566002526bb6b1183ec9138f11cf5",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
+    "facts": {
+     "sha256": "8948d7268c07daf06f1d0dbacca362f26cecfeaf6532d8ab4359ea2b9143c984",
+     "bytes": 2063,
+     "cases": [
+      {
+       "name": "packaged desktop retains optional profile through resource denial, cancellation observation and approved dataset persistence",
+       "line": 7
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [],
+     "assertionCount": 3,
+     "assertionDigest": "16925bce41f8320e54ee6917695ca6f03efa9628511abf5937a96c93c38f9e8a",
+     "assertionExamples": [
+      {
+       "line": 13,
+       "kind": "expect",
+       "sha256": "b0059fa41b9042db26b646e23d10cec2794b2ac32849f3823964c6442603d4d8"
+      },
+      {
+       "line": 17,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      },
+      {
+       "line": 22,
+       "kind": "expect",
+       "sha256": "e884c2ad2c6967d303fd6efd58efe5bece7f39b84a23e7eeaf9976d9d022dfc7"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "8948d7268c07daf06f1d0dbacca362f26cecfeaf6532d8ab4359ea2b9143c984"
+   },
+   "current_row_sha256": "126ac15acdcc2f180a6f23ec26339f4da06cdb9b31695ac0668cab623e558ab6"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
+   "prior_row_sha256": "cb290e56a9f919dd086ed4cca099000cc1eec89d31a30664b997ee5556c05335",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ocr.e2e.spec.ts",
+    "facts": {
+     "sha256": "646d9eecf59a8da820e93fcc730d921c67c09813b927c645f3cd7663e3a3f01a",
+     "bytes": 2906,
+     "cases": [
+      {
+       "name": "packaged desktop imports scanned pages, denies an absent language and saves reviewed real OCR output",
+       "line": 37
+      },
+      {
+       "name": "packaged desktop reviews scanned data at native 400 percent zoom",
+       "line": 38
+      }
+     ],
+     "dynamicCases": 1,
+     "functions": [
+      {
+       "name": "runDesktopOcr",
+       "line": 14
+      }
+     ],
+     "assertionCount": 3,
+     "assertionDigest": "d92f1c5bcdf4835b67c75042eaed80a24166bf65e58c61bbae830b2be6fbda16",
+     "assertionExamples": [
+      {
+       "line": 22,
+       "kind": "expect",
+       "sha256": "089a123578f2c933a542095ee3cfbb446a86f1d0c547e09574a5e8f8b968a567"
+      },
+      {
+       "line": 27,
+       "kind": "expect",
+       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      },
+      {
+       "line": 31,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      }
+     ],
+     "modifiers": [
+      {
+       "line": 13,
+       "kind": "skip"
+      }
+     ]
+    },
+    "committed_sha256": "646d9eecf59a8da820e93fcc730d921c67c09813b927c645f3cd7663e3a3f01a"
+   },
+   "current_row_sha256": "5dd7a8063396eae10b391cbf1dbd72a6f318fed781c86894397a4d39f3b08b58"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+   "prior_row_sha256": "39203c658a2ba75af5b4049ad93ce5ea6d9eb0fed3a4a0f447ff5c9045453df1",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "facts": {
+     "sha256": "a1b0dc3df57b063c9e40d58709ebf252db5b55bc7c578e455ec1ea92eeeac21f",
+     "bytes": 15170,
+     "cases": [
+      {
+       "name": "packaged desktop preserves operational runtime controls and shell recovery",
+       "line": 41
+      },
+      {
+       "name": "packaged desktop preserves operational controls at native 400 percent zoom",
+       "line": 46
+      },
+      {
+       "name": "packaged desktop trains one local adapter, reviews privately, saves and reopens it",
+       "line": 51
+      },
+      {
+       "name": "packaged desktop model reference searches, saves and survives reload and workspace changes",
+       "line": 121
+      },
+      {
+       "name": "packaged desktop artifact local lifecycle preserves actual bytes and scope",
+       "line": 134
+      },
+      {
+       "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
+       "line": 161
+      },
+      {
+       "name": "packaged desktop private artifact publication records local branch and remote commit",
+       "line": 166
+      }
+     ],
+     "dynamicCases": 9,
+     "functions": [
+      {
+       "name": "runOperationalDesktop",
+       "line": 21
+      },
+      {
+       "name": "runProviderDesktopCase",
+       "line": 150
+      }
+     ],
+     "assertionCount": 4,
+     "assertionDigest": "1d2471eaf52f35ca9c92295f1d417a2f7ed8fee5d87cf147cdc36a426de16e81",
+     "assertionExamples": [
+      {
+       "line": 28,
+       "kind": "expect",
+       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      },
+      {
+       "line": 32,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      },
+      {
+       "line": 163,
+       "kind": "expect",
+       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
+      },
+      {
+       "line": 168,
+       "kind": "expect",
+       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
+      }
+     ],
+     "modifiers": [
+      {
+       "line": 53,
+       "kind": "skip"
+      },
+      {
+       "line": 80,
+       "kind": "skip"
+      },
+      {
+       "line": 105,
+       "kind": "skip"
+      },
+      {
+       "line": 123,
+       "kind": "skip"
+      },
+      {
+       "line": 136,
+       "kind": "skip"
+      },
+      {
+       "line": 162,
+       "kind": "skip"
+      },
+      {
+       "line": 167,
+       "kind": "skip"
+      }
+     ]
+    },
+    "committed_sha256": "a1b0dc3df57b063c9e40d58709ebf252db5b55bc7c578e455ec1ea92eeeac21f"
+   },
+   "current_row_sha256": "9ab2d6a22c50fb4e51b6423836cd07bbb822970993444e4a582acb40c3aa5e21"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+   "prior_row_sha256": "c7424547bea95d41fa80230876a6a339162da6a191c639a5a28c3d64fb084092",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+    "facts": {
+     "sha256": "94cce1f6212cd2a2561d9854b0968d9ae113b3646ec13f4f1d2b301f93c39ecd",
+     "bytes": 3278,
+     "cases": [
+      {
+       "name": "packaged desktop edits bounded output shapes and restores explicit choices from saved settings",
+       "line": 47
+      },
+      {
+       "name": "packaged desktop edits and reloads output shapes at native 400 percent zoom",
+       "line": 52
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "runDesktopOutputControls",
+       "line": 13
+      }
+     ],
+     "assertionCount": 4,
+     "assertionDigest": "f8b44544f2e06bcf5f278be43dd6e43d8966149bdb10fbb9a7bc88de298bee9f",
+     "assertionExamples": [
+      {
+       "line": 25,
+       "kind": "expect",
+       "sha256": "b0059fa41b9042db26b646e23d10cec2794b2ac32849f3823964c6442603d4d8"
+      },
+      {
+       "line": 29,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      },
+      {
+       "line": 35,
+       "kind": "expect",
+       "sha256": "e32f0f27f2790dfabe5e43016842f349cd0b19443abb2455ad3624638d89a35a"
+      },
+      {
+       "line": 38,
+       "kind": "expect",
+       "sha256": "065be533a11e6a3068509e499a2b47851a368dcdb9feb50cec0db1a7c74468cb"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "94cce1f6212cd2a2561d9854b0968d9ae113b3646ec13f4f1d2b301f93c39ecd"
+   },
+   "current_row_sha256": "4fa15ac25a1527be767725e1ecf388ea9f1e20945a6bed189c5be5e82fe3c7a7"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+   "prior_row_sha256": "a1b21eb817535ec8717bc826ab01c790be01b630f1c898f85bc56f42a8a7fa5e",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
+    "facts": {
+     "sha256": "ac6b6cc4090999bbfb4fff630968436e4ec2cfb4bab0dd540e30a69f7eaf3d61",
+     "bytes": 19539,
+     "cases": [
+      {
+       "name": "packaged desktop completes the guided build and publication lifecycle",
+       "line": 316
+      },
+      {
+       "name": "packaged desktop completes build, publication and runtime windows at native 400 percent zoom",
+       "line": 317
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "runDesktopLifecycle",
+       "line": 33
+      },
+      {
+       "name": "observeStop",
+       "line": 124
+      },
+      {
+       "name": "seedDesktopQualificationModel",
+       "line": 319
+      },
+      {
+       "name": "verifyIsolatedRuntimeData",
+       "line": 412
+      },
+      {
+       "name": "requiredEnvironment",
+       "line": 450
+      }
+     ],
+     "assertionCount": 34,
+     "assertionDigest": "43902d58804fc037a91f3741af74bb8fa577e19523ac136ac1815be259717b43",
+     "assertionExamples": [
+      {
+       "line": 95,
+       "kind": "expect",
+       "sha256": "ea3d7bc94deccadd8b778b78791205420682cc08d881e0c64e2d91a9b3e7ac10"
+      },
+      {
+       "line": 99,
+       "kind": "expect",
+       "sha256": "3050b37f233facbcf0da50a38c73f7c7b0ad535aca734781e33c1ad2f323a29c"
+      },
+      {
+       "line": 106,
+       "kind": "expect",
+       "sha256": "6dcc529334337ae06fac3740b65512da9a6d6c7b2fa878c0fdf64f6a63ac3781"
+      },
+      {
+       "line": 116,
+       "kind": "expect",
+       "sha256": "694554a85bca21ad5e2966a146846b6dd53fc154f751babd090eaef55ef497a6"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "ac6b6cc4090999bbfb4fff630968436e4ec2cfb4bab0dd540e30a69f7eaf3d61"
+   },
+   "current_row_sha256": "cea20043a02e34afa829dfed6148f0b091f6ec0d4718db50948521e45de171e9"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+   "prior_row_sha256": "16960bf140e009f40121403885563d9e724b7ae3a09cba47e1f7724a6a9f1282",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+    "facts": {
+     "sha256": "1c82c2453a2ea38b51d29671fb5dc03810fdaf08e07175d9eee11a96d700c8c4",
+     "bytes": 17868,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "collectNative400Frame",
+       "line": 10
+      },
+      {
+       "name": "collectAccessibilityAudit",
+       "line": 46
+      },
+      {
+       "name": "groups",
+       "line": 60
+      },
+      {
+       "name": "collectStandardAudit",
+       "line": 104
+      },
+      {
+       "name": "collectSystemBuilderAccessibilityAudit",
+       "line": 108
+      },
+      {
+       "name": "collectDocumentAccessibilityAudit",
+       "line": 109
+      },
+      {
+       "name": "collectRuntimeAccessibilityAudit",
+       "line": 110
+      },
+      {
+       "name": "collectNativeDocumentAccessibilityAudit",
+       "line": 111
+      },
+      {
+       "name": "collectNativeRuntimeAccessibilityAudit",
+       "line": 112
+      },
+      {
+       "name": "loadTechnicalAccessibilityReference",
+       "line": 115
+      },
+      {
+       "name": "finalizeTechnicalAccessibilityEvidence",
+       "line": 131
+      },
+      {
+       "name": "qualifyTechnicalAccessibility",
+       "line": 147
+      },
+      {
+       "name": "save",
+       "line": 167
+      }
+     ],
+     "assertionCount": 18,
+     "assertionDigest": "4f14077cf3eaa1d78a5cb9f346013c5791a6ac4b486c5f1abb5ad0599e467a09",
+     "assertionExamples": [
+      {
+       "line": 121,
+       "kind": "expect",
+       "sha256": "6452cef7dcfbdf8d4e7209eeba712f326e610568ab670147bca737f4d057207d"
+      },
+      {
+       "line": 121,
+       "kind": "expect",
+       "sha256": "cffe78dc9431c5ddcd7c456f95a6471ca94c6f731aedca9fbcd3aadad0cf0eed"
+      },
+      {
+       "line": 123,
+       "kind": "expect",
+       "sha256": "fa15139d2f47e28f2b857519090635c6e6061291c6b049e4ac8737a6dd245d49"
+      },
+      {
+       "line": 124,
+       "kind": "expect",
+       "sha256": "e40427724aa405be98139f78c28869f949cfa2c3dcac85cc999034a99d7a48dd"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "1c82c2453a2ea38b51d29671fb5dc03810fdaf08e07175d9eee11a96d700c8c4"
+   },
+   "current_row_sha256": "25fb7246fdac1bed149b6995ebe8682db1fcd9276dfadd779e05578c5515b84d"
+  }
+ ]
+}

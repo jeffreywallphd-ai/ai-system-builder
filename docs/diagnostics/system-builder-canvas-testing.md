@@ -444,3 +444,29 @@ preserves every executable test and previously covered path. The union adds
 only that launcher. Unknown or incomplete impact retains the generic guard.
 The related Data/OCR contract checks remain required; no real OCR, model quality
 or whole-system campaign is repeated by this source component.
+
+
+## Current definition census and preserved source history
+
+The definition census now follows the reviewed operational source checkpoint.
+Ten stale source entries are refreshed. The other 170 entries, all 39 scenarios,
+131 behavior links, 29 host files, 16 inventories and pending feature checks
+stay intact. Source facts use LF-normalized text. Each committed pin has a real
+Git witness at the recorded source baseline.
+
+The [operational census history](../operations/comprehensive-ui-automation-operational-census-history.json)
+preserves the exact previous rows and their digests. It also binds the prior
+census Git version and the unchanged eight-row historical archive. Keep the
+one-space JSON format: the current map is 499849 bytes and fits the existing
+512 KiB limit. The reader and total input limits are unchanged.
+
+The existing reporting test validates the current map, authenticates every Git
+pin and checks history and no-execution results. Forged facts, Git pins, test
+statuses and history are refused. This guard stays outside the map's source
+inventory to avoid a circular source pin. Run the existing census unit file as
+a focused feature check and the related Operational profile for the guard.
+
+A valid definition map runs no inspected software tests. The 39 host journeys,
+conditional test modifiers and pending feature check remain explicit gaps.
+Actual host, native, provider, resource, model and combined qualification stay
+separate. Accepted model accuracy and OCR are not repeated for this update.
