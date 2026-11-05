@@ -1178,6 +1178,39 @@ class _SourceMappedDenial:
         # Freeze this table independently of its inspectable field.
         self.function_origin = self.functions
 
+    @staticmethod
+    def _exact_output_pointer(argument, buffer):
+        _need(type(argument) is type(C.byref(C.c_ubyte()))
+              and getattr(argument, '_obj', None) is buffer
+              and C.cast(argument,C.c_void_p).value == C.addressof(buffer))
+
+    def _typed_output(self, function, args, keep, output, variant):
+        # Fixed output layouts only, captured before the Native function runs.
+        if variant == 'system-library':return None
+        if function is self.dll.NtCreateFile:
+            _need(len(args) == 11 and output is not None
+                  and getattr(args[0], '_obj', None) is output.original[2])
+            value = getattr(args[3], '_obj', None)
+            _need(type(value) is core._Io and any(item is value for item in keep))
+            self._exact_output_pointer(args[0],output.original[2])
+            self._exact_output_pointer(args[3],value)
+        elif function is self.api.k.GetFileInformationByHandleEx:
+            _need(len(args) == 4 and type(args[1]) is int and args[1] in (1,9,18))
+            value = getattr(args[2], '_obj', None)
+            expected = {1:core._Standard,9:C.c_uint32 * 2,18:C.c_ubyte * 24}[args[1]]
+            _need(type(value) is expected and args[3] == C.sizeof(value)
+                  and any(item is value for item in keep))
+            self._exact_output_pointer(args[2],value)
+        elif function is self.api.k.VirtualQuery:
+            _need(len(args) == 3)
+            value = getattr(args[1], '_obj', None)
+            _need(type(value) is _MappedRegion and args[2] == C.sizeof(value)
+                  and any(item is value for item in keep))
+            self._exact_output_pointer(args[1],value)
+        else:return None
+        _need(0 < C.sizeof(value) <= 48)
+        return value
+
     def invoke(self, function, args, keep, *, output=None, terminal=False,
                variant='scalar', library=None):
         self.live()
@@ -1192,13 +1225,28 @@ class _SourceMappedDenial:
         _need(output is None or type(output) is _MapperResource
               and output.mapper is self and output.acquire is None
               and any(item is output for item in self.resources))
-        known_return = None
+        known_return = physical_return = typed_return = None
+        observed = self._typed_output(function,args,keep,output,variant)
+        def retain_physical(value):
+            nonlocal physical_return
+            _need(physical_return is None)
+            physical_return = value
+        def read_physical():return physical_return
+        def retain_typed():
+            nonlocal typed_return
+            _need(physical_return is not None and typed_return is None)
+            # Original allocated objects remain held even if copying is interrupted.
+            typed_return = () if observed is None else (
+                observed, C.string_at(C.addressof(observed),C.sizeof(observed)))
+        def read_typed():return typed_return
         def retain_known(value):
             nonlocal known_return
-            _need(known_return is None)
+            _need(known_return is None and physical_return is not None
+                  and value[0] is physical_return[0]
+                  and value[2:] == physical_return[1:])
             known_return = value
         def read_known():return known_return
-        custody = (retain_known, read_known)
+        custody = (retain_known, read_known, retain_physical, read_physical, read_typed)
         output_slot = None if output is None else output.original[2]
         is_indirect = output_slot is not None and function is self.dll.NtCreateFile
         call = {'function': function, 'args': args, 'keep': keep, 'output': output,
@@ -1215,19 +1263,21 @@ class _SourceMappedDenial:
                           'source-mapper-native', function, args, (self.parent, self, call, keep, custody),
                           terminal=terminal, variant=variant, library=library)
         call['row'] = row
+        call_thread = get_ident()
         try:
             if variant == 'system-library':
                 value = function(*args, use_last_error=True, winmode=0x800)
             else:value = function(*args)
-            error = C.get_last_error() & 0xffffffff
             indirect = output_slot.value if is_indirect else value
-            # Known return/output remains in independent originals before validation/ACK.
-            known = (value, error, get_ident(), indirect)
+            retain_physical((value,call_thread,indirect))
+            if output_slot is not None and not is_indirect:output_slot.value = value
+            retain_typed()
+            error = C.get_last_error() & 0xffffffff
+            # Final error publication cannot replace the earlier physical return.
+            known = (value, error, call_thread, indirect)
             retain_known(known)
             # The prebound closure is also held in the physical row and global
             # original registry. Observation-list drift cannot lose the return.
-            if output_slot is not None and not is_indirect:
-                output_slot.value = value
             arena.returned(row, value, error)
             _failure_native(self.parent, label, True, value, error)
             _need(self.original[5] and self.original[5][-1] is facts)
@@ -1259,6 +1309,15 @@ class _SourceMappedDenial:
         _need(type(retained) is tuple and len(retained) == 4
               and retained[0] is call and retained[1] is self
               and retained[2][1]() is known)
+        physical, typed = retained[2][3](), retained[2][4]()
+        _need(type(physical) is tuple and len(physical) == 3
+              and known[0] is physical[0] and known[2:] == physical[1:]
+              and type(typed) is tuple and len(typed) in (0,2))
+        if retained[3] is not None:_need(retained[3].value == physical[2])
+        if typed:
+            value, copied = typed
+            _need(type(copied) is bytes and len(copied) == C.sizeof(value)
+                  and C.string_at(C.addressof(value),C.sizeof(value)) == copied)
         _need(binding is self.api.rows.bindings[row.index]
               and binding[0] is (self.api.engine_final if terminal else self.api.engine_normal)
               and binding[1] == 'source-mapper-native' and binding[2] is function
@@ -1275,6 +1334,12 @@ class _SourceMappedDenial:
               and row.payload['acknowledged'] is True
               and row.payload['result'] is call['known'][0]
               and row.payload['os_error'] == call['known'][1])
+
+    def _observed(self, call):
+        self.acknowledged(call)
+        typed = _MAPPER_RETURNS[id(call)][2][4]()
+        _need(type(typed) is tuple and len(typed) == 2)
+        return type(typed[0]).from_buffer_copy(typed[1])
 
     def _new(self, kind):
         self.live()
@@ -1298,9 +1363,10 @@ class _SourceMappedDenial:
                     (C.byref(handle.slot), 0x100081 if directory else 0x100083,
                      C.byref(attrs), C.byref(status), None, 0x80, 1, 1,
                      0x200000 | (1 if directory else 0x40), None, 0), keep, output=handle)
+        status = self._observed(self.calls[-1])
         _need(status.status in (None, 0) and status.information == 1)
         tags = (C.c_uint32 * 2)()
-        self._information(handle, 9, tags)
+        tags = self._information(handle, 9, tags)
         _need(bool(tags[0] & 0x10) is directory
               and not tags[0] & (0x400 | 0x200 | 0x800 | 0x4000 | 0x1000) and tags[1] == 0)
         return handle
@@ -1309,10 +1375,11 @@ class _SourceMappedDenial:
         self.buffers.append(buffer)
         self.invoke(self.api.k.GetFileInformationByHandleEx,
                     (handle.number(), kind, C.byref(buffer), C.sizeof(buffer)), (handle, buffer))
+        return self._observed(self.calls[-1])
 
     def _identity(self, handle):
         buffer = (C.c_ubyte * 24)()
-        self._information(handle, 18, buffer)
+        buffer = self._information(handle, 18, buffer)
         raw = bytes(buffer)
         _need(any(raw[:8]) and any(raw[8:]))
         return raw
@@ -1338,7 +1405,7 @@ class _SourceMappedDenial:
         writer = self._open(ancestors[-1], 'model.safetensors', False)
         identity = self._identity(writer)
         standard = core._Standard()
-        self._information(writer, 1, standard)
+        standard = self._information(writer, 1, standard)
         _need(0 < standard.size <= 4096 and 0 <= standard.allocated <= 65536
               and standard.links == 1 and not standard.directory and not standard.delete_pending)
         self.size = standard.size
@@ -1353,6 +1420,7 @@ class _SourceMappedDenial:
         address = view.number()
         result = self.invoke(self.api.k.VirtualQuery,
                              (address, C.byref(region), C.sizeof(region)), (view, section, region))
+        region = self._observed(self.calls[-1])
         _need(C.sizeof(region) == 48 and result == 48
               and region.base == region.allocation_base == address
               and region.allocation_protect == region.protect == 4

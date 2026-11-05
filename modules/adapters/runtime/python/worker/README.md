@@ -1263,3 +1263,19 @@ stay unchanged. Source tests use simulated ABI replies; they do not resolve the
 earlier target-unknown sharing failure or qualify native protection, discovery,
 shared accounting, worker/restart lifetime or an offload model run. Production
 remains unavailable and unknown retained staging still charges all 12 GiB.
+
+## Original mapper output custody
+
+The closed Source mapper retains the actual scalar and output handle before
+reading the last-error code. It also snapshots only its fixed IO, file metadata
+and mapped-region layouts before that getter or later validation can change
+them. Unknown or interrupted publication keeps the original partial graph and
+denies retry or cleanup credit. Consumers use typed copies of captured bytes;
+changed original buffers or output slots cannot supply favorable evidence.
+
+Focused fake-ABI tests cover getter failure, rewritten file identity, IO status
+and mapped-region facts, later buffer mutation and invalid output layouts. This
+adds no Native call, new case, wire field, quota or production capability. The
+strict801 witness and all old failed observations stay unchanged. A separate
+sharing-denial same-file proof and actual Windows qualification remain pending.
+Accepted accuracy/OCR stay closed; unknown staging remains fully charged12GiB.

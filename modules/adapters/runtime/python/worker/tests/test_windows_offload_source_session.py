@@ -469,6 +469,134 @@ class SourceMapperTests(unittest.TestCase):
                     self.assertNotIn('UnmapViewOfFile',[n for n,_ in case.effects])
                 finally:case.doCleanups()
 
+    def test_getter_cannot_replace_zero_native_identity_with_favorable_bytes(self):
+        self.bad_identity = True
+        def getter():
+            name,args = self.effects[-1] if self.effects else ('',())
+            if name == 'GetFileInformationByHandleEx' and args[1] == 18:
+                data = args[2]._obj
+                for i,b in enumerate(b'volume01'+(123).to_bytes(16,'little')):data[i]=b
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):
+            with self.assertRaises(OffloadAdmissionError):self.mapper()
+        mapper = self.parent.mapper;call = mapper.calls[-1]
+        typed = source._MAPPER_RETURNS[id(call)][2][4]()
+        self.assertEqual(typed[1],b'\0'*24)
+        self.assertFalse(mapper.prepared);self.assertTrue(self.api.uncertain)
+        self.assertNotIn('CloseHandle',[n for n,_ in self.effects])
+
+    def test_getter_cannot_change_private_region_into_shared_write_evidence(self):
+        self.bad_region = ('kind',0x20000)
+        def getter():
+            name,args = self.effects[-1] if self.effects else ('',())
+            if name == 'VirtualQuery':args[1]._obj.kind = 0x40000
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):
+            with self.assertRaises(OffloadAdmissionError):self.mapper()
+        mapper=self.parent.mapper;call=mapper.calls[-1]
+        observed=source._MAPPER_RETURNS[id(call)][2][4]()
+        self.assertEqual(source._MappedRegion.from_buffer_copy(observed[1]).kind,0x20000)
+        self.assertFalse(mapper.prepared);self.assertTrue(self.api.uncertain)
+
+    def test_original_scalar_and_handle_survive_getter_failure_without_ack(self):
+        for target in ('NtCreateFile','CreateFileMappingW'):
+            with self.subTest(target=target):
+                case=SourceMapperTests('runTest');case.setUp()
+                try:
+                    def getter():
+                        if case.effects and case.effects[-1][0] == target:raise OSError('synthetic-getter-failure')
+                        return 0
+                    with patch.object(C,'get_last_error',side_effect=getter):
+                        with self.assertRaises(OSError):case.mapper()
+                    mapper=case.parent.mapper;resource=mapper.resources[-1];call=resource.acquire
+                    custody=source._MAPPER_RETURNS[id(call)][2]
+                    physical=custody[3]()
+                    self.assertEqual(physical[0],0 if target=='NtCreateFile'else resource.slot.value)
+                    self.assertEqual(physical[2],resource.slot.value);self.assertGreater(physical[2],0)
+                    self.assertIsNone(custody[1]())
+                    self.assertIsNone(call['row'].completion)
+                    self.assertFalse(call['row'].payload['acknowledged'])
+                    self.assertTrue(case.api.uncertain);self.assertFalse(mapper.prepared)
+                finally:case.doCleanups()
+
+    def test_getter_cannot_replace_original_incomplete_io_status(self):
+        def returned(name,args,value):
+            if name=='NtCreateFile':args[3]._obj.information=0
+        self.on_return=returned
+        def getter():
+            name,args=self.effects[-1] if self.effects else ('',())
+            if name=='NtCreateFile':args[3]._obj.information=1
+            return 0
+        with patch.object(C,'get_last_error',side_effect=getter):
+            with self.assertRaises(OffloadAdmissionError):self.mapper()
+        mapper=self.parent.mapper;call=mapper.calls[-1]
+        typed=source._MAPPER_RETURNS[id(call)][2][4]()
+        self.assertEqual(source.core._Io.from_buffer_copy(typed[1]).information,0)
+        self.assertFalse(mapper.prepared);self.assertTrue(self.api.uncertain)
+
+    def test_later_typed_buffer_mutation_cannot_rewrite_original_observation(self):
+        mapper=self.mapper()
+        call=next(call for call in mapper.calls if call['function'] is self.api.k.GetFileInformationByHandleEx and call['args'][1]==18)
+        typed=source._MAPPER_RETURNS[id(call)][2][4]();original=typed[1]
+        typed[0][0]^=1
+        with self.assertRaises(OffloadAdmissionError):mapper.acknowledged(call)
+        self.assertEqual(source._MAPPER_RETURNS[id(call)][2][4]()[1],original)
+
+    def test_wrong_typed_metadata_is_denied_before_native_dispatch(self):
+        mapper=self.mapper();count=len(self.effects);buffer=C.c_uint64()
+        with self.assertRaises(OffloadAdmissionError):
+            mapper.invoke(self.api.k.GetFileInformationByHandleEx,
+                (mapper.resources[0].number(),9,C.byref(buffer),8),(mapper.resources[0],buffer))
+        self.assertEqual(len(self.effects),count)
+
+    def test_nonzero_offset_output_pointers_are_denied_before_dispatch(self):
+        for target in ('file-slot','io-status','file-information','mapped-region'):
+            with self.subTest(target=target):
+                case=SourceMapperTests('runTest');case.setUp()
+                try:
+                    mapper=case.mapper();count=len(case.effects)
+                    if target in ('file-slot','io-status'):
+                        original=mapper.resources[0].acquire
+                        resource=mapper._new('ancestor');status=source.core._Io()
+                        args=list(original['args']);args[0]=C.byref(resource.slot,1 if target=='file-slot'else 0)
+                        args[3]=C.byref(status,1 if target=='io-status'else 0)
+                        with self.assertRaises(OffloadAdmissionError):
+                            mapper.invoke(mapper.dll.NtCreateFile,tuple(args),(resource,status),output=resource)
+                    elif target=='file-information':
+                        buffer=C.c_uint32*2;buffer=buffer()
+                        with self.assertRaises(OffloadAdmissionError):
+                            mapper.invoke(case.api.k.GetFileInformationByHandleEx,
+                                (mapper.resources[0].number(),9,C.byref(buffer,1),8),
+                                (mapper.resources[0],buffer))
+                    else:
+                        buffer=source._MappedRegion();view=mapper.resources[-1]
+                        with self.assertRaises(OffloadAdmissionError):
+                            mapper.invoke(case.api.k.VirtualQuery,
+                                (view.number(),C.byref(buffer,1),C.sizeof(buffer)),(view,buffer))
+                    self.assertEqual(len(case.effects),count)
+                finally:case.doCleanups()
+
+    def test_direct_output_slot_drift_is_not_hidden_by_a_second_publication(self):
+        for target in ('CreateFileMappingW','MapViewOfFile'):
+            with self.subTest(target=target):
+                case=SourceMapperTests('runTest');case.setUp();returned=[]
+                try:
+                    def observed(name,args,value):
+                        if name==target:returned.append(value)
+                    case.on_return=observed
+                    def getter():
+                        if case.effects and case.effects[-1][0]==target:
+                            case.parent.mapper.resources[-1].slot.value=returned[-1]+1
+                        return 0
+                    with patch.object(C,'get_last_error',side_effect=getter):
+                        with self.assertRaises(OffloadAdmissionError):case.mapper()
+                    mapper=case.parent.mapper;resource=mapper.resources[-1]
+                    physical=source._MAPPER_RETURNS[id(resource.acquire)][2][3]()
+                    self.assertEqual(physical[0],returned[-1]);self.assertEqual(physical[2],returned[-1])
+                    self.assertEqual(resource.slot.value,returned[-1]+1)
+                    self.assertFalse(mapper.prepared);self.assertTrue(case.api.uncertain)
+                finally:case.doCleanups()
+
 
 class SourceProtocolTests(unittest.TestCase):
     nonce = 'a' * 32
