@@ -120,6 +120,20 @@ the slot. Cleanup records each confirmed removal so retry cannot adopt a recreat
 file. An ambient/stale slot is never adopted or recursively removed. Verified
 owner recovery after process failure remains a distinct native operation.
 
+An interrupt during model construction, weight loading, dispatch or final sealing
+keeps the original lease and its model-reference list in the current process.
+The original interrupt is returned. The adapter does not run automatic teardown
+for that interrupt. Cleanup also records ownership before garbage collection,
+reference inspection or file operations. Any failure retains that same record;
+only cleanup acknowledged by the original lease as released removes it. A silent
+return without that acknowledgement retains ownership. A different reference
+list cannot replace the one already retained. Fresh model admission stays denied until the existing
+release checks succeed. Model-free fault-injection tests cover these paths.
+If cleanup finished before record removal was interrupted, retry removes only
+the retained record. It does not seal or delete the already released files again.
+These records do not prove native worker exit, lazy-reference retirement or a
+safe restart after process loss. Those qualifications remain pending.
+
 Queued dataset work remains cancellable. Running Dataset Preparation is currently
 not force-cancellable: a request or timeout cannot declare it finished or stop the
 shared worker. Wait for observed completion before retry or unload. The desktop

@@ -249,20 +249,36 @@ class BoundedModelBundle:
 _RETAINED_LEASES: list[tuple[OwnedOffloadLease, list]] = []
 
 
+def _retain_offload_lease(lease: OwnedOffloadLease, references: list) -> None:
+    for existing, original_references in _RETAINED_LEASES:
+        if existing is lease:
+            if original_references is not references:
+                raise OffloadAdmissionError()
+            return
+    _RETAINED_LEASES.append((lease, references))
+
+
+def _forget_offload_lease(lease: OwnedOffloadLease) -> None:
+    _RETAINED_LEASES[:] = [(existing, refs) for existing, refs in _RETAINED_LEASES if existing is not lease]
+
+
 def release_offload_lease(lease: OwnedOffloadLease, references: list) -> None:
+    # Keep the original owner before GC, reference inspection or file effects.
+    # Any exception, including an interrupt, must leave it available for retry.
+    _retain_offload_lease(lease, references)
+    if lease.released is True:
+        # Cleanup may have finished before interrupted registry bookkeeping.
+        # The original released owner needs no further file effects.
+        _forget_offload_lease(lease)
+        return
     gc.collect()
     if any(reference() is not None for reference in references):
-        if not any(existing is lease for existing, _references in _RETAINED_LEASES):
-            _RETAINED_LEASES.append((lease, references))
         raise OffloadAdmissionError()
-    try:
-        lease.seal()
-        lease.cleanup(model_released=True)
-    except OffloadAdmissionError:
-        if not any(existing is lease for existing, _references in _RETAINED_LEASES):
-            _RETAINED_LEASES.append((lease, references))
-        raise
-    _RETAINED_LEASES[:] = [(existing, refs) for existing, refs in _RETAINED_LEASES if existing is not lease]
+    lease.seal()
+    lease.cleanup(model_released=True)
+    if lease.released is not True:
+        raise OffloadAdmissionError()
+    _forget_offload_lease(lease)
 
 
 def retry_retained_offload_cleanup() -> None:
@@ -369,24 +385,24 @@ def _load_bounded_local_model(
             tied_groups=tied, unsplit_groups=unsplit, nonpersistent_buffer_modules=buffer_modules)
     resources = resource_plan(cpu_bytes)
     inventory.verify_unchanged()
+    references = []
     lease = (OwnedOffloadLease(cache_root, reservation) if _recovery is ORDINARY_OFFLOAD
              else OwnedOffloadLease(cache_root, reservation, _recovery=_recovery))
-    references = []
-
-    class TrackedQwen2ForCausalLM(Qwen2ForCausalLM):
-        def __init__(self, config):
-            # Observe even partially constructed instances without retaining them.
-            references.append(weakref.ref(self))
-            super().__init__(config)
-
-        @classmethod
-        def _load_pretrained_model(cls, *args, **kwargs):
-            loaded = super()._load_pretrained_model(*args, **kwargs)
-            return _bind_safe_disk_aliases(loaded, inventory, tied_groups=tied,
-                                          device_map=device_map, dtype=model_config.torchDtype)
 
     def construct():
         try:
+            class TrackedQwen2ForCausalLM(Qwen2ForCausalLM):
+                def __init__(self, config):
+                    # Observe partially constructed instances without retaining them.
+                    references.append(weakref.ref(self))
+                    super().__init__(config)
+
+                @classmethod
+                def _load_pretrained_model(cls, *args, **kwargs):
+                    loaded = super()._load_pretrained_model(*args, **kwargs)
+                    return _bind_safe_disk_aliases(loaded, inventory, tied_groups=tied,
+                                                  device_map=device_map, dtype=model_config.torchDtype)
+
             tokenizer = Qwen2TokenizerFast(
                 tokenizer_object=Tokenizer.from_str(inputs.tokenizer_json),
                 **inputs.tokenizer_kwargs(AddedToken),
@@ -464,9 +480,17 @@ def _load_bounded_local_model(
                 current = following
             return None
 
-    result = construct()
-    if result is None:
-        release_offload_lease(lease, references)
-        raise OffloadAdmissionError()
-    model, tokenizer, inference = result
-    return BoundedModelBundle(model, tokenizer, inference, inventory, lease, resources, references)
+    try:
+        result = construct()
+        if result is None:
+            release_offload_lease(lease, references)
+            raise OffloadAdmissionError()
+        model, tokenizer, inference = result
+        return BoundedModelBundle(model, tokenizer, inference, inventory, lease, resources, references)
+    except BaseException:
+        # An interrupt can bypass the supplier's own teardown. Preserve custody
+        # without calling hooks or cleaning files, and propagate the original.
+        # A normal supplier failure may already have completed owned cleanup.
+        if not lease.released:
+            _retain_offload_lease(lease, references)
+        raise

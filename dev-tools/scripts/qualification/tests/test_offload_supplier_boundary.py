@@ -7,7 +7,7 @@ here. Actual tiny-model compatibility stays explicit.
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from modules.adapters.runtime.python.worker.tests import test_bounded_model_loader as fixtures
 from modules.adapters.runtime.python.worker.tasks import bounded_model_loader as loader
@@ -74,6 +74,220 @@ class SupplierBoundaryTests(fixtures.PinnedLoaderBoundaryTests):
                     read_cuda_memory=lambda:0,_recovery=context)
         self.assertFalse(self.calls)
         self.assertFalse((self.cache/'.aisb-offload-v1').exists())
+
+    def _assert_interrupted_load_retains_original_owner(self, stage, error_type):
+        error = error_type('synthetic interruption')
+        created = []
+        original_lease = loader.OwnedOffloadLease
+        def lease(*args, **kwargs):
+            value = original_lease(*args, **kwargs)
+            created.append(value)
+            return value
+        supplier = self.modules['transformers'].Qwen2ForCausalLM
+        if stage == 'constructor':
+            original = supplier._from_config
+            target, name = supplier, '_from_config'
+            def interrupted(cls, *args, **kwargs):
+                self.holders.append(original.__func__(cls, *args, **kwargs))
+                raise error
+        elif stage == 'weights':
+            target, name = supplier, '_load_pretrained_model'
+            def interrupted(model, *args, **kwargs):
+                self.holders.append(model)
+                raise error
+        elif stage == 'dispatch':
+            target, name = self.modules['accelerate'], 'dispatch_model'
+            def interrupted(model, **kwargs):
+                self.holders.append(model)
+                raise error
+        elif stage == 'subclass':
+            target, name = supplier, '__init_subclass__'
+            def interrupted(cls, **kwargs):
+                raise error
+        elif stage == 'bundle':
+            target, name = loader, 'BoundedModelBundle'
+            def interrupted(model, *args, **kwargs):
+                self.holders.append(model)
+                raise error
+        else:
+            self.assertEqual(stage, 'seal')
+            target, name = original_lease, 'seal'
+            def interrupted(*args, **kwargs):
+                raise error
+        injected = (patch.object(target, name, new=classmethod(interrupted))
+                    if stage in ('constructor', 'subclass')
+                    else patch.object(target, name, side_effect=interrupted))
+        with patch.object(loader, 'OwnedOffloadLease', side_effect=lease), injected:
+            with self.assertRaises(error_type) as caught:
+                self.load()
+        self.assertIs(caught.exception, error)
+        self.assertEqual(len(created), 1)
+        self.assertEqual(len(loader._RETAINED_LEASES), 1)
+        retained, references = loader._RETAINED_LEASES[0]
+        self.assertIs(retained, created[0])
+        self.assertEqual(bool(references), stage != 'subclass')
+        self.assertFalse(retained.released)
+        self.assertTrue(retained.path.is_dir())
+        self.assertEqual(self.default_dtype, 'float64')
+        with patch.object(loader, 'inspect_local_model', side_effect=AssertionError('No fresh admission')):
+            with self.assertRaises(OffloadAdmissionError):
+                self.load()
+        if self.holders:
+            with self.assertRaises(OffloadAdmissionError):
+                loader.retry_retained_offload_cleanup()
+            self.assertIs(loader._RETAINED_LEASES[0][0], retained)
+            self.assertIs(loader._RETAINED_LEASES[0][1], references)
+        # Release only the synthetic model and traceback owned by this fixture.
+        # A supplier interruption is never itself cleanup or native-exit proof.
+        self.holders.clear()
+        error.__traceback__ = None
+        loader.retry_retained_offload_cleanup()
+        self.assertTrue(retained.released)
+        self.assertFalse(loader._RETAINED_LEASES)
+        self.assertFalse(retained.path.exists())
+        self.assertTrue((self.root / 'model.safetensors').is_file())
+
+    def test_constructor_interrupt_retains_original_lease_and_restores_shared_dtype(self):
+        self._assert_interrupted_load_retains_original_owner('constructor', KeyboardInterrupt)
+
+    def test_weight_loading_exit_retains_original_lease_and_live_model(self):
+        self._assert_interrupted_load_retains_original_owner('weights', SystemExit)
+
+    def test_dispatch_interrupt_retains_original_lease_and_live_model(self):
+        self._assert_interrupted_load_retains_original_owner('dispatch', KeyboardInterrupt)
+
+    def test_final_seal_exit_retains_original_lease_without_automatic_teardown(self):
+        self._assert_interrupted_load_retains_original_owner('seal', SystemExit)
+
+    def test_supplier_subclass_interrupt_retains_lease_before_a_model_exists(self):
+        self._assert_interrupted_load_retains_original_owner('subclass', KeyboardInterrupt)
+
+    def test_bundle_handoff_exit_retains_original_lease_and_live_model(self):
+        self._assert_interrupted_load_retains_original_owner('bundle', SystemExit)
+
+    def test_completed_owned_cleanup_retry_changes_only_retained_bookkeeping(self):
+        bundle = self.load()
+        bundle.model = None
+        bundle.tokenizer = None
+        error = KeyboardInterrupt('synthetic bookkeeping interruption')
+        with patch.object(loader, '_forget_offload_lease', side_effect=error), \
+             self.assertRaises(KeyboardInterrupt) as caught:
+            loader.release_offload_lease(bundle.lease, bundle.model_references)
+        self.assertIs(caught.exception, error)
+        self.assertTrue(bundle.lease.released)
+        self.assertFalse(bundle.lease.path.exists())
+        self.assertIs(loader._RETAINED_LEASES[0][0], bundle.lease)
+        self.assertIs(loader._RETAINED_LEASES[0][1], bundle.model_references)
+        with patch.object(bundle.lease, 'seal', side_effect=AssertionError('No repeated seal')), \
+             patch.object(bundle.lease, 'cleanup', side_effect=AssertionError('No repeated cleanup')):
+            loader.retry_retained_offload_cleanup()
+        self.assertFalse(loader._RETAINED_LEASES)
+        self.assertTrue((self.root / 'model.safetensors').is_file())
+
+
+class CleanupCustodyBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        self.retained = patch.object(loader, '_RETAINED_LEASES', [])
+        self.retained.start()
+        self.addCleanup(self.retained.stop)
+        self.references = []
+        self.lease = SimpleNamespace(released=False, seal=Mock(), cleanup=Mock())
+
+    def test_gc_interrupt_retains_exact_owner_before_any_cleanup_effect(self):
+        for error in (KeyboardInterrupt(), SystemExit(), RuntimeError('synthetic failure')):
+            with self.subTest(error=type(error).__name__), \
+                 patch.object(loader.gc, 'collect', side_effect=error), \
+                 self.assertRaises(type(error)) as caught:
+                loader.release_offload_lease(self.lease, self.references)
+            self.assertIs(caught.exception, error)
+            self.assertEqual(len(loader._RETAINED_LEASES), 1)
+            self.assertIs(loader._RETAINED_LEASES[0][0], self.lease)
+            self.assertIs(loader._RETAINED_LEASES[0][1], self.references)
+            self.lease.seal.assert_not_called()
+            self.lease.cleanup.assert_not_called()
+
+    def test_seal_and_cleanup_failures_retain_without_duplicate_or_foreign_removal(self):
+        foreign = object()
+        foreign_references = []
+        loader._RETAINED_LEASES.append((foreign, foreign_references))
+        for stage in ('seal', 'cleanup'):
+            for error in (KeyboardInterrupt(), SystemExit(), RuntimeError('synthetic failure'), OffloadAdmissionError()):
+                with self.subTest(stage=stage, error=type(error).__name__):
+                    loader._RETAINED_LEASES[:] = [(foreign, foreign_references)]
+                    self.lease.seal.side_effect = None
+                    self.lease.cleanup.side_effect = None
+                    getattr(self.lease, stage).side_effect = error
+                    with patch.object(loader.gc, 'collect'), self.assertRaises(type(error)) as caught:
+                        loader.release_offload_lease(self.lease, self.references)
+                    self.assertIs(caught.exception, error)
+                    self.assertEqual(len(loader._RETAINED_LEASES), 2)
+                    self.assertIs(loader._RETAINED_LEASES[0][0], foreign)
+                    self.assertIs(loader._RETAINED_LEASES[0][1], foreign_references)
+                    self.assertIs(loader._RETAINED_LEASES[1][0], self.lease)
+                    self.assertIs(loader._RETAINED_LEASES[1][1], self.references)
+        self.lease.seal.side_effect = None
+        self.lease.cleanup.side_effect = lambda **kwargs: setattr(self.lease, 'released', True)
+        with patch.object(loader.gc, 'collect'):
+            loader.release_offload_lease(self.lease, self.references)
+        self.assertEqual(len(loader._RETAINED_LEASES), 1)
+        self.assertIs(loader._RETAINED_LEASES[0][0], foreign)
+        self.assertIs(loader._RETAINED_LEASES[0][1], foreign_references)
+        self.lease.cleanup.assert_called_with(model_released=True)
+
+    def test_silent_cleanup_without_exact_released_acknowledgement_retains_custody(self):
+        for state in (False, None, 0, 1, 'true', object()):
+            with self.subTest(state=type(state).__name__), patch.object(loader.gc, 'collect'):
+                self.lease.released = state
+                with self.assertRaises(OffloadAdmissionError):
+                    loader.release_offload_lease(self.lease, self.references)
+                self.assertEqual(len(loader._RETAINED_LEASES), 1)
+                self.assertIs(loader._RETAINED_LEASES[0][0], self.lease)
+                self.assertIs(loader._RETAINED_LEASES[0][1], self.references)
+                self.assertIs(self.lease.released, state)
+        self.lease.released = True
+        loader.retry_retained_offload_cleanup()
+        self.assertFalse(loader._RETAINED_LEASES)
+
+    def test_replaced_reference_collection_denies_before_gc_or_file_effects(self):
+        loader._RETAINED_LEASES.append((self.lease, self.references))
+        with patch.object(loader.gc, 'collect') as collect, self.assertRaises(OffloadAdmissionError):
+            loader.release_offload_lease(self.lease, list(self.references))
+        collect.assert_not_called()
+        self.lease.seal.assert_not_called()
+        self.lease.cleanup.assert_not_called()
+        self.assertIs(loader._RETAINED_LEASES[0][1], self.references)
+
+    def test_interrupted_post_cleanup_bookkeeping_retries_without_file_effects(self):
+        error = KeyboardInterrupt('synthetic bookkeeping interruption')
+        self.lease.cleanup.side_effect = lambda **kwargs: setattr(self.lease, 'released', True)
+        with patch.object(loader.gc, 'collect'), \
+             patch.object(loader, '_forget_offload_lease', side_effect=error), \
+             self.assertRaises(KeyboardInterrupt) as caught:
+            loader.release_offload_lease(self.lease, self.references)
+        self.assertIs(caught.exception, error)
+        self.assertTrue(self.lease.released)
+        self.assertIs(loader._RETAINED_LEASES[0][0], self.lease)
+        self.lease.seal.reset_mock()
+        self.lease.cleanup.reset_mock()
+        with patch.object(loader.gc, 'collect') as collect:
+            loader.retry_retained_offload_cleanup()
+        self.assertFalse(loader._RETAINED_LEASES)
+        collect.assert_not_called()
+        self.lease.seal.assert_not_called()
+        self.lease.cleanup.assert_not_called()
+
+    def test_reference_inspection_failure_retains_owner_and_denies_cleanup(self):
+        for error in (KeyboardInterrupt(), SystemExit(), RuntimeError('synthetic reference failure')):
+            self.references[:] = [Mock(side_effect=error)]
+            with self.subTest(error=type(error).__name__), patch.object(loader.gc, 'collect'), \
+                 self.assertRaises(type(error)) as caught:
+                loader.release_offload_lease(self.lease, self.references)
+            self.assertIs(caught.exception, error)
+            self.assertEqual(len(loader._RETAINED_LEASES), 1)
+            self.assertIs(loader._RETAINED_LEASES[0][0], self.lease)
+            self.assertIs(loader._RETAINED_LEASES[0][1], self.references)
+            self.lease.seal.assert_not_called()
+            self.lease.cleanup.assert_not_called()
 
 
 class InMemoryIndexBoundaryTests(unittest.TestCase):
