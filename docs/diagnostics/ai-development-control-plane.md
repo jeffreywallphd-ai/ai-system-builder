@@ -1755,3 +1755,36 @@ each fixed reviewed consumer. Use a new source/package witness and separate
 one-use reviews for package, desktop and thin-client execution. Preserve existing
 freshness, source checks, bounded capture and owned shutdown. This source result
 does not complete a parent criterion or replace deferred combined testing.
+
+
+## Settings test module loading
+
+The [Settings host observation](../operations/settings-public-host-qualification.json)
+keeps a failed thin-client attempt that stopped before selecting a test. Its
+server and original Windows Job shut down correctly. The runner retained a
+module-loading warning, but did not capture its exact exception. A separate
+model-free comparison reproduced the setup/worker failure and passed with the
+same module-loading setting already used by the training profile.
+
+Both dedicated Settings profiles now use Playwright's existing `build.external`
+option for `**/*.mjs`. Node loads those existing ESM files directly. The fixed
+hosts, case selectors, assertions, setup, timeouts, one-worker policy, zero
+retries and disabled capture remain unchanged. Dependency versions and product
+behavior are unchanged.
+
+The regression reads each real profile and runs actual Playwright setup and a
+worker against the existing pure Settings helpers. Each profile must report one
+passed test, no skipped or flaky tests and no global error. The test constructs
+only a launch plan. It does not seed credentials, start an app or browser, load
+a model or invoke a native qualification role. It removes only its verified new
+workspace-local temporary fixture. Run it with:
+
+```sh
+node --test dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs
+```
+
+This source check does not pass the Settings interface journey. A fresh
+separately reviewed app run must still prove save, reload, clear and cleanup.
+The failed attempt and its evidence remain unchanged. Accepted model-accuracy
+and OCR checks stay closed; full-system testing stays deferred until open
+feature implementation is ready.

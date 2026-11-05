@@ -2,6 +2,8 @@ import path from "node:path";
 import {defineConfig,devices} from "@playwright/test";
 const root=path.resolve(__dirname,"../..");
 export default defineConfig({
+  // Load existing ESM helpers directly in setup and test workers.
+  build:{external:["**/*.mjs"]},
   globalSetup:path.join(root,"dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs"),
   testDir:path.join(root,"dev-tools/scripts/qualification/visual-composer/e2e"),testMatch:"thin-client-operational-ui.e2e.spec.ts",
   grep:/thin client settings (?:public-values|secret-defaults) saves, reloads and clears through the public UI$/,

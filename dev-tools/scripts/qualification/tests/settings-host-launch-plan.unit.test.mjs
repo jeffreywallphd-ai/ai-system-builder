@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
+import {fileURLToPath,pathToFileURL} from "node:url";
+import {spawnSync} from "node:child_process";
+import {mkdirSync,mkdtempSync,readFileSync,realpathSync,rmSync,statSync,writeFileSync} from "node:fs";
+import {tsImport} from "tsx/esm/api";
 import {mkdtemp,readFile,realpath,lstat,rm} from "node:fs/promises";
 import {createSettingsHostEnvironment,createSettingsHostLaunchPlan,settingsHostLayout} from "../visual-composer/settings-host-launch-plan.mjs";
 import settingsHostSetup from "../visual-composer/settings-host-global-setup.mjs";
@@ -62,4 +66,65 @@ test("Settings setup is dormant without explicit opt-in and clears stale readine
   try{delete process.env.VISUAL_COMPOSER_SETTINGS_HOST;process.env.VISUAL_COMPOSER_SETTINGS_READY="1";await(await settingsHostSetup({projects:[]}))();assert.equal(process.env.VISUAL_COMPOSER_SETTINGS_READY,undefined);
     process.env.VISUAL_COMPOSER_SETTINGS_HOST="1";await assert.rejects(settingsHostSetup({projects:[{name:"packaged-desktop"},{name:"thin-chrome"}]}),/exactly one/);
   }finally{for(let i=0;i<keys.length;i++)if(old[i]===undefined)delete process.env[keys[i]];else process.env[keys[i]]=old[i];}
+});
+
+test("both real Settings profiles load helpers in a worker after ESM setup", async t => {
+  const actualRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  for (const host of ["desktop", "thin"]) await t.test(host, async childTest => {
+    const imported = await tsImport(pathToFileURL(path.join(actualRoot, `dev-tools/config/playwright.settings-host-${host}.config.ts`)).href, import.meta.url);
+    const config = imported.default?.default ?? imported.default ?? imported;
+    assert.deepEqual(config.build, { external: ["**/*.mjs"] });
+    assert.equal(config.globalSetup, path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs"));
+    const parent = path.join(actualRoot, ".local-codex/t");
+    mkdirSync(parent, { recursive: true });
+    assert.equal(realpathSync(parent), parent);
+    const fixture = mkdtempSync(path.join(parent, "settings-loader-"));
+    childTest.after(() => {
+      assert.equal(path.resolve(fixture), fixture);
+      assert.equal(realpathSync(fixture), fixture);
+      assert.equal(path.dirname(fixture), parent);
+      assert(path.basename(fixture).startsWith("settings-loader-"));
+      rmSync(fixture, { recursive: true, force: false });
+    });
+    for (const name of ["tmp", "home"]) mkdirSync(path.join(fixture, name));
+    const helper = path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs");
+    const runId = `synthetic-settings-loader-${host}-0123456789`, sourceRevision = "source." + "a".repeat(64);
+    writeFileSync(path.join(fixture, "setup.mjs"), `export default async function setup() {
+      const settings = await import(${JSON.stringify(pathToFileURL(helper).href)});
+      await settings.createSettingsHostLaunchPlan(${JSON.stringify({ repoRoot: actualRoot, runId, sourceRevision, target: host === "thin" ? "thin-chrome" : "packaged-desktop", environment: {} })});
+      await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs")).href)});
+      await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs")).href)});
+    }\n`, { flag: "wx" });
+    // Use real helper imports in both setup and the Playwright worker. This
+    // constructs data only: no readiness, identity seed, app, model or browser.
+    writeFileSync(path.join(fixture, "pure-import.spec.ts"), `
+      import { test, expect } from "@playwright/test";
+      import { SETTINGS_HOST_CASES, settingsHostLayout } from ${JSON.stringify(helper.replaceAll("\\", "/"))};
+      test("Settings helper remains executable after setup preload", () => {
+        expect(SETTINGS_HOST_CASES).toEqual(["public-values", "secret-defaults"]);
+        expect(settingsHostLayout(${JSON.stringify(actualRoot)}, ${JSON.stringify(runId)}, ${JSON.stringify(sourceRevision)}).dataRoot).toContain("visual-composer");
+      });\n`, { flag: "wx" });
+    const report = path.join(fixture, "result.json"), configPath = path.join(fixture, "playwright.config.mjs");
+    writeFileSync(configPath, `export default ${JSON.stringify({
+      build: config.build, testDir: fixture, testMatch: "pure-import.spec.ts", globalSetup: path.join(fixture, "setup.mjs"),
+      outputDir: path.join(fixture, "output"), workers: 1, retries: 0, repeatEach: 1, forbidOnly: true, timeout: 10_000,
+      use: { screenshot: "off", trace: "off", video: "off" }, reporter: [["json", { outputFile: report }]],
+    })};\n`, { flag: "wx" });
+    const env = Object.fromEntries(["SystemRoot", "WINDIR"].filter(key => typeof process.env[key] === "string").map(key => [key, process.env[key]]));
+    Object.assign(env, {
+      PATH: [path.dirname(process.execPath), ...(process.env.SystemRoot ? [path.join(process.env.SystemRoot, "System32")] : [])].join(path.delimiter),
+      TEMP: path.join(fixture, "tmp"), TMP: path.join(fixture, "tmp"), HOME: path.join(fixture, "home"), USERPROFILE: path.join(fixture, "home"),
+      NODE_OPTIONS: "", PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1", ELECTRON_SKIP_BINARY_DOWNLOAD: "1", HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", PIP_NO_INDEX: "1",
+    });
+    const result = spawnSync(process.execPath, [path.join(actualRoot, "node_modules/@playwright/test/cli.js"), "test", "--config", configPath], {
+      cwd: actualRoot, env, windowsHide: true, encoding: "utf8", timeout: 30_000, maxBuffer: 8192,
+    });
+    const diagnostic = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.replaceAll(actualRoot, "<repo>");
+    assert.equal(result.error, undefined, diagnostic);
+    assert.equal(result.status, 0, diagnostic);
+    assert(statSync(report).size <= 128 * 1024);
+    const observed = JSON.parse(readFileSync(report, "utf8"));
+    assert.deepEqual(Object.fromEntries(["expected", "skipped", "unexpected", "flaky"].map(key => [key, observed.stats[key]])), { expected: 1, skipped: 0, unexpected: 0, flaky: 0 });
+    assert.deepEqual(observed.errors, []);
+  });
 });
