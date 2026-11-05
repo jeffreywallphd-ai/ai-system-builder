@@ -2193,7 +2193,7 @@
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
-        "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+        "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
         "dev-tools/scripts/qualification/visual-composer/asset-authoring-oracles.ts",
         "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts",

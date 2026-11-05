@@ -3,6 +3,7 @@ import { _electron as electron, type ElectronApplication } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { qualifyOperationalUiJourney } from "./operational-ui-journey";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { OPERATIONAL_HOST_TIMEOUT_MS } from "../operational-ui-oracles";
 import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
@@ -25,6 +26,7 @@ async function runOperationalDesktop(mode: CriticalAccessibilityMode = "standard
   const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: { ...isolated.env, PYTHON_RUNTIME_QUALIFICATION_SCENARIO: "observed-download" }, timeout: 60_000 });
   try {
     const page = await app.firstWindow({ timeout: 60_000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
     await page.locator('input[name="workspaceName"]').fill("Operational desktop fixture");

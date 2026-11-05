@@ -395,8 +395,8 @@ buttons. The journey restores its caller's viewport after success or failure.
 Each standard accessibility collection also restores its caller's viewport.
 Standard callers must supply an explicit positive integer viewport. An absent
 or invalid restore target fails before layout or media changes. The helper does
-not invent a viewport for an automatically sized Electron window. Establishing
-the standard desktop caller's viewport remains separate launcher work.
+not invent a viewport for an automatically sized Electron window. The owning
+standard desktop launchers establish the viewport before invoking the helper.
 
 The native 400% journey uses the actual zoomed window. It never resizes the
 viewport. It checks that the sidebar is hidden and the navigation trigger is
@@ -422,3 +422,25 @@ tests. Synthetic Page and DOM fixtures check the test definitions; they do not
 qualify an actual host. Preserve earlier failed runs. A fresh source-bound host
 run is still required, and coverage-ledger source pins need separate current
 reconciliation before aggregate closure.
+
+The seven affected desktop launchers now prepare each relevant owned standard
+Page at 1440 by 1000 pixels. This includes both provided-data app sessions, the
+output-shape reload callback and both separately captured lifecycle runtime
+windows. The preparation awaits successful viewport setup before reading its
+exact dimensions. A failed setup cannot pass by reading Playwright's cached
+requested dimensions. The shared audit then captures and restores that explicit
+viewport. Existing browse setup stays in place.
+
+Native preparation makes no Page calls. The launchers retain their original
+owned native zoom, frame measurements, observer and cleanup order. Source tests
+inspect the actual launcher syntax and reject missing, wrong-Page, wrong-mode,
+late, unawaited and dead-branch setup. They also reject missing runtime or reload
+setup. These source checks do not execute OCR, model quality or real hosts, and
+do not close the outstanding host or coverage-census qualification.
+
+The Operational profile already executes the native Data/Context wiring test.
+Replacing its redundant source-only entry with the exact low-memory launcher
+preserves every executable test and previously covered path. The union adds
+only that launcher. Unknown or incomplete impact retains the generic guard.
+The related Data/OCR contract checks remain required; no real OCR, model quality
+or whole-system campaign is repeated by this source component.

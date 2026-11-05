@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { qualifyIngestionSourceJourney } from "./ingestion-source-journey";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { runOwnedRestartPhase } from "../asset-authoring-oracles";
@@ -20,6 +21,7 @@ async function runDesktopImport(mode: CriticalAccessibilityMode = "standard") {
   let stage: ImportedFileJourneyStage = "startup";
   await runOwnedRestartPhase(async () => {
     const page = await app.firstWindow({ timeout: 60_000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
     stage = "workspace";
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();

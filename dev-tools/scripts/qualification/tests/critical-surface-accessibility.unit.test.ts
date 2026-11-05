@@ -25,13 +25,48 @@ vi.mock("node:fs/promises", () => {
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
-import { qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
+import { prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
 import { qualifyOperationalUiJourney } from "../visual-composer/e2e/operational-ui-journey";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
+
+describe("owning standard viewport preparation",()=>{
+  it("sets and verifies the fixed viewport once on the supplied Page",async()=>{
+    const setViewportSize=vi.fn(async()=>undefined),viewportSize=vi.fn(()=>({width:1440,height:1000}));
+    await prepareCriticalAccessibilityViewport({setViewportSize,viewportSize} as unknown as Page,"standard");
+    expect(setViewportSize).toHaveBeenCalledTimes(1);expect(setViewportSize).toHaveBeenCalledWith({width:1440,height:1000});expect(viewportSize).toHaveBeenCalledTimes(1);
+  });
+  it("does not accept cached dimensions before the setter completes",async()=>{
+    let finish!:()=>void;const pending=new Promise<void>(resolve=>{finish=resolve;});
+    const setViewportSize=vi.fn(()=>pending),viewportSize=vi.fn(()=>({width:1440,height:1000}));
+    const result=prepareCriticalAccessibilityViewport({setViewportSize,viewportSize} as unknown as Page,"standard");
+    try {await Promise.resolve();expect(setViewportSize).toHaveBeenCalledTimes(1);expect(viewportSize).not.toHaveBeenCalled();}
+    finally {finish();}
+    await result;expect(viewportSize).toHaveBeenCalledTimes(1);
+  });
+  it.each(["native400",null,{},false,4,"native",Symbol("mode")])("does not touch Page for native or unknown mode %#",async mode=>{
+    let reads=0;const untouched=new Proxy({},{get(){reads++;throw new Error("synthetic-private-page");}}) as Page;
+    if(mode === "native400")await prepareCriticalAccessibilityViewport(untouched,mode);
+    else await expect(prepareCriticalAccessibilityViewport(untouched,mode as never)).rejects.toThrow("Invalid critical accessibility mode.");
+    expect(reads).toBe(0);
+  });
+  it.each([null,undefined,{width:1440,height:999},{width:320,height:1000},{width:"1440",height:1000},{width:1440,height:NaN}])("refuses unavailable or mismatched setter result %#",async viewport=>{
+    const setViewportSize=vi.fn(async()=>undefined),viewportSize=vi.fn(()=>viewport);
+    await expect(prepareCriticalAccessibilityViewport({setViewportSize,viewportSize} as unknown as Page,"standard")).rejects.toThrow("Standard accessibility viewport setup failed.");
+    expect(setViewportSize).toHaveBeenCalledTimes(1);expect(viewportSize).toHaveBeenCalledTimes(1);
+  });
+  it.each([undefined,null,false,0,"",new Error("synthetic-private-browser")].flatMap(reason=>[
+    {stage:"set" as const,reason,synchronous:true},{stage:"set" as const,reason,synchronous:false},{stage:"read" as const,reason,synchronous:true},
+  ]))("redacts every setup failure %# without retry",async({stage,reason,synchronous})=>{
+    const fail=()=>{if(synchronous)throw reason;return Promise.reject(reason);};
+    const setViewportSize=vi.fn(()=>stage === "set" ? fail() : Promise.resolve()),viewportSize=vi.fn(()=>{throw reason;});
+    await expect(prepareCriticalAccessibilityViewport({setViewportSize,viewportSize} as unknown as Page,"standard")).rejects.toThrow("Standard accessibility viewport setup failed.");
+    expect(setViewportSize).toHaveBeenCalledTimes(1);expect(viewportSize).toHaveBeenCalledTimes(stage === "read" ? 1 : 0);
+  });
+});
 
 describe("closed critical accessibility qualification", () => {
   it.each(["settings", "security", "notifications", "navigation-menu", "data-ingestion", "dataset-preparation", "dataset-versions", "dataset-review", "dataset-row-edit",

@@ -4,6 +4,7 @@ import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { uploadLowMemorySource } from "./low-memory-dataset-journey";
 import { qualifyStructuredOutputControls } from "./structured-output-controls-journey";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 
@@ -22,6 +23,7 @@ async function runDesktopOutputControls(mode: CriticalAccessibilityMode = "stand
   });
   try {
     const page = await app.firstWindow({ timeout: 60000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60000 });
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
     await page.locator('input[name="workspaceName"]').fill("Structured output desktop fixture");
@@ -37,6 +39,7 @@ async function runDesktopOutputControls(mode: CriticalAccessibilityMode = "stand
       await page.reload();
       await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./, { timeout: 30000 });
       if (mode === "native400") await applyOwnedDesktopNativeZoom(app, page);
+      await prepareCriticalAccessibilityViewport(page, mode);
       return page;
     }, mode);
   } finally {

@@ -2120,5 +2120,25 @@ native, model or parent qualification. See
 for the layout, report-mode and pending source-pin requirements.
 
 Standard callers must provide an explicit valid viewport. An absent restore
-target is refused before UI effects. The automatically sized desktop launcher
-needs a separate explicit standard viewport setup; it is not qualified here.
+target is refused before UI effects. The owning desktop launchers initialize
+each relevant standard Page before invoking the audit helper.
+
+The fixed preparation awaits successful setup at 1440 by 1000 pixels, then
+checks the exact reported dimensions. A failed setter cannot pass from cached
+dimensions. Native mode performs no Page access and keeps actual zoom/frame
+qualification separate. Unknown modes and all setup failures refuse safely.
+
+All seven affected launchers use their actual mode, including provided-data
+restart sessions, output-shape reload and both captured lifecycle runtime
+windows. Existing browse setup is unchanged. The focused native Data/Context
+admission test inspects those actual definitions and rejects missing, late,
+unawaited, wrong-Page, wrong-mode and dead-branch preparation. Helper tests
+cover failures and zero native Page calls. These are source checks, not real
+host, OCR, model quality or parent qualification.
+
+The existing wiring test is already registered in the Operational profile.
+Its redundant source-only declaration is replaced by the exact low-memory
+desktop launcher. All executable tests and previous covered paths remain;
+the coverage union gains only that launcher. Missing or unknown impact still
+keeps generic coverage. Related Data/OCR contract checks remain required, and
+this component adds no real OCR or model-accuracy qualification.

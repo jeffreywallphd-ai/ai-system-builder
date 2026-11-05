@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import {
@@ -85,6 +85,7 @@ async function runDesktopLifecycle(mode: CriticalAccessibilityMode = "standard")
 
   await runOwnedRestartPhase(async () => {
     const page = await electronApp.firstWindow({ timeout: 60_000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
     if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, page);
     const rendererErrors: string[] = [];
     page.on("console", (message) => {
@@ -143,6 +144,7 @@ async function runDesktopLifecycle(mode: CriticalAccessibilityMode = "standard")
           .find((candidate) => candidate !== page);
         if (!runtimePage)
           throw new Error("Published runtime window is unavailable.");
+        await prepareCriticalAccessibilityViewport(runtimePage, mode);
         if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
         observer.opened(primary.context, runtimePage);
         runtimePage.on("console", (message) => {
@@ -257,6 +259,7 @@ async function runDesktopLifecycle(mode: CriticalAccessibilityMode = "standard")
             await expect.poll(() => runtimePages().length, { timeout: 30_000 }).toBe(1);
             const runtimePage = runtimePages()[0];
             if (!runtimePage) throw new Error("Isolated runtime window is unavailable.");
+            await prepareCriticalAccessibilityViewport(runtimePage, mode);
             if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
         observer.opened(isolatedRuntime.context, runtimePage);
             runtimePage.on("console", message => { if (message.type() === "error") rendererErrors.push(message.text()); });

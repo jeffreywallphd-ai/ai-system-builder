@@ -3,6 +3,7 @@ import { _electron as electron } from "playwright";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart } from "./provided-dataset-version-journey";
 import { prepareManualContext, verifyManualContextAfterRestart, type ManualContextSnapshot } from "./manual-context-host-journey";
@@ -35,6 +36,7 @@ async function runDesktopData(mode: CriticalAccessibilityMode = "standard") {
       env: { ...isolated.env, HF_HUB_CACHE: cache }, timeout: 60_000 });
     await runOwnedRestartPhase(async () => {
       const page = await app.firstWindow({ timeout: 60_000 });
+      await prepareCriticalAccessibilityViewport(page, mode);
       if (phase === "before-restart") {
         await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
         await page.getByRole("button", { name: "Create new workspace", exact: true }).click();

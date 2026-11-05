@@ -6,6 +6,7 @@ import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { qualifyOcrDatasetJourney } from "./ocr-dataset-journey";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 
@@ -23,6 +24,7 @@ async function runDesktopOcr(mode: CriticalAccessibilityMode = "standard") {
   const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: isolated.env, timeout: 60_000, acceptDownloads: true, artifactsDir });
   await runOwnedRestartPhase(async () => {
     const page = await app.firstWindow({ timeout: 60_000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
     if (mode === "native400") await applyOwnedDesktopNativeZoom(app, page);
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();

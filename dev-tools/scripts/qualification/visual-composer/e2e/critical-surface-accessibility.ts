@@ -10,6 +10,19 @@ import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, co
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
 
+/** Owning test launchers prepare standard Pages. Native zoom stays unmodified. */
+export async function prepareCriticalAccessibilityViewport(page: Page, mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400") return;
+  try {
+    // Playwright caches requested dimensions before its channel completes.
+    // A failed setter must never be rescued by reading that cached value.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const viewport = page.viewportSize();
+    if (!viewport || viewport.width !== 1440 || viewport.height !== 1000) throw new Error();
+  } catch { throw new Error("Standard accessibility viewport setup failed."); }
+}
+
 async function requireNavigationLayout(page: Page, narrow: boolean) {
   const observed = await page.evaluate(narrow => {
     const sidebar = document.querySelectorAll(".ui-shell__sidebar"), trigger = document.querySelectorAll(".ui-shell__menu-trigger"), panel = document.querySelectorAll(".ui-shell__menu-panel");

@@ -3,6 +3,7 @@ import { _electron as electron } from "playwright";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { qualifyLowMemoryDatasetJourney, uploadLowMemorySource } from "./low-memory-dataset-journey";
+import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 
 test("packaged desktop retains optional profile through resource denial, cancellation observation and approved dataset persistence", async () => {
   test.setTimeout(180000);
@@ -10,6 +11,7 @@ test("packaged desktop retains optional profile through resource denial, cancell
   const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: { ...isolated.env, PYTHON_RUNTIME_QUALIFICATION_SCENARIO: "dataset-profile" }, timeout: 60000 });
   try {
     const page = await app.firstWindow({ timeout: 60000 });
+    await prepareCriticalAccessibilityViewport(page, "standard");
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60000 });
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
     await page.locator('input[name="workspaceName"]').fill("Low memory desktop fixture");
