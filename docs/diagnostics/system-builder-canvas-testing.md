@@ -448,7 +448,7 @@ or whole-system campaign is repeated by this source component.
 
 ## Current definition census and preserved source history
 
-The definition census now follows the reviewed operational source checkpoint.
+The earlier definition census followed the reviewed operational source checkpoint.
 Ten stale source entries are refreshed. The other 170 entries, all 39 scenarios,
 131 behavior links, 29 host files, 16 inventories and pending feature checks
 stay intact. Source facts use LF-normalized text. Each committed pin has a real
@@ -457,7 +457,7 @@ Git witness at the recorded source baseline.
 The [operational census history](../operations/comprehensive-ui-automation-operational-census-history.json)
 preserves the exact previous rows and their digests. It also binds the prior
 census Git version and the unchanged eight-row historical archive. Keep the
-one-space JSON format: the current map is 499849 bytes and fits the existing
+one-space JSON format: that map was 499849 bytes and fit the existing
 512 KiB limit. The reader and total input limits are unchanged.
 
 The existing reporting test validates the current map, authenticates every Git
@@ -470,3 +470,51 @@ A valid definition map runs no inspected software tests. The 39 host journeys,
 conditional test modifiers and pending feature check remain explicit gaps.
 Actual host, native, provider, resource, model and combined qualification stay
 separate. Accepted model accuracy and OCR are not repeated for this update.
+
+## Failed contrast measurement diagnostics
+
+The browser collector now returns a separate, validated diagnostic value to the
+critical-surface collector. Existing audit entry points still return the same
+core audit. No callback, caller selector or extra argument is accepted by the
+new fixed observation entry points.
+
+Failed mounted-surface reports include `contrastRetryDiagnostics` with the
+fixed audit stage and bounded counts. Successful reports keep their existing
+fields and attachments. Missing diagnostics do not make an audit pass.
+
+- Retry outcomes count violations, unresolved measurements and missing positive
+  samples. They partition the failed retries. Original attempted and passed
+  counts must match the core audit.
+- Engine reason counts keep only known `color-contrast` check reason codes.
+  Each failed retry contributes one recognized reason, or `other`. These are
+  engine-reported hints, not proof of the cause.
+- Style hints count background images, reduced opacity, clipping, non-RGB
+  computed text colors and truncated inspection. Counts contain no CSS values.
+  The collector inspects at most 64 ancestors and 64 node/check slots per failed
+  retry. The existing 1000-node retry limit stays intact.
+
+Selectors, page text, messages, URLs, colors and raw exceptions stay out of the
+diagnostic projection. Collection adds no audit, scroll, frame wait, media change
+or viewport change. All original rule, target identity, visibility, contrast
+sample and retry requirements remain. An incomplete result still fails.
+
+Focused tests exercise the real browser callback with synthetic DOM/engine
+results. They check safe projection, partitioning, bounds, unchanged successful
+core output, extra-argument refusal and failed report persistence through save,
+restore and attachment errors. Fixtures do not qualify an actual browser host.
+
+The [diagnostic census history](../operations/comprehensive-ui-automation-contrast-diagnostics-census-history.json)
+preserves the three previous source rows and binds both unchanged earlier
+histories to real Git versions. The current map records working facts for those
+three files and real committed pins at its source baseline. Three explicit
+source-drift gaps remain until a later reviewed committed-source refresh.
+The map, reader and total input bounds stay unchanged. Both reporting and census
+tests reject forged, future, missing, duplicate or unrelated versions. The map
+still records 39 unrun host families, seven conditional modifier gaps, one
+pending feature check and no execution or parent pass.
+
+A fresh, separately reviewed host run must use these diagnostics to identify
+the unresolved measurement before any color or measurement repair. Preserve
+the earlier failed runs and every genuine remaining qualification gap. Keep
+completed accuracy and OCR checks closed. Full-system testing remains deferred
+until the open implementation work is ready.

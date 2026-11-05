@@ -190,6 +190,7 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(report.status).toBe("passed"); expect(probe.calls).toBe(4); expect(probe.widths).toEqual([1440, 320, 1440, 320, 1440]);
     expect(probe.flags).toEqual(["wx", "w", "w", "w", "w", "w"]); expect(probe.motion).toBe("no-preference"); expect(probe.forcedColors).toBe("none");
     const saved = JSON.parse(probe.writes[probe.writes.length - 1]!); expect(saved.status).toBe("passed"); expect(saved.audits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
+    expect(saved).not.toHaveProperty("contrastRetryDiagnostics"); expect(report).not.toHaveProperty("contrastRetryDiagnostics");
     expect(saved.forcedColorsAudits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
     expect(saved["control-access-320"]).toEqual({ width: 320, controls: 1, inaccessible: 0, status: "passed" });
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
@@ -366,6 +367,31 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     });
     for(const key of ["clientWidth","scrollWidth"])Object.defineProperty(document.documentElement,key,{configurable:true,get:()=>356});
   }
+  it.each(["standard", "forced-colors", "save", "restore", "attachment", "native"] as const)("persists only safe failed contrast diagnostics through %s", async failure => {
+    const button = document.querySelector("button")!; button.id = "synthetic-private-contrast-target";
+    document.querySelector("main")!.setAttribute("style", "visibility:visible;transition-duration:0s;animation-name:none;background-image:linear-gradient(red,blue)");
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+    if (failure === "native") installNativeFrame();
+    probe.saveFails = failure === "save"; probe.restoreFails = failure === "restore"; probe.attachFails = failure === "attachment";
+    Object.defineProperty(window, "axe", { configurable: true, value: { run: async (root: unknown) => {
+      probe.calls++;
+      if (failure === "forced-colors" && probe.forcedColors !== "active") return { violations: [], incomplete: [], passes: [{ id: "color-contrast", nodes: [{}] }] };
+      return { violations: [], passes: [{ id: "color-contrast", nodes: [{}] }], incomplete: [{ id: "color-contrast", nodes: [{
+        target: ["#synthetic-private-contrast-target"], any: [{ id: "color-contrast", message: "synthetic-private-audit-message",
+          data: { messageKey: "bgGradient", bgColor: "synthetic-private-color" } }],
+      }] }] };
+    } } });
+    await expect(qualifyCriticalSurfaceAccessibility(page, info, "settings", failure === "native" ? "native400" : "standard")).rejects.toThrow(/^(Critical|Native|Technical) accessibility (check|finalization) failed at [a-z0-9-]+\.$/);
+    const saved = JSON.parse(probe.writes.at(-1)!);
+    expect(saved.status).toBe("failed");
+    expect(saved.contrastRetryDiagnostics.stage).toBe(failure === "native" ? "native-normal-audit" : failure === "forced-colors" ? "forced-colors-audit-1440" : "audit-1440");
+    const data = saved.contrastRetryDiagnostics.observation;
+    expect(data.attempted).toBe(1); expect(data.passed).toBe(0); expect(data.outcomes).toEqual({ violation: 0, unresolved: 1, noPositiveSample: 0 });
+    expect(data.reasons.bgGradient).toBe(1); expect(data.hints.backgroundImage).toBe(1);
+    expect(probe.writes.join("")).not.toMatch(/synthetic-private|Synthetic private|messageKey|bgColor|linear-gradient/);
+    expect(probe.calls).toBe(failure === "forced-colors" ? 4 : 2);
+    if (failure !== "attachment" && failure !== "restore") expect(JSON.parse(probe.attachments.at(-1)!).contrastRetryDiagnostics).toEqual(saved.contrastRetryDiagnostics);
+  });
   it.each(["settings","navigation-menu"] as const)("audits native %s at its actual width without any viewport resize",async surface=>{
     installNativeFrame();if(surface === "navigation-menu")installNavigation();
     const result=await qualifyCriticalSurfaceAccessibility(page,info,surface,"native400");

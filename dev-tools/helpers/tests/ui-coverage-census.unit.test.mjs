@@ -276,7 +276,31 @@ function assertSettingsNavigationSourceDrift(map,result){
   return {...result,gaps:result.gaps.filter(g=>!isOwned(g))};
 }
 
+const pendingContrastDiagnostics = Object.freeze([
+  { path: "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts", baseline: "1e5fd6b76e30025b4571787573b09a3f8b413103",
+    committed: "0274cd546eb8013c2987f66923c393847911fde9289af57833ee9d79549be265", candidate: "28926b89ee315867857d993dc228463869917681c87dceae7d48c71a6ae3c2cb", facts_sha256: "ce65218c756560acc1f83b3897f42a04848eae17472d262e2b45981e8ea6089e" },
+  { path: "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts", baseline: "1e5fd6b76e30025b4571787573b09a3f8b413103",
+    committed: "076277eb0d7ccab6c401fbb3cc5c58286578c3ea2c9e32a8a722c66954692e9e", candidate: "2f59896ac35870defa416a74986d6974dda6e0d00fbca169be54fb3cf55a880a", facts_sha256: "1121c08ce872688e8401d8334f2aa2320e323d760dab821ef4cea3b9434655e9" },
+  { path: "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts", baseline: "1e5fd6b76e30025b4571787573b09a3f8b413103",
+    committed: "c08850f9ffbcc829abab3c9223bb04932cc347017348fa560cc7ea3d1d21d4ab", candidate: "4e704f91748a5a0f742075c7e166bc74df49525f5f3a960bffde45db5cf0bfd8", facts_sha256: "3faea20f8f8f2e79fb72d9822ac1de40e7a186bda825b5abbc71e4826f9bf22f" },
+].map(Object.freeze));
+function assertContrastDiagnosticDrift(map,result) {
+  assert.equal(map.source_baseline,pendingContrastDiagnostics[0].baseline);
+  const expected=[];
+  for(const pending of pendingContrastDiagnostics) {
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);const row=rows[0];
+    assert.equal(row.committed_sha256,sha(historicalSource(map.source_baseline,pending.path)));
+    assert.equal(row.committed_sha256,pending.committed);assert.equal(row.facts.sha256,pending.candidate);
+    assert.equal(sha(JSON.stringify(row.facts)),pending.facts_sha256,"Future diagnostic facts cannot inherit this exact binding.");
+    assert.notEqual(row.facts.sha256,row.committed_sha256);expected.push({kind:"unreviewed-source-drift",source:pending.path});
+  }
+  const paths=new Set(pendingContrastDiagnostics.map(row=>row.path)),owned=g=>g.kind==="unreviewed-source-drift"&&paths.has(g.source);
+  const ordered=rows=>[...rows].sort((a,b)=>a.source.localeCompare(b.source));
+  assert.deepEqual(ordered(result.gaps.filter(owned)),ordered(expected));
+  return {...result,gaps:result.gaps.filter(g=>!owned(g))};
+}
 function assertCurrentSourceDrift(map, result) {
+  if(map.source_baseline===pendingContrastDiagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result);
   if(map.source_baseline===pendingSettingsEmptyDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsEmptyDefinitions[1].path))result=assertSettingsEmptySourceDrift(map,result);
   const navigationPaths=new Set();
   if(map.source_baseline===pendingSettingsNavigationDefinitions[0].baseline&&map.sources.some(row=>row.path===pendingSettingsNavigationDefinitions[2].path)){
@@ -784,8 +808,8 @@ test("historical Git lookup keeps commit and path identity and returns defensive
 });
 
 test("pending Settings navigation definitions reject forged future missing duplicate and unrelated facts",()=>{
-  const read=repositoryReader(process.cwd());
-  const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
+  // Freeze this older fixture to real historical facts, not later working edits.
+  const map=JSON.parse(historicalSource("1e5fd6b76e30025b4571787573b09a3f8b413103","docs/operations/comprehensive-ui-automation-current-census.json"));
   map.source_baseline=pendingSettingsNavigationDefinitions[0].baseline;
   const review=map.sources.find(row=>row.path===pendingReviewSiteDefinition.source);assert(review);
   const originalReview=historicalSource(map.source_baseline,review.path);
@@ -809,6 +833,27 @@ test("pending Settings navigation definitions reject forged future missing dupli
   ]){
     const m=structuredClone(map),r=structuredClone(result);mutate(m,r);
     assert.throws(()=>assertCurrentSourceDrift(m,r));
+  }
+});
+
+test("pending contrast diagnostic facts reject forged future missing duplicate and unrelated drift",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assertCurrentSourceDrift(map,result);
+  for(const pending of pendingContrastDiagnostics) {
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(g=>g.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]) {const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCurrentSourceDrift(m,r));}
   }
 });
 

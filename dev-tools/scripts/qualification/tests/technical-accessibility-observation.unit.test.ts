@@ -13,11 +13,62 @@ vi.mock("node:fs/promises", () => {
   return { readFile, mkdir, writeFile, default: { readFile, mkdir, writeFile } };
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
-import { readTechnicalAccessibilityAudit, readNative400Frame, readNativeAccessibilityAudit, readCriticalAccessibilityMode,
+import { readTechnicalAccessibilityAudit, readContrastRetryDiagnostics, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, readCriticalAccessibilityMode,
   qualifyNativeCriticalAccessibilityReport } from "../visual-composer/technical-accessibility-observation";
-import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
+import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, collectDocumentAccessibilityObservation,
+  collectRuntimeAccessibilityObservation, collectNativeDocumentAccessibilityObservation, collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
 const base = () => ({ schemaVersion: "technical-accessibility-audit-v1", width: 320, violations: [] as Array<{ rule: string; nodes: number }>, incomplete: [] as Array<{ rule: string; nodes: number }>, contrastPassedNodes: 3, retries: { attempted: 0, passed: 0 } });
 const invalid = "Invalid technical accessibility observation.";
+const diagnostic = () => ({ schemaVersion: "contrast-retry-diagnostics-v1", attempted: 1, passed: 0,
+  outcomes: { violation: 0, unresolved: 1, noPositiveSample: 0 },
+  reasons: { bgGradient: 1, bgImage: 0, imgNode: 0, outsideViewport: 0, elmPartiallyObscuring: 0, elmPartiallyObscured: 0,
+    bgOverlap: 0, colorParse: 0, equalRatio: 0, shortTextContent: 0, other: 0 },
+  hints: { backgroundImage: 1, reducedOpacity: 0, clippedAncestor: 0, nonRgbColor: 0, ancestorLimit: 0, reasonScanLimit: 0 } });
+
+describe("closed failed-contrast diagnostic projection", () => {
+  it("copies and freezes only finite partitioned counts without qualifying an audit", () => {
+    const raw = diagnostic(), value = readContrastRetryDiagnostics(raw);
+    raw.reasons.bgGradient = 0; raw.hints.backgroundImage = 0;
+    expect(value.reasons.bgGradient).toBe(1); expect(value.hints.backgroundImage).toBe(1);
+    for (const part of [value, value.outcomes, value.reasons, value.hints]) expect(Object.isFrozen(part)).toBe(true);
+    expect(value).not.toHaveProperty("status"); expect(value).not.toHaveProperty("failures");
+  });
+  it.each([
+    { schemaVersion: "other" }, { attempted: 1001 }, { passed: 2 }, { attempted: 1.5 }, { attempted: NaN },
+    { outcomes: { violation: 0, unresolved: 0, noPositiveSample: 0 } },
+    { reasons: { ...diagnostic().reasons, bgGradient: 2 } }, { reasons: { ...diagnostic().reasons, other: 1 } },
+    { hints: { ...diagnostic().hints, backgroundImage: Infinity } }, { hints: { ...diagnostic().hints, reasonScanLimit: -1 } },
+    { selector: "synthetic-private-selector" }, { hints: { ...diagnostic().hints, css: "synthetic-private-css" } },
+  ])("rejects excessive, inconsistent and private diagnostic input %#", change => {
+    expect(() => readContrastRetryDiagnostics({ ...diagnostic(), ...change })).toThrow("Invalid contrast retry diagnostics.");
+  });
+  it.each(["getter", "nested-getter", "proxy", "nested-proxy", "revoked", "symbol"])("rejects %s without executing its hooks", kind => {
+    const raw = diagnostic(); let value: unknown = raw, hooks = 0;
+    if (kind === "getter") Object.defineProperty(raw, "attempted", { get() { hooks++; return 1; } });
+    if (kind === "nested-getter") Object.defineProperty(raw.hints, "backgroundImage", { get() { hooks++; return 1; } });
+    if (kind === "proxy") value = new Proxy(raw, { ownKeys() { hooks++; return []; } });
+    if (kind === "nested-proxy") raw.reasons = new Proxy(raw.reasons, { getPrototypeOf() { hooks++; return Object.prototype; } });
+    if (kind === "revoked") { const p = Proxy.revocable(raw, {}); p.revoke(); value = p.proxy; }
+    if (kind === "symbol") Object.defineProperty(raw, Symbol("synthetic-private"), { value: 1 });
+    expect(() => readContrastRetryDiagnostics(value)).toThrow("Invalid contrast retry diagnostics."); expect(hooks).toBe(0);
+  });
+  it("requires the diagnostic counts to match the independently read core audit", () => {
+    const core = { ...base(), incomplete: [{ rule: "color-contrast", nodes: 1 }], retries: { attempted: 1, passed: 0 } };
+    const value = readTechnicalAccessibilityObservation({ audit: core, diagnostics: diagnostic() });
+    expect(value.audit.status).toBe("failed"); expect(value.audit).not.toHaveProperty("diagnostics"); expect(Object.isFrozen(value)).toBe(true);
+    expect(() => readTechnicalAccessibilityObservation({ audit: base(), diagnostics: diagnostic() })).toThrow(invalid);
+    const native = readNativeAccessibilityObservation({ audit: { ...nativeAudit().facts, incomplete: core.incomplete, retries: core.retries }, diagnostics: diagnostic() }, "normal", nativeFrame());
+    expect(native.audit.status).toBe("failed"); expect(native.audit.frame.innerWidth).toBe(356);
+  });
+  it.each(["missing", "extra", "getter", "proxy"])("rejects %s observation envelope without a fallback or executable hook", kind => {
+    let hooks = 0; let raw: unknown = { audit: base(), diagnostics: diagnostic() };
+    if (kind === "missing") raw = { audit: base() };
+    if (kind === "extra") raw = { audit: base(), diagnostics: diagnostic(), private: "synthetic-private" };
+    if (kind === "getter") Object.defineProperty(raw, "audit", { get() { hooks++; return base(); } });
+    if (kind === "proxy") raw = new Proxy(raw as object, { getPrototypeOf() { hooks++; return Object.prototype; } });
+    expect(() => readTechnicalAccessibilityObservation(raw)).toThrow(invalid); expect(hooks).toBe(0);
+  });
+});
 
 const nativeFrame = () => ({dpr:4,cssZoom:"1",visualScale:1,outerWidth:1440,innerWidth:356,layoutWidth:356,overflow:0,controls:2,inaccessible:0});
 const nativeAudit = (media = "normal") => ({schemaVersion:"native-technical-accessibility-audit-v1",media,frame:nativeFrame(),
@@ -242,6 +293,66 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     const report = await collectSystemBuilderAccessibilityAudit(page, 1440);
     expect(report.status).toBe("failed"); expect(report.retries).toEqual({ attempted: 1, passed: 0 });
     expect(report.failures).toContain("unresolved-contrast-retry"); expect(JSON.stringify(report)).not.toContain("synthetic-private");
+  });
+  it.each(["bgGradient", "bgImage", "imgNode", "outsideViewport", "elmPartiallyObscuring", "elmPartiallyObscured", "bgOverlap", "colorParse", "equalRatio", "shortTextContent", "synthetic-private-reason"])("projects only the fixed engine reason for %s", async messageKey => {
+    const main = document.createElement("main"); main.className = "ui-shell";
+    const content = document.body.firstElementChild!; content.replaceWith(main); main.append(content);
+    main.style.backgroundImage = 'linear-gradient(red, blue)'; main.style.opacity = '0.5'; main.style.overflowX = 'hidden';
+    let calls = 0;
+    install(async () => {
+      const retry = { ...node(), any: [{ id: "color-contrast", message: "synthetic-private-message", data: { messageKey, fgColor: "synthetic-private-color" } }] };
+      return ++calls === 1 ? { ...result(), incomplete: [{ id: "color-contrast", nodes: [node()] }] }
+        : { ...result(), incomplete: [{ id: "color-contrast", nodes: [retry] }] };
+    });
+    const value = await collectDocumentAccessibilityObservation(page, 1440);
+    expect(calls).toBe(2); expect(value.audit.status).toBe("failed"); expect(value.audit.retries).toEqual({ attempted: 1, passed: 0 });
+    expect(value.diagnostics.reasons[messageKey.startsWith("synthetic") ? "other" : messageKey as keyof typeof value.diagnostics.reasons]).toBe(1);
+    expect(value.diagnostics.outcomes).toEqual({ violation: 0, unresolved: 1, noPositiveSample: 0 });
+    expect(value.diagnostics.hints).toMatchObject({ backgroundImage: 1, reducedOpacity: 1, clippedAncestor: 1, ancestorLimit: 0, reasonScanLimit: 0 });
+    expect(Object.isFrozen(value.diagnostics.hints)).toBe(true);
+    expect(JSON.stringify(value)).not.toMatch(/synthetic-private|Synthetic private|selector|messageKey|fgColor|linear-gradient/);
+  });
+  it.each(["violation", "unresolved", "noPositiveSample"] as const)("partitions the actual %s retry without adding an audit, scroll or wait", async outcome => {
+    const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main); main.append(document.querySelector(".system-builder")!);
+    let calls = 0; const frames = vi.fn((callback: FrameRequestCallback) => { callback(0); return 1; }); vi.stubGlobal("requestAnimationFrame", frames);
+    install(async () => {
+      if (++calls === 1) return { ...result(), incomplete: [{ id: "color-contrast", nodes: [node()] }] };
+      return { violations: outcome === "violation" ? [{ id: "color-contrast", nodes: [node()] }] : [],
+        incomplete: outcome === "unresolved" ? [{ id: "color-contrast", nodes: [node()] }] : [], passes: [] };
+    });
+    const value = await collectDocumentAccessibilityObservation(page, 320);
+    expect(value.diagnostics.outcomes[outcome]).toBe(1); expect(value.diagnostics.reasons.other).toBe(1);
+    expect(calls).toBe(2); expect(frames).toHaveBeenCalledTimes(2);
+    expect(document.getElementById("synthetic-private-selector")!.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(value.audit.status).toBe("failed");
+  });
+  it("bounds diagnostic ancestry and engine-check inspection without suppressing the failed retry", async () => {
+    const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main);
+    let parent: Element = main;
+    for (let depth = 0; depth < 80; depth++) { const child = document.createElement("div"); parent.append(child); parent = child; }
+    parent.append(document.querySelector(".system-builder")!);
+    let calls = 0;
+    install(async () => ++calls === 1 ? { ...result(), incomplete: [{ id: "color-contrast", nodes: [node()] }] }
+      : { ...result(), incomplete: [{ id: "color-contrast", nodes: [{ ...node(), any: new Array(65).fill({ id: "color-contrast", data: { messageKey: "bgGradient" } }) }] }] });
+    const value = await collectDocumentAccessibilityObservation(page, 320);
+    expect(value.diagnostics.hints.ancestorLimit).toBe(1); expect(value.diagnostics.hints.reasonScanLimit).toBe(1);
+    expect(value.diagnostics.reasons.other).toBe(1); expect(value.audit.status).toBe("failed"); expect(calls).toBe(2);
+  });
+  it("retains the exact successful core audit and an independent zero-count projection", async () => {
+    const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main);
+    install(async () => result());
+    const original = await collectDocumentAccessibilityAudit(page, 1440), value = await collectDocumentAccessibilityObservation(page, 1440);
+    expect(JSON.stringify(value.audit)).toBe(JSON.stringify(original)); expect(value.audit).not.toHaveProperty("diagnostics");
+    expect(value.diagnostics.attempted).toBe(0); expect(Object.values(value.diagnostics.reasons).every(n => n === 0)).toBe(true);
+  });
+  it.each([
+    { collect: collectDocumentAccessibilityObservation, argument: 1440 }, { collect: collectRuntimeAccessibilityObservation, argument: 1440 },
+    { collect: collectNativeDocumentAccessibilityObservation, argument: "normal" }, { collect: collectNativeRuntimeAccessibilityObservation, argument: "normal" },
+  ])("rejects extra observer arguments before Page effects %#", async ({ collect, argument }) => {
+    let calls = 0; const callback = new Proxy(() => undefined, { apply() { calls++; throw new Error("synthetic-private-callback"); } });
+    const evaluate = vi.fn();
+    await expect((collect as (...args: unknown[]) => Promise<unknown>)({ evaluate }, argument, callback)).rejects.toThrow(/Invalid .* accessibility observation\./);
+    expect(evaluate).not.toHaveBeenCalled(); expect(calls).toBe(0);
   });
   it.each(["missing-target", "unknown-rule", "throw-private", "duplicate-rule", "excess-retry-nodes", "hidden-target", "replaced-target", "zero-width", "zero-height"] as const)("reports a fixed browser-stage failure for %s", async kind => {
     let calls = 0;

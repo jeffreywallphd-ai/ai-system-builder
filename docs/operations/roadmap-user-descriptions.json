@@ -15022,6 +15022,140 @@
           "Full-system testing remains deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ccf3ee63da797c58676860f33bff0a929384bbd39dbf633365076f84f64e9dd4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests permit existing writers on parent folders.",
+          "Checks still prevent writing to or deleting the selected folder and exact model files."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a8f8ba4234fcbf971b7c25edd4767608a5e6a56688c1fb8e902883afa9f5c95f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test code records the original reference to the open file and its identity before it calls other code.",
+          "Changed output or an incomplete result cannot pass the check."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "27deed0f807297b92b21e9d6e36f451f1bee1b3cb2f698fbf279aa3dc4201b80",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file owner records the original file-open result and file identity before it calls other code.",
+          "If a field cannot be read or changes, the code keeps the original facts and refuses to confirm the result."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8aca9512cffd41903cb5415e92b0fbadbecd82abbab7ce617ba33df9ef955f7b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This records one tested, reviewed and committed version.",
+          "It does not close the parent requirement or verify later code changes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d4dbcba04390695f280effd1d1a2321c07a1b1e7894dd6d9e9debb4cdda814a5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used simulated Windows responses.",
+          "Actual Windows file protection and the separate conflicting-access refusal test still require their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fffd8dd7035cf4fa7d72c75190b76310a160905ec5a4b3d5262c6fa0dae9dfe4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Shared disk-use tracking, model-worker shutdown, safe restart and resource checks are still pending.",
+          "Old temporary model files with unknown ownership remain untouched.",
+          "The full 12 GiB disk budget remains reserved for those files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9492978a9c9120ca59feb2ff72a07800003c0a216acd42c78cd999d3120c9635",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model-accuracy and text-recognition checks remain closed.",
+          "Full-system testing stays deferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "51cc92b5fbbbd6bf4340b48d8a5fa7abc34166d83a9a0bcf6143e873ec0758e2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The separate conflicting-access test is implemented and its source checks passed.",
+          "It checks the original file identity and preserves the model-file guard.",
+          "The versioned file-protection report contains the separate Windows result."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "05ef99ad15d886cbf51edbd9ae668f1907bdc28e2ff5546220933e611fac0032",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This links one reviewed source version.",
+          "It does not close the parent requirement or verify later code changes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bfea38f6e53e33204b127e12b4cbefd4b0bc6406906e0d5b28dec5768691bfb8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows result applies only to refusal of conflicting access to the new exact test file.",
+          "It does not qualify the earlier file-lock notification test or the full failure-case set."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bdb880a6871a64ffa89674fe538fe52e2801f4c0621ce7d02b2dd99d1b44b477",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Cached-model ownership, protected disk-use tracking, worker restart and model-resource checks are still pending.",
+          "Unknown temporary model files keep the full 12 GiB disk budget reserved."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "46009a199f197f31af18f29714ab4af68cdcbb24f6b1fe4623b4c9637cba245e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model-accuracy and text-recognition checks remain closed.",
+          "Full-system testing stays deferred."
+        ]
+      }
     }
   ]
 }

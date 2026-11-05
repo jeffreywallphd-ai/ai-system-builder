@@ -36,6 +36,46 @@ function count(value: unknown, limit: number, minimum = 0): number {
   if (!Number.isSafeInteger(value) || (value as number) < minimum || (value as number) > limit) throw new Error(INVALID);
   return value as number;
 }
+export const CONTRAST_RETRY_REASON_IDS = Object.freeze(["bgGradient", "bgImage", "imgNode", "outsideViewport", "elmPartiallyObscuring",
+  "elmPartiallyObscured", "bgOverlap", "colorParse", "equalRatio", "shortTextContent", "other"] as const);
+export const CONTRAST_RETRY_HINT_IDS = Object.freeze(["backgroundImage", "reducedOpacity", "clippedAncestor", "nonRgbColor", "ancestorLimit", "reasonScanLimit"] as const);
+const CONTRAST_RETRY_OUTCOMES = ["violation", "unresolved", "noPositiveSample"] as const;
+export interface ContrastRetryDiagnostics {
+  readonly schemaVersion: "contrast-retry-diagnostics-v1";
+  readonly attempted: number; readonly passed: number;
+  readonly outcomes: Readonly<Record<typeof CONTRAST_RETRY_OUTCOMES[number], number>>;
+  readonly reasons: Readonly<Record<typeof CONTRAST_RETRY_REASON_IDS[number], number>>;
+  readonly hints: Readonly<Record<typeof CONTRAST_RETRY_HINT_IDS[number], number>>;
+}
+/** A diagnostic projection supplies no accessibility status or qualification. */
+export function readContrastRetryDiagnostics(value: unknown): ContrastRetryDiagnostics {
+  try {
+    const data = record(value, ["schemaVersion", "attempted", "passed", "outcomes", "reasons", "hints"]);
+    if (data.schemaVersion !== "contrast-retry-diagnostics-v1") throw new Error();
+    const attempted = count(data.attempted, ACCESSIBILITY_RETRY_NODE_LIMIT), passed = count(data.passed, attempted), failed = attempted - passed;
+    function counters<K extends string>(value: unknown, keys: readonly K[]) {
+      const fields = record(value, keys);
+      return Object.freeze(Object.fromEntries(keys.map(key => [key, count(fields[key], failed)]))) as Readonly<Record<K, number>>;
+    }
+    const outcomes = counters(data.outcomes, CONTRAST_RETRY_OUTCOMES), reasons = counters(data.reasons, CONTRAST_RETRY_REASON_IDS), hints = counters(data.hints, CONTRAST_RETRY_HINT_IDS);
+    if (Object.values(outcomes).reduce((a, b) => a + b, 0) !== failed || Object.values(reasons).reduce((a, b) => a + b, 0) !== failed) throw new Error();
+    return Object.freeze({ schemaVersion: "contrast-retry-diagnostics-v1", attempted, passed, outcomes, reasons, hints });
+  } catch { throw new Error("Invalid contrast retry diagnostics."); }
+}
+function observedAudit<T extends { retries: { attempted: number; passed: number } }>(value: unknown, read: (audit: unknown) => T) {
+  const envelope = record(value, ["audit", "diagnostics"]), audit = read(envelope.audit), diagnostics = readContrastRetryDiagnostics(envelope.diagnostics);
+  if (diagnostics.attempted !== audit.retries.attempted || diagnostics.passed !== audit.retries.passed) throw new Error(INVALID);
+  return Object.freeze({ audit, diagnostics });
+}
+/** Keep the strict v1 audit unchanged; diagnostics are a separate bounded value. */
+export function readTechnicalAccessibilityObservation(value: unknown) {
+  try { return observedAudit(value, readTechnicalAccessibilityAudit); }
+  catch { throw new Error(INVALID); }
+}
+export function readNativeAccessibilityObservation(value: unknown, media: unknown, frame: unknown) {
+  try { return observedAudit(value, facts => readNativeAccessibilityAudit({schemaVersion: "native-technical-accessibility-audit-v1", media, frame, facts})); }
+  catch { throw new Error("Invalid native accessibility observation."); }
+}
 function rules(value: unknown): readonly RuleCount[] {
   if (types.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) throw new Error(INVALID);
   const length = count(Object.getOwnPropertyDescriptor(value, "length")?.value, RULE_LIMIT);

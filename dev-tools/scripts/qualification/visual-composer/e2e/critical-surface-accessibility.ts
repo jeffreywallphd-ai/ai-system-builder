@@ -3,9 +3,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, qualifyNativeCriticalAccessibilityReport, readCriticalAccessibilityMode, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation,
-  type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit } from "../technical-accessibility-observation";
-import { collectDocumentAccessibilityAudit, collectRuntimeAccessibilityAudit, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityAudit,
-  collectNativeRuntimeAccessibilityAudit, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference, readTechnicalAccessibilityEngine } from "./technical-accessibility";
+  type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type ContrastRetryDiagnostics } from "../technical-accessibility-observation";
+import { collectDocumentAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
+  collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference, readTechnicalAccessibilityEngine } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
@@ -48,6 +48,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
   const report: Record<string, unknown> = { ...context, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: context.schemaVersion,
     status: "running", scope: "ui-accessibility-observation-only", audits, forcedColorsAudits };
   let created = false, stage = "reference-profile";
+  let failedContrast: { stage: string; observation: ContrastRetryDiagnostics } | undefined;
   let originalViewport: { width: number; height: number } | undefined;
   async function save() {
     const body = JSON.stringify(report, null, 2) + "\n";
@@ -121,7 +122,9 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       report[`motion-${width}`] = readReducedMotionObservation(motion);
       stage = `control-access-${width}`; await controlAccess(width, stage);
       stage = `audit-${width}`;
-      const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width); audits.push(rawAudit(audit)); await save();
+      const { audit, diagnostics } = await (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width);
+      if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
+      audits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
     }
     stage = "forced-colors-media";
@@ -135,7 +138,8 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       if (context.surface === "navigation-menu") { stage = `forced-colors-navigation-layout-${width}`; await requireNavigationLayout(page, width === 320); }
       stage = `forced-colors-control-access-${width}`; await controlAccess(width, stage);
       stage = `forced-colors-audit-${width}`;
-      const audit = await (runtime ? collectRuntimeAccessibilityAudit : collectDocumentAccessibilityAudit)(page, width);
+      const { audit, diagnostics } = await (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width);
+      if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
       forcedColorsAudits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
     }
@@ -143,6 +147,7 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     Object.assign(report, result); return result;
   } catch {
     report.status = "failed"; report.failureStage = stage;
+    if (failedContrast) report.contrastRetryDiagnostics = failedContrast;
     throw new Error(`Critical accessibility check failed at ${stage}.`);
   } finally {
     if (created) await finalizeTechnicalAccessibilityEvidence(report, save,
@@ -165,6 +170,7 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
   const report: Record<string, unknown> = {...context, schemaVersion:"native-critical-surface-accessibility-v1", contextSchemaVersion:context.schemaVersion,
     status:"running", scope:"native-ui-observation-only", audits, initialFrame:rawNativeFrame(initialFrame)};
   let created = false, stage = "reference-profile";
+  let failedContrast: { stage: string; observation: ContrastRetryDiagnostics } | undefined;
   async function save() {
     const body = JSON.stringify(report, null, 2) + "\n";
     if (Buffer.byteLength(body) > 262144) throw new Error("Native accessibility evidence exceeded its bound.");
@@ -200,11 +206,12 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
       }));
       if(context.surface === "navigation-menu") { stage=`native-${media}-navigation-layout`;await requireNavigationLayout(page,true); }
       stage=`native-${media}-audit`;
-      const audit=await(runtime?collectNativeRuntimeAccessibilityAudit:collectNativeDocumentAccessibilityAudit)(page,media);
+      const {audit,diagnostics}=await(runtime?collectNativeRuntimeAccessibilityObservation:collectNativeDocumentAccessibilityObservation)(page,media);
+      if(audit.status==="failed")failedContrast={stage,observation:diagnostics};
       audits.push(raw(audit));await save();if(audit.status!=="passed")throw new Error();
     }
     const result=qualifyNativeCriticalAccessibilityReport(context,audits);Object.assign(report,result);return result;
-  }catch{report.status="failed";report.failureStage=stage;throw new Error(`Native accessibility check failed at ${stage}.`);}
+  }catch{report.status="failed";report.failureStage=stage;if(failedContrast)report.contrastRetryDiagnostics=failedContrast;throw new Error(`Native accessibility check failed at ${stage}.`);}
   finally{if(created)await finalizeTechnicalAccessibilityEvidence(report,save,
     ()=>info.attach(`native-critical-accessibility-${context.surface}`,{body:JSON.stringify(report),contentType:"application/json"}),
     ()=>page.emulateMedia({reducedMotion:"no-preference",forcedColors:"none"}));}
