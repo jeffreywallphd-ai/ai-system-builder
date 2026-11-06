@@ -18,6 +18,7 @@ function Fixture() {
   return <>
     <button id="publish-fixture-notification" type="button" onClick={() => notifications.publish({ message: "Sample saved.", tone: "success" })}>Publish</button>
     <button id="open-fixture-panel" type="button" onClick={() => notifications.setPanelOpen(true)}>Open panel</button>
+    <button id="switch-fixture-workspace" type="button" onClick={() => notifications.setActiveWorkspaceId("other-workspace")}>Switch workspace</button>
     <NotificationBell />
     <NotificationViewport />
   </>;
@@ -77,7 +78,7 @@ describe("notification dismissal focus", () => {
     expect(document.activeElement).toBe(outside);
   });
 
-  it.each(["Escape", "Close"])("returns focus on %s after a batched close and reopen", async (action) => {
+  it.each(["Escape", "Close", "workspace change"])("returns focus on %s after a batched close and reopen", async (action) => {
     await act(async () => bell().click());
     const panel = view.querySelector<HTMLElement>('[role="dialog"]')!;
     const reopen = view.querySelector<HTMLButtonElement>("#open-fixture-panel")!;
@@ -93,8 +94,10 @@ describe("notification dismissal focus", () => {
     await act(async () => {
       if (action === "Escape") {
         outside.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      } else {
+      } else if (action === "Close") {
         panel.querySelector<HTMLButtonElement>('[aria-label="Close notifications"]')!.click();
+      } else {
+        view.querySelector<HTMLButtonElement>("#switch-fixture-workspace")!.click();
       }
     });
 

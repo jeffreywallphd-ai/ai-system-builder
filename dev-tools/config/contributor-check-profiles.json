@@ -5,11 +5,14 @@
       "test_paths": [
         "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
         "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
-        "modules/ui/shared/notifications/tests/notification-dismiss-focus.ui.test.tsx"
+        "modules/ui/shared/notifications/tests/notification-dismiss-focus.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/notificationState.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "modules/ui/shared/notifications/NotificationCenter.tsx",
+        "modules/ui/shared/notifications/NotificationProvider.tsx",
+        "modules/ui/shared/notifications/notificationState.ts",
         "modules/ui/shared/styles/components/notifications.css",
         "modules/ui/shared/README.md"
       ]
