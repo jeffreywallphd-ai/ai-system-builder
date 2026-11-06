@@ -161,6 +161,32 @@ class GuardedLeaseTests(unittest.TestCase):
         self.assertIsNone(observed())
         self.assertNotIn(key, offload._ISSUED_STAGING_LEASES)
 
+    def test_normal_release_never_retains_an_unissued_copy(self):
+        lease = self.lease()
+        lease.seal()
+        alias = copy.copy(lease)
+        references = []
+        steps = list(self.backend.steps)
+        with patch.object(loader, "_RETAINED_LEASES", []):
+            with patch.object(loader.gc, "collect", wraps=gc.collect) as collect:
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    loader.release_offload_lease(alias, [])
+                self.assertEqual(loader._RETAINED_LEASES, [])
+                collect.assert_not_called()
+            self.assertEqual(self.backend.steps, steps)
+            self.assertEqual((lease.path / "index.json").read_bytes(), b"{}")
+            with self.assertRaises(offload.OffloadAdmissionError):
+                loader.release_offload_lease(lease, references)
+            self.assertEqual(len(loader._RETAINED_LEASES), 1)
+            retained, original_references = loader._RETAINED_LEASES[0]
+            self.assertIs(retained, lease)
+            self.assertIs(original_references, references)
+            self.backend.worker_exited = True
+            self.owner.retire_owned_worker()
+            loader.retry_retained_offload_cleanup()
+            self.assertEqual(loader._RETAINED_LEASES, [])
+            self.assertTrue(lease.released)
+
     def test_real_lease_reserves_before_writes_and_parent_retires_after_reference_release(self):
         lease = self.lease()
         self.assertLess(self.backend.steps.index("reserve-durable"), self.backend.steps.index("create"))

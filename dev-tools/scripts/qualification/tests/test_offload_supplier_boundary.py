@@ -1,10 +1,11 @@
-"""Fake-only supplier and lease regressions; no model libraries are imported.
+"""Model-free supplier and lease regressions; no model libraries are imported.
 
 Reuse the fake loader class and explicit library-free limit/alias methods.
 Native and Accelerate methods stay in controlled modules and are not collected
 here. Actual tiny-model compatibility stays explicit.
 """
 from pathlib import Path
+from tempfile import gettempdir, mkdtemp
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -12,7 +13,7 @@ from unittest.mock import Mock, patch
 from modules.adapters.runtime.python.worker.tests import test_bounded_model_loader as fixtures
 from modules.adapters.runtime.python.worker.tasks import bounded_model_loader as loader
 from modules.adapters.runtime.python.worker.tasks import offload_recovery
-from modules.adapters.runtime.python.worker.tasks.local_model_offload import OffloadAdmissionError
+from modules.adapters.runtime.python.worker.tasks.local_model_offload import OffloadAdmissionError, OwnedOffloadLease
 
 
 class GenerationBoundaryTests(unittest.TestCase):
@@ -191,7 +192,34 @@ class CleanupCustodyBoundaryTests(unittest.TestCase):
         self.retained.start()
         self.addCleanup(self.retained.stop)
         self.references = []
-        self.lease = SimpleNamespace(released=False, seal=Mock(), cleanup=Mock())
+        parent = Path(gettempdir()).resolve(strict=True)
+        root = Path(mkdtemp(prefix="offload-custody-", dir=parent))
+        created = root.lstat()
+        self.lease = None
+
+        def retire_fixture():
+            current = root.lstat()
+            self.assertEqual(root.parent, parent)
+            self.assertEqual(root.resolve(strict=True), root)
+            self.assertEqual((current.st_dev, current.st_ino), (created.st_dev, created.st_ino))
+            self.assertNotEqual(created.st_ino, 0)
+            if self.lease is not None:
+                # The injected acknowledgement did not remove this synthetic slot.
+                self.lease.released = False
+                OwnedOffloadLease.seal(self.lease)
+                OwnedOffloadLease.cleanup(self.lease, model_released=True)
+                namespace = self.lease.root
+                identity = namespace.lstat()
+                self.assertEqual(namespace.parent, root)
+                self.assertEqual(namespace.resolve(strict=True), namespace)
+                self.assertEqual((identity.st_dev, identity.st_ino), self.lease._root_identity)
+                namespace.rmdir()
+            root.rmdir()
+
+        self.addCleanup(retire_fixture)
+        self.lease = OwnedOffloadLease(root, 1024)
+        self.lease.seal = Mock()
+        self.lease.cleanup = Mock()
 
     def test_gc_interrupt_retains_exact_owner_before_any_cleanup_effect(self):
         for error in (KeyboardInterrupt(), SystemExit(), RuntimeError('synthetic failure')):

@@ -219,6 +219,7 @@ ordinary and guarded cache owners remain distinct. Worker reference release and
 parent native retirement are separate, and unknown outcomes retain custody.
 Only the issued loader lease can seal, reuse, or release its original slot.
 Copies and leases with another slot's details cannot act on it.
+The cleanup retry list admits only issued leases and keeps their original references.
 No native backend is composed, so actual guarded recovery remains unavailable.
 See the worker README and optional low-memory operations guide for scope and tests.
 

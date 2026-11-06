@@ -22,6 +22,7 @@ from .local_model_offload import (
     CPU_WEIGHT_LIMIT, CUDA_WEIGHT_LIMIT, MAX_INPUT_TOKENS, MAX_NEW_TOKENS,
     LocalModelInventory, OffloadAdmissionError, OffloadResourcePlan,
     ORDINARY_OFFLOAD, OwnedOffloadLease, inspect_local_model, plan_resources, validate_device_map, fit_cpu_residency,
+    _require_issued_offload_lease,
 )
 from .offload_recovery import require_fresh_guarded_context, require_guarded_context
 from .bounded_model_inputs import AdmittedModelInputs
@@ -250,6 +251,7 @@ _RETAINED_LEASES: list[tuple[OwnedOffloadLease, list]] = []
 
 
 def _retain_offload_lease(lease: OwnedOffloadLease, references: list) -> None:
+    _require_issued_offload_lease(lease)
     for existing, original_references in _RETAINED_LEASES:
         if existing is lease:
             if original_references is not references:
