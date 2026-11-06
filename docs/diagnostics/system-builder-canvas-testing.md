@@ -436,6 +436,14 @@ unbroken references fit beside the dismiss button at 320 and 1440 pixels.
 This fixture produced zero contrast samples. The running app still needs
 contrast qualification.
 
+An open notification panel exposed a separate layout problem. The panel fit
+horizontally at all three test widths. At 320 pixels the panel and toast
+overlapped. The test reached the center of Dismiss and missed Close. At 720
+pixels it reached both centers, but the toast extended past the viewport.
+At 1440 pixels both controls were reachable and both surfaces fit. The fixture
+checked synthetic pointer targets. Running-app accessibility and contrast
+still need qualification.
+
 Use the focused `operational-ui` profile for these helpers and related feature
 tests. Synthetic Page and DOM fixtures check the test definitions; they do not
 qualify an actual host. Preserve earlier failed runs. A fresh source-bound host
