@@ -914,6 +914,11 @@ write/delete sharing conflicts. It revalidates held facts before release; the
 adapter requires actual helper close and fences reuse after unknown exit.
 It is uncomposed support under ADR-0043, with no production effect capability.
 
+The adapter accepts a single reply for the active greeting or request, including
+replies split across pipe reads. It rejects extra bytes in a reply or output
+received while no request is active and requests child termination. This
+checks observed pipe framing. The protocol does not echo a request identifier.
+
 The fixed `windows-file-identity` profile runs only two model-free unit files.
 Actual installed-toolchain/native fixtures are separate observations; their
 identity and exit evidence cannot prove a stable tree fence. New child files

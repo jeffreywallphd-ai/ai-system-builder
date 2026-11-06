@@ -10729,6 +10729,21 @@
       "limitations": [
         "The limit and read-error tests used a simulated directory reader. Windows file protection for deleting or revealing model files still needs separate checks."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "bind-windows-identity-replies-to-requests",
+      "work_criteria": [
+        "identity-response-order-and-owned-close"
+      ],
+      "receipt_digest": "cdc3997c03e773231f0eb52ad8524c66e87922ce422d9f69fd8131b13b2dcc9c",
+      "review_digest": "c7ab94dbae9dd71118bec6c4f9b90aa68d88d1ba563cc8a714765ad2302598ce",
+      "scope": "Tests rejected extra bytes in a reply and output received while no request was active. They also checked that a reply can arrive in pieces and that the child process closes before the adapter can start a new session.",
+      "limitations": [
+        "These tests used a simulated child process. The tests cannot show when the child wrote the bytes. Windows file protection for deleting or showing model files in their folder still needs separate tests."
+      ]
     }
   ]
 }

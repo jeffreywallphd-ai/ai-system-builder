@@ -15505,6 +15505,28 @@
           "Windows file protection for deleting or revealing model files still needs separate checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "829457d57390afc945aff08bd303ca11ac7f2786916c134988a792b2bf406ff5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests rejected extra bytes in a reply and output received while no request was active.",
+          "They also checked that a reply can arrive in pieces and that the child process closes before the adapter can start a new session."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "30db1b256f22c6fb1c26c9ec023a9119ad4f50633577ed7fc4feb219ef4872a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests used a simulated child process.",
+          "The tests cannot show when the child wrote the bytes. Windows file protection for deleting or showing model files in their folder still needs separate tests."
+        ]
+      }
     }
   ]
 }
