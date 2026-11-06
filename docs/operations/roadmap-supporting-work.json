@@ -10744,6 +10744,37 @@
       "limitations": [
         "These tests used a simulated child process. The tests cannot show when the child wrote the bytes. Windows file protection for deleting or showing model files in their folder still needs separate tests."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "preserve-model-record-after-unconfirmed-file-delete",
+      "work_criteria": [
+        "preserve-record-on-unconfirmed-file-delete"
+      ],
+      "receipt_digest": "82b715bae2b3f64213d8e6d99be7c821cedf8c7def0d195835d2213c4c2d7888",
+      "review_digest": "8a23267eed83d029c7b275cfb2b96ad777f60ddb5c4ab2e3e3849af5006e7632",
+      "scope": "When the user asks to delete the files too, the application keeps the model record if it cannot confirm file deletion. Tests checked the refusal and confirmed that users can still remove only the model record.",
+      "limitations": [
+        "The tests used a simulated file deletion result. Windows tests for deleting model files and opening their folder are still pending."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "security-generated-model-collision-preservation",
+      "work_criteria": [
+        "retained-model-collisions-denied",
+        "fresh-publication-compatible"
+      ],
+      "receipt_digest": "dca45b59c1b2f2bfbb4bad999e7c546d85bc6cbebe3847fc2a9813d0f1ec2298",
+      "review_digest": "77d15d1af9ba24424bfc9586a3fa25e3e5f0a552a9da5946bf9efddd1e8ad142",
+      "scope": "Tests confirmed that saving a generated model keeps an existing snapshot intact. When two saves competed, one complete result remained. On Windows, a test confirmed that the app refused to save from a linked source folder.",
+      "limitations": [
+        "A separate test could not create a file link inside the source folder, so that check is pending. Tests for model file ownership, file deletion and opening the model folder are still pending."
+      ]
     }
   ]
 }

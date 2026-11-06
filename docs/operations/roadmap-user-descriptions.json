@@ -15527,6 +15527,51 @@
           "The tests cannot show when the child wrote the bytes. Windows file protection for deleting or showing model files in their folder still needs separate tests."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1fc6486a842dbf52d4a9e08c35db95b1ce156046af7ef91ae0a2e578a289ff39",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "When the user asks to delete the files too, the application keeps the model record if it cannot confirm file deletion.",
+          "Tests checked the refusal and confirmed that users can still remove only the model record."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "425e0bc3653dfe31113871beb0d662fa7a40f2423b2a82395326d87c655bd9a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used a simulated file deletion result.",
+          "Windows tests for deleting model files and opening their folder are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "562a12c01e4ea64bd18723cefc40d79c0b2d6ac7c6f6b7d3ee4f7854e72f3bf0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests confirmed that saving a generated model keeps an existing snapshot intact.",
+          "When two saves competed, one complete result remained.",
+          "On Windows, a test confirmed that the app refused to save from a linked source folder."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0e2b526ae199b39d05d419b882ad7bed2740e83934297ad9a77244c158367c09",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A separate test could not create a file link inside the source folder, so that check is pending.",
+          "Tests for model file ownership, file deletion and opening the model folder are still pending."
+        ]
+      }
     }
   ]
 }
