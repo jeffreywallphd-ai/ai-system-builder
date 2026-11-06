@@ -10775,6 +10775,21 @@
       "limitations": [
         "A separate test could not create a file link inside the source folder, so that check is pending. Tests for model file ownership, file deletion and opening the model folder are still pending."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "preserve-outside-focus-when-closing-notifications",
+      "work_criteria": [
+        "retain-outside-control-focus"
+      ],
+      "receipt_digest": "83d96a1e3b1699b9839124286d73e9d5696a46ec6cb57bbc39c2d8b4119e79f6",
+      "review_digest": "963da624ceed7b7a2673bcc60f9986d4ce22b110aec686fe8f9487060e7a4518",
+      "scope": "When a mouse or touch action outside Notifications closes the panel, an outside control keeps focus if it has focus. Escape and Close return focus to the notification bell. A click on the page background also returns focus to the bell if no other control has focus.",
+      "limitations": [
+        "The tests used a simulated page. Browser and desktop checks for this increment are still pending."
+      ]
     }
   ]
 }

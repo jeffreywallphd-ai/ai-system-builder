@@ -15572,6 +15572,29 @@
           "Tests for model file ownership, file deletion and opening the model folder are still pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4ab512cb5056f70d91597737143f6ace319f7078b3849e07e7082ad86dd785cc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "When a mouse or touch action outside Notifications closes the panel, an outside control keeps focus if it has focus.",
+          "Escape and Close return focus to the notification bell.",
+          "A click on the page background also returns focus to the bell if no other control has focus."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c139c3712990e6b54ca5629bf2876bcae2d6f4ec3c2fb963af6fc2462c5c6e73",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used a simulated page.",
+          "Browser and desktop checks for this increment are still pending."
+        ]
+      }
     }
   ]
 }
