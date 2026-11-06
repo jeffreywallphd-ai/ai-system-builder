@@ -15661,6 +15661,52 @@
           "Windows file protection, disk accounting, worker shutdown, restart and real offload measurements still need testing."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c60a119dd81f0ca8bef32144de37d796aab6bde39b997712cb76e715357d9517",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Settings and Functional tests skip the app's local environment files.",
+          "Each test run uses its own cache and keeps the existing local API connection."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ece9a1e319f8a7c1f649eb16a3167d373f3af2630eb2b23a44e9f72ef48c72c0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The checks verified test setup and did not run the app in Chrome or Electron.",
+          "Those checks are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4f3e3a35842ac3c3ddb6f4649bb771f8ec631db06ca93eb5aa96419cb4ef5995",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "If a website save response is lost, the app checks the saved records before it reports success.",
+          "It keeps the files if the result is unclear.",
+          "If the app finds that a website capture task has failed, it stops before the next page."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "87c4f1bf96fc32a64fd617265f45d8dddb5c43846444821624d66db45d45a3bd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used local sample files.",
+          "Live website and private provider checks remain pending.",
+          "Recovery for files from an unconfirmed save also remains pending."
+        ]
+      }
     }
   ]
 }

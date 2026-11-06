@@ -10835,6 +10835,36 @@
       "limitations": [
         "The tests used synthetic files and a simulated file service. The check applies to the private permit itself. Windows file protection, disk accounting, worker shutdown, restart and real offload measurements still need testing."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "isolate-vite-config-for-thin-ui-qualification",
+      "work_criteria": [
+        "keep-qualification-config-and-cache-isolated"
+      ],
+      "receipt_digest": "d4b4402b10745dcb94076d03bb4ed55cbc2155887f0de35c8397249d0ee9337a",
+      "review_digest": "d7e9e1ca574bf1912cb1957bad69ffe25ae641226fa02f4458c5d9a9e28f6b87",
+      "scope": "The Settings and Functional tests skip the app's local environment files. Each test run uses its own cache and keeps the existing local API connection.",
+      "limitations": [
+        "The checks verified test setup and did not run the app in Chrome or Electron. Those checks are still pending."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "source-refresh-is-incremental-and-honest",
+      "work_id": "preserve-website-captures-after-uncertain-publication",
+      "work_criteria": [
+        "keep-owned-website-captures-and-report-save-outcome"
+      ],
+      "receipt_digest": "c06b451e7b5d4d786dd8366f3d336b6c5dbe074b037443dc4d6582acd4e0d774",
+      "review_digest": "b6a7cd48e8c489133215c345ac9336065bda7ad8267bd468efd6a823d3c584e6",
+      "scope": "If a website save response is lost, the app checks the saved records before it reports success. It keeps the files if the result is unclear. If the app finds that a website capture task has failed, it stops before the next page.",
+      "limitations": [
+        "The tests used local sample files. Live website and private provider checks remain pending. Recovery for files from an unconfirmed save also remains pending."
+      ]
     }
   ]
 }
