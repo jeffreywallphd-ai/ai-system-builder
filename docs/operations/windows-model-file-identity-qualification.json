@@ -1,0 +1,86 @@
+{
+  "schema_version": "windows-model-file-identity-component-evidence-v1",
+  "roadmap_id": "security-findings-refresh",
+  "increment_id": "file-and-workspace-authority",
+  "criterion_id": "host-file-authority",
+  "status": "read-only-windows-feature-passed",
+  "source_commit": "b8fa2106456c5b01b5735bdf6cfa09a787b7fd2a",
+  "source_digest": "5ee443916a7c0ec058fee20467bb5d1d02ae8543c662240fd21993ed968ccc79",
+  "input_sha256": {
+    "modules/adapters/model/local/createWindowsModelFileIdentityAdapter.ts": "27a262291584642558f43bf2dada8fd896f920d6f4d2d233f0d8caf5b9133903",
+    "modules/adapters/model/local/windowsModelFileIdentityProtocol.ts": "1f3c2de75a0974fa583d876195f28e4e159b2e6cf83379d07b7c61e1ab387aec",
+    "modules/adapters/model/local/native/windows/model_file_identity.cc": "26bce4cae5f756ae761452edf3db174650a49a4af4729ed7eff03cd1fe787c99",
+    "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts": "e99c746a5c79842491fe38029b99d439bf49066312beba77f9e24c735bf1afa9",
+    "dev-tools/scripts/native/build_windows_model_file_identity.py": "a283afd3c1323132416ac39f0689935a0e17027e833a23f3ab19412d6ce9f1ce",
+    "dev-tools/scripts/qualification/run_trained_context_qualification.py": "03ec78635c435d3bc3c1630c639ec707debdd3e09e305ce3acbc6eef6a4ff434",
+    "dev-tools/scripts/qualification/windows_qualification_memory.py": "463f91a0268d8d63121571a6c8c0892002ec50093c5ba464f9946cb45ef20dc5"
+  },
+  "observation": {
+    "actual_tool": "1fba35",
+    "review_invocation": "agent-windows-identity-native-feature-observation-review-20261106",
+    "scope": "One existing Windows NTFS feature file. New synthetic files only.",
+    "test_file": "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts",
+    "compiler_profile": "windows-x64-msvc1442-sdk26100-v1",
+    "build_result": 0,
+    "compiler_job_enforced": true,
+    "compiler_job_other_processes_after_handle_release": 0,
+    "build_artifacts": {
+      "build.log": {
+        "sha256": "7626c319f5ab26f55d6a2a89f70db8148333056edb3e6d2899f395c53d62777d",
+        "bytes": 24
+      },
+      "dependencies.json": {
+        "sha256": "f3daf449044082ce678857a0b8b6ee7a3b57ac430c90fdae30b2416eaf7a47d7",
+        "bytes": 39200
+      },
+      "job-observations.json": {
+        "sha256": "e0e41e87dea7dd9d71934b461ade2536ea4b91d390074f840f33cdfd996f9ac9",
+        "bytes": 1259
+      },
+      "manifest.json": {
+        "sha256": "bdc6cb4e581eddda89961dca73cc5e21311c7382ac2a6619cc240a90ecb5eccd",
+        "bytes": 302596
+      },
+      "model_file_identity.exe": {
+        "sha256": "68f34dfc3e815ccf313e9ae4010765de527d534f589fa4858ad822689da501f4",
+        "bytes": 286720
+      },
+      "model_file_identity.obj": {
+        "sha256": "bc6dcbe09882e98a99e5ef9c95d114a885410e921aa74be048453aef68f6b019",
+        "bytes": 519411
+      }
+    },
+    "owned_compiler_child_exit_codes": [
+      9
+    ],
+    "node_combined_output_sha256": "65c2297d11ecd9e3b7c6ea678e89aaf6f7f78fdfc531d2a249ce1744bb0ce27f",
+    "retained_transcript_file_sha256": "ba77275713f700f6473667dd17e5322c91dc2765e4ddbb312950a379aa61e2d0",
+    "duration_ms": 41859.0,
+    "tests": {
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "passed_cases": [
+      "actual NTFS relative handles pin identity, deny writers/rename and release normally",
+      "actual root and child identity substitution and preexisting writers deny",
+      "actual junction roots, junction ancestors/children and multiply linked files deny",
+      "actual malformed/oversized private frames deny with finite non-disclosing native exit",
+      "actual native handle table admits its finite boundary and denies an additional object",
+      "actual replaced root parent denies and held ancestor cannot be renamed",
+      "actual builder rejects redirected ancestor before creating an absent output namespace",
+      "actual lease deadline closes the exact native process and releases its handles",
+      "actual read-only directory identity lease is not a fence against new child bytes"
+    ],
+    "source_and_index_stable": true
+  },
+  "scope_limits": [
+    "The read-only helper does not prevent new files from being added under an inspected folder.",
+    "These tests do not grant production binary, model ownership, deletion, folder reveal or offload staging authority.",
+    "The parent criterion, increment and roadmap remain pending qualification."
+  ],
+  "parent_pass": false
+}

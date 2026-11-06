@@ -562,7 +562,7 @@
       "user_description": {
         "purpose": "Keep model operations within the host files that the application owns.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
+        "next_action": "Nine Windows tests passed for checking file identity. The agent still needs to verify who owns the files and test deleting files and opening their folder.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "The agent must prove that interface-supplied paths, broad changeable folders and forged records cannot authorize model deletion.",
