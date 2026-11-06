@@ -3,7 +3,7 @@
 # Security Findings Refresh and Governed Remediation Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-06T13:10:09Z`
+- Updated: `2026-11-06T13:25:32Z`
 
 ## Objective
 
@@ -233,7 +233,7 @@ Remove caller-controlled authority from destructive model operations, dataset st
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `host-file-authority`: A renderer-supplied path, broad mutable root or forged record cannot trigger model deletion or shell/network reveal; legitimate host-owned model operations succeed with denial-before-I/O and link/reparse replacement coverage. | controlled-environment | pending (external) |
-| `dataset-source-isolation`: Dataset preparation cannot resolve/read/localize a source outside the authoritative workspace/organization, including same identifiers and missing bindings; valid selected sources still stage. | local | not recorded |
+| `dataset-source-isolation`: Dataset preparation cannot resolve/read/localize a source outside the authoritative workspace/organization, including same identifiers and missing bindings; valid selected sources still stage. | local | passed (test) |
 | `write-owned-model-completion`: Model read/list routes perform zero registry writes. Authorized download completion records one idempotent model write under frozen organization/workspace authority; read-only, wrong-tenant and replay paths cannot register models. | local | not recorded |
 | `scoped-state-integrity`: Revision writes with identical asset/revision identifiers retain both workspace records; library promotion conflicts are atomic and preserve existing records, including concurrent attempts. | local | passed (test) |
 | `authentication-result-invariant`: Required authentication rejects anonymous/unauthenticated/malformed verifier contexts and never audits them as success; valid authenticated contexts retain supported behavior. | local | passed (test) |

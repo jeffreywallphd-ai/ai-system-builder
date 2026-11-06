@@ -684,6 +684,17 @@
       "outcome": "passed",
       "recordedAt": "2026-11-06T13:10:09Z",
       "summary": "Validated the frozen legacy roadmap against its pre-handoff record. All four completed increments, 12 original chunks, 15 evidence rows and original approval remain intact. The 10 unresolved criteria have exactly one primary owner each in the approved successor. No completion or approval transferred."
+    },
+    {
+      "artifact": "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-organization-isolation.integration.test.ts",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap -- modules/adapters/storage/filesystem/artifact-store/tests/filesystem-organization-isolation.integration.test.ts modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts modules/adapters/transport/api-express/dataset-preparation/tests/register-dataset-preparation-api-routes.unit.test.ts modules/adapters/storage/filesystem/artifact-catalog/tests/local-artifact-storage-binding.adapter.unit.test.ts",
+      "criterionId": "dataset-source-isolation",
+      "id": "evidence-5",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:25:32Z",
+      "summary": "Passed 37 focused tests. Two organizations using the same workspace and source IDs staged only their own files. A missing or foreign binding stopped the request before a storage read, provider call or worker start. Valid selected sources still staged. The tests used synthetic data and did not contact a real provider or start a model."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1210,6 +1221,12 @@
       "recordedAt": "2026-11-06T13:10:09Z",
       "sequence": 55,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "289b87b77bd5d61bfd4b042c3fa21682042d898f10b119d541273cf98e6a547a",
+      "recordedAt": "2026-11-06T13:25:32Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -1691,5 +1708,5 @@
   "schemaVersion": 1,
   "slug": "security-findings-refresh",
   "status": "executing",
-  "updatedAt": "2026-11-06T13:10:09Z"
+  "updatedAt": "2026-11-06T13:25:32Z"
 }
