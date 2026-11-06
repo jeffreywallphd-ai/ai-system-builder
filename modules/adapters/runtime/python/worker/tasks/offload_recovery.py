@@ -5,6 +5,7 @@ worker context, pathname, serialized budget or successful component fixture is
 not native authority. The ordinary empty-root profile remains separate.
 """
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
 
@@ -87,9 +88,20 @@ class _GuardedLease:
         self._owner = owner
         self.path = None
 
-    def seal(self):
+    @contextmanager
+    def _issued_owner(self):
         owner = self._owner
+        if type(owner) is not _GuardedOffloadOwner:
+            raise OffloadAdmissionError()
         with owner._lock:
+            # The owner lock covers identity and the following transition.
+            # A copied or independently constructed lease is never admitted.
+            if owner._lease is not self:
+                raise OffloadAdmissionError()
+            yield owner
+
+    def seal(self):
+        with self._issued_owner() as owner:
             if owner._phase == "writing":
                 owner._invoke("seal_staging", next_phase="sealed")
             elif owner._phase == "sealed":
@@ -98,24 +110,22 @@ class _GuardedLease:
                 raise OffloadAdmissionError()
 
     def assert_live(self, context):
-        owner = self._owner
-        with owner._lock:
+        with self._issued_owner() as owner:
             if context is not owner.worker_context or owner._phase != "sealed":
                 raise OffloadAdmissionError()
             owner._check_ready()
             owner._invoke("assert_sealed")
 
     def release_references(self):
-        owner = self._owner
-        with owner._lock:
+        with self._issued_owner() as owner:
             if owner._phase == "sealed":
                 owner._invoke("release_references", next_phase="release-pending")
             elif owner._phase not in {"release-pending", "retired"}:
                 raise OffloadAdmissionError()
 
     def require_retired(self):
-        with self._owner._lock:
-            if self._owner._phase != "retired":
+        with self._issued_owner() as owner:
+            if owner._phase != "retired":
                 raise OffloadAdmissionError()
 
 

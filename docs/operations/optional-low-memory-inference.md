@@ -1806,3 +1806,9 @@ and lock waits.
 
 This confirms the in-process order. Windows staging protection, actual worker
 exit, shared disk accounting, restart and real offload measurements remain open.
+
+The guarded staging owner accepts seal, reuse, release and retirement checks
+only from the private lease it recorded. The model-free test rejects copies and
+substitutes for that private lease and verifies that the original still works.
+This check does not establish the identity of wrapper objects or add native
+permission, staging capacity, or restart proof.

@@ -100,6 +100,32 @@ class GuardedLeaseTests(unittest.TestCase):
         with self.assertRaises(offload.OffloadAdmissionError):
             self.lease()
 
+    def test_only_the_issued_lease_can_advance_or_observe_its_owner(self):
+        lease = self.lease()
+        issued = self.owner._lease
+        duplicates = (copy.copy(issued), recovery._GuardedLease(self.owner))
+
+        def assert_denied(operation, *args):
+            for alias in duplicates:
+                with self.subTest(operation=operation, alias=alias is duplicates[0]):
+                    steps = list(self.backend.steps)
+                    with self.assertRaises(offload.OffloadAdmissionError):
+                        getattr(alias, operation)(*args)
+                    self.assertEqual(self.backend.steps, steps)
+
+        assert_denied("seal")
+        lease.seal()
+        assert_denied("assert_live", self.context)
+        lease.assert_guarded_reusable(self.context)
+        assert_denied("release_references")
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        self.backend.worker_exited = True
+        self.owner.retire_owned_worker()
+        assert_denied("require_retired")
+        lease.cleanup(model_released=True)
+        self.assertTrue(lease.released)
+
     def test_unknown_retained_full_budget_denies_before_staging_and_cannot_reset_with_another_root(self):
         self.backend.unknown_retained = True
         with self.assertRaises(offload.OffloadAdmissionError): self.lease()
