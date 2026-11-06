@@ -651,6 +651,39 @@
       "outcome": "pending",
       "recordedAt": "2026-10-21T03:41:40Z",
       "summary": "File-effect prototype failed review and was replaced with explicit unavailable behavior before filesystem/shell effects. Focused supported model tests: eighteen passed, one host qualification skipped. Desktop type check passes. Registered profile remains failed, so no increment or roadmap completion is claimed. A qualified native primitive, atomic provenance and supported-cache positive/concurrency qualification remain pending."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap",
+      "criterionId": "authentication-result-invariant",
+      "id": "evidence-2",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:07Z",
+      "summary": "Two tests passed. Malformed, anonymous, and unauthenticated verifier results are denied before a success audit. Valid authenticated identity is preserved and the audit does not include the token."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap",
+      "criterionId": "scoped-state-integrity",
+      "id": "evidence-3",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:08Z",
+      "summary": "Eighteen related tests passed. The same asset and revision IDs remain separate across workspaces, and concurrent library writes keep the existing record and report a conflict."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": null,
+      "criterionId": "legacy-history-preserved",
+      "id": "evidence-4",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:09Z",
+      "summary": "Validated the frozen legacy roadmap against its pre-handoff record. All four completed increments, 12 original chunks, 15 evidence rows and original approval remain intact. The 10 unresolved criteria have exactly one primary owner each in the approved successor. No completion or approval transferred."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1159,6 +1192,24 @@
       "recordedAt": "2026-10-24T06:06:46Z",
       "sequence": 52,
       "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "842a4ac3a35891acda0f565ea20d08c295e55bdcc8623283638754374ca80c28",
+      "recordedAt": "2026-11-06T13:10:07Z",
+      "sequence": 53,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "65d97d0240d5b15737460b2a92b727919cbe680a9c2149f5b46345795a5e6830",
+      "recordedAt": "2026-11-06T13:10:08Z",
+      "sequence": 54,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ba176df228d78e836898fc85bf310fec1ff125e017a72a300e176990c266779",
+      "recordedAt": "2026-11-06T13:10:09Z",
+      "sequence": 55,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -1640,5 +1691,5 @@
   "schemaVersion": 1,
   "slug": "security-findings-refresh",
   "status": "executing",
-  "updatedAt": "2026-10-24T06:06:46Z"
+  "updatedAt": "2026-11-06T13:10:09Z"
 }
