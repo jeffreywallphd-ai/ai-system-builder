@@ -423,6 +423,13 @@ Dismissal from an unfocused control keeps the current focus. The
 `notification-dismiss-focus` profile runs the
 rendered dismissal, notification-action, and toast timing component tests.
 
+A managed-browser fixture used the shared toast styles at 320px and 1440px.
+A long unbroken reference made the text and dismiss button extend beyond the
+available bounds at both widths. Allowing the text container to shrink and wrap
+kept both inside the toast and viewport. Ordinary text fit in all variants.
+The twelve cases produced zero contrast samples. The running-app contrast
+finding still needs separate evidence.
+
 Use the focused `operational-ui` profile for these helpers and related feature
 tests. Synthetic Page and DOM fixtures check the test definitions; they do not
 qualify an actual host. Preserve earlier failed runs. A fresh source-bound host
