@@ -15393,6 +15393,28 @@
           "The agent still needs to identify the exact element and cause."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "448c6cfe49ac4e25944a4383c330f4138d3e667992be44802c1abf5a24d5dd2a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Dismiss a focused toast to return focus to Notifications.",
+          "Dismiss a focused item in the panel to move focus to Close."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ad800157e730030d14a75ec6d4bedee3111bd3476d9057e89ced5b72e922267c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Eight notification component tests passed.",
+          "Contrast and zoom still need tests in the running apps."
+        ]
+      }
     }
   ]
 }

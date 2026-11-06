@@ -10653,6 +10653,21 @@
         "These source checks cover how the test groups findings. The operational browser journey remains open.",
         "Chrome found one unresolved measurement in a notification toast. The exact element and cause still need evidence."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "preserve-focus-when-dismissing-notifications",
+      "work_criteria": [
+        "focused-dismissal-preserves-keyboard-location"
+      ],
+      "receipt_digest": "f2995da8936a4c4e56b29cd0a1ed2c9e1b64c91d125fcef5b5c12dfc228fa2e0",
+      "review_digest": "fe7682b190b2d5453b12121fdfd000e73673c9b5a55fff1b4d6c0c5ec5c7c68d",
+      "scope": "Dismiss a focused toast to return focus to Notifications. Dismiss a focused item in the panel to move focus to Close.",
+      "limitations": [
+        "Eight notification component tests passed. Contrast and zoom still need tests in the running apps."
+      ]
     }
   ]
 }
