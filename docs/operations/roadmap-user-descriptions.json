@@ -15482,6 +15482,29 @@
           "Windows file protection, worker exit and real low-memory runs still need tests."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e3a3d4fad2a2b6514f5b7ae011619d26c24d3ee65d6a8be4d514537fac909d9a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The model file list checks up to 2,000 entries across all folders it scans.",
+          "The test confirmed that parent and child folders share this limit.",
+          "The test also confirmed that the reader closes after a read error."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3e12022d2ff901cc87a521aac1a1659f9015d40a316785c7f57efce7a6fd0335",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The limit and read-error tests used a simulated directory reader.",
+          "Windows file protection for deleting or revealing model files still needs separate checks."
+        ]
+      }
     }
   ]
 }

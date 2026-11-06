@@ -10714,6 +10714,21 @@
       "limitations": [
         "The test used a simulated model and cleanup step. Windows file protection, worker exit and real low-memory runs still need tests."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "verify-bounded-model-file-list-with-dedicated-profile",
+      "work_criteria": [
+        "bounded-model-directory-read-and-close"
+      ],
+      "receipt_digest": "bfe2703ab4a9a87a7b018ea26d869dbce38ddd256f82f211ff6fd495039e574d",
+      "review_digest": "34f279fb8ec10b9fce3cbf5eed92938b7cb7085a9efdeac81f3ddba5b7366e16",
+      "scope": "The model file list checks up to 2,000 entries across all folders it scans. The test confirmed that parent and child folders share this limit. The test also confirmed that the reader closes after a read error.",
+      "limitations": [
+        "The limit and read-error tests used a simulated directory reader. Windows file protection for deleting or revealing model files still needs separate checks."
+      ]
     }
   ]
 }
