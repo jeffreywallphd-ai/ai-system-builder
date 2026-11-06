@@ -425,6 +425,14 @@ failure and does not delete another file. This is not an atomic publication or a
 replacement for pending native ACL/reparse qualification. Rollback preserves the
 missing-binding denial even if upload availability is reduced.
 
+The local dataset source test runs the application with the server's request
+organization scope, binding and catalog adapters, and real filesystem objects.
+Two concurrent requests with identical workspace, source, and storage IDs stage
+different bytes from their own organizations. An ID bound only in the other
+organization is denied before object reads, provider calls or worker dispatch.
+The test uses synthetic files, in-memory records and a fake worker; it does not
+qualify a managed database, identity provider, or native filesystem races.
+
 ## Ingestion commit acknowledgement uncertainty
 
 Security impact: security-relevant data-loss and recovery authority. Uploaded-file
