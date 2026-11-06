@@ -221,6 +221,13 @@ success. Python cache handles and resolved host paths remain private completion
 data: they may be passed to the model registry but must not enter generic task
 records, API/IPC/preload responses, notification state, or logs.
 
+Model download start captures the normalized registration request and host
+organization and user before it asks the runtime to admit a task. Listing and
+cancellation use the same owner throughout each request, including after the
+registry replies. The completion command still requires current model write
+permission. These checks cover one running host; durable registration and
+restart recovery need separate evidence.
+
 ## Dataset Preparation and Model Training Task Profiles
 
 The text-training adapter resolves the required base-model reference before

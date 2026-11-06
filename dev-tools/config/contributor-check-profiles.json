@@ -46,7 +46,8 @@
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "modules/adapters/runtime/python/README.md",
-        "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"
+        "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",
+        "modules/application/use-cases/model/model-download-tasks.use-case.ts"
       ]
     },
     "offload-resource-lifecycle": {

@@ -82,6 +82,69 @@ describe("ModelDownloadTasksUseCase", () => {
     expect(registry.getTaskStatus).not.toHaveBeenCalled();
   });
 
+  it("keeps the original organization and user while the runtime admits a download", async () => {
+    const { useCase, registry } = createFixture();
+    const admitted = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["startTask"]>>>();
+    registry.startTask = () => admitted.result;
+    const owner = { organizationId: "org.a", principalId: "person.a" };
+    const mutable = { ...owner };
+    const starting = useCase.start({ workspaceId, provider: "huggingface", modelId: "org/model" }, mutable);
+    Object.assign(mutable, { organizationId: "org.b", principalId: "person.b" });
+    admitted.resolve({ requestId: "download-1", status: "queued" });
+    await starting;
+
+    const identity = { workspaceId, requestId: "download-1" };
+    await expect(useCase.read(identity, mutable)).rejects.toThrow("not found in this workspace");
+    expect(registry.getTaskStatus).not.toHaveBeenCalled();
+    expect((await useCase.read(identity, owner)).activity.requestId).toBe(identity.requestId);
+  });
+
+  it("uses the admitted metadata when a download is later registered", async () => {
+    const { useCase, registry, setTask, registerDownloadedModel } = createFixture();
+    const admitted = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["startTask"]>>>();
+    registry.startTask = () => admitted.result;
+    const owner = { organizationId: "org.a", principalId: "person.a", modelWriteAuthorized: true };
+    const metadata = { notes: { label: "Original" } };
+    const starting = useCase.start({ workspaceId, provider: "huggingface", modelId: "org/model", metadata }, owner);
+    metadata.notes.label = "Changed";
+    admitted.resolve({ requestId: "download-1", status: "queued" });
+    await starting;
+    setTask({ status: "succeeded" });
+    await useCase.complete({ workspaceId, requestId: "download-1" }, owner);
+
+    expect(registerDownloadedModel).toHaveBeenCalledTimes(1);
+    expect(registerDownloadedModel.mock.calls[0]?.[0]?.metadata).toMatchObject({ notes: { label: "Original" } });
+  });
+
+  it("keeps lists within the originally authorized owner when the registry replies late", async () => {
+    const { useCase, registry } = createFixture();
+    const first = { organizationId: "org.a", principalId: "person.a" };
+    const second = { organizationId: "org.b", principalId: "person.b" };
+    let next = 0;
+    registry.startTask = async () => ({ requestId: `download-${++next}`, status: "queued" });
+    for (const owner of [first, second]) await useCase.start({ workspaceId, provider: "huggingface", modelId: "org/model" }, owner);
+    const listed = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["listTasks"]>>>();
+    registry.listTasks = () => listed.result;
+    const mutable = { ...first };
+    const listing = useCase.list({ workspaceId }, mutable);
+    Object.assign(mutable, second);
+    listed.resolve({ tasks: [1, 2].map(id => ({ requestId: `download-${id}`, workspaceId, taskType: TaskType.MODEL_DOWNLOAD, status: "queued", concurrencyClass: "io" })) });
+    expect((await listing).activities.map(activity => activity.requestId)).toEqual(["download-1"]);
+  });
+
+  it("keeps cancellation confirmation in the original owner scope", async () => {
+    const { useCase, registry, setTask } = createFixture();
+    const mutable = { organizationId: "org.a", principalId: "person.a" };
+    await useCase.start({ workspaceId, provider: "huggingface", modelId: "org/model" }, mutable);
+    const acknowledgement = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["cancelTask"]>>>();
+    registry.cancelTask = () => acknowledgement.result;
+    const cancelling = useCase.cancel({ workspaceId, requestId: "download-1" }, mutable);
+    mutable.principalId = "person.b";
+    setTask({ status: "cancelled" });
+    acknowledgement.resolve({ requestId: "download-1", cancelled: true, status: "cancelled" });
+    expect(await cancelling).toMatchObject({ cancelled: true, activity: { requestId: "download-1", status: "cancelled" } });
+  });
+
   for (const patch of [
     { requestId: "download-other" },
     { workspaceId: createWorkspaceId("workspace.other") },
@@ -135,6 +198,12 @@ describe("ModelDownloadTasksUseCase", () => {
     expect(JSON.stringify(result)).not.toContain("C:\\private");
   });
 });
+
+function hold<T>() {
+  let resolve!: (value: T) => void;
+  const result = new Promise<T>((settle) => { resolve = settle; });
+  return { result, resolve };
+}
 
 function createFixture(taskReconciler?: OwnedTaskReconcilerService) {
   const workspaceId = createWorkspaceId("workspace.downloads");

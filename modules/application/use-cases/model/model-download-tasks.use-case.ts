@@ -48,7 +48,8 @@ export class ModelDownloadTasksUseCase {
   }) {}
 
   public async start(request: StartModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<StartModelDownloadTaskResult> {
-    const normalized = normalizeDownloadModelRequest(request);
+    const normalized = structuredClone(normalizeDownloadModelRequest(request));
+    const owner = captureAuthority(authority);
     const lease = this.dependencies.taskReconciler?.reserve();
     try {
     const started = await this.dependencies.runtimeTaskRegistry.startTask({
@@ -59,12 +60,12 @@ export class ModelDownloadTasksUseCase {
         provider: "transformers",
         modelId: normalized.modelId,
         inferenceMode: normalized.inferenceMode,
-        taskTags: normalized.taskTags,
+        taskTags: normalized.taskTags ? [...normalized.taskTags] : undefined,
         artifactForm: normalized.artifactForm,
       },
     });
     const startedAt = this.now();
-    this.descriptors.set(started.requestId, { request: structuredClone(normalized), startedAt, authority: Object.freeze({ ...authority }) });
+    this.descriptors.set(started.requestId, { request: normalized, startedAt, authority: owner });
     this.pruneDescriptors();
     lease?.start(async () => {
       // Observe only accepted work; model registration still needs explicit
@@ -98,9 +99,10 @@ export class ModelDownloadTasksUseCase {
 
   public async list(request: ListModelDownloadTasksRequest, authority: ModelDownloadAuthority = {}): Promise<ListModelDownloadTasksResult> {
     const normalized = normalizeListModelDownloadTasksRequest(request);
+    const owner = captureAuthority(authority);
     // Scope checks precede even registry enumeration. A request from another
     // tenant cannot use a shared workspace label to observe or finalize work.
-    const owned = [...this.descriptors.values()].some((d) => d.request.workspaceId === normalized.workspaceId && sameAuthority(d.authority, authority));
+    const owned = [...this.descriptors.values()].some((d) => d.request.workspaceId === normalized.workspaceId && sameAuthority(d.authority, owner));
     if (!owned) return { activities: [] };
     const result = await this.dependencies.runtimeTaskRegistry.listTasks({
       workspaceId: normalized.workspaceId,
@@ -111,7 +113,7 @@ export class ModelDownloadTasksUseCase {
     const activities: ModelDownloadTaskActivity[] = [];
     for (const task of result.tasks) {
       const descriptor = this.descriptors.get(task.requestId);
-      if ("recordType" in task || task.taskType !== TaskType.MODEL_DOWNLOAD || !descriptor || descriptor.request.workspaceId !== normalized.workspaceId || !sameAuthority(descriptor.authority, authority) || task.workspaceId !== normalized.workspaceId) continue;
+      if ("recordType" in task || task.taskType !== TaskType.MODEL_DOWNLOAD || !descriptor || descriptor.request.workspaceId !== normalized.workspaceId || !sameAuthority(descriptor.authority, owner) || task.workspaceId !== normalized.workspaceId) continue;
       activities.push(await this.toActivity(task, descriptor));
     }
     return { activities };
@@ -119,12 +121,13 @@ export class ModelDownloadTasksUseCase {
 
   public async cancel(request: CancelModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<CancelModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
-    this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
+    const owner = captureAuthority(authority);
+    this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
     const cancellation = await this.dependencies.runtimeTaskRegistry.cancelTask(normalized.requestId);
     if (cancellation.requestId !== normalized.requestId) {
       throw new Error("Model download cancellation could not be confirmed.");
     }
-    const read = await this.read(normalized, authority);
+    const read = await this.read(normalized, owner);
     return { activity: read.activity, cancelled: cancellation.cancelled };
   }
 
@@ -153,8 +156,9 @@ export class ModelDownloadTasksUseCase {
 
   public async complete(request: ReadModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<ReadModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
-    if (authority.modelWriteAuthorized !== true) throw new Error("Model write authority is required to register a download.");
-    const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
+    const owner = captureAuthority(authority);
+    if (owner.modelWriteAuthorized !== true) throw new Error("Model write authority is required to register a download.");
+    const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
     const task = await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
     if ("recordType" in task || task.requestId !== normalized.requestId || task.taskType !== TaskType.MODEL_DOWNLOAD || task.workspaceId !== normalized.workspaceId || task.status !== "succeeded") {
       throw new Error("Completed model download was not found in this workspace.");
@@ -268,6 +272,14 @@ function finiteNonNegative(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
+
+function captureAuthority(authority: ModelDownloadAuthority): ModelDownloadAuthority {
+  return Object.freeze({
+    organizationId: authority.organizationId,
+    principalId: authority.principalId,
+    modelWriteAuthorized: authority.modelWriteAuthorized === true,
+  });
+}
 
 function sameAuthority(recorded: ModelDownloadAuthority, current: ModelDownloadAuthority): boolean {
   return recorded.organizationId === current.organizationId && recorded.principalId === current.principalId;
