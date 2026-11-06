@@ -15438,6 +15438,28 @@
           "Contrast and zoom still need tests in the running apps."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "50e7e4bfaaabbf3c7aff33c7e8cc3ec33cf6f7d7b62f8826f01040623b33c4c7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Close was reachable at 320, 720 and 1440 pixels in the test page.",
+          "Dismiss kept focus when the test narrowed the view from 1440 to 320 pixels."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e40e4bda1c50a36ee68e512987758c7ee80246d0ecff43d52f0df10028b57ff1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seven browser cases passed in a test page.",
+          "Contrast and native zoom still need tests in the running apps."
+        ]
+      }
     }
   ]
 }

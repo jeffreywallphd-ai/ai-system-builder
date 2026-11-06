@@ -10683,6 +10683,22 @@
       "limitations": [
         "Four layout cases passed in a test page. Contrast and zoom still need tests in the running apps."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "keep-open-notification-panel-controls-reachable",
+      "work_criteria": [
+        "keep-notification-panel-close-in-reach",
+        "keep-announcements-and-keyboard-controls"
+      ],
+      "receipt_digest": "2a3f36305f2e8f2b95346f1b8970a48cf49d7e1e8b8f8d7cb3187d3cf0d317ed",
+      "review_digest": "76eeabed079946f35675e40683bb918ec90f117ccd5b25f60c2281ef41bb3a2c",
+      "scope": "Close was reachable at 320, 720 and 1440 pixels in the test page. Dismiss kept focus when the test narrowed the view from 1440 to 320 pixels.",
+      "limitations": [
+        "Seven browser cases passed in a test page. Contrast and native zoom still need tests in the running apps."
+      ]
     }
   ]
 }
