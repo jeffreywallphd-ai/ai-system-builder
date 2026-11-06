@@ -20,6 +20,7 @@ QUALIFICATION_PROFILES = (
     "windows-staging-protection-probe",
     "windows-file-identity",
     "offload-restart-readiness",
+    "model-file-listing",
     "model-download-ownership",
     "notification-dismiss-focus",
     "security-authority", "security-runtime", "security-records", "security-tooling",
@@ -32,6 +33,12 @@ QUALIFICATION_PROFILE_PATTERNS = {
     "notification-dismiss-focus": [
         "modules/ui/shared/notifications/NotificationCenter.tsx",
         "modules/ui/shared/notifications/tests/notification-dismiss-focus.ui.test.tsx",
+    ],
+    "model-file-listing": [
+        "modules/adapters/model/local/createLocalModelFileListerAdapter.ts",
+        "modules/application/use-cases/model/list-model-files.use-case.ts",
+        "modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts",
+        "modules/application/use-cases/model/tests/list-model-files.use-case.unit.test.ts",
     ],
     "model-download-ownership": [
         "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",

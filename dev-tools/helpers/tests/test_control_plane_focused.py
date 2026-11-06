@@ -83,6 +83,26 @@ class FocusedPythonCollectionTests(unittest.TestCase):
                       if Path(path).name in focused.CONTROLLED_PYTHON_TESTS]
         self.assertEqual(violations, [])
 
+    def test_model_file_listing_profile_runs_only_read_only_listing_tests(self):
+        root = Path(__file__).resolve().parents[3]
+        profile = 'model-file-listing'
+        adapter = 'modules/adapters/model/local/createLocalModelFileListerAdapter.ts'
+        tests = [
+            'modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts',
+            'modules/application/use-cases/model/tests/list-model-files.use-case.unit.test.ts',
+        ]
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys(tests, 'fixture')}):
+            self.assertEqual(focused.profile_commands(root, profile), [['node', '--import', 'tsx', '--test', '--', *tests]])
+
+        owned = [adapter, tests[0], 'dev-tools/config/contributor-check-profiles.json']
+        plan = catalog.plan(root, owned, ['architecture'], 'synthetic')
+        self.assertIn(profile, [check['id'] for check in plan['selected']])
+        self.assertNotIn('focused-tests', [check['id'] for check in plan['selected']])
+
+        unrelated = 'modules/adapters/model/local/createLocalModelFilesDeleteAdapter.ts'
+        plan = catalog.plan(root, [*owned, unrelated], ['architecture'], 'synthetic')
+        self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
+
     def test_model_download_profile_runs_only_the_exact_ownership_tests(self):
         root = Path(__file__).resolve().parents[3]
         profile = 'model-download-ownership'
