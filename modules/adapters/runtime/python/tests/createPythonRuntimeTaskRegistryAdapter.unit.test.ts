@@ -2,6 +2,7 @@ import type { PythonRuntimePort } from "../../../../application/ports/runtime";
 import type {
   PythonRuntimeTaskStatusResult,
   StartPythonRuntimeTaskRequest,
+  StartPythonRuntimeTaskResult,
 } from "../../../../contracts/runtime";
 import { TaskType } from "../../../../contracts/runtime";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -17,6 +18,9 @@ import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy"
 
 describe("createPythonRuntimeTaskRegistryAdapter", () => {
   const workspaceId = createWorkspaceId("workspace.test");
+  const acceptWorkerStart = async (request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult> => ({
+    requestId: request.requestId, taskType: request.taskType, accepted: true, status: "queued",
+  });
 
   it("keeps the python runtime port on python-specific task contracts", () => {
     expectTypeOf<
@@ -349,15 +353,13 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
   });
 
   it("maps MODEL_DOWNLOAD progress and keeps the resolved local path private", async () => {
+    let status: PythonRuntimeTaskStatusResult["status"] = "running";
     const runtimePort: any = {
-      startTask: testDouble.fn(async (request) => ({
-        requestId: request.requestId,
-        status: "queued",
-      })),
+      startTask: testDouble.fn(acceptWorkerStart),
       readTaskStatus: testDouble.fn(async () => ({
         requestId: "download-1",
         taskType: "ensure-model-download",
-        status: "succeeded",
+        status,
         metadata: { workspaceId },
         progress: {
           message: "Downloading C:\\private\\model",
@@ -397,6 +399,10 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
       concurrencyClass: "io",
       payload: { provider: "transformers", modelId: "org/model" },
     });
+    const progress = await adapter.getTaskStatus("download-1");
+    expect(JSON.stringify(progress)).not.toContain("modelHandle");
+    expect(runtimePort.resolveModelDownloadTaskResult).not.toHaveBeenCalled();
+    status = "succeeded";
     const record = await adapter.getTaskStatus("download-1");
 
     expect(runtimePort.startTask.mock.calls[0]?.[0]?.taskType).toBe(
@@ -424,6 +430,188 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
       includeCompleted: true,
     });
     expect(listed.tasks.map((task) => task.requestId)).toEqual(["download-1"]);
+  });
+
+  for (const [label, replacement] of [
+    ["an unowned request", undefined],
+    ["a different request", { requestId: "download-other" }],
+    ["a different task type", { taskType: "train-model" }],
+    ["a different workspace", { metadata: { workspaceId: "workspace.other" } }],
+    ["a malformed workspace", { metadata: { workspaceId: false } }],
+    ["a different workspace during progress", { status: "running", metadata: { workspaceId: "workspace.other" } }],
+  ] satisfies Array<[string, Partial<PythonRuntimeTaskStatusResult> | undefined]>) {
+    it(`refuses model download status for ${label} before resolving a private result`, async () => {
+      const accepted: PythonRuntimeTaskStatusResult = {
+        requestId: "download-1",
+        taskType: "ensure-model-download",
+        status: "succeeded",
+      };
+      let status = accepted;
+      const resolveModelDownloadTaskResult = testDouble.fn(async () => ({
+        provider: "transformers" as const,
+        modelId: "org/model",
+        downloaded: true,
+        fromCache: false,
+        localPath: "C:\\synthetic\\model",
+      }));
+      const runtimePort = {
+        startTask: testDouble.fn(acceptWorkerStart),
+        readTaskStatus: testDouble.fn(async () => status),
+        resolveModelDownloadTaskResult,
+      } as unknown as PythonRuntimePort;
+      const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+      const start = () => adapter.startTask({ workspaceId, requestId: accepted.requestId, taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+      if (replacement) {
+        await start();
+        status = { ...accepted, ...replacement };
+      }
+      await expect(adapter.getTaskStatus(accepted.requestId)).rejects.toThrow("Model download status did not match its accepted task.");
+      expect(resolveModelDownloadTaskResult).not.toHaveBeenCalled();
+
+      // A valid reply without optional metadata uses the already accepted workspace.
+      if (!replacement) await start();
+      status = accepted;
+      const record = await adapter.getTaskStatus(accepted.requestId);
+      expect(record).toMatchObject({ workspaceId, status: "succeeded", taskType: TaskType.MODEL_DOWNLOAD });
+      expect(JSON.stringify(record)).not.toContain("C:\\synthetic");
+      expect((await adapter.readCompletedModelDownload(accepted.requestId))?.localPath).toBe("C:\\synthetic\\model");
+      expect(resolveModelDownloadTaskResult).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it("does not treat progress before worker acceptance as download ownership", async () => {
+    let finishStatus!: () => void;
+    let finishReadiness!: () => void;
+    const statusReady = new Promise<void>((resolve) => { finishStatus = resolve; });
+    const readiness = new Promise<void>((resolve) => { finishReadiness = resolve; });
+    const startTask = testDouble.fn(acceptWorkerStart);
+    const resolveModelDownloadTaskResult = testDouble.fn(async () => ({
+      provider: "transformers" as const, modelId: "org/model", downloaded: true, fromCache: false, localPath: "C:\\synthetic\\model",
+    }));
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask,
+      readTaskStatus: async (requestId: string) => {
+        await statusReady;
+        return { requestId, taskType: "ensure-model-download", status: "succeeded" };
+      },
+      resolveModelDownloadTaskResult,
+    } as unknown as PythonRuntimePort, {
+      ensureRuntimeReady: async (_request, control) => {
+        control.reportProgress({ message: "Preparing" });
+        await readiness;
+      },
+    });
+
+    const reading = adapter.getTaskStatus("download-1");
+    const starting = adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    try {
+      expect(startTask).not.toHaveBeenCalled();
+      finishStatus();
+      await expect(reading).rejects.toThrow("Model download status did not match its accepted task.");
+      expect(resolveModelDownloadTaskResult).not.toHaveBeenCalled();
+    } finally {
+      finishStatus();
+      finishReadiness();
+      await starting;
+    }
+    expect((await adapter.readCompletedModelDownload("download-1"))?.localPath).toBe("C:\\synthetic\\model");
+  });
+
+  for (const [label, replacement] of [
+    ["a different request ID", { requestId: "download-other" }],
+    ["a different task type", { taskType: "train-model" }],
+    ["a refused start", { accepted: false }],
+    ["a different workspace", { metadata: { workspaceId: "workspace.other" } }],
+    ["a terminal status", { status: "failed" }],
+  ] as const) {
+    it(`refuses a model download start acknowledgment with ${label}`, async () => {
+      const adapter = createPythonRuntimeTaskRegistryAdapter({
+        startTask: async (request: StartPythonRuntimeTaskRequest) => ({ ...await acceptWorkerStart(request), ...replacement }),
+      } as unknown as PythonRuntimePort);
+      await expect(adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} }))
+        .rejects.toThrow("Model download status did not match its accepted task.");
+    });
+  }
+
+  it("admits one worker start while the exact model download ID is pending", async () => {
+    let enterStart!: () => void;
+    let finishStart!: () => void;
+    const entered = new Promise<void>((resolve) => { enterStart = resolve; });
+    const release = new Promise<void>((resolve) => { finishStart = resolve; });
+    let calls = 0;
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask: async (request: StartPythonRuntimeTaskRequest) => {
+        if (++calls === 1) {
+          enterStart();
+          await release;
+        }
+        return acceptWorkerStart(request);
+      },
+    } as unknown as PythonRuntimePort);
+    const request = { workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} } as const;
+    const first = adapter.startTask(request);
+    await Promise.race([entered, first.then(() => { throw new Error("Expected a pending worker start."); })]);
+    try {
+      await expect(adapter.startTask({ ...request, workspaceId: createWorkspaceId("workspace.other") }))
+        .rejects.toThrow("Model download status did not match its accepted task.");
+      expect(calls).toBe(1);
+    } finally {
+      finishStart();
+      await first;
+    }
+  });
+
+  it("does not let another task response overwrite an accepted download", async () => {
+    const runtimePort = {
+      startTask: acceptWorkerStart,
+      readTaskStatus: async (requestId: string) => requestId === "download-1"
+        ? { requestId, taskType: "ensure-model-download", status: "running" }
+        : { requestId: "download-1", taskType: "review-dataset", status: "succeeded", metadata: { workspaceId: "workspace.other" } },
+    } as unknown as PythonRuntimePort;
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    await expect(adapter.getTaskStatus("review-1")).rejects.toThrow("Model download status did not match its accepted task.");
+    expect((await adapter.listTasks({ workspaceId, taskTypes: [TaskType.MODEL_DOWNLOAD] })).tasks)
+      .toMatchObject([{ requestId: "download-1", workspaceId, taskType: TaskType.MODEL_DOWNLOAD }]);
+  });
+
+  for (const reused of [false, true]) it(`does not publish an old download after eviction${reused ? " and task ID reuse" : ""}`, async () => {
+    let enterResolver!: () => void;
+    let finishResolver!: () => void;
+    let resolutions = 0;
+    const entered = new Promise<void>((resolve) => { enterResolver = resolve; });
+    const release = new Promise<void>((resolve) => { finishResolver = resolve; });
+    const runtimePort = {
+      startTask: acceptWorkerStart,
+      readTaskStatus: async (requestId: string) => ({ requestId, taskType: "ensure-model-download", status: "succeeded" }),
+      resolveModelDownloadTaskResult: async () => {
+        const resolution = ++resolutions;
+        if (resolution === 1) {
+          enterResolver();
+          await release;
+        }
+        return { provider: "transformers", modelId: "org/model", downloaded: true, fromCache: false, localPath: `C:\\synthetic\\model-${resolution}` };
+      },
+    } as unknown as PythonRuntimePort;
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+
+    const reading = adapter.getTaskStatus("download-1");
+    await Promise.race([entered, reading.then(() => { throw new Error("Expected private resolution."); })]);
+    try {
+      for (let index = 0; index < 256; index++) {
+        await adapter.startTask({ workspaceId, requestId: `review-${index}`, taskType: TaskType.DATASET_REVIEW, payload: {} });
+      }
+      if (reused) await adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    } finally {
+      finishResolver();
+    }
+    await expect(reading).rejects.toThrow("Model download status did not match its accepted task.");
+    if (reused) {
+      expect((await adapter.readCompletedModelDownload("download-1"))?.localPath).toBe("C:\\synthetic\\model-2");
+    } else {
+      await expect(adapter.readCompletedModelDownload("download-1")).rejects.toThrow("Model download status did not match its accepted task.");
+    }
   });
 
   it("maps MODEL_VALIDATION startTask type", async () => {

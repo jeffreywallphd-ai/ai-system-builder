@@ -83,6 +83,27 @@ class FocusedPythonCollectionTests(unittest.TestCase):
                       if Path(path).name in focused.CONTROLLED_PYTHON_TESTS]
         self.assertEqual(violations, [])
 
+    def test_model_download_profile_runs_only_the_exact_ownership_tests(self):
+        root = Path(__file__).resolve().parents[3]
+        profile = 'model-download-ownership'
+        adapter = 'modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts'
+        tests = [
+            'modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
+            'modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts',
+        ]
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys(tests, 'fixture')}):
+            self.assertEqual(focused.profile_commands(root, profile), [['node', '--import', 'tsx', '--test', '--', *tests]])
+
+        config = 'dev-tools/config/contributor-check-profiles.json'
+        owned = [adapter, config, tests[0], 'modules/adapters/runtime/python/README.md']
+        plan = catalog.plan(root, owned, ['architecture'], 'synthetic')
+        self.assertIn(profile, [check['id'] for check in plan['selected']])
+        self.assertNotIn('focused-tests', [check['id'] for check in plan['selected']])
+
+        unrelated = 'modules/adapters/runtime/python/createPythonRuntimePort.ts'
+        plan = catalog.plan(root, [*owned, unrelated], ['architecture'], 'synthetic')
+        self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
+
     def test_functionality_profile_plans_fake_coverage_and_keeps_native_source_responsibility(self):
         import json
         root = Path(__file__).resolve().parents[3]

@@ -15,10 +15,13 @@ import type {
   RuntimeTaskListRequest,
   RuntimeTaskListResult,
   RuntimeTaskProgress,
+  StartPythonRuntimeTaskResult,
 } from "../../../contracts/runtime";
-import { isWorkspaceId } from "../../../contracts/workspace";
+import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
 import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
+
+const downloadIdentityError = "Model download status did not match its accepted task.";
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
@@ -180,16 +183,24 @@ export function createPythonRuntimeTaskRegistryAdapter(
   options: CreatePythonRuntimeTaskRegistryAdapterOptions = {},
 ): PythonRuntimeTaskRegistryAdapter {
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
+  // Status records are replaceable. This owner identifies one accepted start.
+  const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId }>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
   const preparingTasks = new Set<string>();
+  const pendingStarts = new Map<string, symbol>();
   const maximumTrackedTasks = 256;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
+    const owner = acceptedModelDownloads.get(record.requestId);
+    if (owner && (record.taskType !== TaskType.MODEL_DOWNLOAD || record.workspaceId !== owner.workspaceId)) {
+      throw new Error(downloadIdentityError);
+    }
     trackedTasks.delete(record.requestId);
     trackedTasks.set(record.requestId, record);
     while (trackedTasks.size > maximumTrackedTasks) {
       const oldest = trackedTasks.keys().next().value;
       if (typeof oldest !== "string") break;
       trackedTasks.delete(oldest);
+      acceptedModelDownloads.delete(oldest);
       completedDownloads.delete(oldest);
     }
     return record;
@@ -199,28 +210,35 @@ export function createPythonRuntimeTaskRegistryAdapter(
     async startTask(
       request: StartRuntimeTaskRequest,
     ): Promise<StartRuntimeTaskResult> {
-      if (!isWorkspaceId(request.workspaceId)) {
+      const { workspaceId, taskType } = request;
+      if (!isWorkspaceId(workspaceId)) {
         throw new Error("Workspace id is required for python runtime tasks.");
       }
-      if (request.taskType === TaskType.MODEL_PUBLISHING) {
+      if (taskType === TaskType.MODEL_PUBLISHING) {
         throw new Error("model publishing runtime task is not implemented");
       }
       const requestId = request.requestId ?? randomUUID();
+      if (acceptedModelDownloads.has(requestId) || pendingStarts.has(requestId)) throw new Error(downloadIdentityError);
+      if (pendingStarts.size >= maximumTrackedTasks) throw new Error("Python runtime task admission is at capacity.");
+      const pythonTaskType = toPythonTaskType(taskType);
+      const modelDownload = taskType === TaskType.MODEL_DOWNLOAD;
       const isContextTask =
-        request.taskType === TaskType.CONTEXT_GENERATION ||
-        request.taskType === TaskType.CONTEXT_RETRIEVAL;
+        taskType === TaskType.CONTEXT_GENERATION || taskType === TaskType.CONTEXT_RETRIEVAL;
+      const admission = Symbol();
+      pendingStarts.set(requestId, admission);
       try {
         await options.ensureRuntimeReady?.(
-          { ...request, requestId },
+          { ...request, requestId, workspaceId, taskType },
           {
             reportProgress(progress) {
+              if (pendingStarts.get(requestId) !== admission) return;
               preparingTasks.add(requestId);
               const previous = trackedTasks.get(requestId);
               const now = new Date().toISOString();
               rememberTask({
                 requestId,
-                workspaceId: request.workspaceId,
-                taskType: request.taskType,
+                workspaceId,
+                taskType,
                 status: "running",
                 concurrencyClass: "io",
                 progress: {
@@ -242,14 +260,15 @@ export function createPythonRuntimeTaskRegistryAdapter(
           },
         );
       } catch (error) {
+        pendingStarts.delete(requestId);
         preparingTasks.delete(requestId);
         if (isContextTask) {
           const now = new Date().toISOString();
           const previous = trackedTasks.get(requestId);
           rememberTask({
             requestId,
-            workspaceId: request.workspaceId,
-            taskType: request.taskType,
+            workspaceId,
+            taskType,
             status: "failed",
             concurrencyClass: previous?.concurrencyClass ?? "io",
             progress: previous?.progress,
@@ -274,8 +293,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
           `Python runtime failed to start or become ready before starting task: ${reason}`,
         );
       }
-      const pythonTaskType = toPythonTaskType(request.taskType);
-      let result: StartRuntimeTaskResult;
+      let result: StartPythonRuntimeTaskResult;
       try {
         result = await runtimePort.startTask({
           requestId,
@@ -283,19 +301,18 @@ export function createPythonRuntimeTaskRegistryAdapter(
           payload: request.payload,
           metadata: {
             ...(request.metadata ?? {}),
-            workspaceId: request.workspaceId,
+            workspaceId,
           },
           timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
         });
       } catch {
-        preparingTasks.delete(requestId);
         if (isContextTask) {
           const now = new Date().toISOString();
           const previous = trackedTasks.get(requestId);
           rememberTask({
             requestId,
-            workspaceId: request.workspaceId,
-            taskType: request.taskType,
+            workspaceId,
+            taskType,
             status: "failed",
             concurrencyClass: previous?.concurrencyClass ?? "io",
             progress: previous?.progress,
@@ -314,27 +331,42 @@ export function createPythonRuntimeTaskRegistryAdapter(
           throw new Error("Python runtime could not start Context work.");
         }
         throw new Error("Python runtime task could not be started.");
+      } finally {
+        pendingStarts.delete(requestId);
+        preparingTasks.delete(requestId);
       }
-      preparingTasks.delete(requestId);
+      const reportedWorkspace = result.metadata?.workspaceId;
+      if (acceptedModelDownloads.has(result.requestId) || (modelDownload && (
+        result.requestId !== requestId || result.taskType !== pythonTaskType || result.accepted !== true ||
+        (result.status !== "queued" && result.status !== "running") ||
+        (reportedWorkspace !== undefined && reportedWorkspace !== workspaceId)
+      ))) {
+        throw new Error(downloadIdentityError);
+      }
       const preflight = trackedTasks.get(requestId);
       rememberTask({
         requestId: result.requestId,
-        workspaceId: request.workspaceId,
-        taskType: request.taskType,
+        workspaceId,
+        taskType,
         status: result.status ?? "queued",
         concurrencyClass:
-          request.concurrencyClass ??
-          (request.taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
+          request.concurrencyClass ?? (modelDownload ? "io" : "unknown"),
         metadata: result.metadata,
         progress: preflight?.progress,
         queuedAt: preflight?.queuedAt ?? new Date().toISOString(),
       });
+      if (modelDownload) acceptedModelDownloads.set(requestId, { workspaceId });
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
       const preparing = trackedTasks.get(requestId);
       if (preparingTasks.has(requestId) && preparing) return preparing;
+      const downloadOwner = acceptedModelDownloads.get(requestId);
       const status = await runtimePort.readTaskStatus(requestId);
+      const reportedDownload = status.taskType === genericToPythonTaskTypeMap[TaskType.MODEL_DOWNLOAD];
+      const reportedOwner = acceptedModelDownloads.get(status.requestId);
+      const involvesDownload = Boolean(downloadOwner || reportedOwner || reportedDownload);
+      if (involvesDownload && status.requestId !== requestId) throw new Error(downloadIdentityError);
       if (status.status === "unknown" && !status.taskType) {
         return {
           recordType: "not-found",
@@ -351,8 +383,16 @@ export function createPythonRuntimeTaskRegistryAdapter(
           updatedAt: status.updatedAt,
         };
       }
+      const reportedWorkspace = status.metadata?.workspaceId;
+      if (involvesDownload) {
+        // Worker metadata can confirm a workspace, but cannot assign one.
+        if (!downloadOwner || !reportedDownload || reportedOwner !== downloadOwner ||
+            (reportedWorkspace !== undefined && reportedWorkspace !== downloadOwner.workspaceId)) {
+          throw new Error(downloadIdentityError);
+        }
+      }
       const taskType = toGenericTaskType(status.taskType);
-      let data = status.data;
+      let data = reportedDownload ? undefined : status.data;
       if (
         taskType === TaskType.MODEL_DOWNLOAD &&
         status.status === "succeeded"
@@ -360,7 +400,10 @@ export function createPythonRuntimeTaskRegistryAdapter(
         const completion = await runtimePort.resolveModelDownloadTaskResult(
           status.data,
         );
-        completedDownloads.set(status.requestId, completion);
+        if (acceptedModelDownloads.get(requestId) !== downloadOwner) {
+          throw new Error(downloadIdentityError);
+        }
+        completedDownloads.set(requestId, completion);
         data = {
           provider: completion.provider,
           modelId: completion.modelId,
@@ -371,9 +414,8 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const previous = trackedTasks.get(status.requestId);
       return rememberTask({
         requestId: status.requestId,
-        workspaceId: isWorkspaceId(status.metadata?.workspaceId)
-          ? status.metadata.workspaceId
-          : previous?.workspaceId,
+        workspaceId: reportedDownload ? downloadOwner?.workspaceId :
+          isWorkspaceId(reportedWorkspace) ? reportedWorkspace : previous?.workspaceId,
         taskType,
         status: status.status,
         concurrencyClass:

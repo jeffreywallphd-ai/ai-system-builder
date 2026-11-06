@@ -30,10 +30,18 @@ Foundation for the managed Python sidecar runtime adapter:
   metadata, or renderer/API/IPC data.
 - The generic task adapter maps `model-download` to the worker's
   `ensure-model-download` task, retains a bounded current-process task index for
-  list reads, and projects only allowlisted progress fields. Worker cache
-  handles are resolved to host-local paths only through the private
-  `ModelDownloadCompletionPort`; public task/API/IPC records never contain the
-  handle or resolved path.
+  list reads, and projects only allowlisted progress fields. It prevents two
+  worker starts for the same pending ID. An exact acknowledgment of a queued or
+  running download creates the host's download owner. Preparation progress
+  grants no owner. The adapter checks the accepted request, task type, and
+  workspace before resolving a worker cache handle. If the reply omits the
+  workspace, the adapter uses its existing host record. It caches a resolved
+  result only while the same accepted owner is current. The private
+  `ModelDownloadCompletionPort` supplies the resolved path for authorized model
+  registration. Task, API, and IPC records omit both the handle and path. The
+  task adapter drops worker data on unfinished or failed download statuses.
+  The `model-download-ownership` check profile runs the exact runtime adapter
+  and model-download use-case tests with synthetic replies.
 - Context generation maps to `generate-context-artifact`; saved-source
   inspection, bounded LanceDB/context-pack verification, and RAG test queries
   map to `context-artifact-operation`. Exact bytes are privately staged and
