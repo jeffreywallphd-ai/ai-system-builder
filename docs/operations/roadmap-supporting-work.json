@@ -10805,6 +10805,36 @@
       "limitations": [
         "These tests used a simulated page. Browser and desktop checks for the app remain pending."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "work_id": "freeze-model-download-call-authority",
+      "work_criteria": [
+        "keep-download-authority-bound-to-request"
+      ],
+      "receipt_digest": "24249b3733aa1432fab17fd1d8e2d85f2c920174a69e8aa6d9668fbca908b53e",
+      "review_digest": "b77e4aac4113448ff916376197b3038c344c6b499529e8bf62f0a5b2bcbd5d99",
+      "scope": "Model downloads keep their original organization, user and saved details while waiting for the runtime. The focused tests also covered list results and cancellation confirmation.",
+      "limitations": [
+        "The tests used simulated runtime replies in one process. Registration recovery after restart and access to actual model files still need testing."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "bind-offload-effects-to-issued-staging-lease",
+      "work_criteria": [
+        "require-exact-issued-staging-lease"
+      ],
+      "receipt_digest": "4540a4d9a105a4d0c40b884c9a647de990449a0423efaf8d375c6c220d1304d7",
+      "review_digest": "488c4da40219f279ba07036feb532da0fba0591473b7c70a3af6bb6b3cfb3a16",
+      "scope": "The staging owner accepts seal, status and release requests only from the private lease it recorded. The tests refused copies and substitutes for that private lease and kept the original usable.",
+      "limitations": [
+        "The tests used synthetic files and a simulated file service. The check applies to the private permit itself. Windows file protection, disk accounting, worker shutdown, restart and real offload measurements still need testing."
+      ]
     }
   ]
 }

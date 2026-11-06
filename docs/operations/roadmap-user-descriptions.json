@@ -15617,6 +15617,50 @@
           "Browser and desktop checks for the app remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6c47c6bb030c5f4f174e1fa8d0102bffcc11ed21a96e1ed5b68bc3e718dd863d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model downloads keep their original organization, user and saved details while waiting for the runtime.",
+          "The focused tests also covered list results and cancellation confirmation."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ffb41ce328301860811e395e7177d5d628f06bd182c7711a6847f52ae89e706b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used simulated runtime replies in one process.",
+          "Registration recovery after restart and access to actual model files still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2ec2141fd9401b33e4f5585238ae9cba96906adb8dca9254ec086b6e2a7bb9e8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The staging owner accepts seal, status and release requests only from the private lease it recorded.",
+          "The tests refused copies and substitutes for that private lease and kept the original usable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ef7f8fcfd5695a27ead82909551db0d6360f7405531a60b008e626a140f68cae",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used synthetic files and a simulated file service. The check applies to the private permit itself.",
+          "Windows file protection, disk accounting, worker shutdown, restart and real offload measurements still need testing."
+        ]
+      }
     }
   ]
 }
