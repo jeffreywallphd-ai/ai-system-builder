@@ -6670,24 +6670,40 @@
   {
    "path": "dev-tools/scripts/qualification/tests/sanitized-qualification-reporter.unit.test.mjs",
    "facts": {
-    "sha256": "c60bd412a7d706c358d18e4c773e16f2045105bf640c54778da22abf680307e9",
-    "bytes": 5033,
+    "sha256": "aa403f812d6ddd39787d0aa1f0b05c9d1a6334ea93128870c18458bf2acb8d65",
+    "bytes": 9130,
     "cases": [
      {
       "name": "global errors fail evidence without retaining private error content",
       "line": 45
      },
      {
-      "name": "an empty test run never produces a vacuous pass",
+      "name": "browser launch diagnostics report fixed failure reasons without copying startup output",
       "line": 54
      },
      {
+      "name": "a global browser startup failure stays failed and reports only its category",
+      "line": 77
+     },
+     {
+      "name": "a browser startup result discards sibling errors that can contain raw launcher fragments",
+      "line": 88
+     },
+     {
+      "name": "launch diagnostics inspect only bounded startup text and ignore unrecognized prefixes",
+      "line": 103
+     },
+     {
+      "name": "an empty test run never produces a vacuous pass",
+      "line": 115
+     },
+     {
       "name": "a genuine passing run retains its passing child evidence",
-      "line": 58
+      "line": 119
      },
      {
       "name": "actual Playwright teardown failure cannot publish passing evidence",
-      "line": 62
+      "line": 123
      }
     ],
     "dynamicCases": 1,
@@ -6705,8 +6721,8 @@
       "line": 32
      }
     ],
-    "assertionCount": 16,
-    "assertionDigest": "6c00eac83c6b3c57b8ba284ac8b57d4149a195b78d64ffcbc08cb2555be6f876",
+    "assertionCount": 28,
+    "assertionDigest": "71830146d9024b334f7e77eed05270d5eeb78839efeb548b3685f0e3e4f701ed",
     "assertionExamples": [
      {
       "line": 37,
@@ -6731,7 +6747,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "c60bd412a7d706c358d18e4c773e16f2045105bf640c54778da22abf680307e9"
+   "committed_sha256": "aa403f812d6ddd39787d0aa1f0b05c9d1a6334ea93128870c18458bf2acb8d65"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
@@ -9688,76 +9704,80 @@
   {
    "path": "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
    "facts": {
-    "sha256": "de43d2db2225cbbe9818a397dfff94f1a6e41fde0d2937284d9188857163584d",
-    "bytes": 13801,
+    "sha256": "be7c474ac403528fa7f8ea973d5ed2010df5b20e36c0e917fa899131961dc39f",
+    "bytes": 21011,
     "cases": [
      {
       "name": "captures a bounded task into immutable raw and derived snapshots with authoritative progress",
-      "line": 62
+      "line": 63
      },
      {
       "name": "records unchanged, changed, removed, and unavailable refreshes without mutating snapshots",
-      "line": 82
+      "line": 83
      },
      {
       "name": "cleans raw and derived artifacts when cancellation wins the final commit race",
-      "line": 103
+      "line": 104
+     },
+     {
+      "name": "does not capture another page when lost-response readback sees a failed task",
+      "line": 204
      },
      {
       "name": "removes only corresponding catalog entries after their byte cleanup is acknowledged",
-      "line": 119
+      "line": 241
      },
      {
       "name": "keeps catalog evidence when byte cleanup fails",
-      "line": 133
+      "line": 255
      },
      {
       "name": "compensates only successful raw output when the derived write fails",
-      "line": 145
+      "line": 267
      }
     ],
-    "dynamicCases": 0,
+    "dynamicCases": 2,
     "functions": [
      {
       "name": "inspect",
-      "line": 22
+      "line": 23
      },
      {
       "name": "captured",
-      "line": 26
+      "line": 27
      },
      {
       "name": "fixture",
-      "line": 30
+      "line": 31
      }
     ],
-    "assertionCount": 39,
-    "assertionDigest": "876730c61161b6381d2563543554f7e8b7181e5e49dcbe7408495591b18ed0fe",
+    "assertionCount": 54,
+    "assertionDigest": "16c072264325b22753559e5ec04dd127788042ee879629d053364cf6e62ed431",
     "assertionExamples": [
      {
-      "line": 18,
+      "line": 19,
       "kind": "expect",
       "sha256": "99a6fee77afc537cf343d8cf1fe84e9c696e7a6951152a2e5d9b6afd61055e95"
      },
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "538167808b9cf457fe0f82cb023fa3a8800cf5872af6b3efcd04df90fb101d83"
      },
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "865f446d5ae1e5afeb47cbe1cf58ac5002190a3e748033b58ca6dabe80c518da"
      },
      {
-      "line": 20,
+      "line": 21,
       "kind": "expect",
       "sha256": "5611240137587e5f9074ea3efd10496a7f5cb631207bf93d6b4d5ce337cb26fa"
      }
     ],
     "modifiers": []
    },
-   "committed_sha256": "de43d2db2225cbbe9818a397dfff94f1a6e41fde0d2937284d9188857163584d"
+   "committed_sha256": "be7c474ac403528fa7f8ea973d5ed2010df5b20e36c0e917fa899131961dc39f"
   },
   {
    "path": "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
@@ -15774,9 +15794,7 @@
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts"
    ],
    "execution_status": "not-asserted-by-census",
-   "pending_feature_checks": [
-    "Run the dedicated real offline Desktop training profile at the scheduled host qualification boundary. Missing pinned local inputs or dependency readiness keeps execution pending."
-   ]
+   "pending_feature_checks": []
   },
   {
    "id": "image-generation-create-and-register",

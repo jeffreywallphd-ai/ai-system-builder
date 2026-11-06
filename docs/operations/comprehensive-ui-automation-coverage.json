@@ -3732,9 +3732,10 @@
       "settings-functional-host-journey-definitions-checked",
       "model-reference-functional-host-definitions",
       "local-artifact-functional-host-definitions",
-      "provider-functional-host-definitions"
+      "provider-functional-host-definitions",
+      "qualify-desktop-training-with-canonical-adapter-format"
     ],
-    "reconciliation_basis": "The reviewed Settings, model-reference, artifact and provider construction now has exact body/oracle links. Unreferenced prior rows are preserved in the historical archive. Original39 families,131 requirements and execution fields are unchanged.",
+    "reconciliation_basis": "The reviewed Settings, model-reference, artifact and provider construction now has exact body/oracle links. Unreferenced prior rows are preserved in the historical archive. Original39 families,131 requirements and execution fields are unchanged. The eight-step Desktop training feature passed at source 6e9ce243b; see docs/operations/desktop-training-host-qualification.json. Final qualification on current source remains pending.",
     "historical_source_archive": "docs/operations/comprehensive-ui-automation-census-source-history.json"
   }
 }
