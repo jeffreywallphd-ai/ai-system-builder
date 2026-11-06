@@ -52,9 +52,8 @@
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
   ingestion path; do not restore the retired Other import tools beside it.
-- Acquisition progress comes from persisted host state. Task/source snapshot
-  visibility and changed-refresh/new-snapshot visibility commit atomically;
-  keep files after uncertain website saves; clean up only after confirmed cancellation with no snapshot. Local-file recovery retains uncertain effects without adoption or cleanup.
+- Saved host state reports progress. Task/source and changed-refresh/snapshot pairs commit atomically.
+  A website file conflict leaves the task unchanged. Keep bytes after an uncertain save; clean up only after confirmed cancellation without a snapshot. Local-file recovery keeps uncertain effects without adoption or cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact
   duplicates cannot cross splits.

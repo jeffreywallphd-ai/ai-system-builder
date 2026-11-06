@@ -1318,6 +1318,8 @@ capture cleans its own files only when the scoped task confirms terminal
 cancellation for that file and the attempted snapshot is absent. Both hosts
 supply the existing catalog-delete port; it runs after each byte deletion
 succeeds. A derived-write failure still cleans only its acknowledged raw output.
+An exclusive create conflict cannot mark a shared task failed or authorize
+adoption of the existing artifact. A concurrent save may still own those bytes.
 Focused tests cover lost responses, cancellation, and byte-denial/raw-only
 ordering. Native races, durable cleanup recovery, real egress, and production
 access policy remain separate.

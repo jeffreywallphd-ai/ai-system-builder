@@ -198,6 +198,8 @@ match the attempted publication. Otherwise it reports an unconfirmed save and
 keeps the bytes. For initial capture, confirmed terminal cancellation with no
 saved snapshot permits cleanup of the files written by that attempt. Local-file
 publication retains its separate private recovery rules.
+An exclusive file conflict returns a request error without failing the shared
+capture task. The first save can still commit the exact bytes it wrote.
 
 ## Split integrity
 

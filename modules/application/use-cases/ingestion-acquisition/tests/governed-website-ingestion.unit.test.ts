@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredIngestionAcquisitionRepository } from "../../../../adapters/persistence/ingestion";
 import { createFilesystemArtifactObjectStorageAdapter } from "../../../../adapters/storage/filesystem/artifact-store";
-import type { IngestionSourceSnapshot } from "../../../../contracts/ingestion";
-import { createHasArtifactRequest } from "../../../../contracts/storage";
+import { normalizeIngestionSourceId, type IngestionSourceSnapshot } from "../../../../contracts/ingestion";
+import { createHasArtifactRequest, createRetrieveArtifactRequest } from "../../../../contracts/storage";
 import { createContractError, createFailureResult, createSuccessResult } from "../../../../contracts/shared";
 import type { GovernedWebsiteCapturePort, GovernedWebsitePageCapture } from "../../../ports/ingestion";
 import { GovernedWebsiteIngestionUseCases, type GovernedWebsiteIngestionUseCasesDependencies } from "../governed-website-ingestion.use-case";
@@ -78,6 +78,59 @@ describe("governed website ingestion", () => {
     expect(snapshots.length).toBe(1);
     expect(snapshots[0]).toMatchObject({ locator: { requestedUrl: "https://example.com/a", canonicalUrl: "https://example.com/a" }, robots: { decision: "allowed" } });
     await expect(useCases.runTask(created.value.taskId, { workspaceId: "workspace-b" })).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+  });
+
+  it("keeps the original capture publishable when another run collides with its files", async () => {
+    const url = "https://example.com/a";
+    const winnerCapture = captured(url, "first response");
+    if (winnerCapture.outcome !== "captured") throw new Error("Fixture must contain a capture.");
+    let entered!: () => void, resume!: () => void;
+    const atCommit = new Promise<void>(resolve => { entered = resolve; });
+    const continueCommit = new Promise<void>(resolve => { resume = resolve; });
+    const firstCapture: GovernedWebsiteCapturePort = {
+      resolveScope: async () => [url],
+      capturePage: async () => winnerCapture,
+    };
+    const { repository, storage, useCases, context } = await fixture(firstCapture, false, (_storage, repository) => ({
+      repository: { ...repository, async saveTaskWithSourceSnapshot(...args) {
+        entered();
+        await continueCommit;
+        return repository.saveTaskWithSourceSnapshot(...args);
+      } },
+    }));
+    const competing = new GovernedWebsiteIngestionUseCases({
+      repository, streamStorage: storage, artifactCleanup: storage,
+      capture: { ...firstCapture, capturePage: async () => captured(url, "second response") },
+    });
+    const created = await useCases.createTask({ kind: "pages", urls: [url], maximumPages: 1 }, context);
+    if (!created.ok) throw new Error("Fixture task creation failed.");
+    const { taskId, workspaceId } = created.value;
+    const first = useCases.runTask(taskId, context);
+    let duplicate, whilePaused;
+    try {
+      await Promise.race([atCommit, first.then(() => { throw new Error("Original capture did not reach its commit."); })]);
+      duplicate = await competing.runTask(taskId, context);
+      whilePaused = await repository.readTask(workspaceId, taskId);
+    } finally {
+      resume();
+      await first;
+    }
+
+    const completed = await first;
+    expect(duplicate).toMatchObject({ ok: false, error: { code: "conflict" } });
+    expect(whilePaused).toMatchObject({ status: "transferring", revision: created.value.revision + 1, files: [{ status: "pending" }] });
+    expect(completed).toMatchObject({ ok: true, value: { status: "succeeded", progress: { percent: 100 } } });
+    if (!completed.ok) throw new Error("The original capture did not finish.");
+    const output = completed.value.files[0]?.output;
+    if (!output?.sourceId || !output.derivedArtifactKeys?.[0]) throw new Error("Expected raw and readable capture outputs.");
+    const snapshots = await repository.listSourceSnapshots(workspaceId, normalizeIngestionSourceId(output.sourceId));
+    expect(snapshots.length).toBe(1);
+    expect(snapshots[0]).toMatchObject({ rawArtifactKey: output.key, contentDigest: winnerCapture.contentDigest });
+    for (const [key, bytes] of [[output.key, winnerCapture.rawBytes], [output.derivedArtifactKeys[0], winnerCapture.derivedTextBytes]] as const) {
+      const saved = await storage.retrieveArtifact(createRetrieveArtifactRequest(key, { maximumBytes: 256 }), context);
+      if (!saved.ok) throw new Error("The original capture bytes were not retained.");
+      expect(saved.value.content).toEqual(bytes);
+    }
   });
 
   it("records unchanged, changed, removed, and unavailable refreshes without mutating snapshots", async () => {
@@ -183,7 +236,7 @@ describe("governed website ingestion", () => {
       if (!created.ok) throw new Error("Synthetic creation failed.");
       const completed = await useCases.runTask(created.value.taskId, context);
       if (!completed.ok || completed.value.status !== "succeeded") throw new Error("Synthetic initial capture failed.");
-      const sourceId = completed.value.files[0]!.output!.sourceId!;
+      const sourceId = normalizeIngestionSourceId(completed.value.files[0]!.output!.sourceId!);
       const prior = await repository.listSourceSnapshots(created.value.workspaceId, sourceId);
       value = "changed capture";
       const result = await useCases.refreshSource(sourceId, context).then((value) => ({ value }), () => ({ rejected: true }));

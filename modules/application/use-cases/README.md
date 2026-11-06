@@ -23,6 +23,8 @@ not changed. These labels grant no runtime readiness or task acceptance.
   - resolve bounded page or sitemap scope through secure egress, preserve raw
     website captures separately from derived readable text, and append honest
     source refresh outcomes from validators and content digests;
+  - report an exclusive website file conflict without failing the shared task
+    or adopting the existing files;
   - commit task/source lineage atomically; uploaded/provider artifacts survive
     ambiguous metadata acknowledgement and cancellation races;
   - publish local files through an exclusive private reservation, durable byte

@@ -102,7 +102,14 @@ export class GovernedWebsiteIngestionUseCases {
         const sourceId = normalizeIngestionSourceId(`source.${task.taskId}.${file.fileId}`);
         const snapshotId = `snapshot.${task.taskId}.${file.fileId}`;
         const stored = await this.storeCapture(task, sourceId, snapshotId, file.fileName, capture, context);
-        if (!stored.ok) return createSuccessResult(await this.failTask(task, file, "website-storage-failed", stored.error.message, true), context);
+        if (!stored.ok) {
+          // Another run can hold the exclusive bytes while still committing this
+          // task revision. A conflict gives us no authority to fail its save.
+          if (stored.error.code === "conflict") {
+            return failure("conflict", "The capture files already exist. Check this task before retrying.", context);
+          }
+          return createSuccessResult(await this.failTask(task, file, "website-storage-failed", stored.error.message, true), context);
+        }
         const capturedAt = this.now();
         const snapshot = toSnapshot(task, sourceId, snapshotId, file.fileName, capture, stored.value.rawKey, stored.value.derivedKey, capturedAt);
         const files = replaceFile(task, file.fileId, { ...file, status: "finalized", output: {
@@ -278,4 +285,4 @@ function requireFile(task: IngestionTaskRecord, fileId: string): IngestionTaskFi
 function safeMessage(error: unknown, fallback: string): string { const message = error instanceof Error ? error.message.trim() : ""; return message && message.length <= 512 && !/[A-Za-z]:\\|\/Users\/|authorization|cookie|token=/i.test(message) ? message : fallback; }
 function isRetryableCaptureError(error: unknown): boolean { const message = error instanceof Error ? error.message.toLowerCase() : ""; return !message.includes("not allowed") && !message.includes("does not allow") && !message.includes("credentials"); }
 async function* singleChunk(bytes: Uint8Array): AsyncIterable<Uint8Array> { yield bytes; }
-function failure<T = IngestionTaskRecord>(code: "validation" | "not-found" | "unavailable" | "internal", message: string, context: ApplicationRequestContext): ContractResult<T> { return createFailureResult(createContractError(code, message, { requestId: context.requestId, correlationId: context.correlationId }), context); }
+function failure<T = IngestionTaskRecord>(code: "validation" | "not-found" | "conflict" | "unavailable" | "internal", message: string, context: ApplicationRequestContext): ContractResult<T> { return createFailureResult(createContractError(code, message, { requestId: context.requestId, correlationId: context.correlationId }), context); }

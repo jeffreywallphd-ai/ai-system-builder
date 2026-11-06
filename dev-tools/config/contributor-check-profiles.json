@@ -1445,6 +1445,7 @@
         "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
         "modules/application/use-cases/ingestion-acquisition/index.ts",
         "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+        "modules/application/use-cases/ingestion-acquisition/governed-website-ingestion.use-case.ts",
         "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
         "modules/adapters/persistence/ingestion/createStructuredIngestionFilePublicationRepository.ts",
         "modules/adapters/persistence/ingestion/index.ts",
