@@ -2,6 +2,7 @@ import {
   cp,
   lstat,
   mkdir,
+  mkdtemp,
   readdir,
   realpath,
   rename,
@@ -9,7 +10,6 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { join } from "node:path";
-import { randomUUID } from "node:crypto";
 
 import type {
   GeneratedModelStoragePort,
@@ -155,6 +155,10 @@ async function assertSafeSourceTree(
   maximumFiles: number,
   maximumBytes: number,
 ): Promise<void> {
+  const requestedRootStats = await lstat(sourceDirectory);
+  if (requestedRootStats.isSymbolicLink() || !requestedRootStats.isDirectory()) {
+    throw new TypeError("Generated model source must be a real directory.");
+  }
   const sourceRoot = await realpath(sourceDirectory);
   const rootStats = await lstat(sourceRoot);
   if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
@@ -192,6 +196,16 @@ async function assertSafeSourceTree(
       }
     }
   }
+}
+
+async function assertTargetAbsent(targetDirectory: string): Promise<void> {
+  try {
+    await lstat(targetDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  throw new TypeError("Generated model target already exists; retained content cannot be replaced.");
 }
 
 export function createLocalGeneratedModelStorageAdapter(
@@ -238,26 +252,37 @@ export function createLocalGeneratedModelStorageAdapter(
         snapshotsRoot,
         sanitizeSnapshotSegment(request.runId),
       );
-      const temporaryDirectory = path.join(
-        snapshotsRoot,
-        `.stage-${randomUUID()}`,
-      );
+      await assertTargetAbsent(targetDirectory);
+      // Exclusive creation owns this staging leaf, not an existing cache entry.
+      const temporaryDirectory = await mkdtemp(path.join(snapshotsRoot, ".stage-"));
+      const stagedIdentity = await lstat(temporaryDirectory, { bigint: true });
       try {
-        await cp(request.sourceDirectory, temporaryDirectory, {
-          recursive: true,
-          errorOnExist: true,
-          force: false,
-        });
-        const existing = await lstat(targetDirectory).catch(() => undefined);
-        if (existing?.isSymbolicLink()) {
-          throw new TypeError("Generated model target cannot replace a link.");
+        for (const entry of await readdir(request.sourceDirectory)) {
+          await cp(path.join(request.sourceDirectory, entry), path.join(temporaryDirectory, entry), {
+            recursive: true,
+            errorOnExist: true,
+            force: false,
+          });
         }
-        await rm(targetDirectory, { recursive: true, force: true });
+        const beforePublish = await lstat(temporaryDirectory, { bigint: true });
+        if (!beforePublish.isDirectory() || beforePublish.isSymbolicLink()
+          || stagedIdentity.ino === 0n || beforePublish.dev !== stagedIdentity.dev || beforePublish.ino !== stagedIdentity.ino
+          || await realpath(temporaryDirectory) !== temporaryDirectory) {
+          throw new TypeError("Generated model staging identity is unavailable.");
+        }
+        await assertSafeSourceTree(temporaryDirectory, maximumSourceFiles, maximumSourceBytes);
+        await assertTargetAbsent(targetDirectory);
         await rename(temporaryDirectory, targetDirectory);
       } catch (error) {
-        await rm(temporaryDirectory, { recursive: true, force: true }).catch(
-          () => undefined,
-        );
+        // Cooperative identity check only; native parent/race protection is a
+        // separate capability. Unknown/substituted staging must be retained.
+        const current = await lstat(temporaryDirectory, { bigint: true }).catch(() => undefined);
+        const canonicalStage = await realpath(temporaryDirectory).catch(() => undefined);
+        if (current?.isDirectory() && !current.isSymbolicLink()
+          && canonicalStage === temporaryDirectory && isInside(snapshotsRoot, canonicalStage)
+          && stagedIdentity.ino !== 0n && current.dev === stagedIdentity.dev && current.ino === stagedIdentity.ino) {
+          await rm(temporaryDirectory, { recursive: true, force: false }).catch(() => undefined);
+        }
         throw error;
       }
 

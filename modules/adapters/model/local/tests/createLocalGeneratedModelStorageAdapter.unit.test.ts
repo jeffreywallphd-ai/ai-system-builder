@@ -1,4 +1,4 @@
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -6,6 +6,59 @@ import { describe, expect, it } from "../../../../testing/node-test";
 import { createLocalGeneratedModelStorageAdapter } from "../createLocalGeneratedModelStorageAdapter";
 
 describe("createLocalGeneratedModelStorageAdapter", () => {
+  it("preserves observed existing snapshot directories and files instead of replacing them", async () => {
+    for (const kind of ["directory", "file"] as const) {
+      const root = await mkdtemp(join(tmpdir(), "generated-model-retained-"));
+      const source = join(root, "source");
+      const cache = join(root, "cache");
+      const snapshots = join(cache, "models--org--model", "snapshots");
+      const target = join(snapshots, "run-1");
+      await mkdir(source); await mkdir(snapshots, { recursive: true });
+      await writeFile(join(source, "model.safetensors"), "new synthetic bytes");
+      if (kind === "directory") await mkdir(target);
+      const retained = kind === "directory" ? join(target, "retained.txt") : target;
+      await writeFile(retained, "retained synthetic bytes");
+      const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: cache } });
+      await expect(adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", repository: "org/model", runId: "run-1" })).rejects.toThrow("already exists");
+      expect(await readFile(retained, "utf8")).toBe("retained synthetic bytes");
+      expect((await readdir(snapshots)).filter((name) => name.startsWith(".stage-")).length).toBe(0);
+    }
+  });
+
+  it("preserves one complete winner when independent publishers collide on this host", async () => {
+    const root = await mkdtemp(join(tmpdir(), "generated-model-concurrent-"));
+    const cache = join(root, "cache");
+    const snapshots = join(cache, "models--org--model", "snapshots");
+    await mkdir(snapshots, { recursive: true });
+    const sources = [join(root, "first"), join(root, "second")];
+    for (const [index, source] of sources.entries()) {
+      await mkdir(source); await writeFile(join(source, "model.safetensors"), `synthetic-model-${index}`);
+    }
+    const results = await Promise.allSettled(sources.map((sourceDirectory) =>
+      createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: cache } }).storeGeneratedModel({
+        sourceDirectory, repository: "org/model", outputModelName: "Demo", runId: "run-1",
+      })));
+    expect(results.filter((result) => result.status === "fulfilled").length).toBe(1);
+    const winner = results.findIndex((result) => result.status === "fulfilled");
+    expect(await readFile(join(snapshots, "run-1", "model.safetensors"), "utf8")).toBe(`synthetic-model-${winner}`);
+    expect((await readdir(snapshots)).filter((name) => name.startsWith(".stage-")).length).toBe(0);
+  });
+
+  it("rejects a linked requested source root before following it", async (context) => {
+    const root = await mkdtemp(join(tmpdir(), "generated-model-root-link-"));
+    const source = join(root, "source"); const linked = join(root, "linked");
+    await mkdir(source); await writeFile(join(source, "model.safetensors"), "synthetic source");
+    try { await symlink(source, linked, process.platform === "win32" ? "junction" : "dir"); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EPERM") { context.skip("Source-root link fixture privilege is unavailable."); return; }
+      throw error;
+    }
+    const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: join(root, "cache") } });
+    await expect(adapter.storeGeneratedModel({ sourceDirectory: linked, outputModelName: "Demo", runId: "run-1" })).rejects.toThrow("real directory");
+    expect((await lstat(linked)).isSymbolicLink()).toBe(true);
+    expect(await readFile(join(source, "model.safetensors"), "utf8")).toBe("synthetic source");
+  });
+
   it("stores generated model directories in the Hugging Face hub cache layout", async () => {
     const root = join(tmpdir(), `generated-model-storage-${Date.now()}`);
     const source = join(root, "source");

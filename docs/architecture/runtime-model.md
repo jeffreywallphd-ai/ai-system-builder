@@ -399,6 +399,15 @@ failures; callers cannot supply host paths or staging filenames.
 
 Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server. An explicitly confirmed desktop model deletion may remove the stored model's local files only through an adapter that canonicalizes the target beneath the generated-model cache or configured shared model root, rejects links and root/outside/traversal targets, and fails before removing the registry record when file deletion is unsafe or unsuccessful. Hugging Face snapshot deletion removes the owning models cache repository directory so unreferenced snapshot blobs are not left behind; a standalone checkpoint record deletes only its recorded checkpoint file.
 
+Generated-model storage preserves the HF cache layout for fresh outputs but
+never recursively removes a selected target. Observed existing targets and
+non-ENOENT filesystem uncertainty deny. Exclusive staging, requested-root and
+child-link validation, staged-tree bounds and cooperative identity checks precede
+publication; unknown/substituted cleanup is retained. Collision tests qualify
+the current Windows fixtures, not hostile parent substitution, crash recovery
+or atomic no-replace behavior on every platform. A cache output alone grants
+no native deletion ownership or protected publication receipt.
+
 `SERVER_RUNTIME_ROOT` and `SERVER_STORAGE_ROOT` should be separate. Remote execution placement should be implemented in host composition through adapter/client substitution, not by changing application/domain logic.
 
 The managed Python sidecar is a host-private process boundary, not a general
