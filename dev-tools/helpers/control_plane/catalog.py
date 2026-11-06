@@ -21,6 +21,7 @@ QUALIFICATION_PROFILES = (
     "windows-file-identity",
     "offload-restart-readiness",
     "model-file-listing",
+    "model-file-delete-ack",
     "model-download-ownership",
     "notification-dismiss-focus",
     "security-authority", "security-runtime", "security-records", "security-tooling",
@@ -39,6 +40,11 @@ QUALIFICATION_PROFILE_PATTERNS = {
         "modules/application/use-cases/model/list-model-files.use-case.ts",
         "modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts",
         "modules/application/use-cases/model/tests/list-model-files.use-case.unit.test.ts",
+    ],
+    "model-file-delete-ack": [
+        "modules/application/use-cases/model/delete-model-record.use-case.ts",
+        "modules/application/use-cases/model/tests/delete-model-record.use-case.unit.test.ts",
+        "dev-tools/helpers/tests/test_control_plane_model_file_delete_ack_profile.py",
     ],
     "model-download-ownership": [
         "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",

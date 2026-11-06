@@ -919,6 +919,13 @@ replies split across pipe reads. It rejects extra bytes in a reply or output
 received while no request is active and requests child termination. This
 checks observed pipe framing. The protocol does not echo a request identifier.
 
+When the user asks to remove local model files along with the record, the
+application waits for an explicit deletion acknowledgement. A missing path,
+missing file-effects port or unconfirmed deletion preserves the model record
+and stops before catalog writes. Record-only removal does not call the file
+port. The `model-file-delete-ack` profile covers this application decision and
+the disabled production adapter with model-free tests.
+
 The fixed `windows-file-identity` profile runs only two model-free unit files.
 Actual installed-toolchain/native fixtures are separate observations; their
 identity and exit evidence cannot prove a stable tree fence. New child files

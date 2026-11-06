@@ -13,6 +13,16 @@
         "modules/ui/shared/styles/components/notifications.css"
       ]
     },
+    "model-file-delete-ack": {
+      "test_paths": [
+        "modules/adapters/model/local/tests/createLocalModelFilesDeleteAdapter.unit.test.ts",
+        "modules/application/use-cases/model/tests/delete-model-record.use-case.unit.test.ts"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "modules/application/use-cases/model/delete-model-record.use-case.ts"
+      ]
+    },
     "model-file-listing": {
       "test_paths": [
         "modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts",
