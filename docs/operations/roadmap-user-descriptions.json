@@ -15360,6 +15360,39 @@
           "Chrome reports one separate overlap that still stops the test."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e12031de7f01592e5952079de9a806b65a78f80f87ec6af66e5ac34f689833d6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test can now identify notification toasts, the notification panel, modal dialogs, and shell content.",
+          "The tool can still read the earlier reports."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0fbad1652e505359fda250f65778d489ca81eae02e3ac0fe62bfc646503e05a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The source checks cover how the test groups findings.",
+          "The operational browser journey remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b234ff30ad661ea5fee7cc83974d1e258cf2d4508bbe4cf1d4037cc6e6f21e92",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Chrome found one unresolved measurement in a notification toast.",
+          "The agent still needs to identify the exact element and cause."
+        ]
+      }
     }
   ]
 }

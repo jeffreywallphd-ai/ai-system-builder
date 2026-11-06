@@ -304,6 +304,16 @@ const pendingContrastRegionDefinitions = Object.freeze([
   {"path":"dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts","baseline":"6d0e47cdf158622844df28dc9583fe610c6ab096","committed":"95edaff0b97824d7ffce1bfdedb2b2fa973fc1c498d497a8f56b71d8528fedf4","candidate":"23c94fc3ab45639929a4d18ce137b775335c49d66abdda0969cfbf947a40ba09","facts_sha256":"d270d691741f71c4fe83f31b07a3600b5c454429ff326a965f87c2d571c13ed2"},
   {"path":"dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts","baseline":"6d0e47cdf158622844df28dc9583fe610c6ab096","committed":"1da80cf54e7f25a032ad3381549c37e16b7464e529f2bae63dd3f1752a013cea","candidate":"a88771a6b8d8eb54502192149ded65efe2c10a610b7aa33f394d1940a582426e","facts_sha256":"4788d544ebe034e457f8d9c9f73353a678dc6403036d6c5bc170dc3f8581d756"},
 ].map(Object.freeze));
+// The shell markers changed three definitions, with no change to host evidence.
+const shellContrastBaseline = "51d299494bd217ac90c110a4fccc089cf8b945d8";
+const pendingShellContrastDefinitions = Object.freeze([
+  { path: "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts", baseline: shellContrastBaseline,
+    committed: "58755f977afe80b299dd54295588b4ad96968a87db0d295fa91d0aba7b8d1c31", candidate: "dc0a02cd9c1fa62e818971385d85000494f4104c395e5f1e51139dd94c7a7470", facts_sha256: "274942525316e5a2873b0c9c090ff398d67ea88cc90680cd8632ae08fcf1907f" },
+  { path: "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts", baseline: shellContrastBaseline,
+    committed: "23c94fc3ab45639929a4d18ce137b775335c49d66abdda0969cfbf947a40ba09", candidate: "0a03d828e46601b4c69c12907aa24853e120a0395e935bdd28f9c4d1730d5257", facts_sha256: "32d87b6162bd646fd1251903e76c011b2191deb64bd587f334fb2ed673fc1837" },
+  { path: "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts", baseline: shellContrastBaseline,
+    committed: "a88771a6b8d8eb54502192149ded65efe2c10a610b7aa33f394d1940a582426e", candidate: "ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c", facts_sha256: "178a4f3ded4c1dccf0ed8251f63e12c7746640d4f765cf8aa993532886553be2" },
+].map(Object.freeze));
 function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDiagnostics) {
   assert.equal(map.source_baseline,definitions[0].baseline);
   const expected=[];
@@ -320,6 +330,7 @@ function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDia
   return {...result,gaps:result.gaps.filter(g=>!owned(g))};
 }
 function assertCurrentSourceDrift(map, result) {
+  if (map.source_baseline === shellContrastBaseline) result = assertContrastDiagnosticDrift(map, result, pendingShellContrastDefinitions);
   if(map.source_baseline===pendingContrastRegionDefinitions[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastRegionDefinitions);
   if(map.source_baseline===pendingContrastV2Diagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastV2Diagnostics);
   if(map.source_baseline===pendingContrastDiagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result);
@@ -864,7 +875,9 @@ for(const [title,readMap,definitions]of[
   ["pending v2 contrast diagnostic facts reject forged future missing duplicate and unrelated drift",
     ()=>JSON.parse(historicalSource(pendingContrastRegionDefinitions[0].baseline,"docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastV2Diagnostics],
   ["pending contrast region definitions reject forged future missing duplicate and unrelated drift",
-    ()=>JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastRegionDefinitions],
+    ()=>JSON.parse(historicalSource(shellContrastBaseline,"docs/operations/comprehensive-ui-automation-current-census.json")),pendingContrastRegionDefinitions],
+  ["pending shell contrast definitions reject forged future missing duplicate and unrelated drift",
+    ()=>JSON.parse(historicalSource("3e9873fb30238eb3446bc685c423005a4db09117","docs/operations/comprehensive-ui-automation-current-census.json")),pendingShellContrastDefinitions],
 ])test(title,()=>{
   const map=readMap();
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};

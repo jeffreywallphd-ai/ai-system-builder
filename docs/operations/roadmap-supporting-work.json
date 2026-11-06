@@ -10618,6 +10618,24 @@
         "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
         "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "distinguish-operational-shell-overlap-regions",
+      "work_criteria": [
+        "fixed-shell-contrast-regions",
+        "prior-diagnostics-and-census-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "001a07963ba82207e51ae06ecc0728e04402335a9d02211b0975d12b95868b58",
+      "review_digest": "a14389f3e6afec0758b9e95187e1fe5b59e1b28bae66628bd61c2253fe8817b8",
+      "scope": "The updated diagnostic distinguishes notification toasts, the notification panel, modal dialogs, and shell content. The earlier report versions remain readable.",
+      "limitations": [
+        "These source checks cover how the test groups findings. The operational browser journey remains open.",
+        "Chrome found one unresolved measurement in a notification toast. The exact element and cause still need evidence."
+      ]
     }
   ]
 }

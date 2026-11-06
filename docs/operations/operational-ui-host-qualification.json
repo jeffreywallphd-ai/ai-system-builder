@@ -4,13 +4,13 @@
   "increment_id": "operational-ui-and-coverage-qualification",
   "status": "technical-check-pending",
   "owner": "agent",
-  "summary": "Chrome no longer reports the unread badge contrast as unresolved. The audit recorded 61 direct passes and one unresolved overlap. The overlap still stops the test. All test processes closed. No user action is needed.",
+  "summary": "Chrome located one unresolved contrast measurement in a notification toast. The first audit still stops there. All test processes closed. No user action is needed.",
   "observed_source": {
-    "source_commit": "7712dd122c439ae64227e7dfe080aee5efa07b84",
-    "source_digest": "2071f725283c87aa87c8f652b4303be07d8a9afb3c4d2ae215f8265d3de96980",
-    "source_revision": "source.0687c969728fff17baec5d650efb16ff3e59ca7c23f50fda89674fcbb69f1671"
+    "source_commit": "3e9873fb30238eb3446bc685c423005a4db09117",
+    "source_digest": "7f9b98fe7f7fa5c0745eda2964fc6644a8899941f4f0b98052c8de8343093b5f",
+    "source_revision": "source.94715b70c5040f329784526495ee5d04278d659fb8c13e6849a61d4713330816"
   },
-  "observation_work_id": "qualify-notification-badge-browser-observation",
+  "observation_work_id": "observe-operational-shell-overlap-on-current-browser",
   "source_support": {
     "work_id": "fix-operational-navigation-and-source-owned-audit-inputs",
     "commit": "7eba180c82c005f5b723c522e9505547e22dd982",
@@ -806,6 +806,357 @@
       "effect_reference_sha256": "9005d42fcf3a66d15fa37225a10da6322a13def062c90a60f3a7fe6caf328692",
       "outcome_reference_sha256": "664157c68faf27434f43ed5df42ff1dd928a0ae89937eeb08a22f097404a10d5",
       "outcome_report_sha256": "4fa1ed9c36b54f6d3a6b73c504a577c028976cf729b321618107279f34ec8ff0"
+    },
+    {
+      "run_id": "operational-thin-e5f8e23349a24b3a8068cf12bd8b085e",
+      "status": "failed-first-mounted-accessibility-audit-before-first-recorded-phase",
+      "driver_exit": 1,
+      "command_passed": false,
+      "selected_tests": 1,
+      "selection_matches": true,
+      "ended_tests": 1,
+      "global_errors": 0,
+      "case_errors": 1,
+      "retry": 0,
+      "ui_phases_observed": 0,
+      "accessibility_surface_reports_observed": 1,
+      "accessibility_surfaces_passed": 0,
+      "next_phase": "navigation-menu-opened",
+      "local_ui_pass": false,
+      "known_owned_process_retirement": true,
+      "job_total": 27,
+      "job_active_after_exit": 0,
+      "job_forced_terminations": 0,
+      "server_shutdown_acknowledged": true,
+      "temporary_credential_removed": true,
+      "source_unchanged": true,
+      "effect_allowance_remaining": 0,
+      "automatic_retry_allowed": false,
+      "failed_accessibility": {
+        "surface": "navigation-menu",
+        "stage": "audit-1440",
+        "normal_widths_recorded": [
+          1440
+        ],
+        "forced_color_widths_recorded": [],
+        "rule_violations": 0,
+        "incomplete_color_contrast_nodes": 1,
+        "retry_attempted": 1,
+        "retry_passed": 0,
+        "contrast_passed_nodes": 61,
+        "motion_and_control_access_1440_passed": true,
+        "raw_sha256": "029ead9dc40c4e978f80d7399c109216d33734d9e4db2e43ab52494fe76d826d",
+        "attachment_sha256": "f2847e02c8a5705d1681c02a74ab239abd445dc46d482cc67ae25de636cf9d4a",
+        "retry_outcomes": {
+          "violation": 0,
+          "unresolved": 1,
+          "noPositiveSample": 0
+        },
+        "retry_reasons": {
+          "bgGradient": 0,
+          "bgImage": 0,
+          "imgNode": 0,
+          "outsideViewport": 0,
+          "elmPartiallyObscuring": 1,
+          "elmPartiallyObscured": 0,
+          "bgOverlap": 0,
+          "colorParse": 0,
+          "equalRatio": 0,
+          "shortTextContent": 0,
+          "other": 0,
+          "nonBmp": 0,
+          "pseudoContent": 0,
+          "complexTextShadows": 0,
+          "shadowOnBgColor": 0,
+          "fgOnShadowColor": 0
+        },
+        "reason_regions": {
+          "bgGradient": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "bgImage": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "imgNode": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "outsideViewport": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "elmPartiallyObscuring": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 1,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "elmPartiallyObscured": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "bgOverlap": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "colorParse": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "equalRatio": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "shortTextContent": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "other": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "nonBmp": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "pseudoContent": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "complexTextShadows": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "shadowOnBgColor": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          },
+          "fgOnShadowColor": {
+            "glossaryHelp": 0,
+            "notificationBadge": 0,
+            "workspaceControl": 0,
+            "pageDashboard": 0,
+            "shellMenu": 0,
+            "shellHeader": 0,
+            "shellSidebar": 0,
+            "homeCard": 0,
+            "homeContent": 0,
+            "notificationToast": 0,
+            "notificationPanel": 0,
+            "modalDialog": 0,
+            "shellContent": 0,
+            "shellMain": 0,
+            "other": 0
+          }
+        },
+        "style_hints": {
+          "backgroundImage": 1,
+          "reducedOpacity": 0,
+          "clippedAncestor": 1,
+          "nonRgbColor": 0,
+          "ancestorLimit": 0,
+          "reasonScanLimit": 0
+        },
+        "diagnostic_qualification": "diagnostic-only"
+      },
+      "effect_reference_sha256": "4562c6fa1363984005de28878e2fb46cf4c7e528e1defe75cd1929dceb610d1b",
+      "outcome_reference_sha256": "9e2605b7bfbf762a111f6d9450b92218d3e76c8b48015ca67baa6966df1cfeb5",
+      "outcome_report_sha256": "bddc8ea5e11c8dc693296b78a0f8c4043ccd110e1c82b2d3165f811f3b02b650"
     }
   ],
   "diagnosis": {
@@ -813,7 +1164,7 @@
     "failed_step": "navigation-menu-opened",
     "failed_surface": "navigation-menu",
     "failed_audit_stage": "audit-1440",
-    "exact_inner_assertion": "The original report failed at the first wide contrast audit. 61 text samples passed the direct contrast check. The audit recorded no contrast violations. One measurement stayed unresolved after the retry. No full surface or journey step passed. The precise inner assertion text was not captured.",
+    "exact_inner_assertion": "The first wide contrast audit recorded 61 directly passing text samples and one unresolved retry. It recorded no contrast violations. The fixed region for the unresolved measurement was a notification toast. No full audit or journey step passed. The precise inner assertion text was not captured.",
     "measured_facts": {
       "width": 1440,
       "contrast_violations": 0,
@@ -856,20 +1207,21 @@
       },
       "regions_with_unresolved_measurements": {
         "elmPartiallyObscuring": {
-          "other": 1
+          "notificationToast": 1
         }
       }
     },
-    "cause_limit": "The previous run recorded unresolved text in the unread badge region and one partial overlap. The current run again reports one partial overlap, in an unclassified region. The counts do not identify the affected element or establish its cause.",
+    "cause_limit": "The region identifies where the engine measured the text. The report cannot identify the individual element, the overlapping surface, or whether the toast layout caused the result.",
     "implemented_definition_fixes": [
       "Home reading panels now use solid palette colors. The large decorative layer on Home cards was removed.",
       "The new report format pairs engine reasons with fixed UI regions. The tool still reads earlier reports. Core contrast thresholds and all host requirements are unchanged.",
-      "The unread badge now uses darker text. Chrome no longer lists a contrast concern in that region. The separate overlap still prevents the later steps, narrow audits and forced-color audits."
+      "The unread badge now uses darker text. Chrome no longer lists a contrast concern in that region. The separate overlap still prevents the later steps, narrow audits and forced-color audits.",
+      "The version 4 diagnostic identifies notification toasts and other fixed shell regions. Earlier reports keep their original shape."
     ],
     "next_agent_actions": [
-      "Find the remaining overlap with a bounded observation. Keep selectors, page text, CSS values and raw engine messages out of the evidence.",
-      "Repair confirmed layout or contrast problems and add focused checks. Keep the same contrast thresholds and host assertions.",
-      "Run the affected browser feature check on the repaired source. Preserve earlier failures. Keep wider host and full-system tests pending until implementation is ready."
+      "Reproduce the unresolved toast contrast measurement in a focused browser fixture and identify the affected layout or measurement condition.",
+      "Add a regression and repair the owning layer. Keep notification visibility, keyboard access, audit thresholds, and the rest of the page in scope.",
+      "Verify the repaired feature before continuing the remaining browser and desktop steps."
     ],
     "user_action": "No action needed."
   },
@@ -1187,9 +1539,90 @@
         "reviewed_at": "2026-11-05T22:59:54.738663+00:00"
       },
       "scope": "Previous publication details only. All six earlier attempts stay unchanged. The complete earlier document remains at the recorded Git version."
+    },
+    {
+      "source_commit": "3e9873fb30238eb3446bc685c423005a4db09117",
+      "document_sha256": "c93ed4eb113695fc7d5d03b6ab0eb8abec620b8c8f799c62e3bd72e7b21947f9",
+      "committed_document_sha256": "c93ed4eb113695fc7d5d03b6ab0eb8abec620b8c8f799c62e3bd72e7b21947f9",
+      "replaced_fields": {
+        "summary": "Chrome no longer reports the unread badge contrast as unresolved. The audit recorded 61 direct passes and one unresolved overlap. The overlap still stops the test. All test processes closed. No user action is needed.",
+        "observed_source": {
+          "source_commit": "7712dd122c439ae64227e7dfe080aee5efa07b84",
+          "source_digest": "2071f725283c87aa87c8f652b4303be07d8a9afb3c4d2ae215f8265d3de96980",
+          "source_revision": "source.0687c969728fff17baec5d650efb16ff3e59ca7c23f50fda89674fcbb69f1671"
+        },
+        "observation_work_id": "qualify-notification-badge-browser-observation",
+        "diagnosis": {
+          "confirmed_selection_fix": "The latest attempt selected and ended exactly the intended case, with no global error or retry.",
+          "failed_step": "navigation-menu-opened",
+          "failed_surface": "navigation-menu",
+          "failed_audit_stage": "audit-1440",
+          "exact_inner_assertion": "The original report failed at the first wide contrast audit. 61 text samples passed the direct contrast check. The audit recorded no contrast violations. One measurement stayed unresolved after the retry. No full surface or journey step passed. The precise inner assertion text was not captured.",
+          "measured_facts": {
+            "width": 1440,
+            "contrast_violations": 0,
+            "unresolved_contrast_nodes": 1,
+            "contrast_retry_attempts": 1,
+            "contrast_retries_passed": 0,
+            "contrast_passed_nodes": 61,
+            "motion_and_control_access_passed": true,
+            "narrow_and_forced_color_checks_observed": false,
+            "retry_outcomes": {
+              "violation": 0,
+              "unresolved": 1,
+              "noPositiveSample": 0
+            },
+            "retry_reasons": {
+              "bgGradient": 0,
+              "bgImage": 0,
+              "imgNode": 0,
+              "outsideViewport": 0,
+              "elmPartiallyObscuring": 1,
+              "elmPartiallyObscured": 0,
+              "bgOverlap": 0,
+              "colorParse": 0,
+              "equalRatio": 0,
+              "shortTextContent": 0,
+              "other": 0,
+              "nonBmp": 0,
+              "pseudoContent": 0,
+              "complexTextShadows": 0,
+              "shadowOnBgColor": 0,
+              "fgOnShadowColor": 0
+            },
+            "style_hints": {
+              "backgroundImage": 1,
+              "reducedOpacity": 0,
+              "clippedAncestor": 1,
+              "nonRgbColor": 0,
+              "ancestorLimit": 0,
+              "reasonScanLimit": 0
+            },
+            "regions_with_unresolved_measurements": {
+              "elmPartiallyObscuring": {
+                "other": 1
+              }
+            }
+          },
+          "cause_limit": "The previous run recorded unresolved text in the unread badge region and one partial overlap. The current run again reports one partial overlap, in an unclassified region. The counts do not identify the affected element or establish its cause.",
+          "implemented_definition_fixes": [
+            "Home reading panels now use solid palette colors. The large decorative layer on Home cards was removed.",
+            "The new report format pairs engine reasons with fixed UI regions. The tool still reads earlier reports. Core contrast thresholds and all host requirements are unchanged.",
+            "The unread badge now uses darker text. Chrome no longer lists a contrast concern in that region. The separate overlap still prevents the later steps, narrow audits and forced-color audits."
+          ],
+          "next_agent_actions": [
+            "Find the remaining overlap with a bounded observation. Keep selectors, page text, CSS values and raw engine messages out of the evidence.",
+            "Repair confirmed layout or contrast problems and add focused checks. Keep the same contrast thresholds and host assertions.",
+            "Run the affected browser feature check on the repaired source. Preserve earlier failures. Keep wider host and full-system tests pending until implementation is ready."
+          ],
+          "user_action": "No action needed."
+        },
+        "reviewed_at": "2026-11-05T23:37:53.691397+00:00"
+      },
+      "scope": "Retain all seven earlier attempts. The recorded Git version retains the complete earlier document."
     }
   ],
-  "reviewed_at": "2026-11-05T23:37:53.691397+00:00",
+  "reviewed_at": "2026-11-06T04:47:38.061511+00:00",
   "reviewed_source_repairs": [
     {
       "work_id": "repair-responsive-operational-journeys",
@@ -1239,6 +1672,13 @@
       "receipt_digest": "06002d8c4e9d907b3761d228192a7c8e7672fd37304793672d946c7ba473e176",
       "review_digest": "5ff87b0f51d09199c3b56a76f4bab75379cc836ca09ec9a89b4381095f415f28",
       "scope": "The unread notification badge now uses darker text for better contrast. The notification count, label and controls still work as before. This records source support only. The browser case still failed."
+    },
+    {
+      "work_id": "distinguish-operational-shell-overlap-regions",
+      "commit": "3e9873fb30238eb3446bc685c423005a4db09117",
+      "receipt_digest": "001a07963ba82207e51ae06ecc0728e04402335a9d02211b0975d12b95868b58",
+      "review_digest": "a14389f3e6afec0758b9e95187e1fe5b59e1b28bae66628bd61c2253fe8817b8",
+      "scope": "The updated diagnostic distinguishes notification toasts, the notification panel, modal dialogs, and shell content. The earlier report versions remain readable. This records source support. The browser case still stopped at its first audit."
     }
   ]
 }
