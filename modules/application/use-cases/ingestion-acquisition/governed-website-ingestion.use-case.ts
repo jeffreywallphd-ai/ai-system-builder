@@ -5,7 +5,8 @@ import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../ports
 import type { WorkspaceRepository } from "../../ports/workspace";
 import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
 import {
-  normalizeGovernedWebsiteScopeRequest, normalizeIngestionSourceId, normalizeIngestionTaskFileId,
+  normalizeGovernedWebsiteScopeRequest, normalizeIngestionSourceId, normalizeIngestionSourceRefreshRecord,
+  normalizeIngestionSourceSnapshot, normalizeIngestionTaskFileId,
   normalizeIngestionTaskId, normalizeIngestionTaskRecord, type GovernedWebsiteScopeRequest,
   type IngestionSourceRefreshRecord, type IngestionSourceSnapshot, type IngestionTaskFileRecord,
   type IngestionTaskRecord,
@@ -80,7 +81,11 @@ export class GovernedWebsiteIngestionUseCases {
       }
       for (const candidate of task.files) {
         task = await this.requireTask(scope.value.workspaceId, task.taskId);
-        if (task.status === "cancelled") return createSuccessResult(task, context);
+        // Another run may have finished or failed while this call was waiting.
+        // Only a new run may apply the explicit failed-task retry policy above.
+        if (task.status === "cancelled" || task.status === "failed" || task.status === "succeeded") {
+          return createSuccessResult(task, context);
+        }
         const file = requireFile(task, candidate.fileId);
         if (file.status === "finalized") continue;
         if (!file.websiteSource) throw new Error("Website task coordinates are unavailable.");
@@ -112,11 +117,10 @@ export class GovernedWebsiteIngestionUseCases {
         });
         try {
           task = (await this.dependencies.repository.saveTaskWithSourceSnapshot(nextTask, task.revision, snapshot)).task;
-        } catch (error) {
-          await this.deleteStoredCapture(stored.value, context).catch(() => undefined);
-          const latest = await this.dependencies.repository.readTask(task.workspaceId, task.taskId);
-          if (latest?.status === "cancelled") return createSuccessResult(latest, context);
-          throw error;
+        } catch {
+          const recovered = await this.recoverCaptureCommit(nextTask, file.fileId, snapshot, stored.value, context);
+          if (!recovered.ok || recovered.value.status !== "transferring") return recovered;
+          task = recovered.value;
         }
       }
       return createSuccessResult(task, context);
@@ -156,10 +160,46 @@ export class GovernedWebsiteIngestionUseCases {
     try {
       const committed = await this.dependencies.repository.recordSourceRefreshWithSnapshot(snapshot, refresh);
       return createSuccessResult(committed.refresh, context);
-    } catch (error) {
-      await this.deleteStoredCapture(stored.value, context).catch(() => undefined);
-      throw error;
+    } catch {
+      // A lost response does not establish that the snapshot or its artifacts are uncommitted.
+      try {
+        const saved = await this.dependencies.repository.readSourceSnapshot(snapshot.workspaceId, snapshot.snapshotId);
+        if (saved && matchesSnapshot(saved, snapshot)) {
+          const recorded = (await this.dependencies.repository.listSourceRefreshes(snapshot.workspaceId, sourceId, 50))
+            .find((entry) => entry.refreshId === refresh.refreshId);
+          if (recorded && JSON.stringify(normalizeIngestionSourceRefreshRecord(recorded)) === JSON.stringify(normalizeIngestionSourceRefreshRecord(refresh))) {
+            return createSuccessResult(recorded, context);
+          }
+        }
+      } catch { /* An unreadable result cannot authorize deletion or success. */ }
+      return failure("unavailable", "The website refresh save could not be confirmed.", context);
     }
+  }
+
+  private async recoverCaptureCommit(
+    expected: IngestionTaskRecord, fileId: IngestionTaskFileRecord["fileId"], snapshot: IngestionSourceSnapshot,
+    stored: { readonly rawKey: string; readonly derivedKey: string }, context: ApplicationRequestContext,
+  ): Promise<GovernedWebsiteTaskResult> {
+    try {
+      const savedTask = await this.dependencies.repository.readTask(expected.workspaceId, expected.taskId);
+      const latest = savedTask ? normalizeIngestionTaskRecord(savedTask) : undefined;
+      if (latest?.taskId === expected.taskId && latest.kind === "website" && latest.workspaceId === expected.workspaceId
+        && latest.organizationId === expected.organizationId && latest.revision >= expected.revision) {
+        const currentFile = requireFile(latest, fileId);
+        const expectedFile = requireFile(expected, fileId);
+        const savedSnapshot = await this.dependencies.repository.readSourceSnapshot(expected.workspaceId, snapshot.snapshotId);
+        if (savedSnapshot && matchesSnapshot(savedSnapshot, snapshot) && JSON.stringify(currentFile) === JSON.stringify(expectedFile)) {
+          return createSuccessResult(latest, context);
+        }
+        // Cancellation is terminal. The owned file and its snapshot must both be uncommitted.
+        if (latest.status === "cancelled" && currentFile.status === "cancelled" && !currentFile.output
+          && currentFile.checkpointId === expectedFile.checkpointId && !savedSnapshot) {
+          await this.deleteStoredCapture(stored, context).catch(() => undefined);
+          return createSuccessResult(latest, context);
+        }
+      }
+    } catch { /* Missing or invalid readback cannot authorize deletion or success. */ }
+    return failure("unavailable", "The website capture save could not be confirmed.", context);
   }
 
   private async storeCapture(task: Pick<IngestionTaskRecord, "workspaceId">, sourceId: string, snapshotId: string, fileName: string, capture: Extract<GovernedWebsitePageCapture, { outcome: "captured" }>, context: ApplicationRequestContext): Promise<ContractResult<{ rawKey: string; derivedKey: string }>> {
@@ -213,6 +253,9 @@ export class GovernedWebsiteIngestionUseCases {
 }
 
 class MissingWebsiteTaskError extends Error {}
+function matchesSnapshot(saved: IngestionSourceSnapshot, expected: IngestionSourceSnapshot): boolean {
+  return JSON.stringify(normalizeIngestionSourceSnapshot(saved)) === JSON.stringify(normalizeIngestionSourceSnapshot(expected));
+}
 function toSnapshot(task: Pick<IngestionTaskRecord, "workspaceId" | "organizationId">, sourceId: string, snapshotId: string, displayName: string, capture: Extract<GovernedWebsitePageCapture, { outcome: "captured" }>, rawKey: string, derivedKey: string, capturedAt: string, previousSnapshotId?: string): IngestionSourceSnapshot {
   return { schemaVersion: "1.0", snapshotId: snapshotId as never, sourceId: sourceId as never,
     ...(task.organizationId ? { organizationId: task.organizationId } : {}), workspaceId: task.workspaceId,

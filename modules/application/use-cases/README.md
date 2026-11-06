@@ -170,5 +170,8 @@ memory budget, model/provider download or runtime authority is introduced.
 Website compensation uses the existing optional artifact catalog-delete port
 when stream storage also registers output. It removes only current-call capture
 keys, after successful byte cleanup. A byte failure retains catalog evidence;
-a derived-write failure compensates only the raw output. This does not change
-registered user deletion, old source snapshots or native recovery policy.
+a derived-write failure compensates only the raw output. When the save response
+is lost, exact task or refresh records and the matching snapshot confirm success.
+Keep files when the outcome is uncertain. Initial capture may clean its files
+after confirmed terminal cancellation with no saved snapshot. Registered user
+deletion, old source snapshots, and native recovery policy are unchanged.

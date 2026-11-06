@@ -54,7 +54,7 @@
   ingestion path; do not restore the retired Other import tools beside it.
 - Acquisition progress comes from persisted host state. Task/source snapshot
   visibility and changed-refresh/new-snapshot visibility commit atomically;
-  website cancellation races compensate uncommitted website artifacts. Local-file publication retains uncertain effects without adoption or destructive cleanup.
+  keep files after uncertain website saves; clean up only after confirmed cancellation with no snapshot. Local-file recovery retains uncertain effects without adoption or cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact
   duplicates cannot cross splits.

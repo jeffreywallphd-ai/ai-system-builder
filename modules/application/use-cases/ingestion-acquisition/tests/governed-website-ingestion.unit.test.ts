@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredIngestionAcquisitionRepository } from "../../../../adapters/persistence/ingestion";
 import { createFilesystemArtifactObjectStorageAdapter } from "../../../../adapters/storage/filesystem/artifact-store";
+import type { IngestionSourceSnapshot } from "../../../../contracts/ingestion";
 import { createHasArtifactRequest } from "../../../../contracts/storage";
 import { createContractError, createFailureResult, createSuccessResult } from "../../../../contracts/shared";
 import type { GovernedWebsiteCapturePort, GovernedWebsitePageCapture } from "../../../ports/ingestion";
@@ -27,7 +28,7 @@ function captured(url: string, value: string): GovernedWebsitePageCapture {
   const rawBytes = new TextEncoder().encode(`<main>${value}</main>`);
   return { outcome: "captured", requestedUrl: url, canonicalUrl: url, rawBytes, derivedTextBytes: new TextEncoder().encode(value), mediaType: "text/html", httpStatus: 200, contentDigest: digest(rawBytes), robots: { policyUrl: new URL("/robots.txt", url).toString(), checkedAt: "2026-07-30T12:00:00.000Z", decision: "allowed" } };
 }
-async function fixture(capture: GovernedWebsiteCapturePort, cancelBeforeCommit = false, overrides?: (storage: ReturnType<typeof createFilesystemArtifactObjectStorageAdapter>) => Partial<Pick<GovernedWebsiteIngestionUseCasesDependencies, "artifactCleanup" | "artifactCatalogCleanup" | "streamStorage">>) {
+async function fixture(capture: GovernedWebsiteCapturePort, cancelBeforeCommit = false, overrides?: (storage: ReturnType<typeof createFilesystemArtifactObjectStorageAdapter>, repository: ReturnType<typeof createStructuredIngestionAcquisitionRepository>) => Partial<Pick<GovernedWebsiteIngestionUseCasesDependencies, "repository" | "artifactCleanup" | "artifactCatalogCleanup" | "streamStorage">>) {
   const parent = await realpath(tmpdir()), root = await mkdtemp(join(parent, "governed-website-")), info = await lstat(root, { bigint: true });
   expect(info.ino !== 0n).toBe(true); roots.push({ root, parent, dev: info.dev, ino: info.ino });
   const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
@@ -54,7 +55,7 @@ async function fixture(capture: GovernedWebsiteCapturePort, cancelBeforeCommit =
     },
   } : repository;
   let sequence = 0;
-  const useCases = new GovernedWebsiteIngestionUseCases({ repository: taskRepository, capture, streamStorage: storage, artifactCleanup: storage, ...overrides?.(storage), now: () => "2026-07-30T12:00:00.000Z", createId: () => `id-${++sequence}` });
+  const useCases = new GovernedWebsiteIngestionUseCases({ repository: taskRepository, capture, streamStorage: storage, artifactCleanup: storage, ...overrides?.(storage, repository), now: () => "2026-07-30T12:00:00.000Z", createId: () => `id-${++sequence}` });
   return { repository, storage, useCases, context: { workspaceId: "workspace-a" } };
 }
 
@@ -116,6 +117,127 @@ describe("governed website ingestion", () => {
     await expect(storage.hasArtifact(createHasArtifactRequest(`${prefix}.txt`), context)).resolves.toMatchObject({ ok: true, value: { exists: false } });
     expect(await repository.listSourceSnapshots("workspace-a" as never, `source.${created.value.taskId}.${file.fileId}` as never)).toEqual([]);
   });
+
+  for (const committed of [true, false]) {
+    it(`retains website files when a capture response is lost (committed: ${committed})`, async () => {
+      const url = "https://example.com/a";
+      let attempted: IngestionSourceSnapshot | undefined;
+      let deletes = 0;
+      const { repository, storage, useCases, context } = await fixture(
+        { resolveScope: async () => [url], capturePage: async () => captured(url, "first capture") },
+        false,
+        (storage, repository) => ({
+          repository: {
+            ...repository,
+            async saveTaskWithSourceSnapshot(...args) {
+              attempted = args[2];
+              if (committed) await repository.saveTaskWithSourceSnapshot(...args);
+              throw new Error("synthetic storage implementation detail");
+            },
+            async readSourceSnapshot(...args) {
+              if (!committed) throw new Error("synthetic readback unavailable");
+              return repository.readSourceSnapshot(...args);
+            },
+          },
+          artifactCleanup: { async deleteArtifact(...args) { deletes++; return storage.deleteArtifact(...args); } },
+        }),
+      );
+      const created = await useCases.createTask({ kind: "pages", urls: [url] }, context);
+      if (!created.ok) throw new Error("Synthetic creation failed.");
+      const result = await useCases.runTask(created.value.taskId, context);
+      if (!attempted) throw new Error("Synthetic publication was not reached.");
+      const snapshot = await repository.readSourceSnapshot(created.value.workspaceId, attempted.snapshotId);
+      const savedTask = await repository.readTask(created.value.workspaceId, created.value.taskId);
+      expect(snapshot?.snapshotId).toBe(committed ? attempted.snapshotId : undefined);
+      expect(savedTask?.status).toBe(committed ? "succeeded" : "transferring");
+      for (const key of [attempted.rawArtifactKey, ...attempted.derivedArtifactKeys!]) {
+        await expect(storage.hasArtifact(createHasArtifactRequest(key), context)).resolves.toMatchObject({ ok: true, value: { exists: true } });
+      }
+      expect(deletes).toBe(0);
+      expect(result).toMatchObject(committed
+        ? { ok: true, value: { status: "succeeded", progress: { percent: 100 } } }
+        : { ok: false, error: { code: "unavailable", message: "The website capture save could not be confirmed." } });
+    });
+
+    it(`retains website files when a changed refresh response is lost (committed: ${committed})`, async () => {
+      const url = "https://example.com/a";
+      let value = "first capture";
+      let attempted: IngestionSourceSnapshot | undefined;
+      let deletes = 0;
+      const { repository, storage, useCases, context } = await fixture(
+        { resolveScope: async () => [url], capturePage: async () => captured(url, value) },
+        false,
+        (storage, repository) => ({
+          repository: {
+            ...repository,
+            async recordSourceRefreshWithSnapshot(...args) {
+              attempted = args[0];
+              if (committed) await repository.recordSourceRefreshWithSnapshot(...args);
+              throw new Error("synthetic storage implementation detail");
+            },
+          },
+          artifactCleanup: { async deleteArtifact(...args) { deletes++; return storage.deleteArtifact(...args); } },
+        }),
+      );
+      const created = await useCases.createTask({ kind: "pages", urls: [url] }, context);
+      if (!created.ok) throw new Error("Synthetic creation failed.");
+      const completed = await useCases.runTask(created.value.taskId, context);
+      if (!completed.ok || completed.value.status !== "succeeded") throw new Error("Synthetic initial capture failed.");
+      const sourceId = completed.value.files[0]!.output!.sourceId!;
+      const prior = await repository.listSourceSnapshots(created.value.workspaceId, sourceId);
+      value = "changed capture";
+      const result = await useCases.refreshSource(sourceId, context).then((value) => ({ value }), () => ({ rejected: true }));
+      if (!attempted) throw new Error("Synthetic refresh publication was not reached.");
+      const saved = await repository.listSourceSnapshots(created.value.workspaceId, sourceId);
+      expect(saved.find((snapshot) => snapshot.snapshotId === prior[0]!.snapshotId)).toEqual(prior[0]);
+      expect(saved.length).toBe(committed ? 2 : 1);
+      expect((await repository.listSourceRefreshes(created.value.workspaceId, sourceId)).length).toBe(committed ? 1 : 0);
+      for (const key of [prior[0]!.rawArtifactKey, attempted.rawArtifactKey, ...attempted.derivedArtifactKeys!]) {
+        await expect(storage.hasArtifact(createHasArtifactRequest(key), context)).resolves.toMatchObject({ ok: true, value: { exists: true } });
+      }
+      expect(deletes).toBe(0);
+      expect(result).toMatchObject({ value: committed
+        ? { ok: true, value: { outcome: "changed", previousSnapshotId: prior[0]!.snapshotId, currentSnapshotId: attempted.snapshotId } }
+        : { ok: false, error: { code: "unavailable", message: "The website refresh save could not be confirmed." } } });
+    });
+  }
+  it("does not capture another page when lost-response readback sees a failed task", async () => {
+    const urls = ["https://example.com/a", "https://example.com/b"];
+    const visited: string[] = [];
+    const { useCases, context } = await fixture(
+      { resolveScope: async () => urls, capturePage: async (url) => { visited.push(url); return captured(url, "synthetic page"); } },
+      false,
+      (_storage, repository) => ({
+        repository: {
+          ...repository,
+          async saveTaskWithSourceSnapshot(...args) {
+            const saved = await repository.saveTaskWithSourceSnapshot(...args);
+            if (saved.snapshot.locator.requestedUrl !== urls[0]) return saved;
+            await repository.saveTask({
+              ...saved.task,
+              status: "failed",
+              files: saved.task.files.map((file) => file.status === "finalized" ? file : {
+                ...file,
+                status: "failed",
+                error: { code: "website-removed", message: "This website page is no longer available.", retryable: false },
+              }),
+              revision: saved.task.revision + 1,
+              completedAt: saved.task.updatedAt,
+            }, saved.task.revision);
+            throw new Error("synthetic response lost after the first page save");
+          },
+        },
+      }),
+    );
+    const created = await useCases.createTask({ kind: "pages", urls }, context);
+    if (!created.ok) throw new Error("Synthetic creation failed.");
+    const result = await useCases.runTask(created.value.taskId, context);
+    expect(visited).toEqual([urls[0]]);
+    expect(result).toMatchObject({ ok: true, value: { status: "failed", progress: { completedItems: 1, totalItems: 2 } } });
+    expect(await useCases.runTask(created.value.taskId, context)).toMatchObject({ ok: false, error: { code: "validation" } });
+    expect(visited).toEqual([urls[0]]);
+  });
+
   it("removes only corresponding catalog entries after their byte cleanup is acknowledged", async () => {
     const calls: { workspaceId?: string; storageKey: string }[] = [];
     const { useCases, context } = await fixture({ resolveScope: async () => ["https://example.com/a"], capturePage: async url => captured(url, "alpha") }, true, storage => ({

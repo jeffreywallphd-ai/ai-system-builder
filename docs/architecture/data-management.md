@@ -192,10 +192,12 @@ evidence, capture time, validators, and content digest. Refresh uses ETag or
 Last-Modified when available and falls back to the content digest, recording an
 append-only unchanged, changed, unavailable, or removed result. Task state and
 its source snapshot commit in one structured-persistence transaction; a changed
-refresh and its new snapshot do the same. If cancellation or a competing update
-wins, newly written website artifacts are compensating-deleted before the result
-is returned. Local-file publication instead retains uncertain byte or metadata
-effects; a retry cannot adopt, overwrite or delete them.
+refresh and its new snapshot do the same. If a save response is lost, the
+application reports success only when the saved task or refresh and its snapshot
+match the attempted publication. Otherwise it reports an unconfirmed save and
+keeps the bytes. For initial capture, confirmed terminal cancellation with no
+saved snapshot permits cleanup of the files written by that attempt. Local-file
+publication retains its separate private recovery rules.
 
 ## Split integrity
 

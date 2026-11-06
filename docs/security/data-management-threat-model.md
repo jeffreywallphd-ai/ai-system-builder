@@ -1309,16 +1309,18 @@ qualification, and no real provider/model or native/physical host pass follows.
 
 ## Website capture catalog compensation
 
-A cancelled or losing website capture can have written raw and readable objects
-before its source transaction is refused. Both hosts supply the existing
-catalog-delete port to the website application use case. Compensation uses only
-those current-call generated keys and current workspace/request context. It
-removes each catalog entry after that object deletion returns success. A byte
-denial preserves its catalog evidence. A derived-write failure cleans only its
-acknowledged raw output. Old committed snapshots, unknown data and generic
-storage deletion are unchanged. Focused tests cover catalog visibility after
-held cancellation and byte-denial/raw-only ordering. They do not qualify native
-races, durable cleanup recovery, real egress or production access policy.
+A website capture can write raw and readable objects before its source
+transaction returns. A lost save response cannot authorize deletion. Exact
+scoped readback of the finalized task file or changed refresh and its immutable
+snapshot can confirm the save. Missing, mismatched, or unreadable readback leaves
+the outcome unconfirmed and preserves bytes and catalog evidence. An initial
+capture cleans its own files only when the scoped task confirms terminal
+cancellation for that file and the attempted snapshot is absent. Both hosts
+supply the existing catalog-delete port; it runs after each byte deletion
+succeeds. A derived-write failure still cleans only its acknowledged raw output.
+Focused tests cover lost responses, cancellation, and byte-denial/raw-only
+ordering. Native races, durable cleanup recovery, real egress, and production
+access policy remain separate.
 
 ## Browser artifact deletion intent and stale replies
 
