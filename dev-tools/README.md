@@ -2075,6 +2075,9 @@ its initial bootstrap before token enforcement. An occupied port or failed
 listen rejects startup; there is no alternate address. Existing token enforcement
 and canonical task, listener and persistence shutdown remain required.
 
+The Functional UI test Server uses the same listener and accepts connections
+only on `127.0.0.1`. If the chosen port is occupied, startup stops.
+
 The `host-setup-policy` profile includes disposable local HTTP, occupied-port
 and synchronous-failure fixtures. They close their own sockets and test startup
 handler cleanup. They do not launch an application, browser, model or provider,

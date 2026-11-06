@@ -15,5 +15,8 @@ test("functional canonical composition drains owned children before persistence 
   assert.ok(setup.indexOf("await observer.stop()")<setup.indexOf("await lifecycle.stop()"));assert.match(setup,/observeOwnedHostShutdown\("functional-data",child,runId,source\)/);
   assert.match(setup,/prepareThinClientQualificationIdentity\(plan,"functional-data"\)/);assert.match(setup,/await assertFreshFunctionalHostRoots/);assert.match(setup,/VISUAL_COMPOSER_FUNCTIONAL_METADATA!=="1"/);
   assert.match(entry,/installOwnedHostShutdown\("functional-data"/);assert.match(entry,/shutdownServerResources/);assert.match(entry,/shutdownBackgroundTasks:async/);assert.match(entry,/closePersistence:async/);
+  assert.match(entry,/from "\.\/settings-host-listener\.mjs"/);
+  assert.match(entry,/await listenQualificationHostOnLoopback\(listener,owner\.config\.port\)/);
+  assert.doesNotMatch(entry,/\.listen\(/);
   assert.doesNotMatch(entry,/\.ensureInstalled\(|\.repairInstall\(|setSecret\(|setToken\(/);
 });

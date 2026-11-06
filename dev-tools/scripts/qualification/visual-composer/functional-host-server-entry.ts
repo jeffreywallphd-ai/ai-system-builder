@@ -8,6 +8,7 @@ import {createVisualComposerQualificationRuntimeDatabase} from "./visual-compose
 import {createControlledRuntimeEnvironmentPreparer} from "./controlled-runtime-preparation.mjs";
 import {functionalHostLayout} from "./functional-host-launch-plan.mjs";
 import {installOwnedHostShutdown} from "./owned-host-shutdown.mjs";
+import {listenSettingsHostOnLoopback as listenQualificationHostOnLoopback} from "./settings-host-listener.mjs";
 
 let owner:Awaited<ReturnType<typeof createServer>>|undefined,listener:ReturnType<typeof createServerListener>|undefined,closing:Promise<void>|undefined;
 async function close(){
@@ -25,8 +26,8 @@ async function start(){
     owner=await createServer({env:process.env,structuredDocuments:documents,runtimeDatabases:createVisualComposerQualificationRuntimeDatabase(),
       pythonRuntimeEnvironmentPreparer:createControlledRuntimeEnvironmentPreparer({repoRoot:process.cwd(),runRoot:layout.serverRuntimeRoot,environment:process.env})});
     if(owner.config.storageRootDirectory!==path.resolve(layout.serverStorageRoot))throw new Error("Fixed Functional storage root is required.");
-    listener=createServerListener(owner);const active=listener;
-    await new Promise<void>((resolve,reject)=>{active.once("error",reject);active.listen(owner!.config.port,()=>{active.off("error",reject);resolve();});});
+    listener=createServerListener(owner);
+    await listenQualificationHostOnLoopback(listener,owner.config.port);
   }catch{await close();throw new Error("Functional Server startup did not complete.");}
 }
 const started=start();started.catch(()=>{});
