@@ -74,6 +74,93 @@ class GuardedLeaseTests(unittest.TestCase):
     def lease(self):
         return offload.OwnedOffloadLease(self.root, 1024, _recovery=self.context)
 
+    def test_copied_loader_lease_cannot_use_the_issued_guarded_permit(self):
+        lease = self.lease()
+        alias = copy.copy(lease)
+        substitute = object.__new__(type(lease))
+        vars(substitute).update(vars(lease))
+        rebound = copy.copy(lease)
+        rebound._issued_wrapper = weakref.ref(rebound)
+        rebound._require_issued_wrapper = lambda: None
+
+        def denied(operation, *args, **kwargs):
+            for label, wrapper in (("copy", alias), ("substitute", substitute), ("rebound", rebound)):
+                with self.subTest(operation=operation, wrapper=label):
+                    steps = list(self.backend.steps)
+                    with self.assertRaises(offload.OffloadAdmissionError):
+                        getattr(wrapper, operation)(*args, **kwargs)
+                    self.assertEqual(self.backend.steps, steps)
+
+        denied("seal")
+        lease.seal()
+        denied("assert_guarded_reusable", self.context)
+        lease.assert_guarded_reusable(self.context)
+        denied("cleanup", model_released=True)
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        self.assertEqual(self.backend.steps.count("references-released"), 1)
+        self.backend.worker_exited = True
+        self.owner.retire_owned_worker()
+        denied("cleanup", model_released=True)
+        lease.cleanup(model_released=True)
+        self.assertTrue(lease.released)
+
+    def test_issued_guarded_wrapper_cannot_be_reinitialized(self):
+        lease = self.lease()
+        permit = lease._guarded_lease
+        steps = list(self.backend.steps)
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.__init__(self.root, 1024, _recovery=self.context)
+        self.assertEqual(self.backend.steps, steps)
+        self.assertIs(lease._guarded_lease, permit)
+        lease.seal()
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        self.backend.worker_exited = True
+        self.owner.retire_owned_worker()
+        lease.cleanup(model_released=True)
+
+    def test_issued_guarded_wrapper_cannot_switch_to_another_permit(self):
+        first = self.lease()
+        with TemporaryDirectory(dir=self.root) as secondary:
+            other_backend = SyntheticNativeBackend(Path(secondary))
+            other_owner = recovery._GuardedOffloadOwner(other_backend)
+            second = offload.OwnedOffloadLease(other_backend.root, 1024, _recovery=other_owner.worker_context)
+            first.seal()
+            steps = list(self.backend.steps)
+            original = vars(second).copy()
+            try:
+                vars(second).update(vars(first))
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    second.assert_guarded_reusable(self.context)
+                self.assertEqual(self.backend.steps, steps)
+            finally:
+                vars(second).clear()
+                vars(second).update(original)
+            second.seal()
+            for lease, backend, owner in ((first, self.backend, self.owner), (second, other_backend, other_owner)):
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    lease.cleanup(model_released=True)
+                backend.worker_exited = True
+                owner.retire_owned_worker()
+                lease.cleanup(model_released=True)
+                self.assertTrue(lease.released)
+
+    def test_issue_record_does_not_keep_a_released_wrapper_alive(self):
+        lease = self.lease()
+        lease.seal()
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        self.backend.worker_exited = True
+        self.owner.retire_owned_worker()
+        lease.cleanup(model_released=True)
+        key = id(lease)
+        observed = weakref.ref(lease)
+        del lease
+        gc.collect()
+        self.assertIsNone(observed())
+        self.assertNotIn(key, offload._ISSUED_STAGING_LEASES)
+
     def test_real_lease_reserves_before_writes_and_parent_retires_after_reference_release(self):
         lease = self.lease()
         self.assertLess(self.backend.steps.index("reserve-durable"), self.backend.steps.index("create"))

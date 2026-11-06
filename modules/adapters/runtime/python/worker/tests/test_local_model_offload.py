@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import stat
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
+from weakref import ref
 
 from modules.adapters.runtime.python.worker.tasks import local_model_offload as offload
 
@@ -368,6 +370,32 @@ class OwnedOffloadLeaseTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).absolute()
 
+    def test_copied_loader_lease_cannot_seal_or_clean_the_ordinary_slot(self):
+        def rebound(lease):
+            substitute = copy.copy(lease)
+            substitute._issued_wrapper = ref(substitute)
+            substitute._require_issued_wrapper = lambda: None
+            return substitute
+
+        for clone in (copy.copy, copy.deepcopy, rebound):
+            for operation in ("seal", "cleanup"):
+                with self.subTest(copy=clone.__name__, operation=operation), TemporaryDirectory(dir=self.root) as temporary:
+                    lease = offload.OwnedOffloadLease(Path(temporary), 1024)
+                    index = lease.path / "index.json"
+                    index.write_bytes(b"{}")
+                    if operation == "cleanup":
+                        lease.seal()
+                        with self.assertRaises(offload.OffloadAdmissionError):
+                            clone(lease).cleanup(model_released=True)
+                    else:
+                        with self.assertRaises(offload.OffloadAdmissionError):
+                            clone(lease).seal()
+                        lease.seal()
+                    self.assertEqual(index.read_bytes(), b"{}")
+                    lease.cleanup(model_released=True)
+                    self.assertTrue(lease.released)
+                    self.assertFalse(lease.path.exists())
+
     def test_exclusive_slot_lasts_until_confirmed_release(self):
         lease = offload.OwnedOffloadLease(self.root, 1024)
         with self.assertRaises(offload.OffloadAdmissionError):
@@ -394,6 +422,23 @@ class OwnedOffloadLeaseTests(unittest.TestCase):
         lease.cleanup(model_released=True)
         self.assertEqual(model.read_bytes(), b"synthetic-model")
         self.assertEqual(sibling.read_bytes(), b"untouched")
+
+    def test_issued_ordinary_lease_cannot_switch_to_another_owned_slot(self):
+        with TemporaryDirectory(dir=self.root) as secondary:
+            first = offload.OwnedOffloadLease(self.root, 1024)
+            second = offload.OwnedOffloadLease(Path(secondary), 1024)
+            original = vars(second).copy()
+            try:
+                vars(second).update(vars(first))
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    second.seal()
+            finally:
+                vars(second).clear()
+                vars(second).update(original)
+            for lease in (first, second):
+                lease.seal()
+                lease.cleanup(model_released=True)
+                self.assertTrue(lease.released)
 
     def test_unsealed_changed_foreign_or_oversized_contents_are_retained(self):
         for kind in ("unsealed", "changed", "foreign", "oversized"):

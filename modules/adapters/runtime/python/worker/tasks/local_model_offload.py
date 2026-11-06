@@ -16,6 +16,7 @@ import stat
 import time
 from collections.abc import Mapping
 import uuid
+from weakref import ReferenceType, ref
 
 MODE = "offload-v1"
 CAPABILITY = "dataset-preparation.offload-v1"
@@ -632,6 +633,41 @@ def _directory_identity(path: Path) -> tuple[int, int]:
         raise OffloadAdmissionError() from None
 
 
+@dataclass(frozen=True, slots=True)
+class _StagingLeaseIssue:
+    owner: ReferenceType[OwnedOffloadLease]
+    fields: tuple[tuple[str, object], ...]
+
+
+_ISSUED_STAGING_LEASES: dict[int, _StagingLeaseIssue] = {}
+_MISSING_ISSUED_FIELD = object()
+
+
+def _record_offload_lease(lease: OwnedOffloadLease) -> None:
+    key = id(lease)
+    names = ("root", "path", "reservation", "_guarded_lease")
+    if lease._guarded_lease is None:
+        names += ("_root_identity", "_identity", "_owner")
+    fields = tuple((name, vars(lease)[name]) for name in names)
+
+    def retire(owner_ref):
+        issued = _ISSUED_STAGING_LEASES.get(key)
+        if issued is not None and issued.owner is owner_ref:
+            del _ISSUED_STAGING_LEASES[key]
+
+    _ISSUED_STAGING_LEASES[key] = _StagingLeaseIssue(ref(lease, retire), fields)
+
+
+def _require_issued_offload_lease(lease: OwnedOffloadLease) -> None:
+    # Verify the exact issued wrapper and its original staging fields.
+    issued = _ISSUED_STAGING_LEASES.get(id(lease))
+    if issued is None or issued.owner() is not lease:
+        raise OffloadAdmissionError()
+    state = vars(lease)
+    if any(state.get(name, _MISSING_ISSUED_FIELD) is not original for name, original in issued.fields):
+        raise OffloadAdmissionError()
+
+
 class OwnedOffloadLease:
     """One exclusive offload-cache slot, with conservative uncertain cleanup.
 
@@ -641,6 +677,8 @@ class OwnedOffloadLease:
     identity checks are cooperative, not an ACL/reparse race guarantee.
     """
     def __init__(self, cache_root: Path, reservation: int, *, _recovery=ORDINARY_OFFLOAD):
+        if id(self) in _ISSUED_STAGING_LEASES:
+            raise OffloadAdmissionError()
         if not cache_root.is_absolute() or ".." in cache_root.parts or type(reservation) is not int or not 0 < reservation <= STAGING_LIMIT:
             raise OffloadAdmissionError()
         self._guarded_lease = None
@@ -652,6 +690,7 @@ class OwnedOffloadLease:
             self.root = self.path.parent
             self.reservation = reservation
             self.released = False
+            _record_offload_lease(self)
             return
         _directory_identity(cache_root)
         self.root = cache_root / ".aisb-offload-v1"
@@ -672,6 +711,7 @@ class OwnedOffloadLease:
         self.released = False
         self._sealed = None
         self._removed: set[str] = set()
+        _record_offload_lease(self)
 
     def _check_identity(self) -> None:
         if self.released or _directory_identity(self.root) != self._root_identity or _directory_identity(self.path) != self._identity:
@@ -680,6 +720,7 @@ class OwnedOffloadLease:
             raise OffloadAdmissionError()
 
     def seal(self) -> None:
+        _require_issued_offload_lease(self)
         if self._guarded_lease is not None:
             self._guarded_lease.seal()
             return
@@ -709,6 +750,7 @@ class OwnedOffloadLease:
                 raise OffloadAdmissionError()
 
     def cleanup(self, *, model_released: bool) -> None:
+        _require_issued_offload_lease(self)
         if self.released:
             return
         if self._guarded_lease is not None:
@@ -743,6 +785,7 @@ class OwnedOffloadLease:
             raise OffloadAdmissionError() from None
 
     def assert_guarded_reusable(self, context) -> None:
+        _require_issued_offload_lease(self)
         if self.released or self._guarded_lease is None:
             raise OffloadAdmissionError()
         self._guarded_lease.assert_live(context)
