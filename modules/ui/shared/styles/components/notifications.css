@@ -209,7 +209,37 @@
 @media (max-width: 42rem) {
   .ui-notification__panel,
   .ui-notification__toasts { inset-inline: var(--space-sm); inline-size: auto; }
-  .ui-notification__panel + .ui-notification__toasts { transform: none; }
+}
+
+@media (max-width: 54rem) {
+  .ui-notification__panel + .ui-notification__toasts {
+    transform: none;
+  }
+
+  /* The panel shows the same messages. Keep the toast announcements available. */
+  .ui-notification__panel + .ui-notification__toasts:not(:focus-within) {
+    clip-path: inset(50%);
+  }
+
+  .ui-notification__panel + .ui-notification__toasts .ui-notification__toast:not(:focus-within) .ui-notification__icon-button {
+    display: none;
+  }
+
+  /* Keep a control that already has focus visible when the window narrows. */
+  .ui-notification__panel + .ui-notification__toasts:focus-within {
+    inset-block-start: auto;
+    inset-block-end: var(--space-sm);
+  }
+
+  .ui-notification__panel + .ui-notification__toasts:focus-within .ui-notification__toast:not(:focus-within) {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .ui-notification__panel + .ui-notification__toasts .ui-notification__toast:focus-within {
+    max-block-size: min(12rem, 30vh);
+    overflow: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

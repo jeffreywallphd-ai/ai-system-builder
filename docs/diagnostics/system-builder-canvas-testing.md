@@ -444,6 +444,21 @@ At 1440 pixels both controls were reachable and both surfaces fit. The fixture
 checked synthetic pointer targets. Running-app accessibility and contrast
 still need qualification.
 
+The shared stylesheet keeps the open panel visible and clips the duplicate
+toast on narrower screens. It removes the hidden toast button from keyboard
+access while retaining the live text. The component test confirmed initial
+focus on Close. Six browser cases confirmed the panel and standalone toast
+controls at 320, 720 and 1440 pixels, with both controls visible when the wide
+panel was open. At 320 pixels with the panel open, the accessibility tree
+included Close and the toast text without the duplicate Dismiss button.
+
+A focused toast stays at the bottom when the window narrows. The stylesheet
+limits its height and keeps the other toasts visually hidden. The resize test
+kept focus on Dismiss and kept both button centers reachable while moving from
+1440 to 320 pixels in a 280-pixel-high window with four toasts. Moving focus to
+Close hid the duplicate buttons and kept the live text in the accessibility tree.
+This test resized the synthetic viewport. Native zoom still needs a host test.
+
 Use the focused `operational-ui` profile for these helpers and related feature
 tests. Synthetic Page and DOM fixtures check the test definitions; they do not
 qualify an actual host. Preserve earlier failed runs. A fresh source-bound host

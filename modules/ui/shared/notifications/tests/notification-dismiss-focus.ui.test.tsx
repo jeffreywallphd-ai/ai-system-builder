@@ -86,3 +86,32 @@ it("allows toast text to shrink and wrap while preserving the dismiss button siz
     sheet.remove();
   }
 });
+
+it("keeps live toast text while the narrow open panel owns the visible controls", async () => {
+  await act(async () => bell().click());
+  const panel = view.querySelector<HTMLElement>(".ui-notification__panel")!;
+  const toasts = view.querySelector<HTMLElement>(".ui-notification__panel + .ui-notification__toasts")!;
+  expect(panel.textContent).toContain("Sample saved.");
+  expect(toasts.getAttribute("aria-live")).toBe("polite");
+  expect(toasts.querySelector('[role="status"]')?.textContent).toContain("Sample saved.");
+  expect(document.activeElement).toBe(panel.querySelector('[aria-label="Close notifications"]'));
+
+  const sheet = document.createElement("style");
+  sheet.textContent = readFileSync("modules/ui/shared/styles/components/notifications.css", "utf8");
+  document.head.appendChild(sheet);
+  try {
+    const media = Array.from(sheet.sheet!.cssRules)
+      .filter((rule): rule is CSSMediaRule => rule.type === CSSRule.MEDIA_RULE);
+    const narrow = media.find(rule => rule.media.mediaText === "(max-width: 54rem)");
+    expect(narrow).toBeDefined();
+    const rules = Array.from(narrow!.cssRules).filter((rule): rule is CSSStyleRule => rule.type === CSSRule.STYLE_RULE);
+    const adjacent = ".ui-notification__panel + .ui-notification__toasts";
+    expect(rules.find(rule => rule.selectorText === adjacent + ":not(:focus-within)")?.style.getPropertyValue("clip-path")).toBe("inset(50%)");
+    const otherToast = adjacent + " .ui-notification__toast:not(:focus-within)";
+    expect(rules.find(rule => rule.selectorText === otherToast + " .ui-notification__icon-button")?.style.display).toBe("none");
+    expect(rules.find(rule => rule.selectorText === adjacent + ":focus-within")?.style.getPropertyValue("inset-block-end")).toBe("var(--space-sm)");
+    expect(rules.find(rule => rule.selectorText === adjacent + " .ui-notification__toast:focus-within")?.style.overflow).toBe("auto");
+  } finally {
+    sheet.remove();
+  }
+});
