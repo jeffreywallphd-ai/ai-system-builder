@@ -10910,6 +10910,51 @@
       "limitations": [
         "The tests used simulated interruptions and cleanup responses. Real offload restart and resource checks remain pending."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "website-capture-is-governed-and-reproducible",
+      "work_id": "preserve-website-capture-on-storage-conflict",
+      "work_criteria": [
+        "exclusive-website-collision-keeps-owner-progress"
+      ],
+      "receipt_digest": "5fa8a87f04ef8dc57cf0014c7b7fe98bce90e949427d0a9fe53548851e0d2b01",
+      "review_digest": "83334675e58e1ed9af752d93388f735e94ea84f2189c46ba18f09f1255f4eb69",
+      "scope": "If a second website capture reaches the same files, the app reports a conflict. The first capture can finish and save its original files.",
+      "limitations": [
+        "The tests used local sample data. The live website and recovery checks still need evidence."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "source-refresh-is-incremental-and-honest",
+      "work_id": "verify-parent-lineage-before-website-refresh-commit",
+      "work_criteria": [
+        "reject-inconsistent-source-refresh-parent-before-writes"
+      ],
+      "receipt_digest": "385a5ebd3dd9d7030365b4cf88b8f30dd25398592f395eb3f116f365b496fcc6",
+      "review_digest": "14fa02054612850b058c4f9b403e2f228eef2c19b1c72454f5bcef02bb8a1fc0",
+      "scope": "When a website refresh finds a change, the app checks that the old and new versions have different IDs and belong to the same source. The app saves the result and new version together.",
+      "limitations": [
+        "The tests used sample records. Live provider checks and the order of concurrent refreshes still need evidence."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "rebind-website-conflict-test-in-ui-census",
+      "work_criteria": [
+        "website-test-inventory-matches-reviewed-source"
+      ],
+      "receipt_digest": "a1340a1b432fc1cafdff40569fb8c2fd8ae3ba8bcd61a9d60a03f18bff598925",
+      "review_digest": "2d20484918d049bac5e18b9ae414ed3f59ac9fb34482485a18b2dadaf95cefe1",
+      "scope": "The UI test inventory now points to the reviewed website capture regression. The inventory still maps 39 scenarios to 131 expected behaviors.",
+      "limitations": [
+        "The inventory check read the test definitions. Browser, Desktop and full application results remain separate."
+      ]
     }
   ]
 }

@@ -15773,6 +15773,72 @@
           "Real offload restart and resource checks remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1457f0595dfb4f7b70491156d1c945472731984e56feb15d0c54849d58ae88c6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "If a second website capture reaches the same files, the app reports a conflict.",
+          "The first capture can finish and save its original files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "418ecca1ad7a6f780670eb63882653901a1b2bfc65c9e0784e231d6b91878ce6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used local sample data.",
+          "The live website and recovery checks still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "59404cf46ce2017ccd5fa78a1e1dbf94ce5fb63537213866ad09ea4c9bc48727",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "When a website refresh finds a change, the app checks that the old and new versions have different IDs and belong to the same source.",
+          "The app saves the result and new version together."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cea5c249664bd1829c208ab7af919e8f62efdac4e272486446bbde349fefa050",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample records.",
+          "Live provider checks and the order of concurrent refreshes still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "94ffcdef08065f317e4f172a9d9a6241ec6e006f31cdaeb0debb0f74ea818c83",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The UI test inventory now points to the reviewed website capture regression.",
+          "The inventory still maps 39 scenarios to 131 expected behaviors."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "abb106e033a35703ed89ad9c01fd9109192e060d82aeafb53a7f7730e937af77",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The inventory check read the test definitions.",
+          "Browser, Desktop and full application results remain separate."
+        ]
+      }
     }
   ]
 }
