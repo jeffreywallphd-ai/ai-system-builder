@@ -669,6 +669,17 @@
       "outcome": "passed",
       "recordedAt": "2026-10-27T22:41:27Z",
       "summary": "Current feature positive/denial checks plus docs/architecture/roadmap gates pass. Exact completed security and source reviews are linked and audited, including bounded public contexts, exact workspace/release/revision actions, fail-closed page retirement and store separation. Original criteria, approval, all39 scenario requirements, failures and unowned work remain. No authority, isolation, resource/native control or accepted model/OCR threshold is changed. Actual native/provider/physical/final qualification remains pending; separate current all-criterion review is required."
+    },
+    {
+      "artifact": "docs/operations/comprehensive-ui-review-site-feature-evidence.json",
+      "command": "node node_modules/@playwright/test/cli.js test --config dev-tools/config/playwright.review-site.config.ts",
+      "criterionId": "review-site-ui-regressions",
+      "id": "evidence-12",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:01:04Z",
+      "summary": "Passed 27 review-site DOM tests and subtests and all three Chrome cases. Coverage includes creation order, completion and supporting evidence, dynamic refresh, recovery from a simulated unavailable response, theme preference, blocked storage, and keyboard use in a narrow viewport. The first browser run stopped before assertions because it could not verify the local server. This evidence covers the review site."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -932,6 +943,12 @@
       "recordedAt": "2026-10-30T04:57:35Z",
       "sequence": 43,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "06a3576211f3d3182cc05b6c5fc9f4622a333059ba00efc26ae0099853db352d",
+      "recordedAt": "2026-11-06T13:01:04Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -1620,5 +1637,5 @@
   "schemaVersion": 1,
   "slug": "comprehensive-ui-automation",
   "status": "executing",
-  "updatedAt": "2026-10-30T04:57:35Z"
+  "updatedAt": "2026-11-06T13:01:04Z"
 }
