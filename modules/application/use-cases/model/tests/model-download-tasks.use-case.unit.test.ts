@@ -2,7 +2,13 @@ import type { BigIntStats } from "node:fs";
 import { lstat, mkdtemp, readFile, readdir, realpath, rmdir, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import type { Request, Response } from "express";
 import { createLocalModelRegistryAdapter } from "../../../../adapters/persistence/model";
+import { createInMemoryStructuredDocumentStore, createOrganizationContextStructuredDocumentStore } from "../../../../adapters/persistence/shared";
+import { registerModelManagementApiRoutes, type ModelManagementExpressRoutePort } from "../../../../adapters/transport/api-express/model/registerModelManagementApiRoutes";
+import { createExpressSecurityMiddleware } from "../../../../adapters/transport/api-express/security/createExpressSecurityMiddleware";
+import { createExpressOrganizationContextScope } from "../../../../adapters/transport/api-express/security/expressOrganizationContextScope";
+import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { TaskType, type RuntimeTaskRecord } from "../../../../contracts/runtime";
 import { describe, expect, it, testDouble } from "../../../../testing/node-test";
@@ -76,6 +82,110 @@ describe("ModelDownloadTasksUseCase", () => {
     expect(registerDownloadedModel).toHaveBeenCalledTimes(1);
     expect(registerDownloadedModel.mock.calls[0]?.[0]?.localPath).toBe("C:\\cache\\org-model");
     expect(JSON.stringify(first.activity)).not.toContain("C:\\cache");
+  });
+
+  it("keeps authenticated model route reads pure and registers only in the original owner's partition", async () => {
+    const fixture = createFixture();
+    const scope = createExpressOrganizationContextScope();
+    const documents = createInMemoryStructuredDocumentStore();
+    const modelRegistry = createLocalModelRegistryAdapter({
+      filePath: "unused-in-memory-model-registry.json",
+      documents: createOrganizationContextStructuredDocumentStore(documents, scope),
+      discovery: { enabled: false },
+    });
+    const register = testDouble.fn<ModelRegistryPort["registerDownloadedModel"]>(async (command) => {
+      await Promise.resolve();
+      expect(scope.getCurrentOrganizationContext()).toMatchObject({ organizationId: "org.a", principalId: "principal.a" });
+      return modelRegistry.registerDownloadedModel(command);
+    });
+    const status = testDouble.fn((requestId: string) => fixture.registry.getTaskStatus(requestId));
+    const useCase = new ModelDownloadTasksUseCase({
+      runtimeTaskRegistry: { ...fixture.registry, getTaskStatus: status },
+      modelDownloadCompletion: fixture.completion,
+      modelRegistry: { ...modelRegistry, registerDownloadedModel: register },
+    });
+    const security = createExpressSecurityMiddleware({
+      mode: "lan-https-token", authRequired: true, httpsRequired: true,
+      organizationContextScope: scope, tenantPlacement: { mode: "pooled" },
+      async verifyToken({ token }) {
+        if (token !== "fixture-reader" && token !== "fixture-writer" && token !== "fixture-peer") {
+          throw new Error("Unexpected fixture identity.");
+        }
+        return { authenticated: true, authMethod: "bearer-token", principal: {
+          principalId: token === "fixture-peer" ? "principal.b" : "principal.a",
+          kind: "device", roles: [], scopes: token === "fixture-reader" ? ["model:read"] : ["model:read", "model:write"],
+        } };
+      },
+    });
+    const routes = new Map<string, Parameters<ModelManagementExpressRoutePort["post"]>[1]>();
+    const unused = { async execute(): Promise<never> { throw new Error("Unexpected model operation."); } };
+    registerModelManagementApiRoutes({
+      app: { post: (path, handler) => { routes.set(path, handler); } },
+      browseModelsUseCase: unused, getModelDetailsUseCase: unused, listModelsUseCase: unused,
+      saveModelReferenceUseCase: unused, downloadModelUseCase: unused,
+      updateModelRecordUseCase: unused, deleteModelRecordUseCase: unused, modelDownloadTasksUseCase: useCase,
+    });
+    async function send(operation: "start" | "read" | "list" | "complete", body: object,
+      identity: { token?: string; organizationId?: string } = {}) {
+      const path = `/api/model/download/${operation}`;
+      const handler = routes.get(path);
+      if (!handler) throw new Error(`Fixture route is missing: ${operation}`);
+      let bodyReads = 0, statusCode = 200;
+      let payload: unknown;
+      const request = {
+        method: "POST", path, protocol: "https",
+        headers: { authorization: `Bearer ${identity.token ?? "fixture-writer"}`, "x-organization-id": identity.organizationId ?? "org.a" },
+        get body() { bodyReads++; return body; },
+      };
+      const response = {
+        status(code: number) { statusCode = code; return response; },
+        json(value: unknown) { payload = value; },
+      };
+      let action: Promise<void> | undefined;
+      await security(request as unknown as Request, response as unknown as Response, () => { action = handler(request, response); });
+      await action;
+      return { statusCode, payload, bodyReads };
+    }
+    const task = { workspaceId, requestId: "download-1" };
+    expect(await send("start", { workspaceId, provider: "huggingface", modelId: "org/model",
+      organizationId: "org.b", principalId: "principal.b" })).toMatchObject({
+      statusCode: 200, payload: { ok: true, value: { activity: { ...task, status: "queued" } } },
+    });
+    fixture.setTask({ status: "succeeded" });
+    const reader = { token: "fixture-reader" };
+    expect(await send("read", task, reader)).toMatchObject({ statusCode: 200,
+      payload: { ok: true, value: { activity: { ...task, status: "succeeded" } } } });
+    expect(await send("list", { workspaceId, includeCompleted: true }, reader)).toMatchObject({ statusCode: 200,
+      payload: { ok: true, value: { activities: [{ ...task, status: "succeeded" }] } } });
+    expect(status).toHaveBeenCalledTimes(1);
+    expect(await send("complete", task, reader)).toMatchObject({ statusCode: 403, bodyReads: 0, payload: { ok: false } });
+    const spoofed = { ...task, organizationId: "org.a", principalId: "principal.a", modelWriteAuthorized: true };
+    for (const denial of [
+      await send("complete", spoofed, { organizationId: "org.b" }),
+      await send("complete", spoofed, { token: "fixture-peer" }),
+      await send("complete", { ...task, workspaceId: "workspace.other" }),
+      await send("complete", { ...task, requestId: "stale-download" }),
+    ]) {
+      expect(denial.statusCode >= 400).toBe(true);
+      expect(denial.payload).toMatchObject({ ok: false });
+    }
+    expect(status).toHaveBeenCalledTimes(1);
+    expect(fixture.completion.readCompletedModelDownload).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
+    const [first, duplicate] = await Promise.all([send("complete", task), send("complete", task)]);
+    expect(first).toMatchObject({ statusCode: 200, payload: { ok: true, value: { activity: {
+      ...task, model: { workspaceId, modelId: "org/model", lifecycleStatus: "downloaded" },
+    } } } });
+    expect(duplicate.payload).toEqual(first.payload);
+    expect((await send("complete", task)).payload).toEqual(first.payload);
+    expect(JSON.stringify(first.payload)).not.toContain("localPath");
+    expect(fixture.completion.readCompletedModelDownload).toHaveBeenCalledTimes(1);
+    expect(register).toHaveBeenCalledTimes(1);
+    for (const [organizationId, expected] of [["org.a", 1], ["org.b", 0]] as const) {
+      const records = await scope.runWithOrganizationContext({ organizationId: createOrganizationId(organizationId),
+        principalId: "principal.a" }, () => modelRegistry.listModels({ workspaceId }));
+      expect(records.models.length).toBe(expected);
+    }
   });
 
   it("denies cross-workspace reads before touching the registry", async () => {
