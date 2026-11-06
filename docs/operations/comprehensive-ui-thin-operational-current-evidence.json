@@ -1,0 +1,59 @@
+{
+  "schema_version": "comprehensive-ui-thin-operational-current-evidence-v1",
+  "increment_id": "operational-ui-and-coverage-qualification",
+  "criterion_id": "operational-and-task-ui",
+  "case": "thin client preserves Security refresh recovery and shell controls",
+  "tested_source": {
+    "head": "58daf32ebf473fef658e360cc2063e9ca2fad51d",
+    "source_digest": "2658163949778bc6b2cd0fc74ede45034d4758109f48bead758f8658962a40e8",
+    "app_source": "source.a7fd49d337c062647396ae061a517c85a6f5b5d7db0453ffc70e94524ec9e361"
+  },
+  "attempts": [
+    {
+      "run_id": "operational-thin-cb39438cc0864a1a9d4e2d0e5a3a79fb",
+      "status": "failed",
+      "exit_code": 1,
+      "manifest_sha256": "2898ad176d6392310a88b37306c4e4f9b10aa3ec9cb57fcbf3b3c284a26d4701",
+      "case_report_sha256": "b3caec89aa053cff37121e07593fba0b855c9e45f13f4f3fb62a152eb96f81ff",
+      "teardown_sha256": "234ec165c1d55039150bda9b38007535b18685b0e64b20b36a60dbb4c881fa02",
+      "outcome_sha256": "1e1fa73c0550bbdc555c53817fa7b284db3fd10efeae32a79fe86b1f14cf0329",
+      "setup": null,
+      "operational_phases": null,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false
+    },
+    {
+      "run_id": "operational-thin-ecf551070240445f8df6006f3ee6a278",
+      "status": "failed",
+      "exit_code": 1,
+      "manifest_sha256": "dedbf964fd7526848a80da861e1ebad926b1703d99cc92402addda90a1632ea5",
+      "case_report_sha256": "55011accbaedef34e9fa4d1dde8dc9d2b9d20b7651bcb714a0bb6e85f412a352",
+      "teardown_sha256": "d7a5f6ead16a5f9f2d79e34f5ef50bec14d8b41ca8b1b6f0f1c885ce4b1d13db",
+      "outcome_sha256": "74a07055207b84ac0eaf1c935a995a44d6cbc71cefcf06a1843f53954272e515",
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 0,
+        "forwardFailures": 0,
+        "navigationStatus": null,
+        "nextStage": "browser-launch",
+        "browserLaunched": false,
+        "browserClosed": true,
+        "proxyClosed": true
+      },
+      "operational_phases": null,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false
+    }
+  ],
+  "limits": [
+    "One isolated Chrome case with synthetic credentials. No real providers, actual model loads, or Electron.",
+    "The first attempt stopped before the operational steps reported evidence. It supplies no feature pass.",
+    "The retry stopped while launching Chrome, before app navigation. This identifies a test setup failure; the app workflow remains unobserved.",
+    "Desktop, native zoom, managed environment and full-suite checks remain separate."
+  ],
+  "parent_criterion_pass": false
+}
