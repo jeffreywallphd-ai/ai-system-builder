@@ -22,6 +22,7 @@ import { TaskType } from "../../../contracts/runtime";
 import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
 
 const downloadIdentityError = "Model download status did not match its accepted task.";
+const downloadCancellationIdentityError = "Model download cancellation did not match its accepted task.";
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
@@ -187,7 +188,11 @@ export function createPythonRuntimeTaskRegistryAdapter(
   const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId }>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
   const preparingTasks = new Set<string>();
-  const pendingStarts = new Map<string, symbol>();
+  const pendingStarts = new Map<string, { readonly taskType: RuntimeTaskRecord["taskType"] }>();
+  const isModelDownloadId = (requestId: string): boolean =>
+    acceptedModelDownloads.has(requestId) ||
+    trackedTasks.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD ||
+    pendingStarts.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD;
   const maximumTrackedTasks = 256;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
     const owner = acceptedModelDownloads.get(record.requestId);
@@ -224,7 +229,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const modelDownload = taskType === TaskType.MODEL_DOWNLOAD;
       const isContextTask =
         taskType === TaskType.CONTEXT_GENERATION || taskType === TaskType.CONTEXT_RETRIEVAL;
-      const admission = Symbol();
+      const admission = { taskType };
       pendingStarts.set(requestId, admission);
       try {
         await options.ensureRuntimeReady?.(
@@ -443,8 +448,18 @@ export function createPythonRuntimeTaskRegistryAdapter(
       });
     },
     async cancelTask(requestId: string): Promise<CancelRuntimeTaskResult> {
+      const downloadOwner = acceptedModelDownloads.get(requestId);
+      const wasDownload = isModelDownloadId(requestId);
+      if (wasDownload && !downloadOwner) throw new Error(downloadCancellationIdentityError);
       const result = await runtimePort.cancelTask(requestId);
       const previous = trackedTasks.get(requestId);
+      if ((wasDownload || isModelDownloadId(requestId) || isModelDownloadId(result.requestId)) && (
+        !downloadOwner || acceptedModelDownloads.get(requestId) !== downloadOwner ||
+        result.requestId !== requestId || previous?.taskType !== TaskType.MODEL_DOWNLOAD ||
+        previous.workspaceId !== downloadOwner.workspaceId
+      )) {
+        throw new Error(downloadCancellationIdentityError);
+      }
       if (previous) {
         rememberTask({
           ...previous,

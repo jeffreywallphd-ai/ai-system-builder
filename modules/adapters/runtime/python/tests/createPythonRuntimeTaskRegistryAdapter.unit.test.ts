@@ -517,6 +517,73 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     expect((await adapter.readCompletedModelDownload("download-1"))?.localPath).toBe("C:\\synthetic\\model");
   });
 
+  it("does not cache a model cancellation acknowledgement for a different ID", async () => {
+    let replyId = "download-other";
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask: acceptWorkerStart,
+      cancelTask: async () => ({ requestId: replyId, status: "cancelled", cancelled: true }),
+    } as unknown as PythonRuntimePort);
+    for (const requestId of ["download-1", "download-other"]) {
+      await adapter.startTask({ workspaceId, requestId, taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    }
+    for (const requestId of ["download-1", "untracked-id"]) {
+      await expect(adapter.cancelTask(requestId)).rejects.toThrow("Model download cancellation did not match its accepted task.");
+    }
+    const list = () => adapter.listTasks({ workspaceId, taskTypes: [TaskType.MODEL_DOWNLOAD], includeCompleted: true });
+    expect((await list()).tasks.map(({ status }) => status)).toEqual(["queued", "queued"]);
+    replyId = "download-1";
+    expect(await adapter.cancelTask("download-1")).toMatchObject({ requestId: "download-1", status: "cancelled", cancelled: true });
+    const { tasks } = await list();
+    expect(tasks.find(({ requestId }) => requestId === "download-1")?.status).toBe("cancelled");
+    expect(tasks.find(({ requestId }) => requestId === "download-other")?.status).toBe("queued");
+  });
+
+  it("refuses to cancel a model download before the worker accepts it", async () => {
+    let accept!: () => void;
+    const readiness = new Promise<void>((resolve) => { accept = resolve; });
+    const cancelTask = testDouble.fn<PythonRuntimePort["cancelTask"]>(async (requestId) =>
+      ({ requestId, status: "cancelled", cancelled: true }));
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask: acceptWorkerStart, cancelTask,
+    } as unknown as PythonRuntimePort, { ensureRuntimeReady: () => readiness });
+    const starting = adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    try {
+      await expect(adapter.cancelTask("download-1")).rejects.toThrow("Model download cancellation did not match its accepted task.");
+      expect(cancelTask).not.toHaveBeenCalled();
+    } finally {
+      accept();
+      await starting;
+    }
+    expect(await adapter.cancelTask("download-1")).toMatchObject({ requestId: "download-1", status: "cancelled" });
+    expect(cancelTask).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark a replacement download cancelled when its predecessor's reply arrives late", async () => {
+    let reply!: (value: Awaited<ReturnType<PythonRuntimePort["cancelTask"]>>) => void;
+    const pending = new Promise<Awaited<ReturnType<PythonRuntimePort["cancelTask"]>>>((resolve) => { reply = resolve; });
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask: acceptWorkerStart, cancelTask: () => pending,
+    } as unknown as PythonRuntimePort);
+    const requestId = "download-1";
+    await adapter.startTask({ workspaceId, requestId, taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+    const cancelled = Promise.allSettled([adapter.cancelTask(requestId)]);
+    const other = createWorkspaceId("workspace.other");
+    try {
+      for (let index = 0; index < 256; index++) {
+        await adapter.startTask({ workspaceId, requestId: "fixture-task-" + index, taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+      }
+      await adapter.startTask({ workspaceId: other, requestId, taskType: TaskType.MODEL_DOWNLOAD, payload: {} });
+      reply({ requestId, status: "cancelled", cancelled: true });
+      expect((await cancelled)[0]).toMatchObject({ status: "rejected", reason: { message: "Model download cancellation did not match its accepted task." } });
+      const { tasks } = await adapter.listTasks({ workspaceId: other, taskTypes: [TaskType.MODEL_DOWNLOAD], includeCompleted: true });
+      expect(tasks.length).toBe(1);
+      expect(tasks[0]).toMatchObject({ requestId, workspaceId: other, status: "queued" });
+    } finally {
+      reply({ requestId, status: "cancelled", cancelled: true });
+      await cancelled;
+    }
+  });
+
   for (const [label, replacement] of [
     ["a different request ID", { requestId: "download-other" }],
     ["a different task type", { taskType: "train-model" }],

@@ -36,7 +36,9 @@ Foundation for the managed Python sidecar runtime adapter:
   grants no owner. The adapter checks the accepted request, task type, and
   workspace before resolving a worker cache handle. If the reply omits the
   workspace, the adapter uses its existing host record. It caches a resolved
-  result only while the same accepted owner is current. The private
+  result only while the same accepted owner is current. The adapter rejects
+  cancellation before worker acceptance. It updates the task only if the reply
+  names the requested ID and the original owner is still current. The private
   `ModelDownloadCompletionPort` supplies the resolved path for authorized model
   registration. Task, API, and IPC records omit both the handle and path. The
   task adapter drops worker data on unfinished or failed download statuses.
