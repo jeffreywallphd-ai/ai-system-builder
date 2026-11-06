@@ -9704,36 +9704,40 @@
   {
    "path": "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
    "facts": {
-    "sha256": "be7c474ac403528fa7f8ea973d5ed2010df5b20e36c0e917fa899131961dc39f",
-    "bytes": 21011,
+    "sha256": "e476b0b7dc67eff54e3ccf4cefe4d2d2db7d1ab8cf645553cdaba7103e79665f",
+    "bytes": 24257,
     "cases": [
      {
       "name": "captures a bounded task into immutable raw and derived snapshots with authoritative progress",
       "line": 63
      },
      {
-      "name": "records unchanged, changed, removed, and unavailable refreshes without mutating snapshots",
+      "name": "keeps the original capture publishable when another run collides with its files",
       "line": 83
      },
      {
+      "name": "records unchanged, changed, removed, and unavailable refreshes without mutating snapshots",
+      "line": 136
+     },
+     {
       "name": "cleans raw and derived artifacts when cancellation wins the final commit race",
-      "line": 104
+      "line": 157
      },
      {
       "name": "does not capture another page when lost-response readback sees a failed task",
-      "line": 204
+      "line": 257
      },
      {
       "name": "removes only corresponding catalog entries after their byte cleanup is acknowledged",
-      "line": 241
+      "line": 294
      },
      {
       "name": "keeps catalog evidence when byte cleanup fails",
-      "line": 255
+      "line": 308
      },
      {
       "name": "compensates only successful raw output when the derived write fails",
-      "line": 267
+      "line": 320
      }
     ],
     "dynamicCases": 2,
@@ -9751,8 +9755,8 @@
       "line": 31
      }
     ],
-    "assertionCount": 54,
-    "assertionDigest": "16c072264325b22753559e5ec04dd127788042ee879629d053364cf6e62ed431",
+    "assertionCount": 60,
+    "assertionDigest": "76818774bbf47faefd5d96be3316a68fe5542a75ccb66602d1ba8d8140d7673f",
     "assertionExamples": [
      {
       "line": 19,
@@ -9777,7 +9781,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "be7c474ac403528fa7f8ea973d5ed2010df5b20e36c0e917fa899131961dc39f"
+   "committed_sha256": "e476b0b7dc67eff54e3ccf4cefe4d2d2db7d1ab8cf645553cdaba7103e79665f"
   },
   {
    "path": "modules/application/use-cases/tests/settings.use-cases.unit.test.ts",
