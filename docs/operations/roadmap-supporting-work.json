@@ -10790,6 +10790,21 @@
       "limitations": [
         "The tests used a simulated page. Browser and desktop checks for this increment are still pending."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "bind-notification-focus-to-committed-close",
+      "work_criteria": [
+        "apply-committed-notification-focus"
+      ],
+      "receipt_digest": "4ba5acc7bf5428f2ddd501047e58ce860ed0c8c3f9ed1473395034211194418b",
+      "review_digest": "ec9f918685c53952376e7a210be2c2bb71b2eefd7a2ecc5774f194b19ca09136",
+      "scope": "A workspace change that closes Notifications returns focus to the bell. A pointer dismissal still leaves focus on a control outside the panel if that control already has focus.",
+      "limitations": [
+        "These tests used a simulated page. Browser and desktop checks for the app remain pending."
+      ]
     }
   ]
 }

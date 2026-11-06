@@ -15595,6 +15595,28 @@
           "Browser and desktop checks for this increment are still pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "40a4cf8844fc3a1135cbaa7bb2cdd274028c93e377d31065b66cc640e3b12f16",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A workspace change that closes Notifications returns focus to the bell.",
+          "A pointer dismissal still leaves focus on a control outside the panel if that control already has focus."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7aad5012ababd8ed90d6cd055c37e2a2aa7984e3e0ecb5dafee6495a8e3dae9b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests used a simulated page.",
+          "Browser and desktop checks for the app remain pending."
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,43 @@
+{
+  "schema_version": "comprehensive-ui-review-site-feature-evidence-v1",
+  "increment_id": "operational-ui-and-coverage-qualification",
+  "criterion_id": "review-site-ui-regressions",
+  "tested_source": {
+    "head": "579c09bc60397c23ae6b8464ba6d5c6e07591a0e",
+    "source_digest": "141ca4fffe158b34e682f48772c0a5696aa49d5829bdee9f65569052656d4d83"
+  },
+  "browser": {
+    "command": "node node_modules/@playwright/test/cli.js test --config dev-tools/config/playwright.review-site.config.ts",
+    "workers": 1,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      "opens canonical details and linked work without changing qualification",
+      "refreshes a controlled current copy and recovers from connection refusal",
+      "keeps theme, keyboard and narrow review usable when storage refuses access"
+    ],
+    "run_id": "review-site-feature-a022a15c9ca74ac9bc7a01914c44b408",
+    "report_sha256": "018359872923015e6dab39aadbd1002ed1523975d9684ddd6651b3223cec31ea",
+    "report_digest": "bf5dc1a8e51fa059f0a7b4196f87763780eece6d808b3456a26d16639aa4d322"
+  },
+  "dom": {
+    "test_file": "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "transcript_sha256": "b632fea3a0f4a822142353fd84c3b0d5731858713a30bb6d4768146f1e8bded7"
+  },
+  "prior_failure": {
+    "stage": "server-verified",
+    "failed_browser_cases": 3,
+    "recovery": "Kept the loopback review server running in an owned foreground session.",
+    "run_id": "review-site-feature-0a5d5f98542d496ea0cb897b01293748",
+    "report_sha256": "2c7eddceb218767cccb156b7bc34af4081db051d4df9991351400839a179f6ba",
+    "report_digest": "5a58fba07ef450721bcfec5845424b4ad5fa0d20b9abfa10a18e5d17d4af9e3b"
+  },
+  "limits": [
+    "Only the contributor review site was tested. App host workflows and the combined system suite still need qualification."
+  ],
+  "parent_increment_pass": false
+}
