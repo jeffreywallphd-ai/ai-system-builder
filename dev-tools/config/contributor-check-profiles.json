@@ -1,6 +1,17 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "notification-dismiss-focus": {
+      "test_paths": [
+        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
+        "modules/ui/shared/notifications/tests/notification-dismiss-focus.ui.test.tsx"
+      ],
+      "source_paths": [
+        "dev-tools/config/contributor-check-profiles.json",
+        "modules/ui/shared/notifications/NotificationCenter.tsx"
+      ]
+    },
     "model-download-ownership": {
       "test_paths": [
         "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",

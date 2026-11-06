@@ -416,6 +416,12 @@ The notification check first verifies the panel's initial Close focus. It marks
 unread records when needed and clears completed current-session records before
 checking the empty state. An active record prevents that check from passing.
 Escape must close the panel and return focus to the notification button.
+The focused component tests also verify dismissal of a notification. Dismiss a
+focused toast to return focus to the notification button, even when the panel
+is open. Dismiss a focused item in the panel to return focus to Close.
+Dismissal from an unfocused control keeps the current focus. The
+`notification-dismiss-focus` profile runs the
+rendered dismissal, notification-action, and toast timing component tests.
 
 Use the focused `operational-ui` profile for these helpers and related feature
 tests. Synthetic Page and DOM fixtures check the test definitions; they do not

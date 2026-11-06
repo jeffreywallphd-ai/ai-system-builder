@@ -104,6 +104,26 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         plan = catalog.plan(root, [*owned, unrelated], ['architecture'], 'synthetic')
         self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
 
+    def test_notification_dismiss_focus_profile_runs_only_notification_components(self):
+        root = Path(__file__).resolve().parents[3]
+        profile = 'notification-dismiss-focus'
+        area = 'modules/ui/shared/notifications'
+        timing = f'{area}/tests/NotificationCenter.interaction.ui.test.tsx'
+        actions = f'{area}/tests/notification-center-actions.ui.test.tsx'
+        focus = f'{area}/tests/notification-dismiss-focus.ui.test.tsx'
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([timing, actions, focus], 'fixture')}):
+            self.assertEqual(focused.profile_commands(root, profile), [
+                ['node', '--import', 'tsx', '--test', '--', timing],
+                ['node', 'dev-tools/helpers/run_vitest_checks.mjs', '--', actions, focus],
+            ])
+        owned = [f'{area}/NotificationCenter.tsx', focus, 'dev-tools/config/contributor-check-profiles.json']
+        plan = catalog.plan(root, owned, ['architecture'], 'synthetic')
+        self.assertIn(profile, [check['id'] for check in plan['selected']])
+        self.assertNotIn('operational-ui', [check['id'] for check in plan['selected']])
+        self.assertNotIn('focused-tests', [check['id'] for check in plan['selected']])
+        plan = catalog.plan(root, [*owned, f'{area}/notificationState.ts'], ['architecture'], 'synthetic')
+        self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
+
     def test_functionality_profile_plans_fake_coverage_and_keeps_native_source_responsibility(self):
         import json
         root = Path(__file__).resolve().parents[3]
