@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "6d0e47cdf158622844df28dc9583fe610c6ab096",
+ "source_baseline": "51d299494bd217ac90c110a4fccc089cf8b945d8",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -5155,7 +5155,7 @@
   {
    "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
    "facts": {
-    "sha256": "58755f977afe80b299dd54295588b4ad96968a87db0d295fa91d0aba7b8d1c31",
+    "sha256": "dc0a02cd9c1fa62e818971385d85000494f4104c395e5f1e51139dd94c7a7470",
     "bytes": 45189,
     "cases": [
      {
@@ -5367,7 +5367,7 @@
      }
     ],
     "assertionCount": 193,
-    "assertionDigest": "92186d97bb267a2c6fd57eb8048ca9de0396de72a1e355b82391bc5d23124ddd",
+    "assertionDigest": "64c56cba8b5b5098716596b0cb577aa7ce67207460b002d4d1af59494cccae7f",
     "assertionExamples": [
      {
       "line": 40,
@@ -5392,7 +5392,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "6b2a80ecee2b8d140e0a9f5e36abd4ff442a1f7666a0a08720a775d7b4e4bb0a"
+   "committed_sha256": "58755f977afe80b299dd54295588b4ad96968a87db0d295fa91d0aba7b8d1c31"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
@@ -6830,8 +6830,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
    "facts": {
-    "sha256": "23c94fc3ab45639929a4d18ce137b775335c49d66abdda0969cfbf947a40ba09",
-    "bytes": 44495,
+    "sha256": "0a03d828e46601b4c69c12907aa24853e120a0395e935bdd28f9c4d1730d5257",
+    "bytes": 46559,
     "cases": [
      {
       "name": "preserves original v1 serialized shape without inserting newer reason keys",
@@ -6858,182 +6858,186 @@
       "line": 86
      },
      {
-      "name": "rejects a current-version %s without reading private hooks",
+      "name": "admits the new shell regions only in their exact wire version",
       "line": 99
      },
      {
+      "name": "rejects a current-version %s without reading private hooks",
+      "line": 114
+     },
+     {
       "name": "keeps current-version observations failed when their original core retry is unresolved",
-      "line": 105
-     },
-     {
-      "name": "copies and freezes only finite partitioned counts without qualifying an audit",
-      "line": 113
-     },
-     {
-      "name": "rejects excessive, inconsistent and private diagnostic input %#",
       "line": 120
      },
      {
+      "name": "copies and freezes only finite partitioned counts without qualifying an audit",
+      "line": 128
+     },
+     {
+      "name": "rejects excessive, inconsistent and private diagnostic input %#",
+      "line": 135
+     },
+     {
       "name": "rejects %s without executing its hooks",
-      "line": 129
+      "line": 144
      },
      {
       "name": "requires the diagnostic counts to match the independently read core audit",
-      "line": 139
+      "line": 154
      },
      {
       "name": "rejects %s observation envelope without a fallback or executable hook",
-      "line": 147
+      "line": 162
      },
      {
       "name": "retains the actual CSS width and both ordered media checks without inventing a standard width",
-      "line": 164
+      "line": 179
      },
      {
       "name": "admits only the declared %s mode",
-      "line": 175
-     },
-     {
-      "name": "rejects unknown mode %#",
-      "line": 176
-     },
-     {
-      "name": "rejects frame substitutes, malformed bounds and private extras %#",
-      "line": 177
-     },
-     {
-      "name": "retains valid failed frame facts %#",
-      "line": 182
-     },
-     {
-      "name": "rejects unsupported audit fields %#",
-      "line": 186
-     },
-     {
-      "name": "retains rule, contrast and retry failures rather than treating a valid frame as a pass",
       "line": 190
      },
      {
+      "name": "rejects unknown mode %#",
+      "line": 191
+     },
+     {
+      "name": "rejects frame substitutes, malformed bounds and private extras %#",
+      "line": 192
+     },
+     {
+      "name": "retains valid failed frame facts %#",
+      "line": 197
+     },
+     {
+      "name": "rejects unsupported audit fields %#",
+      "line": 201
+     },
+     {
+      "name": "retains rule, contrast and retry failures rather than treating a valid frame as a pass",
+      "line": 205
+     },
+     {
       "name": "rejects %s without running hooks",
-      "line": 194
+      "line": 209
      },
      {
       "name": "requires exactly two successful ordered media observations %#",
-      "line": 210
+      "line": 225
      },
      {
       "name": "does not qualify the separate managed-host/native path",
-      "line": 214
+      "line": 229
      },
      {
       "name": "requires actual contrast samples at the declared %ipx width",
-      "line": 220
+      "line": 235
      },
      {
       "name": "requires every offscreen contrast retry to resolve and copies only trusted rules/counts",
-      "line": 226
+      "line": 241
      },
      {
       "name": "retains a legitimate failed observation instead of granting a pass %#",
-      "line": 233
+      "line": 248
      },
      {
       "name": "rejects malformed, excessive, inconsistent or private data with fixed diagnostics %#",
-      "line": 243
+      "line": 258
      },
      {
       "name": "never executes %s observation hooks",
-      "line": 259
+      "line": 274
      },
      {
       "name": "retains the prior requirement for a direct contrast sample even if all retries passed",
-      "line": 270
+      "line": 285
      },
      {
       "name": "restores media before publishing passed evidence and attaching it",
-      "line": 277
+      "line": 292
      },
      {
       "name": "records failed evidence for %s without retaining raw exceptions",
-      "line": 282
+      "line": 297
      },
      {
       "name": "retains the original failed check when media restoration also fails",
-      "line": 291
+      "line": 306
      },
      {
       "name": "fails the test even if failed evidence cannot be written",
-      "line": 296
+      "line": 311
      },
      {
       "name": "uses each unique visible retry target without returning its selector/message/text",
-      "line": 322
+      "line": 337
      },
      {
       "name": "uses the complete runtime document and retains browser-local contrast retries",
-      "line": 333
+      "line": 348
      },
      {
       "name": "refuses runtime %s at the actual browser collection boundary",
-      "line": 345
-     },
-     {
-      "name": "keeps builder-shell admission separate from the standalone runtime",
-      "line": 354
-     },
-     {
-      "name": "refuses an unsupported viewport before browser evaluation",
       "line": 360
      },
      {
-      "name": "keeps native mode out of standard collector entry points %#",
-      "line": 365
-     },
-     {
-      "name": "retains failed retry evidence for %s",
+      "name": "keeps builder-shell admission separate from the standalone runtime",
       "line": 369
      },
      {
+      "name": "refuses an unsupported viewport before browser evaluation",
+      "line": 375
+     },
+     {
+      "name": "keeps native mode out of standard collector entry points %#",
+      "line": 380
+     },
+     {
+      "name": "retains failed retry evidence for %s",
+      "line": 384
+     },
+     {
       "name": "projects only the fixed engine reason for %s",
-      "line": 381
+      "line": 396
      },
      {
       "name": "pairs actual retry reasons with the nearest fixed region without disclosing target details",
-      "line": 399
+      "line": 414
      },
      {
       "name": "partitions the actual %s retry without adding an audit, scroll or wait",
-      "line": 433
+      "line": 458
      },
      {
       "name": "bounds diagnostic ancestry and engine-check inspection without suppressing the failed retry",
-      "line": 447
+      "line": 472
      },
      {
       "name": "retains the exact successful core audit and an independent zero-count projection",
-      "line": 459
+      "line": 484
      },
      {
       "name": "rejects extra observer arguments before Page effects %#",
-      "line": 466
+      "line": 491
      },
      {
       "name": "reports a fixed browser-stage failure for %s",
-      "line": 475
+      "line": 500
      },
      {
       "name": "normalizes %s setup errors without opening a browser",
-      "line": 507
+      "line": 532
      },
      {
       "name": "does not persist invalid browser scale data %#",
-      "line": 512
+      "line": 537
      }
     ],
     "dynamicCases": 0,
     "functions": [],
-    "assertionCount": 161,
-    "assertionDigest": "4b3f955f0d0a643972ae788f6e90ed9b3f7f62bf3245f651e1ae7cc44e68f7b8",
+    "assertionCount": 166,
+    "assertionDigest": "2ee2d9c292680f99e90d45d3fd35d5a81f451377b96139d7431d49f73317b0c2",
     "assertionExamples": [
      {
       "line": 36,
@@ -7058,7 +7062,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "95edaff0b97824d7ffce1bfdedb2b2fa973fc1c498d497a8f56b71d8528fedf4"
+   "committed_sha256": "23c94fc3ab45639929a4d18ce137b775335c49d66abdda0969cfbf947a40ba09"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/website-catalog-host-wiring.unit.test.ts",
@@ -8770,8 +8774,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
    "facts": {
-    "sha256": "a88771a6b8d8eb54502192149ded65efe2c10a610b7aa33f394d1940a582426e",
-    "bytes": 23296,
+    "sha256": "ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c",
+    "bytes": 23302,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -8878,7 +8882,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "1da80cf54e7f25a032ad3381549c37e16b7464e529f2bae63dd3f1752a013cea"
+   "committed_sha256": "a88771a6b8d8eb54502192149ded65efe2c10a610b7aa33f394d1940a582426e"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",

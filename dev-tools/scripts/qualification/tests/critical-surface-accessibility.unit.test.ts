@@ -209,7 +209,7 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(saved.status).toBe("failed"); expect(saved.audits[0].violations).toEqual([{ rule: "button-name", nodes: 1 }]);
     expect(saved.audits[0].retries).toEqual({ attempted: 0, passed: 0 });
     expect(saved.contrastRetryDiagnostics.stage).toBe("audit-1440");
-    expect(saved.contrastRetryDiagnostics.observation.schemaVersion).toBe("contrast-retry-diagnostics-v3");
+    expect(saved.contrastRetryDiagnostics.observation.schemaVersion).toBe("contrast-retry-diagnostics-v4");
     expect(Object.values(saved.contrastRetryDiagnostics.observation.reasonRegions.other).every(value => value === 0)).toBe(true);
     expect(saved.contrastRetryDiagnostics.observation.reasons.pseudoContent).toBe(0);
     expect(probe.attachments).toHaveLength(1); expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|selector|privateCss/);

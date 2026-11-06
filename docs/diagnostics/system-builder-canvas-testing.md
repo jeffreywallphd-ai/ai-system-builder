@@ -473,12 +473,12 @@ separate. Accepted model accuracy and OCR are not repeated for this update.
 
 ## Failed contrast measurement diagnostics
 
-New collectors emit `contrast-retry-diagnostics-v3`. The 16 fixed reason keys introduced in v2
+New collectors emit `contrast-retry-diagnostics-v4`. The 16 fixed reason keys introduced in v2
 include the installed engine's emoji-only, pseudo-element, complex-shadow and
 shadow-contribution cases. The v1 reader, original 11-key constant and serialized
 v1 shape remain compatible. The v2 reader retains its exact aggregate shape.
-Each version requires its own exact keys; mixed, missing, unknown or excessive
-values fail. Saved v1 and v2 reports are not rewritten.
+Each version requires its own exact keys. Mixed, missing, unknown or excessive
+values fail. Saved v1 through v3 reports remain readable in their original formats.
 
 Home reading panels use opaque palette surfaces, and readable cards no longer
 carry the large decorative pseudo-element. Accent icons, actions and responsive
@@ -502,10 +502,11 @@ fields and attachments. Missing diagnostics do not make an audit pass.
   Each failed retry contributes one recognized reason, or `other`. These are
   engine-reported hints, not proof of the cause.
 - Region counts assign each failed retry to its nearest fixed UI region, such as
-  the glossary help, page summary, shell or Home content. If no known region
-  is found, the retry is counted as other. For each engine reason, the region
-  counts must add up to the original reason count. A region identifies where
-  the target was found; it does not identify what made the measurement fail.
+  the glossary help, page summary, shell or Home content. Version 4 distinguishes
+  notification toasts, the notification panel, modal dialogs, and the shell
+  content and main containers. If the collector finds no known region, it records
+  the retry under `other`. Region counts add up to the original count for each
+  reason. The counts locate the target by area. The cause still needs evidence.
 - Style hints count background images, reduced opacity, clipping, non-RGB
   computed text colors and truncated inspection. Counts contain no CSS values.
   The collector inspects at most 64 ancestors and 64 node/check slots per failed
@@ -537,6 +538,10 @@ preserves the preceding v2 map and its three replaced source rows. All earlier
 history remains intact. The new map records three current definitions and keeps
 the same bounds and open execution gaps. The history test keeps its existing
 cache limits and evicts old entries when it checks more versions.
+
+The [shell overlap census history](../operations/comprehensive-ui-automation-shell-overlap-census-history.json)
+binds the three updated test and collector definitions to their earlier Git
+versions. The open host and qualification entries retain their previous status.
 
 A separately reviewed browser run recorded 60 direct passing samples and two
 unresolved retries at its first audit. The engine tagged one as partial

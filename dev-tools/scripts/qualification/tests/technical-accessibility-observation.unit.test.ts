@@ -53,7 +53,7 @@ describe("closed failed-contrast diagnostic projection", () => {
     if (kind === "non-engine-contributor") value = { ...value, reasons: { ...diagnosticV2().reasons, fgOnBgColor: 0 } };
     if (kind === "successful-only-reason") value = { ...value, reasons: { ...diagnosticV2().reasons, hidden: 0 } };
     if (kind === "oversized-partition") value = { ...value, reasons: { ...diagnosticV2().reasons, pseudoContent: 2 } };
-    if (kind === "future-version") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v4" };
+    if (kind === "future-version") value = { ...value, schemaVersion: "contrast-retry-diagnostics-v5" };
     expect(() => readContrastRetryDiagnostics(value)).toThrow("Invalid contrast retry diagnostics.");
   });
   it("keeps the exact v2 wire shape", () => {
@@ -95,6 +95,21 @@ describe("closed failed-contrast diagnostic projection", () => {
     if (mode === "proxy") input.reasonRegions.pseudoContent = new Proxy(row, { ownKeys() { hooks++; return []; } });
     expect(() => readContrastRetryDiagnostics(input)).toThrow("Invalid contrast retry diagnostics.");
     expect(hooks).toBe(0);
+  });
+  it("admits the new shell regions only in their exact wire version", () => {
+    const old = regionFixture();
+    expect(readContrastRetryDiagnostics(old)).toEqual(old);
+    const additions = { notificationToast: 0, notificationPanel: 0, modalDialog: 0, shellContent: 0, shellMain: 0 };
+    const reasonRegions = Object.fromEntries(Object.entries(old.reasonRegions)
+      .map(([reason, row]) => [reason, { ...row, ...additions }]));
+    reasonRegions.pseudoContent!.homeContent = 0;
+    reasonRegions.pseudoContent!.notificationToast = 1;
+    const current = { ...old, schemaVersion: "contrast-retry-diagnostics-v4", reasonRegions };
+    expect(readContrastRetryDiagnostics(current)).toEqual(current);
+    expect(() => readContrastRetryDiagnostics({ ...current, schemaVersion: old.schemaVersion })).toThrow("Invalid contrast retry diagnostics.");
+    expect(() => readContrastRetryDiagnostics({ ...old, schemaVersion: current.schemaVersion })).toThrow("Invalid contrast retry diagnostics.");
+    const malformed = { ...current, reasonRegions: { ...reasonRegions, pseudoContent: { ...reasonRegions.pseudoContent, notificationPanel: 1 } } };
+    expect(() => readContrastRetryDiagnostics(malformed)).toThrow("Invalid contrast retry diagnostics.");
   });
   it.each(["getter", "proxy"])("rejects a current-version %s without reading private hooks", kind => {
     const input = diagnosticV2(); let hooks = 0;
@@ -400,8 +415,17 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main);
     main.innerHTML = '<header class="ui-shell__header"><div class="ui-glossary-hint"><span id="synthetic-private-1">x</span></div></header>'
       + '<section class="home-page"><div class="page-dashboard"><span id="synthetic-private-2">4</span></div></section>'
-      + '<div class="synthetic-private-region"><span id="synthetic-private-3">Synthetic private text</span></div>';
-    const reasons = ["shortTextContent", "elmPartiallyObscuring", "synthetic-private-reason"];
+      + '<div class="synthetic-private-region"><span id="synthetic-private-3">Synthetic private text</span></div>'
+      + '<div class="ui-shell__main"><div class="ui-notification__toast"><span id="synthetic-private-4">x</span></div>'
+      + '<div class="ui-notification__panel"><span id="synthetic-private-5">x</span></div>'
+      + '<div class="ui-shell__content"><span id="synthetic-private-6">x</span></div>'
+      + '<span id="synthetic-private-7">x</span></div>';
+    const modal = document.createElement("div");
+    modal.className = "ui-modal-dialog";
+    modal.innerHTML = '<span id="synthetic-private-8">x</span>';
+    document.body.append(modal);
+    const reasons = ["shortTextContent", "elmPartiallyObscuring", "synthetic-private-reason",
+      "elmPartiallyObscuring", "elmPartiallyObscuring", "elmPartiallyObscuring", "elmPartiallyObscuring", "elmPartiallyObscuring"];
     const targets = reasons.map((_, index) => ({ target: [`#synthetic-private-${index + 1}`] }));
     for (const item of targets) {
       const element = document.querySelector(item.target[0]!)!;
@@ -419,16 +443,17 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     });
     const value = await collectDocumentAccessibilityObservation(page, 1440);
     expect(value.audit.status).toBe("failed");
-    expect(calls).toBe(4);
+    expect(calls).toBe(9);
     expect(value.diagnostics).toMatchObject({
-      schemaVersion: "contrast-retry-diagnostics-v3",
+      schemaVersion: "contrast-retry-diagnostics-v4",
       reasonRegions: {
         shortTextContent: { glossaryHelp: 1, shellHeader: 0 },
-        elmPartiallyObscuring: { pageDashboard: 1, homeContent: 0 },
+        elmPartiallyObscuring: { pageDashboard: 1, homeContent: 0, notificationToast: 1,
+          notificationPanel: 1, shellContent: 1, shellMain: 1, modalDialog: 1, other: 0 },
         other: { other: 1 },
       },
     });
-    expect(JSON.stringify(value)).not.toMatch(/synthetic-private|Synthetic private|ui-shell|page-dashboard|messageKey|fgColor/);
+    expect(JSON.stringify(value)).not.toMatch(/synthetic-private|Synthetic private|ui-shell|page-dashboard|ui-notification|ui-modal|messageKey|fgColor/);
   });
   it.each(["violation", "unresolved", "noPositiveSample"] as const)("partitions the actual %s retry without adding an audit, scroll or wait", async outcome => {
     const main = document.createElement("main"); main.className = "ui-shell"; document.body.append(main); main.append(document.querySelector(".system-builder")!);

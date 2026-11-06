@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
-  CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS, CONTRAST_RETRY_REGION_MARKERS,
+  CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS, CONTRAST_RETRY_V4_REGION_MARKERS,
   type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type Native400Frame } from "../technical-accessibility-observation";
 
 // Inputs belong to this source checkout. Output paths remain case-owned CWD paths.
@@ -150,9 +150,9 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
       }
       const facts = { violations, incomplete, contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
       return { audit: width === "native400" ? facts : { schemaVersion: "technical-accessibility-audit-v1", width, ...facts },
-        diagnostics: { schemaVersion: "contrast-retry-diagnostics-v3", attempted, passed, outcomes, reasons, hints, reasonRegions } };
+        diagnostics: { schemaVersion: "contrast-retry-diagnostics-v4", attempted, passed, outcomes, reasons, hints, reasonRegions } };
     } catch { throw new Error("Computed accessibility audit failed."); }
-  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope, reasonIds: [...CONTRAST_RETRY_V2_REASON_IDS], hintIds: [...CONTRAST_RETRY_HINT_IDS], regionMarkers: CONTRAST_RETRY_REGION_MARKERS });
+  }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope, reasonIds: [...CONTRAST_RETRY_V2_REASON_IDS], hintIds: [...CONTRAST_RETRY_HINT_IDS], regionMarkers: CONTRAST_RETRY_V4_REGION_MARKERS });
   if (width === "native400") {
     const frame = await collectNative400Frame(page, scope === "runtime");
     return readNativeAccessibilityObservation(observation, media, rawNativeFrame(frame));
