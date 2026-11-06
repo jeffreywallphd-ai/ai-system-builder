@@ -15707,6 +15707,72 @@
           "Recovery for files from an unconfirmed save also remains pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f994a482c4c760e4317685f3e461a8877abddff17a72631b54ca32519bed4676",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "If the app still tracks a download and the runtime returns its task ID again, the app keeps the original owner.",
+          "A new controller refuses stale task IDs and leaves saved model records unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "29243c20b7ec1431466b6fcff8b8e9499f31a831646ab9b37895535ae8a1786b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests reopened a local sample registry.",
+          "Recovery of an unfinished download after a process restart and Windows model file checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "07b08cf96456b4619250511d8a60ec9faf63112b451bdf1c80addda75f4eec47",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The loader accepts only the original handle to seal, reuse or release its staging slot.",
+          "Tests refused copies and refused a valid handle given another slot's details."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "004a18785c230bf8845d352b6404fc0ab87d7eba5aeaccb6b0bfcfa84e157131",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used small sample files and a simulated file service.",
+          "Windows protection, restart and real memory checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f68bce39bb33576d7753115345dffa38020074018a241bfde7ae5ca5a197c08b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app refuses a copied handle before adding it to the cleanup list.",
+          "A valid handle keeps the same tracked model references until cleanup finishes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "58b873ff409e695d977ce5eaa2c2db3e9ea9cc4ec6070ceb8b6aa3e0c851619b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used simulated interruptions and cleanup responses.",
+          "Real offload restart and resource checks remain pending."
+        ]
+      }
     }
   ]
 }

@@ -10865,6 +10865,51 @@
       "limitations": [
         "The tests used local sample files. Live website and private provider checks remain pending. Recovery for files from an unconfirmed save also remains pending."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "work_id": "deny-reused-model-download-task-identities",
+      "work_criteria": [
+        "reject-model-download-owner-replay"
+      ],
+      "receipt_digest": "cd4883f1f6cd81a5a451ef5b20341633563fa2e0cea6072e69c7300f3c26853f",
+      "review_digest": "19fd88a19b2291466ce17d840a6f3d6fa08e1899f0bca2458e2ddcbd4884f181",
+      "scope": "If the app still tracks a download and the runtime returns its task ID again, the app keeps the original owner. A new controller refuses stale task IDs and leaves saved model records unchanged.",
+      "limitations": [
+        "The tests reopened a local sample registry. Recovery of an unfinished download after a process restart and Windows model file checks remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "keep-staging-effects-with-the-issued-loader-lease",
+      "work_criteria": [
+        "only-issued-loader-lease-may-change-staging"
+      ],
+      "receipt_digest": "20f87573ac5fa59de1a52388dda69ff990ed404d2e803f4905fc9965ae91ed95",
+      "review_digest": "e8074d8742b282813fc095145b00fcc74dac9eeb02b8135ce0a83fe9d3511ddd",
+      "scope": "The loader accepts only the original handle to seal, reuse or release its staging slot. Tests refused copies and refused a valid handle given another slot's details.",
+      "limitations": [
+        "The tests used small sample files and a simulated file service. Windows protection, restart and real memory checks remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "admit-only-issued-offload-cleanup-and-retain-failure-tests",
+      "work_criteria": [
+        "invalid-lease-cannot-poison-cleanup-retry"
+      ],
+      "receipt_digest": "2015d65f597bb41fa948bb2b68cff903a74a0d2a737f061aaf40e8c10eb9ca3f",
+      "review_digest": "68f4a2a6da8b64098d8ce44455ea546a39e857447657ac37e6969fb537699fa4",
+      "scope": "The app refuses a copied handle before adding it to the cleanup list. A valid handle keeps the same tracked model references until cleanup finishes.",
+      "limitations": [
+        "The tests used simulated interruptions and cleanup responses. Real offload restart and resource checks remain pending."
+      ]
     }
   ]
 }
