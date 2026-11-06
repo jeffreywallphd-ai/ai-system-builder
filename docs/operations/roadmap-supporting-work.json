@@ -113,6 +113,23 @@
     {
       "roadmap_id": "security-findings-refresh",
       "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "work_id": "bind-model-download-workspace-before-private-resolution",
+      "work_criteria": [
+        "resolve-only-an-owned-model-download",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d1b7982e5c6a375922813def19cafd7db5980fca48fc4eeafa40bf93e7192a20",
+      "review_digest": "83a0c769554feb60517d65e8f40be0ca3c0154d0f4ba1fc7cd693f5e14c8541b",
+      "scope": "Bind download task results to exact requested identity",
+      "limitations": [
+        "Exact local task/completion support; native owned publication and positive effects remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
       "criterion_id": "scoped-state-integrity",
       "work_id": "security-existing-authority-controls-qualification",
       "work_criteria": [
