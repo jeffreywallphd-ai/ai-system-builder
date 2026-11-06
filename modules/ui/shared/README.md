@@ -279,8 +279,10 @@ Other contextual validation and security/readiness blockers remain unchanged.
 Page dashboard metric details belong inside their description (`dd`), preserving
 valid definition-list semantics on Assets and Systems.
 
-Notification bell controls reference the panel only while it is mounted;
-expanded state, Escape dismissal and focus restoration remain unchanged.
+Notification bell controls reference the panel only while it is mounted.
+Escape and the Close button return focus to the bell. When a mouse or touch
+action outside the panel closes it, an outside control keeps focus if it
+has focus. If focus returns to the page background, the bell receives it.
 
 - Saved dataset setup validation lives in `dataset-version/datasetVersionReplay.ts`.
   It produces one complete frozen value or a fixed denial before any form change.

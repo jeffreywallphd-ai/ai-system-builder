@@ -32,6 +32,7 @@ export function NotificationViewport() {
   const notifications = useNotificationCenter();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
+  const outsideDismissalRef = useRef(false);
 
   function dismissRecord(id: string, button: HTMLButtonElement) {
     const ownerDocument = button.ownerDocument;
@@ -49,7 +50,11 @@ export function NotificationViewport() {
     if (notifications.state.panelOpen) {
       panelRef.current?.querySelector<HTMLButtonElement>("[data-notification-initial-focus]")?.focus();
     } else if (wasOpenRef.current) {
-      document.getElementById(NOTIFICATION_BELL_ID)?.focus();
+      const active = document.activeElement;
+      if (!outsideDismissalRef.current || !active || active === document.body || active === document.documentElement) {
+        document.getElementById(NOTIFICATION_BELL_ID)?.focus();
+      }
+      outsideDismissalRef.current = false;
     }
     wasOpenRef.current = notifications.state.panelOpen;
   }, [notifications.state.panelOpen]);
@@ -59,11 +64,15 @@ export function NotificationViewport() {
       if (!notifications.state.panelOpen) return;
       const target = event.target;
       const bell = document.getElementById(NOTIFICATION_BELL_ID);
-      if (target instanceof Node && !panelRef.current?.contains(target) && !bell?.contains(target)) notifications.setPanelOpen(false);
+      if (target instanceof Node && !panelRef.current?.contains(target) && !bell?.contains(target)) {
+        outsideDismissalRef.current = true;
+        notifications.setPanelOpen(false);
+      }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && notifications.state.panelOpen) {
         event.preventDefault();
+        outsideDismissalRef.current = false;
         notifications.setPanelOpen(false);
       }
     };
@@ -86,7 +95,10 @@ export function NotificationViewport() {
               <h2 id="application-notification-heading">Notifications</h2>
               <p>Current-session messages and activity</p>
             </div>
-            <button type="button" className="ui-notification__icon-button" data-notification-initial-focus aria-label="Close notifications" onClick={() => notifications.setPanelOpen(false)}>
+            <button type="button" className="ui-notification__icon-button" data-notification-initial-focus aria-label="Close notifications" onClick={() => {
+              outsideDismissalRef.current = false;
+              notifications.setPanelOpen(false);
+            }}>
               <ApplicationIcon name="close" />
             </button>
           </header>

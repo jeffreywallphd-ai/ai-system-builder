@@ -17,6 +17,7 @@ function Fixture() {
   const notifications = useNotificationCenter();
   return <>
     <button id="publish-fixture-notification" type="button" onClick={() => notifications.publish({ message: "Sample saved.", tone: "success" })}>Publish</button>
+    <button id="open-fixture-panel" type="button" onClick={() => notifications.setPanelOpen(true)}>Open panel</button>
     <NotificationBell />
     <NotificationViewport />
   </>;
@@ -61,6 +62,44 @@ describe("notification dismissal focus", () => {
     expect(dismiss.isConnected).toBe(false);
     expect(bell().getAttribute("aria-expanded")).toBe("true");
     expect(document.activeElement).toBe(close);
+  });
+
+  it.each(["mousedown", "touchstart"])("keeps another control focused when %s closes the panel", async (eventType) => {
+    await act(async () => bell().click());
+    const outside = publish();
+    outside.focus();
+    expect(bell().getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(outside);
+
+    await act(async () => outside.dispatchEvent(new Event(eventType, { bubbles: true })));
+
+    expect(view.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(outside);
+  });
+
+  it.each(["Escape", "Close"])("returns focus on %s after a batched close and reopen", async (action) => {
+    await act(async () => bell().click());
+    const panel = view.querySelector<HTMLElement>('[role="dialog"]')!;
+    const reopen = view.querySelector<HTMLButtonElement>("#open-fixture-panel")!;
+    const outside = publish();
+    outside.focus();
+    await act(async () => {
+      outside.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      reopen.click();
+    });
+
+    expect(view.querySelector('[role="dialog"]')).toBe(panel);
+    expect(document.activeElement).toBe(outside);
+    await act(async () => {
+      if (action === "Escape") {
+        outside.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      } else {
+        panel.querySelector<HTMLButtonElement>('[aria-label="Close notifications"]')!.click();
+      }
+    });
+
+    expect(view.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(bell());
   });
 
   it("preserves another control's focus during an unfocused dismissal", async () => {
