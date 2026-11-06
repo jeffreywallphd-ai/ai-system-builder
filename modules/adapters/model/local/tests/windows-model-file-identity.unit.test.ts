@@ -40,17 +40,28 @@ async function executable() {
   const file=path.join(root,"synthetic.exe");const bytes=Buffer.from("inert fixture, never executable");await writeFile(file,bytes,{flag:"wx"});
   return {executablePath:file,binarySha256:createHash("sha256").update(bytes).digest("hex")};
 }
-type Fault = "none"|"foreign"|"never-exits"|"write-throws"|"write-never-exits";
+type Fault = "none"|"foreign"|"never-exits"|"write-throws"|"write-never-exits"|"preloaded"|"preloaded-prefix"|"fragmented";
 class InertChild extends EventEmitter {
   readonly pid=4242;readonly stdout=new EventEmitter();readonly stderr=new EventEmitter();readonly stdin=new EventEmitter() as EventEmitter & {write(value:string):boolean};
   killed=0;closed=false;
+  readonly requests: string[] = [];
   constructor(readonly fault:Fault="none") {
-    super();this.stdin.write=(value:string)=>{if(this.fault.startsWith("write-"))throw new Error("inert pipe write failure");queueMicrotask(()=>{
-      if(value.startsWith("ROOT\t"))this.stdout.emit("data",Buffer.from(frame()+"\n"));
-      else if(value.startsWith("CHILD\t"))this.stdout.emit("data",Buffer.from(frame(1,"F")+"\n"));
-      else if(value==="RELEASE\n"){this.stdout.emit("data",Buffer.from("released\n"));setImmediate(()=>this.close(0));}
+    super();this.stdin.write=(value:string)=>{this.requests.push(value);if(this.fault.startsWith("write-"))throw new Error("inert pipe write failure");queueMicrotask(()=>{
+      if (value.startsWith("ROOT\t")) {
+        if (this.fault === "preloaded-prefix") this.reply(frame().slice(4) + "\n");
+        else if (this.fault !== "preloaded") this.reply(frame() + "\n");
+      } else if (value.startsWith("CHILD\t")) this.reply(frame(1, "F") + "\n");
+      else if (value === "RELEASE\n") { this.reply("released\n"); setImmediate(() => this.close(0)); }
     });return true;};
-    queueMicrotask(()=>this.stdout.emit("data",Buffer.from(`aisb-file-id-v1\t${fault==="foreign"||fault==="never-exits"?9:this.pid}\n`)));
+    const greeting = `aisb-file-id-v1\t${fault==="foreign"||fault==="never-exits"?9:this.pid}\n`;
+    const unsolicited = fault === "preloaded" ? frame() + "\n" : fault === "preloaded-prefix" ? frame().slice(0, 4) : "";
+    queueMicrotask(() => this.reply(greeting + unsolicited));
+  }
+  private reply(line: string) {
+    if (this.fault === "fragmented") {
+      this.stdout.emit("data", Buffer.from(line.slice(0, 2)));
+      setImmediate(() => this.stdout.emit("data", Buffer.from(line.slice(2))));
+    } else this.stdout.emit("data", Buffer.from(line));
   }
   close(code:number){if(!this.closed){this.closed=true;this.emit("close",code,null);}}
   kill(){this.killed++;if(this.fault==="never-exits"||this.fault==="write-never-exits")throw new Error("inert termination unavailable");queueMicrotask(()=>this.close(9));return true;}
@@ -67,7 +78,7 @@ test("private adapter enforces binary hash before launching",{skip:process.platf
   await assert.rejects(createWindowsModelFileIdentityAdapter({...options,binarySha256:"f".repeat(64)}).acquire("C:\\owned",identity),{code:"unavailable"});assert.equal(launch.mock.callCount(),0);
 });
 test("private adapter returns bounded frozen facts and confirms release through owned process close",{skip:process.platform!=="win32"||process.arch!=="x64"},async()=>{
-  const options=await executable();const {children}=launchFixture();const adapter=createWindowsModelFileIdentityAdapter(options);const lease=await adapter.acquire("C:\\owned",identity);
+  const options=await executable();const {children}=launchFixture("fragmented");const adapter=createWindowsModelFileIdentityAdapter(options);const lease=await adapter.acquire("C:\\owned",identity);
   assert.equal((await lease.inspectChild(0,"weights.safetensors","F",identity)).fileId,identity.fileId);assert.ok(Object.isFrozen(lease.root));await lease.release();assert.equal(children[0]!.closed,true);assert.equal(children[0]!.killed,0);
 });
 test("foreign native identity denies and confirmed shutdown permits a later lease",{skip:process.platform!=="win32"||process.arch!=="x64"},async()=>{
@@ -84,6 +95,43 @@ test("synchronous pipe failure denies without orphan rejection and confirms nati
   await new Promise(resolve=>setImmediate(resolve));
   mock.restoreAll();syncBuiltinESMExports();launchFixture();const lease=await createWindowsModelFileIdentityAdapter(options).acquire("C:\\owned",identity);await lease.release();
 });
+for (const fault of ["preloaded", "preloaded-prefix"] as const) {
+  test(`private adapter denies a ${fault} identity reply before sending the root request`,
+    { skip: process.platform !== "win32" || process.arch !== "x64" }, async () => {
+      const options = await executable();
+      const { children } = launchFixture(fault);
+      const adapter = createWindowsModelFileIdentityAdapter(options);
+      const failure = await adapter.acquire("C:\\owned", identity).then(
+        async lease => { await lease.release(); return undefined; },
+        error => error,
+      );
+      assert.equal(failure?.code, "unavailable");
+      assert.deepEqual(children[0]!.requests, []);
+      assert.equal(children[0]!.closed, true);
+      mock.restoreAll();
+      syncBuiltinESMExports();
+      launchFixture();
+      const next = await adapter.acquire("C:\\owned", identity);
+      await next.release();
+    });
+}
+
+test("private adapter terminates the child when output arrives between requests",
+  { skip: process.platform !== "win32" || process.arch !== "x64" }, async () => {
+    const options = await executable();
+    const { children } = launchFixture();
+    const adapter = createWindowsModelFileIdentityAdapter(options);
+    const lease = await adapter.acquire("C:\\owned", identity);
+    const child = children[0]!;
+    child.stdout.emit("data", Buffer.from(frame(1, "F") + "\n"));
+    assert.equal(child.killed, 1);
+    await assert.rejects(lease.inspectChild(0, "weights.safetensors", "F", identity), { code: "unavailable" });
+    assert.equal(child.requests.length, 1);
+    assert.equal(child.closed, true);
+    const next = await adapter.acquire("C:\\owned", identity);
+    await next.release();
+  });
+
 // Last: the real per-process fence has no test reset or production bypass.
 test("synchronous pipe failure with unconfirmed child close latches admission across instances",{skip:process.platform!=="win32"||process.arch!=="x64",timeout:5000},async()=>{
   const options=await executable();const {launch}=launchFixture("write-never-exits");await assert.rejects(createWindowsModelFileIdentityAdapter(options).acquire("C:\\owned",identity),{code:"unavailable"});const count=launch.mock.callCount();await assert.rejects(createWindowsModelFileIdentityAdapter(options).acquire("C:\\owned",identity),{code:"unavailable"});assert.equal(launch.mock.callCount(),count);

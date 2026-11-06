@@ -40,7 +40,6 @@ async function verifyExecutable(executable: string, expectedSha256: string): Pro
 class NativeSession {
   private text = "";
   private outputBytes = 0;
-  private lines: string[] = [];
   private pending?: { resolve(value: string): void; reject(error: Error): void };
   private failed = false;
   private closed = false;
@@ -55,18 +54,25 @@ class NativeSession {
     child.stderr.on("error", () => this.fail());
     child.stderr.on("data", () => this.fail());
     child.stdout.on("data", (chunk: Buffer) => {
+      if (this.failed) return;
+      if (!this.pending) { this.fail(); return; }
       this.outputBytes += chunk.length;
       if (this.outputBytes > 16 * 1024 || [...chunk].some(byte => byte !== 9 && byte !== 10 && (byte < 32 || byte > 126))) { this.fail(); return; }
       this.text += chunk.toString("ascii");
-      for (;;) {
-        const newline = this.text.indexOf("\n"); if (newline < 0) break;
-        const line = this.text.slice(0, newline); this.text = this.text.slice(newline + 1);
-        if (line.length > 256) { this.fail(); return; }
-        if (this.pending) { const pending = this.pending; this.pending = undefined; pending.resolve(line); }
-        else if (this.lines.length < 2) this.lines.push(line);
-        else { this.fail(); return; }
+      const newline = this.text.indexOf("\n");
+      if (newline < 0) {
+        if (this.text.length > 256) this.fail();
+        return;
       }
-      if (this.text.length > 256) this.fail();
+      if (newline > 256 || newline !== this.text.length - 1) {
+        this.fail();
+        return;
+      }
+      const pending = this.pending;
+      const line = this.text.slice(0, newline);
+      this.pending = undefined;
+      this.text = "";
+      pending.resolve(line);
     });
     this.timer = setTimeout(() => this.fail(), LEASE_MS);
     child.once("close", () => { if (this.pending) { this.pending.reject(new WindowsFileIdentityUnavailableError()); this.pending = undefined; } });
@@ -82,21 +88,25 @@ class NativeSession {
   }
   async line(request?: string): Promise<string> {
     if (this.failed || this.pending || this.closed) throw new WindowsFileIdentityUnavailableError();
-    const line = this.lines.length ? Promise.resolve(this.lines.shift()!) : new Promise<string>((resolve, reject) => { this.pending = { resolve, reject }; });
+    const response = new Promise<string>((resolve, reject) => {
+      this.pending = { resolve, reject };
+    });
     if (request) {
       try { this.child.stdin.write(request); }
       catch { this.fail(); }
     }
     // Even a synchronous write failure must adopt the pending response Promise.
     // Otherwise shutdown rejects an orphan and escapes the handled denial.
-    return await line;
+    const line = await response;
+    if (this.failed) throw new WindowsFileIdentityUnavailableError();
+    return line;
   }
   async shutdown(success: boolean): Promise<void> {
     if (!success) this.fail();
     let timeout: NodeJS.Timeout | undefined;
     try {
       await Promise.race([this.exitPromise, new Promise<never>((_resolve, reject) => { timeout = setTimeout(() => reject(new WindowsFileIdentityUnavailableError()), SHUTDOWN_MS); })]);
-      if (success && (this.failed || this.exit?.code !== 0 || this.exit.signal !== null || this.lines.length || this.text)) throw new WindowsFileIdentityUnavailableError();
+      if (success && (this.failed || this.exit?.code !== 0 || this.exit.signal !== null || this.text)) throw new WindowsFileIdentityUnavailableError();
     } catch {
       if (!this.closed) { unconfirmedExit = true; this.fail(); }
       throw new WindowsFileIdentityUnavailableError();
