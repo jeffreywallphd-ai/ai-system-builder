@@ -6,6 +6,7 @@ import { createInMemoryStructuredDocumentStore } from "../../shared";
 import { createStructuredIngestionFilePublicationRepository } from "../createStructuredIngestionFilePublicationRepository";
 import type { IngestionFilePublication } from "../../../../application/ports/ingestion";
 import {
+  INGESTION_SOURCE_SNAPSHOT_NAMESPACE,
   INGESTION_TASK_NAMESPACE,
   createStructuredIngestionAcquisitionRepository,
 } from "../createStructuredIngestionAcquisitionRepository";
@@ -128,8 +129,67 @@ describe("structured ingestion acquisition repository", () => {
     const nextSnapshot: IngestionSourceSnapshot = { ...snapshot(), snapshotId: "snapshot-2" as never, contentDigest: digest("d"), previousSnapshotId: snapshot().snapshotId };
     const changed: IngestionSourceRefreshRecord = { ...refresh(), refreshId: "refresh-2" as never, outcome: "changed", currentSnapshotId: nextSnapshot.snapshotId };
     await expect(repository.recordSourceRefreshWithSnapshot(nextSnapshot, changed)).resolves.toMatchObject({ refresh: { outcome: "changed" }, snapshot: { snapshotId: "snapshot-2" } });
+    await expect(repository.recordSourceRefreshWithSnapshot(nextSnapshot, changed)).resolves.toEqual({ refresh: changed, snapshot: nextSnapshot });
     expect((await repository.listSourceSnapshots(createWorkspaceId("workspace-a"), snapshot().sourceId)).length).toBe(2);
     expect(await repository.listSourceRefreshes(createWorkspaceId("workspace-a"), snapshot().sourceId)).toEqual([changed]);
+  });
+
+  it("does not save a changed refresh with a missing or different snapshot parent", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const previous = await repository.createSourceSnapshot(snapshot());
+    const other = await repository.createSourceSnapshot({ ...previous, snapshotId: "snapshot-other" as never, contentDigest: digest("c") });
+    const next: IngestionSourceSnapshot = { ...previous, snapshotId: "snapshot-2" as never, contentDigest: digest("d") };
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: next.snapshotId };
+
+    await expect(repository.recordSourceRefreshWithSnapshot(next, changed)).rejects.toThrow("matching snapshot");
+    await expect(repository.recordSourceRefreshWithSnapshot({ ...next, previousSnapshotId: other.snapshotId }, changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.readSourceSnapshot(previous.workspaceId, next.snapshotId)).toBeUndefined();
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    expect(await repository.readSourceSnapshot(previous.workspaceId, other.snapshotId)).toEqual(other);
+  });
+
+  it("does not save an unpaired changed refresh", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const previous = await repository.createSourceSnapshot(snapshot());
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: "snapshot-2" as never };
+
+    await expect(repository.recordSourceRefresh(changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+  });
+
+  it("does not record a changed refresh when both identifiers normalize to the same old snapshot", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const initial = snapshot();
+    const previous = await repository.createSourceSnapshot({ ...initial, previousSnapshotId: initial.snapshotId });
+    const changed: IngestionSourceRefreshRecord = {
+      ...refresh(), outcome: "changed", currentSnapshotId: previous.snapshotId,
+      previousSnapshotId: `${previous.snapshotId} ` as IngestionSourceSnapshot["snapshotId"],
+    };
+
+    await expect(repository.recordSourceRefreshWithSnapshot(previous, changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    expect(await repository.readSourceSnapshot(previous.workspaceId, previous.snapshotId)).toEqual(previous);
+  });
+
+  it("does not use a previous snapshot with identity or scope inconsistent with its storage key", async () => {
+    const previous = snapshot();
+    const next: IngestionSourceSnapshot = { ...previous, snapshotId: "snapshot-2" as never, contentDigest: digest("d"), previousSnapshotId: previous.snapshotId };
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: next.snapshotId };
+    const mismatches = [
+      { snapshotId: "snapshot-other" as IngestionSourceSnapshot["snapshotId"] },
+      { sourceId: "source-other" as IngestionSourceSnapshot["sourceId"] },
+      { workspaceId: createWorkspaceId("workspace-b") },
+      { organizationId: createOrganizationId("organization-b") },
+    ];
+    for (const mismatch of mismatches) {
+      const documents = createInMemoryStructuredDocumentStore();
+      await documents.writeDocument(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, `${previous.workspaceId}/${previous.snapshotId}`, { ...previous, ...mismatch }, { expectedRevision: 0 });
+      const repository = createStructuredIngestionAcquisitionRepository(documents);
+
+      await expect(repository.recordSourceRefreshWithSnapshot(next, changed)).rejects.toThrow("previous source snapshot");
+      expect(await repository.readSourceSnapshot(previous.workspaceId, next.snapshotId)).toBeUndefined();
+      expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    }
   });
 
   it("creates tasks idempotently and applies exact monotonic optimistic revisions", async () => {

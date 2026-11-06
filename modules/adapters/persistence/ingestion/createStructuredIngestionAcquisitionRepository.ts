@@ -135,6 +135,7 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
     async recordSourceRefresh(input) {
       const record = normalizeIngestionSourceRefreshRecord(input);
       assertOrganizationScope(documents, record.organizationId);
+      if (record.outcome === "changed") throw new Error("Changed source refreshes must commit their matching snapshot atomically.");
       return createImmutable(documents, INGESTION_SOURCE_REFRESH_NAMESPACE, refreshKey(record.workspaceId, record.refreshId), record, normalizeIngestionSourceRefreshRecord);
     },
     async recordSourceRefreshWithSnapshot(snapshotInput, refreshInput) {
@@ -142,12 +143,22 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
       const refresh = normalizeIngestionSourceRefreshRecord(refreshInput);
       assertOrganizationScope(documents, snapshot.organizationId);
       assertOrganizationScope(documents, refresh.organizationId);
-      if (refresh.outcome !== "changed" || refresh.currentSnapshotId !== snapshot.snapshotId || refresh.sourceId !== snapshot.sourceId || refresh.workspaceId !== snapshot.workspaceId || refresh.organizationId !== snapshot.organizationId) throw new Error("Changed source refreshes must commit their matching snapshot atomically.");
+      const previousSnapshotId = refresh.previousSnapshotId;
+      if (refresh.outcome !== "changed" || !previousSnapshotId || previousSnapshotId === snapshot.snapshotId
+        || snapshot.previousSnapshotId !== previousSnapshotId
+        || refresh.currentSnapshotId !== snapshot.snapshotId || refresh.sourceId !== snapshot.sourceId
+        || refresh.workspaceId !== snapshot.workspaceId || refresh.organizationId !== snapshot.organizationId) {
+        throw new Error("Changed source refreshes must commit their matching snapshot atomically.");
+      }
       const snapshotDocumentKey = snapshotKey(snapshot.workspaceId, snapshot.snapshotId);
       const refreshDocumentKey = refreshKey(refresh.workspaceId, refresh.refreshId);
       return documents.runInTransaction(async (transaction) => {
-        const previous = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotKey(refresh.workspaceId, refresh.previousSnapshotId!));
-        if (!previous || normalizeIngestionSourceSnapshot(previous.value).sourceId !== refresh.sourceId) throw new Error("Changed source refreshes require their previous source snapshot.");
+        const previousDocument = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotKey(refresh.workspaceId, previousSnapshotId));
+        const previous = previousDocument && normalizeIngestionSourceSnapshot(previousDocument.value);
+        if (!previous || previous.snapshotId !== previousSnapshotId || previous.sourceId !== refresh.sourceId
+          || previous.workspaceId !== refresh.workspaceId || previous.organizationId !== refresh.organizationId) {
+          throw new Error("Changed source refreshes require their previous source snapshot.");
+        }
         const currentSnapshot = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey);
         if (currentSnapshot && stableJson(normalizeIngestionSourceSnapshot(currentSnapshot.value)) !== stableJson(snapshot)) throw new StructuredDocumentConflictError(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, 0);
         const currentRefresh = await transaction.readDocument<IngestionSourceRefreshRecord>(INGESTION_SOURCE_REFRESH_NAMESPACE, refreshDocumentKey);

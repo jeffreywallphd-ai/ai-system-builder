@@ -1309,6 +1309,10 @@ qualification, and no real provider/model or native/physical host pass follows.
 
 ## Website capture catalog compensation
 
+A changed refresh cannot be stored alone. Its new snapshot must point to the
+same previous snapshot as the refresh record. The transaction verifies the
+previous record's identity, source, workspace, and organization before writing.
+
 A website capture can write raw and readable objects before its source
 transaction returns. A lost save response cannot authorize deletion. Exact
 scoped readback of the finalized task file or changed refresh and its immutable

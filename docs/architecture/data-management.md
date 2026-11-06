@@ -191,8 +191,10 @@ artifacts. Source snapshots record requested and canonical URLs, robots
 evidence, capture time, validators, and content digest. Refresh uses ETag or
 Last-Modified when available and falls back to the content digest, recording an
 append-only unchanged, changed, unavailable, or removed result. Task state and
-its source snapshot commit in one structured-persistence transaction; a changed
-refresh and its new snapshot do the same. If a save response is lost, the
+its source snapshot commit in one structured-persistence transaction. A changed
+refresh must commit with its new snapshot. Both records must name the same
+existing previous snapshot in the same source, workspace, and organization.
+If a save response is lost, the
 application reports success only when the saved task or refresh and its snapshot
 match the attempted publication. Otherwise it reports an unconfirmed save and
 keeps the bytes. For initial capture, confirmed terminal cancellation with no
