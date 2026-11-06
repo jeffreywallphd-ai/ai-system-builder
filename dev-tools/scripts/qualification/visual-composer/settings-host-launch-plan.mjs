@@ -61,5 +61,9 @@ export async function createSettingsHostLaunchPlan({repoRoot,runId,sourceRevisio
     AI_SYSTEM_BUILDER_HTTPS_ENABLED:transport.AI_SYSTEM_BUILDER_HTTPS_ENABLED,AI_SYSTEM_BUILDER_DEV_SECURITY_TOGGLE_ENABLED:transport.AI_SYSTEM_BUILDER_DEV_SECURITY_TOGGLE_ENABLED,
     AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE:transport.AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE};
   plan.server.args[plan.server.args.length-1]=path.join(repoRoot,"dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts");
+  if(target==="thin-chrome"){
+    plan.thinClient.args.push("--config",path.join(repoRoot,"dev-tools/scripts/qualification/visual-composer/qualification-thin-vite.config.mjs"));
+    Object.assign(plan.thinClient.env,{VISUAL_COMPOSER_QUALIFICATION_RUN_ID:runId,VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION:sourceRevision});
+  }
   return plan;
 }

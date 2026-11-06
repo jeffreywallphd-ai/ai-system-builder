@@ -2078,6 +2078,11 @@ and canonical task, listener and persistence shutdown remain required.
 The Functional UI test Server uses the same listener and accepts connections
 only on `127.0.0.1`. If the chosen port is occupied, startup stops.
 
+The thin-client Settings and Functional fixtures also use a dedicated Vite
+configuration. It skips the operator's dotenv files and puts Vite's cache in
+that test run's directory. The fixtures keep the local API proxy. Normal app
+startup still uses the app's own Vite configuration.
+
 The `host-setup-policy` profile includes disposable local HTTP, occupied-port
 and synchronous-failure fixtures. They close their own sockets and test startup
 handler cleanup. They do not launch an application, browser, model or provider,

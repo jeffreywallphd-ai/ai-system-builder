@@ -2442,6 +2442,7 @@
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs",
         "dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts",
         "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs",
+        "dev-tools/scripts/qualification/visual-composer/qualification-thin-vite.config.mjs",
         "dev-tools/scripts/qualification/visual-composer/qualification-reporting.ts",
         "dev-tools/scripts/qualification/visual-composer/functional-artifact-oracles.ts",
         "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",

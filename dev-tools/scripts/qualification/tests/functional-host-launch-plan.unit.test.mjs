@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import {mkdtemp,readFile,rm,realpath,lstat} from "node:fs/promises";
+import {mkdtemp,readFile,rm,realpath,lstat,rmdir,unlink,writeFile} from "node:fs/promises";
+import {resolveConfig} from "vite";
 import {createFunctionalHostEnvironment,createFunctionalHostLaunchPlan,functionalHostLayout} from "../visual-composer/functional-host-launch-plan.mjs";
+import {createSettingsHostLaunchPlan} from "../visual-composer/settings-host-launch-plan.mjs";
 import functionalHostSetup from "../visual-composer/functional-host-global-setup.mjs";
 import {prepareThinClientQualificationIdentity} from "../visual-composer/visual-composer-global-setup.mjs";
 const root=process.cwd(),run="functional-model-fixture-20261029",source="source."+"a".repeat(64);
@@ -21,6 +23,52 @@ test("functional plans use their truthful Server entry without changing reviewed
   assert.match(plan.server.args.at(-1),/functional-host-server-entry\.ts$/);assert.equal(plan.server.env.HF_TOKEN,undefined);
   assert.equal(plan.server.env.SERVER_STORAGE_ROOT,plan.paths.thinStorageRoot);assert.equal(plan.server.env.SERVER_RUNTIME_ROOT,plan.paths.thinRuntimeRoot);assert.equal(plan.server.env.AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE,"dedicated");
   assert.equal(plan.desktop.seed.env.ELECTRON_RUN_AS_NODE,"1");assert.equal(plan.desktop.env.HF_HUB_OFFLINE,"1");
+});
+test("the two thin test plans ignore operator dotenv and use a run-owned cache in Vite resolution",async()=>{
+  const input={repoRoot:root,runId:run,sourceRevision:source,target:"thin-chrome",environment:{VITE_QUALIFICATION_DOTENV_PROBE:"ambient"}};
+  const [settings,functional]=await Promise.all([createSettingsHostLaunchPlan(input),createFunctionalHostLaunchPlan(input)]);
+  const selected=plan=>{const slot=plan.thinClient.args.indexOf("--config");return slot<0?path.join(plan.thinClient.cwd,"vite.config.ts"):plan.thinClient.args[slot+1];};
+  const parent=path.join(await realpath(root),".local-codex","t");
+  assert.equal(await realpath(parent),parent,"The dotenv fixture needs the physical repository temp directory.");
+  const fixture=await mkdtemp(path.join(parent,"qualification-dotenv-"));
+  const owned=await lstat(fixture,{bigint:true});
+  const dotEnv=path.join(fixture,".env");
+  let written;
+  const keys=["NODE_ENV","VITE_QUALIFICATION_DOTENV_PROBE","VISUAL_COMPOSER_QUALIFICATION_RUN_ID","VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION",
+    "AI_SYSTEM_BUILDER_SECURITY_MODE","AI_SYSTEM_BUILDER_HTTPS_ENABLED","AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED","AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET"];
+  const previous=keys.map(key=>process.env[key]);
+  try{
+    assert(owned.isDirectory()&&!owned.isSymbolicLink()&&owned.ino!==0n);
+    await writeFile(dotEnv,"VITE_QUALIFICATION_DOTENV_PROBE=synthetic-operator-input\n",{flag:"wx"});
+    written=await lstat(dotEnv,{bigint:true});
+    keys.forEach(key=>{delete process.env[key];});
+    Object.assign(process.env,{NODE_ENV:"development",VISUAL_COMPOSER_QUALIFICATION_RUN_ID:run,VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION:source,
+      AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED:"false",AI_SYSTEM_BUILDER_HTTPS_ENABLED:"false",AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET:settings.serverOrigin.origin});
+    assert.equal(selected(settings),selected(functional));
+    assert.equal(functional.thinClient.env.VITE_QUALIFICATION_DOTENV_PROBE,undefined);
+    const options={root:functional.thinClient.cwd,configFile:selected(functional),configLoader:"runner",envDir:fixture,logLevel:"silent"};
+    const config=await resolveConfig(options,"serve","development");
+    assert.equal(config.env.VITE_QUALIFICATION_DOTENV_PROBE,undefined);
+    assert.equal(config.envDir,false);
+    assert.equal(path.normalize(config.cacheDir),path.join(functional.paths.thinRuntimeRoot,"vite-cache"));
+    assert.equal(config.server.host,"127.0.0.1");
+    assert.equal(config.server.proxy["/api"].target,functional.serverOrigin.origin);
+    assert.equal(functional.thinClient.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID,run);
+    assert.equal(functional.thinClient.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,source);
+    process.env.AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET="http://example.invalid:43170";
+    await assert.rejects(resolveConfig(options,"serve","development"),/fixed source and loopback API proxy/);
+  }finally{
+    keys.forEach((key,index)=>{if(previous[index]===undefined)delete process.env[key];else process.env[key]=previous[index];});
+    const current=await lstat(fixture,{bigint:true});
+    assert.equal(path.dirname(fixture),parent);assert.equal(await realpath(fixture),fixture);
+    assert(current.isDirectory()&&!current.isSymbolicLink()&&current.dev===owned.dev&&current.ino===owned.ino&&owned.ino!==0n);
+    if(written){
+      const currentFile=await lstat(dotEnv,{bigint:true});
+      assert(currentFile.isFile()&&!currentFile.isSymbolicLink()&&currentFile.dev===written.dev&&currentFile.ino===written.ino&&written.ino!==0n);
+      await unlink(dotEnv);
+    }
+    await rmdir(fixture);
+  }
 });
 test("the functional managed identity adds only credential use and never secret management/create/admin",async()=>{
   const parent=await realpath(path.join(root,".local-codex/t")),folder=await mkdtemp(path.join(parent,"functional-auth-"));
