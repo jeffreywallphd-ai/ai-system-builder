@@ -15460,6 +15460,28 @@
           "Contrast and native zoom still need tests in the running apps."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a7ed98be412a1d93ab42f873538041d2c2b8b4df63ac8e4e4c44a4f133fe625b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Unload waited for the active request to finish in the cache test.",
+          "After unload, the test refused a request that tried to reuse the old cached model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "afe4ccd9c691f233a90ce7a50797c0cbee0a8ab13c681debc393a2656a2edb61",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test used a simulated model and cleanup step.",
+          "Windows file protection, worker exit and real low-memory runs still need tests."
+        ]
+      }
     }
   ]
 }

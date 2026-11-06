@@ -10699,6 +10699,21 @@
       "limitations": [
         "Seven browser cases passed in a test page. Contrast and native zoom still need tests in the running apps."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "verify-offload-unload-waits-for-active-forward",
+      "work_criteria": [
+        "observe-cache-unload-after-forward"
+      ],
+      "receipt_digest": "dff568495439cf14e9d2abd3668a59eb03e944980778277ffacadf8fc857c641",
+      "review_digest": "6a835a3b76b3c17fa62d3bc4accb5669d485d91f823eb369530511328ddc977f",
+      "scope": "Unload waited for the active request to finish in the cache test. After unload, the test refused a request that tried to reuse the old cached model.",
+      "limitations": [
+        "The test used a simulated model and cleanup step. Windows file protection, worker exit and real low-memory runs still need tests."
+      ]
     }
   ]
 }
