@@ -1,5 +1,7 @@
 """Model-free real-consumer tests; synthetic ports supply no native evidence."""
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event, Lock
 import copy
 import gc
 import sys
@@ -361,6 +363,85 @@ class GuardedConsumerTests(unittest.TestCase):
             self.assertIs(view._owner, cached)
             cached.assert_reusable.assert_called_once()
             cached._bundle.lease.assert_guarded_reusable.assert_called_once_with(first)
+
+    def test_cached_unload_does_not_release_a_running_forward(self):
+        started, allow_return, unload_waiting = Event(), Event(), Event()
+        operation_lock = Lock()
+
+        class ObservedOperationLock:
+            def __enter__(self):
+                if started.is_set() and not allow_return.is_set():
+                    if operation_lock.acquire(blocking=False):
+                        operation_lock.release()
+                        raise AssertionError("Unload could take the operation lock during generation.")
+                    unload_waiting.set()
+                if not operation_lock.acquire(timeout=5):
+                    raise AssertionError("Synthetic generator lock did not settle.")
+
+            def __exit__(self, *_):
+                operation_lock.release()
+
+        def forward(*_):
+            started.set()
+            if not allow_return.wait(5):
+                raise AssertionError("Synthetic forward was not released.")
+            return "synthetic response"
+
+        owner = object.__new__(generation.BoundedOffloadGenerator)
+        owner._owner = owner
+        owner._operation_lock = ObservedOperationLock()
+        owner._closed = owner._poisoned = False
+        owner._decoder = None
+        bundle = SimpleNamespace(
+            model=object(),
+            tokenizer=Mock(return_value={"input_ids": object()}),
+            inference_mode="causal",
+            lease=object(),
+            model_references=[],
+        )
+        owner._bundle = bundle
+        model, lease, references = bundle.model, bundle.lease, bundle.model_references
+        view = owner.for_request({"max_new_tokens": 8})
+        key = ("transformers", "fixture/model", "causal", "cpu", "float32", None, None, "offload-v1", "synthetic")
+        torch = SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: False))
+        with (
+            patch.dict(generation._GENERATOR_CACHE, {key: owner}, clear=True),
+            patch.dict(sys.modules, {"torch": torch}),
+            patch.object(owner, "assert_reusable"),
+            patch.object(generation, "validate_generation_limits"),
+            patch.object(generation, "_move_tokenized_inputs_to_model_device", side_effect=lambda inputs, _: inputs),
+            patch.object(generation.BoundedOffloadGenerator, "_generate_new_tokens_text", side_effect=forward),
+            patch.object(generation, "release_offload_lease") as release,
+            patch.object(generation, "retry_retained_offload_cleanup") as retry,
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            generated = executor.submit(view.generate_text, "Synthetic request")
+            try:
+                self.assertTrue(started.wait(5))
+                unloading = executor.submit(generation.unload_generation_models)
+                self.assertTrue(unload_waiting.wait(5))
+                self.assertFalse(unloading.done())
+                self.assertIs(generation._GENERATOR_CACHE[key], owner)
+                self.assertIs(bundle.model, model)
+                self.assertIs(bundle.lease, lease)
+                self.assertIs(bundle.model_references, references)
+                self.assertFalse(owner._closed)
+                release.assert_not_called()
+                retry.assert_not_called()
+            finally:
+                allow_return.set()
+            self.assertEqual(generated.result(timeout=5), "synthetic response")
+            unloaded = unloading.result(timeout=5)
+            self.assertEqual([entry["memoryMode"] for entry in unloaded], ["offload-v1"])
+            release.assert_called_once()
+            self.assertIs(release.call_args.args[0], lease)
+            self.assertIs(release.call_args.args[1], references)
+            retry.assert_called_once()
+            self.assertTrue(owner._closed)
+            self.assertIsNone(bundle.model)
+            self.assertNotIn(key, generation._GENERATOR_CACHE)
+            with self.assertRaises(offload.OffloadAdmissionError):
+                view.generate_text("Synthetic stale request")
 
     def test_ordinary_lease_and_cached_standard_generator_keep_their_existing_path(self):
         with TemporaryDirectory() as directory:

@@ -1794,3 +1794,15 @@ Pre-generation memory denials and completed decoder-output repair keep their
 existing behavior. These model-free regression checks do not qualify actual
 file protection, cache borrowers, shared disk accounting, worker restart or
 offload resources. Accepted accuracy and OCR results stay closed.
+
+## Unloading during a cached request
+
+A model-free test starts generation through a cached view and pauses the fake
+supplier inside the operation lock. The test observes lock contention before
+it checks that unload keeps the original owner and model. After the request
+returns, unload calls the mocked release once with the original lease. It
+refuses the old view. Events order the threads and the fixture bounds its event
+and lock waits.
+
+This confirms the in-process order. Windows staging protection, actual worker
+exit, shared disk accounting, restart and real offload measurements remain open.
