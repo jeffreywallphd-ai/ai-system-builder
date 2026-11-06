@@ -9,7 +9,8 @@
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
-        "modules/ui/shared/notifications/NotificationCenter.tsx"
+        "modules/ui/shared/notifications/NotificationCenter.tsx",
+        "modules/ui/shared/styles/components/notifications.css"
       ]
     },
     "model-download-ownership": {

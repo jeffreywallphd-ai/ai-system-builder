@@ -183,6 +183,11 @@
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
+.ui-notification__toast > div {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
 .ui-notification__toast--success { border-inline-start-color: var(--color-success, #43c58a); }
 .ui-notification__toast--warning { border-inline-start-color: var(--color-warning, #e7b454); }
 .ui-notification__toast--error { border-inline-start-color: var(--color-danger, #ef5b6c); }

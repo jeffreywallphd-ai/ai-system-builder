@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,4 +70,19 @@ describe("notification dismissal focus", () => {
     expect(dismiss.isConnected).toBe(false);
     expect(document.activeElement).toBe(publish());
   });
+});
+
+it("allows toast text to shrink and wrap while preserving the dismiss button size", () => {
+  const sheet = document.createElement("style");
+  sheet.textContent = readFileSync("modules/ui/shared/styles/components/notifications.css", "utf8");
+  document.head.appendChild(sheet);
+  try {
+    const copy = view.querySelector<HTMLElement>(".ui-notification__toast > div")!;
+    const copyStyle = getComputedStyle(copy);
+    expect(Number.parseFloat(copyStyle.getPropertyValue("min-inline-size"))).toBe(0);
+    expect(copyStyle.getPropertyValue("overflow-wrap")).toBe("anywhere");
+    expect(getComputedStyle(toastDismiss()).flexShrink).toBe("0");
+  } finally {
+    sheet.remove();
+  }
 });

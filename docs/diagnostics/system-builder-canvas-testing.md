@@ -429,6 +429,12 @@ available bounds at both widths. Allowing the text container to shrink and wrap
 kept both inside the toast and viewport. Ordinary text fit in all variants.
 The twelve cases produced zero contrast samples. The running-app contrast
 finding still needs separate evidence.
+The shared stylesheet lets toast text shrink and wrap long references. The
+component regression checks the applied rule and the dismiss button's size rule.
+A fresh browser fixture used the changed stylesheet. Wrapped text and long
+unbroken references fit beside the dismiss button at 320 and 1440 pixels.
+This fixture produced zero contrast samples. The running app still needs
+contrast qualification.
 
 Use the focused `operational-ui` profile for these helpers and related feature
 tests. Synthetic Page and DOM fixtures check the test definitions; they do not
