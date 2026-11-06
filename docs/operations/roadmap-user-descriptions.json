@@ -15415,6 +15415,29 @@
           "Contrast and zoom still need tests in the running apps."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f1456fde8d9c6d8c0dca2ef6276ec63e541e7639c8590d2893c6725a263da891",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The toast wraps long text so the dismiss button stays in view.",
+          "A browser test checked two widths, 320 and 1440 pixels.",
+          "It used wrapped text and long references without spaces."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9f0ebcc81467c4edcb20a074e858c61b28eb30d3aaef9cc8c4f22e3b694bbcfc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Four layout cases passed in a test page.",
+          "Contrast and zoom still need tests in the running apps."
+        ]
+      }
     }
   ]
 }

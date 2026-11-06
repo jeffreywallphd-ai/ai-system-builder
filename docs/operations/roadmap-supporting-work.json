@@ -10668,6 +10668,21 @@
       "limitations": [
         "Eight notification component tests passed. Contrast and zoom still need tests in the running apps."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "keep-long-notification-text-and-dismiss-control-in-bounds",
+      "work_criteria": [
+        "wrap-long-text-with-a-visible-dismiss-control"
+      ],
+      "receipt_digest": "27078a0fd0d6e164173af98cf185aff62878fecb34929a572e9e83df7e1491c5",
+      "review_digest": "bf1e26c7bfd97e201cf3056657cbdbb8155ac3a8e3f50cb8f2a7d940101dda8e",
+      "scope": "The toast wraps long text so the dismiss button stays in view. A browser test checked two widths, 320 and 1440 pixels. It used wrapped text and long references without spaces.",
+      "limitations": [
+        "Four layout cases passed in a test page. Contrast and zoom still need tests in the running apps."
+      ]
     }
   ]
 }
