@@ -15326,6 +15326,40 @@
           "The wider UI and combined system tests remain deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3c729c6881485576eaf50efe96991e7b2b115130fd5a88a1eb578dac93c03995",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The unread badge now uses darker text for better contrast.",
+          "The badge keeps the same count, label and controls."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ea268517525a578972fa34717a0682ae7a025d97012bcb5409c33fd8085edef5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers the committed badge change.",
+          "The browser and parent checks remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4eba34038f66d3a9abeeb33d7d0e4f5637936d3cfe6409cdc74a6d363d9cffcd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The badge colors meet the contrast target in the source check.",
+          "Chrome no longer reports the badge contrast as unresolved.",
+          "Chrome reports one separate overlap that still stops the test."
+        ]
+      }
     }
   ]
 }

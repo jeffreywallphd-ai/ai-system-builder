@@ -10598,6 +10598,26 @@
         "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
         "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "repair-notification-badge-contrast",
+      "work_criteria": [
+        "readable-notification-count",
+        "finite-owned-coverage-and-exact-commit",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "06002d8c4e9d907b3761d228192a7c8e7672fd37304793672d946c7ba473e176",
+      "review_digest": "5ff87b0f51d09199c3b56a76f4bab75379cc836ca09ec9a89b4381095f415f28",
+      "scope": "The unread notification badge now uses darker text for better contrast. The notification count, label and controls still work as before.",
+      "limitations": [
+        "This evidence covers the committed badge change. The browser journey and roadmap check remain open.",
+        "The source check verifies that the badge colors meet the contrast target. Chrome no longer reports the badge contrast as unresolved. One separate overlap still stops the test.",
+        "The region result comes from the standard thin-client run only. Packaged desktop, native zoom, managed persistence, provider and resource checks remain open.",
+        "Previously accepted model quality and text recognition results remain closed. The wider UI matrix and combined system checks stay deferred."
+      ]
     }
   ]
 }
