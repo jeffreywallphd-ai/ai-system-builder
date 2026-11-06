@@ -563,6 +563,11 @@ controller refuses the new request. It keeps the original owner and does not
 cancel that task. A fresh controller cannot adopt an old task from the model
 registry. Local tests reopen a synthetic saved registry and confirm that stale
 requests leave it unchanged. This does not restore tasks after a restart.
+An async read, list, cancel, or completion can use a reply only for the exact
+download entry it started with. Retired entries cannot start a registry write or
+publish late results to a replacement. The host reserves an observed runtime ID
+until it confirms the original task ended or its worker stopped and any pending
+cancellation calls settle, even if the entry has left the activity history.
 # Confirmed worker exit and task recovery
 
 The Python foundation fails only its accepted unfinished tasks after the owned

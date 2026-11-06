@@ -6,7 +6,7 @@ import { createLocalModelRegistryAdapter } from "../../../../adapters/persistenc
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { TaskType, type RuntimeTaskRecord } from "../../../../contracts/runtime";
 import { describe, expect, it, testDouble } from "../../../../testing/node-test";
-import type { ModelRegistryPort } from "../../../ports/model";
+import type { ModelDownloadCompletionPort, ModelRegistryPort } from "../../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../../ports/runtime";
 import { ModelDownloadTasksUseCase } from "../model-download-tasks.use-case";
 import { OwnedTaskReconcilerService } from "../../../services/runtime/owned-task-reconciler.service";
@@ -103,6 +103,125 @@ describe("ModelDownloadTasksUseCase", () => {
     expect(registerDownloadedModel).not.toHaveBeenCalled();
     expect((await useCase.complete(identity, owner)).activity.model?.modelRecordId).toBe("registered-model");
     expect(registerDownloadedModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not accept late status, list, or cancel results after an ID is reused", async () => {
+    const status = hold<RuntimeTaskRecord>();
+    const list = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["listTasks"]>>>();
+    const cancel = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["cancelTask"]>>>();
+    const fixture = createRetirementFixture({
+      getTaskStatus: () => status.result, listTasks: () => list.result, cancelTask: () => cancel.result,
+    });
+    const { useCase, owner, identity, task } = fixture;
+    await fixture.start();
+    const pending = Promise.allSettled([
+      useCase.read(identity, owner),
+      useCase.complete(identity, owner),
+      useCase.cancel(identity, owner),
+    ]);
+    const listed = useCase.list({ workspaceId: identity.workspaceId, includeCompleted: true }, owner);
+    await fixture.evict();
+    await fixture.reuse(owner);
+    status.resolve(task);
+    list.resolve({ tasks: [task] });
+    cancel.resolve({ requestId: identity.requestId, cancelled: true, status: "cancelled" });
+    for (const result of await pending) {
+      expect(result).toMatchObject({ status: "rejected", reason: { message: "Model download task was not found in this workspace." } });
+    }
+    expect(await listed).toEqual({ activities: [] });
+    expect(fixture.registerDownloadedModel).not.toHaveBeenCalled();
+  });
+
+  it("does not start a registry write when a completion payload arrives after retirement", async () => {
+    const started = hold<void>();
+    const payload = hold<Awaited<ReturnType<ModelDownloadCompletionPort["readCompletedModelDownload"]>>>();
+    const fixture = createRetirementFixture({}, { readCompletedModelDownload: () => { started.resolve(); return payload.result; } });
+    const { useCase, owner, identity } = fixture;
+    await fixture.start();
+    const pending = Promise.allSettled([useCase.complete(identity, owner)]);
+    await started.result;
+    await fixture.evict();
+    await fixture.reuse(fixture.otherOwner);
+    payload.resolve({ modelId: "org/model", provider: "transformers", downloaded: true, fromCache: false, localPath: "C:\\cache\\fixture" });
+    expect((await pending)[0]).toMatchObject({ status: "rejected", reason: { message: "Model download task was not found in this workspace." } });
+    expect(fixture.registerDownloadedModel).not.toHaveBeenCalled();
+  });
+
+  it("does not attach a late authorized registry result to a new owner of the same ID", async () => {
+    const started = hold<void>();
+    const written = hold<void>();
+    const original = createFixture();
+    const register = testDouble.fn<ModelRegistryPort["registerDownloadedModel"]>(async (request) => {
+      started.resolve();
+      await written.result;
+      return original.registerDownloadedModel(request);
+    });
+    const fixture = createRetirementFixture({}, undefined, register);
+    const { useCase, owner, otherOwner, identity } = fixture;
+    await fixture.start();
+    const pending = Promise.allSettled([useCase.complete(identity, owner)]);
+    await started.result;
+    await fixture.evict();
+    await fixture.reuse(otherOwner);
+    written.resolve();
+    expect((await pending)[0]).toMatchObject({ status: "rejected", reason: { message: "Model download task was not found in this workspace." } });
+    expect(register).toHaveBeenCalledTimes(1);
+    const replacement = await useCase.read(identity, otherOwner);
+    expect(replacement.activity).toMatchObject({ modelId: "org/replacement", status: "succeeded" });
+    expect(replacement.activity.model).toBeUndefined();
+  });
+
+  it("keeps an evicted ID reserved until its original runtime observer settles", async () => {
+    const reconciler = new OwnedTaskReconcilerService();
+    let terminal = false;
+    const fixture = createRetirementFixture({
+      getTaskStatus: async (requestId) => ({ ...fixture.task, requestId, status: terminal && requestId === fixture.identity.requestId ? "succeeded" : "running" }),
+    }, undefined, undefined, reconciler);
+    try {
+      await fixture.start();
+      await fixture.evict();
+      await expect(fixture.reuse(fixture.otherOwner)).rejects.toThrow("could not be admitted");
+      terminal = true;
+      await reconciler.reconcileNow();
+      expect((await fixture.reuse(fixture.otherOwner)).activity.modelId).toBe("org/replacement");
+    } finally {
+      reconciler.stopObservation();
+    }
+  });
+
+  it("keeps an evicted ID reserved when terminal observation races a pending cancellation", async () => {
+    const reconciler = new OwnedTaskReconcilerService();
+    const startReply = hold<void>();
+    const cancellationStarted = hold<void>();
+    const cancellationReply = hold<Awaited<ReturnType<RuntimeTaskRegistryPort["cancelTask"]>>>();
+    let terminal = false;
+    let originalCancelCalls = 0;
+    const fixture = createRetirementFixture({
+      getTaskStatus: async (requestId) => ({ ...fixture.task, requestId, status: terminal && requestId === fixture.identity.requestId ? "succeeded" : "running" }),
+      cancelTask: async (requestId) => {
+        if (requestId !== fixture.identity.requestId) return { requestId, status: "running", cancelled: false };
+        originalCancelCalls++;
+        cancellationStarted.resolve();
+        return cancellationReply.result;
+      },
+    }, undefined, undefined, reconciler);
+    await fixture.start();
+    await fixture.evict();
+    const duplicate = Promise.allSettled([fixture.reuse(fixture.otherOwner, startReply.result)]);
+    const shutdown = reconciler.cancelAndReconcile();
+    try {
+      await cancellationStarted.result;
+      terminal = true;
+      await reconciler.reconcileNow();
+      startReply.resolve();
+      expect((await duplicate)[0]).toMatchObject({ status: "rejected", reason: { message: "The model download task could not be admitted." } });
+      expect(originalCancelCalls).toBe(1);
+    } finally {
+      startReply.resolve();
+      cancellationReply.resolve({ requestId: fixture.identity.requestId, status: "cancelled", cancelled: true });
+      await shutdown;
+      reconciler.stopObservation();
+    }
   });
 
   it("preserves a saved registry and denies stale completion after reopening the controller", async () => {
@@ -343,6 +462,56 @@ function createFixture(taskReconciler?: OwnedTaskReconcilerService) {
     completion,
     registerDownloadedModel,
     setTask(patch: Partial<RuntimeTaskRecord>) { task = { ...task, ...patch }; },
+  };
+}
+
+function createRetirementFixture(
+  runtime: Partial<RuntimeTaskRegistryPort> = {},
+  completion?: ModelDownloadCompletionPort,
+  register?: ModelRegistryPort["registerDownloadedModel"],
+  taskReconciler?: OwnedTaskReconcilerService,
+) {
+  const base = createFixture();
+  const workspaceId = createWorkspaceId("workspace.downloads");
+  const identity = { workspaceId, requestId: "download-1" };
+  const owner = { organizationId: "org.a", principalId: "person.a", modelWriteAuthorized: true };
+  const otherOwner = { ...owner, organizationId: "org.b" };
+  const task: RuntimeTaskRecord = { ...identity, taskType: TaskType.MODEL_DOWNLOAD, concurrencyClass: "io", status: "succeeded" };
+  const input = { workspaceId, provider: "huggingface" as const, modelId: "org/model" };
+  let next = identity.requestId;
+  let nextReply: Promise<void> | undefined;
+  const registerDownloadedModel = register ?? base.registerDownloadedModel;
+  const useCase = new ModelDownloadTasksUseCase({
+    runtimeTaskRegistry: {
+      ...base.registry,
+      getTaskStatus: async () => task,
+      ...runtime,
+      startTask: async () => {
+        const requestId = next;
+        const reply = nextReply;
+        nextReply = undefined;
+        if (reply) await reply;
+        return { requestId, status: "queued" };
+      },
+    },
+    modelDownloadCompletion: completion ?? base.completion,
+    modelRegistry: { registerDownloadedModel } as ModelRegistryPort,
+    taskReconciler,
+  });
+  return {
+    useCase, identity, owner, otherOwner, task, registerDownloadedModel,
+    start: () => useCase.start(input, owner),
+    async evict() {
+      for (let index = 0; index < 100; index++) {
+        next = "fixture-download-" + index;
+        await useCase.start(input, otherOwner);
+      }
+    },
+    reuse(authority: typeof owner, reply?: Promise<void>) {
+      next = identity.requestId;
+      nextReply = reply;
+      return useCase.start({ ...input, modelId: "org/replacement" }, authority);
+    },
   };
 }
 

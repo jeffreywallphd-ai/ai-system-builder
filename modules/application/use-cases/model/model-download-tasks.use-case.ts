@@ -35,6 +35,7 @@ export interface ModelDownloadAuthority {
 
 export class ModelDownloadTasksUseCase {
   private readonly descriptors = new Map<string, DownloadDescriptor>();
+  private readonly observedOwners = new Map<string, DownloadDescriptor>();
   private readonly finalizedModels = new Map<string, ModelDownloadTaskActivity["model"]>();
   private readonly finalizations = new Map<string, Promise<ModelDownloadTaskActivity["model"]>>();
   private readonly finalizationFailures = new Set<string>();
@@ -52,43 +53,75 @@ export class ModelDownloadTasksUseCase {
     const owner = captureAuthority(authority);
     const lease = this.dependencies.taskReconciler?.reserve();
     try {
-    const started = await this.dependencies.runtimeTaskRegistry.startTask({
-      workspaceId: normalized.workspaceId,
-      taskType: TaskType.MODEL_DOWNLOAD,
-      concurrencyClass: "io",
-      payload: {
-        provider: "transformers",
-        modelId: normalized.modelId,
-        inferenceMode: normalized.inferenceMode,
-        taskTags: normalized.taskTags ? [...normalized.taskTags] : undefined,
-        artifactForm: normalized.artifactForm,
-      },
-    });
-    const requestId = started.requestId;
-    if (this.descriptors.has(requestId)) {
-      // An unexpected duplicate grants no authority to replace or cancel the existing task.
-      throw new Error("The model download task could not be admitted.");
-    }
-    const startedAt = this.now();
-    this.descriptors.set(requestId, { request: normalized, startedAt, authority: owner });
-    this.pruneDescriptors();
-    lease?.start(async () => {
-      // Observe only accepted work; model registration still needs explicit
-      // current write authority through complete().
-      const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
-      return !("recordType" in record) && record.requestId === requestId && record.workspaceId === normalized.workspaceId && record.taskType === TaskType.MODEL_DOWNLOAD && ["succeeded", "failed", "cancelled"].includes(record.status);
-    }, () => this.dependencies.runtimeTaskRegistry.cancelTask(requestId), async () => {});
-    return {
-      activity: {
-        requestId,
-        workspaceId: normalized.workspaceId!,
-        modelId: normalized.modelId,
-        displayName: normalized.displayName ?? normalized.modelId,
-        status: started.status ?? "queued",
-        startedAt,
-        updatedAt: startedAt,
-      },
-    };
+      const started = await this.dependencies.runtimeTaskRegistry.startTask({
+        workspaceId: normalized.workspaceId,
+        taskType: TaskType.MODEL_DOWNLOAD,
+        concurrencyClass: "io",
+        payload: {
+          provider: "transformers",
+          modelId: normalized.modelId,
+          inferenceMode: normalized.inferenceMode,
+          taskTags: normalized.taskTags ? [...normalized.taskTags] : undefined,
+          artifactForm: normalized.artifactForm,
+        },
+      });
+      const requestId = started.requestId;
+      if (this.descriptors.has(requestId) || this.observedOwners.has(requestId)) {
+        // An unexpected duplicate grants no authority to replace or cancel the existing task.
+        throw new Error("The model download task could not be admitted.");
+      }
+      const startedAt = this.now();
+      const descriptor: DownloadDescriptor = { request: normalized, startedAt, authority: owner };
+      this.descriptors.set(requestId, descriptor);
+      if (lease) {
+        // The host still owns this runtime task after its entry leaves the bounded UI history.
+        this.observedOwners.set(requestId, descriptor);
+        let settled = false;
+        let pendingCancels = 0;
+        const releaseObserver = () => {
+          if (settled && pendingCancels === 0 && this.observedOwners.get(requestId) === descriptor) {
+            this.observedOwners.delete(requestId);
+          }
+        };
+        const settleObserver = () => {
+          settled = true;
+          releaseObserver();
+        };
+        try {
+          lease.start(async () => {
+            if (settled || this.observedOwners.get(requestId) !== descriptor) return true;
+            const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
+            const terminal = !("recordType" in record) && record.requestId === requestId && record.workspaceId === normalized.workspaceId && record.taskType === TaskType.MODEL_DOWNLOAD && ["succeeded", "failed", "cancelled"].includes(record.status);
+            if (terminal) settleObserver();
+            return terminal;
+          }, async () => {
+            if (settled || this.observedOwners.get(requestId) !== descriptor) return;
+            pendingCancels++;
+            try {
+              await this.dependencies.runtimeTaskRegistry.cancelTask(requestId);
+            } finally {
+              pendingCancels--;
+              releaseObserver();
+            }
+          }, async () => { settleObserver(); });
+        } catch (error) {
+          settleObserver();
+          this.descriptors.delete(requestId);
+          throw error;
+        }
+      }
+      this.pruneDescriptors();
+      return {
+        activity: {
+          requestId,
+          workspaceId: normalized.workspaceId!,
+          modelId: normalized.modelId,
+          displayName: normalized.displayName ?? normalized.modelId,
+          status: started.status ?? "queued",
+          startedAt,
+          updatedAt: startedAt,
+        },
+      };
     } catch (error) { lease?.release(); throw error; }
   }
 
@@ -96,6 +129,7 @@ export class ModelDownloadTasksUseCase {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, authority);
     const task = await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
+    this.assertCurrentDescriptor(normalized.requestId, descriptor);
     if ("recordType" in task || task.requestId !== normalized.requestId || task.taskType !== TaskType.MODEL_DOWNLOAD || task.workspaceId !== normalized.workspaceId) {
       throw new Error("Model download task was not found in this workspace.");
     }
@@ -107,8 +141,8 @@ export class ModelDownloadTasksUseCase {
     const owner = captureAuthority(authority);
     // Scope checks precede even registry enumeration. A request from another
     // tenant cannot use a shared workspace label to observe or finalize work.
-    const owned = [...this.descriptors.values()].some((d) => d.request.workspaceId === normalized.workspaceId && sameAuthority(d.authority, owner));
-    if (!owned) return { activities: [] };
+    const owned = new Map([...this.descriptors].filter(([, d]) => d.request.workspaceId === normalized.workspaceId && sameAuthority(d.authority, owner)));
+    if (!owned.size) return { activities: [] };
     const result = await this.dependencies.runtimeTaskRegistry.listTasks({
       workspaceId: normalized.workspaceId,
       taskTypes: [TaskType.MODEL_DOWNLOAD],
@@ -117,8 +151,8 @@ export class ModelDownloadTasksUseCase {
     });
     const activities: ModelDownloadTaskActivity[] = [];
     for (const task of result.tasks) {
-      const descriptor = this.descriptors.get(task.requestId);
-      if ("recordType" in task || task.taskType !== TaskType.MODEL_DOWNLOAD || !descriptor || descriptor.request.workspaceId !== normalized.workspaceId || !sameAuthority(descriptor.authority, owner) || task.workspaceId !== normalized.workspaceId) continue;
+      const descriptor = owned.get(task.requestId);
+      if ("recordType" in task || task.taskType !== TaskType.MODEL_DOWNLOAD || !descriptor || this.descriptors.get(task.requestId) !== descriptor || task.workspaceId !== normalized.workspaceId) continue;
       activities.push(await this.toActivity(task, descriptor));
     }
     return { activities };
@@ -127,8 +161,9 @@ export class ModelDownloadTasksUseCase {
   public async cancel(request: CancelModelDownloadTaskRequest, authority: ModelDownloadAuthority = {}): Promise<CancelModelDownloadTaskResult> {
     const normalized = normalizeModelDownloadTaskIdentity(request);
     const owner = captureAuthority(authority);
-    this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
+    const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
     const cancellation = await this.dependencies.runtimeTaskRegistry.cancelTask(normalized.requestId);
+    this.assertCurrentDescriptor(normalized.requestId, descriptor);
     if (cancellation.requestId !== normalized.requestId) {
       throw new Error("Model download cancellation could not be confirmed.");
     }
@@ -165,13 +200,16 @@ export class ModelDownloadTasksUseCase {
     if (owner.modelWriteAuthorized !== true) throw new Error("Model write authority is required to register a download.");
     const descriptor = this.requireDescriptor(normalized.requestId, normalized.workspaceId, owner);
     const task = await this.dependencies.runtimeTaskRegistry.getTaskStatus(normalized.requestId);
+    this.assertCurrentDescriptor(normalized.requestId, descriptor);
     if ("recordType" in task || task.requestId !== normalized.requestId || task.taskType !== TaskType.MODEL_DOWNLOAD || task.workspaceId !== normalized.workspaceId || task.status !== "succeeded") {
       throw new Error("Completed model download was not found in this workspace.");
     }
     try {
       await this.finalize(normalized.requestId, descriptor);
+      this.assertCurrentDescriptor(normalized.requestId, descriptor);
       this.finalizationFailures.delete(normalized.requestId);
     } catch {
+      this.assertCurrentDescriptor(normalized.requestId, descriptor);
       this.finalizationFailures.add(normalized.requestId);
       // Keep retries explicit and write-authorized; a read never retries a write.
       this.finalizations.delete(normalized.requestId);
@@ -185,6 +223,7 @@ export class ModelDownloadTasksUseCase {
     if (existing) return existing;
     const finalization = (async () => {
       const completion = await this.dependencies.modelDownloadCompletion.readCompletedModelDownload(requestId);
+      this.assertCurrentDescriptor(requestId, descriptor);
       if (!completion?.localPath || completion.modelId !== descriptor.request.modelId) {
         throw new Error("Model download completion data is unavailable.");
       }
@@ -208,6 +247,7 @@ export class ModelDownloadTasksUseCase {
           },
         },
       });
+      this.assertCurrentDescriptor(requestId, descriptor);
       const normalizedModel = normalizeModelInventoryRecord(registered.model);
       const { localPath: _localPath, validationReportPath: _validationReportPath, ...model } = normalizedModel;
       this.finalizedModels.set(requestId, model);
@@ -223,6 +263,12 @@ export class ModelDownloadTasksUseCase {
       throw new Error("Model download task was not found in this workspace.");
     }
     return descriptor;
+  }
+
+  private assertCurrentDescriptor(requestId: string, descriptor: DownloadDescriptor): void {
+    if (this.descriptors.get(requestId) !== descriptor) {
+      throw new Error("Model download task was not found in this workspace.");
+    }
   }
 
   private pruneDescriptors(): void {
