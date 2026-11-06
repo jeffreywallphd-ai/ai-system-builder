@@ -557,6 +557,12 @@ adapter filter alone. Cancellation confirms only an acknowledgement for the exac
 requested id; substituted acknowledgements fail without reporting cancellation
 success. These checks supplement frozen organization/principal/workspace and
 current write authority, and do not qualify native provenance or durable recovery.
+
+If the runtime returns an ID that is already owned by a retained download, the
+controller refuses the new request. It keeps the original owner and does not
+cancel that task. A fresh controller cannot adopt an old task from the model
+registry. Local tests reopen a synthetic saved registry and confirm that stale
+requests leave it unchanged. This does not restore tasks after a restart.
 # Confirmed worker exit and task recovery
 
 The Python foundation fails only its accepted unfinished tasks after the owned

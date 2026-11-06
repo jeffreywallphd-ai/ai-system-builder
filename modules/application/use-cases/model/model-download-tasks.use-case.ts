@@ -64,18 +64,23 @@ export class ModelDownloadTasksUseCase {
         artifactForm: normalized.artifactForm,
       },
     });
+    const requestId = started.requestId;
+    if (this.descriptors.has(requestId)) {
+      // An unexpected duplicate grants no authority to replace or cancel the existing task.
+      throw new Error("The model download task could not be admitted.");
+    }
     const startedAt = this.now();
-    this.descriptors.set(started.requestId, { request: normalized, startedAt, authority: owner });
+    this.descriptors.set(requestId, { request: normalized, startedAt, authority: owner });
     this.pruneDescriptors();
     lease?.start(async () => {
       // Observe only accepted work; model registration still needs explicit
       // current write authority through complete().
-      const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(started.requestId);
-      return !("recordType" in record) && record.requestId === started.requestId && record.workspaceId === normalized.workspaceId && record.taskType === TaskType.MODEL_DOWNLOAD && ["succeeded", "failed", "cancelled"].includes(record.status);
-    }, () => this.dependencies.runtimeTaskRegistry.cancelTask(started.requestId), async () => {});
+      const record = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
+      return !("recordType" in record) && record.requestId === requestId && record.workspaceId === normalized.workspaceId && record.taskType === TaskType.MODEL_DOWNLOAD && ["succeeded", "failed", "cancelled"].includes(record.status);
+    }, () => this.dependencies.runtimeTaskRegistry.cancelTask(requestId), async () => {});
     return {
       activity: {
-        requestId: started.requestId,
+        requestId,
         workspaceId: normalized.workspaceId!,
         modelId: normalized.modelId,
         displayName: normalized.displayName ?? normalized.modelId,

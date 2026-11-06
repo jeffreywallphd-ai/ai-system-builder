@@ -1,3 +1,8 @@
+import type { BigIntStats } from "node:fs";
+import { lstat, mkdtemp, readFile, readdir, realpath, rmdir, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { createLocalModelRegistryAdapter } from "../../../../adapters/persistence/model";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { TaskType, type RuntimeTaskRecord } from "../../../../contracts/runtime";
 import { describe, expect, it, testDouble } from "../../../../testing/node-test";
@@ -80,6 +85,92 @@ describe("ModelDownloadTasksUseCase", () => {
 
     await expect(useCase.read({ workspaceId: otherWorkspace, requestId: "download-1" })).rejects.toThrow("not found in this workspace");
     expect(registry.getTaskStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not replace or cancel the original owner if the runtime reuses a task ID", async () => {
+    const { useCase, registry, setTask, completion, registerDownloadedModel } = createFixture();
+    const owner = { organizationId: "org.a", principalId: "person.a", modelWriteAuthorized: true };
+    const other = { ...owner, organizationId: "org.b" };
+    const input = { workspaceId, provider: "huggingface" as const, modelId: "org/model" };
+    const first = await useCase.start(input, owner);
+    const identity = { workspaceId, requestId: first.activity.requestId };
+    await expect(useCase.start(input, other)).rejects.toThrow("could not be admitted");
+    expect(registry.cancelTask).not.toHaveBeenCalled();
+    setTask({ status: "succeeded" });
+    await expect(useCase.complete(identity, other)).rejects.toThrow("not found in this workspace");
+    expect(registry.getTaskStatus).not.toHaveBeenCalled();
+    expect(completion.readCompletedModelDownload).not.toHaveBeenCalled();
+    expect(registerDownloadedModel).not.toHaveBeenCalled();
+    expect((await useCase.complete(identity, owner)).activity.model?.modelRecordId).toBe("registered-model");
+    expect(registerDownloadedModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a saved registry and denies stale completion after reopening the controller", async () => {
+    const { registry, setTask, completion } = createFixture();
+    const owner = { organizationId: "org.a", principalId: "person.a", modelWriteAuthorized: true };
+    const parent = await realpath(tmpdir());
+    const root = await mkdtemp(join(parent, "download-replay-"));
+    const folder = await lstat(root, { bigint: true });
+    expect(folder.isDirectory() && !folder.isSymbolicLink() && folder.ino !== 0n).toBe(true);
+    const filePath = join(root, "models.json");
+    let written: BigIntStats | undefined;
+    try {
+      const store = (date: string) => createLocalModelRegistryAdapter({
+        filePath, discovery: { enabled: false }, now: () => date,
+      });
+      const original = store("2026-11-06T12:00:00.000Z");
+      const originalWrite = testDouble.fn(original.registerDownloadedModel);
+      const current = new ModelDownloadTasksUseCase({
+        runtimeTaskRegistry: registry, modelDownloadCompletion: completion,
+        modelRegistry: { ...original, registerDownloadedModel: originalWrite },
+      });
+      const started = await current.start({ workspaceId, provider: "huggingface", modelId: "org/model" }, owner);
+      const identity = { workspaceId, requestId: started.activity.requestId };
+      setTask({ status: "succeeded" });
+      const [registered] = await Promise.all([current.complete(identity, owner), current.complete(identity, owner)]);
+      written = await lstat(filePath, { bigint: true });
+      expect(originalWrite).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(registered.activity)).not.toContain('"localPath":');
+      const originalBytes = await readFile(filePath);
+
+      const reopened = store("2026-11-06T12:30:00.000Z");
+      const read = testDouble.fn(registry.getTaskStatus);
+      const list = testDouble.fn(registry.listTasks);
+      const readCompletion = testDouble.fn(completion.readCompletedModelDownload);
+      const write = testDouble.fn(reopened.registerDownloadedModel);
+      const fresh = new ModelDownloadTasksUseCase({
+        runtimeTaskRegistry: { ...registry, getTaskStatus: read, listTasks: list },
+        modelDownloadCompletion: { readCompletedModelDownload: readCompletion },
+        modelRegistry: { ...reopened, registerDownloadedModel: write },
+      });
+      for (const replay of [owner, { ...owner, modelWriteAuthorized: false }, { ...owner, organizationId: "org.b" }]) {
+        await expect(fresh.complete(identity, replay)).rejects.toThrow();
+        await expect(fresh.read(identity, replay)).rejects.toThrow("not found in this workspace");
+        expect(await fresh.list({ workspaceId, includeCompleted: true }, replay)).toEqual({ activities: [] });
+      }
+      expect(read).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+      expect(readCompletion).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+      expect((await reopened.listModels({ workspaceId })).models.map((model) => model.modelRecordId)).toEqual([
+        registered.activity.model?.modelRecordId,
+      ]);
+      expect(await readFile(filePath)).toEqual(originalBytes);
+    } finally {
+      expect(dirname(root)).toBe(parent);
+      expect(await realpath(root)).toBe(root);
+      const currentFolder = await lstat(root, { bigint: true });
+      expect(currentFolder.isDirectory() && currentFolder.dev === folder.dev && currentFolder.ino === folder.ino).toBe(true);
+      if (written) {
+        expect(await readdir(root)).toEqual(["models.json"]);
+        const currentFile = await lstat(filePath, { bigint: true });
+        expect(currentFile.isFile() && currentFile.dev === written.dev && currentFile.ino === written.ino && written.ino !== 0n).toBe(true);
+        await unlink(filePath);
+      } else {
+        expect(await readdir(root)).toEqual([]);
+      }
+      await rmdir(root);
+    }
   });
 
   it("keeps the original organization and user while the runtime admits a download", async () => {
