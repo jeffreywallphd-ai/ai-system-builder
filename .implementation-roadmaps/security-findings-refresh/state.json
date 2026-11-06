@@ -695,6 +695,17 @@
       "outcome": "passed",
       "recordedAt": "2026-11-06T13:25:32Z",
       "summary": "Passed 37 focused tests. Two organizations using the same workspace and source IDs staged only their own files. A missing or foreign binding stopped the request before a storage read, provider call or worker start. Valid selected sources still staged. The tests used synthetic data and did not contact a real provider or start a model."
+    },
+    {
+      "artifact": "docs/security/model-download-route-authority-evidence.json",
+      "command": "python dev-tools/helpers/run_focused_checks.py --profile model-download-ownership",
+      "criterionId": "write-owned-model-completion",
+      "id": "evidence-6",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T21:27:46Z",
+      "summary": "Read and list leave model records unchanged. Only the original organization, workspace and principal with write permission can complete a download. Concurrent retries write one record. A fresh controller rejects stale requests after reopening a local sample registry."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1227,6 +1238,12 @@
       "recordedAt": "2026-11-06T13:25:32Z",
       "sequence": 56,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3f663cd15149d94713ecba4ea29136c1ed19776120972114f9e79496a403a70c",
+      "recordedAt": "2026-11-06T21:27:46Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -1708,5 +1725,5 @@
   "schemaVersion": 1,
   "slug": "security-findings-refresh",
   "status": "executing",
-  "updatedAt": "2026-11-06T13:25:32Z"
+  "updatedAt": "2026-11-06T21:27:46Z"
 }
