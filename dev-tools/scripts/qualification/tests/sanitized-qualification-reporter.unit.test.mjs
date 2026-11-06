@@ -51,6 +51,67 @@ test("global errors fail evidence without retaining private error content", () =
   assert.ok(!JSON.stringify(result).includes("synthetic-private-global-error"));
   assert.ok(!JSON.stringify(result).includes("synthetic-value"));
 }));
+test("browser launch diagnostics report fixed failure reasons without copying startup output", () => fixture(root => {
+  const reporter = new Reporter();
+  const privateOutput = "unlabelled synthetic private content Z3K5, Q:/fixture-profile/Private Directory, --synthetic-flag";
+  const cases = [
+    ["browserType.launch: Executable doesn't exist at Q:/synthetic", "executable unavailable"],
+    ["browserType.launch: spawn Q:/synthetic EACCES", "permission denied"],
+    ["browserType.launch: Target page, context or browser has been closed\n[pid=123][err] Cannot create default profile directory", "profile directory unavailable"],
+    ["TimeoutError: browserType.launchPersistentContext: Timeout 15000ms exceeded.", "launch timed out"],
+    ["browserType.launch: Target page, context or browser has been closed", "browser closed before launch completed"],
+    ["browserType.launch: Unrecognized startup response", "cause undetermined"],
+  ];
+  for (const [index, [message]] of cases.entries()) {
+    reporter.onTestEnd({ titlePath: () => [`synthetic case ${index}`], parent: { project: () => ({ name: "fixture" }) } }, {
+      status: "failed", duration: 1, errors: [{ message: `${message}\n${privateOutput}` }],
+    });
+  }
+  assert.deepEqual(reporter.onEnd({ status: "failed" }), { status: "failed" });
+  const result = evidence(root);
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.checks.slice(0, cases.length).map(check => check.diagnostic),
+    cases.map(([, reason]) => `Browser startup: ${reason}.`));
+  assert.doesNotMatch(JSON.stringify(result), /Z3K5|Q:\/fixture-profile|--synthetic-flag|\[pid=123\]/);
+}));
+test("a global browser startup failure stays failed and reports only its category", () => fixture(root => {
+  const reporter = new Reporter(); child(reporter);
+  reporter.onError({ message: "browserType.launchPersistentContext: Timeout 15000ms exceeded.\nUnlabelled private startup marker Z8K2" });
+  reporter.onError({ message: "Unknown unrelated global marker Z8K9" });
+  assert.deepEqual(reporter.onEnd({ status: "passed" }), { status: "failed" });
+  const result = evidence(root);
+  const diagnostic = result.checks[1].diagnostic;
+  assert.match(diagnostic, /global errors: 2/);
+  assert.match(diagnostic, /launch timed out \(1\)/);
+  assert.doesNotMatch(JSON.stringify(result), /Z8K2|Z8K9|15000|browserType/);
+}));
+test("a browser startup result discards sibling errors that can contain raw launcher fragments", () => fixture(root => {
+  const reporter = new Reporter();
+  reporter.onTestEnd({ titlePath: () => ["synthetic startup"], parent: { project: () => ({ name: "fixture" }) } }, {
+    status: "failed", duration: 1, errors: [
+      { message: "Unprefixed startup fragment Z9K1" },
+      { message: "browserType.launch: Timeout 15000ms exceeded." },
+      { value: "Unprefixed child process output Z9K2" },
+      { message: "TimeoutError: browserType.launch: Timeout 15000ms exceeded." },
+    ],
+  });
+  reporter.onEnd({ status: "failed" });
+  const result = evidence(root);
+  assert.equal(result.checks[0].diagnostic, "Browser startup: launch timed out.");
+  assert.doesNotMatch(JSON.stringify(result), /Z9K1|Z9K2/);
+}));
+test("launch diagnostics inspect only bounded startup text and ignore unrecognized prefixes", () => fixture(root => {
+  const reporter = new Reporter();
+  const synthetic = { titlePath: () => ["synthetic child"], parent: { project: () => ({ name: "fixture" }) } };
+  reporter.onTestEnd(synthetic, { status: "failed", duration: 1, errors: [{ message:
+    `browserType.launch: Unrecognized startup response\n${"x".repeat(9000)}\nCannot create default profile directory` }] });
+  reporter.onTestEnd(synthetic, { status: "failed", duration: 1, errors: [{ message:
+    "Assertion failed after browserType.launch: ordinary feature failure" }] });
+  reporter.onEnd({ status: "failed" });
+  const result = evidence(root);
+  assert.equal(result.checks[0].diagnostic, "Browser startup: cause undetermined.");
+  assert.equal(result.checks[1].diagnostic, "Assertion failed after browserType.launch: ordinary feature failure");
+}));
 test("an empty test run never produces a vacuous pass", () => fixture(root => {
   new Reporter().onEnd({ status: "passed" });
   assert.equal(evidence(root).status, "failed");

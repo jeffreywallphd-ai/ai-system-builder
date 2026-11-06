@@ -1143,6 +1143,13 @@ and borrows the existing model preload/HTTP and ownership regressions. It keeps
 the Operational profile and its limits unchanged. Unknown, incomplete and
 explicit generic test impact retains its checks.
 
+The browser evidence reporter uses fixed descriptions when Playwright reports a
+launch failure. It distinguishes a missing executable, denied access, an
+unavailable profile directory, a timeout, an early close and an unknown cause.
+The report keeps only those fixed descriptions for a startup failure. Other
+errors in the same result can contain raw launcher text. A startup failure does
+not prove an app defect or confirm that the browser and its profile retired.
+
 The two named actual-host cases search the already approved small Qwen model,
 save its reference, inspect details, reload and check a second workspace. They
 never download weights or run inference/accuracy. Dedicated functional Desktop

@@ -2383,6 +2383,7 @@
         "dev-tools/scripts/qualification/tests/functional-host-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/functional-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/functional-host-wiring.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/sanitized-qualification-reporter.unit.test.mjs",
         "dev-tools/helpers/tests/test_control_plane_functional_host_ui_profile.py",
         "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
         "apps/thin-client/src/features/model-management/tests/model-reference-http.ui.test.tsx",
@@ -2409,6 +2410,7 @@
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
         "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.mjs",
+        "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs",
         "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.d.mts",
         "dev-tools/scripts/qualification/visual-composer/functional-host-global-setup.mjs",
         "dev-tools/scripts/qualification/visual-composer/functional-host-server-entry.ts",
