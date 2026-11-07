@@ -147,6 +147,8 @@ larger than the file's remaining declared size. The host verifies each digest
 and offset, persists authoritative progress, streams finalization without
 joining the file in renderer memory, and retains unfinished checkpoints for at
 most 24 hours.
+Checkpoint storage copies each bounded chunk before it awaits storage work.
+Digest verification, persisted bytes and retry sizes use that same private copy.
 Retry is idempotent for the last accepted chunk. Cancellation and expiry use a
 durable cleanup intent.
 When another file advances the same task, the host can retry the progress

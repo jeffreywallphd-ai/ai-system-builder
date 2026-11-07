@@ -391,6 +391,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
             "modules/adapters/transport/api-express/tests/register-ingestion-task-api-route.unit.test.ts",
             "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+            "modules/adapters/storage/ingestion-checkpoint/tests/filesystem-ingestion-checkpoint-storage.integration.test.ts",
             "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
             "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
             "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",

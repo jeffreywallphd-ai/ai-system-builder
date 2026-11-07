@@ -88,8 +88,10 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         profile = 'model-file-listing'
         adapter = 'modules/adapters/model/local/createLocalModelFileListerAdapter.ts'
         tests = [
+            'modules/adapters/model/local/tests/createLocalGeneratedModelStorageAdapter.unit.test.ts',
             'modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts',
             'modules/application/use-cases/model/tests/list-model-files.use-case.unit.test.ts',
+            'modules/application/use-cases/tests/train-model.use-case.unit.test.ts',
         ]
         with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys(tests, 'fixture')}):
             self.assertEqual(focused.profile_commands(root, profile), [['node', '--import', 'tsx', '--test', '--', *tests]])
@@ -131,9 +133,10 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         timing = f'{area}/tests/NotificationCenter.interaction.ui.test.tsx'
         actions = f'{area}/tests/notification-center-actions.ui.test.tsx'
         focus = f'{area}/tests/notification-dismiss-focus.ui.test.tsx'
-        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([timing, actions, focus], 'fixture')}):
+        state = f'{area}/tests/notificationState.unit.test.ts'
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([timing, actions, focus, state], 'fixture')}):
             self.assertEqual(focused.profile_commands(root, profile), [
-                ['node', '--import', 'tsx', '--test', '--', timing],
+                ['node', '--import', 'tsx', '--test', '--', timing, state],
                 ['node', 'dev-tools/helpers/run_vitest_checks.mjs', '--', actions, focus],
             ])
         owned = [f'{area}/NotificationCenter.tsx', focus, 'dev-tools/config/contributor-check-profiles.json']
@@ -141,7 +144,7 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         self.assertIn(profile, [check['id'] for check in plan['selected']])
         self.assertNotIn('operational-ui', [check['id'] for check in plan['selected']])
         self.assertNotIn('focused-tests', [check['id'] for check in plan['selected']])
-        plan = catalog.plan(root, [*owned, f'{area}/notificationState.ts'], ['architecture'], 'synthetic')
+        plan = catalog.plan(root, [*owned, f'{area}/TaskObservationProvider.tsx'], ['architecture'], 'synthetic')
         self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
 
     def test_functionality_profile_plans_fake_coverage_and_keeps_native_source_responsibility(self):

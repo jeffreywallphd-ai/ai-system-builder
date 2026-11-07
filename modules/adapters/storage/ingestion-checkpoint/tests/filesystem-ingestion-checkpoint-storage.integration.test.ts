@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "../../../../testing/node-test";
 import { createHasArtifactRequest } from "../../../../contracts/storage";
+import { INGESTION_TASK_MAXIMUM_CHUNK_BYTES } from "../../../../contracts/ingestion";
 import { createFilesystemArtifactObjectStorageAdapter } from "../../filesystem/artifact-store";
 import { createFilesystemIngestionCheckpointStorage } from "../createFilesystemIngestionCheckpointStorage";
 
@@ -29,6 +30,86 @@ describe("filesystem ingestion checkpoint and stream storage", () => {
     expect(chunks).toEqual([[1, 2, 3], [4, 5]]);
     await checkpoints.deleteCheckpoint({ workspaceId: "workspace-a", checkpointId: "checkpoint-1" });
     await expect(checkpoints.inspectCheckpoint({ workspaceId: "workspace-a", checkpointId: "checkpoint-1" })).resolves.toEqual({ chunkCount: 0, sizeBytes: 0 });
+  });
+
+  it("keeps verified checkpoint bytes stable when the caller reuses its pending buffer", async () => {
+    const directory = await root("ingestion-checkpoint-copy-");
+    const checkpoints = createFilesystemIngestionCheckpointStorage({ rootDirectory: directory });
+    const expected = new Uint8Array([1, 2, 3]);
+    const borrowed = new Uint8Array(expected);
+    const request = {
+      workspaceId: "workspace-a", checkpointId: "checkpoint-1",
+      chunkIndex: 0, expectedOffset: 0, bytes: borrowed, sha256: sha(expected),
+    };
+
+    const writing = checkpoints.appendChunk(request);
+    borrowed.fill(9);
+    await expect(writing).resolves.toEqual({ chunkCount: 1, sizeBytes: 3, duplicate: false });
+
+    const chunks: number[][] = [];
+    for await (const bytes of checkpoints.readChunks({
+      workspaceId: request.workspaceId, checkpointId: request.checkpointId,
+      expectedChunkCount: 1, expectedSizeBytes: expected.byteLength,
+    })) chunks.push([...bytes]);
+    expect(chunks).toEqual([[...expected]]);
+    await expect(checkpoints.appendChunk({ ...request, bytes: expected })).resolves.toEqual({
+      chunkCount: 1, sizeBytes: 3, duplicate: true,
+    });
+  });
+
+  it("checks the actual chunk size without evaluating an instance byte-length accessor", async () => {
+    const directory = await root("ingestion-checkpoint-bound-");
+    const checkpoints = createFilesystemIngestionCheckpointStorage({ rootDirectory: directory });
+    const bytes = new Uint8Array(INGESTION_TASK_MAXIMUM_CHUNK_BYTES + 1);
+    let accessorCalls = 0;
+    Object.defineProperty(bytes, "byteLength", { get() { accessorCalls += 1; return 1; } });
+
+    await expect(checkpoints.appendChunk({
+      workspaceId: "workspace-a", checkpointId: "checkpoint-1",
+      chunkIndex: 0, expectedOffset: 0, bytes, sha256: sha(bytes),
+    })).rejects.toThrow("bounded non-empty byte array");
+    expect(accessorCalls).toBe(0);
+    await expect(checkpoints.inspectCheckpoint({
+      workspaceId: "workspace-a", checkpointId: "checkpoint-1",
+    })).resolves.toEqual({ chunkCount: 0, sizeBytes: 0 });
+  });
+
+  it("caps the private allocation if a shared view grows after size admission", async () => {
+    const directory = await root("ingestion-checkpoint-grow-");
+    const checkpoints = createFilesystemIngestionCheckpointStorage({ rootDirectory: directory });
+    const OriginalUint8Array = Uint8Array;
+    const shared = Reflect.construct(SharedArrayBuffer, [1, {
+      maxByteLength: INGESTION_TASK_MAXIMUM_CHUNK_BYTES + 1,
+    }]) as SharedArrayBuffer & { grow(byteLength: number): void };
+    const supplied = new OriginalUint8Array(shared);
+    const request = {
+      workspaceId: "workspace-a", checkpointId: "checkpoint-1",
+      chunkIndex: 0, expectedOffset: 0, bytes: supplied, sha256: sha(supplied),
+    };
+    const allocations: number[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "Uint8Array")!;
+    const growingConstructor = new Proxy(OriginalUint8Array, {
+      construct(target, argumentsList, newTarget) {
+        // Reproduce concurrent growth exactly at the private allocation boundary.
+        shared.grow(INGESTION_TASK_MAXIMUM_CHUNK_BYTES + 1);
+        const result = Reflect.construct(target, argumentsList, newTarget) as Uint8Array;
+        allocations.push(result.byteLength);
+        return result;
+      },
+    });
+    let writing: ReturnType<typeof checkpoints.appendChunk> | undefined;
+    Object.defineProperty(globalThis, "Uint8Array", { ...descriptor, value: growingConstructor });
+    try {
+      writing = checkpoints.appendChunk(request);
+    } finally {
+      Object.defineProperty(globalThis, "Uint8Array", descriptor);
+    }
+
+    await expect(writing).rejects.toThrow();
+    expect(allocations).toEqual([1]);
+    await expect(checkpoints.inspectCheckpoint({
+      workspaceId: "workspace-a", checkpointId: "checkpoint-1",
+    })).resolves.toEqual({ chunkCount: 0, sizeBytes: 0 });
   });
 
   it("finalizes an async stream atomically with exact size and digest and removes failed output", async () => {

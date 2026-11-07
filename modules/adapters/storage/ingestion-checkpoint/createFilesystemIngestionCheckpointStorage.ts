@@ -18,6 +18,10 @@ import {
 } from "../../filesystem-security";
 import { resolveOrganizationStorageKey } from "../filesystem/organizationStorageScope";
 
+const getTypedArrayByteLength = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
+)!.get!;
+
 export interface CreateFilesystemIngestionCheckpointStorageOptions {
   readonly rootDirectory: string;
   readonly organizationContextProvider?: OrganizationRequestContextProviderPort;
@@ -56,15 +60,22 @@ export function createFilesystemIngestionCheckpointStorage(options: CreateFilesy
       const prefix = scopedPrefix(request.workspaceId, request.checkpointId);
       const chunkIndex = integer(request.chunkIndex, 0, INGESTION_TASK_MAXIMUM_CHUNKS - 1, "Checkpoint chunk index");
       const expectedOffset = integer(request.expectedOffset, 0, Number.MAX_SAFE_INTEGER, "Checkpoint expected offset");
-      if (!(request.bytes instanceof Uint8Array) || request.bytes.byteLength < 1 || request.bytes.byteLength > INGESTION_TASK_MAXIMUM_CHUNK_BYTES) throw new Error("Checkpoint chunk bytes must be a bounded non-empty byte array.");
+      const inputBytes = request.bytes;
+      const inputByteLength = inputBytes instanceof Uint8Array
+        ? getTypedArrayByteLength.call(inputBytes)
+        : 0;
+      if (inputByteLength < 1 || inputByteLength > INGESTION_TASK_MAXIMUM_CHUNK_BYTES) throw new Error("Checkpoint chunk bytes must be a bounded non-empty byte array.");
+      // Keep the verified bytes private across the asynchronous storage work.
+      const bytes = new Uint8Array(inputByteLength);
+      Uint8Array.prototype.set.call(bytes, inputBytes);
       const expectedDigest = normalizeIngestionSha256Digest(request.sha256);
-      const actualDigest = digest(request.bytes);
+      const actualDigest = digest(bytes);
       if (expectedDigest !== actualDigest) throw new Error("Checkpoint chunk digest does not match its bytes.");
       const current = await summary(request.workspaceId, request.checkpointId);
       if (chunkIndex < current.chunkCount) {
         if (chunkIndex !== current.chunkCount - 1) throw new Error("Only the most recently accepted checkpoint chunk may be retried.");
         const existing = await readContainedFile({ rootDirectory, key: `${prefix}/${chunkName(chunkIndex)}`, maximumBytes: INGESTION_TASK_MAXIMUM_CHUNK_BYTES });
-        if (existing.size !== request.bytes.byteLength || digest(existing.content) !== expectedDigest || current.sizeBytes - existing.size !== expectedOffset) throw new Error("Retried checkpoint chunk does not match the accepted chunk.");
+        if (existing.size !== bytes.byteLength || digest(existing.content) !== expectedDigest || current.sizeBytes - existing.size !== expectedOffset) throw new Error("Retried checkpoint chunk does not match the accepted chunk.");
         return { ...current, duplicate: true };
       }
       if (chunkIndex !== current.chunkCount || expectedOffset !== current.sizeBytes) throw new Error("Checkpoint chunk is out of order or has a stale offset.");
@@ -73,16 +84,16 @@ export function createFilesystemIngestionCheckpointStorage(options: CreateFilesy
         await writeContainedFileStream({
           rootDirectory,
           key,
-          content: singleChunk(request.bytes),
+          content: singleChunk(bytes),
           maximumBytes: INGESTION_TASK_MAXIMUM_CHUNK_BYTES,
           overwrite: false,
         });
       } catch (error) {
         const existing = await readContainedFile({ rootDirectory, key, maximumBytes: INGESTION_TASK_MAXIMUM_CHUNK_BYTES }).catch(() => undefined);
-        if (!existing || existing.size !== request.bytes.byteLength || digest(existing.content) !== expectedDigest) throw error;
+        if (!existing || existing.size !== bytes.byteLength || digest(existing.content) !== expectedDigest) throw error;
         return { chunkCount: current.chunkCount + 1, sizeBytes: current.sizeBytes + existing.size, duplicate: true };
       }
-      return { chunkCount: current.chunkCount + 1, sizeBytes: current.sizeBytes + request.bytes.byteLength, duplicate: false };
+      return { chunkCount: current.chunkCount + 1, sizeBytes: current.sizeBytes + bytes.byteLength, duplicate: false };
     },
     async *readChunks(input) {
       const expectedChunkCount = integer(input.expectedChunkCount, 0, INGESTION_TASK_MAXIMUM_CHUNKS, "Expected checkpoint chunk count");
