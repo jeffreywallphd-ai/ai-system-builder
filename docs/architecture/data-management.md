@@ -149,6 +149,9 @@ joining the file in renderer memory, and retains unfinished checkpoints for at
 most 24 hours.
 Checkpoint storage copies each bounded chunk before it awaits storage work.
 Digest verification, persisted bytes and retry sizes use that same private copy.
+Final file-stream storage also admits each chunk by its intrinsic byte length
+and allocates exactly that amount before hashing and writing. Instance accessors
+cannot understate the admitted size, and shared growth beyond the copy denies.
 Summary reads inspect at most four saved chunks concurrently. Each file retains
 the existing containment and regular-file checks. A failed batch waits for all
 of its started reads before it rejects; it starts no later batch. There is no

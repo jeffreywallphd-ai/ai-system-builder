@@ -43,6 +43,10 @@ remains separate from these cooperative ownership checks.
 Resumable local-file tasks use `createFilesystemIngestionFileByteStorageAdapter`
 through the private application publisher. It inspects bounded checkpoint content
 before reservation and checks exact EOF size/SHA before exclusive target linking.
+Each incoming chunk uses its intrinsic byte length for admission and a private
+copy of exactly that size. Instance size accessors cannot weaken the bound;
+shared growth beyond the admitted copy denies before publication. Hashing and
+writing use the same private bytes.
 Its opaque task-owned key cannot overwrite an existing file, and post-publication
 errors never delete the target. It writes no binding/catalog itself: the publisher
 conditionally records exact metadata only after durable byte acknowledgement

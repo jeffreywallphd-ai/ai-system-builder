@@ -223,6 +223,8 @@ and thin-client Playwright journeys separately before claiming host delivery.
 The `ingestion-publication` profile runs sixteen fixed ordinary file-ingestion test files.
 publication and task repositories, bounded byte storage, desktop and server
 composition, dataset source staging, website compatibility and HTTP boundaries.
+Its declared source paths include the private final file-stream adapter and its
+existing test file. Selecting this profile covers those exact source changes.
 Its host fixtures use owned synthetic files with no model or provider calls.
 It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no

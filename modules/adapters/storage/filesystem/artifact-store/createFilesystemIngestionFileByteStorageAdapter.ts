@@ -9,6 +9,10 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { writeContainedFileStream } from "../../../filesystem-security";
 import { resolveOrganizationStorageKey } from "../organizationStorageScope";
 
+const getTypedArrayByteLength = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
+)!.get!;
+
 interface Options {
   readonly rootDirectory: string;
   readonly organizationContextProvider?: OrganizationRequestContextProviderPort;
@@ -37,9 +41,13 @@ export function createFilesystemIngestionFileByteStorageAdapter(options: Options
     let digest: ReturnType<typeof normalizeIngestionSha256Digest> | undefined;
     const content = async function* () {
       for await (const chunk of input.content) {
-        if (!(chunk instanceof Uint8Array) || chunk.byteLength > input.maximumBytes - sizeBytes) throw new Error("Invalid content.");
+        if (!(chunk instanceof Uint8Array)) throw new Error("Invalid content.");
+        const byteLength = getTypedArrayByteLength.call(chunk);
+        if (byteLength > input.maximumBytes - sizeBytes) throw new Error("Invalid content.");
         // The producer cannot mutate bytes after hashing while the writer awaits I/O.
-        const owned = new Uint8Array(chunk);
+        // Concurrent shared growth cannot enlarge the admitted allocation.
+        const owned = new Uint8Array(byteLength);
+        Uint8Array.prototype.set.call(owned, chunk);
         sizeBytes += owned.byteLength;
         hash.update(owned);
         yield owned;

@@ -399,6 +399,11 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts",
         ]
         self.assertEqual(profile["test_paths"], expected)
+        byte_sources = [
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        ]
+        self.assertTrue(all(path in profile["source_paths"] for path in byte_sources))
         commands = run_focused_checks.profile_commands(root, "ingestion-publication")
         self.assertEqual([path for command in commands for path in command if path in expected], sorted(expected))
         self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] for command in commands))
@@ -406,6 +411,7 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"ingestion-publication": profile}}))
         for paths, required, focused in [
             (profile["source_paths"] + expected, ["ingestion-publication"], False),
+            (byte_sources, ["ingestion-publication"], False),
             ([expected[0]], ["ingestion-publication", "focused-tests"], True),
             ([expected[0], "modules/unknown/source.ts"], ["ingestion-publication"], True),
         ]:

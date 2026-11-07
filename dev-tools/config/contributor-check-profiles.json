@@ -1448,6 +1448,8 @@
         "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts"
       ],
       "source_paths": [
+        "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
+        "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
         "modules/adapters/storage/ingestion-checkpoint/createFilesystemIngestionCheckpointStorage.ts",
         "modules/adapters/storage/ingestion-checkpoint/tests/filesystem-ingestion-checkpoint-storage.integration.test.ts",
         "modules/application/shared/ingestion-file-publication.ts",

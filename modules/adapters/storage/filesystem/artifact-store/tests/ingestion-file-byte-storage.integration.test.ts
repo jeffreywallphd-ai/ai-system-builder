@@ -19,6 +19,64 @@ async function fixture(run: (root: string, storage: ReturnType<typeof createFile
   finally { assert.ok(path.isAbsolute(root) && root.startsWith(path.join(tmpdir(), "owned-ingestion-bytes-"))); await rm(root, { recursive: true, force: true }); }
 }
 
+async function observeAllocations<T>(run: () => Promise<T>, beforeAllocation: () => void = () => undefined) {
+  const original = Uint8Array;
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "Uint8Array")!;
+  const allocations: number[] = [];
+  const observed = new Proxy(original, {
+    construct(target, argumentsList, newTarget) {
+      beforeAllocation();
+      const copy = Reflect.construct(target, argumentsList, newTarget) as Uint8Array;
+      allocations.push(copy.byteLength);
+      return copy;
+    },
+  });
+  Object.defineProperty(globalThis, "Uint8Array", { ...descriptor, value: observed });
+  try { return { result: await run(), allocations }; }
+  finally { Object.defineProperty(globalThis, "Uint8Array", descriptor); }
+}
+
+for (const operation of ["verifyContent", "storeArtifactStream"] as const) {
+  test(`${operation} rejects an oversized chunk without reading its size accessor or allocating a copy`, async () => fixture(async (root, storage) => {
+    const bytes = new Uint8Array(8).fill(7);
+    const input = { ...request(bytes), maximumBytes: 1, expectedSizeBytes: 1, expectedSha256: digest(new Uint8Array([7])) };
+    let sizeReads = 0;
+    Object.defineProperty(bytes, "byteLength", { get() { sizeReads += 1; return 0; } });
+    const { result, allocations } = await observeAllocations(() => storage[operation](input, context));
+    assert.equal(result.ok, false);
+    assert.equal(sizeReads, 0);
+    assert.deepEqual(allocations, []);
+    assert.doesNotMatch(JSON.stringify(result), /owned-ingestion-bytes|byteLength|RangeError/);
+    await assert.rejects(readFile(path.join(root, key)), { code: "ENOENT" });
+  }));
+
+  test(`${operation} cannot enlarge an admitted copy when a shared view grows`, async () => fixture(async (root, storage) => {
+    const original = Uint8Array;
+    const shared = Reflect.construct(SharedArrayBuffer, [1, { maxByteLength: 8 }]) as SharedArrayBuffer & { grow(bytes: number): void };
+    const bytes = new original(shared);
+    bytes.fill(7);
+    const input = request(bytes);
+    const { result, allocations } = await observeAllocations(() => storage[operation](input, context), () => shared.grow(8));
+    assert.equal(result.ok, false);
+    assert.deepEqual(allocations, [1]);
+    assert.doesNotMatch(JSON.stringify(result), /owned-ingestion-bytes|RangeError/);
+    await assert.rejects(readFile(path.join(root, key)), { code: "ENOENT" });
+  }));
+
+  test(`${operation} keeps exact valid bytes without evaluating an instance size accessor`, async () => fixture(async (root, storage) => {
+    const bytes = new Uint8Array([7, 8, 9]);
+    const input = request(bytes);
+    let sizeReads = 0;
+    Object.defineProperty(bytes, "byteLength", { get() { sizeReads += 1; return 0; } });
+    const result = await storage[operation](input, context);
+    assert.equal(result.ok, true);
+    assert.equal(sizeReads, 0);
+    if (result.ok) assert.equal(result.value.sizeBytes, 3);
+    if (operation === "storeArtifactStream") assert.deepEqual(new Uint8Array(await readFile(path.join(root, key))), new Uint8Array([7, 8, 9]));
+    else assert.deepEqual(await readdir(root), []);
+  }));
+}
+
 test("checkpoint inspection validates the full stream without creating a target", async () => fixture(async (root, storage) => {
   const bytes = new Uint8Array([1, 2, 3]);
   const result = await storage.verifyContent(request(bytes), context);
