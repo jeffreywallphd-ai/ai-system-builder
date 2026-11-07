@@ -632,6 +632,203 @@ class PortableNativePolicyTests(unittest.TestCase):
             with self.subTest(phase=phase),patch.object(job,"_digest",side_effect=AssertionError("identity read after unknown role")),patch.object(job,"_regular_directory",side_effect=AssertionError("directory work after unknown role")),self.assertRaises(job.NativeFailure):
                 job._reviewed_host_intent(phase,candidate=Path("none"),node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},environment={},environment_sha256="",review_digest="")
 
+    @contextlib.contextmanager
+    def serial_provided_subject(self):
+        with tempfile.TemporaryDirectory(prefix="serial provided policy ") as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32);folder=run/"serial-provided"
+            for path in (folder,candidate.parent/"t",candidate.parent/"h"):path.mkdir(parents=True,exist_ok=True)
+            node=root/"node.exe";node.write_bytes(b"inert reviewed Node image")
+            base=root/"base/python.exe";base.parent.mkdir();base.write_bytes(b"inert original Python image")
+            dll=base.with_name("python312.dll");dll.write_bytes(b"inert Python runtime identity")
+            files={}
+            for name in job._SERIAL_PROVIDED_FILES:
+                (helpers/name).write_bytes(b"fixed reviewed source; never executed")
+                files[name]=job._digest(helpers/name)
+            env={"NODE_OPTIONS":"","PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"dataset-profile",
+                 "AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1",
+                 "PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1","TEMP":str(candidate.parent/"t"),
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+            args=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),python_executable=base,
+                runtime_file_hashes={str(file):job._digest(file) for file in (base,dll)},run=run,folder=folder,
+                reviewed_file_hashes=files,environment=env,
+                environment_sha256=job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode()),
+                review_digest="b"*64)
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)), \
+                 patch.object(job,"_Win") as native,patch.object(job.subprocess,"Popen") as popen:
+                yield SimpleNamespace(root=root,candidate=candidate,helpers=helpers,run=run,folder=folder,
+                    node=node,base=base,dll=dll,args=args,native=native,popen=popen)
+
+    def test_serial_provided_has_one_fixed_original_python_command_and_standard_budget(self):
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual(intent.phase,"serial-provided")
+            self.assertEqual(intent.argv,(str(case.base),"-I","-S","-B",str(case.helpers/"serial-provided.py")))
+            self.assertEqual(intent.seconds,1500)
+            self.assertEqual(job._memory_limits(intent),(1024**3,3*1024**3))
+            self.assertEqual(job.MEMBERS,32)
+            self.assertEqual(set(intent.consumer_hashes),{str(case.helpers/name) for name in job._SERIAL_PROVIDED_FILES}|{str(case.node),str(case.base),str(case.dll)})
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises((AttributeError,TypeError)):intent.seconds=9999
+            with self.assertRaises(TypeError):intent.environment["NODE_OPTIONS"]="--eval"
+            case.args["environment"]["NODE_OPTIONS"]="changed after issuance"
+            case.args["runtime_file_hashes"][str(case.base)]="0"*64
+            self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+            self.assertEqual(intent.consumer_hashes[str(case.base)],job._digest(case.base))
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_rejects_commands_phases_and_budget_selectors(self):
+        with self.serial_provided_subject() as case:
+            for key in ("command","argv","phase","seconds","job_bytes","process_bytes","consumer_files","bounded_files"):
+                with self.subTest(key=key),self.assertRaises(TypeError):
+                    job._reviewed_serial_provided_intent(**case.args,**{key:"caller choice"})
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_never_uses_unbounded_digest_for_its_references(self):
+        with self.serial_provided_subject() as case:
+            original=job._digest
+            def source_only(file):
+                if file==job._MODULE:return original(file)
+                raise AssertionError("Unbounded reference digest is not permitted")
+            with patch.object(job,"_digest",source_only):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+                job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_witness_capture_runtime_before_io(self):
+        with self.serial_provided_subject() as case:
+            expected=dict(case.args["runtime_file_hashes"]);original=job._training_file
+            def mutate_caller(file,identity):
+                count=original(file,identity)
+                if file==case.node:case.args["runtime_file_hashes"].pop(str(case.base),None)
+                return count
+            with patch.object(job,"_training_file",mutate_caller):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual({key:intent.consumer_hashes.get(key) for key in expected},expected)
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_witness_capture_helpers_before_io(self):
+        with self.serial_provided_subject() as case:
+            expected={str(case.helpers/name):value for name,value in case.args["reviewed_file_hashes"].items()}
+            original=job._training_file
+            def mutate_caller(file,identity):
+                count=original(file,identity)
+                if file==case.base:case.args["reviewed_file_hashes"].clear()
+                return count
+            with patch.object(job,"_training_file",mutate_caller):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual({key:intent.consumer_hashes.get(key) for key in expected},expected)
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_rejects_oversized_or_redirected_helper_before_open(self):
+        for unsafe in ("oversized","redirected"):
+            with self.subTest(unsafe=unsafe),self.serial_provided_subject() as case:
+                target=case.helpers/"serial-provided.py"
+                if unsafe=="oversized":
+                    content=b"x"*(512*1024+1);target.write_bytes(content)
+                    case.args["reviewed_file_hashes"][target.name]=hashlib.sha256(content).hexdigest()
+                original_open,original_resolve,original_digest=Path.open,Path.resolve,job._digest
+                def no_unsafe_open(file,*args,**kwargs):
+                    if file==target:raise AssertionError("Unsafe reference must not be opened")
+                    return original_open(file,*args,**kwargs)
+                def resolve(file,*args,**kwargs):
+                    if unsafe=="redirected" and file==target:return case.root/"outside.py"
+                    return original_resolve(file,*args,**kwargs)
+                def source_only(file):
+                    if file==job._MODULE:return original_digest(file)
+                    raise AssertionError("Unbounded reference digest is not permitted")
+                with patch.object(Path,"open",no_unsafe_open),patch.object(Path,"resolve",resolve), \
+                     patch.object(job,"_digest",source_only),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**case.args)
+                case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_requires_exact_helpers_runtime_and_owned_locations(self):
+        with self.serial_provided_subject() as case:
+            changes=[{"folder":case.run/"ui-thin"},{"candidate":case.root},
+                     {"python_executable":case.base.parent/"venv/Scripts/python.exe"},
+                     {"runtime_file_hashes":{str(case.base):job._digest(case.base)}},
+                     {"reviewed_file_hashes":{name:value for name,value in case.args["reviewed_file_hashes"].items() if name!="serial-provided.py"}},
+                     {"reviewed_file_hashes":{**case.args["reviewed_file_hashes"],"arbitrary.py":"0"*64}},
+                     {"environment_sha256":"0"*64}]
+            for patch_values in changes:
+                with self.subTest(fields=list(patch_values)),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**{**case.args,**patch_values})
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_denies_other_scenarios_and_injected_node_flags(self):
+        with self.serial_provided_subject() as case:
+            for patch_values in ({"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"ocr-documents"},
+                                 {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"generation"},
+                                 {"NODE_OPTIONS":"--eval caller"},{"PYTHONPATH":"caller directory"}):
+                env={**case.args["environment"],**patch_values}
+                args={**case.args,"environment":env,"environment_sha256":job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())}
+                with self.subTest(fields=patch_values),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**args)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_post_issue_source_or_runtime_drift_denies_native_dispatch(self):
+        owned_type=job._OwnedJob
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            for file in (case.helpers/"serial-provided.py",case.helpers/"global-setup.mjs",case.node,case.base,case.dll):
+                original=file.read_bytes();file.write_bytes(b"unreviewed replacement")
+                try:
+                    with self.subTest(file=file.name),self.assertRaises(job.NativeFailure):owned_type(intent,case.folder)
+                finally:file.write_bytes(original)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_does_not_issue_behind_a_current_owner(self):
+        for registry in (job._LIVE,job._PENDING):
+            with self.subTest(active=registry is job._LIVE),self.serial_provided_subject() as case:
+                owner=object();registry[id(owner)]=owner
+                try:
+                    with self.assertRaises(job.NativeFailure):job._reviewed_serial_provided_intent(**case.args)
+                    case.native.assert_not_called();case.popen.assert_not_called()
+                finally:del registry[id(owner)]
+
+    def test_serial_provided_preserves_all_current_family_stop_markers(self):
+        for level in (0,1,2,3):
+            with self.subTest(level=level),self.serial_provided_subject() as case:
+                parent=[case.folder,case.run,case.run.parent,case.run.parent.parent][level]
+                marker=parent/"FENCED.json";marker.write_bytes(b"unknown earlier owner")
+                with self.assertRaisesRegex(job.NativeFailure,"family-remains-fenced"):
+                    job._reviewed_serial_provided_intent(**case.args)
+                self.assertEqual(marker.read_bytes(),b"unknown earlier owner")
+                case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_refuses_existing_outputs_and_new_post_issue_fences(self):
+        owned_type=job._OwnedJob
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            marker=case.run.parent/"FENCED.json";marker.write_bytes(b"new uncertain owner")
+            with self.assertRaisesRegex(job.NativeFailure,"family-remains-fenced"):
+                owned_type(intent,case.folder)
+            self.assertEqual(marker.read_bytes(),b"new uncertain owner")
+            case.native.assert_not_called();case.popen.assert_not_called()
+        with self.serial_provided_subject() as case:
+            (case.folder/"stdout.log").write_bytes(b"retained original output")
+            with self.assertRaisesRegex(job.NativeFailure,"fresh-output-required"):
+                job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual((case.folder/"stdout.log").read_bytes(),b"retained original output")
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_denies_broken_or_unreadable_stop_entries(self):
+        for unreadable in (False,True):
+            with self.subTest(unreadable=unreadable),self.serial_provided_subject() as case:
+                marker=case.run.parent/"FENCED.json";original=Path.lstat
+                def inspect(path):
+                    if path==marker:
+                        if unreadable:raise PermissionError("synthetic stop-marker denial")
+                        return SimpleNamespace()  # lstat still sees a broken entry.
+                    return original(path)
+                with patch.object(Path,"lstat",inspect),self.assertRaises((job.NativeFailure,PermissionError)):
+                    job._reviewed_serial_provided_intent(**case.args)
+                case.native.assert_not_called();case.popen.assert_not_called()
+
     def test_host_scenarios_keep_exact_commands_and_select_only_the_approved_ocr_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"

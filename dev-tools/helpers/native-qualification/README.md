@@ -31,6 +31,33 @@ These cooperative source attestations do not prove hostile live code replacement
 power-loss durability, model outcomes, offload safety or product qualification.
 Source review alone grants no physical test result.
 
+The private `serial-provided` role runs only its exact reviewed
+`serial-provided.py` coordinator with the original Python and isolated flags.
+It binds the four existing package/UI helpers, coordinator, Node, Python and
+`python312.dll` identities plus the reviewed environment. It accepts only the
+offline provided-data profile. Its first Node and helper reads use bounded,
+stable file validation; a later check does not excuse an earlier unbounded read.
+The existing package and per-host role contracts stay unchanged. Its fixed
+coordinator lifetime is 1500 seconds;
+the unchanged outer quotas are 1 GiB per process, 3 GiB total and 32 processes.
+Each package or app phase still needs its own existing deadline, stricter quota
+where applicable, complete report and confirmed retirement before a successor.
+The coordinator needs an empty output folder. A stop marker at the operator,
+runs, run or phase level refuses admission and dispatch, including a dangling
+entry. Existing output and markers are preserved.
+Both small witness maps are captured before any file read. Only the two fixed
+runtime keys and five literal helper keys are copied, with bounded plain hashes.
+Later caller changes cannot drop a witness or enlarge the private snapshots.
+
+This role is a source component for the serial app runner. It does not supply
+that runner or prove nested jobs, actual app behavior or memory use. The outer
+watchdog can cover coordinator setup, phases, validation and normal cleanup only
+after admission. It cannot interrupt a blocked OS call during parent admission;
+unconfirmed cleanup still denies success. No caller timeout, command selector,
+OCR profile or model/provider work is added. The prior nine-case mechanics run
+keeps its exact earlier source identity; its consumed retry is never rerun to
+qualify this new role.
+
 The closed standard-library fixtures, their leaf and their guardian use the
 original Python interpreter. A Windows virtual environment can start an extra
 interpreter through its redirector, which changes the expected process tree.

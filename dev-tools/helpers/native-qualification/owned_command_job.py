@@ -37,6 +37,9 @@ _LIVE={}
 _ISSUED={}
 _FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
 _CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
+_SERIAL_PROVIDED_PHASE="serial-provided"
+_SERIAL_PROVIDED_SECONDS=1500
+_SERIAL_PROVIDED_FILES=(*_CONSUMER_FILES,"serial-provided.py")
 _HOST_UI_PROJECTS={
     "ui":("thin-chrome","packaged-desktop"),
     "ui-thin":("thin-chrome",),
@@ -245,22 +248,18 @@ def _fixture_intent(role,folder,*,retry=None):
     return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(source),MappingProxyType({command[0]: interpreter_hash})))
 
 
-def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
-    """Private trusted-source composition; never routed from command JSON/CLI.
-
-    The owning reviewed consumer supplies immutable source/environment witnesses.
-    This validates their exact bytes and constructs only fixed literal argv forms;
-    these local attestations coordinate cooperative code, not hostile-user auth.
-    """
-    need(type(phase) is str and (phase=="package" or phase in _HOST_UI_PROJECTS),"unknown-fixed-host-role")
+def _reviewed_host_inputs(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest,consumer_files,bounded_files=False):
+    """Shared passive witnesses; no intent, process or command is issued here."""
     need(candidate.is_absolute() and candidate.resolve()==candidate and re.fullmatch(r"\.local-codex/q/[a-f0-9]{8}/c",candidate.relative_to(_REPO).as_posix()),"fixed-candidate")
     helpers=candidate/".local-codex/native-fixed-host-operator/v1"
     need(run.parent==candidate/".local-codex/native-fixed-host-operator/runs" and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-host-run")
-    need(node_executable.is_absolute() and node_executable.name.lower() in ("node","node.exe") and re.fullmatch(r"[a-f0-9]{64}",node_sha256) and _digest(node_executable)==node_sha256,"reviewed-node-identity")
-    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(_CONSUMER_FILES) and re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-consumer-witness")
+    need(node_executable.is_absolute() and node_executable.name.lower() in ("node","node.exe") and re.fullmatch(r"[a-f0-9]{64}",node_sha256)
+         and (_training_file(node_executable,node_sha256)>0 if bounded_files else _digest(node_executable)==node_sha256),"reviewed-node-identity")
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(consumer_files) and re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-consumer-witness")
     bindings={}
     for name,value in reviewed_file_hashes.items():
-        need(re.fullmatch(r"[a-f0-9]{64}",value) and _digest(helpers/name)==value,"consumer-source-drift")
+        need(re.fullmatch(r"[a-f0-9]{64}",value)
+             and (_training_file(helpers/name,value)>0 if bounded_files else _digest(helpers/name)==value),"consumer-source-drift")
         bindings[str(helpers/name)]=value
     env=dict(environment)
     need(all(type(key) is str and type(value) is str and "\0" not in key+value for key,value in env.items()) and len({key.upper() for key in env})==len(env) and sum(len(key)+len(value)+2 for key,value in env.items())<32760,"bounded-environment")
@@ -269,9 +268,73 @@ def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,fold
     need(env.get("TEMP")==env.get("TMP")==str(candidate.parent/"t") and env.get("HOME")==env.get("USERPROFILE")==str(candidate.parent/"h"),"short-owned-temp-home")
     need(_digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())==environment_sha256,"reviewed-environment-drift")
     _regular_directory(folder,_REPO);_regular_directory(candidate.parent/"t",_REPO);_regular_directory(candidate.parent/"h",_REPO)
-    argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*("--project="+project for project in _HOST_UI_PROJECTS[phase]))
     bindings[str(node_executable)]=node_sha256
+    return helpers,env,bindings
+
+
+def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
+    """Private fixed package/UI forms, never routed from command JSON/CLI.
+
+    Reviewed witnesses coordinate cooperative source, not hostile-user auth.
+    """
+    need(type(phase) is str and (phase=="package" or phase in _HOST_UI_PROJECTS),"unknown-fixed-host-role")
+    helpers,env,bindings=_reviewed_host_inputs(phase,candidate=candidate,node_executable=node_executable,
+        node_sha256=node_sha256,run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        environment=environment,environment_sha256=environment_sha256,review_digest=review_digest,
+        consumer_files=_CONSUMER_FILES)
+    argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*("--project="+project for project in _HOST_UI_PROJECTS[phase]))
     return _remember(_Intent(phase,argv,candidate,MappingProxyType(env),420,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _reviewed_serial_provided_intent(*,candidate,node_executable,node_sha256,python_executable,runtime_file_hashes,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
+    """One fixed original-Python coordinator, with unchanged Standard quotas.
+
+    The actual reviewed consumer must perform package, thin and desktop phases
+    in sequence and prove each predecessor retired before its successor. This
+    constructor supplies no consumer implementation or physical qualification.
+    """
+    _assert_no_pending()
+    need(not _LIVE,"active-owned-state-blocks-successor")
+    original=getattr(sys,"_base_executable",None)
+    need(type(python_executable) is type(_MODULE) and type(original) is str
+         and python_executable==Path(original) and python_executable.name.lower()=="python.exe",
+         "serial-original-python-required")
+    runtime_paths=(python_executable,python_executable.with_name("python312.dll"))
+    need(type(runtime_file_hashes) is dict and len(runtime_file_hashes)==len(runtime_paths),
+         "serial-exact-runtime-witnesses-required")
+    need(type(reviewed_file_hashes) is dict and len(reviewed_file_hashes)==len(_SERIAL_PROVIDED_FILES),
+         "serial-exact-consumer-witnesses-required")
+    # Capture only the fixed keys before I/O. Caller growth cannot enlarge a
+    # snapshot, and later caller mutation cannot remove an admitted witness.
+    runtime_file_hashes={str(file):dict.get(runtime_file_hashes,str(file)) for file in runtime_paths}
+    reviewed_file_hashes={name:dict.get(reviewed_file_hashes,name) for name in _SERIAL_PROVIDED_FILES}
+    need(all(type(value) is str and len(value)==64 and re.fullmatch(r"[a-f0-9]{64}",value)
+             for value in runtime_file_hashes.values()),"serial-exact-runtime-witnesses-required")
+    need(all(type(value) is str and len(value)==64 and re.fullmatch(r"[a-f0-9]{64}",value)
+             for value in reviewed_file_hashes.values()),"serial-exact-consumer-witnesses-required")
+    for file in runtime_paths: _training_file(file,runtime_file_hashes[str(file)])
+    helpers,env,bindings=_reviewed_host_inputs(_SERIAL_PROVIDED_PHASE,candidate=candidate,
+        node_executable=node_executable,node_sha256=node_sha256,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,environment=environment,
+        environment_sha256=environment_sha256,review_digest=review_digest,consumer_files=_SERIAL_PROVIDED_FILES,bounded_files=True)
+    need(env["PYTHON_RUNTIME_QUALIFICATION_SCENARIO"]=="dataset-profile","serial-provided-scenario-required")
+    _serial_provided_fresh(folder)
+    bindings.update(runtime_file_hashes)
+    argv=(str(python_executable),"-I","-S","-B",str(helpers/"serial-provided.py"))
+    return _remember(_Intent(_SERIAL_PROVIDED_PHASE,argv,candidate,MappingProxyType(env),
+        _SERIAL_PROVIDED_SECONDS,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _serial_provided_fresh(folder):
+    """No old run/fence or output can become a new coordinator's authority."""
+    _regular_directory(folder,_REPO)
+    for parent in (folder.parent.parent.parent,folder.parent.parent,folder.parent,folder):
+        _regular_directory(parent,_REPO)
+        try:(parent/"FENCED.json").lstat()
+        except FileNotFoundError:pass
+        else:raise NativeFailure("serial-provided-family-remains-fenced")
+    with os.scandir(folder) as entries:
+        need(next(entries,None) is None,"serial-provided-fresh-output-required")
 
 
 def _training_file_limit(path):
@@ -569,9 +632,10 @@ def _validate_intent(intent,folder):
     _assert_no_pending()
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent and folder==intent.folder,"external-intent-denied")
     need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
-    if intent.phase in _TRAINING_DEADLINES or intent.phase in _SOURCE_ROLES:
+    if intent.phase in _TRAINING_DEADLINES or intent.phase in _SOURCE_ROLES or intent.phase==_SERIAL_PROVIDED_PHASE:
         for name,value in intent.consumer_hashes.items():_training_file(Path(name),value)
         if intent.phase in _SOURCE_ROLES:_source_session_fresh(folder)
+        if intent.phase==_SERIAL_PROVIDED_PHASE:_serial_provided_fresh(folder)
         if intent.phase=="training-package":
             _training_empty_cache(_REPO/".local-codex/q"/intent.folder.parent.name[:8])
     else:
@@ -584,7 +648,8 @@ def _memory_limits(intent):
     # quota. Only an exact already-issued immutable intent reaches readback.
     need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
     phase=intent.phase
-    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,"ocr-runtime-import","ocr-runtime-import-v2",*_SOURCE_ROLES) or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,_SERIAL_PROVIDED_PHASE,"ocr-runtime-import","ocr-runtime-import-v2",*_SOURCE_ROLES) or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    if phase==_SERIAL_PROVIDED_PHASE:return PROCESS_BYTES,UI_JOB_BYTES
     if phase in _TRAINING_DEADLINES:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
     ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or ((phase=="package" or phase in _HOST_UI_PROJECTS) and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
     if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
