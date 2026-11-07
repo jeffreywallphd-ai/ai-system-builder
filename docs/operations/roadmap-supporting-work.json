@@ -10955,6 +10955,21 @@
       "limitations": [
         "The inventory check read the test definitions. Browser, Desktop and full application results remain separate."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "verify-catalog-acknowledgement-before-model-removal",
+      "work_criteria": [
+        "preserve-model-record-after-catalog-refusal"
+      ],
+      "receipt_digest": "0689f306713c926259500d2398e5ebea6fedf472b229bbb9301ed5e01e78a305",
+      "review_digest": "34e206b41f71f7b06b2974f52efcb5c8ac59f68c614c161aa6d8e47939cfa510",
+      "scope": "The app keeps the model record when it cannot confirm cleanup of the related artifact records. The result lists only records the catalog confirms it removed.",
+      "limitations": [
+        "The tests used sample records. Windows model file deletion, opening a model folder, and real catalog cleanup still need separate checks."
+      ]
     }
   ]
 }

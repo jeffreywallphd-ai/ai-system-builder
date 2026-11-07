@@ -15839,6 +15839,28 @@
           "Browser, Desktop and full application results remain separate."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af3fb57ee59f5822efe117eb6a8c9f70302f40942f2d162f746717f88d846324",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app keeps the model record when it cannot confirm cleanup of the related artifact records.",
+          "The result lists only records the catalog confirms it removed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e20f194514619465b4fd6778383ebd88ba253ce13a06b6957ddfb9859eb1212d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample records.",
+          "Windows model file deletion, opening a model folder, and real catalog cleanup still need separate checks."
+        ]
+      }
     }
   ]
 }
