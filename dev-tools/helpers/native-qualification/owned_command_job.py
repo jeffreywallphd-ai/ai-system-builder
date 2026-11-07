@@ -1124,7 +1124,12 @@ def native_selftest():
     _assert_no_pending()
     _prior_family_clear(_PREVIOUS_SELFTEST_RUNS)
     _regular_directory(_SELFTEST_RUNS,_REPO,create=True)
-    need(not (_SELFTEST_RUNS/"FENCED.json").exists(),"native selftest lifecycle remains fenced; no automatic successor")
+    try:
+        (_SELFTEST_RUNS / "FENCED.json").lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise NativeFailure("native selftest lifecycle remains fenced; no automatic successor")
     source=_implementation_hashes();suite=_SELFTEST_RUNS/uuid.uuid4().hex;suite.mkdir()
     cases=[];all_passed=False;current_case=None
     try:

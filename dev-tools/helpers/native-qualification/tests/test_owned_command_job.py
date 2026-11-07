@@ -825,6 +825,51 @@ class PortableNativePolicyTests(unittest.TestCase):
                 job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
             create.assert_not_called()
 
+    def test_current_family_stop_marker_refuses_existing_files_and_dangling_links(self):
+        for exists, linked in ((True, False), (False, True)):
+            with self.subTest(exists=exists, linked=linked), \
+                 patch.object(job, "os", SimpleNamespace(name="nt")), \
+                 patch.object(job.c, "sizeof", return_value=8), \
+                 patch.object(job, "_prior_family_clear"), \
+                 patch.object(job, "_regular_directory"), \
+                 patch.object(Path, "exists", return_value=exists), \
+                 patch.object(Path, "is_symlink", return_value=linked), \
+                 patch.object(Path, "lstat", return_value=SimpleNamespace()), \
+                 patch.object(job, "_implementation_hashes", side_effect=AssertionError("Fence was missed")) as source, \
+                 patch.object(job, "_OwnedJob") as native:
+                with self.assertRaisesRegex(job.NativeFailure, "native selftest lifecycle remains fenced"):
+                    job.native_selftest()
+                source.assert_not_called()
+                native.assert_not_called()
+
+    def test_absent_current_family_marker_reaches_source_verification_before_new_job(self):
+        with patch.object(job, "os", SimpleNamespace(name="nt")), \
+             patch.object(job.c, "sizeof", return_value=8), \
+             patch.object(job, "_prior_family_clear"), \
+             patch.object(job, "_regular_directory"), \
+             patch.object(Path, "exists", return_value=False), \
+             patch.object(Path, "is_symlink", return_value=False), \
+             patch.object(Path, "lstat", side_effect=FileNotFoundError()), \
+             patch.object(job, "_implementation_hashes", side_effect=job.NativeFailure("source witness requested")) as source, \
+             patch.object(job, "_OwnedJob") as native:
+            with self.assertRaisesRegex(job.NativeFailure, "source witness requested"):
+                job.native_selftest()
+            source.assert_called_once_with()
+            native.assert_not_called()
+
+    def test_unreadable_current_family_marker_denies_a_fresh_run(self):
+        with patch.object(job, "os", SimpleNamespace(name="nt")), \
+             patch.object(job.c, "sizeof", return_value=8), \
+             patch.object(job, "_prior_family_clear"), \
+             patch.object(job, "_regular_directory"), \
+             patch.object(Path, "lstat", side_effect=PermissionError("injected marker access denial")), \
+             patch.object(job, "_implementation_hashes") as source, \
+             patch.object(job, "_OwnedJob") as native:
+            with self.assertRaises(PermissionError):
+                job.native_selftest()
+            source.assert_not_called()
+            native.assert_not_called()
+
     def test_unissued_intent_cannot_reach_native_creation(self):
         with self.assertRaises(job.NativeFailure):job._validate_intent(object(),Path("none"))
 

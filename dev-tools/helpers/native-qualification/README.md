@@ -45,6 +45,10 @@ count zero, root exit, final pipe drains and acknowledged closure of every owned
 handle. A nonzero command remains failed even when cleanup is proven; retries
 still need separate review. Unknown cleanup grants no successor.
 
+The current-family stop marker is checked without following it. Any entry at
+`FENCED.json`, including a broken link, prevents a fresh run. An access error
+also prevents a fresh run. This check does not remove or repair old markers.
+
 Standard fixtures and dataset-profile commands retain a 1 GiB process commit
 ceiling. Their fixture/package jobs retain a 2 GiB aggregate ceiling and their
 combined UI job retains a 3 GiB ceiling. The approved fixed OCR profile uses
