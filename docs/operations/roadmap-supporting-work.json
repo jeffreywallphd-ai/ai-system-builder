@@ -11150,6 +11150,81 @@
       "limitations": [
         "The tests simulated worker cleanup and interruptions. Protected Windows staging, accounting, restart and real offload measurements remain pending."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "charge-native-phase-preparation-to-existing-time-limit",
+      "work_criteria": [
+        "preparation-and-descendant-grace-use-one-phase-deadline"
+      ],
+      "receipt_digest": "e8d4a2d28fd308f8ec6bb4e634449b0f03a0591368fd19001d1853f0833462d5",
+      "review_digest": "3abba7b3f56995fe4dbfe18f39f478d32a6e2fa69f24d47314c48672248119a6",
+      "scope": "Each test phase counts preparation and execution against one time limit. The normal wait for child processes shares that limit. Cleanup keeps its separate time limits.",
+      "limitations": [
+        "The evidence uses local simulated checks. The agent still needs to finish the overall runner and qualify the Windows suite."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "preserve-current-native-selftest-fence-on-dangling-link",
+      "work_criteria": [
+        "current-family-stop-marker-fails-closed-for-links"
+      ],
+      "receipt_digest": "3d6308f354637f3e0ff7742097d05dad871b58857183c02ac36f3cc4b6d57b62",
+      "review_digest": "c674ffe51a7c4d006361c6138382e1d9543fa8b56baccd53f08d50bf47fae5dc",
+      "scope": "The native runner refuses a new test when its stop marker exists, including a broken link. An access error also refuses the new test.",
+      "limitations": [
+        "The first Windows check produced the expected output and confirmed cleanup, but counted three processes instead of one. The complete Windows suite remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "use-original-python-for-closed-native-fixtures",
+      "work_criteria": [
+        "closed-native-fixtures-use-the-original-interpreter"
+      ],
+      "receipt_digest": "1f260ebc5d7f29e3124842d4da8148ca271b45fc54268901c3b1c9f939f8d4c1",
+      "review_digest": "dbdddc1a4dc8feffb8db542196f773995e7e4abb6ae6e873a361420fb948c685",
+      "scope": "Harmless native test children use the original Python interpreter. The fixed roles, limits and failed history are preserved.",
+      "limitations": [
+        "The corrected launcher passed 75 local checks. To authorize one guarded Windows retry, answer the question in this chat."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "finish-upload-byte-integrity-and-controller-profile-fixture",
+      "work_criteria": [
+        "stored-upload-bytes-match-the-verified-private-snapshot"
+      ],
+      "receipt_digest": "da9376c54155b2aaa6f2c5fd5fa80f838fa3d99669d300e8ec10af3f5845166f",
+      "review_digest": "fc75cb5a20428830e9a9097981b8356c8e0a1e9d007a43249b66dcbfe23ba094",
+      "scope": "Upload data is copied before storage waits. The tests verify stable saved bytes, matching retries and a copy that fits its checked size.",
+      "limitations": [
+        "The file tests used temporary local data. The remaining provider browser check, larger-file and crash-recovery qualification are still pending."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "finish-upload-byte-integrity-and-controller-profile-fixture",
+      "work_criteria": [
+        "stored-upload-bytes-match-the-verified-private-snapshot"
+      ],
+      "receipt_digest": "da9376c54155b2aaa6f2c5fd5fa80f838fa3d99669d300e8ec10af3f5845166f",
+      "review_digest": "fc75cb5a20428830e9a9097981b8356c8e0a1e9d007a43249b66dcbfe23ba094",
+      "scope": "Test planning uses all four registered model checks and all four registered notification checks. Uncovered files still keep their broader verification requirement.",
+      "limitations": [
+        "These results cover test planning and the upload correction. Real app journeys and final combined coverage remain pending."
+      ]
     }
   ]
 }

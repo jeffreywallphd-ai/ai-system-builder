@@ -16124,6 +16124,117 @@
           "Protected Windows staging, accounting, restart and real offload measurements remain pending."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d9cffd79763c303dffefd8abd7b71edbd83e357bae7f0c7f2fe4b49a0b42c683",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Each test phase counts preparation and execution against one time limit.",
+          "The normal wait for child processes shares that limit.",
+          "Cleanup keeps its separate time limits."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e04006d44675b05a16c2be689fa8a53803832d0409d7c6e45115074934456063",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The evidence uses local simulated checks.",
+          "The agent still needs to finish the overall runner and qualify the Windows suite."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d00d602720d1d4818d5dabb2a7241449ceaf01db23fd55d8ac57593f19e1f2ee",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The native runner refuses a new test when its stop marker exists, including a broken link.",
+          "An access error also refuses the new test."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "baa813faf3a2987291c0469ddcc283c72c8022135b7b510564120bc5bb4be8f2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The first Windows check produced the expected output and confirmed cleanup, but counted three processes instead of one.",
+          "The complete Windows suite remains pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3ff0ef18391ab7ba20b46d37440f2dddb2582dc133329e4ad822827680190f40",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Harmless native test children use the original Python interpreter.",
+          "The fixed roles, limits and failed history are preserved."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e692e8a0754dde6afa91e93aa60ab95d91c248868e5970d8e77a696d1c9dc2c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The corrected launcher passed 75 local checks.",
+          "To authorize one guarded Windows retry, answer the question in this chat."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "96b7797e1580c76c54202942a6e4085fd2626e4d24abe50cedf6955c07c2a6c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Upload data is copied before storage waits.",
+          "The tests verify stable saved bytes, matching retries and a copy that fits its checked size."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3a28cab7aadfdc40122efe5c224fdf054eaf7d7c36d08c74cafbd53b8377f096",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file tests used temporary local data.",
+          "The remaining provider browser check, larger-file and crash-recovery qualification are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cfdd6a85fdc577b5a334edc9b9cf3b02f6f0b1563530d4f61ebc9de586e08399",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test planning uses all four registered model checks and all four registered notification checks.",
+          "Uncovered files still keep their broader verification requirement."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bab319fdd6ae2d21b24930e0d027c042730866e96b905432b2734851aff5a409",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover test planning and the upload correction.",
+          "Real app journeys and final combined coverage remain pending."
+        ]
+      }
     }
   ]
 }
