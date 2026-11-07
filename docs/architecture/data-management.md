@@ -149,6 +149,11 @@ joining the file in renderer memory, and retains unfinished checkpoints for at
 most 24 hours.
 Checkpoint storage copies each bounded chunk before it awaits storage work.
 Digest verification, persisted bytes and retry sizes use that same private copy.
+Summary reads inspect at most four saved chunks concurrently. Each file retains
+the existing containment and regular-file checks. A failed batch waits for all
+of its started reads before it rejects; it starts no later batch. There is no
+cached size authority. Repeated enumeration still grows with the saved chunk count;
+component timing does not establish maximum-scale or whole-host qualification.
 Retry is idempotent for the last accepted chunk. Cancellation and expiry use a
 durable cleanup intent.
 When another file advances the same task, the host can retry the progress

@@ -21,6 +21,7 @@ import { resolveOrganizationStorageKey } from "../filesystem/organizationStorage
 const getTypedArrayByteLength = Object.getOwnPropertyDescriptor(
   Object.getPrototypeOf(Uint8Array.prototype), "byteLength",
 )!.get!;
+const METADATA_INSPECTION_BATCH_SIZE = 4;
 
 export interface CreateFilesystemIngestionCheckpointStorageOptions {
   readonly rootDirectory: string;
@@ -51,7 +52,15 @@ export function createFilesystemIngestionCheckpointStorage(options: CreateFilesy
     const prefix = scopedPrefix(workspaceId, checkpointId);
     const found = await entries(workspaceId, checkpointId);
     let sizeBytes = 0;
-    for (const entry of found) sizeBytes += (await statContainedFile({ rootDirectory, key: `${prefix}/${entry}` })).size;
+    for (let offset = 0; offset < found.length; offset += METADATA_INSPECTION_BATCH_SIZE) {
+      const batch = await Promise.allSettled(found.slice(offset, offset + METADATA_INSPECTION_BATCH_SIZE)
+        .map((entry) => statContainedFile({ rootDirectory, key: `${prefix}/${entry}` })));
+      // Settle every started read before failure; never start a later batch on error.
+      for (const result of batch) {
+        if (result.status === "rejected") throw result.reason;
+        sizeBytes += result.value.size;
+      }
+    }
     return { chunkCount: found.length, sizeBytes };
   }
 
