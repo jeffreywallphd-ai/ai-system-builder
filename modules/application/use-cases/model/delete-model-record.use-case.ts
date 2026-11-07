@@ -11,6 +11,15 @@ import {
   type ModelRegistryPort,
 } from "../../ports/model";
 
+export class ModelBackingArtifactCleanupUnavailableError extends Error {
+  public readonly code = "unavailable";
+
+  public constructor() {
+    super("The model record was kept because cleanup of its related artifact records could not be confirmed.");
+    this.name = "ModelBackingArtifactCleanupUnavailableError";
+  }
+}
+
 export class DeleteModelRecordUseCase {
   public constructor(
     private readonly dependencies: {
@@ -28,6 +37,12 @@ export class DeleteModelRecordUseCase {
     }
 
     const current = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.workspaceId, normalizedRequest.modelRecordId);
+    const backingArtifactIds = normalizedRequest.deleteBackingArtifacts ? current?.backingArtifactIds ?? [] : [];
+    const catalogDelete = this.dependencies.artifactCatalogDeletePort;
+    if (backingArtifactIds.length > 0 && !catalogDelete) {
+      throw new ModelBackingArtifactCleanupUnavailableError();
+    }
+
     const deletedBackingArtifactIds: string[] = [];
     let deletedLocalFiles = false;
 
@@ -46,12 +61,18 @@ export class DeleteModelRecordUseCase {
       deletedLocalFiles = true;
     }
 
-    if (normalizedRequest.deleteBackingArtifacts && current?.backingArtifactIds?.length) {
-      for (const storageKey of current.backingArtifactIds) {
-        if (this.dependencies.artifactCatalogDeletePort) {
-          await this.dependencies.artifactCatalogDeletePort.deleteArtifactCatalogRecord({ storageKey });
+    if (catalogDelete) {
+      try {
+        for (const storageKey of backingArtifactIds) {
+          const result = await catalogDelete.deleteArtifactCatalogRecord({ storageKey });
+          const deleted = result?.ok === true ? result.value?.deleted : undefined;
+          if (typeof deleted !== "boolean") {
+            throw new ModelBackingArtifactCleanupUnavailableError();
+          }
+          if (deleted) deletedBackingArtifactIds.push(storageKey);
         }
-        deletedBackingArtifactIds.push(storageKey);
+      } catch {
+        throw new ModelBackingArtifactCleanupUnavailableError();
       }
     }
 

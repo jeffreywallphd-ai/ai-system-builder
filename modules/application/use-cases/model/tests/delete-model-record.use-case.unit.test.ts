@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { DeleteModelRecordRequest, ModelInventoryRecord } from "../../../../contracts/model";
+import { createContractError, createFailureResult } from "../../../../contracts/shared";
 import type { ArtifactCatalogDeletePort } from "../../../ports/artifact-catalog";
 import {
   ModelLocalFileEffectsUnavailableError,
@@ -28,7 +29,13 @@ function unexpectedRegistryCall(): never {
   assert.fail("Unexpected registry operation");
 }
 
-function fixture(record: ModelInventoryRecord, localResult?: boolean | ModelLocalFileEffectsUnavailableError) {
+type CatalogResult = Awaited<ReturnType<ArtifactCatalogDeletePort["deleteArtifactCatalogRecord"]>>;
+
+function fixture(
+  record: ModelInventoryRecord,
+  localResult?: boolean | ModelLocalFileEffectsUnavailableError,
+  catalogResult: CatalogResult | Error | null = { ok: true, value: { deleted: true } },
+) {
   const steps: string[] = [];
   const modelLocalFilesDeletePort: ModelLocalFilesDeletePort | undefined = localResult === undefined
     ? undefined
@@ -40,10 +47,12 @@ function fixture(record: ModelInventoryRecord, localResult?: boolean | ModelLoca
           return { deleted: localResult };
         },
       };
-  const artifactCatalogDeletePort: ArtifactCatalogDeletePort = {
-    async deleteArtifactCatalogRecord() {
+  const artifactCatalogDeletePort: ArtifactCatalogDeletePort | undefined = catalogResult === null ? undefined : {
+    async deleteArtifactCatalogRecord(input) {
       steps.push("catalog");
-      return { ok: true, value: { deleted: true } };
+      assert.equal(input.storageKey, "synthetic-model-artifact");
+      if (catalogResult instanceof Error) throw catalogResult;
+      return catalogResult;
     },
   };
   const modelRegistry: ModelRegistryPort = {
@@ -109,5 +118,46 @@ test("supports removing the record alone without calling file or catalog effects
   const result = await useCase.execute({ ...identity, deleteLocalFiles: false });
   assert.equal(result.deletedRegistryRecord, true);
   assert.equal(result.deletedLocalFiles, false);
+  assert.deepEqual(steps, ["read", "registry"]);
+});
+
+for (const scenario of [
+  { label: "is unavailable", result: null, steps: ["read"] },
+  { label: "refuses the cleanup", result: createFailureResult(createContractError("validation", "Synthetic private catalog details.")), steps: ["read", "catalog"] },
+  { label: "throws", result: new Error("Synthetic private catalog exception."), steps: ["read", "catalog"] },
+  { label: "omits the deletion acknowledgement", result: { ok: true, value: {} } as unknown as CatalogResult, steps: ["read", "catalog"] },
+  { label: "returns a nonboolean success flag", result: { ok: "true", value: { deleted: false } } as unknown as CatalogResult, steps: ["read", "catalog"] },
+] as const) {
+  test(`keeps the model record when catalog cleanup ${scenario.label}`, async () => {
+    const { useCase, steps } = fixture(localModel, undefined, scenario.result);
+    await assert.rejects(useCase.execute({ ...identity, deleteBackingArtifacts: true }), {
+      code: "unavailable",
+      message: "The model record was kept because cleanup of its related artifact records could not be confirmed.",
+    });
+    assert.deepEqual(steps, scenario.steps);
+  });
+}
+
+test("keeps the model record and local files when requested catalog cleanup has no port", async () => {
+  const { useCase, steps } = fixture(localModel, true, null);
+  await assert.rejects(useCase.execute({ ...identity, deleteLocalFiles: true, deleteBackingArtifacts: true }), { code: "unavailable" });
+  assert.deepEqual(steps, ["read"]);
+});
+
+test("reports only catalog deletions actually acknowledged by the port", async () => {
+  for (const deleted of [true, false]) {
+    const { useCase, steps } = fixture(localModel, undefined, { ok: true, value: { deleted } });
+    const result = await useCase.execute({ ...identity, deleteBackingArtifacts: true });
+    assert.equal(result.deletedRegistryRecord, true);
+    assert.deepEqual(result.deletedBackingArtifactIds, deleted ? ["synthetic-model-artifact"] : []);
+    assert.deepEqual(steps, ["read", "catalog", "registry"]);
+  }
+});
+
+test("allows record removal when there are no related artifact records to clean up", async () => {
+  const { useCase, steps } = fixture({ ...localModel, backingArtifactIds: [] }, undefined, null);
+  const result = await useCase.execute({ ...identity, deleteBackingArtifacts: true });
+  assert.equal(result.deletedRegistryRecord, true);
+  assert.deepEqual(result.deletedBackingArtifactIds, []);
   assert.deepEqual(steps, ["read", "registry"]);
 });

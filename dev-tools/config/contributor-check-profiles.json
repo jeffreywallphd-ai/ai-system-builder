@@ -24,6 +24,8 @@
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
+        "modules/adapters/transport/api-express/model/registerModelManagementApiRoutes.ts",
+        "modules/adapters/transport/ipc-electron/model/registerModelManagementIpc.ts",
         "modules/application/use-cases/model/delete-model-record.use-case.ts"
       ]
     },

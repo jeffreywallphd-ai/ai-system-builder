@@ -1,4 +1,5 @@
 import { ModelLocalFileEffectsUnavailableError } from "../../../../application/ports/model";
+import { ModelBackingArtifactCleanupUnavailableError } from "../../../../application/use-cases/model";
 import { normalizeEditableModelRecordRequest } from "../../../../contracts/model";
 import type {
   BrowseModelsUseCase,
@@ -172,12 +173,13 @@ function toFailureResponse<
   request: { requestId?: string; correlationId?: string },
 ): TResponse {
   const unavailable = isRuntimeCapabilityUnavailableError(error);
-  const fileEffectsUnavailable = error instanceof ModelLocalFileEffectsUnavailableError;
+  const cleanupUnavailable = error instanceof ModelLocalFileEffectsUnavailableError
+    || error instanceof ModelBackingArtifactCleanupUnavailableError;
   return createIpcFailureResponse(
     createIpcError(
       channel,
-      unavailable || fileEffectsUnavailable ? "unavailable" : "internal",
-      fileEffectsUnavailable ? error.message : unavailable
+      unavailable || cleanupUnavailable ? "unavailable" : "internal",
+      cleanupUnavailable ? error.message : unavailable
         ? "Required runtime capability is not ready."
         : "Model management request failed.",
       {

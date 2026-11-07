@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import { getExpressAuthContext } from "../security/expressAuthContext";
 import { getExpressOrganizationContext } from "../security/expressOrganizationContext";
+import { ModelBackingArtifactCleanupUnavailableError } from "../../../../application/use-cases/model";
 import type { BrowseModelsUseCase, DeleteModelRecordUseCase, DownloadModelUseCase, GetModelDetailsUseCase, ListModelFilesUseCase, ListModelsUseCase, ModelDownloadTasksUseCase, PublishModelUseCase, SaveModelReferenceUseCase, UpdateModelRecordUseCase, ValidateModelUseCase } from "../../../../application/use-cases/model";
 import { createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
 import { isRuntimeCapabilityUnavailableError } from "../../../../application/services/runtime";
@@ -81,6 +82,7 @@ const mapFailureCode = (error: unknown): "internal" | "validation" | "not-found"
 const statusCode = (response: { ok: boolean; error?: { code: string } }) => response.ok ? 200 : response.error?.code === "validation" ? 400 : response.error?.code === "not-found" ? 404 : response.error?.code === "unavailable" ? 503 : 500;
 
 const safeFailureMessage = (code: "internal" | "validation" | "not-found" | "unavailable", error: unknown): string => {
+  if (error instanceof ModelBackingArtifactCleanupUnavailableError) return error.message;
   if (code === "unavailable") return "Required runtime capability is not ready.";
   if (code === "validation") return error instanceof Error ? error.message : "Request validation failed.";
   if (code === "not-found") return "Model resource was not found.";

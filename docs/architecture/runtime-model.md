@@ -953,6 +953,11 @@ and stops before catalog writes. Record-only removal does not call the file
 port. The `model-file-delete-ack` profile covers this application decision and
 the disabled production adapter with model-free tests.
 
+When a removal requests cleanup of related artifact records, a missing catalog
+service or an unconfirmed result also preserves the model record. A confirmed
+absence permits a retry to finish and is omitted from the removed-record list.
+Artifact catalog deletion requires its own authorization.
+
 The fixed `windows-file-identity` profile runs only two model-free unit files.
 Actual installed-toolchain/native fixtures are separate observations; their
 identity and exit evidence cannot prove a stable tree fence. New child files
