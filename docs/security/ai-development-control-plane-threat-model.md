@@ -840,3 +840,12 @@ Feature-owned trigger paths and complete declared coverage have different roles.
 Shared configuration and borrowed tests must not activate an unrelated profile.
 Startup-only palette work selects the new profile explicitly. Missing required
 profile data still fails closed; do not ignore it to repair cross-profile routing.
+
+Combined source ownership uses only selected, structurally valid profiles from
+one captured configuration document. Keep the existing 200-source and 100-test
+bounds, exact paths and unique test entries. Validate all selected profiles before
+removing a fallback, even when an earlier profile already covers every path.
+Unselected declarations never authorize coverage. Unknown or jointly uncovered
+source and an explicit generic requirement retain the generic check. This routing
+repair changes no command identity, process authority or qualification threshold.
+Actual profile execution and candidate-bound review remain mandatory.

@@ -12,31 +12,47 @@ const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit
 
 /** Use the mounted navigation layout. Never force a hidden sidebar control. */
 export async function navigateCriticalApplicationArea(page: Page, area: "Home" | "Data" | "Artifacts" | "Context") {
+  let stage = "target-admission";
   try {
     if (!["Home", "Data", "Artifacts", "Context"].includes(area)) throw new Error();
+    stage = "sidebar-admission";
     const sidebar = page.locator("aside.ui-shell__sidebar");
     if (await sidebar.count() !== 1) throw new Error();
     if (await sidebar.isVisible()) {
+      stage = "sidebar-target-admission";
       const target = sidebar.getByRole("button", { name: area, exact: true });
       if (await target.count() !== 1) throw new Error();
+      stage = "sidebar-target-visibility";
       await target.waitFor({ state: "visible" });
+      stage = "sidebar-target-activation";
       await target.click();
       return;
     }
-    const trigger = page.getByRole("button", { name: "Open navigation menu", exact: true });
+    stage = "menu-trigger-admission";
+    // SUMMARY is a native disclosure control. Playwright does not give it the
+    // same implicit role as BUTTON; retain its actual markup and keyboard use.
+    const trigger = page.locator('summary.ui-shell__menu-trigger[aria-label="Open navigation menu"]');
     const menu = page.getByRole("menu", { name: "Application navigation", exact: true, includeHidden: true });
     if (await trigger.count() !== 1 || await menu.count() !== 1) throw new Error();
+    stage = "menu-trigger-visibility";
     await trigger.waitFor({ state: "visible" });
+    stage = "menu-trigger-state";
     const expanded = await trigger.getAttribute("aria-expanded");
     if (expanded !== "true" && expanded !== "false") throw new Error();
+    stage = "menu-trigger-activation";
     if (expanded === "false") await trigger.press("Enter");
+    stage = "menu-visibility";
     await menu.waitFor({ state: "visible" });
+    stage = "menu-target-admission";
     const target = menu.getByRole("menuitem", { name: area, exact: true });
     if (await target.count() !== 1) throw new Error();
+    stage = "menu-target-visibility";
     await target.waitFor({ state: "visible" });
+    stage = "menu-target-activation";
     await target.press("Enter");
+    stage = "menu-closure";
     await menu.waitFor({ state: "hidden" });
-  } catch { throw new Error("Critical application navigation failed."); }
+  } catch { throw new Error(`Critical application navigation failed. Stage: ${stage}.`); }
 }
 
 /** Owning test launchers prepare standard Pages. Native zoom stays unmodified. */

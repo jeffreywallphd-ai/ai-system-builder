@@ -11345,6 +11345,51 @@
       "limitations": [
         "This is local source and synthetic fixture evidence, not an actual browser or desktop pass. All seven related source checks passed after an earlier operational attempt failed without a reproduced cause; both results remain recorded. The failed real host attempts and pending forced-colors, native, provider and parent qualification remain open. Accepted model accuracy stays closed. Full software testing is deferred to the combined campaign."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "fix-shared-forced-colors-control-and-reading-states",
+      "work_criteria": [
+        "forced-color-source-and-state-contracts-are-exact"
+      ],
+      "receipt_digest": "c9e1fd623ad995b55a4e9addd3eccfc8f82e414608fbd2b854dcfc66760a76de",
+      "review_digest": "2966e8c23f5828a4f94d165975859bef882c38b2c577a0b2c80ec7c71f376217",
+      "scope": "The shared system-color source layer, native choice controls, disabled and selected states, workflow cards and keyboard focus passed five scoped source checks and separate review. The completed source checkpoint is committed as569821987.",
+      "limitations": [
+        "Source and selector checks do not qualify real app painting. The later V3 browser trial removed the earlier65 contrast violations but retained two unresolved checks and a native navigation failure. Desktop did not run. That actual failure is independently reviewed and preserved; no parent criterion passes. Completed model accuracy stays closed. Full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "fix-shared-forced-colors-control-and-reading-states",
+      "work_criteria": [
+        "forced-color-source-and-state-contracts-are-exact"
+      ],
+      "receipt_digest": "c9e1fd623ad995b55a4e9addd3eccfc8f82e414608fbd2b854dcfc66760a76de",
+      "review_digest": "2966e8c23f5828a4f94d165975859bef882c38b2c577a0b2c80ec7c71f376217",
+      "scope": "The shared system-color source layer, native choice controls, disabled and selected states, workflow cards and keyboard focus passed five scoped source checks and separate review. The completed source checkpoint is committed as569821987.",
+      "limitations": [
+        "Source and selector checks do not qualify real app painting. The later V3 browser trial removed the earlier65 contrast violations but retained two unresolved checks and a native navigation failure. Desktop did not run. That actual failure is independently reviewed and preserved; no parent criterion passes. Completed model accuracy stays closed. Full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-shared-forced-colors-control-and-reading-states",
+      "work_criteria": [
+        "forced-color-source-and-state-contracts-are-exact"
+      ],
+      "receipt_digest": "c9e1fd623ad995b55a4e9addd3eccfc8f82e414608fbd2b854dcfc66760a76de",
+      "review_digest": "2966e8c23f5828a4f94d165975859bef882c38b2c577a0b2c80ec7c71f376217",
+      "scope": "The shared system-color source layer, native choice controls, disabled and selected states, workflow cards and keyboard focus passed five scoped source checks and separate review. The completed source checkpoint is committed as569821987.",
+      "limitations": [
+        "Source and selector checks do not qualify real app painting. The later V3 browser trial removed the earlier65 contrast violations but retained two unresolved checks and a native navigation failure. Desktop did not run. That actual failure is independently reviewed and preserved; no parent criterion passes. Completed model accuracy stays closed. Full software testing remains deferred."
+      ]
     }
   ]
 }

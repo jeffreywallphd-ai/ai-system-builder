@@ -466,8 +466,17 @@ class OperationalUiProfile(unittest.TestCase):
                 profile = self.profile()
                 profile["source_paths"].remove(missing)
                 configuration["profiles"]["operational-ui"] = profile
+                configuration["profiles"]["dataset-version-browser"]["source_paths"] = [source]
                 (root / CONFIG).write_text(json.dumps(configuration))
-                self.assertIn("focused-tests", {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]})
+                ids = {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]}
+                self.assertEqual("focused-tests" in ids, missing != source)
+                if missing == source:
+                    # Another selected owner covers it until BOTH declarations
+                    # omit it. Physical source presence alone grants no coverage.
+                    configuration["profiles"]["dataset-version-browser"]["source_paths"] = [admission]
+                    (root / CONFIG).write_text(json.dumps(configuration))
+                    ids = {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]}
+                    self.assertIn("focused-tests", ids)
 
     def test_native_desktop_helper_is_exact_borrowed_coverage(self):
         helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
@@ -775,24 +784,28 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertIn(common, profile["source_paths"])
         self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[-1], common)
         self.assertTrue(any(name not in functional["source_paths"] + functional["test_paths"] for name in paths))
-        for incomplete, required, affected, generic in [
-            (False, ["operational-ui"], paths, False),
-            (False, ["operational-ui", "focused-tests"], paths, True),
-            (True, ["operational-ui"], paths, True),
-            (False, ["operational-ui"], paths + ["dev-tools/scripts/qualification/visual-composer/e2e/unknown-navigation.ts"], True),
+        for incomplete, both, required, affected, generic in [
+            (False, False, ["operational-ui"], paths, False),
+            (False, False, ["operational-ui", "focused-tests"], paths, True),
+            (True, False, ["operational-ui"], paths, False),
+            (True, True, ["operational-ui"], paths, True),
+            (False, False, ["operational-ui"], paths + ["dev-tools/scripts/qualification/visual-composer/e2e/unknown-navigation.ts"], True),
         ]:
-            with self.subTest(incomplete=incomplete, required=required, affected=affected), tempfile.TemporaryDirectory(prefix="workspace-navigation-owner-") as directory:
+            with self.subTest(incomplete=incomplete, both=both, required=required, affected=affected), tempfile.TemporaryDirectory(prefix="workspace-navigation-owner-") as directory:
                 root = Path(directory)
                 selected_profile = self.profile()
+                selected_functional = json.loads(json.dumps(functional))
                 if incomplete:
                     selected_profile["source_paths"].remove(common)
+                if both:
+                    selected_functional["source_paths"].remove(common)
                 self.fixture(root, selected_profile)
                 for name in set(functional["source_paths"] + functional["test_paths"]):
                     target = root / name
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_bytes((ROOT / name).read_bytes())
                 (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
-                    "operational-ui": selected_profile, "functional-host-ui": functional,
+                    "operational-ui": selected_profile, "functional-host-ui": selected_functional,
                 }}))
                 ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
                 self.assertIn("functional-host-ui", ids)
@@ -815,25 +828,78 @@ class OperationalUiProfile(unittest.TestCase):
         dataset = json.loads((ROOT / CONFIG).read_bytes())["profiles"]["dataset-version-browser"]
         self.assertTrue(doc in profile["source_paths"], "The provided-journey guide needs exact profile coverage.")
         self.assertEqual(profile["test_paths"], TESTS)
-        for missing, explicit, unknown, generic in [
-            (None, False, False, False), (doc, False, False, True),
-            (critical, False, False, True), (None, True, False, True),
-            (None, False, True, True),
+        for missing, both, explicit, unknown, generic in [
+            (None, False, False, False, False), (doc, False, False, False, False),
+            (doc, True, False, False, True),
+            (critical, False, False, False, True), (None, False, True, False, True),
+            (None, False, False, True, True),
         ]:
-            with self.subTest(missing=missing, explicit=explicit, unknown=unknown), tempfile.TemporaryDirectory(prefix="provided-navigation-owner-") as directory:
+            with self.subTest(missing=missing, both=both, explicit=explicit, unknown=unknown), tempfile.TemporaryDirectory(prefix="provided-navigation-owner-") as directory:
                 root = Path(directory)
                 declared = self.profile()
+                selected_dataset = json.loads(json.dumps(dataset))
                 if missing:
                     declared["source_paths"].remove(missing)
+                if both:
+                    selected_dataset["source_paths"].remove(missing)
                 self.fixture(root, declared)
                 (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
-                    "operational-ui": declared, "dataset-version-browser": dataset,
+                    "operational-ui": declared, "dataset-version-browser": selected_dataset,
                 }}))
                 affected = paths + ([prefix + "visual-composer/e2e/unreviewed-navigation.ts"] if unknown else [])
                 required = ["operational-ui", "dataset-version-browser"] + (["focused-tests"] if explicit else [])
                 ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
                 self.assertTrue({"operational-ui", "dataset-version-browser"}.issubset(ids))
                 self.assertEqual("focused-tests" in ids, generic)
+
+    def test_composed_styles_and_navigation_use_selected_coverage_and_one_config_read(self):
+        style = "modules/ui/shared/styles/forced-colors.css"
+        navigation = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        profiles = json.loads((ROOT / CONFIG).read_bytes())["profiles"]
+        for unknown, explicit, generic in [(False, False, False), (True, False, True), (False, True, True)]:
+            with self.subTest(unknown=unknown, explicit=explicit), tempfile.TemporaryDirectory(prefix="composed-feature-owner-") as directory:
+                root = Path(directory)
+                self.fixture(root, profiles["operational-ui"])
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": profiles["operational-ui"], "shared-forced-colors": profiles["shared-forced-colors"],
+                }}))
+                affected = [style, navigation] + (["modules/ui/shared/styles/unknown-feature.css"] if unknown else [])
+                required = ["documentation"] + (["focused-tests"] if explicit else [])
+                with patch.object(catalog, "read_json", wraps=catalog.read_json) as read:
+                    ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertTrue({"operational-ui", "shared-forced-colors"}.issubset(ids))
+                self.assertEqual("focused-tests" in ids, generic)
+                self.assertEqual(read.call_count, 1)
+
+    def test_unselected_declarations_cannot_cover_unknown_impact(self):
+        unknown = "modules/ui/shared/styles/unknown-feature.css"
+        with tempfile.TemporaryDirectory(prefix="unselected-feature-owner-") as directory:
+            root = Path(directory)
+            profile = self.profile()
+            self.fixture(root, profile)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                "operational-ui": profile,
+                "shared-forced-colors": {"source_paths": [unknown], "test_paths": [TESTS[0]]},
+            }}))
+            with patch.object(catalog, "read_json", wraps=catalog.read_json) as read:
+                ids = {row["id"] for row in catalog.plan(root, [unknown], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+            self.assertNotIn("shared-forced-colors", ids)
+            self.assertNotIn("operational-ui", ids)
+            self.assertEqual(read.call_count, 0)
+
+    def test_every_selected_profile_is_validated_before_fallback_is_removed(self):
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        for bad in [[], [None], [TESTS[0], TESTS[0]], [f"dev-tools/example-{i}.test.mjs" for i in range(101)], "invalid"]:
+            with self.subTest(bad=type(bad).__name__), tempfile.TemporaryDirectory(prefix="invalid-selected-owner-") as directory:
+                root = Path(directory)
+                self.fixture(root, self.profile())
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": self.profile(),
+                    "shared-forced-colors": {"source_paths": [source], "test_paths": bad},
+                }}))
+                with self.assertRaises(ControlError):
+                    catalog.plan(root, [source], ["operational-ui", "shared-forced-colors"], "synthetic-candidate")
 
 
 if __name__ == "__main__":

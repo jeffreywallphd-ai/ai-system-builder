@@ -160,3 +160,22 @@ check each title/content/citation, progress index/total, navigation boundaries a
 Not reviewed to Approved state, then revisit every approval. Mutations, extra or
 missing items and duplicate approvals cannot satisfy that oracle. Form/source
 selectors are scoped to the active named tab panel, including persistent tabs.
+
+The third serial app attempt reached both browser tests. Ordinary wide and narrow
+accessibility audits passed. Forced colors had no violations and 65 positive
+contrast samples, but two pseudo-content checks remained unresolved. Desktop did
+not run. Keep that failed observation and its independently checked process
+retirement in `docs/operations/provided-data-serial-host-qualification.json`.
+
+The narrow shell uses a native `summary` disclosure. Its test selects that exact
+visible element and operates it by keyboard. Do not assume that Playwright gives
+it a button role, force a hidden sidebar control or change the product role for
+the test. Navigation failures report only a fixed source stage. They never include
+the exception, selector, page text or private payload. A DOM regression checks the
+actual shell declarations on both hosts and reproduces the old role assumption.
+
+In forced colors, the opaque step card supplies the workflow number's backdrop.
+The number keeps its content, system foreground and border, with a transparent
+background. The official audit can classify opaque positioned pseudo-elements as
+covering nearby text. This source-based repair still needs an actual app audit;
+do not ignore incomplete nodes or change the engine, rules or contrast targets.

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 const probe = vi.hoisted(() => ({ exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
   forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false,
@@ -34,6 +35,32 @@ const context = () => ({ schemaVersion: "critical-accessibility-context-v1", run
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
 
 describe("responsive Data and Context navigation driver", () => {
+  it("operates the actual native disclosure markup without inventing a button role", async () => {
+    // The installed Playwright role map does not assign SUMMARY a button role.
+    // Keep the DOM shape distinct from a button, unlike the inert API-only driver.
+    for(const name of ["apps/desktop/src/renderer/components/layout/AppShell.tsx","apps/thin-client/src/components/layout/AppShell.tsx"]) {
+      const source=readFileSync(path.resolve(name),"utf8"),summary=source.match(/<summary\s[\s\S]*?>/g);
+      expect(summary).toHaveLength(1);expect(summary![0]).toContain('className="ui-shell__menu-trigger"');
+      expect(summary![0]).toContain('aria-label="Open navigation menu"');expect(summary![0]).toContain('aria-haspopup="menu"');
+      expect(summary![0]).toContain("aria-expanded={isMenuExpanded}");expect(summary![0]).not.toMatch(/\brole\s*=/);
+    }
+    const host=document.createElement("div");
+    host.innerHTML='<aside class="ui-shell__sidebar" hidden></aside><details><summary class="ui-shell__menu-trigger" aria-label="Open navigation menu" aria-expanded="false" aria-haspopup="menu">Menu</summary><div role="menu" aria-label="Application navigation"><button role="menuitem">Artifacts</button></div></details>';
+    document.body.append(host);
+    const details=host.querySelector("details")!,summary=host.querySelector("summary")!,item=host.querySelector("button")!;
+    let activations=0;
+    summary.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();details.open=true;summary.setAttribute("aria-expanded","true");}});
+    item.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();activations++;details.open=false;summary.setAttribute("aria-expanded","false");}});
+    const locator=(nodes:Element[])=>({count:async()=>nodes.length,isVisible:async()=>!nodes[0]?.hasAttribute("hidden"),
+      getAttribute:async(name:string)=>nodes[0]?.getAttribute(name)??null,
+      waitFor:async({state}:{state:string})=>{expect(nodes).toHaveLength(1);expect(state==="hidden"?!details.open:!nodes[0]!.hasAttribute("hidden")).toBe(true);},
+      press:async(key:string)=>{expect(nodes).toHaveLength(1);nodes[0]!.dispatchEvent(new KeyboardEvent("keydown",{key,bubbles:true,cancelable:true}));},
+      getByRole:(role:string,{name}:{name:string})=>locator(Array.from(nodes[0]!.querySelectorAll(`[role="${role}"]`)).filter(node=>node.textContent===name))});
+    const page={locator:(selector:string)=>locator(Array.from(host.querySelectorAll(selector))),
+      getByRole:(role:string,{name}:{name:string})=>locator(Array.from(host.querySelectorAll(role==="button"?'button:not([role]),[role="button"]':`[role="${role}"]`)).filter(node=>node.getAttribute("aria-label")===name))} as unknown as Page;
+    try {await navigateCriticalApplicationArea(page,"Artifacts");expect(activations).toBe(1);expect(details.open).toBe(false);}
+    finally {host.remove();}
+  });
   function driver(wide: boolean, opened = false, failure = "") {
     const calls: string[] = [];
     const control = (name: string) => ({
@@ -48,10 +75,12 @@ describe("responsive Data and Context navigation driver", () => {
       },
     });
     const page = {
-      locator: (selector: string) => { expect(selector).toBe("aside.ui-shell__sidebar"); return control("sidebar"); },
+      locator: (selector: string) => {
+        if(selector === "aside.ui-shell__sidebar")return control("sidebar");
+        expect(selector).toBe('summary.ui-shell__menu-trigger[aria-label="Open navigation menu"]');return control("trigger");
+      },
       getByRole: (role: string, { name, exact, includeHidden }: { name: string; exact: boolean; includeHidden?: boolean }) => {
         expect(exact).toBe(true);
-        if (role === "button" && name === "Open navigation menu") return control("trigger");
         expect(role).toBe("menu"); expect(name).toBe("Application navigation"); expect(includeHidden).toBe(true); return control("menu");
       },
     } as unknown as Page;
@@ -82,9 +111,24 @@ describe("responsive Data and Context navigation driver", () => {
     "menu:missing", "menu:duplicate", "menu:visible", "menu/menuitem:Artifacts:missing", "menu/menuitem:Artifacts:duplicate",
     "menu/menuitem:Artifacts:visible", "menu/menuitem:Artifacts:activate", "menu:hidden"])("redacts %s and never retries activation", async failure => {
     const { page, calls } = driver(failure.startsWith("sidebar/button"), false, failure);
-    await expect(navigateCriticalApplicationArea(page, "Artifacts")).rejects.toThrow("Critical application navigation failed.");
+    const error=await navigateCriticalApplicationArea(page,"Artifacts").then(()=>undefined,error=>error);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toMatch(/^Critical application navigation failed\. Stage: (sidebar-admission|sidebar-target-admission|sidebar-target-visibility|sidebar-target-activation|menu-trigger-admission|menu-trigger-visibility|menu-trigger-state|menu-trigger-activation|menu-visibility|menu-target-admission|menu-target-visibility|menu-target-activation|menu-closure)\.$/);
+    expect(error.message).not.toContain("synthetic-private");expect("cause" in error).toBe(false);
     expect(calls.filter(call => call === "trigger:press:Enter").length).toBeLessThanOrEqual(1);
     expect(calls.filter(call => call.endsWith(":click") || call === "menu/menuitem:Artifacts:press:Enter").length).toBeLessThanOrEqual(1);
+  });
+  it.each([
+    ["trigger:missing","menu-trigger-admission"],
+    ["trigger:activate","menu-trigger-activation"],
+    ["menu/menuitem:Artifacts:activate","menu-target-activation"],
+    ["menu:hidden","menu-closure"],
+  ])("reports only a fixed diagnostic stage for %s",async(failure,stage)=>{
+    const error=await navigateCriticalApplicationArea(driver(false,false,failure).page,"Artifacts").then(()=>undefined,error=>error);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe(`Critical application navigation failed. Stage: ${stage}.`);
+    expect("cause" in error).toBe(false);
+    expect(error.message).not.toContain("synthetic-private");
   });
 });
 

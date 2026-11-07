@@ -305,19 +305,31 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     if any(not matches for matches in covered.values()):
         refuse("verification.unclassified-impact", "Every changed path must have a tracked verification rule.", "Add a bounded catalog rule and a regression test for the uncovered impact.")
     selected = [c for c in checks if c["id"] in required or any(c["id"] in matches for matches in covered.values())]
-    for profile_id in QUALIFICATION_PROFILES:
-        if profile_id not in {c["id"] for c in selected}:
-            continue
+    declared_sources = set()
+    selected_ids = {c["id"] for c in selected}
+    selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
+    if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))
+        fields(data, {"schema_version", "profiles"}, {"schema_version", "profiles"})
+        if data["schema_version"] != "contributor-check-profiles-v1" or not isinstance(data["profiles"], dict):
+            refuse("verification.profile-schema", "Use the versioned source-owned profile schema.")
+    for profile_id in selected_profiles:
         profile = data.get("profiles", {}).get(profile_id)
         fields(profile, {"test_paths", "source_paths"}, {"test_paths", "source_paths"})
         source_paths = profile["source_paths"]
         if not isinstance(source_paths, list) or not 1 <= len(source_paths) <= 200 or not all(isinstance(p, str) for p in source_paths):
             refuse("verification.profile-coverage", "Use bounded explicit source coverage for a registered profile.")
-        declared = {relative(p) for p in source_paths + profile["test_paths"]}
-        focused = [p for p, matches in covered.items() if "focused-tests" in matches]
-        if "focused-tests" not in required and all(p in declared for p in focused):
-            selected = [c for c in selected if c["id"] != "focused-tests"]
+        test_paths = profile["test_paths"]
+        if (not isinstance(test_paths, list) or not 1 <= len(test_paths) <= 100
+                or not all(isinstance(p, str) for p in test_paths)
+                or len(set(test_paths)) != len(test_paths)):
+            refuse("verification.profile-coverage", "Use bounded explicit tests for a registered profile.")
+        declared_sources.update(relative(p) for p in source_paths + test_paths)
+    # Joint ownership comes only from selected, individually valid profiles.
+    # Unknown paths and an explicitly requested generic check retain fallback.
+    focused = [p for p, matches in covered.items() if "focused-tests" in matches]
+    if "focused-tests" not in required and all(p in declared_sources for p in focused):
+        selected = [c for c in selected if c["id"] != "focused-tests"]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value

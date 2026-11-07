@@ -85,7 +85,8 @@
   :root .ui-workflow__step:first-of-type::before,
   :root .ui-workflow__step[data-active="true"]::before,
   :root .ui-workflow__step:has(.ui-panel__toggle[aria-expanded="true"])::before {
-    background: Canvas;
+    /* The opaque Canvas card supplies the number's backdrop. */
+    background: transparent;
     color: CanvasText;
     border-color: CanvasText;
     box-shadow: none;

@@ -7,15 +7,16 @@
     "sentences": [
       "No action needed.",
       "The app package was built.",
-      "Both browser tests started and failed.",
-      "Desktop tests did not run.",
-      "I will correct the navigation test and investigate the forced-colors audit before a new app run."
+      "Ordinary wide and narrow contrast checks passed.",
+      "The high-contrast audit found no violations, but two checks remain unresolved.",
+      "The narrow navigation test failed. Desktop tests did not run.",
+      "I will fix the test control selection and the workflow number backdrops before new app checks."
     ]
   },
-  "source_revision": "source.8a74f6f411cc2cdaac72e639016c6bd2762e90d240f0adcf22a65e394c2613b0",
-  "primary_base_commit": "608679a6095ef5617921e504bf208858df6a7c49",
-  "tested_candidate_commit": "34de446944dca5d0d34f766574fe7f996fef57cf",
-  "source_snapshot": "The tested candidate commit records all3949 admitted raw working files, including existing modified files and10 previously untracked files. The primary base commit is lineage only; it does not imply bare-HEAD equivalence. The source_revision binds the tested product source.",
+  "source_revision": "source.22c17d1aa3bdd4b8f93d2e6a34d84f80a90b052a42ecf365188cdff258bd225d",
+  "primary_base_commit": "5698219870d571c9747807c25e480c9941d936f8",
+  "tested_candidate_commit": "ddd0963a415184c578104445072c7f98ef4a5868",
+  "source_snapshot": "The tested candidate commit records all3953 admitted raw working files, including existing changes and10 previously untracked files. The primary base commit is lineage only. The source revision binds the tested product source.",
   "package": {
     "status": "passed",
     "source_and_worker_resource_checks_passed": true,
@@ -23,8 +24,8 @@
     "job_limit_bytes": 2147483648,
     "active_process_limit": 32,
     "peak_commit": {
-      "process_commit_bytes": 863203328,
-      "job_commit_bytes": 1687560192
+      "process_commit_bytes": 863055872,
+      "job_commit_bytes": 1638588416
     }
   },
   "thin_browser": {
@@ -32,10 +33,60 @@
     "required_tests": 2,
     "passed_tests": 0,
     "failures": [
-      "The standard test failed the forced-colors audit at dataset preparation.",
-      "The native400 test selected hidden sidebar Artifacts instead of the responsive menu."
+      "The standard test reached dataset preparation: ordinary1440px and320px audits passed. Forced-colors1440px has zero violations and65 positive contrast samples, but two unresolved color-contrast checks remain after two retries.",
+      "The native400 test failed navigation. Its saved diagnostic does not identify the branch. Source inspection found a button-role lookup for the native summary control."
     ],
-    "automatic_retry": false
+    "automatic_retry": false,
+    "accessibility_partial_observation": {
+      "surface": "dataset-preparation",
+      "ordinary_audits": [
+        {
+          "contrastPassedNodes": 67,
+          "incomplete": [],
+          "retries": {
+            "attempted": 0,
+            "passed": 0
+          },
+          "schemaVersion": "technical-accessibility-audit-v1",
+          "violations": [],
+          "width": 1440
+        },
+        {
+          "contrastPassedNodes": 49,
+          "incomplete": [],
+          "retries": {
+            "attempted": 0,
+            "passed": 0
+          },
+          "schemaVersion": "technical-accessibility-audit-v1",
+          "violations": [],
+          "width": 320
+        }
+      ],
+      "forced_colors_audits": [
+        {
+          "contrastPassedNodes": 65,
+          "incomplete": [
+            {
+              "nodes": 2,
+              "rule": "color-contrast"
+            }
+          ],
+          "retries": {
+            "attempted": 2,
+            "passed": 0
+          },
+          "schemaVersion": "technical-accessibility-audit-v1",
+          "violations": [],
+          "width": 1440
+        }
+      ],
+      "unresolved_reason": "pseudoContent",
+      "region": "shellContent",
+      "clipped_ancestor_hints": 2,
+      "exact_failed_elements_recorded": false,
+      "overall_audit_passed": false
+    }
   },
   "desktop": {
     "status": "not-run",
@@ -69,24 +120,30 @@
   },
   "all_primary_candidate_and_runtime_inputs_preserved": true,
   "evidence_sha256": {
-    "outer_result": "d575b1e0e4d4d4ce811be4fd42e9d1783d1f8e2f4df30e5e04470a3aac02cf4d",
-    "outer_native": "07f6baf2003a4437bbad9a48cabd0323c2e3500f5ef39785c6c36020c471eb61",
-    "coordinator": "834784e791708f1fd7195aa94b8efb8f790d7e98fadcb037da74279e39f10f4b",
-    "package_native": "53ee7f72a57695f3d5ad0b407dda5f5ac17508c12a7962562c6d6b344439b045",
-    "thin_native": "4ae678c51ae66c9cda281c756758208888343c8e471ae2ea3e67deb63480dd8e",
-    "independent_failed_result_review": "1f2d2e8d9d4969316099a7041f31311384163abead7ba309d96304072171d87d"
+    "outer_result": "df29609a2cbe46f1402d6225c0ccc8a8ba64354e35e1c7483df9b7d50240425b",
+    "outer_native": "8047fcc7e5021bdfff2571a263ab7926a421d1caa6a3ecd56166143abd8aa0dd",
+    "coordinator": "b8a85a01d9bcb46d8898f547553065b1b18411b91215f70209a1472d363d6803",
+    "package_native": "b1bfd3ceb6a86ebc6336a515a3905572fee63ab0ba2b359d977ef5e86f5b82b8",
+    "thin_native": "6b06bb72891487d676d75ba369866f09d72ff15882900039a8a57a2c416cad43",
+    "accessibility_partial_observation": "4639c83d968923de12048ab1ab4356c1d4d70a1d6e49be044b451a2553923ad5",
+    "independent_failed_result_review": "d07917b79f6ba1fd9502febb0c253d9719f4e3b2bbbb867a002512b3f274a200"
   },
   "source_repairs": {
     "worker_config": "Use deterministic per-project output directories; keep strict parent project admission.",
     "diagnostic": "A failed command is distinct from unconfirmed cleanup.",
     "focused_regression": "The inert worker import reproduced the same zero-selector assertion, then passed after correction.",
-    "responsive_navigation": "Current source selects real sidebar or keyboard-operated menu and header Settings; a fresh actual host run is required."
+    "responsive_navigation": "Current source selects real sidebar or keyboard-operated menu and header Settings; a fresh actual host run is required.",
+    "system_colors": "The committed shared system palette removes the earlier65 reported contrast violations. Two unresolved pseudo-content observations still prevent an audit pass.",
+    "native_disclosure": "Use the exact native summary control instead of an assumed button role; retain keyboard, visibility, uniqueness and closure checks with fixed diagnostic stages.",
+    "workflow_counter": "The current source uses transparent numeral backdrops over opaque system-color cards. This is a source-derived repair hypothesis for the two unresolved observations, pending a fresh actual audit."
   },
   "scope_limits": [
-    "This is a failed app attempt, not passing UI or parent-roadmap qualification.",
-    "The package and safe-retirement subset applies only to the exact historical source and artifacts tested. Corrected helpers need a fresh reviewed app attempt.",
+    "This is a failed app attempt. It does not pass UI or parent-roadmap qualification.",
+    "Package and safe-retirement results apply only to the exact historical source tested. Source repairs need fresh reviewed app evidence.",
+    "The zero-violation and positive-contrast subset does not pass the two unresolved checks. The saved report does not identify the exact failed elements.",
+    "The native disclosure lookup mismatch is supported by source inspection, not a recorded runtime step. Fixed stage diagnostics will distinguish future failures.",
     "Committed memory is the Windows Job metric, not process RSS or total machine memory. No model accuracy, OCR, provider or offload test ran.",
-    "All consumed markers and failed evidence remain. The earlier Native9 retry is consumed. Existing supplier findings and other qualification gaps remain."
+    "All earlier failed attempts, consumed markers and evidence remain. The Native9 retry is already consumed. Supplier findings and other qualification gaps stay open."
   ],
   "parent_qualification_granted": false,
   "current_corrected_helpers_qualified": false,
@@ -94,21 +151,22 @@
   "prior_attempts": [
     {
       "schema_version": "provided-data-serial-host-qualification-v1",
-      "status": "failed-before-ui-test-bodies",
+      "status": "failed-in-ui-test-bodies",
       "observed_at": "2026-11-07",
       "user_description": {
         "owner": "agent",
         "sentences": [
           "No action needed.",
           "The app package was built.",
-          "The browser tests failed before they started.",
+          "Both browser tests started and failed.",
           "Desktop tests did not run.",
-          "I will fix the test setup and check it before a new app run."
+          "I will correct the navigation test and investigate the forced-colors audit before a new app run."
         ]
       },
-      "source_revision": "source.d40638d920f4dd243e5f6b10bdd55bbec3edc28331593969959c2649bc4ce5ce",
-      "primary_base_commit": "a1fd23c035bd5ccabea69f9da99e4c8fd09d23e2",
-      "tested_candidate_commit": "166a3f4682dc005436373cc639549d9113e38d16",
+      "source_revision": "source.8a74f6f411cc2cdaac72e639016c6bd2762e90d240f0adcf22a65e394c2613b0",
+      "primary_base_commit": "608679a6095ef5617921e504bf208858df6a7c49",
+      "tested_candidate_commit": "34de446944dca5d0d34f766574fe7f996fef57cf",
+      "source_snapshot": "The tested candidate commit records all3949 admitted raw working files, including existing modified files and10 previously untracked files. The primary base commit is lineage only; it does not imply bare-HEAD equivalence. The source_revision binds the tested product source.",
       "package": {
         "status": "passed",
         "source_and_worker_resource_checks_passed": true,
@@ -116,15 +174,18 @@
         "job_limit_bytes": 2147483648,
         "active_process_limit": 32,
         "peak_commit": {
-          "process_commit_bytes": 857481216,
-          "job_commit_bytes": 1695584256
+          "process_commit_bytes": 863203328,
+          "job_commit_bytes": 1687560192
         }
       },
       "thin_browser": {
-        "status": "failed-before-test-bodies",
+        "status": "failed-in-test-bodies",
         "required_tests": 2,
         "passed_tests": 0,
-        "failure": "Worker config import required a runner-only project argument.",
+        "failures": [
+          "The standard test failed the forced-colors audit at dataset preparation.",
+          "The native400 test selected hidden sidebar Artifacts instead of the responsive menu."
+        ],
         "automatic_retry": false
       },
       "desktop": {
@@ -159,17 +220,18 @@
       },
       "all_primary_candidate_and_runtime_inputs_preserved": true,
       "evidence_sha256": {
-        "outer_result": "fe93790abb8ddc4bef0e65678c2305b5f6286861aa024504f3e3e07c9f9bc27c",
-        "outer_native": "1b7d6dd8117cf3634a1b69e41b63350213858a0eee49d970f5c46aa50c36fcf4",
-        "coordinator": "784861c27a5fbdcdcb3075db42deed736c585c9fc540fb6eb1bb66d9f46d31f9",
-        "package_native": "9540ff98e5acd3ed2dc1b53ad49abef9842ee8df5b019bf6b8520c003fb487d0",
-        "thin_native": "855bd63b64fffee86f70f7412c6143a3e16dc5980e04887e50ce98ad16de48ce",
-        "independent_failed_result_review": "81afa09fdac78b5934a0a88bfcd02bc120070252c8782987a6e3aedcb9c7ff15"
+        "outer_result": "d575b1e0e4d4d4ce811be4fd42e9d1783d1f8e2f4df30e5e04470a3aac02cf4d",
+        "outer_native": "07f6baf2003a4437bbad9a48cabd0323c2e3500f5ef39785c6c36020c471eb61",
+        "coordinator": "834784e791708f1fd7195aa94b8efb8f790d7e98fadcb037da74279e39f10f4b",
+        "package_native": "53ee7f72a57695f3d5ad0b407dda5f5ac17508c12a7962562c6d6b344439b045",
+        "thin_native": "4ae678c51ae66c9cda281c756758208888343c8e471ae2ea3e67deb63480dd8e",
+        "independent_failed_result_review": "1f2d2e8d9d4969316099a7041f31311384163abead7ba309d96304072171d87d"
       },
       "source_repairs": {
         "worker_config": "Use deterministic per-project output directories; keep strict parent project admission.",
         "diagnostic": "A failed command is distinct from unconfirmed cleanup.",
-        "focused_regression": "The inert worker import reproduced the same zero-selector assertion, then passed after correction."
+        "focused_regression": "The inert worker import reproduced the same zero-selector assertion, then passed after correction.",
+        "responsive_navigation": "Current source selects real sidebar or keyboard-operated menu and header Settings; a fresh actual host run is required."
       },
       "scope_limits": [
         "This is a failed app attempt, not passing UI or parent-roadmap qualification.",
@@ -180,7 +242,109 @@
       "parent_qualification_granted": false,
       "current_corrected_helpers_qualified": false,
       "new_attempt_authorized_by_this_report": false,
-      "source_snapshot": "The tested candidate commit records all3948 admitted raw working files, including existing modified files and10 previously untracked files. The primary base commit is lineage only; it does not imply bare-HEAD equivalence. The source_revision binds the tested product source."
+      "prior_attempts": [
+        {
+          "schema_version": "provided-data-serial-host-qualification-v1",
+          "status": "failed-before-ui-test-bodies",
+          "observed_at": "2026-11-07",
+          "user_description": {
+            "owner": "agent",
+            "sentences": [
+              "No action needed.",
+              "The app package was built.",
+              "The browser tests failed before they started.",
+              "Desktop tests did not run.",
+              "I will fix the test setup and check it before a new app run."
+            ]
+          },
+          "source_revision": "source.d40638d920f4dd243e5f6b10bdd55bbec3edc28331593969959c2649bc4ce5ce",
+          "primary_base_commit": "a1fd23c035bd5ccabea69f9da99e4c8fd09d23e2",
+          "tested_candidate_commit": "166a3f4682dc005436373cc639549d9113e38d16",
+          "package": {
+            "status": "passed",
+            "source_and_worker_resource_checks_passed": true,
+            "process_limit_bytes": 1073741824,
+            "job_limit_bytes": 2147483648,
+            "active_process_limit": 32,
+            "peak_commit": {
+              "process_commit_bytes": 857481216,
+              "job_commit_bytes": 1695584256
+            }
+          },
+          "thin_browser": {
+            "status": "failed-before-test-bodies",
+            "required_tests": 2,
+            "passed_tests": 0,
+            "failure": "Worker config import required a runner-only project argument.",
+            "automatic_retry": false
+          },
+          "desktop": {
+            "status": "not-run",
+            "reason": "The browser predecessor failed."
+          },
+          "retirement": {
+            "outer": {
+              "root_exit_code": 1,
+              "active_processes": 0,
+              "handles_closed": true,
+              "streams_complete": true,
+              "forced_termination": false,
+              "limit_messages": []
+            },
+            "package": {
+              "root_exit_code": 0,
+              "active_processes": 0,
+              "handles_closed": true,
+              "streams_complete": true,
+              "forced_termination": false,
+              "limit_messages": []
+            },
+            "thin_browser": {
+              "root_exit_code": 1,
+              "active_processes": 0,
+              "handles_closed": true,
+              "streams_complete": true,
+              "forced_termination": false,
+              "limit_messages": []
+            }
+          },
+          "all_primary_candidate_and_runtime_inputs_preserved": true,
+          "evidence_sha256": {
+            "outer_result": "fe93790abb8ddc4bef0e65678c2305b5f6286861aa024504f3e3e07c9f9bc27c",
+            "outer_native": "1b7d6dd8117cf3634a1b69e41b63350213858a0eee49d970f5c46aa50c36fcf4",
+            "coordinator": "784861c27a5fbdcdcb3075db42deed736c585c9fc540fb6eb1bb66d9f46d31f9",
+            "package_native": "9540ff98e5acd3ed2dc1b53ad49abef9842ee8df5b019bf6b8520c003fb487d0",
+            "thin_native": "855bd63b64fffee86f70f7412c6143a3e16dc5980e04887e50ce98ad16de48ce",
+            "independent_failed_result_review": "81afa09fdac78b5934a0a88bfcd02bc120070252c8782987a6e3aedcb9c7ff15"
+          },
+          "source_repairs": {
+            "worker_config": "Use deterministic per-project output directories; keep strict parent project admission.",
+            "diagnostic": "A failed command is distinct from unconfirmed cleanup.",
+            "focused_regression": "The inert worker import reproduced the same zero-selector assertion, then passed after correction."
+          },
+          "scope_limits": [
+            "This is a failed app attempt, not passing UI or parent-roadmap qualification.",
+            "The package and safe-retirement subset applies only to the exact historical source and artifacts tested. Corrected helpers need a fresh reviewed app attempt.",
+            "Committed memory is the Windows Job metric, not process RSS or total machine memory. No model accuracy, OCR, provider or offload test ran.",
+            "All consumed markers and failed evidence remain. The earlier Native9 retry is consumed. Existing supplier findings and other qualification gaps remain."
+          ],
+          "parent_qualification_granted": false,
+          "current_corrected_helpers_qualified": false,
+          "new_attempt_authorized_by_this_report": false,
+          "source_snapshot": "The tested candidate commit records all3948 admitted raw working files, including existing modified files and10 previously untracked files. The primary base commit is lineage only; it does not imply bare-HEAD equivalence. The source_revision binds the tested product source."
+        }
+      ],
+      "worker_config_repair_observed": true,
+      "forced_colors_observation": {
+        "status": "failed",
+        "surface": "dataset-preparation",
+        "width": 1440,
+        "violations": 65,
+        "incomplete": 2,
+        "contrast_passed_nodes": 0,
+        "report_sha256": "4db915e49998cf4d7fa6a648d6585f13b1f3e164a253b46a0650c792ade5d706",
+        "cause": "Not established. Audit-tool behavior must be distinguished from product styling without suppressing failures."
+      }
     }
   ],
   "worker_config_repair_observed": true,
@@ -188,10 +352,10 @@
     "status": "failed",
     "surface": "dataset-preparation",
     "width": 1440,
-    "violations": 65,
+    "violations": 0,
     "incomplete": 2,
-    "contrast_passed_nodes": 0,
-    "report_sha256": "4db915e49998cf4d7fa6a648d6585f13b1f3e164a253b46a0650c792ade5d706",
-    "cause": "Not established. Audit-tool behavior must be distinguished from product styling without suppressing failures."
+    "contrast_passed_nodes": 65,
+    "report_sha256": "4639c83d968923de12048ab1ab4356c1d4d70a1d6e49be044b451a2553923ad5",
+    "cause": "Two unresolved pseudo-content checks remain in shell content. The saved report does not identify the exact elements. A transparent workflow-number backdrop is a source-based repair; actual app qualification is pending."
   }
 }

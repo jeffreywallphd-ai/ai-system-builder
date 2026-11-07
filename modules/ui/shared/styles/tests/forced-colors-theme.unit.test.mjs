@@ -131,7 +131,10 @@ test("expanded workflow cards and their counters keep the system pair without ch
     const cards=matches(f.rules,step).filter(rule=>value(rule,"background")==="Canvas"&&value(rule,"color")==="CanvasText");
     assert(cards.some(rule=>rule.selectorText.includes(':has(.ui-panel__toggle[aria-expanded="true"])')&&value(rule,"border-color")==="CanvasText"&&value(rule,"box-shadow")==="none"));
     const counters=f.rules.filter(rule=>rule.selectorText.includes("::before")&&rule.selectorText.includes("ui-workflow__step"));
-    assert(counters.some(rule=>rule.selectorText.includes(':has(.ui-panel__toggle[aria-expanded="true"])')&&value(rule,"background")==="Canvas"&&value(rule,"color")==="CanvasText"&&value(rule,"box-shadow")==="none"));
+    // The card is the opaque Canvas backdrop. A second opaque, absolutely
+    // positioned numeral plane makes the official audit unable to resolve
+    // nearby text backgrounds. Keep the number and border without that plane.
+    assert(counters.some(rule=>rule.selectorText.includes(':has(.ui-panel__toggle[aria-expanded="true"])')&&value(rule,"background")==="transparent"&&value(rule,"color")==="CanvasText"&&value(rule,"box-shadow")==="none"));
     for(const rule of counters)for(const property of ["content","counter-increment","counter-reset","z-index"])assert.equal(value(rule,property),"");
   } finally {f.close();}
 });

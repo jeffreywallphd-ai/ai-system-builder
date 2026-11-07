@@ -16383,6 +16383,32 @@
           "Full software testing will run in the combined testing phase. No action is needed from you for the remaining code work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "79fc48514da4a1884460163be8ad463211240db190dd59a5024d2bee496aaac1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared high-contrast styling passed its source checks and independent review.",
+          "Those changes are committed.",
+          "The checks covered system colors, controls, workflow cards and keyboard focus."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "abcb8c6f6ed045be192e49d02d49908572aeccc2e4514fb659e9c66d207b5727",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser's first dataset audit found no high-contrast violations, but two checks remain unresolved.",
+          "A narrow navigation test also failed. Desktop tests did not run.",
+          "The failed results remain recorded. These source changes do not complete the roadmap.",
+          "Completed model accuracy tests stay closed. Full software testing remains deferred.",
+          "No action is needed from you for this code work."
+        ]
+      }
     }
   ]
 }

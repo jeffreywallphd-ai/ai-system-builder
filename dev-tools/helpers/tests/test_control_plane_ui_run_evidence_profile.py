@@ -90,15 +90,16 @@ class UiRunEvidenceProfile(unittest.TestCase):
                          if name != "operational-ui" and any(fnmatch.fnmatchcase(source, pattern) for pattern in patterns)}
             with self.subTest(source=source), tempfile.TemporaryDirectory(prefix="late-report-profile-") as directory:
                 root = Path(directory)
-                for incomplete, required, generic in [(False, ["documentation"], False),
-                                                       (False, ["focused-tests"], True),
-                                                       (True, ["documentation"], True)]:
+                for incomplete, omit_neighbors, required, generic in [(False, False, ["documentation"], False),
+                                                       (False, False, ["focused-tests"], True),
+                                                       (True, False, ["documentation"], not bool(neighbors)),
+                                                       (True, True, ["documentation"], True)]:
                     profile = self.profile()
                     if incomplete:
                         profile["source_paths"].remove(source)
                     profiles = {"operational-ui": profile, **{
                         name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"],
-                               "source_paths": [source]} for name in neighbors}}
+                               "source_paths": [CORE if omit_neighbors else source]} for name in neighbors}}
                     config = root / CONFIG; config.parent.mkdir(parents=True, exist_ok=True)
                     config.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
                     ids = {check["id"] for check in catalog.plan(root, [CORE, source], required, "synthetic-candidate")["selected"]}
@@ -119,11 +120,19 @@ class UiRunEvidenceProfile(unittest.TestCase):
                          if name != "operational-ui" and any(fnmatch.fnmatchcase(source, pattern) for pattern in patterns)}
             with self.subTest(source=source), tempfile.TemporaryDirectory(prefix="owned-run-profile-") as directory:
                 root = Path(directory)
-                for incomplete, required, generic in [(False, ["documentation"], False), (False, ["focused-tests"], True), (True, ["documentation"], True)]:
+                for incomplete, omit_neighbors, required, generic in [
+                    (False, False, ["documentation"], False),
+                    (False, False, ["focused-tests"], True),
+                    (True, False, ["documentation"], not bool(neighbors)),
+                    (True, True, ["documentation"], True),
+                ]:
                     profile = self.profile()
                     if incomplete:
                         profile["source_paths"].remove(source)
-                    profiles = {"operational-ui": profile, **{name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"], "source_paths": [source]} for name in neighbors}}
+                    # Selected neighbors continue to cover an omitted OP source.
+                    # Omitting it from every owner requires the generic fallback;
+                    # use CORE to retain a valid nonempty neighbor declaration.
+                    profiles = {"operational-ui": profile, **{name: {"test_paths": ["dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts"], "source_paths": [CORE if omit_neighbors else source]} for name in neighbors}}
                     config = root / CONFIG; config.parent.mkdir(parents=True, exist_ok=True)
                     config.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": profiles}))
                     ids = {check["id"] for check in catalog.plan(root, [CORE, source], required, "synthetic-candidate")["selected"]}

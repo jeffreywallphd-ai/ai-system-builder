@@ -1937,3 +1937,27 @@ selectors. They do not measure the CSS cascade, native painting or real app
 contrast. Keep those checks in the existing controlled host journeys with the
 official accessibility engine and unchanged rules. The earlier failed host
 observations remain evidence; source changes do not turn them into passes.
+
+The third serial Data and Context attempt built its package and reached both
+browser bodies. The ordinary contrast audits passed. The forced-colors audit had
+zero violations and 65 positive samples, with two unresolved pseudo-content
+checks. Native zoom navigation also failed; Desktop did not start. The recorded
+failure includes confirmed process shutdown and unchanged inputs. It is not a
+complete app or roadmap pass.
+
+The source correction selects the shell's native summary disclosure and reports
+only fixed navigation stages. It preserves uniqueness, visibility, keyboard and
+menu-close assertions. Workflow number backgrounds are transparent over opaque
+system-color cards. Keep real painting and navigation qualification separate from
+these source regressions. The
+[disclosure census history](../operations/comprehensive-ui-automation-disclosure-census-history.json)
+preserves the previous full facts and Git identity. Its one changed definition
+keeps the existing baseline, accepted history and pending execution status.
+
+For a change across several known features, the planner combines explicit source
+and test ownership from the selected profiles. It reads one configuration document
+and validates every selected profile before it can remove the generic fallback.
+The existing limits remain 200 source paths and 100 unique test paths per profile.
+An unknown path, incomplete combined coverage or an explicitly required generic
+check keeps the fallback. Declarations in unselected profiles supply no coverage.
+Declarations also supply no test pass: every selected check must still execute.

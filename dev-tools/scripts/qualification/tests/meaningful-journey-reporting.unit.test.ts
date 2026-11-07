@@ -95,6 +95,8 @@ const shellOverlapBaseline="51d299494bd217ac90c110a4fccc089cf8b945d8";
 const shellOverlapHistoricalMap="3e9873fb30238eb3446bc685c423005a4db09117";
 const responsiveHistoryPath="docs/operations/comprehensive-ui-automation-responsive-journey-census-history.json";
 const responsivePriorCommit="608679a6095ef5617921e504bf208858df6a7c49";
+const disclosureHistoryPath="docs/operations/comprehensive-ui-automation-disclosure-census-history.json";
+const disclosurePriorCommit="5698219870d571c9747807c25e480c9941d936f8";
 const responsiveSources=["apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
   "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
@@ -235,6 +237,19 @@ function checkedResponsiveHistory(bundle:CensusBundle,map:CensusMap,history:Cens
   expect(history.preserved_histories).toEqual(preserved);
   expect(history.prior_history).toEqual(preserved.at(-1));
 }
+function historicalResponsiveMap() {return JSON.parse(gitSource(disclosurePriorCommit,censusPath).toString("utf8")) as CensusMap;}
+function checkedDisclosureHistory(bundle:CensusBundle,map:CensusMap,history:CensusHistory) {
+  expect(Object.keys(history).sort()).toEqual(["schema_version","scope","roadmap_id","prior_commit","prior_census_path",
+    "prior_census_git_sha256","prior_census_working_sha256","prior_source_baseline","source_baseline","old_archive","prior_history",
+    "reason","preserved_fields_sha256","qualification_effect","sources"].sort());
+  expect(history.prior_commit).toBe(disclosurePriorCommit);expect(history.source_baseline).toBe(responsivePriorCommit);
+  checkedHistory(bundle,map,history,1);
+  expect(history.sources.map(row=>row.path)).toEqual(["dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"]);
+  const prior=bundle.read(responsiveHistoryPath);expect(prior).toEqual(gitSource(disclosurePriorCommit,responsiveHistoryPath));
+  expect(history.prior_history).toEqual({path:responsiveHistoryPath,sha256:sha(prior),bytes:prior.length});
+  const preceding=historicalResponsiveMap();
+  for(const [index,row] of map.sources.entries())expect(row.committed_sha256).toBe(preceding.sources[index]!.committed_sha256);
+}
 it("keeps current coverage definitions bound to real source and preserves unrun qualification",async()=>{
   const bundle=await censusBundle(),result=checkedCensus(bundle,bundle.map);
   expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:180,current_host_spec_files:29,inventory_groups:16,
@@ -250,7 +265,8 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
     contrastRegionsBaseline,contrastV2HistoryPath);
   checkedRegionHistory(bundle,historicalShellOverlapMap(),JSON.parse(bundle.read(shellOverlapHistoryPath).toString("utf8")) as CensusHistory,
     shellOverlapBaseline,contrastRegionsHistoryPath);
-  checkedResponsiveHistory(bundle,bundle.map,JSON.parse(bundle.read(responsiveHistoryPath).toString("utf8")) as CensusHistory);
+  checkedResponsiveHistory(bundle,historicalResponsiveMap(),JSON.parse(bundle.read(responsiveHistoryPath).toString("utf8")) as CensusHistory);
+  checkedDisclosureHistory(bundle,bundle.map,JSON.parse(bundle.read(disclosureHistoryPath).toString("utf8")) as CensusHistory);
 });
 it.each(["facts","execution-status","committed-pin","missing-version"] as const)("refuses forged census %s without a host or execution claim",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);const map=structuredClone(bundle.map);
@@ -316,7 +332,7 @@ it.each(["region-row","history-witness","qualification"] as const)("refuses forg
 
 it.each(["prior-row","row-hash","current-row","missing-row","duplicate-row","old-archive","prior-map","working-map",
   "source-baseline","qualification","executed","full-testing","preserved-history","mapping","committed-working","extra"] as const)("refuses forged responsive journey history %s",async variant=>{
-  const bundle=await censusBundle(),map=structuredClone(bundle.map);
+  const bundle=await censusBundle(),map=historicalResponsiveMap();
   const history=JSON.parse(bundle.read(responsiveHistoryPath).toString("utf8")) as CensusHistory;
   checkedResponsiveHistory(bundle,map,history);
   if(variant==="prior-row")history.sources[0]!.prior_row.facts.assertionCount=0;
@@ -336,4 +352,31 @@ it.each(["prior-row","row-hash","current-row","missing-row","duplicate-row","old
   if(variant==="committed-working")map.sources.find(row=>row.path===responsiveSources[0])!.committed_sha256=map.sources.find(row=>row.path===responsiveSources[0])!.facts.sha256 as string;
   if(variant==="extra")(history as unknown as Record<string,unknown>).extra="forged";
   expect(()=>checkedResponsiveHistory(bundle,map,history)).toThrow();
+});
+
+it.each(["prior-row","row-hash","current-row","missing-row","duplicate-row","old-archive","prior-map","working-map",
+  "source-baseline","qualification","executed","full-testing","prior-history","mapping","committed-pin","extra"] as const)("refuses forged disclosure history %s",async variant=>{
+  const bundle=await censusBundle(),map=structuredClone(bundle.map);
+  const history=JSON.parse(bundle.read(disclosureHistoryPath).toString("utf8")) as CensusHistory;
+  checkedDisclosureHistory(bundle,map,history);
+  if(variant==="prior-row")history.sources[0]!.prior_row.facts.assertionCount=0;
+  if(variant==="row-hash")history.sources[0]!.prior_row_sha256="0".repeat(64);
+  if(variant==="current-row")history.sources[0]!.current_row_sha256="0".repeat(64);
+  if(variant==="missing-row")history.sources.pop();
+  if(variant==="duplicate-row")history.sources.push(structuredClone(history.sources[0]!));
+  if(variant==="old-archive")history.old_archive.sha256="0".repeat(64);
+  if(variant==="prior-map")history.prior_commit="0".repeat(40);
+  if(variant==="working-map")history.prior_census_working_sha256="0".repeat(64);
+  if(variant==="source-baseline")map.source_baseline=shellOverlapBaseline;
+  if(variant==="qualification")history.qualification_effect.actual_host_pass=true;
+  if(variant==="executed")history.qualification_effect.executed_tests=1;
+  if(variant==="full-testing")history.qualification_effect.full_testing_status="complete";
+  if(variant==="prior-history")history.prior_history.sha256="0".repeat(64);
+  if(variant==="mapping")map.scenarios[0]!.execution_status="passed";
+  if(variant==="committed-pin") {
+    const row=map.sources.find(row=>row.path===history.sources[0]!.path)!;
+    row.committed_sha256=row.facts.sha256 as string;history.sources[0]!.current_row_sha256=jsonSha(row);
+  }
+  if(variant==="extra")(history as unknown as Record<string,unknown>).extra="forged";
+  expect(()=>checkedDisclosureHistory(bundle,map,history)).toThrow();
 });
