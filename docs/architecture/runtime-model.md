@@ -1002,6 +1002,11 @@ or uncertain lifetimes deny reuse and retain charge. The current factory stays
 backendless and advertises no guarded capability. Synthetic real-lease tests
 are source evidence, not actual Windows or resource qualification.
 
+Backend admission and confirmed retirement use the same lock. Retirement
+removes the backend from the owner registry. A stale call stops before it
+can retain the backend or Core again. A call that overlaps a live operation
+still records uncertainty and keeps custody.
+
 The initial implementation supports only its new protected-current-user namespace
 and optional index file. It refuses unsupported inherited/retained trees; unknown
 old staging retains the full12GiB charge. Production accounting/domain/fence

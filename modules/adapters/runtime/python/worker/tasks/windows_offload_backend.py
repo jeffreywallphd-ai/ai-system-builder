@@ -79,12 +79,18 @@ class WindowsOffloadBackend(_NativeOffloadBackend):
 
     def _run(self, operation):
         self._require_dependencies()  # No Core call or file effect without both.
-        self._retain()
-        try:
-            with self._lock:
-                if self._busy or self._uncertain or self._phase == 'retired':
-                    raise OffloadAdmissionError()
+        with self._lock:
+            if self._phase == 'retired':
+                raise OffloadAdmissionError()
+            self._retain()
+            admitted = not (self._busy or self._uncertain)
+            if admitted:
                 self._busy = True
+            else:
+                self._uncertain = True
+        try:
+            if not admitted:
+                raise OffloadAdmissionError()
             value = operation()
             with self._lock:
                 if self._uncertain:
@@ -92,7 +98,8 @@ class WindowsOffloadBackend(_NativeOffloadBackend):
                 self._busy = False
                 return value
         except BaseException as error:
-            self._uncertain = True
+            with self._lock:
+                self._uncertain = True
             try:
                 self._core.retain_failure()  # Custody only; never cleanup.
             except BaseException:
@@ -175,7 +182,10 @@ class WindowsOffloadBackend(_NativeOffloadBackend):
             self._ack(self._worker.assert_native_retired, self._core)
             self._ack(self._core.retire_fresh_staging)
             self._ack(self._journal.credit_retirement, self._core)
-            self._phase = 'retired'
-            with _LOCK:
-                _BACKENDS.pop(id(self), None)
+            with self._lock:
+                if self._uncertain:
+                    raise OffloadAdmissionError()
+                self._phase = 'retired'
+                with _LOCK:
+                    _BACKENDS.pop(id(self), None)
         return self._run(retire)

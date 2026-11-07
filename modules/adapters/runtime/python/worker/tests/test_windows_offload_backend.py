@@ -94,6 +94,33 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(trace.count('worker-refs'), 1)
         self.assertNotIn(id(backend), b._BACKENDS)
 
+    def test_stale_calls_do_not_restore_a_retired_backend_or_core_to_custody(self):
+        core, journal, worker, backend, owner, trace = self.setup_consumer()
+        lease = OwnedOffloadLease(core.cache_root, 4096, _recovery=owner.worker_context)
+        lease.seal()
+        with self.assertRaises(OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        worker.exited = True
+        owner.retire_owned_worker()
+        lease.cleanup(model_released=True)
+        before_trace, before_steps = list(trace), list(core._api.steps)
+        self.assertNotIn(id(backend), b._BACKENDS)
+        self.assertNotIn(id(core), c._CUSTODY)
+
+        with patch.object(core, 'retain_failure', wraps=core.retain_failure) as retain:
+            for action in (backend.assert_ready, backend.create_staging, backend.seal_staging,
+                           backend.assert_sealed, backend.release_references, backend.retire_owned_worker):
+                with self.subTest(operation=action.__name__), self.assertRaises(OffloadAdmissionError):
+                    action()
+            with self.assertRaises(OffloadAdmissionError):
+                backend.reserve_staging(core.cache_root, 4096)
+            retain.assert_not_called()
+        self.assertNotIn(id(backend), b._BACKENDS)
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertEqual(journal.charge, 0)
+        self.assertEqual(trace, before_trace)
+        self.assertEqual(core._api.steps, before_steps)
+
     def test_missing_real_producers_refuse_before_any_core_call(self):
         core = c.WindowsOffloadCore(Path.cwd())
         for journal, worker in ((None, None), (SyntheticJournal(core, []), None), (None, SyntheticWorker(core, []))):
