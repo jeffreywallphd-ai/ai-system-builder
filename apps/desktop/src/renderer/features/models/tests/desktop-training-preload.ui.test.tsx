@@ -102,7 +102,12 @@ async function compose() {
         if (!owned.has(folder)) await remember(folder);
         expect(await readFile(dataset.path!)).toEqual(inputBytes[index]);
       }
-      const output = path.join(directory!, "worker-output"); await mkdir(output); await writeFile(path.join(output, "adapter_model.safetensors"), outputBytes); await writeFile(path.join(output, "adapter_config.json"), '{"fixture":true}');
+      const output = payload.output?.outputDirectory;
+      if (typeof output !== "string") throw new Error("The owned training output fixture is unavailable.");
+      expect(path.dirname(output)).toBe(await realpath(tmpdir()));
+      expect(path.basename(output)).toMatch(/^ai-system-builder-training-output-/);
+      await remember(output);
+      await writeFile(path.join(output, "adapter_model.safetensors"), outputBytes); await writeFile(path.join(output, "adapter_config.json"), '{"fixture":true}');
       job = { id: "training-fixture-run", payload, phase: "running", output };
       return { requestId: job.id, accepted: true, status: "queued" };
     },
@@ -139,7 +144,7 @@ function button(label: string) { const found = [...container!.querySelectorAll<H
 async function settled(predicate: () => boolean) { const end = Date.now() + 10000; while (Date.now() < end) { await act(async () => { await new Promise(done => setTimeout(done, 10)); }); if (predicate()) return; } expect(predicate()).toBe(true); }
 async function start() { await settled(() => container!.querySelectorAll('input[name="training-dataset"]').length === 2); await act(async () => { container!.querySelectorAll<HTMLInputElement>('input[name="training-dataset"]').forEach(input => input.click()); }); expect(button("Start Training").disabled).toBe(false); await act(async () => button("Start Training").click()); await settled(() => Boolean(job)); }
 const savedModels = async () => (await registry.listModels({ workspaceId: workspace })).models.filter(model => model.source === "generated");
-async function review() { job!.phase = "succeeded"; await settled(() => Boolean([...container!.querySelectorAll("button")].find(value => value.textContent === "Save model"))); expect(await savedModels()).toHaveLength(0); expect(copies).toBe(0); }
+async function review() { job!.phase = "succeeded"; await settled(() => Boolean([...container!.querySelectorAll("button")].find(value => value.textContent === "Save model"))); expect(await savedModels()).toHaveLength(0); expect(copies).toBe(0); expect(container!.textContent).not.toContain(job!.output); }
 
 it("stages two real input files, waits for review, saves exact output bytes and reopens the registry", async () => {
   const baseId = await compose(); await mount(); await start();

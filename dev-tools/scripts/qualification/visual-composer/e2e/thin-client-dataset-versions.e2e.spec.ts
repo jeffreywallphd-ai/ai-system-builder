@@ -7,6 +7,7 @@ import { prepareSourceContext, verifySourceContextAfterRestart } from "./source-
 import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
 import { operationalStatusUrl } from "../operational-ui-oracles";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { navigateCriticalApplicationArea } from "./critical-surface-accessibility";
 
 test.use({ trace: "off", video: "off", screenshot: "off" });
 test.skip(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
@@ -20,7 +21,7 @@ async function runBrowserData(page: Page, mode: CriticalAccessibilityMode = "sta
   await page.locator('input[name="workspaceName"]').fill("Synthetic provided browser data");
   await page.getByRole("button", { name: "Create workspace", exact: true }).click();
   await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
-  await page.getByRole("button", { name: "Artifacts", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Artifacts");
   const saved = await prepareProvidedVersions(page, "thin", test.info(), mode);
   const savedRows = await prepareSavedRowReview(page, "thin", test.info(), mode);
   const savedSourceContext = await prepareSourceContext(page, "thin", test.info(), mode);
@@ -28,7 +29,7 @@ async function runBrowserData(page: Page, mode: CriticalAccessibilityMode = "sta
   // This variation checks the native creation/review forms. The standard case
   // retains the complete service restart and exact second-owner marker proof.
   if (mode === "native400") return;
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.locator("header.ui-shell__header").getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Restart server", exact: true }).click();
   // Readiness alone could observe the old listener. Require the fresh second
   // owner record, emitted only after task/listener/persistence close + reopen.

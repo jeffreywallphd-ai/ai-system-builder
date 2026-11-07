@@ -16344,15 +16344,16 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "d398f07058333f61b97cf33b4ab665a8fc9ffb8981ad706b81e480ec23361bdd",
+      "source_text_sha256": "67c3bd07df8651a4b753c8d3f43ce357a5030fc8215007609518a7a328252e58",
       "user_description": {
         "owner": "agent",
         "sentences": [
           "The app package was built.",
-          "Browser tests failed before they started.",
+          "Both browser tests started and failed.",
           "Desktop tests did not run.",
           "All owned test processes stopped.",
-          "The revised test setup needs a fresh reviewed app run.",
+          "The agent must correct narrow navigation and investigate the forced-colors audit.",
+          "Fresh reviewed app evidence is still needed.",
           "These observations do not complete the roadmap."
         ]
       }

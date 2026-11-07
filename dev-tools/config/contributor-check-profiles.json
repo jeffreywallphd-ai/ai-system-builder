@@ -2181,6 +2181,7 @@
         "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"
       ],
       "source_paths": [
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md",
         "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
         "apps/desktop/src/renderer/features/python-runtime/components/PythonRuntimeFooter.tsx",
         "apps/desktop/src/renderer/features/python-runtime/api/desktopPythonRuntimeClient.ts",

@@ -25,13 +25,68 @@ vi.mock("node:fs/promises", () => {
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
-import { prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
+import { navigateCriticalApplicationArea, prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
 import { qualifyOperationalUiJourney } from "../visual-composer/e2e/operational-ui-journey";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
+
+describe("responsive Data and Context navigation driver", () => {
+  function driver(wide: boolean, opened = false, failure = "") {
+    const calls: string[] = [];
+    const control = (name: string) => ({
+      count: async () => { calls.push(`${name}:count`); return failure === `${name}:duplicate` ? 2 : failure === `${name}:missing` ? 0 : 1; },
+      isVisible: async () => { calls.push(`${name}:visible`); return wide; },
+      waitFor: async ({ state }: { state: string }) => { calls.push(`${name}:wait:${state}`); if (failure === `${name}:${state}`) throw new Error("synthetic-private-dom"); },
+      getAttribute: async () => failure === "trigger:state" ? null : opened ? "true" : "false",
+      click: async () => { calls.push(`${name}:click`); if (failure === `${name}:activate`) throw new Error("synthetic-private-dom"); },
+      press: async (key: string) => { calls.push(`${name}:press:${key}`); if (failure === `${name}:activate`) throw new Error("synthetic-private-dom"); },
+      getByRole: (role: string, { name: target, exact }: { name: string; exact: boolean }) => {
+        expect(exact).toBe(true); return control(`${name}/${role}:${target}`);
+      },
+    });
+    const page = {
+      locator: (selector: string) => { expect(selector).toBe("aside.ui-shell__sidebar"); return control("sidebar"); },
+      getByRole: (role: string, { name, exact, includeHidden }: { name: string; exact: boolean; includeHidden?: boolean }) => {
+        expect(exact).toBe(true);
+        if (role === "button" && name === "Open navigation menu") return control("trigger");
+        expect(role).toBe("menu"); expect(name).toBe("Application navigation"); expect(includeHidden).toBe(true); return control("menu");
+      },
+    } as unknown as Page;
+    return { page, calls };
+  }
+  it.each(["Home", "Data", "Artifacts", "Context"] as const)("uses the visible sidebar for %s", async area => {
+    const { page, calls } = driver(true);
+    await navigateCriticalApplicationArea(page, area);
+    expect(calls).toContain(`sidebar/button:${area}:click`);
+    expect(calls.some(call => call.startsWith("menu") || call.startsWith("trigger"))).toBe(false);
+  });
+  it.each(["Home", "Data", "Artifacts", "Context"].flatMap(area => [false, true].map(opened => ({ area, opened }))))("uses the real responsive menu for $area, already open=$opened", async ({ area, opened }) => {
+    const { page, calls } = driver(false, opened);
+    await navigateCriticalApplicationArea(page, area as "Home" | "Data" | "Artifacts" | "Context");
+    expect(calls).toContain(`menu/menuitem:${area}:press:Enter`);
+    expect(calls.at(-1)).toBe("menu:wait:hidden");
+    expect(calls.filter(call => call === "trigger:press:Enter")).toHaveLength(opened ? 0 : 1);
+    expect(calls.some(call => call.includes(":click"))).toBe(false);
+  });
+  it.each([null, undefined, "Settings", "../Context", {}, 4, Symbol("area")])("rejects unknown targets before Page access %#", async area => {
+    let calls = 0;
+    const page = new Proxy({}, { get() { calls++; throw new Error("synthetic-private-page"); } }) as Page;
+    await expect(navigateCriticalApplicationArea(page, area as never)).rejects.toThrow("Critical application navigation failed.");
+    expect(calls).toBe(0);
+  });
+  it.each(["sidebar:missing", "sidebar:duplicate", "sidebar/button:Artifacts:missing", "sidebar/button:Artifacts:duplicate",
+    "sidebar/button:Artifacts:visible", "sidebar/button:Artifacts:activate", "trigger:missing", "trigger:duplicate", "trigger:visible", "trigger:activate", "trigger:state",
+    "menu:missing", "menu:duplicate", "menu:visible", "menu/menuitem:Artifacts:missing", "menu/menuitem:Artifacts:duplicate",
+    "menu/menuitem:Artifacts:visible", "menu/menuitem:Artifacts:activate", "menu:hidden"])("redacts %s and never retries activation", async failure => {
+    const { page, calls } = driver(failure.startsWith("sidebar/button"), false, failure);
+    await expect(navigateCriticalApplicationArea(page, "Artifacts")).rejects.toThrow("Critical application navigation failed.");
+    expect(calls.filter(call => call === "trigger:press:Enter").length).toBeLessThanOrEqual(1);
+    expect(calls.filter(call => call.endsWith(":click") || call === "menu/menuitem:Artifacts:press:Enter").length).toBeLessThanOrEqual(1);
+  });
+});
 
 describe("owning standard viewport preparation",()=>{
   it("sets and verifies the fixed viewport once on the supplied Page",async()=>{

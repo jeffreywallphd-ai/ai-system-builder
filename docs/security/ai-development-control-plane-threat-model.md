@@ -791,3 +791,35 @@ normal-exit, Job-zero, handle, stream, limit and failure check remains mandatory
 The retained first serial attempt proves only its package and safe-retirement
 subset: browser test bodies did not execute and Desktop did not start. No reuse,
 automatic retry, current-source qualification or parent pass follows.
+
+Responsive qualification navigation admits only Home, Data, Artifacts and
+Context before Page access. It selects one visible sidebar button, or one named
+application menu through its existing trigger and keyboard-operated menu item.
+Missing, duplicate, hidden or failed controls deny without forced clicks,
+viewport changes or retries. Settings restart is header-scoped. The reviewed
+second attempt reached test bodies and found actual audit/navigation failures;
+all owned processes retired but no UI test passed. Its namespace and markers
+remain consumed. Audit-tool hypotheses do not suppress failures or qualify a
+host; they require separate reference evidence and review.
+
+Exact operational ownership includes the provided-data journey guide. This
+declaration changes no test inventory or catalog selection algorithm. Complete,
+missing, unknown and explicit-generic routing cases preserve fallback guards.
+Run file-isolation fixtures with the operating-system facility they test rather
+than skipping a denied fixture. This supplies no application/native privilege,
+resource-limit change, failed-history erasure or current host qualification.
+
+Source-only inventory refreshes authenticate complete facts and their prior Git
+rows, preserve all non-source mapping fields and old history bytes, and retain
+unrun host/full-test gaps. The responsive refresh binds all 180 committed pins to
+actual `608679a6` Git blobs, four changed definitions and six archived changed rows.
+It preserves the original mixed-era map, including its two mismatched older pins,
+and every accepted history. Current source drift is limited to four exact working
+versions; changing a baseline cannot supply execution or qualification. Compact formatting keeps the unchanged document cap;
+neither history nor a source fixture supplies an actual execution pass.
+
+The finite training worker fixture uses only the output stage already created
+by the application. Canonical parent, fixed prefix and original device/inode
+checks precede its fixed synthetic writes. It retains bounded owned cleanup,
+review/save/retry/discard and workspace assertions, plus private-path refusal.
+The production guard still rejects foreign output; no real model is loaded.

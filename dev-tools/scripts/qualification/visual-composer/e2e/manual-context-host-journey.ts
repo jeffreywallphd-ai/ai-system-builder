@@ -1,5 +1,5 @@
 import {finalizeQualificationEvidence} from "../qualification-reporting";
-import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { navigateCriticalApplicationArea, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
@@ -146,7 +146,7 @@ export async function prepareManualContext(page: Page, host: Host, info: TestInf
   readCriticalAccessibilityMode(mode);
   if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   const workspace = await page.getByLabel("Select current workspace").inputValue();
-  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Context");
   await page.getByRole("tab", { name: "Context Packs", exact: true }).click();
   await page.getByRole("button", { name: /^Manual entry/ }).click();
   const prepare = page.getByRole("button", { name: "Prepare context pack", exact: true });
@@ -171,7 +171,7 @@ export async function prepareManualContext(page: Page, host: Host, info: TestInf
 
 export async function verifyManualContextAfterRestart(page: Page, host: Host, saved: ManualContextSnapshot, info: TestInfo) {
   await expect(page.getByLabel("Select current workspace")).toHaveValue(saved.workspace, { timeout: 60_000 });
-  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Context");
   await page.getByRole("tab", { name: "Context Browser", exact: true }).click();
   const card = page.locator("article").filter({ has: page.getByRole("heading", { name: fixed.name, exact: true }) }); await expect(card).toHaveCount(1);
   await card.getByRole("button", { name: "View Details", exact: true }).click();
@@ -230,7 +230,7 @@ async function verifyManualContextDiscardAndDelete(page: Page, host: Host, saved
   validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "removed", before);
   await expect(readManualContextValue(page, host, saved.workspace, { action: "browser-detail", artifactId: saved.artifactId })).rejects.toThrow("The saved Context read could not be verified.");
   await page.reload(); await expect(page.getByLabel("Select current workspace")).toHaveValue(saved.workspace, { timeout: 60_000 });
-  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Context");
   await page.getByRole("tab", { name: "Context Browser", exact: true }).click(); await expect(card).toHaveCount(0);
   validateManualContextCatalog(await readManualContextValue(page, host, saved.workspace, { action: "browser-list" }), saved, "removed", before);
 }

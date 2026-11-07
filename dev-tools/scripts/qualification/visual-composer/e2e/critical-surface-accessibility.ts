@@ -10,6 +10,35 @@ import { collectDocumentAccessibilityObservation, collectRuntimeAccessibilityObs
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
 
+/** Use the mounted navigation layout. Never force a hidden sidebar control. */
+export async function navigateCriticalApplicationArea(page: Page, area: "Home" | "Data" | "Artifacts" | "Context") {
+  try {
+    if (!["Home", "Data", "Artifacts", "Context"].includes(area)) throw new Error();
+    const sidebar = page.locator("aside.ui-shell__sidebar");
+    if (await sidebar.count() !== 1) throw new Error();
+    if (await sidebar.isVisible()) {
+      const target = sidebar.getByRole("button", { name: area, exact: true });
+      if (await target.count() !== 1) throw new Error();
+      await target.waitFor({ state: "visible" });
+      await target.click();
+      return;
+    }
+    const trigger = page.getByRole("button", { name: "Open navigation menu", exact: true });
+    const menu = page.getByRole("menu", { name: "Application navigation", exact: true, includeHidden: true });
+    if (await trigger.count() !== 1 || await menu.count() !== 1) throw new Error();
+    await trigger.waitFor({ state: "visible" });
+    const expanded = await trigger.getAttribute("aria-expanded");
+    if (expanded !== "true" && expanded !== "false") throw new Error();
+    if (expanded === "false") await trigger.press("Enter");
+    await menu.waitFor({ state: "visible" });
+    const target = menu.getByRole("menuitem", { name: area, exact: true });
+    if (await target.count() !== 1) throw new Error();
+    await target.waitFor({ state: "visible" });
+    await target.press("Enter");
+    await menu.waitFor({ state: "hidden" });
+  } catch { throw new Error("Critical application navigation failed."); }
+}
+
 /** Owning test launchers prepare standard Pages. Native zoom stays unmodified. */
 export async function prepareCriticalAccessibilityViewport(page: Page, mode: CriticalAccessibilityMode = "standard") {
   readCriticalAccessibilityMode(mode);

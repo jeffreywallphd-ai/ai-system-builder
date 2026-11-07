@@ -1,5 +1,14 @@
 # Provided-data and manual Context journeys
 
+Data and Context transitions use the mounted navigation layout. At ordinary
+widths they select the visible sidebar. At narrow widths, including native 400%
+zoom, they open the existing Application navigation menu and activate its exact
+menu item with Enter. A hidden, missing or duplicate control fails the journey;
+the driver never forces a click or changes the viewport. The browser restart
+step selects Settings in the header to avoid the separate sidebar entry.
+Inert driver tests establish selector and failure behavior only. Actual host,
+accessibility and restart qualification still require a fresh reviewed run.
+
 This private qualification composition tests saved dataset versions and a manual Context pack in the real
 packaged Desktop app and the browser app. It does not generate model output.
 Normal qualification commands keep their existing controlled worker.

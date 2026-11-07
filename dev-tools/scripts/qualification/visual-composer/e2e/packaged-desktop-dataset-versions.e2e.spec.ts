@@ -3,7 +3,7 @@ import { _electron as electron } from "playwright";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
-import { prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
+import { navigateCriticalApplicationArea, prepareCriticalAccessibilityViewport } from "./critical-surface-accessibility";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { prepareProvidedVersions, verifyProvidedVersionsAfterRestart } from "./provided-dataset-version-journey";
 import { prepareManualContext, verifyManualContextAfterRestart, type ManualContextSnapshot } from "./manual-context-host-journey";
@@ -44,7 +44,7 @@ async function runDesktopData(mode: CriticalAccessibilityMode = "standard") {
         await page.getByRole("button", { name: "Create workspace", exact: true }).click();
         await expect(page.getByLabel("Select current workspace")).toHaveValue(/^workspace\./);
         if (mode === "native400") await applyOwnedDesktopNativeZoom(app, page);
-        await page.getByRole("button", { name: "Data", exact: true }).click();
+        await navigateCriticalApplicationArea(page, "Data");
         saved = await prepareProvidedVersions(page, "desktop", test.info(), mode);
         savedRows = await prepareSavedRowReview(page, "desktop", test.info(), mode);
         savedSourceContext = await prepareSourceContext(page, "desktop", test.info(), mode);

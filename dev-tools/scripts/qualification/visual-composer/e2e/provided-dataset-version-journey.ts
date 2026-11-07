@@ -1,5 +1,5 @@
 import {finalizeQualificationEvidence} from "../qualification-reporting";
-import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { navigateCriticalApplicationArea, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
@@ -165,7 +165,7 @@ async function checkVersionBytes(page: Page, host: Host, workspace: string, vers
 }
 
 async function openDataset(page: Page, host: Host) {
-  await page.getByRole("button", { name: host === "desktop" ? "Data" : "Artifacts", exact: true }).click();
+  await navigateCriticalApplicationArea(page, host === "desktop" ? "Data" : "Artifacts");
   await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();
   const name = `${NAME}.jsonl`;
   if (host === "desktop") await page.locator("article").filter({ has: page.getByRole("heading", { name, exact: true }) }).first()

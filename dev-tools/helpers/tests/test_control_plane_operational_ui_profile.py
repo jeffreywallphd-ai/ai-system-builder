@@ -740,7 +740,7 @@ class OperationalUiProfile(unittest.TestCase):
         self.assertEqual(profile["test_paths"][-1], unit)
         self.assertEqual(profile["source_paths"][-3:], [worker, unit, "modules/adapters/runtime/python/worker/README.md"])
         self.assertEqual(len(profile["test_paths"]), 83)
-        self.assertEqual(len(profile["source_paths"]), 196)
+        self.assertEqual(len(profile["source_paths"]), 197)
         self.assertNotIn(worker, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         self.assertNotIn(unit, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
         with tempfile.TemporaryDirectory(prefix="training-worker-diagnostic-profile-") as directory:
@@ -797,6 +797,42 @@ class OperationalUiProfile(unittest.TestCase):
                 ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
                 self.assertIn("functional-host-ui", ids)
                 self.assertIn("operational-ui", ids)
+                self.assertEqual("focused-tests" in ids, generic)
+
+
+    def test_provided_data_navigation_documentation_keeps_complete_and_fallback_ownership(self):
+        prefix = "dev-tools/scripts/qualification/"
+        doc = prefix + "visual-composer/provided-dataset-qualification.md"
+        critical = prefix + "visual-composer/e2e/critical-surface-accessibility.ts"
+        paths = [critical, doc, CONFIG,
+                 "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
+                 prefix + "tests/critical-surface-accessibility.unit.test.ts"]
+        paths += [prefix + "visual-composer/e2e/" + name for name in [
+            "provided-dataset-version-journey.ts", "saved-row-review-host-journey.ts",
+            "source-context-host-journey.ts", "manual-context-host-journey.ts",
+            "thin-client-dataset-versions.e2e.spec.ts", "packaged-desktop-dataset-versions.e2e.spec.ts"]]
+        profile = self.profile()
+        dataset = json.loads((ROOT / CONFIG).read_bytes())["profiles"]["dataset-version-browser"]
+        self.assertTrue(doc in profile["source_paths"], "The provided-journey guide needs exact profile coverage.")
+        self.assertEqual(profile["test_paths"], TESTS)
+        for missing, explicit, unknown, generic in [
+            (None, False, False, False), (doc, False, False, True),
+            (critical, False, False, True), (None, True, False, True),
+            (None, False, True, True),
+        ]:
+            with self.subTest(missing=missing, explicit=explicit, unknown=unknown), tempfile.TemporaryDirectory(prefix="provided-navigation-owner-") as directory:
+                root = Path(directory)
+                declared = self.profile()
+                if missing:
+                    declared["source_paths"].remove(missing)
+                self.fixture(root, declared)
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": declared, "dataset-version-browser": dataset,
+                }}))
+                affected = paths + ([prefix + "visual-composer/e2e/unreviewed-navigation.ts"] if unknown else [])
+                required = ["operational-ui", "dataset-version-browser"] + (["focused-tests"] if explicit else [])
+                ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertTrue({"operational-ui", "dataset-version-browser"}.issubset(ids))
                 self.assertEqual("focused-tests" in ids, generic)
 
 

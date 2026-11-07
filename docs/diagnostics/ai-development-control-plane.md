@@ -1886,3 +1886,35 @@ The operational test list and the catalog selection algorithm are unchanged.
 Routing regressions retain the generic check for unknown sources, incomplete
 ownership and an explicit generic request. This keeps the feature checks focused
 without changing the deferred full-system testing workflow.
+
+The Data and Context UI journeys use the current sidebar or responsive menu,
+including its real menu-item roles and keyboard activation. They do not force
+hidden controls or widen native zoom. Browser restart selects header Settings.
+The second serial attempt reached both browser test bodies. It failed the
+forced-colors audit and narrow navigation; Desktop did not start. The reviewed
+package/retirement subset and prior failure remain in
+`docs/operations/provided-data-serial-host-qualification.json`. A source repair
+or suspected audit-tool defect supplies no real UI or parent pass.
+
+The operational profile also owns the provided-data journey guide. Its existing
+test list covers mixed navigation/helper/documentation changes without selecting
+the unrelated qualification-folder fallback. Unknown source, incomplete ownership
+and an explicit generic-test request still retain that fallback. Windows
+file-isolation fixtures need their actual filesystem permissions and a writable
+task-owned temporary directory; a denied fixture is not a product test pass.
+
+The responsive-journey definition refresh preserves six changed source records
+in `docs/operations/comprehensive-ui-automation-responsive-journey-census-history.json`.
+The current baseline authenticates all 180 source pins at commit `608679a6`.
+Four working definitions remain explicit source drifts. Two diagnostic rows change
+only their committed pins. Keep the original map and its declared older baseline;
+two accepted website pins did not match that old baseline. Check old history against its actual old map, and retain later accepted
+training and website mappings. Full facts use compact indentation to fit the
+unchanged 512 KiB document limit. Source facts, history checks and synthetic UI
+fixtures do not qualify an actual host run or complete a parent roadmap.
+
+The finite training bridge fixture must write into the output folder supplied
+by the application request. Check its canonical temporary parent and identity
+before writing the small synthetic files. Keep the production foreign-folder
+refusal, explicit save/discard and private-path redaction. A separate folder
+created by the fake worker is an invalid result, not a reason to relax ownership.

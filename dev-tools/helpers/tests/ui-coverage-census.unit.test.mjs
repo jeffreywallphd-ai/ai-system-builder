@@ -329,8 +329,42 @@ function assertContrastDiagnosticDrift(map,result,definitions=pendingContrastDia
   assert.deepEqual(ordered(result.gaps.filter(owned)),ordered(expected));
   return {...result,gaps:result.gaps.filter(g=>!owned(g))};
 }
+// Exact responsive-navigation and finite training fixture definitions; no execution pass.
+const pendingResponsiveJourneyDefinitions = Object.freeze([
+  {
+    "path": "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "22452d5e28d03e26605aa5be1c186a1fb622b9927c1e6f49836eaa55d7b135af",
+    "candidate": "235adf27c2e5b1b2120b3d15af98f7192addfc114304a4b37fcf9a8a5f6c2d74",
+    "facts_sha256": "21a867309e86e8695300b0a7ce18fc23653b2c7de04f603dc39d7e4aae194332"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "dc0a02cd9c1fa62e818971385d85000494f4104c395e5f1e51139dd94c7a7470",
+    "candidate": "2b1691eb195e0478aff745af32d39802ef9470b9cedbbaa1f790540e1179c4d3",
+    "facts_sha256": "963ce449f14934eecfe082fd2fbbaf91da9bb2cd052eacb47f3cf3523c6f14dd"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "43a30f579f680cd402e3922b906d5adf36fa1b157780990877c5a0140cb801be",
+    "candidate": "5efd9d07a41b128ec2a2c1d600443cb92df32316d91bc7faa61a995c4ce86cb2",
+    "facts_sha256": "d95fbd6dc7acd4e5b429a1eb847aa33f5e0a096e0c0884bd862dd5bb67dfaa25"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "2947ecc6d7eff93cbbfe4f500416db347c78393eb3a2f582b24904fdc13954bf",
+    "candidate": "db47b2ad96970f22ebe60bb87077f89d496a85858ae0cac8d004dfba3d9fcb47",
+    "facts_sha256": "a20ce4842cfcb64c9ba10c53d8c2c6fdc348a0fcffc15576d50fbc4875b101aa"
+  }
+].map(Object.freeze));
+// Historical contrast bindings below retain their own original source versions.
+const pendingCurrentJourneyDefinitions = pendingResponsiveJourneyDefinitions;
 function assertCurrentSourceDrift(map, result) {
-  if (map.source_baseline === shellContrastBaseline) result = assertContrastDiagnosticDrift(map, result, pendingShellContrastDefinitions);
+  if(map.source_baseline===pendingResponsiveJourneyDefinitions[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingResponsiveJourneyDefinitions);
+  if(map.source_baseline===shellContrastBaseline)result=assertContrastDiagnosticDrift(map,result,pendingShellContrastDefinitions);
   if(map.source_baseline===pendingContrastRegionDefinitions[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastRegionDefinitions);
   if(map.source_baseline===pendingContrastV2Diagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastV2Diagnostics);
   if(map.source_baseline===pendingContrastDiagnostics[0].baseline)result=assertContrastDiagnosticDrift(map,result);
@@ -941,4 +975,30 @@ test("saved-value oracle binding refuses stale forged missing duplicate and unre
   ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertSettingsEmptySourceDrift(m,r));}
   const foreign={kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"};
   assert.deepEqual(assertSettingsEmptySourceDrift(map,{gaps:[...result.gaps,foreign]}).gaps,[foreign]);
+});
+
+
+test("pending responsive journey facts retain four exact drifts and refuse future or missing evidence",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(pendingResponsiveJourneyDefinitions.length,4);assert.equal(pendingCurrentJourneyDefinitions.length,4);
+  assert.equal(result.gaps.length,4);assertCurrentSourceDrift(map,result);
+  for(const pending of pendingCurrentJourneyDefinitions) {
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]) {
+      const changed=structuredClone(map),observation=structuredClone(result);mutate(changed,observation);
+      assert.throws(()=>assertCurrentSourceDrift(changed,observation));
+    }
+  }
 });

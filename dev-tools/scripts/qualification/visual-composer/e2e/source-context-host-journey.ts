@@ -1,5 +1,5 @@
 import {finalizeQualificationEvidence} from "../qualification-reporting";
-import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { navigateCriticalApplicationArea, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
@@ -133,7 +133,7 @@ async function selectWorkspace(page: Page, workspace: string) {
   await expect(page.getByLabel("Select current workspace")).toHaveValue(workspace);
 }
 async function browser(page: Page) {
-  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Context");
   await page.getByRole("tab", { name: "Context Browser", exact: true }).click();
 }
 async function closeNotices(page: Page) {
@@ -216,7 +216,7 @@ async function reviewAndSave(page: Page, kind: Kind, source: SourceIdentity, aud
 }
 
 async function verifyDesktopPackDownload(page: Page, saved: SourceContextRecord) {
-  await page.getByRole("button", { name: "Data", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Data");
   await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();
   const card = page.getByRole("tabpanel", { name: "Artifact Browser", exact: true }).locator("article").filter({ has: page.getByText(saved.storageKey, { exact: true }) });
   await expect(card).toHaveCount(1); await card.getByRole("button", { name: "View Details", exact: true }).click();
@@ -238,13 +238,13 @@ export async function prepareSourceContext(page: Page, host: Host, info: TestInf
   readCriticalAccessibilityMode(mode);
   if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
   const originalWorkspace = await page.getByLabel("Select current workspace").inputValue();
-  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await navigateCriticalApplicationArea(page, "Home");
   await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
   await page.locator('input[name="workspaceName"]').fill(`Synthetic ${host} transit Context`);
   await page.getByRole("button", { name: "Create workspace", exact: true }).click();
   await expect(page.getByLabel("Select current workspace")).not.toHaveValue(originalWorkspace);
   const workspace = await page.getByLabel("Select current workspace").inputValue();
-  await page.getByRole("button", { name: host === "desktop" ? "Data" : "Artifacts", exact: true }).click();
+  await navigateCriticalApplicationArea(page, host === "desktop" ? "Data" : "Artifacts");
   await page.getByRole("tab", { name: "Artifact Ingestion", exact: true }).click();
   const ingestion = page.getByRole("list", { name: "Add data workflow", exact: true });
   await ingestion.getByLabel("Choose one or more files", { exact: true }).setInputFiles({ name: fixed.source_name, mimeType: "text/markdown", buffer: INPUT });
