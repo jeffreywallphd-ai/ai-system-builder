@@ -588,6 +588,8 @@ export class GovernedIngestionTaskUseCases {
         throw new Error(
           "The ingestion chunk is out of order. Resume from the accepted progress shown.",
         );
+      if (command.bytes.byteLength > file.totalBytes - file.acceptedBytes)
+        throw new Error("The ingestion chunk exceeds the remaining file size.");
       const checkpoint = await this.dependencies.checkpoints.appendChunk(
         {
           workspaceId: scope.value.workspaceId,

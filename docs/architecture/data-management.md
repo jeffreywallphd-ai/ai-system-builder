@@ -142,9 +142,11 @@ Renderers never receive checkpoint paths or provider credentials.
 
 Local transfers slice each `File` into 1 MiB chunks. Contracts cap a chunk at
 4 MiB, a file at 4 GiB, a task at 128 files and 16 GiB, and aggregate checkpoint
-growth at 65,536 chunks. The host verifies each chunk digest and offset,
-persists authoritative progress, streams finalization without joining the file
-in renderer memory, and retains unfinished checkpoints for at most 24 hours.
+growth at 65,536 chunks. Before writing a checkpoint, the host rejects a chunk
+larger than the file's remaining declared size. The host verifies each digest
+and offset, persists authoritative progress, streams finalization without
+joining the file in renderer memory, and retains unfinished checkpoints for at
+most 24 hours.
 Retry is idempotent for the last accepted chunk. Cancellation and expiry use a
 durable cleanup intent.
 

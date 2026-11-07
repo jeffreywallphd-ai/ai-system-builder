@@ -170,3 +170,29 @@ test("wrong digest survives database reopen and resumes; partial cancellation re
   assert.deepEqual(await state.checkpoints.inspectCheckpoint({ workspaceId: context.workspaceId,
     checkpointId: cancelledFile.checkpointId }), { chunkCount: 0, sizeBytes: 0 });
 });
+
+test("a chunk larger than the declared remainder leaves progress and retry intact", async t => {
+  const owned = await fixture(t);
+  const state = await owned.compose();
+  const task = value(await state.useCases.createTask({ files: [
+    { fileName: "synthetic-size.jsonl", mediaType: "application/jsonl", sizeBytes: 2 * row.length },
+  ] }, context));
+  const file = task.files[0]!;
+  const append = (chunkIndex: number, bytes: Buffer) => state.useCases.appendChunk({
+    taskId: task.taskId, fileId: file.fileId, chunkIndex,
+    expectedOffset: chunkIndex * row.length, bytes, sha256: sha(bytes),
+  }, context);
+  const progress = value(await append(0, row));
+  const checkpoint = { workspaceId: context.workspaceId, checkpointId: file.checkpointId };
+
+  assert.equal((await append(1, Buffer.concat([row, row]))).ok, false);
+  assert.deepEqual(await state.checkpoints.inspectCheckpoint(checkpoint), { chunkCount: 1, sizeBytes: row.length });
+  assert.deepEqual(value(await state.useCases.readTask(task.taskId, context)), progress);
+  assert.equal(value(await append(1, row)).progress.acceptedBytes, 2 * row.length);
+
+  const digest = sha(Buffer.concat([row, row]));
+  const complete = value(await state.useCases.finalizeFile({ taskId: task.taskId, fileId: file.fileId, sha256: digest }, context));
+  assert.equal(complete.status, "succeeded");
+  await verifySavedBytes(owned.root, complete, digest);
+  assert.deepEqual(await state.checkpoints.inspectCheckpoint(checkpoint), { chunkCount: 0, sizeBytes: 0 });
+});
