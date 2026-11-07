@@ -1007,6 +1007,12 @@ removes the backend from the owner registry. A stale call stops before it
 can retain the backend or Core again. A call that overlaps a live operation
 still records uncertainty and keeps custody.
 
+The Core also keeps its owner slot until the executor acknowledges fresh
+staging cleanup. If slot removal is interrupted, the Core restores the slot
+before unlocking and withholds proof of retirement. Calls to a released Core
+cannot create a new slot for it. Read-binding retirement also checks for
+uncertainty under the custody lock before releasing its records.
+
 The initial implementation supports only its new protected-current-user namespace
 and optional index file. It refuses unsupported inherited/retained trees; unknown
 old staging retains the full12GiB charge. Production accounting/domain/fence

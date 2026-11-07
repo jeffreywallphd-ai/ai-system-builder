@@ -393,11 +393,12 @@ class _JournalCoreBinding:
         return result
 
     def retired_witness(self, receiver, core):
-        self.assert_consumer(receiver, core, retired=True)
-        _require(core._retired and type(core._retirement_kind) is str
-                 and core._retirement_kind == 'staging' and not core._allocations
-                 and all(handle.closed for handle in core._handles))
-        return self._witness
+        with _CUSTODY_LOCK:
+            self.assert_consumer(receiver, core, retired=True)
+            _require(core._retired and type(core._retirement_kind) is str
+                     and core._retirement_kind == 'staging' and id(core) not in _CUSTODY
+                     and not core._allocations and all(handle.closed for handle in core._handles))
+            return self._witness
 
     def assert_retired_witness(self, receiver, core, witness):
         _require(witness is self.retired_witness(receiver, core))
@@ -506,12 +507,10 @@ class _ReadBindingRetirement:
         self.core._retired = True
 
     def release(self):
-        self.check('published')
         core = self.core
         with _CUSTODY_LOCK:
+            self.check('published')
             try:
-                _require(_READ_RETIREMENTS.get(id(core)) is self
-                         and _CUSTODY.get(id(core)) is core and self.released is False)
                 _require(_CUSTODY.pop(id(core)) is core)
                 _require(_READ_RETIREMENTS.pop(id(core)) is self)
                 # This is the release commit. Later caller interruption cannot
@@ -1140,13 +1139,18 @@ class WindowsOffloadCore:
     def _retain(self):
         self._assert_origin()
         with _CUSTODY_LOCK:
-            _require(id(self) in _CUSTODY or len(_CUSTODY) < _MAX_OWNERS)
+            owner = _CUSTODY.get(id(self))
+            _require(owner is self or (owner is None and not self._retired and len(_CUSTODY) < _MAX_OWNERS))
             _CUSTODY[id(self)] = self
 
     def retain_failure(self):
-        self._retain_native_outcome_failure()
-        self._retain()
-        self._uncertain = True
+        self._assert_origin()
+        with _CUSTODY_LOCK:
+            if self._retired and id(self) not in _CUSTODY:
+                return  # Confirmed retirement cannot create another owner slot.
+            self._retain_native_outcome_failure()
+            self._retain()
+            self._uncertain = True
 
     def _retain_native_outcome_failure(self):
         if self.__origin is self and self.__native_outcome is not None:
@@ -1185,7 +1189,8 @@ class WindowsOffloadCore:
             self._pending = None
             return value
         except BaseException:
-            self._retain_native_outcome_failure()
+            if self._busy:
+                self._retain_native_outcome_failure()  # Pin failure before fallible bookkeeping.
             self.retain_failure()
             raise
 
@@ -1289,7 +1294,6 @@ class WindowsOffloadCore:
             _require(self._run(retirement.retire) is None)
             retirement.check('acknowledged')
             self._retirement_kind = 'read-binding'
-            retirement.check('published')
             retirement.release()
         except BaseException as error:
             if admitted and not (retirement is not None and retirement.released):
@@ -1414,8 +1418,19 @@ class WindowsOffloadCore:
             for handle, _ in reversed(self._chain):
                 self._api.close(handle)
             _require(not self._allocations and all(handle.closed for handle in self._handles))
-            self._retirement_kind = 'staging'
             self._retired = True
-            with _CUSTODY_LOCK:
-                _CUSTODY.pop(id(self), None)
-        return self._run(retire)
+        self._run(retire)
+        # A native callback finishing is not its execution owner's acknowledgement.
+        with _CUSTODY_LOCK:
+            _require(_CUSTODY.get(id(self)) is self)
+            try:
+                _require(self._retired is True and self._uncertain is False and self._retirement_kind is None)
+                _require(_CUSTODY.pop(id(self)) is self)
+                self._retirement_kind = 'staging'
+            except BaseException as error:
+                self._uncertain = True
+                self._retirement_kind = None
+                _CUSTODY[id(self)] = self
+                if isinstance(error, Exception):
+                    raise OffloadAdmissionError() from None
+                raise

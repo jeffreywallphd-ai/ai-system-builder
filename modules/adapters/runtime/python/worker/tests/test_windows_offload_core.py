@@ -922,9 +922,113 @@ class CoreTests(NativeOutcomeContract, unittest.TestCase):
         with self.assertRaises(c.OffloadAdmissionError): core.retire_fresh_staging()
         self.assertTrue(core._retired and all(h.closed for h in core._handles))
         self.assertTrue(core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
         steps = list(core._api.steps)
         with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
         self.assertEqual(core._api.steps, steps)
+
+    def test_fresh_staging_keeps_the_owner_slot_until_the_execution_reply(self):
+        core = fresh_core()
+        core.create_staging(4096); core.seal_staging()
+        original = core._execution.execute
+        observations = []
+
+        def held_reply(bound, operation):
+            result = original(bound, operation)
+            observations.append(c._CUSTODY.get(id(core)) is core)
+            try:
+                fresh_core()
+            except c.OffloadAdmissionError:
+                observations.append('denied')
+            return result
+
+        core._execution.execute = held_reply
+        with patch.object(c, '_MAX_OWNERS', 1):
+            core.retire_fresh_staging()
+        self.assertEqual(observations, [True, 'denied'])
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertFalse(core._uncertain)
+
+    def test_interrupted_staging_slot_removal_restores_custody_before_unlock(self):
+        core = fresh_core()
+        binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver()
+        binding.borrow_anchor(receiver)
+        core.create_staging(4096); core.seal_staging()
+        observations = []
+
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+
+        class ObservedLock:
+            def __init__(self): self.lock = c.RLock()
+            def __enter__(self): self.lock.acquire(); return self
+            def __exit__(self, kind, error, traceback):
+                if kind is KeyboardInterrupt:
+                    observations.append(c._CUSTODY.get(id(core)) is core)
+                self.lock.release()
+                return False
+
+        with patch.object(c, '_CUSTODY', InterruptedPop(c._CUSTODY)), \
+             patch.object(c, '_CUSTODY_LOCK', ObservedLock()):
+            with self.assertRaises(KeyboardInterrupt): core.retire_fresh_staging()
+            self.assertEqual(observations, [True])
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertTrue(core._uncertain)
+            with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+
+    def test_stale_call_paused_before_pin_cannot_reinsert_a_retired_core(self):
+        for kind in ('read-binding', 'staging'):
+            with self.subTest(kind=kind):
+                if kind == 'read-binding':
+                    core, _ = read_binding_core()
+                    retire = core._retire_unused_read_binding
+                else:
+                    core = fresh_core()
+                    core.create_staging(4096); core.seal_staging()
+                    retire = core.retire_fresh_staging
+                original = core._retain
+                steps_after_retirement = []
+
+                def interleave():
+                    core._retain = original
+                    retire()
+                    steps_after_retirement[:] = core._api.steps
+                    original()
+
+                core._retain = interleave
+                with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+                core.retain_failure()
+                self.assertTrue(core._retired)
+                self.assertFalse(core._uncertain)
+                self.assertNotIn(id(core), c._CUSTODY)
+                self.assertNotIn(id(core), c._READ_RETIREMENTS)
+                self.assertEqual(core._api.steps, steps_after_retirement)
+
+    def test_read_release_rechecks_custody_after_a_prelock_failure(self):
+        core, _ = read_binding_core()
+        observations = []
+
+        class InterleavedLock:
+            def __init__(self): self.lock = c.RLock()
+            def __enter__(self):
+                if core._retirement_kind == 'read-binding' and not observations:
+                    # A competing failure wins the lock before the release acquires it.
+                    observations.append(core._busy)
+                    core.retain_failure()
+                self.lock.acquire()
+                return self
+            def __exit__(self, *_): self.lock.release()
+
+        with patch.object(c, '_CUSTODY_LOCK', InterleavedLock()):
+            with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(observations, [False])
+        self.assertTrue(core._retired and core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        self.assertIs(c._READ_RETIREMENTS[id(core)], core._read_retirement)
+        self.assertFalse(core._read_retirement.released)
 
     def test_execution_producer_cannot_skip_return_early_or_hide_double_dispatch(self):
         for mode in ('skip', 'early', 'double'):
