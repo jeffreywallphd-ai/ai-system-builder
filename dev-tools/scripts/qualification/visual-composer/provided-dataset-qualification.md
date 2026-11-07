@@ -179,3 +179,41 @@ The number keeps its content, system foreground and border, with a transparent
 background. The official audit can classify opaque positioned pseudo-elements as
 covering nearby text. This source-based repair still needs an actual app audit;
 do not ignore incomplete nodes or change the engine, rules or contrast targets.
+
+## Startup diagnostics after a stopped app test
+
+The fourth serial attempt passed packaging and the first Data surface's normal
+and forced-color audits at both1440px and320px. Each audit had zero violations,
+zero incomplete checks and zero retries. The enclosing observer then recorded a
+process-commit limit notification and forcibly stopped its owned Job. It confirmed
+active-zero and closed outer handles/streams. The nested final browser/coordinator
+reports are absent. Desktop did not start; native400 remains unobserved. A missing
+final reporter file does not prove that a browser test never began.
+
+The limit notification alone does not identify the allocating process or prove a
+PyTorch, Chrome, leak or physical-RAM cause. Keep the failed namespace and its
+independently reviewed observations. Do not increase a global cap from that PID.
+
+The fixed Python entry now writes up to four exclusive, fsynced startup facts in
+its validated current cache. They mark entry before packaged main, completion of
+that import, completion of the fixed task imports and entry before the listener.
+Fields contain only a closed role/stage, current PID/parent PID, a validated source
+revision or null, and an explicit diagnostic-only scope. They contain no raw error,
+credential, payload, executable path or model data. They do not prove readiness,
+process ownership, native retirement or disk credit. The ordinary authenticated
+loopback launch checks and model-free task restrictions are unchanged.
+
+For the fixed dataset-profile thin-browser scenario, both accessibility variants
+record the existing owned browser's bounded CDP process-role list before and after
+the audits. Native observations begin only after frame admission. Each snapshot
+also identifies its test observer. Unknown roles become `other`; malformed,
+duplicate or more than32rows become unavailable. Only the fixed SystemInfo query
+is sent; the diagnostic session is detached. No PID is inspected or acted on.
+Unavailable diagnostics do not change the official accessibility result. These
+awaits use the existing test/host/phase deadlines, not an independently timed
+diagnostic guarantee. Source-written and CDP IDs remain correlation only.
+
+The startup-failure and caller-persistence regressions are local source evidence.
+They neither rerun the apps nor reopen completed accuracy/OCR/provider tests.
+Use a separately reviewed fresh execution to collect actual startup observations;
+preserve the existing process, Job, member, output and deadline limits.

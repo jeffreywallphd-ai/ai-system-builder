@@ -16402,11 +16402,35 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The browser's first dataset audit found no high-contrast violations, but two checks remain unresolved.",
-          "A narrow navigation test also failed. Desktop tests did not run.",
-          "The failed results remain recorded. These source changes do not complete the roadmap.",
-          "Completed model accuracy tests stay closed. Full software testing remains deferred.",
-          "No action is needed from you for this code work."
+          "In that earlier run, two high-contrast checks were unresolved and narrow navigation failed.",
+          "Desktop tests did not run in that attempt. Its failed results stay recorded.",
+          "Those source checks did not complete the roadmap. Completed model accuracy stays closed.",
+          "Full software testing remains deferred. No action is needed from you for this code work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "cd938ad8982196513968017045db42765eb07e749c939434b25b6c6d7a82879a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The navigation and high-contrast fixes passed their source checks and independent review.",
+          "Those changes are committed.",
+          "The later browser run passed the first Data screen accessibility checks at both widths."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5ef1e67245aea2d04ba00a87e3179ef9add2a77096404fabd019d3c5f03145b6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The run then reached its per-process memory limit and was stopped. All owned test processes stopped.",
+          "The process that reached the limit and the browser zoom outcome are unknown. Desktop tests did not run.",
+          "The agent will use the new diagnostics and finish the remaining checks. No action is needed from you.",
+          "This does not complete the roadmap or qualify low-memory mode. Completed model accuracy stays closed. Full software testing remains deferred."
         ]
       }
     }

@@ -1961,3 +1961,21 @@ The existing limits remain 200 source paths and 100 unique test paths per profil
 An unknown path, incomplete combined coverage or an explicitly required generic
 check keeps the fallback. Declarations in unselected profiles supply no coverage.
 Declarations also supply no test pass: every selected check must still execute.
+
+The next serial app attempt passed the first Data screen's ordinary and forced
+contrast checks at both widths with no unresolved nodes. Its enclosing Job then
+hit the unchanged per-process commit limit and forcibly stopped all owned work.
+The outer observer confirmed active-zero and closed handles/streams. Final nested
+browser/coordinator results are absent. Desktop did not start; native400 remains
+unobserved. Missing final reporting cannot prove that a browser case never began.
+The source-bound report preserves the entire earlier attempt and this distinction.
+
+New fixed startup facts precede the private provided-worker imports. Existing
+owned browser sessions can supply bounded, sanitized process-role snapshots in
+both accessibility variants. These facts support diagnosis only. They never
+establish native identity, readiness, retirement, disk credit or an app pass.
+Unknown or unavailable observations remain explicit. No notification PID is
+probed or acted on; no process/memory/timeout cap changes. CDP awaits remain under
+the existing test/phase guards, without a separate diagnostic timing guarantee.
+See the [fixed fixture guide](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
+and [startup diagnostic census history](../operations/comprehensive-ui-automation-startup-diagnostics-census-history.json).

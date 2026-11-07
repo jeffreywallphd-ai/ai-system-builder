@@ -26,13 +26,51 @@ vi.mock("node:fs/promises", () => {
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
-import { navigateCriticalApplicationArea, prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
+import { navigateCriticalApplicationArea, observeOwnedBrowserProcessRoles, prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
 import { qualifyOperationalUiJourney } from "../visual-composer/e2e/operational-ui-journey";
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
+
+describe("owned browser diagnostic roles", () => {
+  function owned(result: unknown, fail = "") {
+    const session = {send:vi.fn(async()=>{if(fail==="send")throw new Error("synthetic-private-transport");return result;}),
+      detach:vi.fn(async()=>{if(fail==="detach")throw new Error("synthetic-private-detach");})};
+    const create=vi.fn(async()=>session);
+    const page={context:()=>({browser:()=>({newBrowserCDPSession:create})})} as unknown as Page;
+    return {page,session,create};
+  }
+  it("uses only the existing browser session and copies bounded roles without private fields", async()=>{
+    const {page,session,create}=owned({processInfo:[{id:12,type:"browser",privatePath:"synthetic-private-path"},{id:13,type:"unknown-private-role"}]});
+    const result=await observeOwnedBrowserProcessRoles(page);
+    expect(result.status).toBe("collected");expect(result.nativeAuthority).toBe(false);
+    expect(result.observer).toEqual({role:"playwright-worker",pid:process.pid,parentPid:process.ppid});
+    expect(result.processes).toEqual([{pid:12,role:"browser"},{pid:13,role:"other"}]);
+    expect(JSON.stringify(result)).not.toContain("private");
+    expect(create).toHaveBeenCalledTimes(1);expect(session.send).toHaveBeenCalledTimes(1);expect(session.send).toHaveBeenCalledWith("SystemInfo.getProcessInfo");
+    expect(session.detach).toHaveBeenCalledTimes(1);
+  });
+  it("rejects malformed, duplicate or oversized observations and always detaches", async()=>{
+    for(const rows of [null,[],Array.from({length:33},(_,id)=>({id:id+1,type:"renderer"})),[{id:1,type:"renderer"},{id:1,type:"GPU"}],
+      [{id:true,type:"browser"}],[{id:0,type:"browser"}],[{id:2**32,type:"browser"}],[{id:1,type:"x".repeat(65)}],[null]]) {
+      const {page,session}=owned({processInfo:rows});
+      expect(await observeOwnedBrowserProcessRoles(page)).toMatchObject({status:"unavailable",nativeAuthority:false,processes:[]});
+      expect(session.detach).toHaveBeenCalledTimes(1);
+    }
+  });
+  it("keeps missing transport, request and close errors non-authoritative and private", async()=>{
+    const missing={context:()=>({browser:()=>null})} as unknown as Page;
+    expect(await observeOwnedBrowserProcessRoles(missing)).toMatchObject({status:"unavailable",processes:[]});
+    for(const failure of ["send","detach"]) {
+      const {page,session}=owned({processInfo:[{id:1,type:"browser"}]},failure);
+      const result=await observeOwnedBrowserProcessRoles(page);
+      expect(result).toMatchObject({status:"unavailable",nativeAuthority:false,processes:[]});
+      expect(JSON.stringify(result)).not.toContain("private");expect(session.detach).toHaveBeenCalledTimes(1);
+    }
+  });
+});
 
 describe("responsive Data and Context navigation driver", () => {
   it("operates the actual native disclosure markup without inventing a button role", async () => {
@@ -293,6 +331,35 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     expect(saved.forcedColorsAudits.map((v: { width: number }) => v.width)).toEqual([1440, 320]);
     expect(saved["control-access-320"]).toEqual({ width: 320, controls: 1, inaccessible: 0, status: "passed" });
     expect(probe.writes.join("")).not.toMatch(/Synthetic private|synthetic-private|userAgent|selector|message/);
+  });
+  it.each(["standard","native400"] as const)("persists owned diagnostic frontiers without changing %s audit results",async mode=>{
+    vi.stubEnv("PYTHON_RUNTIME_QUALIFICATION_SCENARIO","dataset-profile");
+    if(mode==="native400")installNativeFrame();
+    const detach=vi.fn(async()=>{}),send=vi.fn(async()=>({processInfo:[{id:123,type:"renderer",privateText:"synthetic-private-browser"}]}));
+    const observed={...page,context:()=>({browser:()=>({newBrowserCDPSession:async()=>({send,detach})})})} as unknown as Page;
+    expect((await qualifyCriticalSurfaceAccessibility(observed,info,"settings",mode)).status).toBe("passed");
+    const first=JSON.parse(probe.writes[0]!),last=JSON.parse(probe.writes.at(-1)!);
+    expect(first.audits).toEqual([]);expect(first.browserProcessRolesBefore).toMatchObject({status:"collected",nativeAuthority:false,processes:[{pid:123,role:"renderer"}]});
+    expect(last.browserProcessRolesAfter).toEqual(first.browserProcessRolesBefore);expect(last.status).toBe("passed");
+    expect(detach).toHaveBeenCalledTimes(2);expect(probe.calls).toBe(mode==="standard"?4:2);
+    expect(probe.writes.join("")).not.toContain("synthetic-private-browser");
+  });
+  it.each(["standard","native400"] as const)("keeps unavailable %s diagnostics separate from a passing accessibility audit",async mode=>{
+    vi.stubEnv("PYTHON_RUNTIME_QUALIFICATION_SCENARIO","dataset-profile");
+    if(mode==="native400")installNativeFrame();
+    const detach=vi.fn(async()=>{}),observed={...page,context:()=>({browser:()=>({newBrowserCDPSession:async()=>({
+      send:async()=>{throw new Error("synthetic-private-role-transport");},detach})})})} as unknown as Page;
+    expect((await qualifyCriticalSurfaceAccessibility(observed,info,"settings",mode)).status).toBe("passed");
+    const last=JSON.parse(probe.writes.at(-1)!);
+    for(const key of ["browserProcessRolesBefore","browserProcessRolesAfter"])expect(last[key]).toMatchObject({status:"unavailable",nativeAuthority:false,processes:[]});
+    expect(detach).toHaveBeenCalledTimes(2);expect(probe.calls).toBe(mode==="standard"?4:2);
+    expect(probe.writes.join("")).not.toContain("synthetic-private-role-transport");
+  });
+  it("does not open diagnostic sessions outside the fixed dataset-profile scenario",async()=>{
+    vi.stubEnv("PYTHON_RUNTIME_QUALIFICATION_SCENARIO","training-profile");
+    const create=vi.fn(),observed={...page,context:()=>({browser:()=>({newBrowserCDPSession:create})})} as unknown as Page;
+    expect((await qualifyCriticalSurfaceAccessibility(observed,info,"settings")).status).toBe("passed");
+    expect(create).not.toHaveBeenCalled();expect(JSON.parse(probe.writes.at(-1)!)).not.toHaveProperty("browserProcessRolesBefore");
   });
   it.each([false, true])("restores the caller's narrow viewport after an audit failure=%s", async failure => {
     probe.auditFails = failure;

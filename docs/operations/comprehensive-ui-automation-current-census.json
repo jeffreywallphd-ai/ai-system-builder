@@ -5155,267 +5155,295 @@
   {
    "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
    "facts": {
-    "sha256": "7dd5b0764c155983f6407a7bd147559aa99f64fc9bc8f08e6d794db48b5bef0c",
-    "bytes": 53666,
+    "sha256": "1dafcde36e373a8444b0236f24c3fb9db86b8d109c07603d4e3753107820bc88",
+    "bytes": 59102,
     "cases": [
      {
+      "name": "uses only the existing browser session and copies bounded roles without private fields",
+      "line": 45
+     },
+     {
+      "name": "rejects malformed, duplicate or oversized observations and always detaches",
+      "line": 55
+     },
+     {
+      "name": "keeps missing transport, request and close errors non-authoritative and private",
+      "line": 63
+     },
+     {
       "name": "operates the actual native disclosure markup without inventing a button role",
-      "line": 38
+      "line": 76
      },
      {
       "name": "uses the visible sidebar for %s",
-      "line": 89
+      "line": 127
      },
      {
       "name": "uses the real responsive menu for $area, already open=$opened",
-      "line": 95
+      "line": 133
      },
      {
       "name": "rejects unknown targets before Page access %#",
-      "line": 103
-     },
-     {
-      "name": "redacts %s and never retries activation",
-      "line": 109
-     },
-     {
-      "name": "reports only a fixed diagnostic stage for %s",
-      "line": 121
-     },
-     {
-      "name": "sets and verifies the fixed viewport once on the supplied Page",
-      "line": 136
-     },
-     {
-      "name": "does not accept cached dimensions before the setter completes",
       "line": 141
      },
      {
+      "name": "redacts %s and never retries activation",
+      "line": 147
+     },
+     {
+      "name": "reports only a fixed diagnostic stage for %s",
+      "line": 159
+     },
+     {
+      "name": "sets and verifies the fixed viewport once on the supplied Page",
+      "line": 174
+     },
+     {
+      "name": "does not accept cached dimensions before the setter completes",
+      "line": 179
+     },
+     {
       "name": "does not touch Page for native or unknown mode %#",
-      "line": 149
+      "line": 187
      },
      {
       "name": "refuses unavailable or mismatched setter result %#",
-      "line": 155
+      "line": 193
      },
      {
       "name": "redacts every setup failure %# without retry",
-      "line": 160
+      "line": 198
      },
      {
       "name": "copies supported %s context and requires both exact ordered widths",
-      "line": 171
+      "line": 209
      },
      {
       "name": "rejects unsupported or private context %#",
-      "line": 181
+      "line": 219
      },
      {
       "name": "admits %s only for the desktop host",
-      "line": 188
+      "line": 226
      },
      {
       "name": "accepts the supported desktop %s observation",
-      "line": 192
-     },
-     {
-      "name": "never qualifies missing, reordered, sparse or failed audits %#",
-      "line": 195
-     },
-     {
-      "name": "refuses executable context and array hooks without invoking them",
-      "line": 199
-     },
-     {
-      "name": "refuses an over-cap array before enumerating its descriptors",
-      "line": 205
-     },
-     {
-      "name": "rejects invalid or excessive reduced motion facts %#",
-      "line": 217
-     },
-     {
-      "name": "copies finite facts and retains a legitimate inaccessible-control failure",
-      "line": 224
-     },
-     {
-      "name": "refuses malformed or private control facts %#",
       "line": 230
      },
      {
+      "name": "never qualifies missing, reordered, sparse or failed audits %#",
+      "line": 233
+     },
+     {
+      "name": "refuses executable context and array hooks without invoking them",
+      "line": 237
+     },
+     {
+      "name": "refuses an over-cap array before enumerating its descriptors",
+      "line": 243
+     },
+     {
+      "name": "rejects invalid or excessive reduced motion facts %#",
+      "line": 255
+     },
+     {
+      "name": "copies finite facts and retains a legitimate inaccessible-control failure",
+      "line": 262
+     },
+     {
+      "name": "refuses malformed or private control facts %#",
+      "line": 268
+     },
+     {
       "name": "refuses executable observation hooks without invoking them",
-      "line": 234
+      "line": 272
      },
      {
       "name": "audits both declared widths and finalizes only bounded context/rule/count facts",
-      "line": 287
+      "line": 325
+     },
+     {
+      "name": "persists owned diagnostic frontiers without changing %s audit results",
+      "line": 335
+     },
+     {
+      "name": "keeps unavailable %s diagnostics separate from a passing accessibility audit",
+      "line": 347
+     },
+     {
+      "name": "does not open diagnostic sessions outside the fixed dataset-profile scenario",
+      "line": 358
      },
      {
       "name": "restores the caller's narrow viewport after an audit failure=%s",
-      "line": 297
+      "line": 364
      },
      {
       "name": "persists current-version reason counters with an unchanged failed core audit",
-      "line": 304
+      "line": 371
      },
      {
       "name": "refuses an unavailable or invalid caller viewport %# before any mutation",
-      "line": 316
+      "line": 383
      },
      {
       "name": "redacts a viewport capture failure without inventing a restore target",
-      "line": 321
+      "line": 388
      },
      {
       "name": "requires wide sidebar and narrow open menu in both media profiles, then restores narrow caller",
-      "line": 345
+      "line": 412
      },
      {
       "name": "refuses wrong responsive navigation %s",
-      "line": 350
+      "line": 417
      },
      {
       "name": "reads fixed source-owned profile and engine inputs from an unrelated working folder",
-      "line": 356
+      "line": 423
      },
      {
       "name": "keeps an unavailable source-owned engine failed and redacted",
-      "line": 363
+      "line": 430
      },
      {
       "name": "audits the actual standalone mount without requiring the builder shell",
-      "line": 369
+      "line": 436
      },
      {
       "name": "refuses %s instead of auditing a different page",
-      "line": 377
+      "line": 444
      },
      {
       "name": "rejects a thin runtime before any file or Page effect",
-      "line": 386
+      "line": 453
      },
      {
       "name": "rechecks runtime identity if the document changes after initial admission",
-      "line": 391
+      "line": 458
      },
      {
       "name": "refuses a visible %s control even without document overflow",
-      "line": 401
+      "line": 468
      },
      {
       "name": "scrolls visible controls before measurement and excludes hidden or inert controls",
-      "line": 410
+      "line": 477
      },
      {
       "name": "retains a failed forced-colors %s check after both baseline widths passed",
-      "line": 426
+      "line": 493
      },
      {
       "name": "refuses a mounted document without any observable controls",
-      "line": 433
+      "line": 500
      },
      {
       "name": "refuses an excessive control collection before inspecting its entries",
-      "line": 438
+      "line": 505
      },
      {
       "name": "denies an existing report without overwriting, inspecting or adopting its bytes",
-      "line": 446
+      "line": 513
      },
      {
       "name": "rejects unknown context before any file or Page effect",
-      "line": 451
+      "line": 518
      },
      {
       "name": "preserves failed %s evidence and fixed diagnostics",
-      "line": 455
+      "line": 522
      },
      {
       "name": "persists only safe failed contrast diagnostics through %s",
-      "line": 481
-     },
-     {
-      "name": "audits native %s at its actual width without any viewport resize",
-      "line": 506
-     },
-     {
-      "name": "requires native responsive navigation in %s media",
-      "line": 515
-     },
-     {
-      "name": "reads the same source-owned inputs for native observations from an unrelated working folder",
-      "line": 521
-     },
-     {
-      "name": "supports only the standalone runtime mount for native runtime observations",
-      "line": 529
-     },
-     {
-      "name": "denies invalid native %s before evidence writes or audits",
-      "line": 534
-     },
-     {
-      "name": "keeps the standard device-scale guard unchanged",
       "line": 548
      },
      {
-      "name": "retains failed native %s results and restores media without resizing",
-      "line": 552
+      "name": "audits native %s at its actual width without any viewport resize",
+      "line": 573
      },
      {
-      "name": "rejects unsupported native hosts and unknown modes before touching Page or files",
-      "line": 563
+      "name": "requires native responsive navigation in %s media",
+      "line": 582
      },
      {
-      "name": "redacts an initial native Page failure %# before effects",
-      "line": 572
-     },
-     {
-      "name": "rejects missing or invalid mode before Page access %#",
+      "name": "reads the same source-owned inputs for native observations from an unrelated working folder",
       "line": 588
      },
      {
-      "name": "refuses unsupported or mismatched transport/project before file or Page work %#",
+      "name": "supports only the standalone runtime mount for native runtime observations",
       "line": 596
+     },
+     {
+      "name": "denies invalid native %s before evidence writes or audits",
+      "line": 601
+     },
+     {
+      "name": "keeps the standard device-scale guard unchanged",
+      "line": 615
+     },
+     {
+      "name": "retains failed native %s results and restores media without resizing",
+      "line": 619
+     },
+     {
+      "name": "rejects unsupported native hosts and unknown modes before touching Page or files",
+      "line": 630
+     },
+     {
+      "name": "redacts an initial native Page failure %# before effects",
+      "line": 639
+     },
+     {
+      "name": "rejects missing or invalid mode before Page access %#",
+      "line": 655
+     },
+     {
+      "name": "refuses unsupported or mismatched transport/project before file or Page work %#",
+      "line": 663
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "owned",
+      "line": 38
+     },
+     {
       "name": "driver",
-      "line": 64
+      "line": 102
      },
      {
       "name": "installNavigation",
-      "line": 326
+      "line": 393
      },
      {
       "name": "installNativeFrame",
-      "line": 469
+      "line": 536
      }
     ],
-    "assertionCount": 228,
-    "assertionDigest": "afbb7b7ace838ff66f309a25d034863131c325f9dd1e45dafe9434f58c594296",
+    "assertionCount": 259,
+    "assertionDigest": "931309cf2def76804f6034fa96879a15f3be2b05d5e35ae66a3bafd5c7875fd2",
     "assertionExamples": [
      {
-      "line": 43,
+      "line": 48,
       "kind": "expect",
-      "sha256": "8a54f9877ab59dda566cbdd34c85e85810a0472d67b2b9e818ba684b7330662d"
+      "sha256": "ee91d9e18f7ccba53d5f0332a0883e34fd230afebfdb937bf06e7a88abb472a9"
      },
      {
-      "line": 43,
+      "line": 48,
       "kind": "expect",
-      "sha256": "7d3ba00b6c449cd7dfddebe9f7868b3eea572553d4d9af53348c4388cb9ce15f"
+      "sha256": "25a26a0388f670caf41df1b3b919d95621c192e133573896ee496c035c7ad591"
      },
      {
-      "line": 44,
+      "line": 49,
       "kind": "expect",
-      "sha256": "99dd0d72f1227c9115f20fcc0b68c82651841c3a668de2eb826bd728e094156d"
+      "sha256": "f764efb2e02aff09674d4f89a7f04da4594a1be1bc21e0ae96fa6cdc9b0b8710"
      },
      {
-      "line": 44,
+      "line": 50,
       "kind": "expect",
-      "sha256": "6d281c9cff3d433a16668c3b78595dc247b07d833f13448b67b99240ee52c9ee"
+      "sha256": "c19b075150413ae4801abafb1f30b3b789bc66f21217440024e67c4595939ad0"
      }
     ],
     "modifiers": []

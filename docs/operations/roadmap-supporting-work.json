@@ -11390,6 +11390,51 @@
       "limitations": [
         "Source and selector checks do not qualify real app painting. The later V3 browser trial removed the earlier65 contrast violations but retained two unresolved checks and a native navigation failure. Desktop did not run. That actual failure is independently reviewed and preserved; no parent criterion passes. Completed model accuracy stays closed. Full software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-real-host-roundtrips",
+      "work_id": "finish-disclosure-and-selected-profile-regressions",
+      "work_criteria": [
+        "disclosure-counter-and-failed-evidence-repairs-are-reviewed"
+      ],
+      "receipt_digest": "7b0b943b8c94030ff452902502e6b94b285ca1748ec4177f43d8a2e99e30f830",
+      "review_digest": "a8a31aa10f7e948d495a17493a4d9a6689afc77c7e6b7f3b4766dd6c1c11ba3b",
+      "scope": "The exact native summary navigation, transparent system-color workflow numbers and selected-profile source checks passed seven scoped checks and independent review. The completed source17 checkpoint is committed asfe875ca. Later reviewed V4 evidence shows the first Data accessibility surface passed normal and forced1440/320px with no unresolved checks.",
+      "limitations": [
+        "V4 then hit the unchanged1GiB per-process commit limit and its enclosing Job was forcibly stopped with active-zero/closed outer handles and streams. The allocating role and native400 result are unobserved; final browser/nested reports are absent and Desktop did not run. This is historical source support only, not current startup-diagnostic, all-host, offload or parent qualification. Accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "finish-disclosure-and-selected-profile-regressions",
+      "work_criteria": [
+        "disclosure-counter-and-failed-evidence-repairs-are-reviewed"
+      ],
+      "receipt_digest": "7b0b943b8c94030ff452902502e6b94b285ca1748ec4177f43d8a2e99e30f830",
+      "review_digest": "a8a31aa10f7e948d495a17493a4d9a6689afc77c7e6b7f3b4766dd6c1c11ba3b",
+      "scope": "The exact native summary navigation, transparent system-color workflow numbers and selected-profile source checks passed seven scoped checks and independent review. The completed source17 checkpoint is committed asfe875ca. Later reviewed V4 evidence shows the first Data accessibility surface passed normal and forced1440/320px with no unresolved checks.",
+      "limitations": [
+        "V4 then hit the unchanged1GiB per-process commit limit and its enclosing Job was forcibly stopped with active-zero/closed outer handles and streams. The allocating role and native400 result are unobserved; final browser/nested reports are absent and Desktop did not run. This is historical source support only, not current startup-diagnostic, all-host, offload or parent qualification. Accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "finish-disclosure-and-selected-profile-regressions",
+      "work_criteria": [
+        "disclosure-counter-and-failed-evidence-repairs-are-reviewed"
+      ],
+      "receipt_digest": "7b0b943b8c94030ff452902502e6b94b285ca1748ec4177f43d8a2e99e30f830",
+      "review_digest": "a8a31aa10f7e948d495a17493a4d9a6689afc77c7e6b7f3b4766dd6c1c11ba3b",
+      "scope": "The exact native summary navigation, transparent system-color workflow numbers and selected-profile source checks passed seven scoped checks and independent review. The completed source17 checkpoint is committed asfe875ca. Later reviewed V4 evidence shows the first Data accessibility surface passed normal and forced1440/320px with no unresolved checks.",
+      "limitations": [
+        "V4 then hit the unchanged1GiB per-process commit limit and its enclosing Job was forcibly stopped with active-zero/closed outer handles and streams. The allocating role and native400 result are unobserved; final browser/nested reports are absent and Desktop did not run. This is historical source support only, not current startup-diagnostic, all-host, offload or parent qualification. Accepted model accuracy stays closed and full software testing remains deferred."
+      ]
     }
   ]
 }

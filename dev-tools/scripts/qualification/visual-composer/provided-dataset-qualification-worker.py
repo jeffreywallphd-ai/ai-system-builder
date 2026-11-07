@@ -447,6 +447,56 @@ def write_failure_fact(cache, boundary, error, sequence):
         stream.write(body)
 
 
+_STARTUP_STAGES = ("before-packaged-main", "after-packaged-main", "after-runtime-task-import", "before-listener")
+
+
+def write_startup_fact(cache, owned, stage):
+    """Diagnostic self-identity only, never readiness or process authority."""
+    if type(stage) is not str or stage not in _STARTUP_STAGES:
+        raise ValueError("A fixed startup stage is required.")
+    if (type(cache) is not type(Path()) or type(owned) is not type(Path())
+            or not cache.is_absolute() or not owned.is_absolute() or cache.resolve() != cache
+            or owned.resolve() != owned or not cache.is_relative_to(owned) or cache == owned):
+        raise ValueError("A current qualification cache is required.")
+    for directory in (owned, *[owned.joinpath(*cache.relative_to(owned).parts[:i])
+                              for i in range(1, len(cache.relative_to(owned).parts) + 1)]):
+        info = directory.lstat()
+        if not stat.S_ISDIR(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+            raise ValueError("A regular qualification cache is required.")
+    pid, parent = os.getpid(), os.getppid()
+    if not all(type(value) is int and 0 < value <= 0xffffffff for value in (pid, parent)):
+        raise ValueError("A bounded current process identity is required.")
+    revision = os.getenv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", "")
+    body = json.dumps({"schema_version": "provided-worker-startup-v1", "role": "provided-data-python",
+                       "stage": stage, "pid": pid, "parentPid": parent,
+                       "sourceRevision": revision if re.fullmatch(r"source\.[a-f0-9]{64}", revision) else None,
+                       "scope": "current-process-self-observation-only", "nativeAuthority": False})
+    if len(body.encode("utf-8")) > 1024:
+        raise ValueError("The startup diagnostic exceeded its limit.")
+    destination = cache / f"qualification-startup-{pid}-{stage}.json"
+    # Use extended Windows I/O only after checking the original semantic path.
+    destination = Path(chr(92) * 2 + "?" + chr(92) + str(destination)) if os.name == "nt" else destination
+    with destination.open("x", encoding="utf-8") as stream:
+        stream.write(body)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def load_provided_runtime(worker, cache, owned):
+    write_startup_fact(cache, owned, "before-packaged-main")
+    spec = importlib.util.spec_from_file_location("aisb_provided_qualification_main", worker / "main.py")
+    if spec is None or spec.loader is None:
+        raise RuntimeError("The packaged worker entry is unavailable.")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    write_startup_fact(cache, owned, "after-packaged-main")
+    host, port = module._resolve_launch_configuration()  # Production loopback/token checks.
+    application = importlib.import_module("_ai_system_builder_worker.app")
+    task = importlib.import_module("_ai_system_builder_worker.tasks.prepare_training_dataset")
+    write_startup_fact(cache, owned, "after-runtime-task-import")
+    return module, application, task, host, port
+
+
 def main():
     if sys.argv[1:] or os.name != "nt" or any(os.getenv(key) != "1" for key in (
             "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "PIP_NO_INDEX")):
@@ -466,12 +516,7 @@ def main():
         info = directory.lstat()
         if not stat.S_ISDIR(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
             raise RuntimeError("A regular qualification cache is required.")
-    spec = importlib.util.spec_from_file_location("aisb_provided_qualification_main", worker / "main.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    host, port = module._resolve_launch_configuration()  # Production loopback/token checks.
-    application = importlib.import_module("_ai_system_builder_worker.app")
-    task = importlib.import_module("_ai_system_builder_worker.tasks.prepare_training_dataset")
+    module, application, task, host, port = load_provided_runtime(worker, cache, owned)
     original_prepare, original_dispatch = task.prepare_training_dataset, application._run_task
     original_context = application.generate_context_artifact
     original_inspection = application.operate_on_context_artifact
@@ -517,6 +562,7 @@ def main():
     application._run_task = observe(dispatch, "task")
     application._ensure_model_download_data = deny_download
     import uvicorn
+    write_startup_fact(cache, owned, "before-listener")
     uvicorn.run(module.app, host=host, port=port, reload=False, access_log=False)
 
 

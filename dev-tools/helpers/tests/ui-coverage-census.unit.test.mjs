@@ -366,13 +366,21 @@ const pendingDisclosureJourneyDefinitions = Object.freeze(pendingResponsiveJourn
     candidate:"7dd5b0764c155983f6407a7bd147559aa99f64fc9bc8f08e6d794db48b5bef0c",
     facts_sha256:"8b4a8aa5b59c0f762b252289bd988d7aa7add895c25e4196015cf85e0ad6c8f0"} : {...row}
 )));
-const pendingCurrentJourneyDefinitions = pendingDisclosureJourneyDefinitions;
+const pendingStartupJourneyDefinitions = Object.freeze(pendingDisclosureJourneyDefinitions.map(row=>Object.freeze(
+  row.path === "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts" ? {...row,
+    candidate:"1dafcde36e373a8444b0236f24c3fb9db86b8d109c07603d4e3753107820bc88",
+    facts_sha256:"3b5718b169a9bd8fd91da9b95dbad1bb4bffaa414bc683d4186cd3004e6f5be3"} : {...row}
+)));
+const pendingCurrentJourneyDefinitions = pendingStartupJourneyDefinitions;
 function assertCurrentSourceDrift(map, result) {
   if(map.source_baseline===pendingResponsiveJourneyDefinitions[0].baseline) {
     // Preserve the genuine preceding snapshot, not a future wildcard binding.
     // The current census also has to match actual source facts in validateCensus.
     const prior=pendingResponsiveJourneyDefinitions[1],row=map.sources.find(row=>row.path===prior.path);
-    result=assertContrastDiagnosticDrift(map,result,row?.facts.sha256===prior.candidate?pendingResponsiveJourneyDefinitions:pendingDisclosureJourneyDefinitions);
+    const disclosed=pendingDisclosureJourneyDefinitions[1];
+    const definitions=row?.facts.sha256===prior.candidate?pendingResponsiveJourneyDefinitions:
+      row?.facts.sha256===disclosed.candidate?pendingDisclosureJourneyDefinitions:pendingStartupJourneyDefinitions;
+    result=assertContrastDiagnosticDrift(map,result,definitions);
   }
   if(map.source_baseline===shellContrastBaseline)result=assertContrastDiagnosticDrift(map,result,pendingShellContrastDefinitions);
   if(map.source_baseline===pendingContrastRegionDefinitions[0].baseline)result=assertContrastDiagnosticDrift(map,result,pendingContrastRegionDefinitions);

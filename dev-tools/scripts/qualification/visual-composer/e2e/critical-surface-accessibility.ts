@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { Page, TestInfo } from "@playwright/test";
+import type { CDPSession, Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, qualifyNativeCriticalAccessibilityReport, readCriticalAccessibilityMode, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation,
   type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type ContrastRetryDiagnostics } from "../technical-accessibility-observation";
 import { collectDocumentAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
@@ -9,6 +9,39 @@ import { collectDocumentAccessibilityObservation, collectRuntimeAccessibilityObs
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
   incomplete: audit.incomplete, contrastPassedNodes: audit.contrastPassedNodes, retries: audit.retries });
+
+type OwnedBrowserRoleObservation = {schemaVersion:string;status:"collected"|"unavailable";source:"owned-browser-cdp";nativeAuthority:false;
+  observer:{role:"playwright-worker";pid:number;parentPid:number};processes:Array<{pid:number;role:string}>};
+
+/** The existing owned browser reports these roles. They are never native authority. */
+export async function observeOwnedBrowserProcessRoles(page: Page) {
+  const unavailable = (): OwnedBrowserRoleObservation => ({ schemaVersion: "owned-browser-role-observation-v1", status: "unavailable",
+    source: "owned-browser-cdp", nativeAuthority: false,
+    observer:{role:"playwright-worker",pid:process.pid,parentPid:process.ppid}, processes: [] });
+  let session: CDPSession | undefined;
+  let observation = unavailable();
+  try {
+    const browser = page.context().browser();
+    if (!browser) return observation;
+    session = await browser.newBrowserCDPSession();
+    const result: unknown = await session.send("SystemInfo.getProcessInfo");
+    const rows = result && typeof result === "object" ? (result as {processInfo?:unknown}).processInfo : undefined;
+    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 32) throw new Error();
+    const seen = new Set<number>();
+    const processes = rows.map((row: unknown) => {
+      if (!row || typeof row !== "object") throw new Error();
+      const {id, type} = row as {id?:unknown;type?:unknown};
+      if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0 || id > 0xffffffff || seen.has(id) || typeof type !== "string" || type.length > 64) throw new Error();
+      seen.add(id);
+      return {pid:id,role:["browser","renderer","GPU","utility","service_worker","zygote"].includes(type) ? type : "other"};
+    });
+    observation = {...unavailable(),status:"collected",processes};
+  } catch { observation = unavailable(); }
+  finally {
+    if (session) { try { await session.detach(); } catch { observation = unavailable(); } }
+  }
+  return observation;
+}
 
 /** Use the mounted navigation layout. Never force a hidden sidebar control. */
 export async function navigateCriticalApplicationArea(page: Page, area: "Home" | "Data" | "Artifacts" | "Context") {
@@ -130,6 +163,9 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
     const viewport = page.viewportSize();
     if (!viewport || !Number.isSafeInteger(viewport.width) || viewport.width <= 0 || !Number.isSafeInteger(viewport.height) || viewport.height <= 0) throw new Error();
     originalViewport = { width: viewport.width, height: viewport.height };
+    if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
+      report.browserProcessRolesBefore = await observeOwnedBrowserProcessRoles(page);
+    }
     stage = "evidence-setup"; await mkdir(folder, { recursive: true });
     stage = "evidence-create"; await save();
     stage = "browser-profile";
@@ -188,6 +224,9 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       forcedColorsAudits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
     }
+    if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
+      report.browserProcessRolesAfter = await observeOwnedBrowserProcessRoles(page);
+    }
     const result = qualifyCriticalAccessibilityReport(context, audits);
     Object.assign(report, result); return result;
   } catch {
@@ -229,6 +268,9 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
     const reference=await loadTechnicalAccessibilityReference();
     if (reference.profile.deviceScaleFactor !== 1) throw new Error();
     report.profile=reference.profile.environmentId;report.profileSha256=reference.profileSha256;report.hardware=reference.hardware;
+    if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
+      report.browserProcessRolesBefore = await observeOwnedBrowserProcessRoles(page);
+    }
     stage="evidence-setup";await mkdir(folder,{recursive:true});stage="evidence-create";await save();
     stage="audit-engine";await page.evaluate(await readTechnicalAccessibilityEngine());
     for (const media of ["normal","forced-colors"] as const) {
@@ -254,6 +296,9 @@ async function qualifyNativeSurface(page: Page, info: TestInfo, context: Critica
       const {audit,diagnostics}=await(runtime?collectNativeRuntimeAccessibilityObservation:collectNativeDocumentAccessibilityObservation)(page,media);
       if(audit.status==="failed")failedContrast={stage,observation:diagnostics};
       audits.push(raw(audit));await save();if(audit.status!=="passed")throw new Error();
+    }
+    if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
+      report.browserProcessRolesAfter = await observeOwnedBrowserProcessRoles(page);
     }
     const result=qualifyNativeCriticalAccessibilityReport(context,audits);Object.assign(report,result);return result;
   }catch{report.status="failed";report.failureStage=stage;if(failedContrast)report.contrastRetryDiagnostics=failedContrast;throw new Error(`Native accessibility check failed at ${stage}.`);}

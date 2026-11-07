@@ -428,4 +428,82 @@ class ProvidedDatasetQualificationTests(unittest.TestCase):
             with self.assertRaises(ValueError): fixture.validate_fixed_rag_package(package(rows), fixed)
 
 
+class ProvidedStartupDiagnosticsTests(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.root = Path(self.folder.name).resolve()
+        self.owned = self.root / "owned"
+        self.cache = self.owned / "cache"
+        self.cache.mkdir(parents=True)
+        self.worker = self.root / "worker"
+        self.worker.mkdir()
+
+    def facts(self):
+        return {value["stage"]: value for file in self.cache.glob("qualification-startup-*.json")
+                for value in [json.loads(file.read_text(encoding="utf-8"))]}
+
+    def test_failed_packaged_import_keeps_only_preimport_fact_without_private_error(self):
+        (self.worker / "main.py").write_text("raise RuntimeError('synthetic-private-import-detail')\n", encoding="utf-8")
+        with self.assertRaises(RuntimeError): fixture.load_provided_runtime(self.worker, self.cache, self.owned)
+        facts = self.facts()
+        self.assertEqual(set(facts), {"before-packaged-main"})
+        fact = facts["before-packaged-main"]
+        self.assertEqual(fact["role"], "provided-data-python")
+        self.assertEqual(fact["pid"], fixture.os.getpid())
+        self.assertEqual(fact["parentPid"], fixture.os.getppid())
+        self.assertFalse(fact["nativeAuthority"])
+        self.assertNotIn("synthetic-private-import-detail", json.dumps(facts))
+
+    def test_auth_or_task_import_failure_does_not_invent_a_completed_frontier(self):
+        for fail_auth in (True, False):
+            with self.subTest(fail_auth=fail_auth):
+                for file in self.cache.iterdir(): file.unlink()
+                body = "def _resolve_launch_configuration():\n    " + (
+                    "raise RuntimeError('synthetic-private-auth-detail')\n" if fail_auth else "return '127.0.0.1', 43111\n")
+                (self.worker / "main.py").write_text(body, encoding="utf-8")
+                with patch.object(fixture.importlib, "import_module", side_effect=RuntimeError("synthetic-private-task-detail")) as importer:
+                    with self.assertRaises(RuntimeError): fixture.load_provided_runtime(self.worker, self.cache, self.owned)
+                    self.assertEqual(importer.call_count, 0 if fail_auth else 1)
+                self.assertEqual(set(self.facts()), {"before-packaged-main", "after-packaged-main"})
+                self.assertNotIn("synthetic-private", json.dumps(self.facts()))
+
+    def test_success_retains_exact_module_and_launch_results_without_starting_listener(self):
+        (self.worker / "main.py").write_text("app=object()\ndef _resolve_launch_configuration():\n    return '127.0.0.1', 43111\n", encoding="utf-8")
+        application, task = NS(name="application"), NS(name="task")
+        with patch.object(fixture.importlib, "import_module", side_effect=[application, task]) as importer:
+            module, actual_app, actual_task, host, port = fixture.load_provided_runtime(self.worker, self.cache, self.owned)
+        self.assertIs(actual_app, application); self.assertIs(actual_task, task)
+        self.assertIsNotNone(module.app); self.assertEqual((host, port), ("127.0.0.1", 43111))
+        self.assertEqual([call.args[0] for call in importer.call_args_list], ["_ai_system_builder_worker.app", "_ai_system_builder_worker.tasks.prepare_training_dataset"])
+        self.assertEqual(set(self.facts()), {"before-packaged-main", "after-packaged-main", "after-runtime-task-import"})
+        self.assertNotIn("before-listener", self.facts())
+
+    def test_exclusive_finite_facts_redact_unvalidated_environment_and_do_not_overwrite(self):
+        with patch.dict(fixture.os.environ, {"VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION": "synthetic-private-environment"}):
+            fixture.write_startup_fact(self.cache, self.owned, "before-packaged-main")
+        files = list(self.cache.iterdir()); self.assertEqual(len(files), 1)
+        original = files[0].read_bytes(); self.assertLessEqual(len(original), 1024)
+        self.assertIsNone(self.facts()["before-packaged-main"]["sourceRevision"])
+        self.assertNotIn(b"synthetic-private-environment", original)
+        with self.assertRaises(FileExistsError): fixture.write_startup_fact(self.cache, self.owned, "before-packaged-main")
+        self.assertEqual(files[0].read_bytes(), original)
+
+    def test_invalid_stage_identity_foreign_path_and_reparse_cache_deny_before_write(self):
+        class UntrustedStage:
+            def __eq__(self, other): raise AssertionError("must not inspect custom stage")
+        for stage in (None, True, "unknown", "../escape", UntrustedStage()):
+            with self.subTest(stage=type(stage).__name__), self.assertRaises(ValueError): fixture.write_startup_fact(self.cache, self.owned, stage)
+        for cache in (self.root, self.owned, Path("relative"), "not-a-path"):
+            with self.assertRaises(ValueError): fixture.write_startup_fact(cache, self.owned, "before-packaged-main")
+        for pid in (True, 0, -1, 0x100000000):
+            with patch.object(fixture.os, "getpid", return_value=pid), self.assertRaises(ValueError): fixture.write_startup_fact(self.cache, self.owned, "before-packaged-main")
+        original = Path.lstat
+        def reparse(path):
+            if path == self.cache: return NS(st_mode=fixture.stat.S_IFDIR, st_file_attributes=0x400)
+            return original(path)
+        with patch.object(Path, "lstat", reparse), self.assertRaises(ValueError): fixture.write_startup_fact(self.cache, self.owned, "before-packaged-main")
+        self.assertEqual(list(self.cache.iterdir()), [])
+
+
 if __name__ == "__main__": unittest.main()
