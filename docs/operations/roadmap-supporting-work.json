@@ -10970,6 +10970,51 @@
       "limitations": [
         "The tests used sample records. Windows model file deletion, opening a model folder, and real catalog cleanup still need separate checks."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "limit-generated-model-directory-walks",
+      "work_criteria": [
+        "generated-model-tree-traversal-stays-within-host-limits"
+      ],
+      "receipt_digest": "e20a251e5f6eead6ee2254e9e1dc27a2876d2a45e3c121509cab014bfff3bc93",
+      "review_digest": "920d42cc5a306a3e26b92e2ffd224733a2b6ac15882563b99f27ec768dbae65b",
+      "scope": "The app limits the number of folders, files, and bytes it scans before saving a generated model. It also limits folder depth and checks the copied files before putting them in the model cache.",
+      "limitations": [
+        "The tests used sample files and Windows folder junctions. File replacement during saving, protected ownership, deleting model files, and opening model folders still need separate checks."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "source-refresh-is-incremental-and-honest",
+      "work_id": "prefer-current-website-snapshot-when-capture-times-tie",
+      "work_criteria": [
+        "use-scoped-latest-lineage-leaf-when-capture-times-tie"
+      ],
+      "receipt_digest": "ac6be6942361fc290dece91ea8c7a62d28fe206a493abf714fb83eb2a1a3954b",
+      "review_digest": "d562a90c261c12cd8a2ea4c6021c6798599755d159596097df2269021904b6f6",
+      "scope": "If versions of the same source share a capture time, the app prefers a version with no recorded replacement at that time. The stored versions stay available as history.",
+      "limitations": [
+        "The tests used sample records. Live website behavior and the order of concurrent refreshes still need separate checks."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "keep-retired-offload-backends-out-of-custody",
+      "work_criteria": [
+        "stale-offload-calls-cannot-retain-retired-owners"
+      ],
+      "receipt_digest": "9eab8a2e0b0b908544f65572c8d68078ba439e040e5c3a070e49a0c3a9e0b0e9",
+      "review_digest": "26076a20264f87b9a854e627198f2ccca757f36589bc6c03dc3545fd320a4be1",
+      "scope": "After the app confirms cleanup for a low-memory run, it rejects later requests for that run and keeps it closed.",
+      "limitations": [
+        "The tests used simulated cleanup and worker exit. Protected restart and actual low-memory measurements still need separate checks."
+      ]
     }
   ]
 }

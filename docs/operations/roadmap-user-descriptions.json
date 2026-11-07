@@ -15861,6 +15861,70 @@
           "Windows model file deletion, opening a model folder, and real catalog cleanup still need separate checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aa14e458a0212776e26019364d11143e6297594bee576f99b8ab33d4bb1b2f84",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app limits the number of folders, files, and bytes it scans before saving a generated model.",
+          "It also limits folder depth and checks the copied files before putting them in the model cache."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d7036335fb5ee19016cc0b64705643a0dedf391e7697bcda4f0fc0cc19492991",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample files and Windows folder junctions.",
+          "File replacement during saving, protected ownership, deleting model files, and opening model folders still need separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e20b951f75708b947c35e4d812b32357325b357b4712c936ec7685860f5e0c03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "If versions of the same source share a capture time, the app prefers a version with no recorded replacement at that time.",
+          "The stored versions stay available as history."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "901ea8ee7f6f0a63eb91c3136261d1d53e5224977f318161ba5f8b2e23b9308e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample records.",
+          "Live website behavior and the order of concurrent refreshes still need separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "22b3d6f66f60f2b88c7bc0ba7452e2ca0c61de34b508b20ae6e455825ac87943",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "After the app confirms cleanup for a low-memory run, it rejects later requests for that run and keeps it closed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8ea0250449f936d4d8845a513b5e84abd726bddb3b0f4bee4c3da6779b8a7e9f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used simulated cleanup and worker exit. Protected restart and actual low-memory measurements still need separate checks."
+        ]
+      }
     }
   ]
 }
