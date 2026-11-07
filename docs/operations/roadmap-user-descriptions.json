@@ -16357,6 +16357,32 @@
           "These observations do not complete the roadmap."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "08eb94a3b239b0eebb4ef211ddf38a837047fc487806f7474ad71cf53d33f2c5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test navigation now uses the real sidebar or menu.",
+          "The training test uses the app\u2019s own output folder.",
+          "The coverage records preserve earlier work and use the correct file versions.",
+          "This tested and reviewed source change is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "daebb915c53e767d151876db8c02770b67bfbcb43b679601511ad03aecf51ce0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are source and simulated UI checks. Real browser and desktop checks still need to pass.",
+          "One earlier source check failed. The diagnostic run and repeat verification passed, and the earlier failure stays recorded.",
+          "The remaining display, process, provider and roadmap checks are still open. Completed model accuracy tests stay closed.",
+          "Full software testing will run in the combined testing phase. No action is needed from you for the remaining code work."
+        ]
+      }
     }
   ]
 }

@@ -11300,6 +11300,51 @@
       "limitations": [
         "All 29 coordinator regressions and the required source checks passed. These tests used harmless files and simulated process results. Real app runs and process cleanup still need evidence. The source checks do not complete the roadmap."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "complete-responsive-ui-journeys-with-authentic-source-baseline",
+      "work_criteria": [
+        "responsive-navigation-and-failed-observations-are-exact"
+      ],
+      "receipt_digest": "61152f3f2fabfc7ef13e836774f0cd51aff814b7c901e09672c33a69458f7262",
+      "review_digest": "25edf072896d45b38024dcd268d62bee53a450c7865ce6e5554987b4290b1c29",
+      "scope": "Reviewed responsive navigation uses real sidebar or menu controls and the correct Settings header. The finite training fixture uses only the application-owned output stage. The census authenticates all 180 source pins, preserves prior mappings and histories, and keeps four explicit working-source differences. This completed source checkpoint is committed as 1d44bfd49.",
+      "limitations": [
+        "This is local source and synthetic fixture evidence, not an actual browser or desktop pass. All seven related source checks passed after an earlier operational attempt failed without a reproduced cause; both results remain recorded. The failed real host attempts and pending forced-colors, native, provider and parent qualification remain open. Accepted model accuracy stays closed. Full software testing is deferred to the combined campaign."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "complete-responsive-ui-journeys-with-authentic-source-baseline",
+      "work_criteria": [
+        "responsive-navigation-and-failed-observations-are-exact"
+      ],
+      "receipt_digest": "61152f3f2fabfc7ef13e836774f0cd51aff814b7c901e09672c33a69458f7262",
+      "review_digest": "25edf072896d45b38024dcd268d62bee53a450c7865ce6e5554987b4290b1c29",
+      "scope": "Reviewed responsive navigation uses real sidebar or menu controls and the correct Settings header. The finite training fixture uses only the application-owned output stage. The census authenticates all 180 source pins, preserves prior mappings and histories, and keeps four explicit working-source differences. This completed source checkpoint is committed as 1d44bfd49.",
+      "limitations": [
+        "This is local source and synthetic fixture evidence, not an actual browser or desktop pass. All seven related source checks passed after an earlier operational attempt failed without a reproduced cause; both results remain recorded. The failed real host attempts and pending forced-colors, native, provider and parent qualification remain open. Accepted model accuracy stays closed. Full software testing is deferred to the combined campaign."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "complete-responsive-ui-journeys-with-authentic-source-baseline",
+      "work_criteria": [
+        "responsive-navigation-and-failed-observations-are-exact"
+      ],
+      "receipt_digest": "61152f3f2fabfc7ef13e836774f0cd51aff814b7c901e09672c33a69458f7262",
+      "review_digest": "25edf072896d45b38024dcd268d62bee53a450c7865ce6e5554987b4290b1c29",
+      "scope": "Reviewed responsive navigation uses real sidebar or menu controls and the correct Settings header. The finite training fixture uses only the application-owned output stage. The census authenticates all 180 source pins, preserves prior mappings and histories, and keeps four explicit working-source differences. This completed source checkpoint is committed as 1d44bfd49.",
+      "limitations": [
+        "This is local source and synthetic fixture evidence, not an actual browser or desktop pass. All seven related source checks passed after an earlier operational attempt failed without a reproduced cause; both results remain recorded. The failed real host attempts and pending forced-colors, native, provider and parent qualification remain open. Accepted model accuracy stays closed. Full software testing is deferred to the combined campaign."
+      ]
     }
   ]
 }

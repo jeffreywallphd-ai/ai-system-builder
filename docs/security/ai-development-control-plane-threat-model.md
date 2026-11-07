@@ -823,3 +823,20 @@ by the application. Canonical parent, fixed prefix and original device/inode
 checks precede its fixed synthetic writes. It retains bounded owned cleanup,
 review/save/retry/discard and workspace assertions, plus private-path refusal.
 The production guard still rejects foreign output; no real model is loaded.
+
+The shared forced-colors layer follows the system palette only when that mode is
+active. Keep ordinary layout and behavior, warning text, notification severity,
+selection and disabled state, workflow numbers and visible keyboard focus.
+Restore native choice controls without removing unrelated pseudo-element content.
+Do not opt out of system colors or alter the official audit to obtain a pass.
+
+Its closed source profile adds no process, provider, model or native authority.
+Selection tests check actual control attributes and a bounded pseudo-element
+inventory; they do not suppress unsupported ordinary selectors. The DOM test
+environment cannot prove CSS specificity or native painting. Real host evidence
+and all unresolved qualification remain separate from this source support.
+
+Feature-owned trigger paths and complete declared coverage have different roles.
+Shared configuration and borrowed tests must not activate an unrelated profile.
+Startup-only palette work selects the new profile explicitly. Missing required
+profile data still fails closed; do not ignore it to repair cross-profile routing.

@@ -1,6 +1,7 @@
 @import "../../../../../modules/ui/shared/styles/tokens.css";
 @import "../../../../../modules/ui/shared/styles/reset.css";
 @import "../../../../../modules/ui/shared/styles/components/controls.css";
+@import "../../../../../modules/ui/shared/styles/forced-colors.css";
 
 html, body {
   background: var(--color-bg-primary);

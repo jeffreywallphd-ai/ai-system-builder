@@ -1918,3 +1918,22 @@ by the application request. Check its canonical temporary parent and identity
 before writing the small synthetic files. Keep the production foreign-folder
 refusal, explicit save/discard and private-path redaction. A separate folder
 created by the fake worker is an invalid result, not a reason to relax ownership.
+
+The `shared-forced-colors` profile runs eleven fixed style, shell, startup,
+notification and Context UI test files. It covers the shared high-contrast
+stylesheet and its three host imports. Unknown source, incomplete declarations
+and an explicit generic request keep the normal fallback. Existing operational
+and dataset profile inventories stay unchanged.
+
+Automatic selection uses only the forced-colors stylesheet, its own style and
+routing tests, and the two app stylesheet entrypoints. Shared configuration,
+borrowed test files and the startup stylesheet do not activate this profile by
+themselves. Explicitly select `shared-forced-colors` for a startup-only palette
+change. Its complete source declaration still covers all three host imports.
+Older profile configurations keep their own routing and denial behavior.
+
+The high-contrast source tests check media boundaries, import order and control
+selectors. They do not measure the CSS cascade, native painting or real app
+contrast. Keep those checks in the existing controlled host journeys with the
+official accessibility engine and unchanged rules. The earlier failed host
+observations remain evidence; source changes do not turn them into passes.

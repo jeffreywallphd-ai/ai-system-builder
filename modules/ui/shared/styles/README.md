@@ -80,3 +80,15 @@ real host checks sample first, active and default number interiors in device pix
 Asset card/detail headers wrap their title and source badge when space is tight.
 Badges keep intrinsic width; long titles can break within the available width.
 Actual wide,320px and native-zoom checks reject title/badge overlap or overflow.
+
+## System high-contrast colors
+
+`forced-colors.css` follows the user's system palette when forced colors are active.
+Each app imports it after its local styles. Desktop startup also imports it after
+shared controls. Keep ordinary color, layout and interaction rules unchanged.
+The normal custom form theme has one deliberate exception: high-contrast mode uses
+native checkbox and radio controls. Preserve labels, checked and disabled state,
+workflow numbers, status text, notification severity and visible keyboard focus.
+Use system foreground/background pairs. Do not opt out of forced colors or weaken
+the accessibility audit. Source and selector tests check structure and state
+contracts; real host checks must still verify native painting, contrast and focus.

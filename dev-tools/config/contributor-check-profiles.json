@@ -1,6 +1,31 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "shared-forced-colors": {
+      "test_paths": [
+        "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.mjs",
+        "modules/ui/shared/styles/tests/shared-form-controls-primary-style.unit.test.ts",
+        "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts",
+        "modules/ui/shared/styles/tests/shared-collapsible-panel-overflow.unit.test.ts",
+        "modules/ui/shared/styles/tests/page-dashboard-layout.unit.test.ts",
+        "apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx",
+        "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+        "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx",
+        "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+        "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+        "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "modules/ui/shared/styles/forced-colors.css",
+        "apps/desktop/src/renderer/styles/app.css",
+        "apps/thin-client/src/styles/app.css",
+        "apps/desktop/src/renderer/styles/startup.css",
+        "modules/ui/shared/styles/README.md",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/helpers/tests/test_control_plane_forced_colors_profile.py"
+      ]
+    },
     "notification-dismiss-focus": {
       "test_paths": [
         "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",

@@ -11,6 +11,7 @@ from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
 QUALIFICATION_PROFILES = (
+    "shared-forced-colors",
     "offload-resource-lifecycle",
     "model-qualification-scheduling",
     "windows-guarded-tree-probe",
@@ -31,6 +32,13 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "shared-forced-colors": [
+        "modules/ui/shared/styles/forced-colors.css",
+        "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.mjs",
+        "dev-tools/helpers/tests/test_control_plane_forced_colors_profile.py",
+        "apps/desktop/src/renderer/styles/app.css",
+        "apps/thin-client/src/styles/app.css"
+    ],
     "notification-dismiss-focus": [
         "modules/ui/shared/notifications/NotificationCenter.tsx",
         "modules/ui/shared/notifications/tests/notification-dismiss-focus.ui.test.tsx",

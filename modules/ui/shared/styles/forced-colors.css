@@ -1,0 +1,231 @@
+/* Honor the user's high-contrast palette. Ordinary themes are unchanged. */
+@media (forced-colors: active) {
+  :root {
+    --color-accent: CanvasText;
+    --color-accent-hover: CanvasText;
+    --color-accent-strong: Highlight;
+    --color-focus-ring: CanvasText;
+    --color-bg-primary: Canvas;
+    --color-bg-subtle: Canvas;
+    --color-bg-panel: Canvas;
+    --color-bg-elevated: Canvas;
+    --color-bg-hover: Canvas;
+    --color-bg-accent: Highlight;
+    --color-bg-accent-hover: Highlight;
+    --color-input-bg: Field;
+    --color-input-bg-focus: Field;
+    --color-border: CanvasText;
+    --color-border-soft: CanvasText;
+    --color-border-strong: CanvasText;
+    --color-border-inverse: CanvasText;
+    --color-text-primary: CanvasText;
+    --color-text-secondary: CanvasText;
+    --color-text-muted: CanvasText;
+    --color-text-inverse: HighlightText;
+    --color-success: CanvasText;
+    --color-danger: CanvasText;
+    --color-info: CanvasText;
+  }
+
+  :root .system-builder { --color-text-muted: CanvasText; }
+
+  html, body {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  /* Remove decorative backdrops from shared and host-specific reading surfaces. */
+  :root .ui-shell,
+  :root .ui-shell__header,
+  :root .ui-shell__sidebar,
+  :root .ui-shell__main,
+  :root .ui-shell__menu-panel,
+  :root .ui-panel,
+  :root .ui-panel__toggle,
+  :root .ui-panel__body,
+  :root .ui-tabbed-panel__panel,
+  :root .page-dashboard__metric,
+  :root .ui-workflow__step,
+  :root .ui-workflow__step:first-of-type,
+  :root .ui-workflow__step[data-active="true"],
+  :root .ui-workflow__step:has(.ui-panel__toggle[aria-expanded="true"]),
+  :root .ui-workflow__subpanel,
+  :root .ui-glossary-hint__bubble,
+  :root .ui-status,
+  :root .ui-status[role="alert"],
+  :root .ui-status--error,
+  :root .ui-status--success,
+  :root .ui-feedback,
+  :root .ui-feedback--error,
+  :root .ui-feedback--success,
+  :root .ui-feedback[role="alert"],
+  :root .ui-notification__panel,
+  :root .ui-notification__panel-header,
+  :root .ui-notification__item,
+  :root .ui-notification__toast,
+  :root .ui-type-badge,
+  :root .context-studio__artifact-group,
+  :root .context-studio__mode-selector,
+  :root .context-studio__manual-source,
+  :root .dataset-preparation__artifact-group,
+  :root .dataset-preparation__artifact-group:nth-child(2) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+
+  :root .ui-type-badge {
+    /* --ui-type-color contains RGB components, not a CSS color keyword. */
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  :root .ui-workflow__step::before,
+  :root .ui-workflow__step:first-of-type::before,
+  :root .ui-workflow__step[data-active="true"]::before,
+  :root .ui-workflow__step:has(.ui-panel__toggle[aria-expanded="true"])::before {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+    /* Preserve the existing numbered content and its stacking order. */
+  }
+
+  :root .ui-workflow::before { border-color: CanvasText; }
+
+  :root .ui-notification__badge {
+    background: CanvasText;
+    color: Canvas;
+    border-color: Canvas;
+  }
+
+  :root input:not([type="checkbox"]):not([type="radio"]),
+  :root textarea,
+  :root select {
+    background: Field;
+    color: FieldText;
+    border-color: FieldText;
+    box-shadow: none;
+  }
+
+  :root :is(input, textarea)::placeholder {
+    color: FieldText;
+    opacity: 1;
+  }
+
+  :root :is(button, .ui-button),
+  :root :is(button, .ui-button):hover:enabled:not([aria-disabled="true"]) {
+    background: ButtonFace;
+    color: ButtonText;
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+
+  :root .ui-file-input::file-selector-button {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  :root a[href]:not(.ui-button) {
+    color: LinkText;
+  }
+
+  :root :is(
+    .ui-shell__sidebar-item[aria-current="page"],
+    .ui-shell__menu-item[aria-current="page"],
+    .ui-shell__settings-button[aria-current="page"],
+    .ui-tabbed-panel__tab--active,
+    .asset-library-tabs [role="tab"][aria-selected="true"],
+    .context-studio__mode-card--selected,
+    .ui-button[aria-pressed="true"], .ui-button[aria-current="page"],
+    .system-composer__modes [role="tab"][aria-selected="true"],
+    .system-composer-inspector__tabs [role="tab"][aria-selected="true"],
+    .system-composer__tree [role="treeitem"][aria-selected="true"],
+    .system-composition-preview__surface button[aria-current="page"]
+  ):not(:disabled):not([aria-disabled="true"]) {
+    background: Highlight;
+    color: HighlightText;
+    border-color: HighlightText;
+    box-shadow: none;
+  }
+
+  :root .ui-shell__sidebar-item[aria-current="page"] .ui-app-icon,
+  :root .context-studio__mode-card span,
+  :root .ui-choice > span {
+    color: inherit;
+  }
+
+  :root .ui-tabbed-panel__tab--active::after,
+  :root .asset-library-tabs [role="tab"][aria-selected="true"]::after {
+    background: currentColor;
+    box-shadow: none;
+  }
+
+  :root .ui-choice,
+  :root .ui-choice:hover,
+  :root .ui-choice:has(input:checked) {
+    background: Field;
+    color: FieldText;
+    border-color: FieldText;
+  }
+
+  :root :is(input[type="checkbox"], input[type="radio"]),
+  :root :is(input[type="checkbox"], input[type="radio"]):checked {
+    appearance: auto;
+    accent-color: auto;
+    background: Field;
+    color: FieldText;
+    border-color: FieldText;
+    box-shadow: none;
+  }
+
+  :root :is(input[type="checkbox"], input[type="radio"])::before {
+    content: none;
+  }
+
+  /* Disabled controls remain distinct without making their text translucent. */
+  :root .ui-button[aria-disabled="true"][aria-current="page"],
+  :root :is(button, input, textarea, select, .ui-button, [role="tab"], [role="treeitem"]):disabled,
+  :root :is(button, .ui-button, [role="tab"], [role="treeitem"])[aria-disabled="true"] {
+    background: ButtonFace;
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+    box-shadow: none;
+  }
+
+  :root input:not([type="checkbox"]):not([type="radio"]):disabled,
+  :root textarea:disabled,
+  :root select:disabled,
+  :root :is(input[type="checkbox"], input[type="radio"]):disabled,
+  :root .ui-choice:has(input:disabled) {
+    background: Field;
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+
+  :root .ui-file-input:disabled::file-selector-button {
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  :root :is(button, a[href], input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+
+  :root :is(.ui-tabbed-panel__tab, .asset-library-tabs [role="tab"],
+    .system-composer__modes [role="tab"], .system-composer-inspector__tabs [role="tab"]):focus-visible {
+    outline-color: currentColor;
+    outline-offset: -2px;
+  }
+
+  ::selection {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
