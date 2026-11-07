@@ -404,6 +404,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
         _need(type(core) is w.WindowsOffloadCore and callable(_api_factory)
               and (domain is None or isinstance(domain, _JournalDomainPort)))
         self.__origin, self.__core, self.__domain = self, core, domain
+        self.__released = False
         self._core, self._domain = core, domain
         self._binding = core._journal_accounting_binding()
         self._factory, self._api, self._constructing_api = _api_factory, None, None
@@ -429,18 +430,24 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
     def _retain(self):
         self._assert_origin()
         with _OWNERS_LOCK:
-            _need(id(self) in _OWNERS or len(_OWNERS) < _MAX_OWNERS)
+            owner = _OWNERS.get(id(self))
+            _need(self.__released is False and (owner is self or (owner is None and len(_OWNERS) < _MAX_OWNERS)))
             _OWNERS[id(self)] = self
 
     def _fail(self):
         _need(self.__origin is self)
-        self._retain_native_outcome_failure()
-        self._uncertain = True
+        with self._lock:
+            if self.__released is True:
+                return
+            self._retain_native_outcome_failure()
+            self._uncertain = True
+            domain = self._domain if not self._domain_failure_started else None
+            if domain is not None:
+                self._domain_failure_started = True
         try: self._binding._retain_failure()
         except BaseException: pass  # Journal already retains the exact Core.
-        if self._domain is not None and not self._domain_failure_started:
-            self._domain_failure_started = True
-            try: self._domain.retain_failure(self)
+        if domain is not None:
+            try: domain.retain_failure(self)
             except BaseException: pass  # Never retry unknown bookkeeping.
 
     def _retain_native_outcome_failure(self):
@@ -464,7 +471,7 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
         self._assert_origin()
         _need(isinstance(self._domain, _JournalDomainPort)
               and isinstance(self._core._execution, w._NativeExecutionPort)
-              and not self._uncertain)
+              and not self._uncertain and self.__released is False)
 
     def prepare(self):
         """Explicit native bootstrap; unknown/full usage refuses before writes."""
@@ -538,7 +545,8 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
             self._pending = None
             return result
         except BaseException:
-            self._retain_native_outcome_failure()
+            if self._dispatch is not None:
+                self._retain_native_outcome_failure()
             self._fail()
             raise
 
@@ -706,7 +714,17 @@ class WindowsProtectedJournal(_ProtectedJournalPort, w._JournalAnchorReceiver):
             self._phase = 'credited'
         try:
             result = self._run(credit, retired=True)
-            with _OWNERS_LOCK: _OWNERS.pop(id(self), None)
+            with self._lock:
+                _need(self._phase == 'credited' and not self._uncertain and not self._busy)
+                with _OWNERS_LOCK:
+                    _need(_OWNERS.get(id(self)) is self and self.__released is False)
+                    try:
+                        _need(_OWNERS.pop(id(self)) is self)
+                        self.__released = True
+                    except BaseException:
+                        if self.__released is False:
+                            _OWNERS[id(self)] = self
+                        raise
             return result
         except BaseException as error:
             self._fail()

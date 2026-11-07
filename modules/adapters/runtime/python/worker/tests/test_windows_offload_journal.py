@@ -329,6 +329,56 @@ class JournalTests(JournalTableTestCase):
             with self.subTest(value=value), self.assertRaises(OffloadAdmissionError): journal.reserve(core, value)
         self.assertEqual(trace, before); self.assertEqual(domain.stage, 0)
 
+    def test_retired_journal_rejects_stale_operations_without_freezing_accounting(self):
+        core, journal, domain, trace = prepared()
+        journal.reserve(core, 8192); core.create_staging(8192); core.seal_staging()
+        journal.seal(core); journal.references_released(core); core.retire_fresh_staging()
+        execute = core._execution.execute
+        before_ack = []
+
+        def observe_owner(bound, operation):
+            result = execute(bound, operation)
+            if domain.credited:
+                before_ack.append(j._OWNERS.get(id(journal)) is journal)
+            return result
+
+        core._execution.execute = observe_owner
+        journal.credit_retirement(core)
+        self.assertEqual(before_ack, [True])
+        before = list(trace)
+        self.assertNotIn(id(journal), j._OWNERS)
+        for operation in (
+            journal.prepare, lambda: journal.reserve(core, 8192),
+            lambda: journal.seal(core), lambda: journal.references_released(core),
+            lambda: journal.credit_retirement(core),
+        ):
+            with self.subTest(operation=operation), self.assertRaises(OffloadAdmissionError):
+                operation()
+            self.assertNotIn(id(journal), j._OWNERS)
+            self.assertFalse(journal._uncertain or domain.frozen)
+        self.assertEqual(trace, before)
+        self.assertTrue(domain.credited)
+
+    def test_interrupted_journal_pop_restores_its_exact_owner(self):
+        core, journal, domain, trace = prepared()
+        journal.reserve(core, 8192); core.create_staging(8192); core.seal_staging()
+        journal.seal(core); journal.references_released(core); core.retire_fresh_staging()
+
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+
+        with patch.object(j, '_OWNERS', InterruptedPop(j._OWNERS)):
+            with self.assertRaises(KeyboardInterrupt):
+                journal.credit_retirement(core)
+            self.assertIs(j._OWNERS[id(journal)], journal)
+            self.assertTrue(journal._uncertain and domain.frozen)
+            before = list(trace)
+            with self.assertRaises(OffloadAdmissionError):
+                journal.credit_retirement(core)
+            self.assertEqual(trace, before)
+
     def test_post_credit_registry_interruption_freezes_domain_and_forbids_retry(self):
         core, journal, domain, trace = prepared()
         journal.reserve(core, 8192); core.create_staging(8192); core.seal_staging()

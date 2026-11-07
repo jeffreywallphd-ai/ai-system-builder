@@ -1022,6 +1022,9 @@ staging cleanup. If slot removal is interrupted, the Core restores the slot
 before unlocking and withholds proof of retirement. Calls to a released Core
 cannot create a new slot for it. Read-binding retirement also checks for
 uncertainty under the custody lock before releasing its records.
+The accounting journal releases its owner slot after the executor confirms
+retirement. It restores the slot if removal is interrupted. A call to an
+already released journal cannot reopen its slot or mark its accounting failed.
 
 The initial implementation supports only its new protected-current-user namespace
 and optional index file. It refuses unsupported inherited/retained trees; unknown
