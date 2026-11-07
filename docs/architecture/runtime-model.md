@@ -1025,6 +1025,9 @@ uncertainty under the custody lock before releasing its records.
 The accounting journal releases its owner slot after the executor confirms
 retirement. It restores the slot if removal is interrupted. A call to an
 already released journal cannot reopen its slot or mark its accounting failed.
+The guarded parent confirms its lease retirement only after its owner record
+is removed. An interrupted removal keeps the owner in custody. A late failure
+report leaves a confirmed retirement closed.
 
 The initial implementation supports only its new protected-current-user namespace
 and optional index file. It refuses unsupported inherited/retained trees; unknown

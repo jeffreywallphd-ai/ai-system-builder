@@ -213,6 +213,46 @@ class GuardedLeaseTests(unittest.TestCase):
         with self.assertRaises(offload.OffloadAdmissionError):
             self.lease()
 
+    def test_late_worker_failure_does_not_reopen_a_retired_parent(self):
+        with patch.dict(recovery._RETAINED_OWNERS, {}, clear=True):
+            lease = self.lease()
+            lease.seal()
+            with self.assertRaises(offload.OffloadAdmissionError):
+                lease.cleanup(model_released=True)
+            self.backend.worker_exited = True
+            self.owner.retire_owned_worker()
+            before = list(self.backend.steps)
+
+            self.context.retain_failure()
+
+            self.assertNotIn(id(self.owner), recovery._RETAINED_OWNERS)
+            lease.cleanup(model_released=True)
+            self.assertTrue(lease.released)
+            self.assertEqual(self.backend.steps, before)
+
+    def test_interrupted_parent_slot_removal_retains_custody_without_repeating_native_work(self):
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+
+        with patch.object(recovery, '_RETAINED_OWNERS', InterruptedPop()):
+            lease = self.lease()
+            lease.seal()
+            with self.assertRaises(offload.OffloadAdmissionError):
+                lease.cleanup(model_released=True)
+            self.backend.worker_exited = True
+            with self.assertRaises(KeyboardInterrupt):
+                self.owner.retire_owned_worker()
+            self.assertIs(recovery._RETAINED_OWNERS.get(id(self.owner)), self.owner)
+            before = list(self.backend.steps)
+            with self.assertRaises(offload.OffloadAdmissionError):
+                self.owner.retire_owned_worker()
+            with self.assertRaises(offload.OffloadAdmissionError):
+                lease.cleanup(model_released=True)
+            self.assertFalse(lease.released)
+            self.assertEqual(self.backend.steps, before)
+
     def test_only_the_issued_lease_can_advance_or_observe_its_owner(self):
         lease = self.lease()
         issued = self.owner._lease

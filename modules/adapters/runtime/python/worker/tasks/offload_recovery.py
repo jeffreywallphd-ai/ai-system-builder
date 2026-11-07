@@ -77,6 +77,8 @@ class GuardedOffloadContext:
         # still cannot leave a retryable context with an uncertain writer.
         owner = self._checked_owner()
         with owner._lock:
+            if owner._phase == "retired":
+                return
             owner._retain()
             owner._phase = "uncertain"
     def new_lease(self, cache_root, reservation):
@@ -146,7 +148,10 @@ class _GuardedOffloadOwner:
 
     def _retain(self):
         with _RETAINED_LOCK:
-            if id(self) not in _RETAINED_OWNERS:
+            retained = _RETAINED_OWNERS.get(id(self))
+            if self._phase == "retired" or (retained is not None and retained is not self):
+                raise OffloadAdmissionError()
+            if retained is None:
                 if len(_RETAINED_OWNERS) >= MAX_RETAINED_OWNERS:
                     raise OffloadAdmissionError()
                 _RETAINED_OWNERS[id(self)] = self
@@ -211,10 +216,26 @@ class _GuardedOffloadOwner:
         with self._lock:
             if self._phase != "release-pending":
                 raise OffloadAdmissionError()
-            self._invoke("retire_owned_worker", next_phase="retired")
-            # Only an acknowledged native retirement can remove strong custody.
-            with _RETAINED_LOCK:
-                _RETAINED_OWNERS.pop(id(self), None)
+            try:
+                self._invoke("retire_owned_worker")
+                # Acknowledged worker cleanup and owner removal are separate facts.
+                with _RETAINED_LOCK:
+                    if _RETAINED_OWNERS.get(id(self)) is not self:
+                        raise OffloadAdmissionError()
+                    try:
+                        if _RETAINED_OWNERS.pop(id(self)) is not self:
+                            raise OffloadAdmissionError()
+                        self._phase = "retired"
+                    except BaseException:
+                        if self._phase != "retired":
+                            _RETAINED_OWNERS[id(self)] = self
+                        raise
+            except BaseException as error:
+                if self._phase != "retired":
+                    self._phase = "uncertain"
+                if isinstance(error, Exception):
+                    raise OffloadAdmissionError() from None
+                raise
 
 
 def require_guarded_context(value):
