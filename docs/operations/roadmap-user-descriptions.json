@@ -16433,6 +16433,30 @@
           "This does not complete the roadmap or qualify low-memory mode. Completed model accuracy stays closed. Full software testing remains deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f60abe6b5667a33cbccd1e11ae2f042c560026f8c9dfb0361ce47591b42b006e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The startup diagnostics passed their focused checks and independent review. Those changes are committed.",
+          "The later browser run collected its process-role records and passed the first Data screen accessibility checks at both widths."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d089adc7900bc7c8c5b1daeddef3849908d89aa4549e72ed26834aa0944283b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The run then reached its per-process memory limit and stopped. All owned test processes stopped.",
+          "No Python startup record was written. The process that reached the limit and the browser zoom result are unknown. Desktop tests did not run.",
+          "The agent will inspect the earlier startup checks and finish the remaining work. No action is needed from you.",
+          "This does not complete the roadmap or qualify low-memory mode. Completed model accuracy stays closed. Full software testing remains deferred."
+        ]
+      }
     }
   ]
 }

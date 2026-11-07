@@ -11435,6 +11435,51 @@
       "limitations": [
         "V4 then hit the unchanged1GiB per-process commit limit and its enclosing Job was forcibly stopped with active-zero/closed outer handles and streams. The allocating role and native400 result are unobserved; final browser/nested reports are absent and Desktop did not run. This is historical source support only, not current startup-diagnostic, all-host, offload or parent qualification. Accepted model accuracy stays closed and full software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-real-host-roundtrips",
+      "work_id": "qualify-owned-startup-diagnostics-and-observed-ui-evidence",
+      "work_criteria": [
+        "bounded-startup-role-facts-and-v4-history-are-accurate"
+      ],
+      "receipt_digest": "88ec3afa926761dd04b5cf0cc8143daa437f606e19a49ca9bcb02c2d8aec4a86",
+      "review_digest": "9ce8b40d6ac62792da6f9f317512fe3b0cb5f60053518fd8cf30d0d49f9a99d9",
+      "scope": "Bounded pre-import worker facts and owned-browser role diagnostics passed six focused source checks and independent review, committed asda079406. A separate reviewed V5 execution collected both browser snapshots and passed the first normal/forced Data surface at1440/320px.",
+      "limitations": [
+        "The V5 attempt failed the unchanged1GiB process-commit limit. No wrapper startup fact or final browser/nested result was available; native400 is unobserved and Desktop did not start. All93 enclosed processes and outer handles/streams retired. No allocating role or PyTorch cause is established. This source support and failed observation do not qualify app journeys, offload or a parent roadmap. Accepted accuracy remains closed; full software tests remain deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "qualify-owned-startup-diagnostics-and-observed-ui-evidence",
+      "work_criteria": [
+        "bounded-startup-role-facts-and-v4-history-are-accurate"
+      ],
+      "receipt_digest": "88ec3afa926761dd04b5cf0cc8143daa437f606e19a49ca9bcb02c2d8aec4a86",
+      "review_digest": "9ce8b40d6ac62792da6f9f317512fe3b0cb5f60053518fd8cf30d0d49f9a99d9",
+      "scope": "Bounded pre-import worker facts and owned-browser role diagnostics passed six focused source checks and independent review, committed asda079406. A separate reviewed V5 execution collected both browser snapshots and passed the first normal/forced Data surface at1440/320px.",
+      "limitations": [
+        "The V5 attempt failed the unchanged1GiB process-commit limit. No wrapper startup fact or final browser/nested result was available; native400 is unobserved and Desktop did not start. All93 enclosed processes and outer handles/streams retired. No allocating role or PyTorch cause is established. This source support and failed observation do not qualify app journeys, offload or a parent roadmap. Accepted accuracy remains closed; full software tests remain deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-owned-startup-diagnostics-and-observed-ui-evidence",
+      "work_criteria": [
+        "bounded-startup-role-facts-and-v4-history-are-accurate"
+      ],
+      "receipt_digest": "88ec3afa926761dd04b5cf0cc8143daa437f606e19a49ca9bcb02c2d8aec4a86",
+      "review_digest": "9ce8b40d6ac62792da6f9f317512fe3b0cb5f60053518fd8cf30d0d49f9a99d9",
+      "scope": "Bounded pre-import worker facts and owned-browser role diagnostics passed six focused source checks and independent review, committed asda079406. A separate reviewed V5 execution collected both browser snapshots and passed the first normal/forced Data surface at1440/320px.",
+      "limitations": [
+        "The V5 attempt failed the unchanged1GiB process-commit limit. No wrapper startup fact or final browser/nested result was available; native400 is unobserved and Desktop did not start. All93 enclosed processes and outer handles/streams retired. No allocating role or PyTorch cause is established. This source support and failed observation do not qualify app journeys, offload or a parent roadmap. Accepted accuracy remains closed; full software tests remain deferred."
+      ]
     }
   ]
 }
