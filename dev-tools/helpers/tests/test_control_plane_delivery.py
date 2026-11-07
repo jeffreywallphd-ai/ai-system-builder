@@ -333,14 +333,16 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         config="dev-tools/config/contributor-check-profiles.json"
         source="dev-tools/helpers/native-qualification/owned_command_job.py"
         tests="dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
+        coordinator="dev-tools/helpers/native-qualification/serial_provided_coordinator.py"
+        coordinator_tests="dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py"
         readme="dev-tools/helpers/native-qualification/README.md"
         profiles=read_json(root/config)
         profile=profiles["profiles"]["native-host-policy"]
-        self.assertEqual(profile["test_paths"],[tests])
+        self.assertEqual(profile["test_paths"],[tests,coordinator_tests])
         commands=run_focused_checks.profile_commands(root,"native-host-policy")
-        self.assertEqual(commands,[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(tests).parent.as_posix()),"-p",Path(tests).name]])
+        self.assertEqual(commands,[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(test).parent.as_posix()),"-p",Path(test).name] for test in (tests,coordinator_tests)])
         self.put(config,json.dumps(profiles))
-        for path in (source,tests,readme):
+        for path in (source,tests,coordinator,coordinator_tests,readme):
             ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
             self.assertIn("native-host-policy",ids)
             self.assertNotIn("ocr-provider-contract",ids)

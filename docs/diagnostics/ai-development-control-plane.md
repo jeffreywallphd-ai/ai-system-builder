@@ -230,8 +230,8 @@ It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no
 controlled-provider, scale, native-race, offload or parent-roadmap qualification.
 
-The `native-host-policy` profile runs only the fixed native-launcher policy
-test file. It checks exact private package, combined UI, web-only and desktop-only
+The `native-host-policy` profile runs only the fixed native-launcher and serial
+provided-data coordinator policy test files. It checks exact private package, combined UI, web-only and desktop-only
 commands, unchanged limit selection, source/environment witnesses and injected
 owner retirement refusals. Normal execution leaves actual Windows qualification
 skipped. An explicit physical run still needs its separate review and authority.
@@ -239,6 +239,22 @@ This profile does not start an app, run a model or prove memory savings. Keep
 actual native readback, serial app setup, per-host measurements and parent
 qualification pending until separately executed. Unknown impact and an explicit
 `focused-tests` requirement retain generic coverage.
+
+The serial coordinator source defaults to refusal. Its synthetic tests cover
+bounded same-snapshot proof parsing, exact phase order, no successor after
+uncertain retirement, complete current feature/session evidence and sequential
+package preservation. The four MJS witnesses in its manifest avoid a self-hash
+cycle; the outer intent separately pins all five rendered helpers. An actual
+consumer still needs fresh source/runtime/inventory bindings, a separately
+reviewed fixed setup/configuration, one-use effect authority and actual outer and
+inner observations. Portable checks do not run an app, model or Native retry and
+do not complete a parent criterion. See the
+[helper contract](../../dev-tools/helpers/native-qualification/README.md).
+
+Required Windows report paths can exceed 260 characters. The coordinator adapts
+only exact filesystem operations to extended-length syntax and keeps normal
+canonical identities in its records. The long-path regression uses harmless new
+temporary files and retains all existing bounds, ancestor and single-link checks.
 
 The `host-setup-policy` profile runs one fixed Node lifecycle/binding test file.
 It checks the pure thirteen-key environment projection, normal and provided-data

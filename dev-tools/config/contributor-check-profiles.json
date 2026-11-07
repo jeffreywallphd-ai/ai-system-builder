@@ -275,11 +275,14 @@
     },
     "native-host-policy": {
       "test_paths": [
-        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
+        "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
+        "dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py"
       ],
       "source_paths": [
         "dev-tools/helpers/native-qualification/owned_command_job.py",
         "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
+        "dev-tools/helpers/native-qualification/serial_provided_coordinator.py",
+        "dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py",
         "dev-tools/helpers/native-qualification/README.md",
         "dev-tools/helpers/control_plane/catalog.py",
         "dev-tools/config/contributor-check-profiles.json",

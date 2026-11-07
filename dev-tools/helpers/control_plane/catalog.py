@@ -197,6 +197,8 @@ QUALIFICATION_PROFILE_PATTERNS = {
     "native-host-policy": [
         "dev-tools/helpers/native-qualification/owned_command_job.py",
         "dev-tools/helpers/native-qualification/tests/test_owned_command_job.py",
+        "dev-tools/helpers/native-qualification/serial_provided_coordinator.py",
+        "dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py",
         "dev-tools/helpers/native-qualification/README.md",
     ],
     "dataset-semantic-curation": [

@@ -217,13 +217,65 @@ complete retirement before the next app, a finite whole-run deadline and
 separate per-host observations. Do not reuse a combined-UI setup that starts web
 services during a desktop-only phase.
 
-`native-host-policy` runs this area's one fixed policy test file through the
+`native-host-policy` runs this area's two fixed policy test files through the
 control plane. Normal execution leaves its physical Windows case explicitly
 skipped. Physical opt-in still requires separate source review and controlled
 execution authority. These portable command, limit-selection and injected-owner
 checks do not qualify new native readback, actual apps or memory savings. The
 earlier 1 GiB process-limit failure remains failed; reducing overlap need not
 resolve that single-process limit. Existing old-run and offload guards remain.
+
+### Serial provided-data coordinator template
+
+`serial_provided_coordinator.py` is a versioned, fixed-purpose template. The
+checked-in entry refuses execution before reading inputs. There are no command,
+phase, timeout, resource-profile or model selectors. A separately reviewed local
+consumer replaces only its `_FIXED_CONTEXT` literal. The enclosing Native intent
+pins the resulting Python file and four MJS helpers. The literal pins one bounded
+passive manifest, an exact effect review and one-use authorization. These hashes
+coordinate cooperative reviewed work; they do not authenticate a hostile operator.
+Do not copy an old review, authorization or candidate forward.
+
+The manifest pins only the four inner MJS helpers to avoid a self-hash cycle.
+The outer intent pins all five code helpers. The child captures its own admitted
+hash and rechecks it, the runtime and preservation maps before each dispatch.
+The exact current source/dependency/state/Git/runtime/isolated-site inventories
+must be populated and reviewed during fresh materialization; the template cannot
+infer whether a caller-supplied inventory omitted required sources. The sole
+reviewed candidate dependency junction has its exact target and tag checked.
+
+Package, thin browser and Desktop run in that order. Each inner phase retains
+420 seconds and Standard limits; the outer role retains 1500 seconds, 1 GiB per
+process, 3 GiB aggregate and 32 members. The outer limit includes this coordinator
+and all descendants; an inner quota cannot enlarge it. Preparation, report checks,
+preservation and ordinary cleanup run inside that outer command. Parent admission,
+blocked OS calls and uncertain retirement are not falsely given a hard time bound.
+The child writes only fresh evidence in the outer phase's `coordinator` directory;
+the enclosing owner's live stdout/stderr files are separate and remain untouched.
+
+A successor requires normal exit zero, actual Job zero, stream completion and
+all native handle acknowledgments, empty owner registries and unchanged inputs.
+Failures preserve the consumed attempt, original failure, prior files and any
+fence. No automatic retry, adoption, removal, ACL change or old-process operation
+exists. Final outer retirement still needs its own observation and result review.
+
+The consumer checks the complete current four-test inventory: restart and native
+400-percent forms on each host, five worker caches and three distinct Desktop
+shutdown acknowledgments. Source Context, saved-row, manual Context and every
+selected accessibility surface remain required. Raw file hashes and typed
+`sha256:` artifact digests have distinct formats. Package comparisons preserve
+all original files/directories, permit only the two literal empty GPU log
+directories, and compare Desktop's actual before-tree to the accepted thin
+after-tree. Worker/OCR bytes and PE/resource metadata are checked without running
+OCR. Portable synthetic evidence qualifies these validators, never a physical
+host, nested Job, memory saving or parent roadmap. Fresh setup/configuration,
+materialization and effect review, and actual app/resource results remain pending.
+
+Windows file operations use extended-length syntax internally so required
+300-character evidence paths remain usable. Manifests, reports and comparisons
+retain normal canonical local-drive paths. Input namespace/UNC aliases, redirected
+ancestors, hardlinks, metadata drift and oversized files still deny. No registry,
+alias, junction, ownership or quota change is used to support long names.
 
 ## Closed Desktop training roles
 

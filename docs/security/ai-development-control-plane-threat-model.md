@@ -712,3 +712,45 @@ against other local processes: the original synthetic identity, organization
 authorization and token-enforcement lifecycle are still required. No production
 listener or product network policy changes. Actual current-source UI execution
 and complete owned-process retirement remain pending.
+
+## Fixed serial provided-data consumer
+
+The versioned Python coordinator refuses by default. Only a separately reviewed
+compiled literal can name the exact bounded manifest, review and authorization.
+JSON is passive data: no command, role, deadline, model or limit selector is
+accepted. Hashes bind cooperative source, not hostile-user authority. Fresh
+materialization must independently establish the complete source, dependency,
+runtime, Git/state and isolated-site inventory; the template cannot prove that a
+reviewed inventory is semantically complete. The outer Native intent binds all
+five rendered helpers. The manifest carries four MJS hashes, avoiding a circular
+self-hash; the child captures and rechecks its own bytes before each phase.
+
+Bounded readers admit ordinary single-link files before allocation, hash and
+parse one stable byte snapshot, reject duplicate/nonfinite JSON and detect
+identity/size drift. Enumeration is bounded while collecting entries. Inventory
+size and hash must share the admitted snapshot. These checks detect cooperative
+drift; they do not replace a Native hostile-filesystem custody boundary.
+
+Windows extended-length syntax is an internal syscall representation for exact
+local-drive paths. Records retain normal canonical names; caller-supplied
+namespace and UNC aliases are refused. Long names retain every ancestor/reparse,
+single-link, metadata and allocation check. No registry change, path alias,
+junction or custody-policy relaxation is introduced by this representation.
+
+Fixed package, thin-browser and Desktop roles run sequentially. Normal command
+success, Job zero, complete bounded drains and handle closure precede any next
+phase. Source/package/worker preservation and five-cache/three-shutdown evidence
+cannot substitute for Native retirement. The child uses a fresh evidence
+subdirectory and never touches the enclosing owner's live logs. Errors retain
+failed facts, consumed attempts and fences; no reset, adoption, old-PID operation
+or retained-staging cleanup is authorized. The earlier one-use mechanics retry
+remains consumed. Its nine cases do not qualify this changed source or nested Jobs.
+
+Exact report context, typed artifact digests, current four-test/accessibility
+inventory and phase-local acknowledgments prevent partial or stale evidence from
+becoming a host pass. Full package transitions preserve all original files and
+directories and only permit two literal empty GPU log directories. A generic
+passed field never supplies the required feature or cleanup facts. Portable
+tests supply validator evidence only. Actual compiled source/effect review,
+outer/inner retirement, resource peaks and app outcomes remain pending; closed
+model accuracy and OCR criteria are not rerun.
