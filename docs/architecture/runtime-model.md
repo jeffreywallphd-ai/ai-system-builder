@@ -335,6 +335,10 @@ Current Python model training support includes causal language model training ov
 Model training reports structured progress after every completed microbatch and
 remains cancellable through the shared task lifecycle. Every desktop status,
 cancel, save, and discard request is bound to the workspace recorded at start.
+The Python task registry confirms a training start only when the worker accepts
+the exact host task ID and type, reports a queued or running state, and agrees
+with the host workspace if it supplies one. A different start cannot replace a
+tracked training task. If a start fails, its temporary setup progress is removed.
 After a training run reaches any terminal state, the desktop may offer one
 runtime unload action for that run. Its visibility must not depend on the
 generation-model cache inventory because training models are task-local and do

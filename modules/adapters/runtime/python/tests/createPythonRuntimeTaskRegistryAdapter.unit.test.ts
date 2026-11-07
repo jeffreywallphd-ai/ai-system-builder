@@ -325,9 +325,7 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
 
   it("maps MODEL_TRAINING startTask to train-model", async () => {
     const runtimePort: any = {
-      startTask: testDouble.fn(async (request) => ({
-        requestId: request.requestId,
-      })),
+      startTask: testDouble.fn(acceptWorkerStart),
       readTaskStatus: testDouble.fn(),
       cancelTask: testDouble.fn(),
       getHealthStatus: testDouble.fn(),
@@ -350,6 +348,53 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
       metadata: { workspaceId },
       timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.modelTraining,
     });
+  });
+
+  for (const [label, replacement] of [
+    ["a different request ID", { requestId: "unrelated-run" }],
+    ["a different task type", { taskType: "prepare-training-dataset" }],
+    ["a refused start", { accepted: false }],
+    ["a different workspace", { metadata: { workspaceId: "workspace.other" } }],
+    ["a terminal status", { status: "succeeded" }],
+    ["an incomplete acknowledgement", { accepted: undefined }],
+  ] as const) {
+    it(`does not track a model training start reply with ${label}`, async () => {
+      const adapter = createPythonRuntimeTaskRegistryAdapter({
+        startTask: async (request: StartPythonRuntimeTaskRequest) => ({
+          ...await acceptWorkerStart(request), ...replacement,
+        }),
+      } as unknown as PythonRuntimePort, {
+        ensureRuntimeReady: async (_request, control) => { control.reportProgress({ message: "Preparing" }); },
+      });
+      await expect(adapter.startTask({
+        workspaceId, requestId: "training-1", taskType: TaskType.MODEL_TRAINING, payload: {},
+      })).rejects.toThrow("Model training start did not match its requested task.");
+      expect((await adapter.listTasks({ workspaceId })).tasks).toEqual([]);
+    });
+  }
+
+  it("protects a tracked training start from another request or a substituted reply", async () => {
+    const other = createWorkspaceId("workspace.other");
+    const workerStart = testDouble.fn(async (request: StartPythonRuntimeTaskRequest) => ({
+      ...await acceptWorkerStart(request),
+      requestId: "training-1",
+    }));
+    const adapter = createPythonRuntimeTaskRegistryAdapter({
+      startTask: workerStart,
+      readTaskStatus: async () => { throw new Error("Synthetic status unavailable."); },
+    } as unknown as PythonRuntimePort);
+    const request = { workspaceId, requestId: "training-1", taskType: TaskType.MODEL_TRAINING, payload: {} };
+    await adapter.startTask(request);
+    await expect(adapter.startTask({ ...request, workspaceId: other, taskType: TaskType.DATASET_PREPARATION }))
+      .rejects.toThrow("Model training start did not match its requested task.");
+    expect(workerStart).toHaveBeenCalledTimes(1);
+    await expect(adapter.startTask({ ...request, workspaceId: other, requestId: "dataset-1", taskType: TaskType.DATASET_PREPARATION }))
+      .rejects.toThrow("Model training start did not match its requested task.");
+    expect(workerStart).toHaveBeenCalledTimes(2);
+    const listed = (await adapter.listTasks({ workspaceId })).tasks;
+    expect(listed.length).toBe(1);
+    expect(listed[0]).toMatchObject({ workspaceId, requestId: "training-1", taskType: TaskType.MODEL_TRAINING });
+    expect((await adapter.listTasks({ workspaceId: other })).tasks).toEqual([]);
   });
 
   it("maps MODEL_DOWNLOAD progress and keeps the resolved local path private", async () => {
@@ -732,9 +777,7 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
   });
   it("generates non-timestamp request ids when caller does not provide one", async () => {
     const runtimePort: any = {
-      startTask: testDouble.fn(async (request) => ({
-        requestId: request.requestId,
-      })),
+      startTask: testDouble.fn(acceptWorkerStart),
       readTaskStatus: testDouble.fn(),
       cancelTask: testDouble.fn(),
       getHealthStatus: testDouble.fn(),

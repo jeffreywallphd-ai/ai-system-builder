@@ -23,6 +23,7 @@ import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPol
 
 const downloadIdentityError = "Model download status did not match its accepted task.";
 const downloadCancellationIdentityError = "Model download cancellation did not match its accepted task.";
+const trainingStartIdentityError = "Model training start did not match its requested task.";
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
@@ -193,6 +194,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
     acceptedModelDownloads.has(requestId) ||
     trackedTasks.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD ||
     pendingStarts.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD;
+  const isModelTrainingId = (requestId: string): boolean =>
+    trackedTasks.get(requestId)?.taskType === TaskType.MODEL_TRAINING ||
+    pendingStarts.get(requestId)?.taskType === TaskType.MODEL_TRAINING;
   const maximumTrackedTasks = 256;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
     const owner = acceptedModelDownloads.get(record.requestId);
@@ -223,6 +227,10 @@ export function createPythonRuntimeTaskRegistryAdapter(
         throw new Error("model publishing runtime task is not implemented");
       }
       const requestId = request.requestId ?? randomUUID();
+      const modelTraining = taskType === TaskType.MODEL_TRAINING;
+      if (isModelTrainingId(requestId) || (modelTraining && (trackedTasks.has(requestId) || pendingStarts.has(requestId)))) {
+        throw new Error(trainingStartIdentityError);
+      }
       if (acceptedModelDownloads.has(requestId) || pendingStarts.has(requestId)) throw new Error(downloadIdentityError);
       if (pendingStarts.size >= maximumTrackedTasks) throw new Error("Python runtime task admission is at capacity.");
       const pythonTaskType = toPythonTaskType(taskType);
@@ -230,6 +238,12 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const isContextTask =
         taskType === TaskType.CONTEXT_GENERATION || taskType === TaskType.CONTEXT_RETRIEVAL;
       const admission = { taskType };
+      let preflightRecord: RuntimeTaskRecord | undefined;
+      const clearUnacceptedTraining = () => {
+        if (modelTraining && preflightRecord && trackedTasks.get(requestId) === preflightRecord) {
+          trackedTasks.delete(requestId);
+        }
+      };
       pendingStarts.set(requestId, admission);
       try {
         await options.ensureRuntimeReady?.(
@@ -240,7 +254,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
               preparingTasks.add(requestId);
               const previous = trackedTasks.get(requestId);
               const now = new Date().toISOString();
-              rememberTask({
+              preflightRecord = rememberTask({
                 requestId,
                 workspaceId,
                 taskType,
@@ -265,6 +279,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
           },
         );
       } catch (error) {
+        clearUnacceptedTraining();
         pendingStarts.delete(requestId);
         preparingTasks.delete(requestId);
         if (isContextTask) {
@@ -311,6 +326,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
           timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
         });
       } catch {
+        clearUnacceptedTraining();
         if (isContextTask) {
           const now = new Date().toISOString();
           const previous = trackedTasks.get(requestId);
@@ -340,12 +356,16 @@ export function createPythonRuntimeTaskRegistryAdapter(
         pendingStarts.delete(requestId);
         preparingTasks.delete(requestId);
       }
-      const reportedWorkspace = result.metadata?.workspaceId;
-      if (acceptedModelDownloads.has(result.requestId) || (modelDownload && (
-        result.requestId !== requestId || result.taskType !== pythonTaskType || result.accepted !== true ||
-        (result.status !== "queued" && result.status !== "running") ||
-        (reportedWorkspace !== undefined && reportedWorkspace !== workspaceId)
-      ))) {
+      const reportedWorkspace = result?.metadata?.workspaceId;
+      const matchesModelStart = result?.requestId === requestId && result.taskType === pythonTaskType &&
+        result.accepted === true && (result.status === "queued" || result.status === "running") &&
+        (reportedWorkspace === undefined || reportedWorkspace === workspaceId);
+      if ((modelTraining && !matchesModelStart) ||
+          (result && result.requestId !== requestId && isModelTrainingId(result.requestId))) {
+        clearUnacceptedTraining();
+        throw new Error(trainingStartIdentityError);
+      }
+      if ((modelDownload && !matchesModelStart) || acceptedModelDownloads.has(result.requestId)) {
         throw new Error(downloadIdentityError);
       }
       const preflight = trackedTasks.get(requestId);
