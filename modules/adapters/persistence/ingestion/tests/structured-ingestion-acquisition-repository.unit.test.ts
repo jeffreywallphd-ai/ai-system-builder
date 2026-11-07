@@ -134,6 +134,34 @@ describe("structured ingestion acquisition repository", () => {
     expect(await repository.listSourceRefreshes(createWorkspaceId("workspace-a"), snapshot().sourceId)).toEqual([changed]);
   });
 
+  it("selects the current source version when several captures share one instant", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const initial = await repository.createSourceSnapshot(snapshot());
+    const middle: IngestionSourceSnapshot = {
+      ...initial, snapshotId: "snapshot-2" as never, previousSnapshotId: initial.snapshotId,
+      capturedAt: "2026-07-30T04:00:00Z", contentDigest: digest("c"),
+    };
+    const latest: IngestionSourceSnapshot = {
+      ...initial, snapshotId: "snapshot-3" as never, previousSnapshotId: middle.snapshotId, contentDigest: digest("d"),
+    };
+    for (const next of [middle, latest]) {
+      await repository.recordSourceRefreshWithSnapshot(next, {
+        ...refresh(), refreshId: `refresh-${next.snapshotId}` as never, outcome: "changed",
+        previousSnapshotId: next.previousSnapshotId, currentSnapshotId: next.snapshotId,
+      });
+    }
+
+    const { workspaceId, sourceId } = initial;
+    expect(await repository.listSourceSnapshots(workspaceId, sourceId, 1)).toEqual([latest]);
+    expect(await repository.readSourceSnapshot(workspaceId, initial.snapshotId)).toEqual(initial);
+    expect(await repository.readSourceSnapshot(workspaceId, middle.snapshotId)).toEqual(middle);
+
+    const later = await repository.createSourceSnapshot({
+      ...initial, snapshotId: "snapshot-4" as never, capturedAt: "2026-07-30T04:00:00.001Z", contentDigest: digest("e"),
+    });
+    expect(await repository.listSourceSnapshots(workspaceId, sourceId, 1)).toEqual([later]);
+  });
+
   it("does not save a changed refresh with a missing or different snapshot parent", async () => {
     const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
     const previous = await repository.createSourceSnapshot(snapshot());

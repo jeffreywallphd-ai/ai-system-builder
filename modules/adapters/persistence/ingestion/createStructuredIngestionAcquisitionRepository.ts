@@ -130,7 +130,20 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
     async listSourceSnapshots(workspaceId, sourceId, limit = 50) {
       const snapshots = (await documents.listDocuments<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE)).map((document) => normalizeIngestionSourceSnapshot(document.value));
       snapshots.forEach((snapshot) => assertOrganizationScope(documents, snapshot.organizationId));
-      return snapshots.filter((snapshot) => snapshot.workspaceId === workspaceId && snapshot.sourceId === sourceId).sort((left, right) => right.capturedAt.localeCompare(left.capturedAt)).slice(0, listLimit(limit)).map(cloneStructuredJson);
+      const scoped = snapshots
+        .filter((snapshot) => snapshot.workspaceId === workspaceId && snapshot.sourceId === sourceId)
+        .map((snapshot) => ({ snapshot, time: Date.parse(snapshot.capturedAt) }));
+      const timeById = new Map(scoped.map(({ snapshot, time }) => [snapshot.snapshotId, time]));
+      const superseded = new Set<IngestionSourceSnapshot["snapshotId"]>();
+      for (const { snapshot, time } of scoped) {
+        const previousId = snapshot.previousSnapshotId;
+        if (previousId && previousId !== snapshot.snapshotId && timeById.get(previousId) === time) {
+          superseded.add(previousId);
+        }
+      }
+      return scoped.sort((left, right) => right.time - left.time
+        || Number(superseded.has(left.snapshot.snapshotId)) - Number(superseded.has(right.snapshot.snapshotId)))
+        .slice(0, listLimit(limit)).map(({ snapshot }) => cloneStructuredJson(snapshot));
     },
     async recordSourceRefresh(input) {
       const record = normalizeIngestionSourceRefreshRecord(input);

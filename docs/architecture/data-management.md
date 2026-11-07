@@ -194,6 +194,8 @@ append-only unchanged, changed, unavailable, or removed result. Task state and
 its source snapshot commit in one structured-persistence transaction. A changed
 refresh must commit with its new snapshot. Both records must name the same
 existing previous snapshot in the same source, workspace, and organization.
+When capture times match, refresh uses a version with no successor at that time
+before one that already has a successor.
 If a save response is lost, the
 application reports success only when the saved task or refresh and its snapshot
 match the attempted publication. Otherwise it reports an unconfirmed save and
