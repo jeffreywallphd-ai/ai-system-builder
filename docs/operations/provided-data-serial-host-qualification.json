@@ -1,0 +1,90 @@
+{
+  "schema_version": "provided-data-serial-host-qualification-v1",
+  "status": "failed-before-ui-test-bodies",
+  "observed_at": "2026-11-07",
+  "user_description": {
+    "owner": "agent",
+    "sentences": [
+      "No action needed.",
+      "The app package was built.",
+      "The browser tests failed before they started.",
+      "Desktop tests did not run.",
+      "I will fix the test setup and check it before a new app run."
+    ]
+  },
+  "source_revision": "source.d40638d920f4dd243e5f6b10bdd55bbec3edc28331593969959c2649bc4ce5ce",
+  "primary_base_commit": "a1fd23c035bd5ccabea69f9da99e4c8fd09d23e2",
+  "tested_candidate_commit": "166a3f4682dc005436373cc639549d9113e38d16",
+  "package": {
+    "status": "passed",
+    "source_and_worker_resource_checks_passed": true,
+    "process_limit_bytes": 1073741824,
+    "job_limit_bytes": 2147483648,
+    "active_process_limit": 32,
+    "peak_commit": {
+      "process_commit_bytes": 857481216,
+      "job_commit_bytes": 1695584256
+    }
+  },
+  "thin_browser": {
+    "status": "failed-before-test-bodies",
+    "required_tests": 2,
+    "passed_tests": 0,
+    "failure": "Worker config import required a runner-only project argument.",
+    "automatic_retry": false
+  },
+  "desktop": {
+    "status": "not-run",
+    "reason": "The browser predecessor failed."
+  },
+  "retirement": {
+    "outer": {
+      "root_exit_code": 1,
+      "active_processes": 0,
+      "handles_closed": true,
+      "streams_complete": true,
+      "forced_termination": false,
+      "limit_messages": []
+    },
+    "package": {
+      "root_exit_code": 0,
+      "active_processes": 0,
+      "handles_closed": true,
+      "streams_complete": true,
+      "forced_termination": false,
+      "limit_messages": []
+    },
+    "thin_browser": {
+      "root_exit_code": 1,
+      "active_processes": 0,
+      "handles_closed": true,
+      "streams_complete": true,
+      "forced_termination": false,
+      "limit_messages": []
+    }
+  },
+  "all_primary_candidate_and_runtime_inputs_preserved": true,
+  "evidence_sha256": {
+    "outer_result": "fe93790abb8ddc4bef0e65678c2305b5f6286861aa024504f3e3e07c9f9bc27c",
+    "outer_native": "1b7d6dd8117cf3634a1b69e41b63350213858a0eee49d970f5c46aa50c36fcf4",
+    "coordinator": "784861c27a5fbdcdcb3075db42deed736c585c9fc540fb6eb1bb66d9f46d31f9",
+    "package_native": "9540ff98e5acd3ed2dc1b53ad49abef9842ee8df5b019bf6b8520c003fb487d0",
+    "thin_native": "855bd63b64fffee86f70f7412c6143a3e16dc5980e04887e50ce98ad16de48ce",
+    "independent_failed_result_review": "81afa09fdac78b5934a0a88bfcd02bc120070252c8782987a6e3aedcb9c7ff15"
+  },
+  "source_repairs": {
+    "worker_config": "Use deterministic per-project output directories; keep strict parent project admission.",
+    "diagnostic": "A failed command is distinct from unconfirmed cleanup.",
+    "focused_regression": "The inert worker import reproduced the same zero-selector assertion, then passed after correction."
+  },
+  "scope_limits": [
+    "This is a failed app attempt, not passing UI or parent-roadmap qualification.",
+    "The package and safe-retirement subset applies only to the exact historical source and artifacts tested. Corrected helpers need a fresh reviewed app attempt.",
+    "Committed memory is the Windows Job metric, not process RSS or total machine memory. No model accuracy, OCR, provider or offload test ran.",
+    "All consumed markers and failed evidence remain. The earlier Native9 retry is consumed. Existing supplier findings and other qualification gaps remain."
+  ],
+  "parent_qualification_granted": false,
+  "current_corrected_helpers_qualified": false,
+  "new_attempt_authorized_by_this_report": false,
+  "source_snapshot": "The tested candidate commit records all3948 admitted raw working files, including existing modified files and10 previously untracked files. The primary base commit is lineage only; it does not imply bare-HEAD equivalence. The source_revision binds the tested product source."
+}

@@ -252,8 +252,9 @@ def compare_trees(original, before, after):
 
 def verify_native(observed, folder, phase):
     need(observed["limits"] == {"flags": 0x2308, "process_bytes": GIB, "job_bytes": (2 if phase == "package" else 3) * GIB, "active_limit": 32}, "native-limits")
-    need(all(observed[key] is True for key in ("command_passed", "cleanup_confirmed", "all_owned_handles_close_acknowledged", "assigned_at_creation", "resumed_after_membership")), "native-retirement-unconfirmed")
-    need(integer(observed["root_exit_code"], 0, 0) and integer(observed["job_accounting"]["active"], 0, 0) and integer(observed["job_accounting"]["total"], 1), "native-exit-or-accounting")
+    need(all(observed[key] is True for key in ("cleanup_confirmed", "all_owned_handles_close_acknowledged", "assigned_at_creation", "resumed_after_membership"))
+         and integer(observed["job_accounting"]["active"], 0, 0) and integer(observed["job_accounting"]["total"], 1), "native-retirement-unconfirmed")
+    need(observed["command_passed"] is True and integer(observed["root_exit_code"], 0, 0), "native-command-failed")
     need(all(observed[key] is False for key in ("forced_owned_job_termination", "log_overflow", "completion_message_overflow", "fence_required")) and observed["reason"] is None and observed["observed_limit_messages"] == [] and observed["cleanup_errors"] == [], "native-command-not-normal")
     need(set(observed["logs"]) == {"stdout", "stderr"}, "native-stream-set")
     for name, row in observed["logs"].items():

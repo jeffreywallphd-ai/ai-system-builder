@@ -780,3 +780,14 @@ other reports can be saved. Sensitive captures stay disabled. Portable Node
 tests use inert resources and mocked public composition, not real app or Native
 results. Required dependency checks retain actual supplier/tooling findings;
 source acceptance grants no clean dependency-tree, release or parent pass.
+
+Worker configuration reload does not carry the runner CLI arguments. Config
+imports therefore use only the reviewed fixed context and deterministic exact
+per-project output directories. Strict single-project admission stays in parent
+global setup before host composition; missing, duplicate or unknown selectors
+still deny. Workers gain no command, project, path or limit selector. A known
+command failure is reported separately from unconfirmed retirement, while every
+normal-exit, Job-zero, handle, stream, limit and failure check remains mandatory.
+The retained first serial attempt proves only its package and safe-retirement
+subset: browser test bodies did not execute and Desktop did not start. No reuse,
+automatic retry, current-source qualification or parent pass follows.

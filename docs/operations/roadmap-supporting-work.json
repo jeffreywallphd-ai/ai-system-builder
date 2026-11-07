@@ -11283,7 +11283,7 @@
       "review_digest": "f5f0dfc65c204eec7ced25536b0e5ab05d59d989e2b91a6c76d95439bb8846fe",
       "scope": "The fixed outer test command has a total time limit and checks the exact runtime and helper files before starting. Its existing memory and process limits stay in place.",
       "limitations": [
-        "Portable tests cover this command and its guards. Real nested process groups, app runs and resource measurements still need evidence. Earlier Windows process results apply only to the code tested then."
+        "The actual package build passed. Browser tests failed before their bodies, and Desktop did not run. All owned test processes stopped. Corrected helpers still need a fresh reviewed app run. These observations do not complete the roadmap."
       ]
     },
     {

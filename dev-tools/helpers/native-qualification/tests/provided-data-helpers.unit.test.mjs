@@ -185,6 +185,33 @@ test('rendered Playwright settings retain both current specs, serial worker, no 
   assert.deepEqual(config.use,{actionTimeout:8000,navigationTimeout:15000,screenshot:'off',trace:'off',video:'off'});
 });
 
+test('worker config reload has fixed host output directories without runner CLI arguments',async t=>{
+  const f=await compiledFixture(t);await environment(t,f,'thin-chrome');
+  // Playwright forks its worker entry with no original CLI argument array,
+  // then reloads user configuration before loading either test body.
+  process.argv=[process.execPath,'workerProcessEntry.js'];
+  const {default:config}=await import(pathToFileURL(path.join(f.helpers,'playwright.config.mjs')).href);
+  assert.deepEqual(config.projects.map(project=>[project.name,project.outputDir]),[
+    ['thin-chrome',path.join(f.run,'ui-thin/playwright-output')],
+    ['packaged-desktop',path.join(f.run,'ui-desktop/playwright-output')],
+  ]);
+  assert.equal(config.workers,1);assert.equal(config.retries,0);
+  assert.equal(config.outputDir,undefined); // No shared/default phase output override.
+});
+
+test('parent setup refuses missing duplicate or unknown host selectors before composition',async t=>{
+  const f=await compiledFixture(t),state=await compositionFixtures(f,t);await environment(t,f,'thin-chrome');
+  const {default:setup}=await import(pathToFileURL(path.join(f.helpers,'global-setup.mjs')).href);
+  for (const args of [[],['--project=thin-chrome','--project=packaged-desktop'],['--project=unknown'],['--project','thin-chrome']]) {
+    process.argv=[process.execPath,'fixed-cli.js','test',...args];
+    await assert.rejects(setup({projects:[{name:'thin-chrome'},{name:'packaged-desktop'}]}));
+    assert.deepEqual(state.calls,[]);
+  }
+  for (const phase of ['ui-thin','ui-desktop']) {
+    await assert.rejects(readFile(path.join(f.run,phase,'setup-receipt.json')),error=>error.code==='ENOENT');
+  }
+});
+
 async function compositionFixtures(f,t) {
   const key='providedFixture'+path.basename(f.ctx.originalRoot).replaceAll('-','');
   const state={calls:[],failCleanup:false,failStart:false,drift:false};globalThis[key]=state;t.after(()=>delete globalThis[key]);

@@ -304,6 +304,20 @@ and retains cleanup failures even if other evidence can be written. Playwright
 keeps its current whole-file four-test inventory, one worker, zero retries,
 300-second test/360-second global deadlines and disabled captures.
 
+Playwright workers reload user configuration without the runner's CLI arguments.
+The configuration therefore declares both fixed projects without reading argv;
+each project owns its exact phase output directory. Parent global setup still
+requires one exact approved project selector before composing a host. A worker
+reload does not select or start another host. Missing, duplicate and unknown
+parent selectors still refuse before effects.
+
+A failed command with confirmed Job zero and closed handles remains a failed
+test. Its diagnostic is distinct from unconfirmed retirement. Neither failure
+permits a successor or a pass. The first controlled serial trial packaged
+successfully, but exposed the worker-import defect before the browser test
+bodies. All owned processes retired; Desktop did not start. That failed trial
+and its consumed markers remain historical, not current UI qualification.
+
 The Node fixture tests use inert package/resource/runtime files and mocked public
 host composition. They run no build, application, browser, model, OCR or Native
 case. These additional sources require explicit `native-host-policy` selection;

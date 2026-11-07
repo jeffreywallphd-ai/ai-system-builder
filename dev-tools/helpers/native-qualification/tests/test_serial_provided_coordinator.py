@@ -211,6 +211,18 @@ class CoordinatorTests(unittest.TestCase):
             mutated = copy.deepcopy(row); mutated["logs"]["stdout"][key] = value
             with self.subTest(key=key), self.assertRaises(S.Refused): S.verify_native(mutated, self.output, "package")
 
+    def test_failed_command_with_proven_retirement_is_distinct_from_unknown_ownership(self):
+        row = self.native(self.output, "package")
+        row.update(command_passed=False, root_exit_code=1)
+        with self.assertRaisesRegex(S.Refused, "^native-command-failed$"):
+            S.verify_native(row, self.output, "package")
+        for change in (lambda value: value.update(cleanup_confirmed=False),
+                       lambda value: value.update(all_owned_handles_close_acknowledged=False),
+                       lambda value: value["job_accounting"].update(active=1)):
+            unknown = copy.deepcopy(row); change(unknown)
+            with self.assertRaisesRegex(S.Refused, "^native-retirement-unconfirmed$"):
+                S.verify_native(unknown, self.output, "package")
+
     def caches(self, host):
         items = []
         for index, (phase, cache, cleanup, ack) in enumerate(S.cache_census(host, self.base)):

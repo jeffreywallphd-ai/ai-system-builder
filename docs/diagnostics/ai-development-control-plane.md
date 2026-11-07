@@ -261,6 +261,15 @@ Their shared context is initially null; packaging and configuration refuse befor
 production imports. One reviewed passive literal supplies runtime/source pins.
 The four rendered MJS hashes enter the Python manifest afterward, and the outer
 operator pins all five final helpers. This order avoids a circular self-hash.
+Worker reloads use deterministic project-local output directories because
+Playwright does not forward the original CLI arguments to workers. Strict
+one-project selection remains in parent global setup before host composition.
+Portable regressions cover both worker imports and invalid parent selectors.
+Known command failure remains separate from unconfirmed native retirement;
+neither can pass or start a successor. The retained first serial attempt built
+the package and closed all owned processes, but failed before its browser test
+bodies and never started Desktop. The [sanitized observation](../operations/provided-data-serial-host-qualification.json)
+preserves that scope. It does not qualify the corrected helpers.
 Tests exercise real bounded file readers, strict JSON/resource checks and mocked
 public single-host setup. They do not package or open an app. Existing whole-file
 test selection, one worker, zero retries, captures disabled and fixed deadlines

@@ -16319,18 +16319,6 @@
       }
     },
     {
-      "kind": "support-limitation",
-      "source_text_sha256": "24a05019b962d3fcf064734027d33082ec54fbfb80ae4a28af327beeef4faa79",
-      "user_description": {
-        "owner": "agent",
-        "sentences": [
-          "These portable tests check the program and its safety rules.",
-          "Real app runs and resource measurements still need evidence.",
-          "Earlier Windows results apply only to the code tested then."
-        ]
-      }
-    },
-    {
       "kind": "support-scope",
       "source_text_sha256": "a3d59d063f3f096cf890f8115b8734dd257cdce597341863ebd893153ee64dbd",
       "user_description": {
@@ -16351,6 +16339,21 @@
           "These tests used harmless files and simulated process results.",
           "Real app runs and process cleanup still need evidence.",
           "The code checks do not complete the roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d398f07058333f61b97cf33b4ab665a8fc9ffb8981ad706b81e480ec23361bdd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app package was built.",
+          "Browser tests failed before they started.",
+          "Desktop tests did not run.",
+          "All owned test processes stopped.",
+          "The revised test setup needs a fresh reviewed app run.",
+          "These observations do not complete the roadmap."
         ]
       }
     }
