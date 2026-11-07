@@ -575,6 +575,7 @@ export class GovernedIngestionTaskUseCases {
       const file = requireFile(task, fileId);
       if (file.status === "finalized")
         return createSuccessResult(task, context);
+      if (!fileAcceptsChunks(file)) throw new Error("This ingestion file is not accepting chunks.");
       if (
         command.chunkIndex < file.nextChunkIndex &&
         file.lastChunk?.index === command.chunkIndex &&
@@ -628,9 +629,7 @@ export class GovernedIngestionTaskUseCases {
         await this.saveIdempotently(
           updated,
           task.revision,
-          fileId,
-          checkpoint.chunkCount,
-          digest,
+          file,
         ),
         context,
       );
@@ -1087,30 +1086,46 @@ export class GovernedIngestionTaskUseCases {
   private async saveIdempotently(
     task: IngestionTaskRecord,
     expectedRevision: number,
-    fileId: ReturnType<typeof normalizeIngestionTaskFileId>,
-    nextChunkIndex: number,
-    digest: string,
+    beforeFile: IngestionTaskFileRecord,
   ): Promise<IngestionTaskRecord> {
+    const fileId = beforeFile.fileId;
+    const acceptedFile = requireFile(task, fileId);
+    const readCurrent = async () => {
+      const current = await this.dependencies.repository.readTask(task.workspaceId, task.taskId);
+      return current?.workspaceId === task.workspaceId && current.taskId === task.taskId
+        && current.organizationId === task.organizationId && current.kind === task.kind ? current : undefined;
+    };
     try {
       return await this.dependencies.repository.saveTask(
         task,
         expectedRevision,
       );
     } catch (error) {
-      const current = await this.dependencies.repository.readTask(
-        task.workspaceId,
-        task.taskId,
-      );
-      const file = current?.files.find(
-        (candidate) => candidate.fileId === fileId,
-      );
-      if (
-        current &&
-        file?.nextChunkIndex === nextChunkIndex &&
-        file.lastChunk?.digest === digest
-      )
-        return current;
-      throw error;
+      const current = await readCurrent();
+      const file = current?.files.find(candidate => candidate.fileId === fileId);
+      if (current && chunkProgressMatches(file, acceptedFile)) return current;
+      if (!current || current.kind !== "file-batch" || current.revision <= expectedRevision
+          || (current.status !== "queued" && current.status !== "transferring")
+          || !fileAcceptsChunks(file)
+          || file?.status !== beforeFile.status || file?.output !== undefined || beforeFile.output !== undefined
+          || !chunkProgressMatches(file, beforeFile)) throw error;
+
+      // A different file advanced the task revision. The checkpoint is already written.
+      const rebased = updateTask(current, {
+        status: "transferring",
+        files: replaceFile(current, fileId, acceptedFile),
+        updatedAt: this.now(),
+        progressMessage: task.progress.message ?? "Chunk saved.",
+      });
+      try {
+        return await this.dependencies.repository.saveTask(rebased, current.revision);
+      } catch (retryError) {
+        const latest = await readCurrent();
+        if (latest && chunkProgressMatches(latest.files.find(candidate => candidate.fileId === fileId), acceptedFile)) {
+          return latest;
+        }
+        throw retryError;
+      }
     }
   }
 
@@ -1186,6 +1201,16 @@ function safeMessage(error: unknown, fallback: string): string {
 }
 function immutableIngestionFile(file: IngestionTaskFileRecord): string {
   return JSON.stringify({ fileId: file.fileId, checkpointId: file.checkpointId, fileName: file.fileName, mediaType: file.mediaType, totalBytes: file.totalBytes, providerSource: file.providerSource, websiteSource: file.websiteSource });
+}
+function fileAcceptsChunks(file: IngestionTaskFileRecord | undefined): boolean {
+  return file?.status === "pending" || file?.status === "transferring";
+}
+function chunkProgressMatches(observed: IngestionTaskFileRecord | undefined, expected: IngestionTaskFileRecord): boolean {
+  return observed !== undefined && immutableIngestionFile(observed) === immutableIngestionFile(expected)
+    && observed.acceptedBytes === expected.acceptedBytes && observed.nextChunkIndex === expected.nextChunkIndex
+    && observed.lastChunk?.index === expected.lastChunk?.index
+    && observed.lastChunk?.sizeBytes === expected.lastChunk?.sizeBytes
+    && observed.lastChunk?.digest === expected.lastChunk?.digest;
 }
 function providerBaseName(value: string): string {
   const parts = String(value).trim().replaceAll("\\", "/").split("/");

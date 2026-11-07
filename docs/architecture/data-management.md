@@ -149,6 +149,10 @@ joining the file in renderer memory, and retains unfinished checkpoints for at
 most 24 hours.
 Retry is idempotent for the last accepted chunk. Cancellation and expiry use a
 durable cleanup intent.
+When another file advances the same task, the host can retry the progress
+record once for an unchanged file. It uses the existing checkpoint bytes and
+preserves the other file's progress. The host accepts chunks only for files
+that are pending or transferring in an active task.
 
 When an acquisition reaches terminal success, the shared desktop/thin-client
 workflow clears its source-specific form state, returns to the default Files

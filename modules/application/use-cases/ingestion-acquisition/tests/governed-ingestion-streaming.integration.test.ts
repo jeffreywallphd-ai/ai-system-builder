@@ -12,7 +12,7 @@ import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy, type OpenedL
 import { createFilesystemIngestionCheckpointStorage } from "../../../../adapters/storage/ingestion-checkpoint";
 import { createFilesystemArtifactObjectStorageAdapter } from "../../../../adapters/storage/filesystem/artifact-store";
 import { createFilesystemIngestionFileByteStorageAdapter, createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter } from "../../../../adapters/storage/filesystem";
-import type { IngestionTaskRecord } from "../../../../contracts/ingestion";
+import { normalizeIngestionTaskRecord, type IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { GovernedIngestionTaskUseCases } from "../governed-ingestion-tasks.use-case";
 import { IngestionFilePublicationService } from "../ingestion-file-publication.service";
 
@@ -196,3 +196,99 @@ test("a chunk larger than the declared remainder leaves progress and retry intac
   await verifySavedBytes(owned.root, complete, digest);
   assert.deepEqual(await state.checkpoints.inspectCheckpoint(checkpoint), { chunkCount: 0, sizeBytes: 0 });
 });
+
+test("rejects a cancelled file before writing a checkpoint in a mixed-status upload", async t => {
+  const owned = await fixture(t);
+  const state = await owned.compose();
+  const task = value(await state.useCases.createTask({ files: ["cancelled", "active"].map(name => ({
+    fileName: `${name}.jsonl`, mediaType: "application/jsonl", sizeBytes: row.length,
+  })) }, context));
+  const cancelled = task.files[0]!;
+  const mixed = normalizeIngestionTaskRecord({
+    ...task, revision: task.revision + 1,
+    files: [{ ...cancelled, status: "cancelled" }, task.files[1]!],
+  });
+  await state.repository.saveTask(mixed, task.revision);
+  const append = (index: number) => state.useCases.appendChunk({
+    taskId: task.taskId, fileId: task.files[index]!.fileId, chunkIndex: 0, expectedOffset: 0,
+    bytes: row, sha256: sha(row),
+  }, context);
+
+  assert.equal((await append(0)).ok, false);
+  assert.deepEqual(await state.checkpoints.inspectCheckpoint({ workspaceId: context.workspaceId,
+    checkpointId: cancelled.checkpointId }), { chunkCount: 0, sizeBytes: 0 });
+  const active = value(await append(1));
+  assert.deepEqual(active.files.map(file => file.status), ["cancelled", "transferring"]);
+  assert.deepEqual(active.files.map(file => file.acceptedBytes), [0, row.length]);
+});
+
+for (const intervening of ["a second file", "a second file with a lost reply", "cancellation"] as const) {
+  test(`an upload progress write survives or defers to ${intervening}`, { timeout: 10_000 }, async t => {
+    const owned = await fixture(t);
+    const state = await owned.compose();
+    const task = value(await state.useCases.createTask({ files: ["first", "second"].map(name => ({
+      fileName: `${name}.jsonl`, mediaType: "application/jsonl", sizeBytes: row.length,
+    })) }, context));
+    let saveReached!: () => void;
+    let releaseSave!: () => void;
+    const reached = new Promise<void>(resolve => { saveReached = resolve; });
+    const hold = new Promise<void>(resolve => { releaseSave = resolve; });
+    const save = state.repository.saveTask.bind(state.repository);
+    let saves = 0;
+    state.repository.saveTask = async (...args) => {
+      const attempt = ++saves;
+      if (attempt === 1) {
+        saveReached();
+        await hold;
+      }
+      const saved = await save(...args);
+      if (attempt === 3 && intervening === "a second file with a lost reply") {
+        throw new Error("Synthetic lost acknowledgement after the retried update.");
+      }
+      return saved;
+    };
+    const write = state.checkpoints.appendChunk.bind(state.checkpoints);
+    let writes = 0;
+    state.checkpoints.appendChunk = async (...args) => {
+      writes += 1;
+      return write(...args);
+    };
+    const append = (index: number) => state.useCases.appendChunk({
+      taskId: task.taskId, fileId: task.files[index]!.fileId,
+      chunkIndex: 0, expectedOffset: 0, bytes: row, sha256: sha(row),
+    }, context);
+    const first = append(0);
+    try {
+      await Promise.race([reached, first.then(() => { throw new Error("First chunk did not reach its progress write."); })]);
+      if (intervening === "cancellation") {
+        assert.equal(value(await state.useCases.cancelTask(task.taskId, context)).status, "cancelled");
+        releaseSave();
+        assert.equal((await first).ok, false);
+        const final = value(await state.useCases.readTask(task.taskId, context));
+        assert.equal(final.status, "cancelled");
+        assert.equal(final.cleanupPending, false);
+        assert.equal(saves, 3);
+        assert.equal(writes, 1);
+        assert.deepEqual(await state.checkpoints.inspectCheckpoint({ workspaceId: context.workspaceId,
+          checkpointId: task.files[0]!.checkpointId }), { chunkCount: 0, sizeBytes: 0 });
+      } else {
+        const second = value(await append(1));
+        assert.deepEqual(second.files.map(file => file.acceptedBytes), [0, row.length]);
+        releaseSave();
+        assert.deepEqual(value(await first).files.map(file => file.acceptedBytes), [row.length, row.length]);
+        const final = value(await state.useCases.readTask(task.taskId, context));
+        assert.deepEqual(final.files.map(file => file.acceptedBytes), [row.length, row.length]);
+        assert.equal(final.progress.acceptedBytes, 2 * row.length);
+        assert.equal(saves, 3);
+        assert.equal(writes, 2);
+        for (const file of task.files) {
+          assert.deepEqual(await state.checkpoints.inspectCheckpoint({ workspaceId: context.workspaceId,
+            checkpointId: file.checkpointId }), { chunkCount: 1, sizeBytes: row.length });
+        }
+      }
+    } finally {
+      releaseSave();
+      await first;
+    }
+  });
+}
