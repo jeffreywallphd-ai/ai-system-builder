@@ -11105,6 +11105,51 @@
       "limitations": [
         "The tests used sample files with real local storage. Checks for shared hosts, a live website, and a private provider remain pending."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "reopen-cleanup-for-confirmed-late-ingestion-checkpoints",
+      "work_criteria": [
+        "late-cancelled-ingestion-bytes-reenter-existing-cleanup"
+      ],
+      "receipt_digest": "ba99bbac4450a73f9cd0e421ef6d08042b0dab06a6b7403c2c8013e0e646c820",
+      "review_digest": "8501346214903c6159e36bf6a18aa891731c7179491f4a2df305fd665217649f",
+      "scope": "If the app detects that upload bytes arrived after cancellation, it marks their checkpoint for cleanup. A failed cleanup can be retried after the database reopens.",
+      "limitations": [
+        "The tests used sample files and local storage. Recovery from a crash before a write returns and live provider checks remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "deny-stale-offload-journal-calls-after-credit",
+      "work_criteria": [
+        "journal-terminal-custody-cannot-be-recreated"
+      ],
+      "receipt_digest": "c3e30f14b94067fc04cbb87b0c44ffe025fe0aff88f86bb8612a0d4b4ef398e9",
+      "review_digest": "3ca8d587cbd27428bc8e93e6053cfa721a7a2f62eec1892c6c76534fa3b047ad",
+      "scope": "After the low-memory accounting journal confirms cleanup, a late request cannot reopen it. An interrupted removal keeps the record reserved.",
+      "limitations": [
+        "The tests simulated cleanup and interruptions. Protected Windows restart and real low-memory measurements remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "keep-guarded-offload-parent-retirement-terminal",
+      "work_criteria": [
+        "guarded-offload-parent-retirement-remains-terminal"
+      ],
+      "receipt_digest": "cb069a595e60b10cf34067e600c629162bbf73bc0fe0f68954b48db632f03092",
+      "review_digest": "13e54b897cc8884def625e86884f90de58061cf78b2918003539be8538958d33",
+      "scope": "After the app confirms worker cleanup, a late failure report leaves the finished run closed. If removal of the ownership record is interrupted, the app keeps that record.",
+      "limitations": [
+        "The tests simulated worker cleanup and interruptions. Protected Windows staging, accounting, restart and real offload measurements remain pending."
+      ]
     }
   ]
 }
