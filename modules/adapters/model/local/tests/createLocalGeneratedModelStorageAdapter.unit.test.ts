@@ -1,6 +1,8 @@
-import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import fileOperations, { appendFile, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { mock } from "node:test";
 
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createLocalGeneratedModelStorageAdapter } from "../createLocalGeneratedModelStorageAdapter";
@@ -205,6 +207,93 @@ describe("createLocalGeneratedModelStorageAdapter", () => {
         repository: "org/model",
       }),
     ).rejects.toThrow("exceeds storage limits");
+  });
+
+  it("copies a file at the exact byte limit alongside an empty file", async () => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "source");
+      await mkdir(source);
+      const content = Buffer.alloc(300_000, 0xa5);
+      await writeFile(join(source, "model.bin"), content);
+      await writeFile(join(source, "empty.txt"), "");
+      const adapter = createLocalGeneratedModelStorageAdapter({
+        env: { HF_HUB_CACHE: join(root, "cache") }, maximumSourceBytes: content.length,
+      });
+
+      const result = await adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", runId: "run-1" });
+      expect((await readFile(join(result.localPath, "model.bin"))).equals(content)).toBe(true);
+      expect((await lstat(join(result.localPath, "empty.txt"))).size).toBe(0);
+    });
+  });
+
+  it("never reads additional bytes if the open source grows during copying", async () => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "source");
+      const cache = join(root, "cache");
+      const file = join(source, "model.bin");
+      await mkdir(source);
+      await writeFile(file, "model");
+      const openFile = open;
+      const reads: number[] = [];
+      const opening = mock.method(fileOperations, "open", async (...args: Parameters<typeof openFile>) => {
+        const handle = await openFile(...args);
+        if (args[0] === file) {
+          const read = handle.read.bind(handle);
+          mock.method(handle, "read", async (buffer: Buffer, offset: number, length: number, position: number | null) => {
+            reads.push(length);
+            await appendFile(file, "extra");
+            return read(buffer, offset, length, position);
+          });
+        }
+        return handle;
+      });
+      syncBuiltinESMExports();
+      try {
+        const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: cache }, maximumSourceBytes: 5 });
+        await expect(adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", runId: "run-1" }))
+          .rejects.toThrow("changed while being staged");
+      } finally {
+        opening.mock.restore();
+        syncBuiltinESMExports();
+      }
+      expect(reads).toEqual([5]);
+      expect(await readFile(file, "utf8")).toBe("modelextra");
+      expect(await readdir(join(cache, "models--generated--Demo", "snapshots"))).toEqual([]);
+    });
+  });
+
+  it("rejects an unexpected source handle before reading or writing model bytes", async () => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "source");
+      const cache = join(root, "cache");
+      const file = join(source, "model.bin");
+      const other = join(root, "other.bin");
+      await mkdir(source);
+      await writeFile(file, "model");
+      await writeFile(other, "other");
+      const openFile = open;
+      let readAttempts = 0;
+      const opening = mock.method(fileOperations, "open", async (...args: Parameters<typeof openFile>) => {
+        if (args[0] !== file) return openFile(...args);
+        const handle = await openFile(other, args[1]);
+        mock.method(handle, "read", () => {
+          readAttempts += 1;
+          throw new Error("Substituted content must not be read.");
+        });
+        return handle;
+      });
+      syncBuiltinESMExports();
+      try {
+        const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: cache } });
+        await expect(adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", runId: "run-1" }))
+          .rejects.toThrow("changed while being staged");
+      } finally {
+        opening.mock.restore();
+        syncBuiltinESMExports();
+      }
+      expect(readAttempts).toBe(0);
+      expect(await readdir(join(cache, "models--generated--Demo", "snapshots"))).toEqual([]);
+    });
   });
 
   it("rejects a linked child of a generated model source before cache creation", async (context) => {

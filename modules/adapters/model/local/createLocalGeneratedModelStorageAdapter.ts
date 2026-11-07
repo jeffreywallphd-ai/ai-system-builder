@@ -1,8 +1,9 @@
+import { constants, type BigIntStats } from "node:fs";
 import {
-  cp,
   lstat,
   mkdir,
   mkdtemp,
+  open,
   opendir,
   realpath,
   rename,
@@ -151,6 +152,56 @@ async function ensureContainedDirectory(
 }
 
 const MAXIMUM_SOURCE_DEPTH = 64;
+const COPY_BUFFER_BYTES = 256 * 1024;
+
+function isSameFileSnapshot(expected: BigIntStats, actual: BigIntStats): boolean {
+  return actual.isFile() && expected.ino !== 0n
+    && actual.dev === expected.dev && actual.ino === expected.ino
+    && actual.size === expected.size && actual.nlink === expected.nlink
+    && actual.mtimeNs === expected.mtimeNs && actual.ctimeNs === expected.ctimeNs;
+}
+
+async function stageGeneratedModelFile(
+  source: string,
+  canonicalSource: string,
+  inspected: BigIntStats,
+  target: string,
+): Promise<void> {
+  const changedSource = "Generated model source changed while being staged.";
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  const input = await open(source, constants.O_RDONLY | noFollow | (constants.O_NONBLOCK ?? 0));
+  try {
+    if (!isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+      throw new TypeError(changedSource);
+    }
+    const output = await open(target, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600);
+    try {
+      // The walk already checked the size against the total byte limit.
+      let remaining = Number(inspected.size);
+      const buffer = Buffer.allocUnsafe(Math.min(remaining, COPY_BUFFER_BYTES));
+      while (remaining > 0) {
+        const { bytesRead } = await input.read(buffer, 0, Math.min(remaining, buffer.length), null);
+        if (bytesRead === 0) throw new TypeError(changedSource);
+        let offset = 0;
+        while (offset < bytesRead) {
+          const { bytesWritten } = await output.write(buffer, offset, bytesRead - offset, null);
+          if (bytesWritten === 0) throw new Error("Generated model staging write made no progress.");
+          offset += bytesWritten;
+        }
+        remaining -= bytesRead;
+      }
+    } finally {
+      await output.close();
+    }
+    if (await realpath(source) !== canonicalSource
+      || !isSameFileSnapshot(inspected, await lstat(source, { bigint: true }))
+      || !isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+      throw new TypeError(changedSource);
+    }
+  } finally {
+    await input.close();
+  }
+}
 
 async function walkGeneratedModelTree(
   sourceDirectory: string,
@@ -169,11 +220,12 @@ async function walkGeneratedModelTree(
   }
   let fileCount = 0;
   let directoryCount = 0;
-  let totalBytes = 0;
+  let totalBytes = 0n;
+  const byteLimit = BigInt(Math.floor(maximumBytes));
   async function visit(directory: string, depth: number, destinationDirectory?: string): Promise<void> {
     for await (const entry of await opendir(directory)) {
       const absoluteEntry = path.join(directory, entry.name);
-      const entryStats = await lstat(absoluteEntry);
+      const entryStats = await lstat(absoluteEntry, { bigint: true });
       if (entryStats.isSymbolicLink()) {
         throw new TypeError("Generated model source cannot contain links.");
       }
@@ -194,11 +246,11 @@ async function walkGeneratedModelTree(
       } else if (entryStats.isFile()) {
         fileCount += 1;
         totalBytes += entryStats.size;
-        if (fileCount > maximumFiles || totalBytes > maximumBytes) {
+        if (fileCount > maximumFiles || totalBytes > byteLimit) {
           throw new TypeError("Generated model source exceeds storage limits.");
         }
         if (target !== undefined) {
-          await cp(absoluteEntry, target, { errorOnExist: true, force: false });
+          await stageGeneratedModelFile(absoluteEntry, canonicalEntry, entryStats, target);
         }
       } else {
         throw new TypeError(

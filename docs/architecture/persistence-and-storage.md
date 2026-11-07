@@ -558,8 +558,10 @@ reads directory entries incrementally and limits file count, byte count and
 folder count. The folder count uses the same limit as the file count and is
 counted separately. The walk permits at most 64 levels below the source root.
 It applies these limits while staging individual entries and while checking
-the staged result. Native protection against concurrent file changes needs
-separate qualification.
+the staged result. The staging copy reads only the admitted bytes from each
+open file and checks its identity and metadata before and after transfer. A
+detected change prevents publication. Native protection against concurrent
+file changes and protected ownership still need separate qualification.
 
 Server defaults should keep `SERVER_STORAGE_ROOT` and `SERVER_RUNTIME_ROOT` distinct. Desktop local mode should use desktop-owned runtime roots and desktop-owned artifact storage roots. Server/thin-client mode should use server-owned runtime roots and server-owned artifact storage roots. Future desktop-remote mode should not assume remote artifacts are local files.
 
