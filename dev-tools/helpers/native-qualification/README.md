@@ -14,6 +14,23 @@ A root exit observed after the deadline is a timeout. Owned cleanup still runs
 with its existing confirmation checks and cleanup limits. This phase control
 does not provide a whole-run watchdog or interrupt a blocked native call.
 
+One private source-reviewed retry is available for the known first-case process
+count failure only after the user authorizes it. It checks exact saved output,
+active-zero accounting, closed handles, both old stop markers, reviewed source
+and the original interpreter. It exclusively creates and flushes one family-wide
+claim before a new suite. Every existing claim, including a partial file or broken
+link, refuses another attempt. A failed write or retry does not reset that claim.
+The public command keeps refusing the original stop marker. Old files and process
+identities are never adopted, changed or removed.
+
+Each retry case rechecks the approved witnesses and empty owner registries.
+Fixture intents retain the approved source/interpreter hashes, and guardian
+dispatch rechecks them before launch. Final success requires all nine unchanged
+native assertions, unchanged proof/source, and no active or uncertain owner.
+These cooperative source attestations do not prove hostile live code replacement,
+power-loss durability, model outcomes, offload safety or product qualification.
+Source review alone grants no physical test result.
+
 The closed standard-library fixtures, their leaf and their guardian use the
 original Python interpreter. A Windows virtual environment can start an extra
 interpreter through its redirector, which changes the expected process tree.

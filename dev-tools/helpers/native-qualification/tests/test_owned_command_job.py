@@ -891,6 +891,223 @@ class PortableNativePolicyTests(unittest.TestCase):
                 job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
             create.assert_not_called()
 
+    @contextlib.contextmanager
+    def reviewed_retry_subject(self):
+        with tempfile.TemporaryDirectory(prefix="native reviewed retry ") as directory:
+            root = Path(directory).resolve()
+            module = root / "dev-tools/helpers/native-qualification/owned_command_job.py"
+            family = root / ".local-codex/native-ocr-budget-command-selftests-v4"
+            prior = family / ("a" * 32)
+            (prior / "stdio").mkdir(parents=True)
+            sources = {}
+            for name in job._RETRY_SOURCE_FILES:
+                file = module.parent / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(b"fixed reviewed source\n")
+                sources[name] = job._digest(file)
+            base = root / "base/python.exe"
+            base.parent.mkdir()
+            base.write_bytes(b"fixed original interpreter\n")
+            paths = {"family-stop": family / "FENCED.json", "suite-stop": prior / "FENCED.json",
+                     "suite": prior / "observation.json", "stdio": prior / "stdio/observation.json",
+                     "stdout": prior / "stdio/stdout.log", "stderr": prior / "stdio/stderr.log"}
+            paths["stdout"].write_bytes(b"fixed-native-stdout\n")
+            paths["stderr"].write_bytes(b"fixed-native-stderr\n")
+            job.dump(paths["family-stop"], {"suite": str(prior), "reason": "native-selftest-failed-or-unconfirmed", "automatic_successor_allowed": False})
+            job.dump(paths["suite-stop"], {"reason": "native-selftest-failed-or-unconfirmed", "repeat_authority": False, "fixture_retained": True})
+            job.dump(paths["suite"], {
+                "schema_version": "actual-fixed-host-native-selftest-v1", "passed": False,
+                "cases": [{"case": "stdio", "passed": False, "error_type": "NativeFailure", "diagnostic": "native-private-stdio"}],
+                "source_unchanged": True, "expected_native_cases": 9, "actual_platform": "win32",
+                "portable_pass_claimed": False, "old_process_or_fence_adopted": False,
+                "actual_package_or_UI_executed": False, "model_provider_retained_stage_used": False,
+            })
+            job.dump(paths["stdio"], {
+                "root_exit_code": 0, "job_accounting": {"total": 3, "active": 0, "terminated": 0},
+                "command_passed": True, "cleanup_confirmed": True, "all_owned_handles_close_acknowledged": True,
+                "cleanup_errors": [], "assigned_at_creation": True, "resumed_after_membership": True,
+                "fence_required": False, "forced_owned_job_termination": False, "automatic_retry_allowed": False,
+                "log_overflow": False, "reason": None,
+                "limits": {"flags": job.LIMIT_FLAGS, "process_bytes": job.PROCESS_BYTES,
+                           "job_bytes": job.JOB_BYTES, "active_limit": job.MEMBERS},
+                "logs": {name: {"complete": True, "path": str(paths[name]), "bytes": 20,
+                                "observed_bytes": 20, "sha256": job._digest(paths[name]), "cap_bytes": job.LOG_CAP}
+                         for name in ("stdout", "stderr")},
+            })
+            hashes = {name: job._digest(file) for name, file in paths.items()}
+            args = dict(prior_suite=prior, proof_hashes=hashes, source_hashes=sources,
+                        interpreter_sha256=job._digest(base), review_digest="b" * 64)
+            with patch.object(job, "_REPO", root), patch.object(job, "_MODULE", module), \
+                 patch.object(job, "_SELFTEST_RUNS", family), \
+                 patch.object(job, "_PREVIOUS_SELFTEST_RUNS", root / "absent-previous-family"), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job, "os", SimpleNamespace(name="nt", fstat=os.fstat, fsync=os.fsync, environ={})), \
+                 patch.object(job.c, "sizeof", return_value=8), \
+                 patch.object(job, "_native_selftest_suite", return_value={"injected_suite_only": True}) as suite, \
+                 patch.object(job, "_OwnedJob", side_effect=AssertionError("No native execution in portable tests")) as native:
+                yield SimpleNamespace(root=root, family=family, prior=prior, module=module, base=base,
+                                      paths=paths, args=args, suite=suite, native=native,
+                                      claim=family / job._REVIEWED_RETRY_CLAIM)
+
+    def test_reviewed_retry_consumes_one_claim_before_its_fixed_suite(self):
+        with self.reviewed_retry_subject() as case:
+            original = {name: path.read_bytes() for name, path in case.paths.items()}
+            def observe(suite, source, *, retry):
+                self.assertTrue(case.claim.is_file())
+                self.assertEqual(json.loads(case.claim.read_bytes())["suite"], suite.name)
+                self.assertEqual(suite.parent, case.family)
+                self.assertEqual(source, {"owned_command_job.py": job._digest(case.module)})
+                retry["validate"]()
+                return {"injected_suite_only": True}
+            case.suite.side_effect = observe
+            self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_suite_only": True})
+            self.assertEqual({name: path.read_bytes() for name, path in case.paths.items()}, original)
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+            case.suite.assert_called_once()
+            case.native.assert_not_called()
+            with self.assertRaisesRegex(job.NativeFailure, "remains fenced"):
+                job.native_selftest()
+
+    def test_reviewed_retry_refuses_incomplete_or_incompatible_prior_native_proof(self):
+        cases = [("cleanup_confirmed", False), ("all_owned_handles_close_acknowledged", False),
+                 ("cleanup_errors", ["unknown"]), ("fence_required", True), ("reason", "timeout"),
+                 ("command_passed", False), ("forced_owned_job_termination", True),
+                 ("job_accounting", {"total": 3, "active": 1, "terminated": 0}),
+                 ("job_accounting", {"total": 3, "active": False, "terminated": 0})]
+        for field, value in cases:
+            with self.subTest(field=field, value=value), self.reviewed_retry_subject() as case:
+                body = json.loads(case.paths["stdio"].read_bytes()); body[field] = value
+                case.paths["stdio"].write_text(json.dumps(body), encoding="utf8")
+                case.args["proof_hashes"]["stdio"] = job._digest(case.paths["stdio"])
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_refuses_changed_source_interpreter_or_saved_bytes(self):
+        for target in ("source", "interpreter", "stdio"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                file = {"source": case.module, "interpreter": case.base, "stdio": case.paths["stdio"]}[target]
+                file.write_bytes(b"changed bytes")
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_requires_all_exact_witness_keys(self):
+        for key in ("proof_hashes", "source_hashes"):
+            with self.subTest(key=key), self.reviewed_retry_subject() as case:
+                case.args[key]["unknown"] = "c" * 64
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+
+    def test_reviewed_retry_refuses_incomplete_saved_streams(self):
+        for field, value in (("complete", False), ("bytes", 19), ("observed_bytes", 21), ("path", "unrelated.log")):
+            with self.subTest(field=field), self.reviewed_retry_subject() as case:
+                body = json.loads(case.paths["stdio"].read_bytes())
+                body["logs"]["stdout"][field] = value
+                case.paths["stdio"].write_text(json.dumps(body), encoding="utf8")
+                case.args["proof_hashes"]["stdio"] = job._digest(case.paths["stdio"])
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+
+    def test_reviewed_retry_refuses_multiply_linked_proof(self):
+        with self.reviewed_retry_subject() as case:
+            os.link(case.paths["stdout"], case.root / "extra-stdout-link")
+            with self.assertRaisesRegex(job.NativeFailure, "retry-proof-file"):
+                job._reviewed_native_selftest_retry(**case.args)
+            self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_treats_every_existing_claim_as_consumed(self):
+        for directory in (False, True):
+            with self.subTest(directory=directory), self.reviewed_retry_subject() as case:
+                if directory: case.claim.mkdir()
+                else: case.claim.write_bytes(b"incomplete old claim")
+                with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                    job._reviewed_native_selftest_retry(**case.args)
+                case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_does_not_read_proofs_behind_a_broken_claim_entry(self):
+        with self.reviewed_retry_subject() as case:
+            original = Path.lstat
+            def inspect(path):
+                if path == case.claim: return SimpleNamespace()
+                return original(path)
+            with patch.object(Path, "lstat", inspect), patch.object(job, "_validate_reviewed_retry") as proof:
+                with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                    job._reviewed_native_selftest_retry(**case.args)
+                proof.assert_not_called(); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_refuses_active_or_uncertain_current_owners(self):
+        for registry in (job._LIVE, job._PENDING):
+            with self.subTest(registry=registry is job._LIVE), self.reviewed_retry_subject() as case:
+                owner = object(); registry[id(owner)] = owner
+                try:
+                    with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                    self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+                finally: del registry[id(owner)]
+
+    def test_reviewed_retry_keeps_claim_consumed_after_uncertain_flush(self):
+        with self.reviewed_retry_subject() as case:
+            with patch.object(job.os, "fsync", side_effect=OSError("injected flush failure")):
+                with self.assertRaises(OSError): job._reviewed_native_selftest_retry(**case.args)
+            self.assertTrue(case.claim.is_file()); case.suite.assert_not_called(); case.native.assert_not_called()
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+
+    def test_reviewed_retry_does_not_reissue_after_suite_failure(self):
+        with self.reviewed_retry_subject() as case:
+            case.suite.side_effect = job.NativeFailure("injected native suite failure")
+            with self.assertRaisesRegex(job.NativeFailure, "injected native suite failure"):
+                job._reviewed_native_selftest_retry(**case.args)
+            self.assertTrue(case.claim.is_file())
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+            case.suite.assert_called_once(); case.native.assert_not_called()
+
+    def test_reviewed_retry_fixture_intent_pins_approved_bytes_before_native_creation(self):
+        owned_type = job._OwnedJob
+        for target in ("source", "interpreter"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                def inspect(suite, source, *, retry):
+                    folder = suite / "stdio"; folder.mkdir()
+                    intent = job._fixture_intent("stdio", folder, retry=retry)
+                    self.assertEqual(dict(intent.source_hashes), {"owned_command_job.py": case.args["source_hashes"]["owned_command_job.py"]})
+                    self.assertEqual(dict(intent.consumer_hashes), {str(case.base): case.args["interpreter_sha256"]})
+                    (case.module if target == "source" else case.base).write_bytes(b"unreviewed replacement")
+                    with patch.object(job, "_Win") as native:
+                        with self.assertRaises(job.NativeFailure): owned_type(intent, folder)
+                        native.assert_not_called()
+                    next_folder = folder.parent / "failure"; next_folder.mkdir()
+                    with self.assertRaisesRegex(job.NativeFailure, "retry-proof-drift"):
+                        job._fixture_intent("failure", next_folder, retry=retry)
+                    return {"injected_dispatch_denial": True}
+                case.suite.side_effect = inspect
+                self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_dispatch_denial": True})
+                self.assertTrue(case.claim.is_file()); case.native.assert_not_called()
+
+    def test_reviewed_retry_guardian_refuses_between_case_drift_before_popen(self):
+        for target in ("source", "interpreter"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                def inspect(suite, source, *, retry):
+                    (case.module if target == "source" else case.base).write_bytes(b"unreviewed replacement")
+                    with patch.object(job.subprocess, "Popen") as popen, patch.object(job, "_Win") as native:
+                        with self.assertRaises(job.NativeFailure): job.crash_case("before-resume", retry=retry)
+                        popen.assert_not_called(); native.assert_not_called()
+                    return {"injected_dispatch_denial": True}
+                case.suite.side_effect = inspect
+                self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_dispatch_denial": True})
+                self.assertTrue(case.claim.is_file()); case.native.assert_not_called()
+
+    def test_final_selftest_check_never_passes_a_retained_or_uncertain_owner(self):
+        cases = [{"passed": True} for _ in range(9)]
+        for registry in (job._LIVE, job._PENDING):
+            with self.subTest(active=registry is job._LIVE):
+                owner = object(); registry[id(owner)] = owner
+                try:
+                    with self.assertRaises(job.NativeFailure):
+                        job._selftest_suite_passes(cases, job._implementation_hashes())
+                finally: del registry[id(owner)]
+        self.assertFalse(job._selftest_suite_passes(cases[:8], job._implementation_hashes()))
+        self.assertFalse(job._selftest_suite_passes([{ "passed": False }, *cases[:8]], job._implementation_hashes()))
+
     def test_current_family_stop_marker_refuses_existing_files_and_dangling_links(self):
         for exists, linked in ((True, False), (False, True)):
             with self.subTest(exists=exists, linked=linked), \

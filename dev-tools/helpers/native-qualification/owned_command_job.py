@@ -234,14 +234,15 @@ def _fixed_fixture_command(argument, role):
     return (str(python), "-I", "-S", "-B", str(_MODULE), argument, role)
 
 
-def _fixture_intent(role,folder):
+def _fixture_intent(role,folder,*,retry=None):
     need(role in _FIXTURES,"unknown-fixed-fixture-role")
     need(folder.parent.parent==_SELFTEST_RUNS and re.fullmatch(r"[a-f0-9]{32}",folder.parent.name) and folder.name==role,"fixed-fixture-folder")
     _regular_directory(folder,_REPO)
     env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
-    command = _fixed_fixture_command("--fixture", role)
-    interpreter_hash = _digest(Path(command[0]))
-    return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(_implementation_hashes()),MappingProxyType({command[0]: interpreter_hash})))
+    command = _fixed_fixture_command("--fixture", role) if retry is None else _retry_fixed_command("--fixture", role, retry)
+    interpreter_hash = _digest(Path(command[0])) if retry is None else retry["interpreter_sha256"]
+    source = _implementation_hashes() if retry is None else {"owned_command_job.py": retry["source_hashes"]["owned_command_job.py"]}
+    return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(source),MappingProxyType({command[0]: interpreter_hash})))
 
 
 def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
@@ -1100,15 +1101,20 @@ def _cleanup_observer(observer,native):
     return closed
 
 
-def crash_case(mode):
+def crash_case(mode,*,retry=None):
+    if retry is not None: _before_retry_case(retry)
     copied=[];process=None;result=None;native=None
     observer={"process":None,"copied":copied,"guardian_raw":None,"launch_attempted":False}
     _register_owner(observer)
     env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
     try:
         native=_Win()
+        if retry is not None:
+            command = _retry_fixed_command("--guardian", mode, retry)
+            _assert_no_pending()
+            need(set(_LIVE) == {id(observer)}, "retry-guardian-owner-drift")
         observer["launch_attempted"]=True
-        process=subprocess.Popen(_fixed_fixture_command("--guardian", mode),cwd=_MODULE.parent,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,creationflags=DETACHED_PROCESS)
+        process=subprocess.Popen(_fixed_fixture_command("--guardian", mode) if retry is None else command,cwd=_MODULE.parent,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,creationflags=DETACHED_PROCESS)
         observer["process"]=process
         wire=bounded_line(process.stdout,15)
         ready=json.loads(wire)
@@ -1139,6 +1145,155 @@ def crash_case(mode):
     return result
 
 
+_REVIEWED_RETRY_CLAIM = "REVIEWED-RETRY-CLAIMED-v1.json"
+_RETRY_SOURCE_FILES = ("owned_command_job.py", "tests/test_owned_command_job.py", "README.md")
+_RETRY_PROOF_FILES = ("family-stop", "suite-stop", "suite", "stdio", "stdout", "stderr")
+
+
+def _retry_bytes(path, expected, maximum=65536):
+    need(type(expected) is str and re.fullmatch(r"[a-f0-9]{64}", expected), "retry-proof-hash")
+    before = path.lstat()
+    def identity(info):
+        return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+    def ordinary(info):
+        return (stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                and 0 <= info.st_size <= maximum
+                and not (getattr(info, "st_file_attributes", 0) & 0x400))
+    need(ordinary(before) and before.st_ino > 0 and not path.is_symlink()
+         and path.resolve() == path, "retry-proof-file")
+    with path.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        need(ordinary(opened) and identity(opened) == identity(before), "retry-proof-open")
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    named = path.lstat()
+    need(ordinary(after) and ordinary(named) and identity(before) == identity(after) == identity(named)
+         and before.st_ctime_ns == named.st_ctime_ns and opened.st_ctime_ns == after.st_ctime_ns
+         and len(raw) == before.st_size and hashlib.sha256(raw).hexdigest() == expected, "retry-proof-drift")
+    return raw
+
+
+def _retry_json(raw):
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            need(key not in value, "retry-proof-json")
+            value[key] = item
+        return value
+    value = json.loads(raw, object_pairs_hook=unique,
+                       parse_constant=lambda _: need(False, "retry-proof-json"))
+    need(type(value) is dict, "retry-proof-json")
+    return value
+
+
+def _validate_reviewed_retry(prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest):
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}", review_digest), "retry-review-witness")
+    need(type(prior_suite) is type(_SELFTEST_RUNS) and prior_suite.parent == _SELFTEST_RUNS
+         and re.fullmatch(r"[a-f0-9]{32}", prior_suite.name), "retry-prior-suite")
+    need(type(proof_hashes) is dict and set(proof_hashes) == set(_RETRY_PROOF_FILES)
+         and type(source_hashes) is dict and set(source_hashes) == set(_RETRY_SOURCE_FILES), "retry-witness-set")
+    _regular_directory(prior_suite, _REPO)
+    _regular_directory(prior_suite / "stdio", _REPO)
+    paths = {
+        "family-stop": _SELFTEST_RUNS / "FENCED.json", "suite-stop": prior_suite / "FENCED.json",
+        "suite": prior_suite / "observation.json", "stdio": prior_suite / "stdio/observation.json",
+        "stdout": prior_suite / "stdio/stdout.log", "stderr": prior_suite / "stdio/stderr.log",
+    }
+    raw = {name: _retry_bytes(path, proof_hashes[name]) for name, path in paths.items()}
+    for name in _RETRY_SOURCE_FILES:
+        _retry_bytes(_MODULE.parent / name, source_hashes[name], 1024 * 1024)
+    command = _fixed_fixture_command("--fixture", "stdio")
+    _retry_bytes(Path(command[0]), interpreter_sha256, 128 * 1024**2)
+    family, stop, suite, stdio = (_retry_json(raw[name]) for name in ("family-stop", "suite-stop", "suite", "stdio"))
+    need(family == {"suite": str(prior_suite), "reason": "native-selftest-failed-or-unconfirmed", "automatic_successor_allowed": False}
+         and stop == {"reason": "native-selftest-failed-or-unconfirmed", "repeat_authority": False, "fixture_retained": True}, "retry-prior-stop")
+    need(suite.get("schema_version") == "actual-fixed-host-native-selftest-v1" and suite.get("passed") is False
+         and suite.get("cases") == [{"case": "stdio", "passed": False, "error_type": "NativeFailure", "diagnostic": "native-private-stdio"}]
+         and suite.get("source_unchanged") is True and suite.get("expected_native_cases") == 9
+         and suite.get("actual_platform") == "win32"
+         and suite.get("portable_pass_claimed") is False
+         and suite.get("old_process_or_fence_adopted") is False
+         and suite.get("actual_package_or_UI_executed") is False
+         and suite.get("model_provider_retained_stage_used") is False, "retry-prior-case")
+    need(raw["stdout"] == b"fixed-native-stdout\n" and raw["stderr"] == b"fixed-native-stderr\n", "retry-prior-output")
+    need(type(stdio.get("root_exit_code")) is int and stdio["root_exit_code"] == 0
+         and stdio.get("job_accounting") == {"total": 3, "active": 0, "terminated": 0}
+         and all(type(value) is int for value in stdio["job_accounting"].values())
+         and stdio.get("command_passed") is True and stdio.get("cleanup_confirmed") is True
+         and stdio.get("all_owned_handles_close_acknowledged") is True and stdio.get("cleanup_errors") == []
+         and stdio.get("assigned_at_creation") is True and stdio.get("resumed_after_membership") is True
+         and stdio.get("fence_required") is False and stdio.get("forced_owned_job_termination") is False
+         and stdio.get("automatic_retry_allowed") is False and stdio.get("log_overflow") is False
+         and stdio.get("reason") is None, "retry-prior-retirement")
+    expected_limits = {"flags": LIMIT_FLAGS, "process_bytes": PROCESS_BYTES, "job_bytes": JOB_BYTES, "active_limit": MEMBERS}
+    need(stdio.get("limits") == expected_limits, "retry-prior-budget")
+    for name in ("stdout", "stderr"):
+        row = stdio.get("logs", {}).get(name, {})
+        need(row.get("complete") is True and row.get("path") == str(paths[name])
+             and row.get("bytes") == row.get("observed_bytes") == len(raw[name])
+             and row.get("sha256") == proof_hashes[name] and row.get("cap_bytes") == LOG_CAP, "retry-prior-stream")
+
+
+def _reviewed_native_selftest_retry(*, prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest):
+    """Private cooperative source-reviewed exception, never routed from CLI/JSON.
+
+    The caller must hold actual user authority and an independent exact-source
+    review. Hashes attest reviewed bytes; they are not hostile-user permission.
+    """
+    need(os.name == "nt" and c.sizeof(c.c_void_p) == 8, "actual-Windows-x64-required")
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    _prior_family_clear(_PREVIOUS_SELFTEST_RUNS)
+    try:
+        (_SELFTEST_RUNS / _REVIEWED_RETRY_CLAIM).lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise NativeFailure("reviewed-native-retry-already-consumed")
+    # Copy cooperative witnesses before any I/O. No caller path selects code.
+    need(type(proof_hashes) is dict and type(source_hashes) is dict, "retry-witness-set")
+    proof_hashes, source_hashes = dict(proof_hashes), dict(source_hashes)
+    interpreter_path = _fixed_fixture_command("--fixture", "stdio")[0]
+    def validate():
+        need(_fixed_fixture_command("--fixture", "stdio")[0] == interpreter_path, "retry-interpreter-path-drift")
+        _validate_reviewed_retry(prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest)
+    validate()
+    suite = _SELFTEST_RUNS / uuid.uuid4().hex
+    claim = {"schema_version": "reviewed-native-selftest-retry-v1",
+             "authority_ref": "user-allow-one-guarded-reviewed-retry-20261107",
+             "prior_suite": prior_suite.name, "suite": suite.name,
+             "proof_hashes": proof_hashes, "source_hashes": source_hashes,
+             "interpreter_path": interpreter_path, "interpreter_sha256": interpreter_sha256, "review_digest": review_digest,
+             "automatic_retry_allowed": False}
+    # Exclusive creation refuses every existing entry, including a broken link.
+    # Any write/flush failure leaves this exception consumed; there is no reset.
+    dump(_SELFTEST_RUNS / _REVIEWED_RETRY_CLAIM, claim)
+    validate()
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    suite.mkdir()
+    return _native_selftest_suite(suite, _implementation_hashes(),
+                                  retry={"claim": claim, "validate": validate,
+                                         "source_hashes": MappingProxyType(source_hashes),
+                                         "interpreter_path": interpreter_path,
+                                         "interpreter_sha256": interpreter_sha256})
+
+
+def _before_retry_case(retry):
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    retry["validate"]()
+
+
+def _retry_fixed_command(argument, role, retry):
+    command = _fixed_fixture_command(argument, role)
+    retry["validate"]()
+    need(command[0] == retry["interpreter_path"], "retry-interpreter-path-drift")
+    _retry_bytes(Path(command[0]), retry["interpreter_sha256"], 128 * 1024**2)
+    _retry_bytes(_MODULE, retry["source_hashes"]["owned_command_job.py"], 1024 * 1024)
+    return command
+
+
 def native_selftest():
     need(os.name=="nt" and c.sizeof(c.c_void_p)==8,"actual-Windows-x64-required")
     _assert_no_pending()
@@ -1151,12 +1306,26 @@ def native_selftest():
     else:
         raise NativeFailure("native selftest lifecycle remains fenced; no automatic successor")
     source=_implementation_hashes();suite=_SELFTEST_RUNS/uuid.uuid4().hex;suite.mkdir()
+    return _native_selftest_suite(suite, source)
+
+
+def _selftest_suite_passes(cases, source, retry=None):
+    need(_implementation_hashes()==source,"native-source-changed")
+    _assert_no_pending()
+    need(not _LIVE,"selftest-owned-state-not-retired")
+    if retry is not None: _before_retry_case(retry)
+    return len(cases)==9 and all(case["passed"] for case in cases)
+
+
+def _native_selftest_suite(suite, source, *, retry=None):
     cases=[];all_passed=False;current_case=None
     try:
         for role in ("stdio","failure","natural-expiry","timeout","overflow","ui-budget","ocr-budget"):
             current_case=role
+            if retry is not None: _before_retry_case(retry)
             folder=suite/role;folder.mkdir()
-            result=_OwnedJob(_fixture_intent(role,folder),folder).run()
+            intent = _fixture_intent(role,folder) if retry is None else _fixture_intent(role,folder,retry=retry)
+            result=_OwnedJob(intent,folder).run()
             dump(folder/"observation.json",result)
             need(result["cleanup_confirmed"] and result["all_owned_handles_close_acknowledged"] and result["job_accounting"]["active"]==0 and result["assigned_at_creation"] and result["resumed_after_membership"],"selftest-owned-cleanup-required")
             if role=="stdio":
@@ -1176,14 +1345,15 @@ def native_selftest():
             cases.append({"case":role,"passed":True,"observation":str(folder/"observation.json"),"sha256":_digest(folder/"observation.json"),"root_exit_code":result["root_exit_code"],"job_total":result["job_accounting"]["total"],"job_active":result["job_accounting"]["active"]})
         for mode in ("before-resume","after-descendant"):
             current_case="guardian-crash-"+mode
-            cases.append(crash_case(mode))
-        need(_implementation_hashes()==source,"native-source-changed")
-        all_passed=len(cases)==9 and all(case["passed"] for case in cases)
+            if retry is not None: _before_retry_case(retry)
+            cases.append(crash_case(mode) if retry is None else crash_case(mode,retry=retry))
+        all_passed=_selftest_suite_passes(cases,source,retry)
     except BaseException as error:
         cases.append({"case":current_case,"passed":False,"error_type":type(error).__name__,"diagnostic":str(error)[:500]})
         raise
     finally:
         report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":9,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"ui_job_bytes":UI_JOB_BYTES,"ocr_process_bytes":OCR_PROCESS_BYTES,"ocr_job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics and fixed Standard/OCR budget readback only; no old-process cleanup, native filesystem/offload, runtime import, model, parent or product qualification."}
+        if retry is not None: report["reviewed_retry"] = copy.deepcopy(retry["claim"])
         dump(suite/"observation.json",report)
         if not all_passed:
             dump(suite/"FENCED.json",{"reason":"native-selftest-failed-or-unconfirmed","repeat_authority":False,"fixture_retained":True})
