@@ -216,12 +216,32 @@ def _remember(intent):
     return intent
 
 
+def _fixed_fixture_command(argument, role):
+    roles = {
+        "--fixture": _FIXTURES | {"leaf"},
+        "--guardian": {"before-resume", "after-descendant"},
+    }
+    need(type(argument) is str and type(role) is str
+         and role in roles.get(argument, ()), "unknown-fixed-fixture-command")
+    original = getattr(sys, "_base_executable", None)
+    need(type(original) is str and bool(original), "fixed-fixture-interpreter")
+    python = Path(original)
+    need(python.is_absolute() and python.resolve() == python
+         and python.name.lower() == "python.exe", "fixed-fixture-interpreter")
+    info = python.lstat()
+    need(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= 128 * 1024**2
+         and not (getattr(info, "st_file_attributes", 0) & 0x400), "fixed-fixture-interpreter")
+    return (str(python), "-I", "-S", "-B", str(_MODULE), argument, role)
+
+
 def _fixture_intent(role,folder):
     need(role in _FIXTURES,"unknown-fixed-fixture-role")
     need(folder.parent.parent==_SELFTEST_RUNS and re.fullmatch(r"[a-f0-9]{32}",folder.parent.name) and folder.name==role,"fixed-fixture-folder")
     _regular_directory(folder,_REPO)
     env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
-    return _remember(_Intent("fixture:"+role,(str(Path(sys.executable).resolve()),"-I","-S","-B",str(_MODULE),"--fixture",role),_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(_implementation_hashes()),MappingProxyType({})))
+    command = _fixed_fixture_command("--fixture", role)
+    interpreter_hash = _digest(Path(command[0]))
+    return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(_implementation_hashes()),MappingProxyType({command[0]: interpreter_hash})))
 
 
 def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
@@ -991,7 +1011,7 @@ def fixture(role):
         for _ in range(132):os.write(1,b"x"*65536)
         time.sleep(15);return 97
     need(role in ("hold","timeout"),"fixed-fixture-role")
-    child=subprocess.Popen([str(Path(sys.executable).resolve()),"-I","-S","-B",str(_MODULE),"--fixture","leaf"],stdin=subprocess.DEVNULL,stdout=sys.stdout,stderr=sys.stderr,close_fds=True,creationflags=DETACHED_PROCESS)
+    child=subprocess.Popen(_fixed_fixture_command("--fixture", "leaf"),stdin=subprocess.DEVNULL,stdout=sys.stdout,stderr=sys.stderr,close_fds=True,creationflags=DETACHED_PROCESS)
     native=_Win();handle=int(child._handle)
     print(json.dumps({"child_handle":handle,**native.identity(handle)}),flush=True)
     # If the job was not shut down, natural expiry is deliberately nonzero.
@@ -1088,7 +1108,7 @@ def crash_case(mode):
     try:
         native=_Win()
         observer["launch_attempted"]=True
-        process=subprocess.Popen([str(Path(sys.executable).resolve()),"-I","-S","-B",str(_MODULE),"--guardian",mode],cwd=_MODULE.parent,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,creationflags=DETACHED_PROCESS)
+        process=subprocess.Popen(_fixed_fixture_command("--guardian", mode),cwd=_MODULE.parent,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,creationflags=DETACHED_PROCESS)
         observer["process"]=process
         wire=bounded_line(process.stdout,15)
         ready=json.loads(wire)

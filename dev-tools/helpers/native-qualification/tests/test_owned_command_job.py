@@ -162,6 +162,72 @@ class PortableNativePolicyTests(unittest.TestCase):
         for phase in ("source-session:command","source-session-extra"):
             with self.assertRaises(job.NativeFailure):job._memory_limits(self.issued_intent(phase))
 
+    def test_native_fixture_intent_uses_the_original_interpreter_and_pins_its_bytes(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native interpreter ") as directory:
+            root = Path(directory).resolve()
+            base = root / "base/python.exe"
+            base.parent.mkdir()
+            base.write_bytes(b"inert original interpreter")
+            family = root / "family"
+            folder = family / ("a" * 32) / "stdio"
+            folder.mkdir(parents=True)
+            redirector = root / "venv/Scripts/python.exe"
+            with patch.object(job.sys, "executable", str(redirector)), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job, "_REPO", root), \
+                 patch.object(job, "_SELFTEST_RUNS", family), \
+                 patch.object(job, "_Win") as native:
+                intent = job._fixture_intent("stdio", folder)
+                self.assertEqual(intent.argv, (str(base), "-I", "-S", "-B", str(job._MODULE), "--fixture", "stdio"))
+                self.assertEqual(intent.seconds, 8)
+                job._validate_intent(intent, folder)
+                base.write_bytes(b"changed interpreter")
+                with self.assertRaisesRegex(job.NativeFailure, "reviewed-consumer-drift"):
+                    job._validate_intent(intent, folder)
+                native.assert_not_called()
+
+    def test_native_fixture_leaf_does_not_launch_a_venv_redirector(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native leaf ") as directory:
+            base = Path(directory).resolve() / "python.exe"
+            base.write_bytes(b"inert original interpreter")
+            with patch.object(job.sys, "executable", str(base.parent / "venv/Scripts/python.exe")), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job.subprocess, "Popen", side_effect=RuntimeError("stop before launch")) as launch, \
+                 patch.object(job, "_Win") as native:
+                with self.assertRaisesRegex(RuntimeError, "stop before launch"):
+                    job.fixture("hold")
+                self.assertEqual(tuple(launch.call_args.args[0]), (str(base), "-I", "-S", "-B", str(job._MODULE), "--fixture", "leaf"))
+                self.assertEqual(launch.call_args.kwargs["creationflags"], job.DETACHED_PROCESS)
+                native.assert_not_called()
+
+    def test_fixed_fixture_command_has_closed_roles_and_guardian_flags(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native roles ") as directory:
+            base = Path(directory).resolve() / "python.exe"
+            base.write_bytes(b"inert original interpreter")
+            with patch.object(job.sys, "_base_executable", str(base)):
+                for role in ("before-resume", "after-descendant"):
+                    self.assertEqual(job._fixed_fixture_command("--guardian", role),
+                                     (str(base), "-I", "-S", "-B", str(job._MODULE), "--guardian", role))
+                for argument, role in (("--command", "stdio"), ("--fixture", "training-budget"),
+                                       ("--guardian", "leaf"), ("--fixture", "stdio extra"),
+                                       (object(), "stdio"), ("--fixture", object())):
+                    with self.subTest(argument=argument, role=role), self.assertRaises(job.NativeFailure):
+                        job._fixed_fixture_command(argument, role)
+
+    def test_fixed_fixture_command_refuses_unknown_or_unusable_interpreter(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native identity ") as directory:
+            root = Path(directory).resolve()
+            empty = root / "python.exe"
+            empty.write_bytes(b"")
+            directory_image = root / "directory/python.exe"
+            directory_image.mkdir(parents=True)
+            for original in (None, "python.exe", str(root / "pythonw.exe"),
+                             str(root / "missing/python.exe"), str(empty), str(directory_image)):
+                with self.subTest(original=original), \
+                     patch.object(job.sys, "_base_executable", original), \
+                     self.assertRaises((job.NativeFailure, OSError)):
+                    job._fixed_fixture_command("--fixture", "stdio")
+
     def fake_owned(self):
         native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
         with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native):

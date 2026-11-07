@@ -14,6 +14,14 @@ A root exit observed after the deadline is a timeout. Owned cleanup still runs
 with its existing confirmation checks and cleanup limits. This phase control
 does not provide a whole-run watchdog or interrupt a blocked native call.
 
+The closed standard-library fixtures, their leaf and their guardian use the
+original Python interpreter. A Windows virtual environment can start an extra
+interpreter through its redirector, which changes the expected process tree.
+The fixed commands require a regular original interpreter and keep isolated
+flags. Fixture intents bind its bytes before launch. This test-only choice
+preserves the separately reviewed model, training and OCR runtime context.
+See the [CPython 3.12 redirector](https://raw.githubusercontent.com/python/cpython/v3.12.8/PC/launcher.c).
+
 The pipe-only root, fixed leaf and guardian use `DETACHED_PROCESS`, not
 `CREATE_NO_WINDOW`; this avoids requesting a console host. This flag does not
 permit job breakaway. Exact one-root/two-member fixture counts remain unchanged.
