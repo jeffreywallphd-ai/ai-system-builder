@@ -335,18 +335,28 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         tests="dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
         coordinator="dev-tools/helpers/native-qualification/serial_provided_coordinator.py"
         coordinator_tests="dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py"
+        node_tests="dev-tools/helpers/native-qualification/tests/provided-data-helpers.unit.test.mjs"
+        fixed_helpers=["dev-tools/helpers/native-qualification/provided-data/"+name for name in ("package-tree.mjs","offline-package.mjs","global-setup.mjs","playwright.config.mjs")]
         readme="dev-tools/helpers/native-qualification/README.md"
         profiles=read_json(root/config)
         profile=profiles["profiles"]["native-host-policy"]
-        self.assertEqual(profile["test_paths"],[tests,coordinator_tests])
+        self.assertEqual(profile["test_paths"],[tests,coordinator_tests,node_tests])
         commands=run_focused_checks.profile_commands(root,"native-host-policy")
-        self.assertEqual(commands,[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(test).parent.as_posix()),"-p",Path(test).name] for test in (tests,coordinator_tests)])
+        self.assertEqual(commands,[["node","--test","--",node_tests]]+[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(test).parent.as_posix()),"-p",Path(test).name] for test in (tests,coordinator_tests)])
         self.put(config,json.dumps(profiles))
         for path in (source,tests,coordinator,coordinator_tests,readme):
             ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
             self.assertIn("native-host-policy",ids)
             self.assertNotIn("ocr-provider-contract",ids)
             self.assertNotIn("focused-tests",ids)
+        for path in (*fixed_helpers,node_tests):
+            # These additional templates have explicit profile coverage. They do
+            # not broaden automatic routing or suppress unknown/forced impact.
+            ids={row["id"] for row in catalog.plan(self.root,[path,config],["native-host-policy"],"candidate")["selected"]}
+            self.assertIn("native-host-policy",ids)
+            self.assertNotIn("focused-tests",ids)
+            ids={row["id"] for row in catalog.plan(self.root,[path,"modules/unknown/source.ts"],["native-host-policy"],"candidate")["selected"]}
+            self.assertIn("focused-tests",ids)
         for paths,required,focused in (([source,config],["native-host-policy"],False),([source,"modules/unknown/source.ts"],["native-host-policy"],True),([source],["native-host-policy","focused-tests"],True)):
             ids={row["id"] for row in catalog.plan(self.root,paths,required,"candidate")["selected"]}
             self.assertEqual("focused-tests" in ids,focused)

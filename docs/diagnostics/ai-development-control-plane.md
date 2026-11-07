@@ -230,8 +230,8 @@ It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no
 controlled-provider, scale, native-race, offload or parent-roadmap qualification.
 
-The `native-host-policy` profile runs only the fixed native-launcher and serial
-provided-data coordinator policy test files. It checks exact private package, combined UI, web-only and desktop-only
+The `native-host-policy` profile runs only the fixed native-launcher, serial
+provided-data coordinator and single-host Node fixture test files. It checks exact private package, combined UI, web-only and desktop-only
 commands, unchanged limit selection, source/environment witnesses and injected
 owner retirement refusals. Normal execution leaves actual Windows qualification
 skipped. An explicit physical run still needs its separate review and authority.
@@ -255,6 +255,18 @@ Required Windows report paths can exceed 260 characters. The coordinator adapts
 only exact filesystem operations to extended-length syntax and keeps normal
 canonical identities in its records. The long-path regression uses harmless new
 temporary files and retains all existing bounds, ancestor and single-link checks.
+
+The four `provided-data/` MJS templates add explicitly selected profile coverage.
+Their shared context is initially null; packaging and configuration refuse before
+production imports. One reviewed passive literal supplies runtime/source pins.
+The four rendered MJS hashes enter the Python manifest afterward, and the outer
+operator pins all five final helpers. This order avoids a circular self-hash.
+Tests exercise real bounded file readers, strict JSON/resource checks and mocked
+public single-host setup. They do not package or open an app. Existing whole-file
+test selection, one worker, zero retries, captures disabled and fixed deadlines
+remain. Dependency audit findings stay separate from helper-source checks; no
+dependency or release qualification is inferred. Actual rendered-source/effect
+review, app outcomes, resource peaks and complete Native retirement remain pending.
 
 The `host-setup-policy` profile runs one fixed Node lifecycle/binding test file.
 It checks the pure thirteen-key environment projection, normal and provided-data

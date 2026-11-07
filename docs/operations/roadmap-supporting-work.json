@@ -11270,6 +11270,36 @@
       "limitations": [
         "This receipt covers the retry guard source and 89 portable checks. A separate controlled run passed all nine fixed Windows process checks and received independent review. App, model, offload and whole-run delivery checks remain pending. Separate actual mechanics review SHA256 b7e6fcc92fb24343c484dc31d5f7558749d288b272fadd17a2490801f9bf6ade binds observation SHA256 5877d8d849d86cb3aaf3cda7a34970af0181aed4716d3549ef3a7344cb15501e; neither is the source-only receipt."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "bound-the-fixed-serial-provided-app-coordinator",
+      "work_criteria": [
+        "serial-provided-command-deadline-and-resource-policy-are-fixed"
+      ],
+      "receipt_digest": "66811ae0689e412f83355d83039264a614127996ab86947ed2c6b226a4bb3274",
+      "review_digest": "f5f0dfc65c204eec7ced25536b0e5ab05d59d989e2b91a6c76d95439bb8846fe",
+      "scope": "The fixed outer test command has a total time limit and checks the exact runtime and helper files before starting. Its existing memory and process limits stay in place.",
+      "limitations": [
+        "Portable tests cover this command and its guards. Real nested process groups, app runs and resource measurements still need evidence. Earlier Windows process results apply only to the code tested then."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "implement-the-fixed-serial-provided-coordinator",
+      "work_criteria": [
+        "serial-coordinator-preserves-current-evidence-and-ownership"
+      ],
+      "receipt_digest": "b306290da0cdda778edb0ee42e2894b945fef1b06544aedf2792a83fe7ff6d7e",
+      "review_digest": "6c406699250a3244613726b795b86780455c085b26bc245b034069f0adc25a04",
+      "scope": "The new coordinator checks packaging, browser and desktop results in order. It requires every selected test, worker record and shutdown result before it accepts the run.",
+      "limitations": [
+        "All 29 coordinator regressions and the required source checks passed. These tests used harmless files and simulated process results. Real app runs and process cleanup still need evidence. The source checks do not complete the roadmap."
+      ]
     }
   ]
 }

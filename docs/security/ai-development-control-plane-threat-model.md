@@ -754,3 +754,29 @@ passed field never supplies the required feature or cleanup facts. Portable
 tests supply validator evidence only. Actual compiled source/effect review,
 outer/inner retirement, resource peaks and app outcomes remain pending; closed
 model accuracy and OCR criteria are not rerun.
+
+The four MJS producer templates share one null context literal. Effectful entries
+refuse before production imports until that literal is separately rendered and
+reviewed. Its fixed passive schema contains source/runtime/run witnesses and no
+command, limit, profile or executable fallback. The literal has no helper hashes;
+render four MJS files before hashing them into the Python manifest, then bind all
+five final code artifacts in the outer operator. Final rendered source and effects
+need separate review. Cooperative hashes and frozen context do not authenticate
+a hostile operator or prove source-inventory completeness.
+
+Readers use one admitted bounded byte snapshot for hashing and parsing, reject
+duplicate/nonfinite JSON and detect descriptor/named identity drift. Directories
+are bounded while collecting, then checked again. Every original package file,
+selected/deployed worker byte, PE/resource field and phase predecessor remains
+required. The exact short Windows drive anchor retains its ordinary check when
+extended syntax is unusable; long paths still keep normal canonical identities.
+There is no alias, registry change or ownership-policy relaxation.
+
+The unchanged normal production packaging hooks use only the reviewed offline
+ZIP override, bound to the installed Electron version and exact unchanged bytes.
+Single-host setup keeps web services out of the Desktop phase and inventories
+all five current caches. Cleanup failure remains a failed command even when
+other reports can be saved. Sensitive captures stay disabled. Portable Node
+tests use inert resources and mocked public composition, not real app or Native
+results. Required dependency checks retain actual supplier/tooling findings;
+source acceptance grants no clean dependency-tree, release or parent pass.

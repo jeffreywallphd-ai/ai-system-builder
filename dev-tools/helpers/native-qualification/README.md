@@ -217,7 +217,8 @@ complete retirement before the next app, a finite whole-run deadline and
 separate per-host observations. Do not reuse a combined-UI setup that starts web
 services during a desktop-only phase.
 
-`native-host-policy` runs this area's two fixed policy test files through the
+`native-host-policy` runs this area's two Python policy files and one fixed Node
+fixture file through the
 control plane. Normal execution leaves its physical Windows case explicitly
 skipped. Physical opt-in still requires separate source review and controlled
 execution authority. These portable command, limit-selection and injected-owner
@@ -276,6 +277,42 @@ Windows file operations use extended-length syntax internally so required
 retain normal canonical local-drive paths. Input namespace/UNC aliases, redirected
 ancestors, hardlinks, metadata drift and oversized files still deny. No registry,
 alias, junction, ownership or quota change is used to support long names.
+
+The four MJS templates under `provided-data/` share one initially null context
+literal in `package-tree.mjs`. The other three files are copied unchanged.
+Rendering that literal requires explicit reviewed passive source/runtime/run
+data, never a command or limit. It contains no helper hashes. Compile these four
+files first, then pin their hashes in the Python manifest. The outer Native
+operator separately pins all five final code helpers and needs its own exact
+rendered-source/effect review. This acyclic chain grants no authority by itself.
+
+The shared reader hashes and parses the same admitted bytes. It checks ordinary
+ancestors, single links, stable handles, finite JSON, duplicate fields, bounds
+and complete directory inventories. Long Windows names retain normal identities;
+only the exact short drive anchor uses ordinary syntax because this runtime
+rejects its namespaced form. The anchor is still checked. Context and runtime
+witnesses are frozen after validation. The source-template packaging/configuration
+entries refuse before importing production build or host code.
+
+Offline packaging calls the existing production Forge API with normal hooks and
+only the reviewed `electronZipDir` override. The pinned ZIP must match the
+installed Electron version and stay unchanged. Setup admits one exact project.
+Thin setup starts only thin services; Desktop setup prepares its app identity
+without web startup or repackaging. Teardown preserves the actual per-phase
+package baseline, inventories both thin caches and all three Desktop caches,
+and retains cleanup failures even if other evidence can be written. Playwright
+keeps its current whole-file four-test inventory, one worker, zero retries,
+300-second test/360-second global deadlines and disabled captures.
+
+The Node fixture tests use inert package/resource/runtime files and mocked public
+host composition. They run no build, application, browser, model, OCR or Native
+case. These additional sources require explicit `native-host-policy` selection;
+unknown impact and an explicit generic focused gate retain their coverage.
+No manifest, lockfile or installed dependency version changes. The required
+dependency security check must still record any real tooling/supplier finding;
+helper source qualification does not certify that dependency tree or grant a
+release. Fresh complete candidate/inherited-site bindings, rendered effects,
+actual app results and outer/inner Native retirement remain pending.
 
 ## Closed Desktop training roles
 

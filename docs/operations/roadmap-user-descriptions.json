@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "The nine fixed Windows process checks passed. The agent must finish and test the serial app runner, including its total time limit, then collect the remaining app results. No user action is needed.",
+        "next_action": "The serial coordinator is tested and committed. The agent is preparing the single-host test setup. Next it must run browser and desktop tests in sequence, then review process cleanup and resource measurements. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -16303,6 +16303,54 @@
           "This receipt covers the retry guard source and 89 portable checks.",
           "A separate controlled run passed all nine fixed Windows process checks and received independent review.",
           "App, model, offload and whole-run delivery checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9f2bc1eb4811625aa4a8a8d70df102768999ec227772860b50d16bc81b8d2755",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test program has a total time limit.",
+          "It checks the exact runtime and helper files before starting.",
+          "The existing memory and process limits stay in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "24a05019b962d3fcf064734027d33082ec54fbfb80ae4a28af327beeef4faa79",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These portable tests check the program and its safety rules.",
+          "Real app runs and resource measurements still need evidence.",
+          "Earlier Windows results apply only to the code tested then."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a3d59d063f3f096cf890f8115b8734dd257cdce597341863ebd893153ee64dbd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The new program checks the app build, browser and desktop results in order.",
+          "It requires each selected test, worker record and shutdown result before it accepts a run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4bba17a37428486ad81b8d49b9a015082c9caf20b47dc4936fe633170a224c30",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All 29 coordinator regressions and the required code checks passed.",
+          "These tests used harmless files and simulated process results.",
+          "Real app runs and process cleanup still need evidence.",
+          "The code checks do not complete the roadmap."
         ]
       }
     }
