@@ -316,7 +316,7 @@
       "user_description": {
         "purpose": "Run repeatable interface tests with owned resources and truthful failure results.",
         "owner": "agent",
-        "next_action": "The original processes and handles closed after the corrected browser case. The agent will continue the remaining roadmap features. Production worker and low-memory restart checks remain pending. No user action is needed.",
+        "next_action": "The nine fixed Windows process checks passed. The agent must finish and test the serial app runner, including its total time limit, then collect the remaining app results. No user action is needed.",
         "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
         "requirements": [
           "Tests must use one Playwright worker with no competing AI, build or performance workload.",
@@ -16139,12 +16139,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "e04006d44675b05a16c2be689fa8a53803832d0409d7c6e45115074934456063",
+      "source_text_sha256": "c724a18c30db6a7e724c6260ac574aca8fd655e0f9cecf1b1ba4e8b733d0ca71",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The evidence uses local simulated checks.",
-          "The agent still needs to finish the overall runner and qualify the Windows suite."
+          "This earlier source checkpoint used simulated checks.",
+          "A separate later run passed nine fixed Windows process checks.",
+          "Overall runner and app qualification remain pending."
         ]
       }
     },
@@ -16161,12 +16162,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "baa813faf3a2987291c0469ddcc283c72c8022135b7b510564120bc5bb4be8f2",
+      "source_text_sha256": "aba9d26d9b5adb9c4d4c748b3d0d2b8345bf4c87befff5d236e2ae88657ad105",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The first Windows check produced the expected output and confirmed cleanup, but counted three processes instead of one.",
-          "The complete Windows suite remains pending."
+          "That earlier Windows run produced the expected output and confirmed cleanup, but failed its process-count check.",
+          "Its failed history remains unchanged.",
+          "A later reviewed run passed the fixed Windows process checks."
         ]
       }
     },
@@ -16183,12 +16185,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "e692e8a0754dde6afa91e93aa60ab95d91c248868e5970d8e77a696d1c9dc2c4",
+      "source_text_sha256": "4c9e3e85682c601a0aa607c7ee0c1d584d76a6e286f504d110c2e66dcf5fbf25",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The corrected launcher passed 75 local checks.",
-          "To authorize one guarded Windows retry, answer the question in this chat."
+          "This receipt covers 75 simulated source checks.",
+          "Later reviewed source and controlled Windows tests are recorded separately.",
+          "No user action is needed for the already approved retry."
         ]
       }
     },
@@ -16233,6 +16236,73 @@
         "sentences": [
           "These results cover test planning and the upload correction.",
           "Real app journeys and final combined coverage remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ddd0c0f412d3a61e89e56365e8d69f12f15510f805a2dbcbe0d392a535db7e3b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Upload checkpoint size checks run in batches of at most four.",
+          "All started reads finish before an error returns."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a07f7f8c5324fbae9743b9e0c741e0a6badde31cec227a8735ed77f5649e0682",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "On this PC, three component trials reduced 128 MiB append time from 6.9 seconds to 4.2-4.4 seconds.",
+          "Maximum file sizes, app memory and provider behavior remain unqualified."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5b4d338be2a57c4d7939b44f071b3ba315607ab646026c69737e32bd898cc1a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The final upload step copies only the bytes admitted by its size check.",
+          "A size getter or shared-buffer growth cannot enlarge the private copy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2857463b577ab9211a62fa1aefd300c6869dab1bebab8967a0498463c96b52f7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All 17 focused file tests passed.",
+          "Larger-file, browser/provider, crash recovery and final app checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "87c7d9eb25c31ee74935e5ade23bb6df05874043ec5765780bb606a14a911bdf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The reviewed retry guard checks saved cleanup evidence and exact code before fixed Windows tests.",
+          "A use record prevents another automatic attempt, and the original stop marker stays in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1adc7f4c74f9df361865b296bc7229b7777a4cbb86c819bf0aab40ab2876091e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This receipt covers the retry guard source and 89 portable checks.",
+          "A separate controlled run passed all nine fixed Windows process checks and received independent review.",
+          "App, model, offload and whole-run delivery checks remain pending."
         ]
       }
     }

@@ -11163,7 +11163,7 @@
       "review_digest": "3abba7b3f56995fe4dbfe18f39f478d32a6e2fa69f24d47314c48672248119a6",
       "scope": "Each test phase counts preparation and execution against one time limit. The normal wait for child processes shares that limit. Cleanup keeps its separate time limits.",
       "limitations": [
-        "The evidence uses local simulated checks. The agent still needs to finish the overall runner and qualify the Windows suite."
+        "This earlier source checkpoint used simulated checks. A separate later run passed nine fixed Windows process checks. Overall runner and app qualification remain pending."
       ]
     },
     {
@@ -11178,7 +11178,7 @@
       "review_digest": "c674ffe51a7c4d006361c6138382e1d9543fa8b56baccd53f08d50bf47fae5dc",
       "scope": "The native runner refuses a new test when its stop marker exists, including a broken link. An access error also refuses the new test.",
       "limitations": [
-        "The first Windows check produced the expected output and confirmed cleanup, but counted three processes instead of one. The complete Windows suite remains pending."
+        "That earlier Windows run produced the expected output and confirmed cleanup, but failed its process-count check. Its failed history remains unchanged. A later reviewed run passed the fixed Windows process checks."
       ]
     },
     {
@@ -11193,7 +11193,7 @@
       "review_digest": "dbdddc1a4dc8feffb8db542196f773995e7e4abb6ae6e873a361420fb948c685",
       "scope": "Harmless native test children use the original Python interpreter. The fixed roles, limits and failed history are preserved.",
       "limitations": [
-        "The corrected launcher passed 75 local checks. To authorize one guarded Windows retry, answer the question in this chat."
+        "This receipt covers 75 simulated source checks. Later reviewed source and controlled Windows tests are recorded separately. No user action is needed for the already approved retry."
       ]
     },
     {
@@ -11224,6 +11224,51 @@
       "scope": "Test planning uses all four registered model checks and all four registered notification checks. Uncovered files still keep their broader verification requirement.",
       "limitations": [
         "These results cover test planning and the upload correction. Real app journeys and final combined coverage remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "bound-parallel-upload-checkpoint-metadata-inspection",
+      "work_criteria": [
+        "bounded-metadata-waits-preserve-storage-validation"
+      ],
+      "receipt_digest": "5165c74ce23ea0cfd60c983ad06d54f9f5822b038bb35b186347e9e46c658c1d",
+      "review_digest": "b72d46883d349cbcf28b934af4f3417f5c89b2afe182252ea4618dc242bb654e",
+      "scope": "Upload checkpoint size checks run in batches of at most four. All started reads finish before an error returns.",
+      "limitations": [
+        "On this PC, three component trials reduced 128 MiB append time from 6.9 seconds to 4.2-4.4 seconds. Maximum file sizes, app memory and provider behavior remain unqualified."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "finish-final-ingestion-copy-and-focused-profile-routing",
+      "work_criteria": [
+        "final-stream-admission-caps-private-allocation"
+      ],
+      "receipt_digest": "3cda4086c73da216c0a292283a069f5a95128e9dd5fec5c5b31f3e9873e7fc98",
+      "review_digest": "f0e56d64b8d6572a52c341e39d6c626b712eeb3683b9f70bb4f4740fea99e242",
+      "scope": "The final upload step copies only the bytes admitted by its size check. A size getter or shared-buffer growth cannot enlarge the private copy.",
+      "limitations": [
+        "All 17 focused file tests passed. Larger-file, browser/provider, crash recovery and final app checks remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "allow-one-proof-bound-native-selftest-retry",
+      "work_criteria": [
+        "reviewed-retry-is-proof-bound-and-single-use"
+      ],
+      "receipt_digest": "da70b3e4b8ffa86c45a73f5827756a2b9a38627e682f0903fcdc105b9b009727",
+      "review_digest": "5aa99da6b0249e58168d370677daef9d5dc6e30bbd229f9200d63848f947d098",
+      "scope": "The reviewed retry guard checks saved cleanup evidence and exact code before fixed Windows tests. A use record prevents another automatic attempt, and the original stop marker stays in place.",
+      "limitations": [
+        "This receipt covers the retry guard source and 89 portable checks. A separate controlled run passed all nine fixed Windows process checks and received independent review. App, model, offload and whole-run delivery checks remain pending. Separate actual mechanics review SHA256 b7e6fcc92fb24343c484dc31d5f7558749d288b272fadd17a2490801f9bf6ade binds observation SHA256 5877d8d849d86cb3aaf3cda7a34970af0181aed4716d3549ef3a7344cb15501e; neither is the source-only receipt."
       ]
     }
   ]
