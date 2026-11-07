@@ -866,6 +866,71 @@ class PortableNativePolicyTests(unittest.TestCase):
             with self.assertRaises(job.NativeFailure):job._OwnedJob(object(),SOURCE.parent)
             native.assert_not_called()
 
+    def run_with_phase_clock(self, prepared_at, resumed_at, exited_at, *, descendants=False):
+        owned = self.fake_owned()
+        owned.process = SimpleNamespace(process=55)
+        clock = [0.0]
+
+        def prepare():
+            clock[0] = prepared_at
+
+        def resume():
+            clock[0] = resumed_at
+
+        def wait(_process, _milliseconds):
+            clock[0] = exited_at
+            return 0
+
+        def sleep(seconds):
+            clock[0] += seconds
+
+        completed = {
+            "root_exit_code": 0, "cleanup_confirmed": True,
+            "forced_owned_job_termination": descendants, "log_overflow": False,
+            "observed_limit_messages": [], "completion_message_overflow": False,
+        }
+        with patch.object(job.time, "monotonic", side_effect=lambda: clock[0]), \
+             patch.object(job.time, "sleep", side_effect=sleep), \
+             patch.object(owned, "prepare", side_effect=prepare), \
+             patch.object(owned, "resume", side_effect=resume) as resumed, \
+             patch.object(owned.n.k, "WaitForSingleObject", side_effect=wait, create=True) as waited, \
+             patch.object(owned, "accounting", return_value={"active": int(descendants)}), \
+             patch.object(owned, "poll_events"), \
+             patch.object(owned, "finish", side_effect=lambda reason: {**completed, "reason": reason}):
+            result = owned.run()
+        return result, resumed.call_count, waited.call_count, clock[0]
+
+    def test_expired_preparation_never_resumes_the_suspended_command(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.02, .02, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (0, 0))
+
+    def test_resume_does_not_restart_the_phase_execution_budget(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.004, .02, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 0))
+
+    def test_timely_preparation_resume_and_root_exit_can_still_pass(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.002, .004, .006)
+        self.assertIsNone(result["reason"])
+        self.assertTrue(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+
+    def test_root_exit_observed_after_the_phase_deadline_stays_failed(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.002, .004, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+
+    def test_descendant_grace_cannot_extend_the_phase_deadline(self):
+        result, resumes, waits, elapsed = self.run_with_phase_clock(.002, .004, .008, descendants=True)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+        self.assertLessEqual(elapsed, .03)
+
     def test_partial_prepare_failure_retains_exact_job_and_blocks_new_launch(self):
         owned=self.fake_owned()
         def fail_prepare():

@@ -893,8 +893,14 @@ class _OwnedJob:
         _assert_no_pending()
         reason=None;normal_root=False
         try:
-            self.prepare();self.resume();deadline=time.monotonic()+self.intent.seconds
+            deadline = time.monotonic() + self.intent.seconds
+            self.prepare()
+            if time.monotonic() < deadline:
+                self.resume()
             while True:
+                if time.monotonic() >= deadline:
+                    reason = "timeout"
+                    break
                 self.accounting()
                 self.poll_events()
                 if self.limit_messages:reason="observed-native-limit-hit";break
@@ -903,14 +909,19 @@ class _OwnedJob:
                 if self.pipe_error.is_set():reason="pipe-error";break
                 wait=self.n.k.WaitForSingleObject(self.process.process,50)
                 need(wait in (0,258),"root-wait")
+                if time.monotonic() >= deadline:
+                    reason = "timeout"
+                    break
                 if wait==0:
                     normal_root=True
                     # An actual command must retire descendants during normal exit.
-                    grace=time.monotonic()+5
+                    grace = min(deadline, time.monotonic() + 5)
                     while self.accounting()["active"] and time.monotonic()<grace:time.sleep(.02)
-                    if self.accounting()["active"]:reason="owned-descendants-remain-after-root"
+                    if time.monotonic() >= deadline:
+                        reason = "timeout"
+                    elif self.accounting()["active"]:
+                        reason = "owned-descendants-remain-after-root"
                     break
-                if time.monotonic()>=deadline:reason="timeout";break
         except BaseException as error:
             reason="native-"+type(error).__name__+":"+str(error)
         result=self.finish(reason)

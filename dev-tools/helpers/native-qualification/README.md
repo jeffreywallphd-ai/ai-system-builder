@@ -7,6 +7,13 @@ selftests remain model-free. The public CLI exposes `--native-selftest`; it has 
 working-directory, shell or JSON execution option. Private child roles are fixed.
 Normal portable tests leave physical qualification explicitly skipped/pending.
 
+Each phase uses one monotonic deadline that starts before native preparation.
+Preparation must finish within that limit before the suspended command can
+resume. Execution and the normal descendant exit grace use the time that remains.
+A root exit observed after the deadline is a timeout. Owned cleanup still runs
+with its existing confirmation checks and cleanup limits. This phase control
+does not provide a whole-run watchdog or interrupt a blocked native call.
+
 The pipe-only root, fixed leaf and guardian use `DETACHED_PROCESS`, not
 `CREATE_NO_WINDOW`; this avoids requesting a console host. This flag does not
 permit job breakaway. Exact one-root/two-member fixture counts remain unchanged.
