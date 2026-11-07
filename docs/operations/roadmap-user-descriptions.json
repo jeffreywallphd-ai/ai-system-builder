@@ -15925,6 +15925,73 @@
           "The tests used simulated cleanup and worker exit. Protected restart and actual low-memory measurements still need separate checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9fdea25101364e9b1ba3e39ab1429a27cb2023622bffae4210fda215dc6f18fb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "When saving a generated model, the app copies only the number of bytes it checked for each file.",
+          "If the app detects a file change during the copy, it rejects the save."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6d58d34584e7647ed470959012edd2142ae80e38318c69aecaf442406862fe1a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used local sample files. Two Windows link checks were skipped.",
+          "Windows tests for simultaneous file changes are still pending.",
+          "Protected ownership, file deletion, and opening model folders still need separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6139a77e224e855c46e811d8a1c6c057955dfe55defc356c08325b55202a1b42",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A low-memory run keeps its slot until cleanup is confirmed.",
+          "If a cleanup result is lost or uncertain, the app keeps the slot reserved."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fe4c3c5f98aa2d5fd6dc0e69b619510458f716a9517ca023f3dfb636db79fe4f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests simulated cleanup and interruptions.",
+          "A protected Windows restart and real low-memory measurements still need separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "364c82ea7bbd7e8f63abc4df4177d2e04fe47ccbf2e9a6cf97e956cd250246e5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "An upload chunk that exceeds the remaining file size leaves saved progress unchanged.",
+          "The next correctly sized chunk can complete the upload."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a70160e18ae821da6de59e58bdcb6aec4f642f88d11d219748d03a241659eb75",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample files with real local storage.",
+          "A live website and a private provider still need separate checks."
+        ]
+      }
     }
   ]
 }
