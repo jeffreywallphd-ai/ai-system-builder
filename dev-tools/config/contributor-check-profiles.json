@@ -33,13 +33,15 @@
       "test_paths": [
         "modules/adapters/model/local/tests/createLocalModelFileListerAdapter.unit.test.ts",
         "modules/application/use-cases/model/tests/list-model-files.use-case.unit.test.ts",
-        "modules/adapters/model/local/tests/createLocalGeneratedModelStorageAdapter.unit.test.ts"
+        "modules/adapters/model/local/tests/createLocalGeneratedModelStorageAdapter.unit.test.ts",
+        "modules/application/use-cases/tests/train-model.use-case.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "modules/adapters/model/local/createLocalModelFileListerAdapter.ts",
         "modules/application/use-cases/model/list-model-files.use-case.ts",
-        "modules/adapters/model/local/createLocalGeneratedModelStorageAdapter.ts"
+        "modules/adapters/model/local/createLocalGeneratedModelStorageAdapter.ts",
+        "modules/application/use-cases/model/train-model.use-case.ts"
       ]
     },
     "model-download-ownership": {

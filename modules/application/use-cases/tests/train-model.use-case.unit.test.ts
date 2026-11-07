@@ -1,13 +1,14 @@
 import { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
-import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
-import { describe, expect, it, testDouble } from "../../../testing/node-test";
+import { afterEach, describe, expect, it, testDouble } from "../../../testing/node-test";
 
 import {
   TaskType,
   type RuntimeTaskRegistryPort,
+  type StartRuntimeTaskRequest,
 } from "../../../contracts/runtime";
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import type {
@@ -70,12 +71,36 @@ describe("TrainModelUseCase", () => {
     completeTask: testDouble.fn(async () => undefined),
   });
 
+  const ownedStages = new Map<string, { dev: bigint; ino: bigint }>();
+  const stagePath = (request: StartRuntimeTaskRequest) =>
+    (request.payload as { output: { outputDirectory: string } }).output.outputDirectory;
+  const rememberStage = async (request: StartRuntimeTaskRequest) => {
+    const stage = stagePath(request);
+    expect(dirname(stage)).toBe(await realpath(tmpdir()));
+    expect(basename(stage)).toMatch(/^ai-system-builder-training-output-[A-Za-z0-9]{6}$/);
+    const stats = await lstat(stage, { bigint: true });
+    expect(stats.isDirectory()).toBe(true);
+    ownedStages.set(stage, { dev: stats.dev, ino: stats.ino });
+  };
+  const stagedOutputFrom = (runtime: RuntimeTaskRegistryPort) => stagePath(
+    (runtime.startTask as ReturnType<typeof testDouble.fn>).mock.calls[0][0],
+  );
+  afterEach(async () => {
+    for (const [stage, original] of ownedStages) {
+      const current = await lstat(stage, { bigint: true }).catch(() => undefined);
+      if (current?.isDirectory() && current.dev === original.dev && current.ino === original.ino
+          && await realpath(stage) === stage && dirname(stage) === await realpath(tmpdir())) {
+        await rm(stage, { recursive: true });
+      }
+    }
+    ownedStages.clear();
+  });
+
   const createRuntimeTaskRegistryFake = (): RuntimeTaskRegistryPort => ({
-    startTask: testDouble.fn(async () => ({
-      requestId: "train-req-1",
-      accepted: true,
-      status: "queued",
-    })),
+    startTask: testDouble.fn(async (request: StartRuntimeTaskRequest) => {
+      await rememberStage(request);
+      return { requestId: "train-req-1", accepted: true, status: "queued" };
+    }),
     getTaskStatus: testDouble.fn(async () => ({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
@@ -146,8 +171,11 @@ describe("TrainModelUseCase", () => {
   for (const stage of ["request-validation", "runtime-readiness", "base-model", "dataset-resolution", "task-dispatch", "task-registration"] as const) it(`keeps the original training-start failure and adds only a safe ${stage} code`, async () => {
     const failure = new Error("private-synthetic-start-detail");
     const runtime = createRuntimeTaskRegistryFake();
-    if (stage === "task-dispatch") runtime.startTask = async () => { throw failure; };
-    if (stage === "task-registration") runtime.startTask = async () => ({ requestId: "", accepted: true, status: "queued" });
+    if (stage === "task-dispatch") runtime.startTask = async (request: StartRuntimeTaskRequest) => { await rememberStage(request); throw failure; };
+    if (stage === "task-registration") runtime.startTask = async (request: StartRuntimeTaskRequest) => {
+      await rememberStage(request);
+      return { requestId: "", accepted: true, status: "queued" };
+    };
     const bindings = createStorageBindingsFake();
     if (stage === "dataset-resolution") bindings.readArtifactStorageBindings = async () => { throw failure; };
     const useCase = new TrainModelUseCase({
@@ -162,6 +190,10 @@ describe("TrainModelUseCase", () => {
     if (stage !== "request-validation" && stage !== "task-registration") expect(caught).toBe(failure);
     expect(Object.getOwnPropertyDescriptor(caught, "code")?.enumerable).toBe(false);
     expect(JSON.stringify(caught)).not.toContain("private-synthetic-start-detail");
+    if (stage === "task-dispatch" || stage === "task-registration") {
+      expect(ownedStages.size).toBe(1);
+      await expect(access([...ownedStages.keys()][0]!)).resolves.toBeUndefined();
+    }
   });
 
   for (const kind of ["typed-readiness", "existing-code", "frozen", "proxy", "accessor-code", "primitive"] as const) it(`preserves protected ${kind} training failures without inspecting private fields`, async () => {
@@ -181,7 +213,9 @@ describe("TrainModelUseCase", () => {
     if (kind === "frozen") expect(Object.getOwnPropertyDescriptor(original, "code")).toBeUndefined();
   });
 
-  for (const data of [undefined, { runId: "train-req-1", status: "invalid" }]) it("settles malformed successful training output without a renderer", async () => {
+  for (const data of [undefined, { runId: "train-req-1", status: "invalid" },
+    { runId: "train-req-1", status: "succeeded" },
+  ]) it("settles malformed successful training output without a renderer", async () => {
     const lifecycle = createLifecycleFake(); const reconciler = new OwnedTaskReconcilerService();
     const runtime = createRuntimeTaskRegistryFake();
     (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockResolvedValue({ requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING, status: "succeeded", data });
@@ -284,6 +318,7 @@ describe("TrainModelUseCase", () => {
 
     expect(runtimeTaskRegistry.cancelTask).toHaveBeenCalledWith("train-req-1");
     expect(result).toMatchObject({ runId: "train-req-1", status: "cancelled" });
+    await expect(access(stagedOutputFrom(runtimeTaskRegistry))).rejects.toThrow();
     expect(lifecycle.completeTask).toHaveBeenCalledWith(
       "train-req-1",
       "cancelled",
@@ -309,6 +344,23 @@ describe("TrainModelUseCase", () => {
       "Model training run was not found in this workspace.",
     );
     expect(runtimeTaskRegistry.cancelTask).not.toHaveBeenCalled();
+  });
+
+  it("retains the assigned output until cancellation is confirmed for that run", async () => {
+    const runtime = createRuntimeTaskRegistryFake();
+    const useCase = new TrainModelUseCase({
+      runtimeTaskRegistry: runtime, modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(),
+      storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake(),
+    });
+    await useCase.execute(baseRequest);
+    const staged = stagedOutputFrom(runtime);
+    await writeFile(join(staged, "partial-model.txt"), "synthetic partial output");
+    expect((await useCase.cancel("train-req-1", "workspace-a")).status).toBe("running");
+    (runtime.cancelTask as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+      requestId: "different-run", status: "cancelled", cancelled: true,
+    });
+    await expect(useCase.cancel("train-req-1", "workspace-a")).rejects.toThrow("Model training cancellation could not be verified.");
+    expect(await readFile(join(staged, "partial-model.txt"), "utf8")).toBe("synthetic partial output");
   });
 
   it("maps runtime training progress into model training status reads", async () => {
@@ -367,7 +419,7 @@ describe("TrainModelUseCase", () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
     (
       runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>
-    ).mockResolvedValue({
+    ).mockImplementation(async () => ({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
       workspaceId: "workspace-a" as never,
@@ -380,11 +432,11 @@ describe("TrainModelUseCase", () => {
           displayName: "Demo Adapter",
           provider: "huggingface",
           modelId: "org/demo-adapter",
-          localPath: "/tmp/demo-adapter",
+          localPath: stagedOutputFrom(runtimeTaskRegistry),
           generatedFromRunId: "worker-train-run-1",
         },
       },
-    });
+    }));
     const registerGeneratedModel = testDouble
       .fn<ModelRegistryPort["registerGeneratedModel"]>()
       .mockResolvedValue({
@@ -430,6 +482,7 @@ describe("TrainModelUseCase", () => {
 
     const first = await useCase.save("train-req-1", "workspace-a");
     const second = await useCase.read("train-req-1", "workspace-a");
+    await expect(access(stagedOutputFrom(runtimeTaskRegistry))).rejects.toThrow();
 
     expect(first.status).toBe("succeeded");
     expect(first.reviewPending).toBe(false);
@@ -455,7 +508,7 @@ describe("TrainModelUseCase", () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
     (
       runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>
-    ).mockResolvedValue({
+    ).mockImplementation(async () => ({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
       workspaceId: "workspace-a" as never,
@@ -467,11 +520,11 @@ describe("TrainModelUseCase", () => {
         outputModelName: "demo-adapter",
         generatedModelCandidate: {
           displayName: "Demo Adapter",
-          localPath: "/tmp/demo-adapter",
+          localPath: stagedOutputFrom(runtimeTaskRegistry),
           artifactForm: "adapter",
         },
       },
-    });
+    }));
     const registerGeneratedModel = testDouble
       .fn<ModelRegistryPort["registerGeneratedModel"]>()
       .mockResolvedValue({
@@ -563,73 +616,135 @@ describe("TrainModelUseCase", () => {
     expect(result.outputModel?.published?.repository).toBe("org/demo-adapter");
   });
 
-  it("discards staged output and denies review actions from another workspace", async () => {
-    const temporaryRoot = await mkdtemp(
-      join(tmpdir(), "trained-model-review-"),
-    );
-    const outputDirectory = join(temporaryRoot, "output");
-    await mkdir(outputDirectory, { recursive: true });
-    await writeFile(join(outputDirectory, "adapter.safetensors"), "weights");
+  it("does not offer review when the worker returns a foreign output folder", async () => {
+    const foreign = await mkdtemp(join(tmpdir(), "training-unrelated-fixture-"));
+    const retained = join(foreign, "retained.txt");
     try {
+      await writeFile(retained, "unrelated synthetic output");
       const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-      (
-        runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>
-      ).mockResolvedValue({
-        requestId: "train-req-1",
-        workspaceId: "workspace-a" as never,
-        taskType: TaskType.MODEL_TRAINING,
-        status: "succeeded",
-        concurrencyClass: "unknown",
+      (runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+        requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING,
+        status: "succeeded", concurrencyClass: "unknown",
         data: {
-          runId: "train-req-1",
-          status: "succeeded",
-          generatedModelCandidate: {
-            displayName: "Demo Adapter",
-            localPath: outputDirectory,
-            artifactForm: "adapter",
-          },
+          runId: "train-req-1", status: "succeeded",
+          generatedModelCandidate: { displayName: "Demo Adapter", artifactForm: "adapter", localPath: foreign },
         },
       });
-      const registerGeneratedModel =
-        testDouble.fn<ModelRegistryPort["registerGeneratedModel"]>();
+      const generatedModelStorage = createGeneratedModelStorageFake();
       const useCase = new TrainModelUseCase({
-        runtimeTaskRegistry,
-        modelRegistry: { ...baseRegistry, registerGeneratedModel },
-        storageBindings: createStorageBindingsFake(),
-        storage: createStorageFake(),
-        taskPowerLifecycle: createLifecycleFake(),
+        runtimeTaskRegistry, modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(),
+        storage: createStorageFake(), generatedModelStorage, taskPowerLifecycle: createLifecycleFake(),
       });
-
       await useCase.execute(baseRequest);
-      const pending = await useCase.read("train-req-1", "workspace-a");
-      expect(pending.reviewPending).toBe(true);
-
-      await expect(useCase.read("train-req-1", "workspace-b")).rejects.toThrow(
-        "Model training run was not found in this workspace.",
-      );
-      await expect(useCase.save("train-req-1", "workspace-b")).rejects.toThrow(
-        "Model training review was not found in this workspace.",
-      );
-      await expect(
-        useCase.discard("train-req-1", "workspace-b"),
-      ).rejects.toThrow(
-        "Model training review was not found in this workspace.",
-      );
-      await expect(access(outputDirectory)).resolves.toBeUndefined();
-
-      const discarded = await useCase.discard("train-req-1", "workspace-a");
-
-      expect(discarded).toMatchObject({
-        runId: "train-req-1",
-        status: "cancelled",
-      });
-      expect(registerGeneratedModel).not.toHaveBeenCalled();
-      await expect(access(outputDirectory)).rejects.toThrow();
       expect(await useCase.read("train-req-1", "workspace-a")).toMatchObject({
-        status: "cancelled",
+        status: "failed", error: { code: "invalid_runtime_result", message: "Training output could not be verified." },
       });
+      await expect(useCase.discard("train-req-1", "workspace-a")).rejects.toThrow("Model training review was not found");
+      expect(generatedModelStorage.storeGeneratedModel).not.toHaveBeenCalled();
+      expect(await readFile(retained, "utf8")).toBe("unrelated synthetic output");
     } finally {
-      await rm(temporaryRoot, { recursive: true, force: true });
+      await rm(foreign, { recursive: true, force: true });
+    }
+  });
+
+  it("discards staged output and denies review actions from another workspace", async () => {
+    const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
+    (
+      runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>
+    ).mockImplementation(async () => ({
+      requestId: "train-req-1",
+      workspaceId: "workspace-a" as never,
+      taskType: TaskType.MODEL_TRAINING,
+      status: "succeeded",
+      concurrencyClass: "unknown",
+      data: {
+        runId: "train-req-1",
+        status: "succeeded",
+        generatedModelCandidate: {
+          displayName: "Demo Adapter",
+          localPath: stagedOutputFrom(runtimeTaskRegistry),
+          artifactForm: "adapter",
+        },
+      },
+    }));
+    const registerGeneratedModel =
+      testDouble.fn<ModelRegistryPort["registerGeneratedModel"]>();
+    const useCase = new TrainModelUseCase({
+      runtimeTaskRegistry,
+      modelRegistry: { ...baseRegistry, registerGeneratedModel },
+      storageBindings: createStorageBindingsFake(),
+      storage: createStorageFake(),
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    await useCase.execute(baseRequest);
+    const outputDirectory = stagedOutputFrom(runtimeTaskRegistry);
+    await writeFile(join(outputDirectory, "adapter.safetensors"), "weights");
+    const pending = await useCase.read("train-req-1", "workspace-a");
+    expect(pending.reviewPending).toBe(true);
+
+    await expect(useCase.read("train-req-1", "workspace-b")).rejects.toThrow(
+      "Model training run was not found in this workspace.",
+    );
+    await expect(useCase.save("train-req-1", "workspace-b")).rejects.toThrow(
+      "Model training review was not found in this workspace.",
+    );
+    await expect(
+      useCase.discard("train-req-1", "workspace-b"),
+    ).rejects.toThrow(
+      "Model training review was not found in this workspace.",
+    );
+    await expect(access(outputDirectory)).resolves.toBeUndefined();
+
+    const discarded = await useCase.discard("train-req-1", "workspace-a");
+
+    expect(discarded).toMatchObject({
+      runId: "train-req-1",
+      status: "cancelled",
+    });
+    expect(registerGeneratedModel).not.toHaveBeenCalled();
+    await expect(access(outputDirectory)).rejects.toThrow();
+    expect(await useCase.read("train-req-1", "workspace-a")).toMatchObject({
+      status: "cancelled",
+    });
+  });
+
+  it("refuses to discard output when the reviewed staging folder was replaced", async () => {
+    const runtime = createRuntimeTaskRegistryFake();
+    (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockImplementation(async () => ({
+      requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING,
+      status: "succeeded", concurrencyClass: "unknown",
+      data: {
+        runId: "train-req-1", status: "succeeded",
+        generatedModelCandidate: { displayName: "Demo Adapter", artifactForm: "adapter", localPath: stagedOutputFrom(runtime) },
+      },
+    }));
+    const useCase = new TrainModelUseCase({
+      runtimeTaskRegistry: runtime, modelRegistry: baseRegistry, storageBindings: createStorageBindingsFake(),
+      storage: createStorageFake(), taskPowerLifecycle: createLifecycleFake(),
+    });
+    await useCase.execute(baseRequest);
+    const stage = stagedOutputFrom(runtime);
+    const held = `${stage}-original`;
+    await writeFile(join(stage, "original.txt"), "owned synthetic output");
+    expect((await useCase.read("train-req-1", "workspace-a")).reviewPending).toBe(true);
+    await rename(stage, held);
+    let replacement: { dev: bigint; ino: bigint } | undefined;
+    try {
+      await mkdir(stage);
+      replacement = await lstat(stage, { bigint: true });
+      await writeFile(join(stage, "replacement.txt"), "replacement synthetic output");
+      await expect(useCase.discard("train-req-1", "workspace-a")).rejects.toThrow("Training output folder could not be verified.");
+      expect(await readFile(join(stage, "replacement.txt"), "utf8")).toBe("replacement synthetic output");
+      expect(await readFile(join(held, "original.txt"), "utf8")).toBe("owned synthetic output");
+    } finally {
+      const current = await lstat(stage, { bigint: true }).catch(() => undefined);
+      if (current) {
+        if (!replacement || !current.isDirectory() || current.dev !== replacement.dev || current.ino !== replacement.ino
+            || await realpath(stage) !== stage) throw new Error("The test no longer owns the replacement folder.");
+        await rm(stage, { recursive: true });
+      }
+      await rename(held, stage);
     }
   });
 
@@ -662,6 +777,8 @@ describe("TrainModelUseCase", () => {
         await useCase.execute(request);
         const dispatched = (runtime.startTask as ReturnType<typeof testDouble.fn>).mock.calls[0][0];
         const stagedInput = dispatched.payload.datasets[0].path;
+        const stagedOutput = stagedOutputFrom(runtime);
+        await writeFile(join(stagedOutput, "partial-model.txt"), "synthetic partial output");
         expect(dispatched.workspaceId).toBe("workspace-a");
         await expect(access(stagedInput)).resolves.toBeUndefined();
         expect(reconciler.status.pending).toBe(1);
@@ -675,6 +792,7 @@ describe("TrainModelUseCase", () => {
         expect(runtime.getTaskStatus).toHaveBeenCalledWith("train-req-1");
         expect(runtime.cancelTask).not.toHaveBeenCalled();
         await expect(access(stagedInput)).rejects.toThrow();
+        await expect(access(stagedOutput)).rejects.toThrow();
         expect(cleanupCalls).toBe(1);
         expect(lifecycle.completeTask).toHaveBeenCalledTimes(1);
         expect(lifecycle.completeTask).toHaveBeenCalledWith("train-req-1", terminal.status);

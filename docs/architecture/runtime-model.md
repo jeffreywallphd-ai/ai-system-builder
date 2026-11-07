@@ -339,6 +339,12 @@ The Python task registry confirms a training start only when the worker accepts
 the exact host task ID and type, reports a queued or running state, and agrees
 with the host workspace if it supplies one. A different start cannot replace a
 tracked training task. If a start fails, its temporary setup progress is removed.
+Before dispatch, the application creates a temporary output folder for the run.
+The worker must report that folder. Preview and save check its filesystem
+identity. Discard and confirmed failure or cancellation retire that same
+checked folder. If start acknowledgement is uncertain, the application retains
+the folder and counts it against the session limit. Concurrent native changes
+and model cache deletion or reveal require separate qualification.
 After a training run reaches any terminal state, the desktop may offer one
 runtime unload action for that run. Its visibility must not depend on the
 generation-model cache inventory because training models are task-local and do

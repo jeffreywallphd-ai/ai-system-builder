@@ -1,6 +1,6 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, parse, relative, resolve } from "node:path";
+import { basename, isAbsolute, join, parse, relative, resolve } from "node:path";
 import { types } from "node:util";
 
 import {
@@ -21,6 +21,22 @@ import type { RuntimeCapabilityGuardService, TaskPowerLifecyclePort } from "../.
 
 type TrainingStartStage = "request-validation" | "runtime-readiness" | "base-model"
   | "dataset-resolution" | "task-dispatch" | "task-registration";
+
+const TRAINING_SESSION_LIMIT = 1024;
+type TrainingOutputStage = {
+  readonly path: string;
+  readonly device: bigint;
+  readonly inode: bigint;
+  cleanup?: Promise<void>;
+};
+
+async function assertTrainingOutputStage(stage: TrainingOutputStage): Promise<void> {
+  const stats = await lstat(stage.path, { bigint: true }).catch(() => undefined);
+  if (!stats?.isDirectory() || stats.dev !== stage.device || stats.ino !== stage.inode
+      || await realpath(stage.path).catch(() => undefined) !== stage.path) {
+    throw new Error("Training output folder could not be verified.");
+  }
+}
 
 /** Add only a fixed diagnostic code. Preserve the original error and all denials. */
 function trainingStartFailure(error: unknown, stage: TrainingStartStage): unknown {
@@ -187,14 +203,17 @@ export class TrainModelUseCase {
   private readonly workspaceIdByRequestId = new Map<string, string>();
   private readonly requestContextByRequestId = new Map<string, { normalizedRequest: ModelTrainingRequest; baseModelRecordId?: string }>();
   private readonly runtimeDatasetDirsByRequestId = new Map<string, string>();
+  private readonly runtimeOutputStages = new Map<string, TrainingOutputStage>();
+  private startingRuns = 0;
+  private unconfirmedStarts = 0;
   private readonly storedOutputs = new Map<string, Awaited<ReturnType<TrainModelUseCase["storeGeneratedModelLocally"]>>>();
   private readonly publishedOutputs = new Map<string, Awaited<ReturnType<TrainModelUseCase["publishGeneratedModel"]>>>();
   private readonly registrations = new Map<string, Awaited<ReturnType<ModelRegistryPort["registerGeneratedModel"]>>>();
-  private readonly pendingOutputCleanup = new Map<string, { runtimePath?: string; storedPath?: string }>();
+  private readonly pendingOutputCleanup = new Map<string, { storedPath?: string }>();
   private async cleanPendingOutput(requestId: string): Promise<void> {
     const pending = this.pendingOutputCleanup.get(requestId);
     if (!pending) return;
-    await this.cleanupRuntimeOutputDirectory(pending.runtimePath, pending.storedPath);
+    await this.cleanupRuntimeOutputDirectory(requestId, pending.storedPath);
     this.pendingOutputCleanup.delete(requestId);
   }
 
@@ -218,15 +237,21 @@ export class TrainModelUseCase {
 
   private async executeOwned(request: ModelTrainingRequest, lease?: OwnedTaskLease): Promise<ModelTrainingResult> {
     let stage: TrainingStartStage = "request-validation";
+    if (this.workspaceIdByRequestId.size + this.startingRuns + this.unconfirmedStarts >= TRAINING_SESSION_LIMIT) {
+      lease?.release();
+      throw trainingStartFailure(new Error("Training session task capacity is unavailable."), stage);
+    }
+    this.startingRuns += 1;
     try {
       return await this.executeAtStartStage(request, lease, (next) => { stage = next; });
     } catch (error) {
       throw trainingStartFailure(error, stage);
+    } finally {
+      this.startingRuns -= 1;
     }
   }
 
   private async executeAtStartStage(request: ModelTrainingRequest, lease: OwnedTaskLease | undefined, enterStage: (stage: TrainingStartStage) => void): Promise<ModelTrainingResult> {
-    if (this.workspaceIdByRequestId.size >= 1024) throw new Error("Training session task capacity is unavailable.");
     this.dependencies.taskReconciler?.assertAccepting();
     const normalizedRequest = normalizeModelTrainingRequest(request);
     if (!isWorkspaceId(normalizedRequest.workspaceId)) {
@@ -262,6 +287,7 @@ export class TrainModelUseCase {
     }
 
     let runtimeDatasetDir: string | undefined;
+    let outputAdmissionUnconfirmed = false;
     let stagedBytes = 0;
     const accountBytes = (bytes: number) => { stagedBytes += bytes; if (stagedBytes > 256 * 1024 * 1024) throw new Error("Training inputs exceed the aggregate byte budget."); };
     try {
@@ -273,12 +299,20 @@ export class TrainModelUseCase {
       }
 
       enterStage("task-dispatch");
+      const outputPath = await mkdtemp(join(await realpath(tmpdir()), "ai-system-builder-training-output-"));
+      outputAdmissionUnconfirmed = true;
+      const stats = await lstat(outputPath, { bigint: true });
+      if (!stats.isDirectory() || stats.ino === 0n || await realpath(outputPath) !== outputPath) {
+        throw new Error("Training output folder could not be verified.");
+      }
+      const outputStage = { path: outputPath, device: stats.dev, inode: stats.ino };
       const started = await this.dependencies.runtimeTaskRegistry.startTask({
         workspaceId: normalizedRequest.workspaceId,
         taskType: TaskType.MODEL_TRAINING,
         payload: {
           ...normalizedRequest,
           datasets: resolvedDatasets,
+          output: { ...normalizedRequest.output, outputDirectory: outputStage.path },
           runMetadata: {
             ...normalizedRequest.runtimeMetadata,
             trainingTask: normalizedRequest.trainingTask,
@@ -290,9 +324,14 @@ export class TrainModelUseCase {
       if (typeof started.requestId !== "string" || started.requestId.trim().length === 0) {
         throw new Error("Model training start response missing requestId.");
       }
+      if (this.workspaceIdByRequestId.has(started.requestId)) {
+        throw new Error("Model training start response repeated an existing task.");
+      }
 
       this.requestContextByRequestId.set(started.requestId, { normalizedRequest, baseModelRecordId });
       this.workspaceIdByRequestId.set(started.requestId, normalizedRequest.workspaceId);
+      this.runtimeOutputStages.set(started.requestId, outputStage);
+      outputAdmissionUnconfirmed = false;
       if (runtimeDatasetDir) {
         this.runtimeDatasetDirsByRequestId.set(started.requestId, runtimeDatasetDir);
       }
@@ -315,6 +354,8 @@ export class TrainModelUseCase {
         status: "queued",
       };
     } catch (error) {
+      // An uncertain dispatch may still write into its folder. Do not adopt or remove it.
+      if (outputAdmissionUnconfirmed) this.unconfirmedStarts += 1;
       lease?.release();
       if (runtimeDatasetDir) {
         await rm(runtimeDatasetDir, { recursive: true, force: true });
@@ -360,6 +401,7 @@ export class TrainModelUseCase {
     if (statusRecord.status === "failed" || statusRecord.status === "cancelled") {
       await this.completePowerLifecycle(requestId, statusRecord.status);
       await this.cleanupRuntimeDatasetDir(requestId);
+      await this.cleanupRuntimeOutputDirectory(requestId);
       const terminal = normalizeModelTrainingResult({
         runId: requestId,
         status: statusRecord.status,
@@ -387,7 +429,8 @@ export class TrainModelUseCase {
     }
 
     const statusRecord = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
-    if ("recordType" in statusRecord) {
+    if ("recordType" in statusRecord || statusRecord.requestId !== requestId
+        || statusRecord.workspaceId !== workspaceId || statusRecord.taskType !== TaskType.MODEL_TRAINING) {
       throw new Error("Model training run was not found in this workspace.");
     }
     if (statusRecord.status === "succeeded" || statusRecord.status === "failed" || statusRecord.status === "cancelled") {
@@ -395,6 +438,7 @@ export class TrainModelUseCase {
     }
 
     const cancellation = await this.dependencies.runtimeTaskRegistry.cancelTask(requestId);
+    if (cancellation.requestId !== requestId) throw new Error("Model training cancellation could not be verified.");
     const status = cancellation.cancelled || cancellation.status === "cancelled"
       ? "cancelled"
       : cancellation.status === "queued" || cancellation.status === "running"
@@ -404,6 +448,9 @@ export class TrainModelUseCase {
     if (status === "cancelled") {
       await this.completePowerLifecycle(requestId, "cancelled");
       await this.cleanupRuntimeDatasetDir(requestId);
+      if (cancellation.status === "cancelled" && cancellation.cancelled) {
+        await this.cleanupRuntimeOutputDirectory(requestId);
+      }
     }
 
     return normalizeModelTrainingResult({
@@ -440,17 +487,14 @@ export class TrainModelUseCase {
   }
 
   public async discard(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
-    const pending = this.requireOwnedPendingResult(requestId, workspaceId);
+    this.requireOwnedPendingResult(requestId, workspaceId);
     if (this.reviewActionRequestIds.has(requestId)) {
       throw new Error("A model training review action is already in progress.");
     }
 
     this.reviewActionRequestIds.add(requestId);
     try {
-      await this.cleanupRuntimeOutputDirectory(
-        pending.generatedModelCandidate?.localPath,
-        undefined,
-      );
+      await this.cleanupRuntimeOutputDirectory(requestId);
       const discarded = normalizeModelTrainingResult({
         runId: requestId,
         status: "cancelled",
@@ -482,6 +526,19 @@ export class TrainModelUseCase {
           }
         : undefined,
     });
+    if (trainingResult.status === "succeeded") {
+      const outputStage = this.runtimeOutputStages.get(statusRecord.requestId);
+      const candidate = trainingResult.generatedModelCandidate;
+      const candidatePath = candidate?.localPath;
+      if (!outputStage || !candidate || !candidatePath || !isAbsolute(candidatePath)
+          || relative(outputStage.path, candidatePath) !== ""
+          || (trainingResult.outputDirectory && (!isAbsolute(trainingResult.outputDirectory)
+              || relative(outputStage.path, trainingResult.outputDirectory) !== ""))) {
+        throw new Error("Training output folder could not be verified.");
+      }
+      await assertTrainingOutputStage(outputStage);
+      candidate.localPath = outputStage.path;
+    }
     } catch {
       await this.completePowerLifecycle(statusRecord.requestId, "failed");
       await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
@@ -493,6 +550,9 @@ export class TrainModelUseCase {
     if (trainingResult.status !== "succeeded" || !trainingResult.generatedModelCandidate) {
       await this.completePowerLifecycle(statusRecord.requestId, "unknown");
       await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
+      if (trainingResult.status === "failed" || trainingResult.status === "cancelled") {
+        await this.cleanupRuntimeOutputDirectory(statusRecord.requestId);
+      }
       return trainingResult;
     }
 
@@ -604,7 +664,7 @@ export class TrainModelUseCase {
       outputModel,
     };
     this.registeredResultsByRequestId.set(statusRecord.requestId, result);
-    this.pendingOutputCleanup.set(statusRecord.requestId, { runtimePath: generated.localPath, storedPath: localStorageResult?.localPath });
+    this.pendingOutputCleanup.set(statusRecord.requestId, { storedPath: localStorageResult?.localPath });
     this.pendingResultsByRequestId.delete(statusRecord.requestId);
     this.requestContextByRequestId.delete(statusRecord.requestId);
     await this.completePowerLifecycle(statusRecord.requestId, "succeeded");
@@ -897,15 +957,25 @@ export class TrainModelUseCase {
     this.runtimeDatasetDirsByRequestId.delete(requestId);
   }
 
-  private async cleanupRuntimeOutputDirectory(runtimeOutputDirectory: string | undefined, storedLocalDirectory: string | undefined): Promise<void> {
-    if (!runtimeOutputDirectory) {
-      return;
+  private async cleanupRuntimeOutputDirectory(requestId: string, storedLocalDirectory?: string): Promise<void> {
+    const outputStage = this.runtimeOutputStages.get(requestId);
+    if (!outputStage) return;
+    if (outputStage.cleanup) return outputStage.cleanup;
+    outputStage.cleanup = (async () => {
+      if (!storedLocalDirectory || relative(outputStage.path, storedLocalDirectory) !== "") {
+        await assertTrainingOutputStage(outputStage);
+        try {
+          await rm(outputStage.path, { recursive: true });
+        } catch {
+          throw new Error("Training output cleanup could not be confirmed.");
+        }
+      }
+      this.runtimeOutputStages.delete(requestId);
+    })();
+    try {
+      await outputStage.cleanup;
+    } finally {
+      delete outputStage.cleanup;
     }
-
-    if (storedLocalDirectory && resolve(runtimeOutputDirectory) === resolve(storedLocalDirectory)) {
-      return;
-    }
-
-    await rm(runtimeOutputDirectory, { recursive: true, force: true });
   }
 }

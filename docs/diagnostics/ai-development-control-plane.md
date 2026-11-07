@@ -118,8 +118,10 @@ not claim a desktop closure, model result or native security pass.
 
 The `model-file-listing` profile runs the local directory reader, application
 tests for workspace lookup and public errors, and generated model storage tests
-for bounded directory traversal. Native file identity keeps its separate
-qualification. The generic check still covers other changed paths.
+for bounded directory traversal. Model-free training tests exercise the assigned
+output folder, save and discard, and denial of foreign or replaced folders.
+Native file identity keeps its separate qualification. The generic check still
+covers other changed paths.
 
 The `settings-ui` profile owns the exact Settings renderer, client and API paths.
 It runs four fixed synthetic panel, page, request-ownership and API test files.
