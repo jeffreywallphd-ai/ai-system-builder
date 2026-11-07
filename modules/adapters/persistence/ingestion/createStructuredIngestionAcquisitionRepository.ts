@@ -70,6 +70,29 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
         return cloneStructuredJson(task);
       });
     },
+    async markCancelledCheckpointCleanupPending(input) {
+      const { workspaceId, taskId, fileId, checkpointId, expectedRevision, updatedAt } = input;
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new Error("Checkpoint cleanup requires an exact task revision.");
+      const key = taskKey(workspaceId, taskId);
+      await documents.runInTransaction(async transaction => {
+        const current = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, key);
+        if (!current) throw new Error("Cancelled ingestion checkpoint is unavailable.");
+        const task = normalizeIngestionTaskRecord(current.value);
+        assertOrganizationScope(documents, task.organizationId);
+        const file = task.files.find(candidate => candidate.fileId === fileId);
+        if (task.workspaceId !== workspaceId || task.taskId !== taskId || task.kind !== "file-batch"
+            || task.status !== "cancelled" || file?.status !== "cancelled"
+            || file.checkpointId !== checkpointId || file.output !== undefined) {
+          throw new Error("Cancelled ingestion checkpoint is unavailable.");
+        }
+        if (task.revision !== expectedRevision || current.revision !== expectedRevision) {
+          throw new StructuredDocumentConflictError(INGESTION_TASK_NAMESPACE, key, expectedRevision);
+        }
+        // Advance even when cleanup is pending so an earlier cleanup cannot clear this write.
+        const pending = normalizeIngestionTaskRecord({ ...task, cleanupPending: true, updatedAt, revision: expectedRevision + 1 });
+        await transaction.writeDocument(INGESTION_TASK_NAMESPACE, key, cloneStructuredJson(pending), { expectedRevision });
+      });
+    },
     async saveTaskWithSourceSnapshot(input, expectedRevision, snapshotInput) {
       const task = normalizeIngestionTaskRecord(input);
       const snapshot = normalizeIngestionSourceSnapshot(snapshotInput);
@@ -204,7 +227,10 @@ async function createImmutable<T>(documents: StructuredDocumentStore, namespace:
 
 function assertTransition(previous: IngestionTaskRecord, next: IngestionTaskRecord): void {
   if (previous.status === "succeeded") throw new Error("Succeeded ingestion tasks are immutable.");
-  if (previous.status === "cancelled" && !(previous.cleanupPending && next.status === "cancelled" && !next.cleanupPending)) throw new Error("Cancelled ingestion tasks are immutable after cleanup.");
+  if (previous.status === "cancelled" && !(previous.cleanupPending && next.status === "cancelled" && !next.cleanupPending
+      && next.completedAt === previous.completedAt && stableJson(next.files) === stableJson(previous.files))) {
+    throw new Error("Cancelled ingestion tasks are immutable after cleanup.");
+  }
   if (previous.status === "failed" && next.status !== "transferring" && next.status !== "failed") throw new Error("Failed ingestion tasks may only resume or retain failure state.");
   if (previous.createdAt !== next.createdAt || previous.checkpointExpiresAt !== next.checkpointExpiresAt || previous.kind !== next.kind || previous.files.length !== next.files.length) throw new Error("Ingestion task definition is immutable.");
   for (const before of previous.files) {

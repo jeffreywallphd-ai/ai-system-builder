@@ -292,3 +292,64 @@ for (const intervening of ["a second file", "a second file with a lost reply", "
     }
   });
 }
+
+for (const outcome of ["late write", "cleanup retry", "lost write reply"] as const) {
+  test(`cancellation recovers a ${outcome}`, { timeout: 10_000 }, async t => {
+    const owned = await fixture(t);
+    let state = await owned.compose();
+    const task = value(await state.useCases.createTask({ files: [
+      { fileName: "late-chunk.jsonl", mediaType: "application/jsonl", sizeBytes: row.length },
+    ] }, context));
+    const file = task.files[0]!;
+    const checkpoint = { workspaceId: context.workspaceId, checkpointId: file.checkpointId };
+    let enteredWrite!: () => void;
+    let releaseWrite!: () => void;
+    const entered = new Promise<void>(resolve => { enteredWrite = resolve; });
+    const hold = new Promise<void>(resolve => { releaseWrite = resolve; });
+    const write = state.checkpoints.appendChunk.bind(state.checkpoints);
+    state.checkpoints.appendChunk = async (...args) => {
+      enteredWrite();
+      await hold;
+      const saved = await write(...args);
+      if (outcome === "lost write reply") throw new Error("Synthetic lost checkpoint acknowledgement.");
+      return saved;
+    };
+    const remove = state.checkpoints.deleteCheckpoint.bind(state.checkpoints);
+    let failCleanup = false;
+    state.checkpoints.deleteCheckpoint = async (...args) => {
+      if (failCleanup) throw new Error("Synthetic checkpoint cleanup failure.");
+      return remove(...args);
+    };
+    const transfer = state.useCases.appendChunk({
+      taskId: task.taskId, fileId: file.fileId, chunkIndex: 0, expectedOffset: 0,
+      bytes: row, sha256: sha(row),
+    }, context);
+    try {
+      await Promise.race([entered, transfer.then(() => { throw new Error("Transfer did not reach checkpoint storage."); })]);
+      const cancelled = value(await state.useCases.cancelTask(task.taskId, context));
+      assert.equal(cancelled.status, "cancelled");
+      assert.equal(cancelled.cleanupPending, false);
+      failCleanup = outcome === "cleanup retry";
+      releaseWrite();
+      assert.equal((await transfer).ok, false);
+      const final = value(await state.useCases.readTask(task.taskId, context));
+      assert.equal(final.status, "cancelled");
+      assert.equal(final.cleanupPending, failCleanup);
+      assert.equal(final.files[0]!.acceptedBytes, 0);
+      if (failCleanup) {
+        assert.deepEqual(await state.checkpoints.inspectCheckpoint(checkpoint), { chunkCount: 1, sizeBytes: row.length });
+        owned.close();
+        state = await owned.compose();
+        const persisted = value(await state.useCases.readTask(task.taskId, context));
+        assert.equal(persisted.cleanupPending, true);
+        const retried = value(await state.useCases.cancelTask(task.taskId, context));
+        assert.equal(retried.status, "cancelled");
+        assert.equal(retried.cleanupPending, false);
+      }
+      assert.deepEqual(await state.checkpoints.inspectCheckpoint(checkpoint), { chunkCount: 0, sizeBytes: 0 });
+    } finally {
+      releaseWrite();
+      await transfer;
+    }
+  });
+}

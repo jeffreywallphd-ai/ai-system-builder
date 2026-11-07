@@ -63,6 +63,37 @@ function refresh(organizationId?: string): IngestionSourceRefreshRecord {
 }
 
 describe("structured ingestion acquisition repository", () => {
+  it("reopens cleanup only for the exact cancelled checkpoint without changing transfer data", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const started = await repository.createTask(task());
+    const file = started.files[0]!;
+    const request = {
+      workspaceId: started.workspaceId, taskId: started.taskId, fileId: file.fileId, checkpointId: file.checkpointId,
+      expectedRevision: 1, updatedAt: now,
+    };
+    await expect(repository.markCancelledCheckpointCleanupPending(request)).rejects.toThrow("unavailable");
+    const cancelled = await repository.saveTask({
+      ...started, status: "cancelled", completedAt: now, cleanupPending: false, revision: 2,
+      files: [{ ...file, status: "cancelled" }],
+    }, 1);
+    await expect(repository.saveTask({ ...cancelled, cleanupPending: true, revision: 3 }, 2)).rejects.toThrow("immutable after cleanup");
+    await expect(repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2,
+      checkpointId: "other-checkpoint" })).rejects.toThrow("unavailable");
+    await expect(repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2,
+      workspaceId: createWorkspaceId("workspace-b") })).rejects.toThrow("unavailable");
+    await expect(repository.markCancelledCheckpointCleanupPending(request)).rejects.toThrow("revision conflict");
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual(cancelled);
+
+    await repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2 });
+    const pending = { ...cancelled, cleanupPending: true, revision: 3 };
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual(pending);
+    await expect(repository.saveTask({ ...pending, cleanupPending: false, revision: 4,
+      files: [{ ...file, status: "transferring" }] }, 3)).rejects.toThrow("immutable after cleanup");
+    await repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 3 });
+    await expect(repository.saveTask({ ...pending, cleanupPending: false, revision: 4 }, 3)).rejects.toThrow("revision conflict");
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual({ ...pending, revision: 4 });
+  });
+
   it("commits a finalized task and matching source snapshot in one optimistic transaction", async () => {
     const documents = createInMemoryStructuredDocumentStore();
     const repository = createStructuredIngestionAcquisitionRepository(documents);

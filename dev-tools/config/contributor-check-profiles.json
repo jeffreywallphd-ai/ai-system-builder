@@ -1464,6 +1464,7 @@
         "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
         "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
         "modules/application/ports/ingestion/README.md",
+        "modules/application/ports/ingestion/ingestion-acquisition-repository.port.ts",
         "modules/application/README.md",
         "modules/application/use-cases/README.md",
         "docs/architecture/data-management.md",

@@ -4,6 +4,7 @@ import type {
   IngestionSourceSnapshot,
   IngestionSourceSnapshotId,
   IngestionTaskId,
+  IngestionTaskFileId,
   IngestionTaskRecord,
 } from "../../../contracts/ingestion";
 import type { WorkspaceId } from "../../../contracts/workspace";
@@ -14,6 +15,14 @@ export interface IngestionAcquisitionRepositoryPort {
   listTasks(workspaceId: WorkspaceId, limit?: number): Promise<readonly IngestionTaskRecord[]>;
   listExpiredCheckpointTasks(workspaceId: WorkspaceId, expiresAtOrBefore: string, limit?: number): Promise<readonly IngestionTaskRecord[]>;
   saveTask(task: IngestionTaskRecord, expectedRevision: number): Promise<IngestionTaskRecord>;
+  markCancelledCheckpointCleanupPending(input: {
+    readonly workspaceId: WorkspaceId;
+    readonly taskId: IngestionTaskId;
+    readonly fileId: IngestionTaskFileId;
+    readonly checkpointId: string;
+    readonly expectedRevision: number;
+    readonly updatedAt: string;
+  }): Promise<void>;
   saveTaskWithSourceSnapshot(
     task: IngestionTaskRecord,
     expectedRevision: number,

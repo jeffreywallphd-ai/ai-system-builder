@@ -153,6 +153,11 @@ When another file advances the same task, the host can retry the progress
 record once for an unchanged file. It uses the existing checkpoint bytes and
 preserves the other file's progress. The host accepts chunks only for files
 that are pending or transferring in an active task.
+If an admitted write finishes after cancellation, the host checks the assigned
+checkpoint. A private repository operation records pending cleanup for that
+cancelled checkpoint and exact task revision before removal. The task keeps
+its result and transfer progress. A failed removal keeps the retry record.
+Recovery from a crash before the write returns requires separate qualification.
 
 When an acquisition reaches terminal success, the shared desktop/thin-client
 workflow clears its source-specific form state, returns to the default Files
