@@ -15992,6 +15992,72 @@
           "A live website and a private provider still need separate checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e4710f858b514734191d6cb6d6a5aef3262a5eec3d8f63b444477b96481d82bd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app checks the worker's training start reply against the requested run and workspace.",
+          "A conflicting start cannot replace a tracked run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f89fc8090ba2dd975a564c7ba3d2acd92dcd8fc2d35556c29ada4656f33509a4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample replies from a simulated worker.",
+          "Checks for actual worker runs and protected Windows file ownership remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "db4b31a9295f54aaeb1a42babe0925e4005c7412890f5bb310caa41f730e832f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app assigns an output folder to each training run.",
+          "It verifies that folder before offering a review, saving output, or cleaning up a confirmed run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d8c345ae457ec8a06601093ecee898a5b1a08759a4f7f551f32151c7cf59c8e9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used a simulated worker and sample files.",
+          "Checks for simultaneous Windows file changes and protected model file actions remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "84bd649a14aa7606c635783574ddd39c34a1ccfaf845938ba59c4920c5e15295",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "When two files in one upload task advance together, both progress updates can be saved.",
+          "The retry reuses the bytes already saved. Cancellation still takes precedence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ce0d534cf2aaa130713e10d7ec473dbe0badbf71cd2b6b13b37799acbcecbbf2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample files with real local storage.",
+          "Checks for shared hosts, a live website, and a private provider remain pending."
+        ]
+      }
     }
   ]
 }

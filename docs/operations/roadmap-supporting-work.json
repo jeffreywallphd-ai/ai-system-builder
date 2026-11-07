@@ -11060,6 +11060,51 @@
       "limitations": [
         "The tests used sample files with real local storage. A live website and a private provider still need separate checks."
       ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "bind-model-training-start-to-requested-task",
+      "work_criteria": [
+        "training-start-acknowledgement-preserves-task-identity"
+      ],
+      "receipt_digest": "13492af51a4033265f5d1cff7ee501ccdc85eebe8b1c9b67cec5286a2376f23d",
+      "review_digest": "ba5fdf320a5727085aebac0e61d564a0fdcd88b2f3edfd56042fd5b4487bfc8b",
+      "scope": "The app checks the worker's training start reply against the requested run and workspace. A conflicting start cannot replace a tracked run.",
+      "limitations": [
+        "The tests used sample replies from a simulated worker. Checks for actual worker runs and protected Windows file ownership remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "reserve-model-training-output-for-the-exact-run",
+      "work_criteria": [
+        "training-output-is-bound-to-its-app-created-directory"
+      ],
+      "receipt_digest": "ad3b7fc8fb41ec43d204f24d5c0c24ee6d975c8263bad7255103289b55420968",
+      "review_digest": "57a34e8db1f5ec1e4e4d41836ddb9f79799037270e0b49219086737aa34eda7c",
+      "scope": "The app assigns an output folder to each training run. It verifies that folder before offering a review, saving output, or cleaning up a confirmed run.",
+      "limitations": [
+        "The tests used a simulated worker and sample files. Checks for simultaneous Windows file changes and protected model file actions remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "preserve-independent-file-upload-progress-on-a-stale-revision",
+      "work_criteria": [
+        "independent-file-chunk-progress-merges-within-the-same-task"
+      ],
+      "receipt_digest": "e9b4ad81f4b3bb32e84c156d4f27bd5c63f3b598b294cfdb844807eba9a440cf",
+      "review_digest": "f5c05dd568293232d0e78d355dfb8e0b5cec43c173a0c3c776da307212acf3f5",
+      "scope": "When two files in one upload task advance together, both progress updates can be saved. The retry reuses the bytes already saved. Cancellation still takes precedence.",
+      "limitations": [
+        "The tests used sample files with real local storage. Checks for shared hosts, a live website, and a private provider remain pending."
+      ]
     }
   ]
 }
