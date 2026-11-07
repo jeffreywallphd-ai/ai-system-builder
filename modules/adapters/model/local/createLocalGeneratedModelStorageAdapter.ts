@@ -3,7 +3,7 @@ import {
   lstat,
   mkdir,
   mkdtemp,
-  readdir,
+  opendir,
   realpath,
   rename,
   rm,
@@ -150,10 +150,13 @@ async function ensureContainedDirectory(
   return { root, directory: current };
 }
 
-async function assertSafeSourceTree(
+const MAXIMUM_SOURCE_DEPTH = 64;
+
+async function walkGeneratedModelTree(
   sourceDirectory: string,
   maximumFiles: number,
   maximumBytes: number,
+  destination?: string,
 ): Promise<void> {
   const requestedRootStats = await lstat(sourceDirectory);
   if (requestedRootStats.isSymbolicLink() || !requestedRootStats.isDirectory()) {
@@ -165,11 +168,10 @@ async function assertSafeSourceTree(
     throw new TypeError("Generated model source must be a real directory.");
   }
   let fileCount = 0;
+  let directoryCount = 0;
   let totalBytes = 0;
-  const pending = [sourceRoot];
-  while (pending.length > 0) {
-    const directory = pending.pop()!;
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+  async function visit(directory: string, depth: number, destinationDirectory?: string): Promise<void> {
+    for await (const entry of await opendir(directory)) {
       const absoluteEntry = path.join(directory, entry.name);
       const entryStats = await lstat(absoluteEntry);
       if (entryStats.isSymbolicLink()) {
@@ -181,13 +183,22 @@ async function assertSafeSourceTree(
           "Generated model source escapes its approved directory.",
         );
       }
+      const target = destinationDirectory === undefined ? undefined : path.join(destinationDirectory, entry.name);
       if (entryStats.isDirectory()) {
-        pending.push(canonicalEntry);
+        directoryCount += 1;
+        if (directoryCount > maximumFiles || depth === MAXIMUM_SOURCE_DEPTH) {
+          throw new TypeError("Generated model source exceeds storage limits.");
+        }
+        if (target !== undefined) await mkdir(target, { mode: 0o700 });
+        await visit(canonicalEntry, depth + 1, target);
       } else if (entryStats.isFile()) {
         fileCount += 1;
         totalBytes += entryStats.size;
         if (fileCount > maximumFiles || totalBytes > maximumBytes) {
           throw new TypeError("Generated model source exceeds storage limits.");
+        }
+        if (target !== undefined) {
+          await cp(absoluteEntry, target, { errorOnExist: true, force: false });
         }
       } else {
         throw new TypeError(
@@ -196,6 +207,7 @@ async function assertSafeSourceTree(
       }
     }
   }
+  await visit(sourceRoot, 0, destination);
 }
 
 async function assertTargetAbsent(targetDirectory: string): Promise<void> {
@@ -214,6 +226,10 @@ export function createLocalGeneratedModelStorageAdapter(
   const cacheRoot = path.resolve(
     resolveLocalGeneratedModelStorageRoot(options),
   );
+  if ((options.maximumSourceBytes !== undefined && !Number.isFinite(options.maximumSourceBytes))
+    || (options.maximumSourceFiles !== undefined && !Number.isFinite(options.maximumSourceFiles))) {
+    throw new TypeError("Generated model storage limits must be finite.");
+  }
   const maximumSourceBytes = Math.min(
     Math.max(options.maximumSourceBytes ?? 20 * 1024 * 1024 * 1024, 1),
     100 * 1024 * 1024 * 1024,
@@ -238,7 +254,7 @@ export function createLocalGeneratedModelStorageAdapter(
           "Generated model target escaped the host-owned cache root.",
         );
       }
-      await assertSafeSourceTree(
+      await walkGeneratedModelTree(
         request.sourceDirectory,
         maximumSourceFiles,
         maximumSourceBytes,
@@ -257,20 +273,14 @@ export function createLocalGeneratedModelStorageAdapter(
       const temporaryDirectory = await mkdtemp(path.join(snapshotsRoot, ".stage-"));
       const stagedIdentity = await lstat(temporaryDirectory, { bigint: true });
       try {
-        for (const entry of await readdir(request.sourceDirectory)) {
-          await cp(path.join(request.sourceDirectory, entry), path.join(temporaryDirectory, entry), {
-            recursive: true,
-            errorOnExist: true,
-            force: false,
-          });
-        }
+        await walkGeneratedModelTree(request.sourceDirectory, maximumSourceFiles, maximumSourceBytes, temporaryDirectory);
         const beforePublish = await lstat(temporaryDirectory, { bigint: true });
         if (!beforePublish.isDirectory() || beforePublish.isSymbolicLink()
           || stagedIdentity.ino === 0n || beforePublish.dev !== stagedIdentity.dev || beforePublish.ino !== stagedIdentity.ino
           || await realpath(temporaryDirectory) !== temporaryDirectory) {
           throw new TypeError("Generated model staging identity is unavailable.");
         }
-        await assertSafeSourceTree(temporaryDirectory, maximumSourceFiles, maximumSourceBytes);
+        await walkGeneratedModelTree(temporaryDirectory, maximumSourceFiles, maximumSourceBytes);
         await assertTargetAbsent(targetDirectory);
         await rename(temporaryDirectory, targetDirectory);
       } catch (error) {

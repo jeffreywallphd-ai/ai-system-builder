@@ -1,11 +1,74 @@
-import { lstat, mkdir, mkdtemp, readFile, readdir, symlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createLocalGeneratedModelStorageAdapter } from "../createLocalGeneratedModelStorageAdapter";
 
+async function withOwnedFixture(run: (root: string) => Promise<void>) {
+  const boundary = await realpath(tmpdir());
+  const root = await mkdtemp(join(boundary, "generated-model-budget-"));
+  const original = await lstat(root, { bigint: true });
+  try {
+    await run(root);
+  } finally {
+    const current = await lstat(root, { bigint: true });
+    if (dirname(root) !== boundary || await realpath(root) !== root || !current.isDirectory()
+      || current.isSymbolicLink() || original.ino === 0n || current.ino !== original.ino
+      || current.dev !== original.dev) {
+      throw new Error("The generated model test no longer owns its fixture root.");
+    }
+    await rm(root, { recursive: true });
+  }
+}
+
 describe("createLocalGeneratedModelStorageAdapter", () => {
+  it("bounds directories separately from files and keeps a nested snapshot at both limits", async () => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "source");
+      const cache = join(root, "cache");
+      const first = join(source, "nested");
+      await mkdir(first, { recursive: true });
+      await mkdir(join(source, "extra-empty"));
+      await writeFile(join(first, "model.bin"), "x");
+      const adapter = createLocalGeneratedModelStorageAdapter({
+        env: { HF_HUB_CACHE: cache }, maximumSourceFiles: 1, maximumSourceBytes: 1,
+      });
+      const request = { sourceDirectory: source, outputModelName: "Demo", runId: "run-1" };
+
+      await expect(adapter.storeGeneratedModel(request)).rejects.toThrow("exceeds storage limits");
+      expect(await readdir(root)).toEqual(["source"]);
+
+      const allowed = createLocalGeneratedModelStorageAdapter({
+        env: { HF_HUB_CACHE: cache }, maximumSourceFiles: 2, maximumSourceBytes: 1,
+      });
+      const saved = await allowed.storeGeneratedModel(request);
+      expect(await readFile(join(saved.localPath, "nested", "model.bin"), "utf8")).toBe("x");
+      expect(await readdir(join(saved.localPath, "extra-empty"))).toEqual([]);
+    });
+  });
+
+  it("refuses excessive nesting before creating cache storage", async () => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "s");
+      await mkdir(join(source, ...Array<string>(65).fill("d")), { recursive: true });
+      const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: join(root, "cache") } });
+
+      await expect(adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", runId: "run-1" }))
+        .rejects.toThrow("exceeds storage limits");
+      expect(await readdir(root)).toEqual(["s"]);
+    });
+  });
+
+  it("rejects nonfinite generated model storage limits", () => {
+    for (const option of ["maximumSourceFiles", "maximumSourceBytes"] as const) {
+      for (const limit of [NaN, Infinity, -Infinity]) {
+        expect(() => createLocalGeneratedModelStorageAdapter({ [option]: limit }))
+          .toThrow("storage limits must be finite");
+      }
+    }
+  });
+
   it("preserves observed existing snapshot directories and files instead of replacing them", async () => {
     for (const kind of ["directory", "file"] as const) {
       const root = await mkdtemp(join(tmpdir(), "generated-model-retained-"));
@@ -144,35 +207,33 @@ describe("createLocalGeneratedModelStorageAdapter", () => {
     ).rejects.toThrow("exceeds storage limits");
   });
 
-  it("rejects linked generated model source trees when links are available", async (context) => {
-    const root = join(tmpdir(), `generated-model-storage-link-${Date.now()}`);
-    const source = join(root, "source");
-    const outside = join(root, "outside.bin");
-    await mkdir(source, { recursive: true });
-    await writeFile(outside, "outside", "utf8");
-    try {
-      await symlink(outside, join(source, "linked.bin"));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "EPERM") {
-        context.skip(
-          "This Windows host does not permit creating test symlinks.",
-        );
-        return;
+  it("rejects a linked child of a generated model source before cache creation", async (context) => {
+    await withOwnedFixture(async (root) => {
+      const source = join(root, "source");
+      const outside = join(root, "outside");
+      const model = join(outside, "model.bin");
+      await mkdir(source);
+      await mkdir(outside);
+      await writeFile(model, "outside", "utf8");
+      try {
+        if (process.platform === "win32") {
+          await symlink(outside, join(source, "linked"), "junction");
+        } else {
+          await symlink(model, join(source, "linked.bin"));
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EPERM") {
+          context.skip("Creating the child link fixture requires local link support.");
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
-    const adapter = createLocalGeneratedModelStorageAdapter({
-      env: { HF_HUB_CACHE: join(root, "cache") },
-      homeDirectory: root,
+      const adapter = createLocalGeneratedModelStorageAdapter({ env: { HF_HUB_CACHE: join(root, "cache") } });
+      await expect(
+        adapter.storeGeneratedModel({ sourceDirectory: source, outputModelName: "Demo", runId: "run-1" }),
+      ).rejects.toThrow("cannot contain links");
+      expect((await readdir(root)).sort()).toEqual(["outside", "source"]);
+      expect(await readFile(model, "utf8")).toBe("outside");
     });
-
-    await expect(
-      adapter.storeGeneratedModel({
-        sourceDirectory: source,
-        outputModelName: "Demo",
-        runId: "run-1",
-        repository: "org/model",
-      }),
-    ).rejects.toThrow("cannot contain links");
   });
 });

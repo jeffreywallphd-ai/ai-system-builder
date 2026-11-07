@@ -553,6 +553,14 @@ are unaffected by the Context RAG storage engine.
 
 Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Desktop model file effects are currently unavailable pending a qualified native file authority. The portable path/rename prototype failed concurrency and supported-cache qualification and is not wired as an effect implementation. Identity-based ports fail before filesystem or shell access; no renderer path, mutable shared discovery root or metadata fallback is used. Registry-only removal remains supported and file removal is an explicit optional UI choice with corrective guidance. A future implementation must bind provenance atomically to the current model record, preserve supported cache links, hold authority through the actual OS operation, and pass positive plus replacement-race qualification. These requirements remain pending; existing disposable preflight denials do not establish that qualification.
 
+Generated model storage checks the source before creating cache storage. It
+reads directory entries incrementally and limits file count, byte count and
+folder count. The folder count uses the same limit as the file count and is
+counted separately. The walk permits at most 64 levels below the source root.
+It applies these limits while staging individual entries and while checking
+the staged result. Native protection against concurrent file changes needs
+separate qualification.
+
 Server defaults should keep `SERVER_STORAGE_ROOT` and `SERVER_RUNTIME_ROOT` distinct. Desktop local mode should use desktop-owned runtime roots and desktop-owned artifact storage roots. Server/thin-client mode should use server-owned runtime roots and server-owned artifact storage roots. Future desktop-remote mode should not assume remote artifacts are local files.
 
 See ADR-0013 and ADR-0012.
