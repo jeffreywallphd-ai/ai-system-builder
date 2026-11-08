@@ -1,5 +1,10 @@
 import { execFile, type ExecFileException } from "node:child_process";
 import { platform as runtimePlatform } from "node:os";
+import {
+  createPreparationStageDiagnostics, readPreparationObserver, snapshotPreparationEnvironment,
+  type PreparationStageDiagnostics, type PreparationStage,
+  type PythonRuntimePreparationObserver,
+} from "./pythonRuntimePreparationDiagnostics";
 
 export const PYTHON_RUNTIME_LANCEDB_VERSION = "0.34.0";
 export const PYTHON_RUNTIME_CONTEXT_REQUIREMENTS_FILE =
@@ -46,6 +51,8 @@ export interface EnsurePythonRuntimeContextDependenciesOptions {
   readonly onProgress?: (
     progress: PythonRuntimeContextDependencyProgress,
   ) => void;
+  /** Passive trusted observer; no persistence or readiness authority. */
+  readonly onDiagnosticStage?: PythonRuntimePreparationObserver;
 }
 
 export class PythonRuntimeContextDependencyError extends Error {
@@ -76,6 +83,7 @@ interface ActiveEnsure {
     (progress: PythonRuntimeContextDependencyProgress) => void
   >;
   lastProgress?: PythonRuntimeContextDependencyProgress;
+  readonly diagnostics: PreparationStageDiagnostics;
 }
 
 const DEFAULT_INSTALL_TIMEOUT_MS = 5 * 60 * 1_000;
@@ -122,27 +130,35 @@ function runCommand(
   implementation: ContextDependencyExecFile,
   options: EnsurePythonRuntimeContextDependenciesOptions,
   args: readonly string[],
+  active: ActiveEnsure,
+  stage: PreparationStage,
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
-    implementation(
-      options.command,
-      args,
-      {
-        cwd: options.cwd,
-        env: options.env,
-        encoding: "utf8",
-        timeout: options.installTimeoutMs ?? DEFAULT_INSTALL_TIMEOUT_MS,
-        windowsHide: true,
-        maxBuffer: MAXIMUM_OUTPUT_BYTES,
-      },
-      (error, stdout, stderr) => {
-        resolve({
-          error,
-          stdout: typeof stdout === "string" ? stdout : "",
-          stderr: typeof stderr === "string" ? stderr : "",
-        });
-      },
-    );
+    const capturedArgs = Object.freeze([...args]);
+    const dispatchOptions = {
+      cwd: options.cwd, env: options.env, encoding: "utf8" as const,
+      timeout: options.installTimeoutMs ?? DEFAULT_INSTALL_TIMEOUT_MS,
+      windowsHide: true as const, maxBuffer: MAXIMUM_OUTPUT_BYTES,
+    };
+    const token = active.diagnostics.enter(stage);
+    try {
+      implementation(
+        options.command,
+        capturedArgs,
+        dispatchOptions,
+        (error, stdout, stderr) => {
+          active.diagnostics.settle(token, "returned");
+          resolve({
+            error,
+            stdout: typeof stdout === "string" ? stdout : "",
+            stderr: typeof stderr === "string" ? stderr : "",
+          });
+        },
+      );
+    } catch (error) {
+      active.diagnostics.settle(token, "threw");
+      throw error;
+    }
   });
 }
 
@@ -189,7 +205,7 @@ async function performEnsure(
     options.execFileImplementation ??
     (execFile as unknown as ContextDependencyExecFile);
   const probeArgs = ["-c", CONTEXT_DEPENDENCY_PROBE_SCRIPT] as const;
-  const probe = await runCommand(implementation, options, probeArgs);
+  const probe = await runCommand(implementation, options, probeArgs, active, "probe-context-dependencies");
   const probeMarker = marker(probe);
   if (!probe.error && probeMarker === "ASB_CONTEXT_DEPENDENCY_READY") {
     return { installed: false, version: PYTHON_RUNTIME_LANCEDB_VERSION };
@@ -235,7 +251,7 @@ async function performEnsure(
     "--no-input",
     "-r",
     requirementsFile,
-  ]);
+  ], active, "install-context-dependencies");
   if (install.error) {
     const timedOut =
       install.error.killed === true ||
@@ -249,7 +265,7 @@ async function performEnsure(
     );
   }
 
-  const verification = await runCommand(implementation, options, probeArgs);
+  const verification = await runCommand(implementation, options, probeArgs, active, "verify-context-dependencies");
   if (
     verification.error ||
     marker(verification) !== "ASB_CONTEXT_DEPENDENCY_READY"
@@ -269,6 +285,13 @@ async function performEnsure(
 export function ensurePythonRuntimeContextDependencies(
   options: EnsurePythonRuntimeContextDependenciesOptions,
 ): Promise<EnsurePythonRuntimeContextDependenciesResult> {
+  const captured = {
+    command: options.command, cwd: options.cwd, env: snapshotPreparationEnvironment(options.env),
+    requirementsFile: options.requirementsFile, installTimeoutMs: options.installTimeoutMs,
+    platform: options.platform, execFileImplementation: options.execFileImplementation,
+    onProgress: options.onProgress,
+  };
+  options = Object.freeze({ ...captured, onDiagnosticStage: readPreparationObserver(options) });
   const requirementsFile =
     options.requirementsFile ?? PYTHON_RUNTIME_CONTEXT_REQUIREMENTS_FILE;
   const key = [
@@ -279,6 +302,7 @@ export function ensurePythonRuntimeContextDependencies(
   ].join("\0");
   const existing = activeEnsures.get(key);
   if (existing?.promise) {
+    existing.diagnostics.subscribe(readPreparationObserver(options));
     if (options.onProgress) {
       existing.listeners.add(options.onProgress);
       if (existing.lastProgress) {
@@ -292,12 +316,23 @@ export function ensurePythonRuntimeContextDependencies(
     return existing.promise;
   }
 
-  const active: ActiveEnsure = { listeners: new Set() };
+  const active: ActiveEnsure = {
+    listeners: new Set(),
+    diagnostics: createPreparationStageDiagnostics("context", readPreparationObserver(options)),
+  };
   if (options.onProgress) active.listeners.add(options.onProgress);
-  const promise = performEnsure(options, active).finally(() => {
-    activeEnsures.delete(key);
+  let resolve!: (result: EnsurePythonRuntimeContextDependenciesResult) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<EnsurePythonRuntimeContextDependenciesResult>((yes, no) => {
+    resolve = yes;
+    reject = no;
   });
   active.promise = promise;
+  // Register before the first observation can invoke a reentrant subscriber.
   activeEnsures.set(key, active);
+  void performEnsure(options, active).finally(() => {
+    active.diagnostics.close();
+    if (activeEnsures.get(key) === active) activeEnsures.delete(key);
+  }).then(resolve, reject);
   return promise;
 }

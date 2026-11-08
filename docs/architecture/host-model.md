@@ -14,6 +14,16 @@ cache; it does not replace host-owned launch, private rotating authentication,
 capability negotiation or termination, and does not qualify real Python/model
 dependencies. No environment variable or API enables this seam.
 
+Both ordinary hosts now share `preparePythonRuntimeEnvironment`: Context setup
+finishes before Worker setup starts. The helper captures private command/cwd/env
+inputs and preserves every existing dependency, version, backend and failure gate.
+Optional stage observations are bounded session diagnostics, not readiness. The
+private provided-data server uses the same real helper through the controlled
+callback to record fixed synthetic labels before dispatch. This remains a
+controlled override, not evidence of default-host execution. Default-host unit
+tests and real controlled-host qualification are separate evidence. Authentication
+rotation, capability negotiation, launch and termination stay host-owned.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0003-host-model-and-transport-separation.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
 - Verification: `docs/architecture/architecture-verification.md`

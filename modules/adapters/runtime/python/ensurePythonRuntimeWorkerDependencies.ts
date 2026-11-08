@@ -4,6 +4,10 @@ import {
   type SpawnSyncReturns,
   type SpawnSyncOptions,
 } from "node:child_process";
+import {
+  createPreparationStageDiagnostics, readPreparationObserver, snapshotPreparationEnvironment, WORKER_PREPARATION_STAGES,
+  type PreparationStageDiagnostics, type PythonRuntimePreparationObserver,
+} from "./pythonRuntimePreparationDiagnostics";
 
 export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   command: string;
@@ -14,6 +18,8 @@ export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   /** @deprecated Ignored: a pathname grants no private persistence authority. */
   diagnosticsFile?: string;
   onDiagnosticOutcomes?: (outcomes: PythonDependencyOutcomes) => void | Promise<void>;
+  /** Passive trusted session observer; command contents are never supplied. */
+  onDiagnosticStage?: PythonRuntimePreparationObserver;
   torchPackageSpecifier?: string;
   torchIndexesByBackend?: Partial<Record<TorchInstallBackend, string>>;
   installTimeoutMs?: number;
@@ -49,13 +55,7 @@ interface TorchInstallationProbeResult {
   importError?: string;
 }
 
-const OUTCOME_STAGES = [
-  "inspect-environment", "probe-pip", "probe-write-access",
-  "detect-accelerator-nvidia", "detect-accelerator-rocm", "probe-torch",
-  "probe-network", "probe-worker-dependencies", "install-worker-dependencies",
-  "probe-model-training-dependencies", "install-model-training-dependencies",
-  "verify-model-training-dependencies", "install-torch", "verify-torch", "other",
-] as const;
+const OUTCOME_STAGES = WORKER_PREPARATION_STAGES;
 type OutcomeStage = typeof OUTCOME_STAGES[number];
 
 interface CommandExecutionRecord {
@@ -74,6 +74,7 @@ interface TorchInstallDiagnostics {
   detectedAccelerator?: TorchInstallBackend;
   selectedBackend?: TorchInstallBackend;
   executedCommands: CommandExecutionRecord[];
+  readonly stageObserver: PreparationStageDiagnostics;
   verificationResult?: {
     success: boolean;
     backend: TorchInstallBackend;
@@ -204,13 +205,33 @@ function runCommand(
     EnsurePythonRuntimeWorkerDependenciesOptions,
     "cwd" | "env" | "installTimeoutMs"
   >,
+  diagnostics: TorchInstallDiagnostics,
+  stage: string,
 ): SpawnSyncReturns<string> {
-  return spawnSyncImplementation(command, args, {
-    cwd: options.cwd,
-    env: options.env,
-    encoding: "utf8",
+  const capturedArgs = Object.freeze([...args]);
+  const dispatchOptions = {
+    cwd: options.cwd, env: options.env, encoding: "utf8" as const,
     timeout: options.installTimeoutMs ?? DEFAULT_INSTALL_TIMEOUT_MS,
-  } satisfies SpawnSyncOptions);
+  } satisfies SpawnSyncOptions;
+  const identity = stageIdentity(stage);
+  const token = diagnostics.stageObserver.enter(identity.stage, identity.backend);
+  try {
+    const result = spawnSyncImplementation(command, capturedArgs, dispatchOptions);
+    diagnostics.stageObserver.settle(token, "returned");
+    return result;
+  } catch (error) {
+    diagnostics.stageObserver.settle(token, "threw");
+    throw error;
+  }
+}
+
+function stageIdentity(stage: string): { stage: OutcomeStage; backend?: TorchInstallBackend } {
+  const backendStage = /^(install-torch|verify-torch)-(cpu|cuda|rocm)(?:-attempt-\d+)?$/.exec(stage);
+  const outcomeStage = backendStage?.[1] ?? stage;
+  return {
+    stage: OUTCOME_STAGES.includes(outcomeStage as OutcomeStage) ? outcomeStage as OutcomeStage : "other",
+    backend: backendStage?.[2] as TorchInstallBackend | undefined,
+  };
 }
 
 function buildRecord(
@@ -219,13 +240,10 @@ function buildRecord(
   _args: readonly string[],
   result: SpawnSyncReturns<string>,
 ): CommandExecutionRecord {
-  const backendStage = /^(install-torch|verify-torch)-(cpu|cuda|rocm)(?:-attempt-\d+)?$/.exec(stage);
-  const outcomeStage = backendStage?.[1] ?? stage;
   const exitCode = typeof result.status === "number" && Number.isSafeInteger(result.status) && result.status >= 0 ? result.status : null;
   const success = exitCode === 0 && !result.error;
   return {
-    stage: OUTCOME_STAGES.includes(outcomeStage as OutcomeStage) ? outcomeStage as OutcomeStage : "other",
-    backend: backendStage?.[2] as TorchInstallBackend | undefined,
+    ...stageIdentity(stage),
     exitCode,
     success,
     attempts: 1,
@@ -265,6 +283,8 @@ function inspectPythonRuntimeEnvironment(
     options.command,
     ["-c", ENV_INSPECTION_SCRIPT],
     options,
+    diagnostics,
+    "inspect-environment",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -320,6 +340,8 @@ function validatePrerequisites(
     options.command,
     ["-m", "pip", "--version"],
     options,
+    diagnostics,
+    "probe-pip",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -348,6 +370,8 @@ function validatePrerequisites(
       options.cwd,
     ],
     options,
+    diagnostics,
+    "probe-write-access",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -374,6 +398,8 @@ function detectComputeBackend(
     "nvidia-smi",
     ["--query-gpu=name", "--format=csv,noheader"],
     options,
+    diagnostics,
+    "detect-accelerator-nvidia",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -397,6 +423,8 @@ function detectComputeBackend(
     "rocminfo",
     [],
     options,
+    diagnostics,
+    "detect-accelerator-rocm",
   );
   appendOutcome(diagnostics,
     buildRecord("detect-accelerator-rocm", "rocminfo", [], rocmResult),
@@ -446,6 +474,8 @@ function probeTorchInstallation(
     options.command,
     ["-c", TORCH_INSTALL_PROBE_SCRIPT],
     options,
+    diagnostics,
+    "probe-torch",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -520,6 +550,8 @@ function ensureNetworkReachabilityForIndex(
     options.command,
     ["-c", networkProbeScript],
     options,
+    diagnostics,
+    "probe-network",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -562,6 +594,8 @@ function executeInstallWithRetry(
       options.command,
       installArgs,
       options,
+      diagnostics,
+      `install-torch-${target.backend}-attempt-${attempt}`,
     );
     appendOutcome(diagnostics,
       buildRecord(
@@ -642,6 +676,8 @@ except Exception as error:
     options.command,
     ["-c", verificationScript],
     options,
+    diagnostics,
+    `verify-torch-${backend}`,
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -710,6 +746,8 @@ function installWorkerRequirementsIfNeeded(
     options.command,
     ["-c", WORKER_DEPENDENCY_PROBE_SCRIPT],
     options,
+    diagnostics,
+    "probe-worker-dependencies",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -743,6 +781,8 @@ function installWorkerRequirementsIfNeeded(
     options.command,
     ["-m", "pip", "install", "-r", requirementsFile],
     options,
+    diagnostics,
+    "install-worker-dependencies",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -775,6 +815,8 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     probeArgs,
     options,
+    diagnostics,
+    "probe-model-training-dependencies",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -808,6 +850,8 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     installArgs,
     options,
+    diagnostics,
+    "install-model-training-dependencies",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -828,6 +872,8 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     probeArgs,
     options,
+    diagnostics,
+    "verify-model-training-dependencies",
   );
   appendOutcome(diagnostics,
     buildRecord(
@@ -909,14 +955,34 @@ function attemptTorchInstallFlow(
   );
 }
 
+function captureWorkerOptions(options: EnsurePythonRuntimeWorkerDependenciesOptions): EnsurePythonRuntimeWorkerDependenciesOptions {
+  const indexes = options.torchIndexesByBackend;
+  const captured = {
+    command: options.command, cwd: options.cwd, env: snapshotPreparationEnvironment(options.env),
+    requirementsFile: options.requirementsFile, trainingRequirementsFile: options.trainingRequirementsFile,
+    torchPackageSpecifier: options.torchPackageSpecifier,
+    torchIndexesByBackend: indexes === undefined ? undefined : Object.freeze({ ...indexes }),
+    installTimeoutMs: options.installTimeoutMs, retryCount: options.retryCount,
+    platform: options.platform, spawnSyncImplementation: options.spawnSyncImplementation,
+  };
+  let onDiagnosticOutcomes: EnsurePythonRuntimeWorkerDependenciesOptions["onDiagnosticOutcomes"];
+  try {
+    const observer = options.onDiagnosticOutcomes;
+    if (typeof observer === "function") onDiagnosticOutcomes = observer;
+  } catch { /* An optional observer cannot replace setup. */ }
+  return Object.freeze({ ...captured, onDiagnosticOutcomes, onDiagnosticStage: readPreparationObserver(options) });
+}
+
 export function ensurePythonRuntimeWorkerDependencies(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
 ): void {
+  options = captureWorkerOptions(options);
   const spawnSyncImplementation = options.spawnSyncImplementation ?? spawnSync;
   const diagnostics: TorchInstallDiagnostics = {
     operation: "worker",
     os: options.platform ?? runtimePlatform(),
     executedCommands: [],
+    stageObserver: createPreparationStageDiagnostics("worker", readPreparationObserver(options)),
     success: false,
   };
 
@@ -976,6 +1042,7 @@ export function ensurePythonRuntimeWorkerDependencies(
     );
     diagnostics.success = true;
   } finally {
+    diagnostics.stageObserver.close();
     publishDiagnostics(options, diagnostics);
   }
 }
@@ -983,11 +1050,13 @@ export function ensurePythonRuntimeWorkerDependencies(
 export function ensurePythonRuntimeModelTrainingDependencies(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
 ): void {
+  options = captureWorkerOptions(options);
   const spawnSyncImplementation = options.spawnSyncImplementation ?? spawnSync;
   const diagnostics: TorchInstallDiagnostics = {
     operation: "model-training",
     os: options.platform ?? runtimePlatform(),
     executedCommands: [],
+    stageObserver: createPreparationStageDiagnostics("model-training", readPreparationObserver(options)),
     success: false,
   };
   try {
@@ -999,6 +1068,7 @@ export function ensurePythonRuntimeModelTrainingDependencies(
     );
     diagnostics.success = true;
   } finally {
+    diagnostics.stageObserver.close();
     publishDiagnostics(options, diagnostics);
   }
 }

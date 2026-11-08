@@ -2,6 +2,15 @@
 
 # Contributor helpers
 
+The existing `security-runtime` profile includes model-free dependency-preparation
+observer, Context/Worker, shared-helper, host-composition and private journal
+regressions. Select it explicitly for that boundary; it adds no automatic broad
+runtime trigger. Its explicit sources/tests can combine with other selected valid
+profiles. Missing ownership, unknown impact and an explicit generic request retain
+the generic focused gate. Source/test limits remain 200/100. The fixed profile
+configuration file is also classified for control-plane checks; sibling config
+files do not acquire that classification.
+
 These Python helpers combine recurring, bounded loops without embedding a
 contributor name, home directory, executable hash, or repository checkout path.
 They use only the Python standard library.

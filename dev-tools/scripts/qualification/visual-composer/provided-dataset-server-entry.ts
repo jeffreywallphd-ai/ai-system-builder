@@ -1,23 +1,26 @@
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { createServer, createServerListener } from "../../../../apps/server/src/createServer";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../../modules/adapters/persistence/sqlite";
 import { createOrganizationId } from "../../../../modules/contracts/organization";
 import { createVisualComposerQualificationRuntimeDatabase } from "./visual-composer-runtime-database";
 import { createProvidedDatasetServerLifecycle, requireProvidedDatasetRoot } from "./provided-dataset-server-lifecycle";
+import { createProvidedRuntimePreparationObserver, createProvidedRuntimePreparationPreparer } from "./provided-runtime-preparation-observer";
 
 let sequence = 0;
 const lifecycle = createProvidedDatasetServerLifecycle(async restartServer => {
   const runtimeRoot = process.env.SERVER_RUNTIME_ROOT ?? "";
-  if (process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
+  if (process.env.NODE_ENV === "production" || process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO !== "dataset-profile" ||
       process.env.AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID !== "qualification.local") throw new Error("Fixed qualification composition is required.");
   await requireProvidedDatasetRoot(path.resolve(process.cwd()), runtimeRoot);
   if (++sequence > 2) throw new Error("The fixed restart count was exceeded.");
   const sourceRevision = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION;
   if (!/^source\.[a-f0-9]{64}$/.test(sourceRevision ?? "")) throw new Error("Current qualification source identity is required.");
-  const cache = path.join(runtimeRoot, `provided-server-cache-${sequence}`);
-  await mkdir(cache, { recursive: false });
+  const repoRoot = path.resolve(process.cwd());
+  const journal = createProvidedRuntimePreparationObserver({ repoRoot, runtimeRoot, sequence: sequence as 1 | 2, sourceRevision: sourceRevision! });
+  const cache = journal.cache;
   const env = { ...process.env, HF_HUB_CACHE: cache };
+  const prepareRuntime = createProvidedRuntimePreparationPreparer({ repoRoot, sourceRevision: sourceRevision!, pythonExecutable: env.PYTHON_RUNTIME_COMMAND ?? "", journal });
   const database = await openLocalSqliteDatabase({ policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: runtimeRoot }) });
   let created: Awaited<ReturnType<typeof createServer>> | undefined;
   let listener: ReturnType<typeof createServerListener> | undefined;
@@ -25,7 +28,9 @@ const lifecycle = createProvidedDatasetServerLifecycle(async restartServer => {
     created = await createServer({ env, restartServer,
       structuredDocuments: database.documents.forOrganization(createOrganizationId("qualification.local")),
       runtimeDatabases: createVisualComposerQualificationRuntimeDatabase(),
-      // No controlled Node preparation override: production Python dependencies.
+      // Controlled observation calls the same real Context/Worker preparation
+      // helper as ordinary hosts. It never replaces or skips dependency checks.
+      pythonRuntimeEnvironmentPreparer: prepareRuntime,
     });
     listener = createServerListener(created);
     const activeListener = listener;

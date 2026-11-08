@@ -80,6 +80,16 @@ equal-date chunks keep plan order and undated records appear last.
 
 ## Define bounded work
 
+For passive Python dependency-preparation changes, explicitly select the existing
+`security-runtime` profile. Its focused regressions cover session-only closed
+observations, unchanged Context/Worker setup, ordinary host wiring and synthetic
+private journal failure paths. It does not launch an app or model. The profile
+configuration itself also requires the control-plane routing/isolation checks.
+This fixed classification grants no wildcard config ownership: unknown siblings,
+incomplete selected declarations and explicit generic requests keep their focused
+fallback. A passing source receipt does not qualify an actual host journey,
+native protection, offload or a parent roadmap.
+
 For the explicitly consolidated security plans, execute only
 `security-findings-refresh`. Its **Merged history** preserves the legacy roadmap,
 completed increments, original criteria/chunks and primary/companion ownership

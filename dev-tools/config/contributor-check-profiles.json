@@ -1095,7 +1095,13 @@
         "modules/adapters/runtime/python/worker/tests/test_review_dataset.py",
         "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
         "modules/adapters/runtime/python/worker/tests/test_dataset_output_name.py",
-        "modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts"
+        "modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts",
+        "modules/adapters/runtime/python/tests/python-runtime-preparation-diagnostics.unit.test.ts",
+        "modules/adapters/runtime/python/tests/preparePythonRuntimeEnvironment.unit.test.ts",
+        "modules/adapters/runtime/python/tests/ensurePythonRuntimeContextDependencies.unit.test.ts",
+        "modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/provided-runtime-preparation-observer.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -1152,7 +1158,20 @@
         "modules/adapters/runtime/python/worker/tests/test_dataset_output_name.py",
         "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
         "modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts",
-        "docs/standards/logging-standards.md"
+        "docs/standards/logging-standards.md",
+        "modules/adapters/runtime/python/pythonRuntimePreparationDiagnostics.ts",
+        "modules/adapters/runtime/python/preparePythonRuntimeEnvironment.ts",
+        "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts",
+        "modules/adapters/runtime/python/index.ts",
+        "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "dev-tools/scripts/qualification/visual-composer/provided-runtime-preparation-observer.ts",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-server-entry.ts",
+        "modules/adapters/runtime/python/README.md",
+        "docs/architecture/host-model.md",
+        "dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/helpers/tests/test_control_plane_runtime_preparation_profile.py"
       ]
     },
     "security-records": {

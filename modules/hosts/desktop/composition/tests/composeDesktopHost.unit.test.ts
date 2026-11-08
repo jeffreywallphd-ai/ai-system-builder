@@ -736,9 +736,9 @@ describe("composeDesktopHost", () => {
           callOrder.push("prepare-training");
         }),
         runtimePort: {
-          startTask: testDouble.fn(async (request: { requestId: string }) => {
+          startTask: testDouble.fn(async (request: { requestId: string; taskType: string }) => {
             callOrder.push("dispatch-training");
-            return { requestId: request.requestId, status: "queued" };
+            return { requestId: request.requestId, taskType: request.taskType, accepted: true, status: "queued" };
           }),
         },
       },
@@ -888,7 +888,7 @@ describe("composeDesktopHost", () => {
       "repoBrowser: huggingFaceArtifactRepoStorage",
     );
     expect(pythonSource).toContain("createPythonRuntimeAdapterFoundation");
-    expect(pythonSource).toContain("ensurePythonRuntimeWorkerDependencies");
+    expect(pythonSource).toContain("preparePythonRuntimeEnvironment");
     expect(comfyInstallSource).toContain("createComfyUiRuntimeInstaller");
     expect(comfySource).toContain("createComfyUiRuntimeInstaller");
     expect(comfySource).toContain("detectNvidiaGpu()");

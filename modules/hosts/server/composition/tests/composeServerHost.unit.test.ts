@@ -591,12 +591,13 @@ describe("composeServerHost", () => {
     expect(source).toContain("classifyPythonRuntimeSupervisorLogLevel");
   });
 
-  it("wires the exact LanceDB ensure into default setup and explicit Context starts", () => {
+  it("wires shared default setup and the exact LanceDB ensure into explicit Context starts", () => {
     const source = readFileSync(
       resolve("modules/hosts/server/composition/composeServerHost.ts"),
       "utf8",
     );
     expect(source).toContain("ensurePythonRuntimeContextDependencies");
+    expect(source).toContain("preparePythonRuntimeEnvironment");
     expect(source).toContain("TaskType.CONTEXT_GENERATION");
     expect(source).toContain("TaskType.CONTEXT_RETRIEVAL");
     expect(source).toContain("control.reportProgress");

@@ -2822,3 +2822,29 @@ cleanup. Fixed completed decoder-output validation remains repairable; failed
 pre-forward admission remains a no-forward result. Synthetic regressions verify
 these boundaries and non-disclosure. Native borrower, worker and accounting
 qualification remains pending, with all existing guards preserved.
+
+
+### Passive pre-launch dependency observations
+
+Context and Worker dependency preparation now expose optional closed immutable
+stage facts before command dispatch and at actual return or throw. A returned
+command is not a passing dependency check. Private command inputs and child
+environments are captured before observers run. Observer throws, rejected promises,
+invalid values and late Context subscriptions cannot bypass original commands,
+single-flight behavior, dependency/backend gates or failure results. Sixty-four
+commands and sixteen listeners per flight bound session retention. No command,
+path, environment, output, exception, process ID or credential enters a fact.
+
+The private provided-data qualifier delegates to the real shared setup helper and
+is rejected in production. It exclusively creates a source-bound synthetic cache;
+existing caches are refused without adoption. At most 256 one-KiB records use
+exclusive writes, flush, identity/size checks and acknowledged close before their
+counts advance. Malformed, duplicate, mismatched or reentrant phases, replaced or
+linked paths, partial writes and uncertain closes fence later records. Partial
+bytes remain; uncertain descriptors are not closed again or used as authority.
+These cooperative directory checks do not protect against a hostile concurrent
+filesystem actor and are not a native staging fence. Missing facts remain missing
+evidence. No readiness, allocating-process identity, protected accounting, native
+restart authority or roadmap pass follows. Focused synthetic denial tests cover
+these boundaries. Actual controlled-host and native qualification remain separate;
+all resource limits and earlier failed evidence remain intact.

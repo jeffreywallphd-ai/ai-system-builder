@@ -19,6 +19,33 @@ Foundation for the managed Python sidecar runtime adapter:
 
 ## Security boundary
 
+### Dependency preparation observations
+
+`preparePythonRuntimeEnvironment` is the ordinary Desktop and Server setup
+sequence: await Context dependencies, then check Worker dependencies. A Context
+failure prevents the Worker step. Dependency commands, versions, backend checks,
+installation gates and failure results remain authoritative.
+
+The optional trusted `onDiagnosticStage` callback receives frozen, closed
+`RuntimeExecutionDiagnostic` labels immediately before dispatch and on actual
+return or synchronous throw. `returned` means that the command returned; it does
+not mean that it succeeded. Context settlement waits for its actual command
+callback. Inputs and child environments are captured before observers run.
+Observers cannot change captured command inputs. Exceptions and rejected promises
+from observers do not replace the real preparation result.
+
+Each flight retains at most 64 command observations and 16 listeners. Late Context
+listeners receive future facts only, with no replay or duplicate command. Final
+cleanup drops listeners and pending tokens. Facts contain no command arguments,
+paths, environment values, command output, error details, process IDs or tokens.
+Ordinary observations stay in the session under ADR-0043. The strict reader copies
+only validated primitive fields; it never serializes an input object.
+
+The private provided-data qualifier can synchronously persist these labels under
+its newly created cache. That controlled override calls the same real helper and
+is rejected in production. Its records are synthetic test diagnostics, not
+protected storage, readiness, native identity or process-ownership evidence.
+
 - The client accepts only canonicalizable loopback HTTP endpoints with an
   explicit non-privileged port and no credentials, path, query, or fragment.
 - The adapter foundation generates a private 256-bit bearer token, rotates it

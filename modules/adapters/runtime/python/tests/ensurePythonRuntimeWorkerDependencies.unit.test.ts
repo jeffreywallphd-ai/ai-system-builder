@@ -16,6 +16,7 @@ import {
   ensurePythonRuntimeWorkerDependencies,
   readPythonRuntimeDependencySessionOutcomes,
 } from "../ensurePythonRuntimeWorkerDependencies";
+import type { PythonRuntimePreparationDiagnostic } from "../pythonRuntimePreparationDiagnostics";
 
 function createSpawnSyncResult(
   overrides: Partial<SpawnSyncReturns<string>> = {},
@@ -54,6 +55,80 @@ function createEnvironmentInspectionJson(version = "3.11.9"): string {
 }
 
 const privateMarker = "synthetic-private-install-marker";
+
+describe("pre-dispatch dependency stage observations", () => {
+  it("snapshots all worker inputs before an entered observer can change later commands", () => {
+    const calls: { command: string; cwd?: string; timeout?: number; value?: string; args: readonly string[] }[] = [];
+    const base = outcomeFixture();
+    const options = { command: "python", cwd: "worker", env: { SYNTHETIC_VALUE: "original" }, installTimeoutMs: 1234, requirementsFile: "requirements.txt", torchPackageSpecifier: "torch-original", torchIndexesByBackend: { cpu: "https://download.pytorch.org/whl/cpu" }, platform: "win32" as const,
+      onDiagnosticStage: () => { options.command = "changed-python"; options.cwd = "changed-worker"; options.env.SYNTHETIC_VALUE = "changed"; options.installTimeoutMs = 1; options.requirementsFile = "changed.txt"; options.torchPackageSpecifier = "changed-torch"; options.torchIndexesByBackend.cpu = "https://invalid.example"; },
+      spawnSyncImplementation: ((command: string, args: readonly string[], dispatch: any) => {
+        calls.push({ command, cwd: dispatch.cwd, timeout: dispatch.timeout, value: dispatch.env?.SYNTHETIC_VALUE, args: [...args] });
+        if (args[1]?.includes("asb:worker-dependency-probe")) return createSpawnSyncResult({ status: 1, stderr: "No module named 'pyarrow'" });
+        if (args[1]?.includes("asb:torch-install-probe")) return createSpawnSyncResult({ stdout: JSON.stringify({ installed: false }) });
+        if (args[0] === "-m" && args.includes("--upgrade")) return createSpawnSyncResult();
+        return base(command, args);
+      }) as any };
+    ensurePythonRuntimeWorkerDependencies(options);
+    expect(calls.every(call => ["python", "nvidia-smi", "rocminfo"].includes(call.command) && call.cwd === "worker" && call.timeout === 1234 && call.value === "original")).toBe(true);
+    expect(calls.some(call => call.args.includes("requirements.txt"))).toBe(true);
+    expect(calls.some(call => call.args.includes("torch-original"))).toBe(true);
+    expect(calls.some(call => call.args.includes("changed.txt") || call.args.includes("changed-torch") || call.args.includes("https://invalid.example"))).toBe(false);
+  });
+
+  it("observes every real worker command in order and preserves the existing final outcome projection", () => {
+    const events: Readonly<PythonRuntimePreparationDiagnostic>[] = [];
+    const fixture = outcomeFixture();
+    const spawn = createSpawnSyncImplementation((command, args) => {
+      expect(events.at(-1)?.data.phase).toBe("entered");
+      return fixture(command, args);
+    });
+    ensurePythonRuntimeWorkerDependencies({ command: "python", cwd: "private-runtime-directory", env: { PRIVATE_TOKEN: privateMarker }, platform: "win32", spawnSyncImplementation: spawn as any, onDiagnosticStage: event => { events.push(event); } });
+    const entered = events.filter(event => event.data.phase === "entered");
+    expect(entered.map(event => event.stage)).toEqual(["inspect-environment", "probe-pip", "probe-write-access", "probe-worker-dependencies", "detect-accelerator-nvidia", "detect-accelerator-rocm", "probe-torch", "verify-torch"]);
+    expect(entered.at(-1)?.data.backend).toBe("cpu");
+    expect(events.length).toBe(2 * spawn.mock.calls.length);
+    expect(events.every(event => event.operation === "worker")).toBe(true);
+    expect(JSON.stringify(events)).not.toContain(privateMarker);
+    expect(JSON.stringify(events)).not.toContain("private-runtime-directory");
+    assertMinimalOutcomes(readPythonRuntimeDependencySessionOutcomes().find(row => row.operation === "worker"));
+  });
+
+  it("isolates rejected observers in model-training checks without adding worker or Torch commands", async () => {
+    const events: Readonly<PythonRuntimePreparationDiagnostic>[] = [];
+    ensurePythonRuntimeModelTrainingDependencies({ command: "python", platform: "linux", spawnSyncImplementation: outcomeFixture() as any, onDiagnosticStage: event => { events.push(event); return Promise.reject(new Error(privateMarker)); } });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(events.filter(event => event.data.phase === "entered").map(event => event.stage)).toEqual(["inspect-environment", "probe-pip", "probe-model-training-dependencies"]);
+    expect(events.every(event => event.operation === "model-training")).toBe(true);
+    assertMinimalOutcomes(readPythonRuntimeDependencySessionOutcomes().find(row => row.operation === "model-training"));
+  });
+
+  it("distinguishes a returned failed command from a dispatch exception without copying either error", () => {
+    const returned: Readonly<PythonRuntimePreparationDiagnostic>[] = [];
+    expect(() => ensurePythonRuntimeWorkerDependencies({ command: "python", platform: "linux", spawnSyncImplementation: outcomeFixture("inspect") as any, onDiagnosticStage: event => { returned.push(event); } })).toThrow();
+    expect(returned.map(event => event.data.phase)).toEqual(["entered", "returned"]);
+    expect(returned.every(event => event.outcome === undefined && event.error === undefined)).toBe(true);
+    const thrown: Readonly<PythonRuntimePreparationDiagnostic>[] = [];
+    const original = new Error(privateMarker);
+    let failure: unknown;
+    try {
+      ensurePythonRuntimeWorkerDependencies({ command: "python", platform: "linux", spawnSyncImplementation: (() => { throw original; }) as any, onDiagnosticStage: event => { thrown.push(event); throw new Error("observer-private"); } });
+    } catch (error) { failure = error; }
+    expect(failure).toBe(original);
+    expect(thrown.map(event => event.data.phase)).toEqual(["entered", "threw"]);
+    expect(JSON.stringify([...returned, ...thrown])).not.toContain(privateMarker);
+    assertMinimalOutcomes(readPythonRuntimeDependencySessionOutcomes().find(row => row.operation === "worker"));
+  });
+
+  it("ignores a diagnostic getter failure and preserves all ordinary setup commands", () => {
+    const fixture = outcomeFixture();
+    const options = { command: "python", platform: "linux" as const, spawnSyncImplementation: fixture as any };
+    Object.defineProperty(options, "onDiagnosticStage", { get() { throw new Error(privateMarker); } });
+    ensurePythonRuntimeWorkerDependencies(options);
+    expect(fixture.mock.calls.length).toBe(7);
+    assertMinimalOutcomes(readPythonRuntimeDependencySessionOutcomes().find(row => row.operation === "worker"));
+  });
+});
 
 function outcomeFixture(failure?: "inspect" | "worker" | "training" | "malformed", fallback = false) {
   let installAttempts = 0;

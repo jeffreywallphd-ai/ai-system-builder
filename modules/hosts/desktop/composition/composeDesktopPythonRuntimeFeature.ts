@@ -31,7 +31,7 @@ export async function composeDesktopPythonRuntimeFeature(
     createPythonRuntimeAdapterFoundation,
     ensurePythonRuntimeContextDependencies,
     ensurePythonRuntimeModelTrainingDependencies,
-    ensurePythonRuntimeWorkerDependencies,
+    preparePythonRuntimeEnvironment,
   } = await import("../../../adapters/runtime/python");
   const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
   const pythonRuntimeBaseUrl = resolvePythonRuntimeBaseUrl();
@@ -85,12 +85,7 @@ export async function composeDesktopPythonRuntimeFeature(
               cwd?: string;
               env?: NodeJS.ProcessEnv;
             }) {
-              await ensurePythonRuntimeContextDependencies({
-                command: context.command,
-                cwd: context.cwd,
-                env: context.env,
-              });
-              ensurePythonRuntimeWorkerDependencies({
+              await preparePythonRuntimeEnvironment({
                 command: context.command,
                 cwd: context.cwd,
                 env: context.env,

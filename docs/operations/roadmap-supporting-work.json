@@ -2267,7 +2267,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2286,7 +2286,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -11479,6 +11479,51 @@
       "scope": "Bounded pre-import worker facts and owned-browser role diagnostics passed six focused source checks and independent review, committed asda079406. A separate reviewed V5 execution collected both browser snapshots and passed the first normal/forced Data surface at1440/320px.",
       "limitations": [
         "The V5 attempt failed the unchanged1GiB process-commit limit. No wrapper startup fact or final browser/nested result was available; native400 is unobserved and Desktop did not start. All93 enclosed processes and outer handles/streams retired. No allocating role or PyTorch cause is established. This source support and failed observation do not qualify app journeys, offload or a parent roadmap. Accepted accuracy remains closed; full software tests remain deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-real-host-roundtrips",
+      "work_id": "observe-owned-ui-startup-with-fixed-memory-limits",
+      "work_criteria": [
+        "fixed-envelope-ui-observation-is-complete-and-published-honestly"
+      ],
+      "receipt_digest": "181fac7fe06004d13b0bf9e5236b9bf09f700d2710d96eca3f8113a3f157de63",
+      "review_digest": "3e68dbe015a317db67d3dfaed17ed5cb35b35c2ef4f719fad8da2e2e4ec5ecf1",
+      "scope": "The V5 observation and publication work passed its focused source checks and independent review, committed as29fb5ffc. The actual run passed the first Data accessibility surface at ordinary and forced1440/320px and collected both browser role snapshots. All93 enclosed processes and the original outer handles and streams retired after the resource stop.",
+      "limitations": [
+        "The actual V5 host trial failed the unchanged1GiB process-commit limit. No wrapper startup fact or final nested UI report was available; native400 is unobserved and Desktop did not start. The allocating role and PyTorch cause remain unknown. This completed observation work is historical support only, not app, offload, current-candidate or parent qualification. Accepted model accuracy stays closed and full software tests remain deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "observe-owned-ui-startup-with-fixed-memory-limits",
+      "work_criteria": [
+        "fixed-envelope-ui-observation-is-complete-and-published-honestly"
+      ],
+      "receipt_digest": "181fac7fe06004d13b0bf9e5236b9bf09f700d2710d96eca3f8113a3f157de63",
+      "review_digest": "3e68dbe015a317db67d3dfaed17ed5cb35b35c2ef4f719fad8da2e2e4ec5ecf1",
+      "scope": "The V5 observation and publication work passed its focused source checks and independent review, committed as29fb5ffc. The actual run passed the first Data accessibility surface at ordinary and forced1440/320px and collected both browser role snapshots. All93 enclosed processes and the original outer handles and streams retired after the resource stop.",
+      "limitations": [
+        "The actual V5 host trial failed the unchanged1GiB process-commit limit. No wrapper startup fact or final nested UI report was available; native400 is unobserved and Desktop did not start. The allocating role and PyTorch cause remain unknown. This completed observation work is historical support only, not app, offload, current-candidate or parent qualification. Accepted model accuracy stays closed and full software tests remain deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "observe-owned-ui-startup-with-fixed-memory-limits",
+      "work_criteria": [
+        "fixed-envelope-ui-observation-is-complete-and-published-honestly"
+      ],
+      "receipt_digest": "181fac7fe06004d13b0bf9e5236b9bf09f700d2710d96eca3f8113a3f157de63",
+      "review_digest": "3e68dbe015a317db67d3dfaed17ed5cb35b35c2ef4f719fad8da2e2e4ec5ecf1",
+      "scope": "The V5 observation and publication work passed its focused source checks and independent review, committed as29fb5ffc. The actual run passed the first Data accessibility surface at ordinary and forced1440/320px and collected both browser role snapshots. All93 enclosed processes and the original outer handles and streams retired after the resource stop.",
+      "limitations": [
+        "The actual V5 host trial failed the unchanged1GiB process-commit limit. No wrapper startup fact or final nested UI report was available; native400 is unobserved and Desktop did not start. The allocating role and PyTorch cause remain unknown. This completed observation work is historical support only, not app, offload, current-candidate or parent qualification. Accepted model accuracy stays closed and full software tests remain deferred."
       ]
     }
   ]

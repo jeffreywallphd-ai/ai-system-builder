@@ -23,6 +23,37 @@ external paths, directory links and inputs larger than 16 KiB. Offline flags,
 launch authentication and production runtime dependency preparation remain active.
 Failure records contain closed error categories, not source data or exceptions.
 
+## Observing dependency preparation
+
+The private server composition calls the real shared Context-then-Worker
+preparer. It does not skip heavy imports, replace dependency checks or relax
+memory limits. Both ordinary hosts use that same helper, but this composition
+must be reported as a controlled override. Source unit checks do not qualify an
+actual host run.
+
+Before a dependency command is dispatched, a synchronous sink can write its
+closed stage label. Actual command return or throw has a separate record.
+`returned` never means success. No command, path, environment, output, error,
+credential or process ID is included. Unavailable diagnostics cannot change the
+underlying preparation result or establish which process reached a memory limit.
+
+Each server session exclusively creates `provided-server-cache-1` or
+`provided-server-cache-2`. An existing cache is refused without adoption or
+inspection of its contents. Ordinary ancestor/cache identities are checked before
+and after bounded writes. This is not a native filesystem fence. At most 256
+exclusive records of at most 1 KiB are written with flush and acknowledged close.
+Stages, sequence and paired phase labels must agree. An uncertain write or close
+fences later records; partial files are retained without deletion, name reuse or
+a second close attempt. Source revision and controlled-composition labels scope
+each record. Neither an observation nor a completed journal grants readiness,
+process ownership, protected accounting, restart authority or roadmap completion.
+
+The preparer validates the fixed worker command, arguments, packaged worker
+directory, source, cache, offline flags and non-privileged loopback port before
+delegation. Production rejects this private composition. Launch credentials are
+rotated by the original foundation after preparation; no pre-launch token is
+required or recorded. Existing real-host deadlines and resource limits remain.
+
 The browser test uses a dedicated organization and the production local SQLite
 adapter through an explicit test-only composition seam. The Settings restart
 action closes background tasks, the listener, composition persistence and the

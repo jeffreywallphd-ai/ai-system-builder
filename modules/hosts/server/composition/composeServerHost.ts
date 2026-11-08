@@ -32,7 +32,7 @@ import {
   createPythonParquetDatasetReviewAdapter,
   createPythonContextArtifactRuntimeAdapter,
   ensurePythonRuntimeContextDependencies,
-  ensurePythonRuntimeWorkerDependencies,
+  preparePythonRuntimeEnvironment,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
 import {
@@ -1877,12 +1877,7 @@ export function composeServerHost(
           cwd: pythonRuntimeWorkerDirectory,
           env: pythonRuntimeEnvironment,
           prepareRuntimeEnvironment: pythonRuntimeEnvironmentPreparer ?? (async (context) => {
-            await ensurePythonRuntimeContextDependencies({
-              command: context.command,
-              cwd: context.cwd,
-              env: context.env,
-            });
-            ensurePythonRuntimeWorkerDependencies({
+            await preparePythonRuntimeEnvironment({
               command: context.command,
               cwd: context.cwd,
               env: context.env,
