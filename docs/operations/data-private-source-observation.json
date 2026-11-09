@@ -1,0 +1,73 @@
+{
+  "schema_version": "data-private-source-observation-v1",
+  "status": "reviewed-component-observation-parent-pending",
+  "repository": "OpenFinAL/ai-system-builder-test",
+  "product_commit": "83c3118ad75a8677c638d97429a9c402838c2ea8",
+  "observed_product_source_digest": "505402cf3b239895e04e18f41d192849967b0c2a933786c2f2e12c6a8237e81c",
+  "operator_sha256": "e3fde52fd96d146a58e27f71c9d2f9550b0e226ca7cb826f90772308a634b356",
+  "effect_plan_sha256": "f9c2a8128b3577ad1534f9322afe94c517601565a3df0affa0ab989279aa43cd",
+  "actual_observation_sha256": "38a5ccd14fa812fdbd365a7a51f8bcc78cfb0e634977e0dfc5361f75f189f307",
+  "independent_outcome_review_sha256": "06c09757b47c66fe35675a6c92c44083232c1d9bd39ba01a9f9e9aab9ef8b000",
+  "observed": {
+    "status": "evidence-collected-review-required",
+    "stage": "observation-finished",
+    "credential_configured": true,
+    "private_before": true,
+    "private_after": true,
+    "counts": {
+      "requests": 5,
+      "privacy": 2,
+      "convertedRef": 1,
+      "mainRef": 1,
+      "tree": 1
+    },
+    "statuses": [
+      {
+        "operation": "privacy",
+        "status": 200
+      },
+      {
+        "operation": "converted-ref",
+        "status": 404
+      },
+      {
+        "operation": "main-ref",
+        "status": 200
+      },
+      {
+        "operation": "tree",
+        "status": 200
+      },
+      {
+        "operation": "privacy",
+        "status": 200
+      }
+    ],
+    "elapsed_ms": 958
+  },
+  "selection": {
+    "outcome": "file-selection-pending",
+    "error_code": "validation"
+  },
+  "provider_writes": 0,
+  "file_downloads": 0,
+  "scope": "One read-only actual production adapter and installed Hub client observation of the already-authorized private synthetic test repository. No mounted app, model, provider write or full-system test.",
+  "limits": [
+    "Metadata facts never qualify the real import interface, localization, large-file bounds, recovery, native process/filesystem/socket cleanup or any parent criterion.",
+    "The validation result does not distinguish missing Parquet files from an invalid listing. The agent must collect bounded diagnostic facts before choosing the next fix or fixture action.",
+    "An unavailable or absent selection remains pending. Preserve old failures, completed model accuracy and OCR, and deferred combined testing.",
+    "A subsequent synthetic timeout/cancellation probe exposed one unhandled promise rejection in this source snapshot. Its narrow source repair is pending. Historical checks do not qualify this unresolved edge or native cleanup."
+  ],
+  "parent_qualification_granted": false,
+  "known_source_findings": [
+    {
+      "id": "late-cancellation-promise-rejection",
+      "status": "pending-source-repair",
+      "source_commit": "83c3118ad75a8677c638d97429a9c402838c2ea8",
+      "synthetic_probe_sha256": "263176ea84e27e2f4323e896f3c28c64d5624c4cddb8197201201ad48caa5944",
+      "synthetic_result_sha256": "2f2eb20da7985e1face327d5297c3821007a4b31282f9c6c12a96606b4be892c",
+      "unhandled_rejections_observed": 1,
+      "scope": "Synthetic local stream/clock race only. No provider, credential, model, app or native qualification effect."
+    }
+  ]
+}

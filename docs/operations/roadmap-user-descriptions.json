@@ -16554,6 +16554,43 @@
           "These local fixes do not complete the roadmap. Earlier failures remain recorded. Completed model accuracy tests stay closed. Full software testing remains deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "adeed0b8e96d68ec849861338ec5fd1f9b738e6671e296078912c0c959192d4b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser checks converted files first. It can use original Parquet files when the converted branch is absent.",
+          "It can also use original files when the complete, valid converted file list is empty. An access error or an incomplete list does not allow that change.",
+          "The browser keeps one repository and a fixed version. It limits response sizes, pages and time. These changes are committed.",
+          "These are earlier local test results. They do not cover the later timeout cleanup error or the real app import steps."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "de00e9b4238623622d75ce080ffd41a46ed6d8214ae53936df3983f116913e47",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action is needed from you for this work.",
+          "The agent must finish the app import, large-file, restart, cancellation and cleanup checks.",
+          "These source checks do not complete the roadmap. Earlier failures stay recorded. Completed model accuracy and OCR checks stay closed. Full software testing remains deferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f67e3afdd76a70de6e22c4844bd66640afd2eab0e42550b03142f22a65a49975",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent found a timeout cleanup error in a synthetic test.",
+          "The caller gets a safe error, but another error can go unhandled.",
+          "The agent must fix that error and run focused tests. This work is pending. No action is needed from you."
+        ]
+      }
     }
   ]
 }

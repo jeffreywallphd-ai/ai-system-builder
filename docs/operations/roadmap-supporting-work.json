@@ -11671,6 +11671,48 @@
       "limitations": [
         "This local source correction neither reproduces nor diagnoses the unavailable work PC. Agent PATH is not app runtime evidence. Copying has no runtime-start, install, probe or provider effect. Preserve failed3528, all180 old source pins, unrun real-host/provider/native/file-link checks and separate low-memory protection/resource qualification. No parent or current aggregate qualification is granted; accepted model accuracy stays closed and full software testing remains deferred."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "source-scope-ui-remains-simple",
+      "work_id": "qualify-bounded-parquet-discovery-and-routing",
+      "work_criteria": [
+        "converted-defaults-stay-compatible",
+        "native-source-selection-is-exact",
+        "metadata-and-pagination-confine-credentials",
+        "whole-browse-is-finite-and-safe-to-fail",
+        "real-client-fixtures-cover-default-and-denials",
+        "canonical-guidance-and-routing-match"
+      ],
+      "receipt_digest": "f7d191a9d12d4af5dbbf54c3cfb4a73b4901ee47883fc6e8dc358c9176b7f95d",
+      "review_digest": "c9599cbdaae314f240eaa40852f12ad46ad6a3240ce7bb2fce9a674ae63f94ec",
+      "scope": "Committed83c3118 preserves converted-first browsing and immutable revisions. Original Parquet is considered only after an exact missing ref or a complete valid empty listing. Metadata keeps finite time/byte/page budgets and exact HTTPS origin/repository/commit fences. Installed-client fixtures, related regressions, desktop types, five source checks and full12-path review passed. These are historical local results; a later cancellation race remains pending.",
+      "limitations": [
+        "Local implementation support only. Real private-source observation is recorded separately; mounted Desktop/Thin Client import and localization, large-file memory/progress/resume, robots, cancellation/cleanup and advanced runtime evidence remain separate technical work. No parent/current-aggregate pass, app/native resource or hostile filesystem/network qualification, write authority or model-quality rerun is granted. Preserve earlier failures; accepted accuracy/OCR stay closed and combined testing remains deferred.",
+        "A subsequent synthetic timeout/cancellation probe exposed one unhandled promise rejection in this source snapshot. Its narrow source repair is pending. Historical checks do not qualify this unresolved edge or native cleanup."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "qualify-bounded-parquet-discovery-and-routing",
+      "work_criteria": [
+        "converted-defaults-stay-compatible",
+        "native-source-selection-is-exact",
+        "metadata-and-pagination-confine-credentials",
+        "whole-browse-is-finite-and-safe-to-fail",
+        "real-client-fixtures-cover-default-and-denials",
+        "canonical-guidance-and-routing-match"
+      ],
+      "receipt_digest": "f7d191a9d12d4af5dbbf54c3cfb4a73b4901ee47883fc6e8dc358c9176b7f95d",
+      "review_digest": "c9599cbdaae314f240eaa40852f12ad46ad6a3240ce7bb2fce9a674ae63f94ec",
+      "scope": "Committed83c3118 preserves converted-first browsing and immutable revisions. Original Parquet is considered only after an exact missing ref or a complete valid empty listing. Metadata keeps finite time/byte/page budgets and exact HTTPS origin/repository/commit fences. Installed-client fixtures, related regressions, desktop types, five source checks and full12-path review passed. These are historical local results; a later cancellation race remains pending.",
+      "limitations": [
+        "Local implementation support only. Real private-source observation is recorded separately; mounted Desktop/Thin Client import and localization, large-file memory/progress/resume, robots, cancellation/cleanup and advanced runtime evidence remain separate technical work. No parent/current-aggregate pass, app/native resource or hostile filesystem/network qualification, write authority or model-quality rerun is granted. Preserve earlier failures; accepted accuracy/OCR stay closed and combined testing remains deferred.",
+        "A subsequent synthetic timeout/cancellation probe exposed one unhandled promise rejection in this source snapshot. Its narrow source repair is pending. Historical checks do not qualify this unresolved edge or native cleanup."
+      ]
     }
   ]
 }
