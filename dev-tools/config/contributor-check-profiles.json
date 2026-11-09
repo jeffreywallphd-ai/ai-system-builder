@@ -1535,7 +1535,9 @@
         "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
         "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
         "apps/server/src/tests/create-server.integration.test.ts",
-        "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts"
+        "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts",
+        "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+        "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts"
       ],
       "source_paths": [
         "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
@@ -1582,7 +1584,12 @@
         "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
         "modules/adapters/transport/README.md",
         "apps/server/src/createServer.ts",
-        "modules/hosts/server/README.md"
+        "modules/hosts/server/README.md",
+        "modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter.ts",
+        "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+        "modules/adapters/storage/huggingface/datasetParquetBrowseSession.ts",
+        "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts",
+        "modules/adapters/storage/huggingface/README.md"
       ]
     },
     "ocr-provider-contract": {

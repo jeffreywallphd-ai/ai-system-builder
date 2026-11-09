@@ -1326,3 +1326,27 @@ records, stored bytes, ordered values and exact source/parent/recipe/report
 lineage before and after the existing restart. The private fixed CSV admission
 delegates to production preparation/review. Focused fixture/oracle/collection
 passes do not establish real-window, worker, native retirement or parent closure.
+
+## Bounded Hugging Face dataset-file discovery
+
+Dataset-file browsing uses the existing provider port and descriptor shape.
+It first resolves the converted Parquet ref to a full immutable commit. Only an
+actual missing-ref response or a valid, completely consumed listing with no
+Parquet files permits the same repository's `main` ref to be resolved and listed.
+Original Parquet files do not require the provider's automatic conversion service.
+Auth, malformed metadata, unsafe paths, incomplete pages, server failures and
+timeouts do not authorize the alternative. Listing never localizes data.
+
+The adapter owns one 15-second operation deadline before token and SDK waits.
+It captures one token and uses the installed Hub client with a private fetch
+session. Every metadata and pagination URL is restricted to the selected HTTPS
+Hub origin, repository and exact commit. Responses reject redirects and URL
+substitution. Next-page links are validated and rebuilt before the SDK sees them;
+ambiguous relations, repeated cursors/pages and unexpected query fields fail.
+Revision JSON is limited to 4 KiB, tree pages to 64 KiB and 100 entries, and the
+whole operation to 4 MiB, 64 pages and 66 requests. Chunk and existing inspected
+entry/result counts remain finite and shared across both refs. A failure returns
+no partial file list, aborts work and prevents late replies from issuing requests.
+These cooperative metadata limits do not claim a hard process-memory or OS I/O
+guarantee. Existing workspace authorization and brokered explicit localization
+remain independent. Real provider/UI qualification stays separate.

@@ -2157,3 +2157,22 @@ desktop launcher. All executable tests and previous covered paths remain;
 the coverage union gains only that launcher. Missing or unknown impact still
 keeps generic coverage. Related Data/OCR contract checks remain required, and
 this component adds no real OCR or model-accuracy qualification.
+
+### Current provider-source file selection
+
+The provider-source journeys accept an exact Parquet file returned by the current
+dataset-file selector. This includes the converted ref and original Parquet on
+`main` when the converted ref is absent or its complete valid listing is empty.
+This current rule supersedes the older converted-only fixture restriction above.
+The source declaration still needs the exact full commit, path, byte count and
+hash; localization remains explicit and capped at 4 KiB in this fixture. A
+manifest authorizes no credential access, conversion, upload, new repository or
+external execution. Preserve the existing separate effect/credential authority.
+
+The `ingestion-publication` focused group includes the actual storage adapter and
+the bounded metadata-session tests. They exercise the installed Hub client's
+pagination through synthetic fetch without provider requests or credentials.
+The 15-second deadline includes token and SDK waits. Origin/repository/commit
+checks, streamed metadata limits and shared pagination budgets are independent
+of the later secure-egress dataset download. Source tests grant no provider, UI,
+native, model or roadmap pass; completed model accuracy tests stay closed.

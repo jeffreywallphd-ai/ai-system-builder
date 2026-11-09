@@ -197,3 +197,4 @@
 - `server-host` for Express/API composition.
 - `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.
 - Browser preparation retires workspace/client sessions during commit, admits actions synchronously and checks task/review/page identities. Unknown status retains ownership. See `docs/architecture/data-management.md` and `docs/security/data-management-threat-model.md`.
+- Dataset-file browsing preserves converted-first selection and full commit pins. Only an exact missing converted ref or a complete valid empty listing permits original Parquet in the same repository. One token/deadline and bounded HTTPS origin/repo/commit pagination protect metadata; auth, malformed, incomplete or oversized results never authorize fallback. See the canonical Data architecture and threat model; local tests do not qualify a provider or parent roadmap.

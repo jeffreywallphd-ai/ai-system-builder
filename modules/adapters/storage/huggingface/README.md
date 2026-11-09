@@ -59,16 +59,32 @@ This module contains the first concrete artifact-repo storage provider adapter.
   and concurrency are controlled before localization.
 - The brokered retrieval path is the only download path; there is no unbounded
   `arrayBuffer` fallback.
-- Dataset browsing resolves the provider's converted Parquet ref to a commit
-  SHA, then uses the official Hub client's recursive file listing at that exact
-  revision. Only contained Parquet paths within the configured file and
-  inspection limits are exposed, and later retrieval remains pinned to the SHA.
+- Dataset-file browsing keeps converted-first selection. Only an actual missing
+  converted ref or a completely consumed valid listing with no Parquet files
+  permits original Parquet on the same repository's `main` ref. Each selected
+  ref resolves to a full 40- or 64-character commit before the installed official
+  Hub client lists its files. Existing descriptor and localization contracts stay
+  unchanged; browsing does not download data or require automatic conversion for
+  a repository that already contains Parquet.
+- A private metadata session supplies the client fetch function. It pins HTTPS
+  origin, repository and immutable tree path, rejects redirects and response-URL
+  substitution, and validates/rebuilds next links before credential use. Ambiguous
+  or repeated pages, unsafe paths, auth errors, malformed data, incomplete
+  listings and timeouts cannot authorize fallback or an accepted prefix.
+- One token and one 15-second monotonic deadline cover token/SDK waits and both
+  sources. Bounds are 4 KiB per revision, 64 KiB and 100 entries per tree page,
+  4 MiB total metadata, 64 pages and 66 requests, with finite chunk, inspected-entry
+  and result-file limits. Abort/late-response guards stop further requests and
+  fixed errors exclude raw provider/token/SDK details. These cooperative metadata
+  limits do not supply a hard process-memory or native I/O guarantee.
 - Mutable branch names and malformed revision responses are not accepted as
   provider-ingestion evidence. The legacy converted-Parquet logical URL remains
   readable only for older callers; new browse results use exact repository paths
   and commit revisions.
 - This is intentionally a small provider slice, not full provider lifecycle management.
-- Tests are mock-driven and deterministic (no live network dependency).
+- Tests are deterministic and have no live network dependency. The metadata
+  suite also runs the installed official client's real pagination against a
+  bounded synthetic fetch, with global network access disabled in the fixture.
 - Fail-closed tests cover absent approval, managed denial, private creation, and
   the provider already-exists retry path, plus oversized and disallowed-type
   localization responses.

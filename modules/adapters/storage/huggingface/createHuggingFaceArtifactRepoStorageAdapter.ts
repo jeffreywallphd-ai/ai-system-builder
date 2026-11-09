@@ -15,6 +15,7 @@ import {
   type StoreArtifactInRepoRequest,
 } from "../../../contracts/storage";
 import { SecureEgressBroker } from "../../security/egress";
+import { createDatasetParquetBrowseSession, DatasetBrowseFailure, normalizeDatasetBrowseRepository } from "./datasetParquetBrowseSession";
 
 const HUGGING_FACE_PROVIDER = "huggingface" as const;
 const DEFAULT_REVISION = "main" as const;
@@ -657,23 +658,6 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     return normalized;
   }
 
-  function normalizeDatasetRepository(repository: string): string {
-    const normalized = repository.trim().replace(/^datasets\//i, "");
-    if (!normalized || !normalized.includes("/")) {
-      throw new HuggingFaceAdapterValidationError(
-        "repository must include namespace and dataset name (for example: owner/repo).",
-      );
-    }
-    return normalized;
-  }
-
-  function toDatasetRevisionPath(repository: string, revision: string): string {
-    const [namespace, ...datasetNameSegments] = repository.split("/");
-    const datasetName = datasetNameSegments.join("/");
-    if (!namespace?.trim() || !datasetName.trim()) throw new HuggingFaceAdapterValidationError("repository must include namespace and dataset name (for example: owner/repo).");
-    return `/api/datasets/${encodeURIComponent(namespace.trim())}/${encodeURIComponent(datasetName.trim())}/revision/${encodeURIComponent(revision)}`;
-  }
-
   async function fetchJsonFromHub<T>(
     path: string,
     operation: HuggingFaceOperation,
@@ -1167,51 +1151,73 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     const requestContext = resolveRequestContext(context);
     let accessToken: string | undefined;
     try {
-      accessToken = await getAccessToken();
-      const repository = normalizeDatasetRepository(input.repository);
+      const repository = normalizeDatasetBrowseRepository(input.repository);
+      if (input.revision !== undefined && typeof input.revision !== "string") throw new DatasetBrowseFailure("validation");
       const revision = input.revision?.trim() || DEFAULT_REVISION;
       if (revision !== DEFAULT_REVISION) {
         throw new HuggingFaceAdapterValidationError(
           "Logical parquet browsing currently supports only the default dataset revision.",
         );
       }
-      const revisionPayload = await fetchJsonFromHub<{ sha?: unknown }>(toDatasetRevisionPath(repository, CONVERTED_PARQUET_REVISION), "listDatasetParquetFiles", requestContext, accessToken);
-      const immutableRevision = typeof revisionPayload.sha === "string" ? revisionPayload.sha.trim().toLowerCase() : "";
-      if (!/^[a-f0-9]{7,64}$/.test(immutableRevision)) throw new HuggingFaceAdapterValidationError("Hugging Face did not return an immutable dataset revision.");
-      const hubClient = await resolveHubClient();
-      if (!hubClient.listFiles) throw new HuggingFaceHubClientUnavailableError("The @huggingface/hub client does not support exact-revision file listing.");
-      const versionedFiles: Array<{ repository: string; path: string; revision: string }> = [];
-      let inspectedEntries = 0;
       const maximumInspectedEntries = maximumDatasetParquetFiles * 8 + 64;
-      for await (const entry of hubClient.listFiles({
-        repo: { type: "dataset", name: repository },
-        recursive: true,
-        revision: immutableRevision,
-        accessToken,
-      })) {
-        inspectedEntries += 1;
-        if (inspectedEntries > maximumInspectedEntries) throw new HuggingFaceAdapterValidationError("Dataset file listing exceeds its bounded inspection limit.");
-        if (entry.type !== "file" || !entry.path.toLowerCase().endsWith(".parquet")) continue;
-        const path = normalizePathInRepo({ provider: HUGGING_FACE_PROVIDER, repository, path: entry.path, revision: immutableRevision });
-        if (versionedFiles.some((file) => file.path === path)) continue;
-        if (versionedFiles.length >= maximumDatasetParquetFiles) throw new HuggingFaceAdapterValidationError(`Dataset parquet listing exceeds the ${maximumDatasetParquetFiles}-file limit.`);
-        versionedFiles.push({ repository, path, revision: immutableRevision });
-      }
-      if (versionedFiles.length === 0) throw new HuggingFaceAdapterValidationError("The selected dataset has no parquet files at its immutable converted revision.");
-
+      const session = createDatasetParquetBrowseSession({ repository, hubBaseUrl,
+        fetchImplementation: resolvedFetchImplementation, maximumEntries: maximumInspectedEntries });
+      const listed = await session.run(async () => {
+        accessToken = await getAccessToken();
+        session.authorize(accessToken);
+        const hubClient = await resolveHubClient();
+        if (!hubClient.listFiles) throw new DatasetBrowseFailure("unavailable");
+        let inspectedEntries = 0;
+        async function filesAt(immutableRevision: string) {
+          const files: Array<{ repository: string; path: string; revision: string }> = [];
+          const fetch = session.treeFetch(immutableRevision);
+          for await (const entry of hubClient.listFiles!({
+            repo: { type: "dataset", name: repository }, recursive: true,
+            revision: immutableRevision, accessToken, fetch, hubUrl: session.hubUrl,
+          })) {
+            if (++inspectedEntries > maximumInspectedEntries || !entry || typeof entry !== "object") throw new DatasetBrowseFailure("validation");
+            const { type, path: entryPath, size } = entry;
+            if (!["file", "directory", "unknown"].includes(type) || typeof entryPath !== "string"
+              || !Number.isSafeInteger(size) || size < 0) throw new DatasetBrowseFailure("validation");
+            if (entryPath.length > 1024 || new TextEncoder().encode(entryPath).byteLength > 1024 || /[\u0000-\u001f\u007f\\?#]/.test(entryPath)) throw new DatasetBrowseFailure("validation");
+            let path: string;
+            try { path = normalizePathInRepo({ provider: HUGGING_FACE_PROVIDER, repository, path: entryPath, revision: immutableRevision }); }
+            catch { throw new DatasetBrowseFailure("validation"); }
+            if (path !== entryPath) throw new DatasetBrowseFailure("validation");
+            if (type !== "file" || entryPath.slice(-8).toLowerCase() !== ".parquet") continue;
+            if (files.some(file => file.path === path)) continue;
+            if (files.length >= maximumDatasetParquetFiles) throw new DatasetBrowseFailure("validation");
+            files.push({ repository, path, revision: immutableRevision });
+          }
+          return files;
+        }
+        const converted = await session.readRevision(CONVERTED_PARQUET_REVISION);
+        if (converted) {
+          const files = await filesAt(converted);
+          if (files.length) return { revision: converted, files };
+        }
+        const original = await session.readRevision(DEFAULT_REVISION);
+        if (!original || original === converted) throw new DatasetBrowseFailure("validation");
+        const files = await filesAt(original);
+        if (!files.length) throw new DatasetBrowseFailure("validation");
+        return { revision: original, files };
+      });
       return {
         ok: true as const,
         value: {
           repository,
-          revision: immutableRevision,
-          files: versionedFiles,
+          revision: listed.revision,
+          files: listed.files,
         },
         ...requestContext,
       };
     } catch (error) {
       return {
         ok: false as const,
-        error: toRepoBrowserError(mapUnexpectedHubError("listDatasetParquetFiles", error, accessToken)),
+        error: toRepoBrowserError(error instanceof DatasetBrowseFailure && error.status !== undefined
+          ? mapProviderStatusError("listDatasetParquetFiles", error.status, accessToken, undefined)
+          : createContractError(error instanceof DatasetBrowseFailure && error.kind === "validation" || error instanceof HuggingFaceAdapterValidationError ? "validation" : "unavailable",
+            "Dataset files could not be listed. Check provider access and available Parquet files, then retry.")),
         ...requestContext,
       };
     }

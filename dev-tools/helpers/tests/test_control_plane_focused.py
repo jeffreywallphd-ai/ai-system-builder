@@ -161,6 +161,39 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         plan = catalog.plan(self.root, [adapter], [profile], 'synthetic')
         self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
 
+    def test_ingestion_profile_covers_bounded_provider_browse_without_waiving_unknown_sources(self):
+        import json
+        root = Path(__file__).resolve().parents[3]
+        profile_id = 'ingestion-publication'
+        config = 'dev-tools/config/contributor-check-profiles.json'
+        owned = [
+            'modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter.ts',
+            'modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts',
+            'modules/adapters/storage/huggingface/datasetParquetBrowseSession.ts',
+            'modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts',
+            'modules/adapters/storage/huggingface/README.md',
+        ]
+        data = json.loads((root / config).read_text(encoding='utf-8'))
+        profile = data['profiles'][profile_id]
+        self.assertTrue(set(owned).issubset(profile['source_paths']))
+        self.assertTrue({owned[1], owned[3]}.issubset(profile['test_paths']))
+        self.assertLessEqual(len(profile['source_paths']), 200)
+        self.assertLessEqual(len(profile['test_paths']), 100)
+        commands = focused.profile_commands(root, profile_id)
+        self.assertTrue(any(argv[:4] == ['node', '--import', 'tsx', '--test'] and owned[1] in argv for argv in commands))
+        self.assertTrue(any(argv[:2] == ['node', 'dev-tools/helpers/run_vitest_checks.mjs'] and owned[3] in argv for argv in commands))
+        selected = lambda paths, required: {row['id'] for row in catalog.plan(root, paths, required, 'synthetic-provider-browse')['selected']}
+        required = [profile_id, 'control-plane']
+        self.assertIn(profile_id, selected(owned, required))
+        self.assertNotIn('focused-tests', selected(owned, required))
+        self.assertIn('focused-tests', selected(owned, ['control-plane']))
+        self.assertIn('focused-tests', selected([*owned, 'modules/adapters/storage/huggingface/unowned-provider.ts'], required))
+        self.assertIn('focused-tests', selected(owned, [*required, 'focused-tests']))
+        profile['source_paths'].remove(owned[2])
+        self.put(config, json.dumps(data))
+        incomplete = catalog.plan(self.root, owned, [profile_id], 'synthetic-provider-browse')
+        self.assertIn('focused-tests', {row['id'] for row in incomplete['selected']})
+
     def test_notification_dismiss_focus_profile_runs_only_notification_components(self):
         root = Path(__file__).resolve().parents[3]
         profile = 'notification-dismiss-focus'

@@ -2848,3 +2848,32 @@ evidence. No readiness, allocating-process identity, protected accounting, nativ
 restart authority or roadmap pass follows. Focused synthetic denial tests cover
 these boundaries. Actual controlled-host and native qualification remain separate;
 all resource limits and earlier failed evidence remain intact.
+
+## Dataset-file metadata and pagination authority
+
+The Hugging Face file browser protects the host-owned token, private metadata,
+exact source identity and bounded app resources. Provider JSON, status-like
+exceptions and Link headers are data, never new destination or fallback authority.
+The installed Hub client receives a scoped fetch function that accepts only the
+selected HTTPS origin, repository and immutable tree path. It cannot forward a
+credential to a different origin, repository, revision or unexpected query.
+Redirects, response-URL substitution, ambiguous next relations, malformed cursors
+and repeated pages fail before another credential-bearing request.
+
+Only the actual exact converted-ref 404 response or a fully consumed valid empty
+converted listing permits an exact same-repository `main` lookup. Auth errors,
+tree/page 404s, thrown status objects, incomplete/unsafe metadata, timeouts and
+other failures do not permit it. Revisions require full 40- or 64-character hashes.
+Source file paths remain exact and contained; no caller-controlled mutable ref,
+anonymous retry, implicit download, repository write or visibility change is added.
+
+One captured token and one 15-second monotonic deadline cover token/SDK waits,
+both source lookups, all streamed metadata and iteration. Limits are 4 KiB per
+revision, 64 KiB/100 entries per page, 4 MiB total, 64 pages, 66 requests, 512
+chunks per response and 4096 chunks total, plus existing inspected-entry and file
+limits. Unknown, oversized or unfinished work has no accepted prefix. Abort and
+late-response guards deny further requests. All outward failures use fixed safe
+categories and copy, including token, SDK-loader and iterator failures. They omit
+raw errors, provider payloads, tokens, headers and URLs. Local synthetic tests
+exercise the installed client; actual provider, hostile-network and host/native
+qualification remain separate. Rollback must retain the metadata protections.

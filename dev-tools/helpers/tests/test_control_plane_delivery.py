@@ -409,6 +409,8 @@ isVitestOwnedTestSource('import { it } from "vitest";');
             "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
             "apps/server/src/tests/create-server.integration.test.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts",
+            "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+            "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts",
         ]
         self.assertEqual(profile["test_paths"], expected)
         byte_sources = [
@@ -417,8 +419,13 @@ isVitestOwnedTestSource('import { it } from "vitest";');
         ]
         self.assertTrue(all(path in profile["source_paths"] for path in byte_sources))
         commands = run_focused_checks.profile_commands(root, "ingestion-publication")
-        self.assertEqual([path for command in commands for path in command if path in expected], sorted(expected))
-        self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] for command in commands))
+        node_tests = sorted(expected[:-1])
+        expected_commands = [
+            ["node", "--import", "tsx", "--test", "--", *node_tests[:12]],
+            ["node", "--import", "tsx", "--test", "--", *node_tests[12:]],
+            ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", expected[-1]],
+        ]
+        self.assertEqual(commands, expected_commands)
         config = "dev-tools/config/contributor-check-profiles.json"
         self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"ingestion-publication": profile}}))
         for paths, required, focused in [
