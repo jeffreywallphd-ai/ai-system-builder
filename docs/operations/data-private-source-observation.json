@@ -85,5 +85,102 @@
         "qualification_authority": "none; use the separately governed repair work record for its actual current receipt and review"
       }
     }
-  ]
+  ],
+  "followup_tree_diagnosis": {
+    "work_id": "diagnose-private-parquet-listing-with-bounded-shape-counts",
+    "product_commit": "0b04d8e65dc5858df754b5b5816e41f6cb77b5a6",
+    "observed_product_source_digest": "318e2340442c399ff4a82d15dd7c7f4a0a8a7f3f5b4b7d65e25fcfada55b5272",
+    "actual_diagnosis_sha256": "0639e02e844cd4c724a0563002e50be9b8b5c9c648c266c0918a7ec5665ef382",
+    "independent_outcome_review_sha256": "d52d1e7df15a3762568a8faa99afd22b1981064a6a246255fb8566765472fe28",
+    "effect_plan_sha256": "45311a150abbcc70fd7e8cccb1b6a83a147c5936d9746a88e818824ca1df29b6",
+    "operator_input_hashes": {
+      "observer_rejection_safe.mjs": "c174dd350214a0771a6ddc118ff1326d958b7b0f5d138bc1ba9c37e82d80393d",
+      "observer_rejection_safe.unit.test.mjs": "20ec912ff1f2c8b155a0047436f8560af95c82df5751f95228c82c940c6a39b9",
+      "tree_counts.mjs": "cb28955bda12a4df86117a87e0ab5bfd5b270b18e6e0a4d532a0b2aeab9f9f61",
+      "tree_counts.unit.test.mjs": "f416b685f2357fcac924cdeec8ddb2ee5f9d77ffdba657eaa2533cf736b3b186",
+      "run_diagnosis.mjs": "b995993a7fd9f0ece6f45a43f6c98360dc3a84bf3f428321de077c496359277a"
+    },
+    "observed": {
+      "status": "evidence-collected-review-required",
+      "stage": "observation-finished",
+      "credential_configured": true,
+      "private_before": true,
+      "private_after": true,
+      "selection": {
+        "outcome": "file-selection-pending",
+        "error_code": "validation"
+      },
+      "counts": {
+        "requests": 5,
+        "privacy": 2,
+        "convertedRef": 1,
+        "mainRef": 1,
+        "tree": 1
+      },
+      "statuses": [
+        {
+          "operation": "privacy",
+          "status": 200
+        },
+        {
+          "operation": "converted-ref",
+          "status": 404
+        },
+        {
+          "operation": "main-ref",
+          "status": 200
+        },
+        {
+          "operation": "tree",
+          "status": 200
+        },
+        {
+          "operation": "privacy",
+          "status": 200
+        }
+      ],
+      "tree_summary": {
+        "schema_version": "bounded-private-tree-counts-v1",
+        "tree_requests": 1,
+        "native_tree_chunks_read": 1,
+        "native_tree_bytes_read": 494,
+        "pages": [
+          {
+            "revision": "7bbc6858caacc78253a9d5123bc63b84d34c317a",
+            "has_link": false,
+            "array_valid": true,
+            "entries": 5,
+            "files": 4,
+            "directories": 1,
+            "unknown_types": 0,
+            "invalid_shapes": 0,
+            "invalid_sizes": 0,
+            "invalid_paths": 0,
+            "parquet_candidates": 0
+          }
+        ],
+        "incomplete_pages": 0,
+        "uninspected_tree_responses": 0,
+        "paths_or_payloads_in_summary": false
+      },
+      "elapsed_ms": 1204
+    },
+    "interpretation": {
+      "reason_code": "no-parquet-in-observed-complete-main-listing",
+      "summary": "The observed main revision has a complete bounded listing with no Parquet file candidates. This test repository needs a Parquet fixture for the file-selection journey.",
+      "observed_revision": "7bbc6858caacc78253a9d5123bc63b84d34c317a",
+      "next_action_owner": "agent",
+      "next_action": "Prepare a separately reviewed small synthetic Parquet fixture in the already-authorized private test repository, then run the remaining import checks.",
+      "qualification_granted": false
+    },
+    "provider_writes": 0,
+    "file_downloads": 0,
+    "parent_qualification_granted": false,
+    "limits": [
+      "The finding applies to the recorded immutable main revision. The first observation did not retain its main revision; this is not independent proof that both observations used the identical tree.",
+      "This metadata diagnosis does not prove the import interface, localization, large-file memory/progress/recovery, native filesystem/process/socket cleanup or any parent criterion.",
+      "Preparing a small synthetic Parquet fixture is a separate agent action under the existing repository authority. This GET-only diagnostic grants no write, creation, credential or retry authority.",
+      "Completed model accuracy and OCR stay closed. Full software testing remains deferred."
+    ]
+  }
 }
