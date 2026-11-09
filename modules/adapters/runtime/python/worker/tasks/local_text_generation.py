@@ -780,7 +780,7 @@ def _validate_snapshot_profile_result(
     local_path: str,
 ) -> None:
     if profile.name == GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE.name:
-        _validate_transformers_snapshot_result(local_path)
+        _validate_transformers_snapshot_result(model_config, local_path)
         return
 
     if profile.name != CHECKPOINT_SNAPSHOT_PROFILE.name:
@@ -829,8 +829,83 @@ def _compose_non_chat_prompt(prompt: str, system_prompt: str | None) -> str:
     )
 
 
-def _validate_transformers_snapshot_result(local_path: str) -> None:
-    root = Path(local_path).resolve(strict=True)
+def _is_cache_reparse_point(facts: os.stat_result) -> bool:
+    return stat.S_ISLNK(facts.st_mode) or bool(
+        getattr(facts, "st_file_attributes", 0)
+        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    )
+
+
+def _require_plain_cache_directory(path: Path) -> None:
+    facts = path.lstat()
+    if not stat.S_ISDIR(facts.st_mode) or _is_cache_reparse_point(facts):
+        raise ValueError("Model cache directory is invalid")
+
+
+def _selected_transformers_snapshot(model_id: str, local_path: str) -> tuple[Path, Path]:
+    _assert_huggingface_model_id(model_id)
+    cache = _resolve_huggingface_cache_root()
+    if cache is None:
+        raise ValueError("Selected model cache is unavailable")
+    cache = cache.resolve(strict=True)
+    repository = cache / f"models--{model_id.replace('/', '--')}"
+    snapshots = repository / "snapshots"
+    snapshot = Path(local_path)
+    if not snapshot.is_absolute():
+        raise ValueError("Model snapshot is invalid")
+    parts = snapshot.relative_to(snapshots).parts
+    if len(parts) != 1 or not HUGGINGFACE_SNAPSHOT_REVISION_PATTERN.fullmatch(parts[0]):
+        raise ValueError("Model snapshot is invalid")
+    # Preserve the requested repository name; resolving an alias first could
+    # incorrectly make another repository its authority.
+    for directory in (cache, repository, snapshots, snapshot):
+        _require_plain_cache_directory(directory)
+    if snapshot.resolve(strict=True) != snapshot:
+        raise ValueError("Model snapshot directory is aliased")
+    return snapshot, repository
+
+
+def _resolve_transformers_snapshot_file(root: Path, repository: Path, relative_name: str) -> Path:
+    if not isinstance(relative_name, str) or not 1 <= len(relative_name) <= 1024 or "\\" in relative_name:
+        raise ValueError("Model snapshot file name is invalid")
+    parts = relative_name.split("/")
+    if any(not re.fullmatch(r"[A-Za-z0-9._-]{1,255}", part) or part in {".", ".."} for part in parts):
+        raise ValueError("Model snapshot file name is invalid")
+    candidate = root
+    for part in parts[:-1]:
+        candidate /= part
+        _require_plain_cache_directory(candidate)
+    candidate /= parts[-1]
+    facts = candidate.lstat()
+    if _is_cache_reparse_point(facts):
+        if not stat.S_ISLNK(facts.st_mode):
+            raise ValueError("Model snapshot file link is invalid")
+        target_text = os.readlink(candidate)
+        if len(target_text) > 1024 or Path(target_text).is_absolute():
+            raise ValueError("Model snapshot file link is invalid")
+        target = Path(os.path.normpath(candidate.parent / target_text))
+        blobs = repository / "blobs"
+        if target.parent != blobs or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", target.name):
+            raise ValueError("Model snapshot file link is invalid")
+        # HF uses a direct relative link to this repository's blob. Refuse
+        # alternate spellings that traverse an unverified directory alias.
+        if Path(target_text) != Path(os.path.relpath(target, candidate.parent)):
+            raise ValueError("Model snapshot file link is invalid")
+        _require_plain_cache_directory(blobs)
+        facts = target.lstat()
+        if _is_cache_reparse_point(facts) or candidate.resolve(strict=True) != target:
+            raise ValueError("Model snapshot blob is invalid")
+        candidate = target
+    if not stat.S_ISREG(facts.st_mode) or facts.st_size <= 0:
+        raise ValueError("Model snapshot file is missing or empty")
+    return candidate
+
+
+def _validate_transformers_snapshot_result(model_config: LocalModelConfig, local_path: str) -> None:
+    try:
+        root, repository = _selected_transformers_snapshot(model_config.modelId, local_path)
+    except (OSError, ValueError) as error:
+        raise RuntimeError("Hugging Face model snapshot does not match the selected repository.") from error
     files = {
         item.name: item
         for item in root.iterdir()
@@ -857,24 +932,27 @@ def _validate_transformers_snapshot_result(local_path: str) -> None:
         )
 
     for index_name in weight_indexes:
-        index_path = files[index_name]
-        if index_path.stat().st_size > MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES:
-            raise RuntimeError(
-                "Hugging Face model snapshot is invalid: the model weight index is too large."
-            )
         try:
-            index_payload = json.loads(index_path.read_text(encoding="utf-8"))
+            index_path = _resolve_transformers_snapshot_file(root, repository, index_name)
+            with index_path.open("rb") as stream:
+                index_bytes = stream.read(MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES + 1)
+            if len(index_bytes) > MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES:
+                raise RuntimeError(
+                    "Hugging Face model snapshot is invalid: the model weight index is too large."
+                )
+            index_payload = json.loads(index_bytes.decode("utf-8"))
+            if not isinstance(index_payload, dict):
+                raise ValueError("weight index is invalid")
             weight_map = index_payload.get("weight_map")
             if not isinstance(weight_map, dict) or not weight_map:
                 raise ValueError("weight_map is missing")
-            referenced_files = {value for value in weight_map.values() if isinstance(value, str)}
+            if any(not isinstance(value, str) for value in weight_map.values()):
+                raise ValueError("weight_map file set is invalid")
+            referenced_files = set(weight_map.values())
             if not referenced_files or len(referenced_files) > DEFAULT_HUGGINGFACE_MAX_CACHE_FILES:
                 raise ValueError("weight_map file set is invalid")
             for relative_name in referenced_files:
-                candidate = (root / relative_name).resolve(strict=True)
-                candidate.relative_to(root)
-                if not candidate.is_file() or candidate.stat().st_size <= 0:
-                    raise ValueError("referenced weight shard is missing")
+                _resolve_transformers_snapshot_file(root, repository, relative_name)
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
             raise RuntimeError(
                 "Hugging Face model snapshot is incomplete: one or more model weight shards are missing or invalid."

@@ -105,7 +105,8 @@ class FocusedPythonCollectionTests(unittest.TestCase):
         plan = catalog.plan(root, [*owned, unrelated], ['architecture'], 'synthetic')
         self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
 
-    def test_model_download_profile_runs_only_the_exact_ownership_tests(self):
+    def test_model_download_profile_runs_exact_ownership_and_real_cache_tests(self):
+        import json
         root = Path(__file__).resolve().parents[3]
         profile = 'model-download-ownership'
         adapter = 'modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts'
@@ -113,17 +114,33 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             'modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
             'modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts',
         ]
-        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys(tests, 'fixture')}):
-            self.assertEqual(focused.profile_commands(root, profile), [['node', '--import', 'tsx', '--test', '--', *tests]])
+        worker = 'modules/adapters/runtime/python/worker/tests/test_local_text_generation.py'
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*tests, worker], 'fixture')}):
+            self.assertEqual(focused.profile_commands(root, profile), [
+                ['node', '--import', 'tsx', '--test', '--', *tests],
+                [sys.executable, '-B', '-m', 'unittest', 'discover', '-s', 'modules/adapters/runtime/python/worker/tests', '-p', 'test_local_text_generation.py'],
+            ])
 
         config = 'dev-tools/config/contributor-check-profiles.json'
-        owned = [adapter, config, tests[0], 'modules/adapters/runtime/python/README.md']
-        plan = catalog.plan(root, owned, ['architecture'], 'synthetic')
+        owned = [adapter, config, tests[0], worker,
+                 'modules/adapters/runtime/python/README.md',
+                 'modules/adapters/runtime/python/worker/tasks/local_text_generation.py',
+                 'modules/adapters/runtime/python/worker/README.md',
+                 'docs/architecture/runtime-model.md']
+        plan = catalog.plan(root, owned, [profile, 'architecture'], 'synthetic')
         self.assertIn(profile, [check['id'] for check in plan['selected']])
         self.assertNotIn('focused-tests', [check['id'] for check in plan['selected']])
 
-        unrelated = 'modules/adapters/runtime/python/createPythonRuntimePort.ts'
-        plan = catalog.plan(root, [*owned, unrelated], ['architecture'], 'synthetic')
+        unrelated = 'modules/adapters/runtime/python/unowned-download-source.py'
+        plan = catalog.plan(root, [*owned, unrelated], [profile], 'synthetic')
+        self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
+        plan = catalog.plan(root, owned, [profile, 'focused-tests'], 'synthetic')
+        self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
+
+        incomplete = json.loads((root / config).read_text(encoding='utf-8'))
+        incomplete['profiles'][profile]['source_paths'].remove(adapter)
+        self.put(config, json.dumps(incomplete))
+        plan = catalog.plan(self.root, [adapter], [profile], 'synthetic')
         self.assertIn('focused-tests', [check['id'] for check in plan['selected']])
 
     def test_notification_dismiss_focus_profile_runs_only_notification_components(self):

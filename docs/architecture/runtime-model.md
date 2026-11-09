@@ -1350,3 +1350,15 @@ decoder or lease. Existing and future request views deny reuse. Resource and
 source admission before generation remain separate; completed decoder-output
 validation retains its bounded repair path. This adds no worker-stop authority,
 native protection, borrower-retirement proof or production capability.
+
+Indexed Hugging Face snapshot validation binds the snapshot directory to the
+requested model's exact repository under the canonical configured cache. Copied
+shards remain supported. Index files and shards may link directly to regular
+blobs in that same repository; external, cross-repository and directory/reparse
+aliases are refused. The index read enforces its byte limit before JSON parsing,
+including growth after metadata checks. Every map value and shard is checked.
+These are cooperative filesystem checks, not immutable native-file authority or
+additional cache-deletion authority. Model-free copied-layout and controlled-link
+regressions supply source evidence only. Missing actual file-symlink privilege is
+reported as a filesystem-coverage skip, never a successful linked download,
+provider transfer, native protection, inference or parent-roadmap qualification.

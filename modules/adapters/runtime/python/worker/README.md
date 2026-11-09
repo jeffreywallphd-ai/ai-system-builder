@@ -298,6 +298,16 @@ Implemented task:
     never accepted as downloaded models. Terminal responses use distinct
     sanitized interrupted-versus-invalid-snapshot codes without paths, tokens, or
     provider exception text
+  - binds generic snapshots to the exact requested repository under the canonical
+    configured cache, including copied snapshots. Indexed files and shards may use
+    the standard direct relative links to that repository's own regular blob files;
+    other repositories, external targets and directory/reparse aliases fail closed.
+    Index bytes are read with the existing limit plus one sentinel byte before JSON
+    parsing; every map value and referenced shard must be valid. These cooperative
+    filesystem checks do not provide an immutable native file fence or new cleanup
+    authority. Model-free tests keep the real profile/cache/handle path and replace
+    only Hub transfer. Actual file-symlink cases explicitly skip when privilege is
+    unavailable; controlled link observations do not replace that missing evidence
   - estimates local model weight memory before construction; validates the closed
     memory-only, 1 GiB, or 4 GiB system-memory overflow policy; never applies it
     to CUDA-only placement; and rejects larger shortfalls with a distinct,

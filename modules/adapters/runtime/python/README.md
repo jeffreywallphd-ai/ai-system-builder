@@ -70,7 +70,10 @@ protected storage, readiness, native identity or process-ownership evidence.
   registration. Task, API, and IPC records omit both the handle and path. The
   task adapter drops worker data on unfinished or failed download statuses.
   The `model-download-ownership` check profile runs the exact runtime adapter
-  and model-download use-case tests with synthetic replies.
+  and model-download use-case tests with synthetic replies, plus the real worker
+  cache/profile/index/handle regressions with only synthetic Hub transfer.
+  Missing file-symlink privilege is an explicit filesystem-coverage skip; controlled
+  link observations and copied-file passes do not qualify actual linked downloads.
 - Context generation maps to `generate-context-artifact`; saved-source
   inspection, bounded LanceDB/context-pack verification, and RAG test queries
   map to `context-artifact-operation`. Exact bytes are privately staged and

@@ -72,13 +72,17 @@
     "model-download-ownership": {
       "test_paths": [
         "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
-        "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts"
+        "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
+        "modules/adapters/runtime/python/worker/tests/test_local_text_generation.py"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
         "modules/adapters/runtime/python/README.md",
         "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",
-        "modules/application/use-cases/model/model-download-tasks.use-case.ts"
+        "modules/application/use-cases/model/model-download-tasks.use-case.ts",
+        "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
+        "modules/adapters/runtime/python/worker/README.md",
+        "docs/architecture/runtime-model.md"
       ]
     },
     "offload-resource-lifecycle": {
