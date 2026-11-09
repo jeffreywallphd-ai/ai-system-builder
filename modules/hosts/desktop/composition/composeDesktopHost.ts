@@ -1,3 +1,4 @@
+import { createPythonRuntimeStartupDiagnostics } from "../../../adapters/runtime/python";
 import { captureStudioStart, captureStudioPropose, captureStudioReview, captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../../application/services/asset-studio/capture-studio-requests";
 import { capturePackageInspection, capturePackageAdmission, capturePackageActivation } from "../../../application/services/asset-package/capture-package-commands";
 import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
@@ -495,6 +496,7 @@ export function composeDesktopHost(
   const readSharedModelStorageDirectory = () =>
     readRuntimeSettingString(SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY);
 
+  const pythonStartupDiagnostics = createPythonRuntimeStartupDiagnostics();
   let pythonRuntimeFoundation: DesktopPythonRuntimeFeature | undefined;
   let pythonRuntimeFoundationPromise:
     Promise<DesktopPythonRuntimeFeature> | undefined;
@@ -516,6 +518,7 @@ export function composeDesktopHost(
           now,
           runtimeLogs,
           recordRuntimeLog,
+          startupDiagnostics: pythonStartupDiagnostics,
         });
         const startOwnedPython = feature.supervisor.start.bind(feature.supervisor);
         feature.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
@@ -525,7 +528,7 @@ export function composeDesktopHost(
         );
         pythonRuntimeFoundation = feature;
         return feature;
-      })();
+      })().catch(error => { pythonStartupDiagnostics.compositionFailed(); throw error; });
     }
     return pythonRuntimeFoundationPromise;
   };
@@ -565,12 +568,17 @@ export function composeDesktopHost(
             message:
               "Python runtime health changed: supervisor=stopped, status=unavailable, healthy=false.",
           });
-          return { ...status, logs: [...runtimeLogs] };
+          return { ...status, logs: [...runtimeLogs], startupDiagnostics: pythonStartupDiagnostics.read() };
         }
-        return status;
+        return { ...status, startupDiagnostics: pythonStartupDiagnostics.read() };
       }
-      const resolvedPythonRuntimeFoundation =
-        await pythonRuntimeFoundationPromise;
+      let resolvedPythonRuntimeFoundation: DesktopPythonRuntimeFeature;
+      try { resolvedPythonRuntimeFoundation = await pythonRuntimeFoundationPromise; }
+      catch {
+        return { ...createUnavailablePythonRuntimeStatus({ runtimeLogs,
+          memoryUsagePercent: readMemoryUsagePercent(), cpuUsagePercent: readCpuUsagePercent(),
+          generationCapacity: createGenerationCapacity(false) }), supervisorStatus: "failed", startupDiagnostics: pythonStartupDiagnostics.read() };
+      }
       const supervisorStatus =
         resolvedPythonRuntimeFoundation.supervisor.getStatus();
       let healthy = false;
@@ -644,6 +652,7 @@ export function composeDesktopHost(
           gpuUsagePercent: 0,
         },
         logs: [...runtimeLogs],
+        startupDiagnostics: pythonStartupDiagnostics.read(),
       };
     };
 

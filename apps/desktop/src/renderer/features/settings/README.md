@@ -39,3 +39,10 @@ configured field kinds. Secret draft revision and callback success rules remain.
 Host clients, request ownership, folder selection and model resolution stay in
 this Desktop feature. See the shared field README and thin-client Settings README
 for their separate boundaries.
+
+Python Runtime offers **Copy diagnostics** for its cached, normalized startup report.
+Copy performs no status/control call, interpreter probe, setup, installation or
+provider request. It exports only closed startup/version/stage facts, excluding
+legacy logs, model inventory, paths and credentials. Fixed notification outcomes
+remain owned by the current view; obsolete clipboard completions publish no notice.
+The report describes an observed attempt, not model compatibility or current readiness.

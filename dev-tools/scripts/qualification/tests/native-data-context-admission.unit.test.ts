@@ -174,7 +174,7 @@ print(json.dumps({'selected':sorted(complete),'incomplete_generic':'focused-test
       cwd:path.resolve(__dirname,"../../../.."),env:environment,encoding:"utf8",windowsHide:true,timeout:20_000,maxBuffer:65536,
     });
     expect(result.error).toBeUndefined();expect(result.status).toBe(0);expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toEqual({selected:["agent-support","dataset-version-browser","documentation","ocr-provider-contract","operational-ui"],
+    expect(JSON.parse(result.stdout)).toEqual({selected:["agent-support","control-plane","dataset-version-browser","documentation","ocr-provider-contract","operational-ui"],
       incomplete_generic:true,unknown_generic:true,no_coverage_lost:true,only_added_source:["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts"],native_test_still_executed:true,source_limit:true,test_limit:true});
     expect(io.calls).toBe(0);
   });

@@ -1,4 +1,5 @@
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { createPythonRuntimeStartupDiagnostics } from "../../../adapters/runtime/python";
 import type { DesktopPythonRuntimeLogEntry } from "../../../contracts/ipc";
 import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../../contracts/runtime";
 import {
@@ -14,6 +15,7 @@ import {
 const PYTHON_RUNTIME_STARTUP_TIMEOUT_MS_DEFAULT = 60_000;
 
 export interface ComposeDesktopPythonRuntimeFeatureOptions {
+  startupDiagnostics?: ReturnType<typeof createPythonRuntimeStartupDiagnostics>;
   loggingPort: LoggingPort;
   now: () => string;
   runtimeLogs: DesktopPythonRuntimeLogEntry[];
@@ -32,7 +34,9 @@ export async function composeDesktopPythonRuntimeFeature(
     ensurePythonRuntimeContextDependencies,
     ensurePythonRuntimeModelTrainingDependencies,
     preparePythonRuntimeEnvironment,
+    createPythonRuntimeStartupDiagnostics,
   } = await import("../../../adapters/runtime/python");
+  const diagnostics = options.startupDiagnostics ?? createPythonRuntimeStartupDiagnostics();
   const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
   const pythonRuntimeBaseUrl = resolvePythonRuntimeBaseUrl();
   const configuredPythonRuntimeStartupTimeoutMs = Number(
@@ -77,6 +81,7 @@ export async function composeDesktopPythonRuntimeFeature(
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,
       requiredCapabilities:
         PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
+      onStartupEvent: diagnostics.event,
       ...(shouldPrepareDependencies
         ? {
             async prepareRuntimeEnvironment(context: {
@@ -84,11 +89,17 @@ export async function composeDesktopPythonRuntimeFeature(
               args: readonly string[];
               cwd?: string;
               env?: NodeJS.ProcessEnv;
+              startupToken?: object;
             }) {
               await preparePythonRuntimeEnvironment({
                 command: context.command,
                 cwd: context.cwd,
                 env: context.env,
+                ...(context.startupToken ? {
+                  onDiagnosticStage: (value) => diagnostics.stage(context.startupToken!, value),
+                  onDiagnosticEnvironment: (value) => diagnostics.environment(context.startupToken!, value),
+                  onDiagnosticFailure: (operation, code) => diagnostics.preparationFailed(context.startupToken!, operation, code),
+                } : {}),
               });
             },
           }
@@ -118,6 +129,7 @@ export async function composeDesktopPythonRuntimeFeature(
   });
   return {
     ...foundation,
+    readStartupDiagnostics: diagnostics.read,
     ...(shouldPrepareDependencies
       ? {
           prepareContextEnvironment(

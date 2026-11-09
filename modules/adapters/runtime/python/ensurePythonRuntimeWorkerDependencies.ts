@@ -1,4 +1,6 @@
 import { platform as runtimePlatform } from "node:os";
+import type { PythonStartupEnvironmentFacts } from "./pythonRuntimeStartupDiagnostics";
+import { readPythonStartupVersion } from "../../../contracts/runtime";
 import {
   spawnSync,
   type SpawnSyncReturns,
@@ -18,6 +20,7 @@ export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   /** @deprecated Ignored: a pathname grants no private persistence authority. */
   diagnosticsFile?: string;
   onDiagnosticOutcomes?: (outcomes: PythonDependencyOutcomes) => void | Promise<void>;
+  onDiagnosticEnvironment?: (facts: PythonStartupEnvironmentFacts) => unknown;
   /** Passive trusted session observer; command contents are never supplied. */
   onDiagnosticStage?: PythonRuntimePreparationObserver;
   torchPackageSpecifier?: string;
@@ -36,6 +39,8 @@ interface PythonRuntimeEnvironmentInspection {
   pythonMajor: number;
   pythonMinor: number;
   pythonExecutable: string;
+  huggingfaceHubVersion?: string | null;
+  transformersVersion?: string | null;
 }
 
 interface TorchInstallTarget {
@@ -120,12 +125,27 @@ const ENV_INSPECTION_SCRIPT = `
 import json
 import platform
 import sys
+try:
+  import importlib.metadata as diagnostic_metadata
+except Exception:
+  diagnostic_metadata = None
+def diagnostic_version(name):
+  if diagnostic_metadata is None:
+    return False
+  try:
+    return diagnostic_metadata.version(name)
+  except diagnostic_metadata.PackageNotFoundError:
+    return None
+  except Exception:
+    return False
 print(json.dumps({
   "platform": platform.system(),
   "pythonVersion": ".".join(str(v) for v in sys.version_info[:3]),
   "pythonMajor": int(sys.version_info[0]),
   "pythonMinor": int(sys.version_info[1]),
   "pythonExecutable": sys.executable,
+  "huggingfaceHubVersion": diagnostic_version("huggingface_hub"),
+  "transformersVersion": diagnostic_version("transformers"),
 }))
 `.trim();
 
@@ -307,7 +327,13 @@ function inspectPythonRuntimeEnvironment(
       ? inspectionResult.stdout.trim()
       : "",
   );
-
+  try {
+    void Promise.resolve(options.onDiagnosticEnvironment?.(Object.freeze({
+      pythonVersion: readPythonStartupVersion(parsed.pythonVersion),
+      huggingfaceHubVersion: parsed.huggingfaceHubVersion === null ? null : readPythonStartupVersion(parsed.huggingfaceHubVersion),
+      transformersVersion: parsed.transformersVersion === null ? null : readPythonStartupVersion(parsed.transformersVersion),
+    }))).catch(() => {});
+  } catch { /* Observation cannot change the real inspection. */ }
   return parsed;
 }
 
@@ -966,11 +992,13 @@ function captureWorkerOptions(options: EnsurePythonRuntimeWorkerDependenciesOpti
     platform: options.platform, spawnSyncImplementation: options.spawnSyncImplementation,
   };
   let onDiagnosticOutcomes: EnsurePythonRuntimeWorkerDependenciesOptions["onDiagnosticOutcomes"];
+  let onDiagnosticEnvironment: EnsurePythonRuntimeWorkerDependenciesOptions["onDiagnosticEnvironment"];
   try {
     const observer = options.onDiagnosticOutcomes;
     if (typeof observer === "function") onDiagnosticOutcomes = observer;
   } catch { /* An optional observer cannot replace setup. */ }
-  return Object.freeze({ ...captured, onDiagnosticOutcomes, onDiagnosticStage: readPreparationObserver(options) });
+  try { if (typeof options.onDiagnosticEnvironment === "function") onDiagnosticEnvironment = options.onDiagnosticEnvironment; } catch { /* Optional observer only. */ }
+  return Object.freeze({ ...captured, onDiagnosticOutcomes, onDiagnosticEnvironment, onDiagnosticStage: readPreparationObserver(options) });
 }
 
 export function ensurePythonRuntimeWorkerDependencies(

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createDesktopPythonRuntimeClient, type DesktopPythonRuntimeClient } from "../api/desktopPythonRuntimeClient";
+import { readPythonRuntimeStartupDiagnosticsProperty, serializePythonRuntimeStartupDiagnostics, type PythonRuntimeStartupDiagnostics } from "../../../../../../../modules/contracts/runtime";
+import { useOptionalNotificationCenter } from "../../../../../../../modules/ui/shared/notifications/NotificationProvider";
 
 export interface UsePythonRuntimeFooterOptions {
   enabled: boolean;
   client?: DesktopPythonRuntimeClient;
 }
 export interface UsePythonRuntimeFooterResult {
+  startupDiagnostics?: PythonRuntimeStartupDiagnostics;
+  onCopyDiagnostics: () => Promise<void>;
   statusLabel: string;
   healthLabel: string;
   capabilitiesLabel: string;
@@ -22,13 +26,14 @@ export interface UsePythonRuntimeFooterResult {
   setLogsExpanded: (expanded: boolean) => void;
 }
 type Snapshot = Awaited<ReturnType<DesktopPythonRuntimeClient["readStatus"]>>;
-type Display = Pick<UsePythonRuntimeFooterResult, "statusLabel" | "healthLabel" | "capabilitiesLabel" | "systemResources" | "logs" | "loading" | "error" | "logsExpanded">;
+type Display = Pick<UsePythonRuntimeFooterResult, "statusLabel" | "healthLabel" | "capabilitiesLabel" | "systemResources" | "logs" | "loading" | "error" | "logsExpanded" | "startupDiagnostics">;
 interface Scope {
   live: boolean;
   lease: number;
   revision: number;
   readOwner?: { foreground: boolean };
   actionOwner?: object;
+  copyOwner?: object;
   flight?: { revision: number; promise: Promise<Snapshot> };
 }
 const READ_FAILURE = "Runtime status could not be loaded. Select Refresh to try again.";
@@ -37,7 +42,7 @@ const initialDisplay = (): Display => ({ statusLabel: "unknown", healthLabel: "u
 const percentage = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
 
 // Prepare consumed fields before a React update. No response parsing runs in an updater.
-function prepare(snapshot: Snapshot): Pick<Display, "statusLabel" | "healthLabel" | "capabilitiesLabel" | "systemResources" | "logs"> {
+function prepare(snapshot: Snapshot): Pick<Display, "statusLabel" | "healthLabel" | "capabilitiesLabel" | "systemResources" | "logs" | "startupDiagnostics"> {
   if (!snapshot || !["stopped", "starting", "ready", "failed"].includes(snapshot.supervisorStatus)
       || typeof snapshot.healthy !== "boolean" || !Array.isArray(snapshot.capabilities)
       || !snapshot.capabilities.every(x => typeof x === "string") || !Array.isArray(snapshot.logs)) throw new Error(READ_FAILURE);
@@ -46,10 +51,12 @@ function prepare(snapshot: Snapshot): Pick<Display, "statusLabel" | "healthLabel
     return { timestamp: entry.timestamp, level: entry.level, message: entry.message };
   });
   return { statusLabel: snapshot.supervisorStatus, healthLabel: snapshot.healthy ? "healthy" : "unhealthy", capabilitiesLabel: snapshot.capabilities.length ? snapshot.capabilities.join(", ") : "none", logs,
+    startupDiagnostics: readPythonRuntimeStartupDiagnosticsProperty(snapshot),
     systemResources: { memoryUsagePercent: percentage(snapshot.systemResources?.memoryUsagePercent), cpuUsagePercent: percentage(snapshot.systemResources?.cpuUsagePercent), gpuUsagePercent: percentage(snapshot.systemResources?.gpuUsagePercent) } };
 }
 
 export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): UsePythonRuntimeFooterResult {
+  const notifications = useOptionalNotificationCenter();
   const client = useMemo(() => options.client ?? createDesktopPythonRuntimeClient(), [options.client]);
   const scope = useMemo<Scope>(() => ({ live: false, lease: 0, revision: 0 }), [client, options.enabled]);
   const committed = useRef<Scope | undefined>(undefined);
@@ -64,7 +71,7 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
   useLayoutEffect(() => {
     scope.live = true; scope.lease += 1; committed.current = scope;
     return () => {
-      scope.live = false; scope.lease += 1; scope.readOwner = undefined; scope.actionOwner = undefined;
+      scope.live = false; scope.lease += 1; scope.readOwner = undefined; scope.actionOwner = undefined; scope.copyOwner = undefined;
       if (committed.current === scope) committed.current = undefined;
     };
   }, [scope]);
@@ -143,5 +150,21 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
   }, [options.enabled, setLogsExpanded]);
 
   const display = state.scope === scope && options.enabled ? state : initialDisplay();
-  return { ...display, onStart: () => runControl("start"), onStop: () => runControl("stop"), onRestart: () => runControl("restart"), onClearLogs: () => runControl("clear-logs"), onRefresh: () => runRefresh(false), setLogsExpanded };
+  const onCopyDiagnostics = useCallback(async () => {
+    if (!current() || scope.copyOwner) return;
+    const owner = {}, lease = scope.lease, revision = scope.revision;
+    scope.copyOwner = owner;
+    const owns = () => current() && scope.copyOwner === owner && scope.lease === lease && scope.revision === revision;
+    const publish = (message: string, tone: "success" | "warning" | "error") => {
+      if (owns()) notifications?.publish({ title: "Runtime diagnostics", message, tone, source: "Python Runtime" });
+    };
+    try {
+      const text = serializePythonRuntimeStartupDiagnostics(display.startupDiagnostics);
+      if (!text || !navigator.clipboard?.writeText) { publish("Diagnostics are unavailable. Under Python Runtime, select Refresh, then try Copy diagnostics again.", "warning"); return; }
+      await navigator.clipboard.writeText(text);
+      publish("Runtime diagnostics copied.", "success");
+    } catch { publish("Diagnostics could not be copied. Check clipboard access and try again.", "error"); }
+    finally { if (scope.copyOwner === owner) scope.copyOwner = undefined; }
+  }, [current, display.startupDiagnostics, notifications?.publish, scope]);
+  return { ...display, onCopyDiagnostics, onStart: () => runControl("start"), onStop: () => runControl("stop"), onRestart: () => runControl("restart"), onClearLogs: () => runControl("clear-logs"), onRefresh: () => runRefresh(false), setLogsExpanded };
 }

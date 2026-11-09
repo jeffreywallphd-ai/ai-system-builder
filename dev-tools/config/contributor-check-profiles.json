@@ -73,7 +73,20 @@
       "test_paths": [
         "modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts",
         "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
-        "modules/adapters/runtime/python/worker/tests/test_local_text_generation.py"
+        "modules/adapters/runtime/python/worker/tests/test_local_text_generation.py",
+        "modules/contracts/runtime/python-runtime-startup-diagnostics.unit.test.ts",
+        "modules/contracts/ipc/tests/desktop-python-runtime-contract.unit.test.ts",
+        "modules/adapters/runtime/python/tests/pythonRuntimeStartupDiagnostics.unit.test.ts",
+        "modules/adapters/runtime/python/tests/preparePythonRuntimeEnvironment.unit.test.ts",
+        "modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts",
+        "modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/desktopPythonStartupDiagnostics.unit.test.ts",
+        "modules/adapters/transport/ipc-electron/tests/register-python-runtime-ipc.unit.test.ts",
+        "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
+        "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
+        "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
+        "modules/hosts/desktop/composition/tests/desktopPythonRuntimeHelpers.unit.test.ts",
+        "modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts"
       ],
       "source_paths": [
         "dev-tools/config/contributor-check-profiles.json",
@@ -82,7 +95,27 @@
         "modules/application/use-cases/model/model-download-tasks.use-case.ts",
         "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
         "modules/adapters/runtime/python/worker/README.md",
-        "docs/architecture/runtime-model.md"
+        "docs/architecture/runtime-model.md",
+        "modules/contracts/runtime/python-runtime-startup-diagnostics.ts",
+        "modules/contracts/runtime/index.ts",
+        "modules/contracts/ipc/desktop-python-runtime-contract.ts",
+        "modules/adapters/runtime/python/pythonRuntimeStartupDiagnostics.ts",
+        "modules/adapters/runtime/python/index.ts",
+        "modules/adapters/runtime/python/preparePythonRuntimeEnvironment.ts",
+        "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
+        "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+        "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+        "modules/hosts/desktop/composition/desktopPythonRuntimeHelpers.ts",
+        "modules/hosts/desktop/composition/composeDesktopHost.ts",
+        "apps/desktop/src/renderer/lib/desktopApi.ts",
+        "apps/desktop/src/renderer/features/python-runtime/api/desktopPythonRuntimeClient.ts",
+        "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
+        "apps/desktop/src/renderer/features/python-runtime/components/PythonRuntimeFooter.tsx",
+        "apps/desktop/src/renderer/features/models/hooks/useModelsFeature.ts",
+        "modules/hosts/desktop/composition/README.md",
+        "apps/desktop/src/renderer/features/settings/README.md",
+        "docs/context/packs/runtime.pack.md",
+        "modules/adapters/runtime/python/createPythonRuntimePort.ts"
       ]
     },
     "offload-resource-lifecycle": {

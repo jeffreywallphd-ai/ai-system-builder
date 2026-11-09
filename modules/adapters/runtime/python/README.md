@@ -349,3 +349,12 @@ This is an uncomposed native component. Synthetic focused tests do not qualify
 actual Windows enforcement, shared disk accounting, retained restart, model
 worker recovery or production offload. See the worker guide and owning runtime
 architecture for the remaining checks. Accepted model accuracy stays closed.
+
+Startup diagnostics are instance-owned, bounded session facts from actual supervisor
+start attempts. Preparation stages and existing Worker inspection metadata never
+grant readiness. Specific Context failures survive generic startup failure; earlier
+Context refusal leaves Python/package versions unknown. Reads never probe, install
+or replay entered stages. Observed Hub/Transformers versions are compared with the
+unchanged requirements pins without new repair triggers or compatibility claims.
+The report retains the latest 64 stage observations and marks truncation. Retired
+means the attempt observer was retired, not that a worker process exited.

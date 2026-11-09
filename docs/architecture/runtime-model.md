@@ -1362,3 +1362,21 @@ additional cache-deletion authority. Model-free copied-layout and controlled-lin
 regressions supply source evidence only. Missing actual file-symlink privilege is
 reported as a filesystem-coverage skip, never a successful linked download,
 provider transfer, native protection, inference or parent-roadmap qualification.
+
+Desktop startup diagnostics use the existing status operation and a closed optional
+report. The host retains instance-owned facts outside lazy foundation composition,
+including a rejected composition. Actual supervisor admission supplies each attempt
+identity; coalesced/skipped starts add no attempt, and retired callbacks cannot
+replace later facts. Context/Worker observations preserve original setup policy and
+errors. Only the existing explicit Worker inspection reads fixed package metadata,
+without importing those packages; earlier Context failure leaves versions unknown.
+Version comparisons are observational and add no repair trigger or readiness claim.
+Settings copies only the cached normalized report with bounded serialization, never
+legacy status/logs, local paths, credentials or model inventory. Status reads and
+Copy add no composition, interpreter, install, provider or model action. Clipboard
+completion notices retire with their view. Source fixtures do not diagnose another
+machine or qualify actual provider, native, inference or parent-roadmap behavior.
+Startup history retains its latest 64 observations with an explicit truncation
+fact. Attempt retirement is separate from confirmed worker termination. Effective
+launch controls are captured before optional observers, while the trusted launch
+preparation writes authentication into the private attempt-local child environment.

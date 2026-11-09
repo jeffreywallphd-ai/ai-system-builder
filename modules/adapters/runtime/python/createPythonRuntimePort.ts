@@ -98,12 +98,22 @@ export function createPythonRuntimeAdapterFoundation(
       metadata: { recovery: "worker-exited" },
     });
   };
+  // Capture all effective controls before reading the new optional observer.
+  // In particular its getter must not mutate an aliased args/capability list.
+  const supervisorDescriptors = Object.getOwnPropertyDescriptors(options.supervisor);
+  delete supervisorDescriptors.onStartupEvent;
+  const supervisorInputs = { ...Object.defineProperties({}, supervisorDescriptors) } as CreatePythonRuntimePortOptions["supervisor"];
+  if (supervisorInputs.args) supervisorInputs.args = [...supervisorInputs.args];
+  if (supervisorInputs.requiredCapabilities) supervisorInputs.requiredCapabilities = [...supervisorInputs.requiredCapabilities];
+  let startupObserver: CreatePythonRuntimePortOptions["supervisor"]["onStartupEvent"];
+  try { const observer = options.supervisor.onStartupEvent; if (typeof observer === "function") startupObserver = observer; } catch { /* Passive observer. */ }
   const supervisor = createPythonRuntimeSupervisor({
-    ...options.supervisor,
+    ...supervisorInputs,
+    onStartupEvent: startupObserver,
     env: runtimeEnvironment,
-    prepareLaunchEnvironment: () => {
+    prepareLaunchEnvironment: (context) => {
       authorizationToken = assertStrongToken(generateAuthorizationToken());
-      runtimeEnvironment.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
+      context.env.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
     },
     runtimeClient: client,
     onEvent: (event) => {

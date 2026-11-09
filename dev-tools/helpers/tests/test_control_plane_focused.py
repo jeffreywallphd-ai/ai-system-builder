@@ -114,10 +114,28 @@ class FocusedPythonCollectionTests(unittest.TestCase):
             'modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts',
             'modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts',
         ]
+        tests.extend([
+            'modules/contracts/runtime/python-runtime-startup-diagnostics.unit.test.ts',
+            'modules/contracts/ipc/tests/desktop-python-runtime-contract.unit.test.ts',
+            'modules/adapters/runtime/python/tests/pythonRuntimeStartupDiagnostics.unit.test.ts',
+            'modules/adapters/runtime/python/tests/preparePythonRuntimeEnvironment.unit.test.ts',
+            'modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts',
+            'modules/adapters/runtime/python/tests/createPythonRuntimeSupervisor.unit.test.ts',
+            'modules/adapters/runtime/python/tests/createPythonRuntimeAdapterFoundation.unit.test.ts',
+            'modules/hosts/desktop/composition/tests/desktopPythonStartupDiagnostics.unit.test.ts',
+            'modules/hosts/desktop/composition/tests/desktopPythonRuntimeHelpers.unit.test.ts',
+            'modules/adapters/transport/ipc-electron/tests/register-python-runtime-ipc.unit.test.ts',
+        ])
+        ui = [
+            'apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx',
+            'apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts',
+            'apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx',
+        ]
         worker = 'modules/adapters/runtime/python/worker/tests/test_local_text_generation.py'
-        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*tests, worker], 'fixture')}):
+        with patch.object(focused, 'snapshot', return_value={'files': dict.fromkeys([*tests, *ui, worker], 'fixture')}):
             self.assertEqual(focused.profile_commands(root, profile), [
-                ['node', '--import', 'tsx', '--test', '--', *tests],
+                ['node', '--import', 'tsx', '--test', '--', *sorted(tests)],
+                ['node', 'dev-tools/helpers/run_vitest_checks.mjs', '--', *ui],
                 [sys.executable, '-B', '-m', 'unittest', 'discover', '-s', 'modules/adapters/runtime/python/worker/tests', '-p', 'test_local_text_generation.py'],
             ])
 

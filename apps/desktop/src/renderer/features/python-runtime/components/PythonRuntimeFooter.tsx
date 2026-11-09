@@ -25,6 +25,7 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
     onRestart,
     onRefresh,
     onClearLogs,
+    onCopyDiagnostics,
     logsExpanded,
     setLogsExpanded,
   } = usePythonRuntimeFooter({
@@ -41,6 +42,7 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
           <button className="ui-button" type="button" onClick={() => void onStop()} disabled={loading}>Stop</button>
           <button className="ui-button" type="button" onClick={() => void onRestart()} disabled={loading}>Restart</button>
           <button className="ui-button" type="button" onClick={() => void onRefresh()} disabled={loading}>Refresh</button>
+          <button className="ui-button" type="button" onClick={() => void onCopyDiagnostics()} disabled={loading}>Copy diagnostics</button>
         </div>
       </div>
       {loading ? <p role="status">Waiting for the runtime response...</p> : null}

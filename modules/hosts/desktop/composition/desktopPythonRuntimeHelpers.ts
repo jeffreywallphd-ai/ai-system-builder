@@ -119,6 +119,7 @@ export function resolveDesktopPythonRuntimeCommand(
 }
 
 export interface DesktopPythonRuntimeFeature {
+  readStartupDiagnostics?: () => import("../../../contracts/runtime").PythonRuntimeStartupDiagnostics;
   supervisor: {
     start: () => Promise<void>;
     stop: () => Promise<void>;

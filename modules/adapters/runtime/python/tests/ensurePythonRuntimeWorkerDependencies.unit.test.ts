@@ -1,4 +1,4 @@
-import type { SpawnSyncReturns } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1401,4 +1401,27 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
       }),
     ).not.toThrow();
   });
+});
+it("executes the actual inspection metadata script without importing model packages or changing setup commands", () => {
+  let source = "";
+  const capture = createSpawnSyncImplementation((_command, args) => {
+    if (args[0] === "-c" && args[1]?.includes("asb:python-env-inspect")) { source = args[1]; return createSpawnSyncResult({ stdout: createEnvironmentInspectionJson("3.12.9") }); }
+    throw new Error("synthetic stop after inspection");
+  });
+  assert.throws(() => ensurePythonRuntimeWorkerDependencies({ command: "synthetic", spawnSyncImplementation: capture as any }), /synthetic stop/);
+  assert.ok(source.includes("diagnostic_version"));
+  for (const hub of ["0.31.4", "9.9.0", "import-denied"]) {
+    const blockedImport = hub === "import-denied";
+    const guard = blockedImport ? "import builtins\noriginal_import=builtins.__import__\ndef guarded(name,*args,**kwargs):\n if name == 'importlib.metadata': raise ImportError('synthetic metadata unavailable')\n return original_import(name,*args,**kwargs)\nbuiltins.__import__=guarded\nsys.version_info=(3,7,9)\n" : "";
+    const wrapper = `import importlib.metadata,sys\nassert sys.flags.isolated and sys.flags.no_site and sys.dont_write_bytecode\ncalls=[]\ndef version(name):\n calls.append(name)\n if name == 'huggingface_hub': return '${hub}'\n raise importlib.metadata.PackageNotFoundError(name)\nimportlib.metadata.version=version\n${guard}exec(${JSON.stringify(source)})\nassert calls == ${blockedImport ? "[]" : "['huggingface_hub','transformers']"}\nassert not any(name in sys.modules for name in ('torch','huggingface_hub','transformers'))`;
+    const result = spawnSync(process.platform === "win32" ? "python" : "python3", ["-I", "-S", "-B", "-c", wrapper], { encoding: "utf8", timeout: 5000, maxBuffer: 16 * 1024, windowsHide: true });
+    assert.equal(result.status, 0);
+    let facts: any;
+    const commands: string[][] = [];
+    const replay = createSpawnSyncImplementation((_command, args) => { commands.push([...args]); if (args[1] === source) return createSpawnSyncResult({ stdout: result.stdout }); throw new Error("synthetic stop after inspection"); });
+    assert.throws(() => ensurePythonRuntimeWorkerDependencies({ command: "synthetic", spawnSyncImplementation: replay as any, onDiagnosticEnvironment: value => { facts = value; } }), blockedImport ? /Unsupported Python version/ : /synthetic stop/);
+    assert.deepEqual(Object.keys(facts).sort(), ["huggingfaceHubVersion", "pythonVersion", "transformersVersion"]);
+    assert.equal(facts.huggingfaceHubVersion, blockedImport ? undefined : hub); assert.equal(facts.transformersVersion, blockedImport ? undefined : null);
+    assert.equal(commands.length, blockedImport ? 1 : 2); if (!blockedImport) assert.deepEqual(commands[1], ["-m", "pip", "--version"]);
+  }
 });

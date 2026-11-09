@@ -21,6 +21,7 @@ import { ListModelsUseCase } from "../../../../../../../modules/application/use-
 import { ModelDownloadTasksUseCase } from "../../../../../../../modules/application/use-cases/model/model-download-tasks.use-case";
 import type { RuntimeTaskRegistryPort } from "../../../../../../../modules/application/ports/runtime";
 import { TaskType, type RuntimeTaskRecord } from "../../../../../../../modules/contracts/runtime";
+import { DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL } from "../../../../../../../modules/contracts/ipc";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 
 vi.mock("../../settings/components/SettingsPanel", () => ({ SettingsPanel: () => null }));
@@ -36,7 +37,7 @@ let root: Root | undefined, container: HTMLDivElement | undefined, directory: st
 let oldApi: PropertyDescriptor | undefined, oldAct: PropertyDescriptor | undefined;
 let directoryIdentity: { dev: bigint; ino: bigint } | undefined;
 let registry: ReturnType<typeof createLocalModelRegistryAdapter>, client: ReturnType<typeof createDesktopModelsClient>, observer: TaskObservationManager;
-let taskReads = 0, completions = 0;
+let taskReads = 0, completions = 0, runtimeStarts = 0;
 let startGate: Promise<void> | undefined, releaseStart: (() => void) | undefined;
 const tasks = new Map<string, RuntimeTaskRecord>(), calls: { channel: string; payload: unknown }[] = [];
 
@@ -61,11 +62,11 @@ afterEach(async () => {
       }
       await inspect(owned); await rm(owned, { recursive: true });
     }
-    directory = undefined; directoryIdentity = undefined; tasks.clear(); calls.length = 0; taskReads = completions = 0; startGate = undefined; releaseStart = undefined; vi.restoreAllMocks();
+    directory = undefined; directoryIdentity = undefined; tasks.clear(); calls.length = 0; taskReads = completions = runtimeStarts = 0; startGate = undefined; releaseStart = undefined; vi.restoreAllMocks();
   }
 });
 
-async function compose() {
+async function compose(options: { startFailure?: Error; unconfirmedStart?: boolean } = {}) {
   oldApi = Object.getOwnPropertyDescriptor(window, "desktopApi"); oldAct = Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, writable: true, value: true });
   directory = await mkdtemp(path.join(await realpath(tmpdir()), "model-download-ui-"));
@@ -74,7 +75,9 @@ async function compose() {
   registry = createLocalModelRegistryAdapter({ filePath: path.join(directory, "models.json"), discovery: { enabled: false } });
   const runtime: RuntimeTaskRegistryPort = {
     startTask: async request => {
+      runtimeStarts++;
       expect(tasks.size).toBeLessThan(4); expect(request).toMatchObject({ workspaceId: workspace, taskType: TaskType.MODEL_DOWNLOAD, concurrencyClass: "io", payload: { provider: "transformers", modelId: model.modelId } });
+      if (options.startFailure) throw options.startFailure;
       const id = `download-${tasks.size + 1}`; tasks.set(id, { requestId: id, workspaceId: workspace, taskType: TaskType.MODEL_DOWNLOAD, concurrencyClass: "io", status: "running", progress: { current: 25, total: 100, unit: "bytes", message: PRIVATE }, updatedAt: "2026-01-01T00:00:00.000Z" });
       await startGate; return { requestId: id, status: "running" };
     },
@@ -94,7 +97,12 @@ async function compose() {
   const api = createDesktopPreloadApi({ ipcRenderer: { invoke: async (channel, request) => {
     expect(calls.length).toBeLessThan(200); const envelope = request as { channel?: unknown; payload?: unknown };
     expect(envelope.channel).toBe(channel); const handler = handlers.get(channel); expect(Boolean(handler)).toBe(true);
-    calls.push({ channel, payload: structuredClone(envelope.payload) }); return handler!(Object.freeze({ syntheticInProcessEvent: true }), request);
+    calls.push({ channel, payload: structuredClone(envelope.payload) });
+    const response = await handler!(Object.freeze({ syntheticInProcessEvent: true }), request);
+    if (options.unconfirmedStart && channel === DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value) {
+      throw new Error(`${PRIVATE} C:\\private-fixture\\transport token=synthetic`);
+    }
+    return response;
   } } });
   const bridge: Pick<NonNullable<typeof window.desktopApi>, "browseModels" | "listModels" | "startModelDownload" | "readModelDownload" | "completeModelDownload" | "listModelDownloads" | "cancelModelDownload"> = { browseModels: api.browseModels, listModels: api.listModels, startModelDownload: api.startModelDownload, readModelDownload: api.readModelDownload, completeModelDownload: api.completeModelDownload, listModelDownloads: api.listModelDownloads, cancelModelDownload: api.cancelModelDownload };
   Object.defineProperty(window, "desktopApi", { configurable: true, writable: true, value: bridge }); client = createDesktopModelsClient();
@@ -154,6 +162,32 @@ it("admits one immediate download and keeps real progress through navigation, wo
   await unmount(); registry = createLocalModelRegistryAdapter({ filePath: path.join(directory!, "models.json"), discovery: { enabled: false } });
   expect((await rows()).map(value => value.modelRecordId)).toEqual([saved[0]!.modelRecordId]); expect((await registry.listModels({ workspaceId: foreign })).models).toHaveLength(0);
   expect(await readFile(path.join(directory!, "download/fixture.txt"))).toEqual(bytes);
+});
+
+it.each(["rejected", "unconfirmed"] as const)("gives fixed notification guidance for a %s start without registering or retrying", async outcome => {
+  const registrations = await compose(outcome === "rejected"
+    ? { startFailure: new Error(`${PRIVATE} C:\\private-fixture\\runtime token=synthetic`) }
+    : { unconfirmedStart: true });
+  await mount(); await search();
+  await act(async () => button("Notifications").click());
+  await act(async () => button("Download").click());
+  const guidance = "The model download request could not be confirmed. Open Settings > Software status > Python Runtime and select Copy diagnostics.";
+  await settled(() => messages().includes(guidance));
+  expect(messages()).toContain("Model download needs attention");
+  expect(button("Download").disabled).toBe(false);
+  expect(runtimeStarts).toBe(1);
+  // Losing the transport response does not prove that the runtime did no work.
+  expect(tasks.size).toBe(outcome === "unconfirmed" ? 1 : 0);
+  await poll(() => messages().includes(guidance));
+  expect(runtimeStarts).toBe(1);
+  if (outcome === "rejected") expect(taskReads).toBe(0);
+  expect(completions).toBe(0);
+  expect(registrations).not.toHaveBeenCalled(); expect(await rows()).toHaveLength(0);
+  const browsePanel = container!.querySelector('section[aria-label="Model search results"]')!.closest(".ui-panel--sectioned")!;
+  expect(browsePanel.textContent).not.toContain(guidance);
+  expect(document.body.textContent).not.toContain(PRIVATE);
+  expect(document.body.textContent).not.toContain("private-fixture");
+  expect(document.body.textContent).not.toContain("token=synthetic");
 });
 
 it("keeps a failed task out of inventory and safely completes a separately requested retry", async () => {

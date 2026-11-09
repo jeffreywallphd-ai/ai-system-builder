@@ -101,3 +101,15 @@ Website ingestion receives the same canonical artifact catalog for compensation
 as stream publication. Exact new capture bytes are deleted before their catalog
 entries. Generic storage deletion, workspace authorization and native guards
 retain their existing responsibilities.
+
+The host retains a closed startup report outside the lazy Python foundation promise.
+An uncomposed or rejected foundation remains readable without another composition.
+Only actual start-attempt callbacks and existing preparation observations update
+that report. Selected command/environment stay private; old/coalesced callbacks
+cannot replace a newer attempt. The existing status operation carries the optional
+report separately from legacy logs and model inventory. No persistent sink is added.
+Effective command, arguments, capability list, bound health methods and private
+environments are captured before startup observers. The trusted launch seam writes
+the rotated bearer into its attempt-local child environment; HTTP authentication
+keeps the same private token closure. Attached health failure updates its existing
+attempt without inventing a new launch.

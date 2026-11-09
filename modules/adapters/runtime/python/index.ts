@@ -12,3 +12,4 @@ export type { PythonRuntimePreparationDiagnostic, PythonRuntimePreparationObserv
 export * from "./createPythonRuntimeTaskRegistryAdapter";
 export * from "./createPythonParquetDatasetReviewAdapter";
 export * from "./context-management/createPythonContextArtifactRuntimeAdapter";
+export * from "./pythonRuntimeStartupDiagnostics";

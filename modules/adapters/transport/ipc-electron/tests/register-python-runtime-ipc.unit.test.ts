@@ -219,3 +219,10 @@ describe("registerPythonRuntimeIpc", () => {
   });
 
 });
+it("carries only the optional closed startup report through the existing status handler", async () => {
+  const report = { schemaVersion: "1", attempt: 1, outcome: "failed", phase: "context", reason: "probe-failed", dependencies: [], stages: [] } as const;
+  const handler = createDesktopPythonRuntimeStatusReadIpcHandler({ readPythonRuntimeStatus: async () => ({ supervisorStatus: "failed", healthy: false, runtimeStatus: "failed", capabilities: [], logs: [], startupDiagnostics: report }) });
+  const result = await handler({}, createDesktopPythonRuntimeStatusReadRequest({ boundary: { host: "desktop", source: "fixture" } }));
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.value.startupDiagnostics).toEqual(report);
+});

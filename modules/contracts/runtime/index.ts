@@ -52,3 +52,4 @@ export * from "./train-model-task-result";
 export * from "./validate-model-task-request";
 export * from "./validate-model-task-result";
 export * from "./task-type";
+export * from "./python-runtime-startup-diagnostics";

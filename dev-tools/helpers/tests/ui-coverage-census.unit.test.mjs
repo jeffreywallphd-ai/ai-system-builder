@@ -372,7 +372,24 @@ const pendingStartupJourneyDefinitions = Object.freeze(pendingDisclosureJourneyD
     facts_sha256:"3b5718b169a9bd8fd91da9b95dbad1bb4bffaa414bc683d4186cd3004e6f5be3"} : {...row}
 )));
 const pendingCurrentJourneyDefinitions = pendingStartupJourneyDefinitions;
-function assertCurrentSourceDrift(map, result) {
+// Current startup-report assertions are an explicit additional definition set.
+// Historical fixtures keep their exact preceding facts and never opt into it.
+const pendingModelStartupReportDefinitions = Object.freeze([
+  {path:"apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
+    baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"a109963772541a400749dbbaa06307888a1440c75b5efed8237a0fdfe4b8806c",
+    candidate:"238fa423bc56cdef9bbcd6feaf207a363e37ba40c28751cb4c2ceef778905abd",facts_sha256:"deb4382d1c1e2d45a47870950038dde52669d9ccc279bf3ac0bc693fd2cc411c"},
+  {path:"apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
+    baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"0461d04977a6958768c694ea1bda292c1808d5cd3654f94180674eee881fe88b",
+    candidate:"8ad89c8b89bf025756e7effc7038a357790b8b781faaf20f18506c03e26e6634",facts_sha256:"a4293db13b03c6a49a1c1f9b9604dcc10654c7cce1af559cb849e6e590615645"},
+  {path:"apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
+    baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"1d36083da854d78f668e320d1b7871778e8e309ec80005370a0fbaf5ee96c355",
+    candidate:"365bc8c8e66de96974ee658c9a2e006769e6b3cc5fb812d0a32a9d864806dded",facts_sha256:"53e0cf976299029ab375ce152ddf36ab571d835e5658800a848f36cf76db1091"},
+  {path:"dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+    baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"8fd3d3fb1ed30e2a381b8b966e213825eb68fca5438934cd87874f262069e7ab",
+    candidate:"55ba55112ff98432a06a16dcd80acc9b96e1c1a83bf6d05607ce9f9b83df9cea",facts_sha256:"ddadf3ed9ba19a168ee12450493a3e42a16a2ed0ae75370043dff505d8278619"},
+].map(Object.freeze));
+function assertCurrentSourceDrift(map, result, includeStartupReport = false) {
+  if(includeStartupReport)result=assertContrastDiagnosticDrift(map,result,pendingModelStartupReportDefinitions);
   if(map.source_baseline===pendingResponsiveJourneyDefinitions[0].baseline) {
     // Preserve the genuine preceding snapshot, not a future wildcard binding.
     // The current census also has to match actual source facts in validateCensus.
@@ -538,7 +555,7 @@ test("checks the current repository map against original scope and actual source
     }
   }
   assert(!result.gaps.some(g=>g.kind==="host-definition-not-mapped"));
-  assertCurrentSourceDrift(map,result);
+  assertCurrentSourceDrift(map,result,true);
   assert.equal(result.gaps.filter(g=>g.kind==="actual-host-not-run-by-census").length,39);
   assert.equal(result.actual_host_pass,false);
   assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
@@ -818,7 +835,7 @@ test("pending training-start definitions reject forged missing duplicate and unr
 test("pending asynchronous training diagnostics refuse forged future missing duplicate and extra facts",()=>{
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
-  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult,true));
   // Test pending-only denials against their own real history after legitimate binding.
   const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));
   map.source_baseline=pendingTrainingTaskDefinitions[0].baseline;
@@ -854,7 +871,7 @@ test("pending asynchronous training diagnostics refuse forged future missing dup
 test("pending adapter-format definitions refuse forged future missing duplicate and extra facts",()=>{
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
-  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult));
+  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult,true));
   const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));map.source_baseline=pendingTrainingAdapterDefinitions[0].baseline;
   for(const pending of pendingTrainingAdapterDefinitions){
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
@@ -997,7 +1014,7 @@ test("saved-value oracle binding refuses stale forged missing duplicate and unre
 
 
 test("pending responsive journey facts retain four exact drifts and refuse future or missing evidence",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const map=JSON.parse(historicalSource("59545794f97ec030f2ef3484c7d07dda501bdd97","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(pendingResponsiveJourneyDefinitions.length,4);assert.equal(pendingCurrentJourneyDefinitions.length,4);
   assert.equal(result.gaps.length,4);assertCurrentSourceDrift(map,result);
@@ -1017,6 +1034,32 @@ test("pending responsive journey facts retain four exact drifts and refuse futur
     ]) {
       const changed=structuredClone(map),observation=structuredClone(result);mutate(changed,observation);
       assert.throws(()=>assertCurrentSourceDrift(changed,observation));
+    }
+  }
+});
+
+test("current model startup report facts retain eight exact drifts and reject forged or unrelated evidence",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(pendingModelStartupReportDefinitions.length,4);assert.equal(result.gaps.length,8);
+  assertCurrentSourceDrift(map,result,true);
+  assert.throws(()=>assertCurrentSourceDrift(map,result),"Historical-only guards cannot accept the new unrelated drift.");
+  for(const pending of pendingModelStartupReportDefinitions) {
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]) {
+      const changed=structuredClone(map),observation=structuredClone(result);mutate(changed,observation);
+      assert.throws(()=>assertCurrentSourceDrift(changed,observation,true));
     }
   }
 });

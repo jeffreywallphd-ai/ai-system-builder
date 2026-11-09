@@ -361,7 +361,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       }
     } catch (error) {
       if (!ownsView(scope, lease)) return;
-      setDownloadState({ status: "error", message: "Failed to download model. Try again." });
+      setDownloadState({ status: "error", message: "The model download request could not be confirmed. Open Settings > Software status > Python Runtime and select Copy diagnostics." });
     } finally {
       if (scope.downloading === ticket) scope.downloading = undefined;
     }

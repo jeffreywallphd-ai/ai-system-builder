@@ -9,6 +9,7 @@ import {
   testDouble,
 } from "../../../../testing/node-test";
 import { createPythonRuntimeAdapterFoundation } from "../createPythonRuntimePort";
+import { createPythonRuntimeStartupDiagnostics } from "../pythonRuntimeStartupDiagnostics";
 
 const TOKENS = [
   "initial-runtime-token-0123456789abcdef",
@@ -371,6 +372,9 @@ describe("createPythonRuntimeAdapterFoundation", () => {
     let processAlive = false;
     const observedAuthorization: string[] = [];
     const spawnedTokens: string[] = [];
+    let observerReads = 0;
+    const diagnostics = createPythonRuntimeStartupDiagnostics();
+    const launchArgs = ["main.py"], launchEnvironment = { SAFE_SETTING: "retained" };
     const fetchImplementation = testDouble.fn(
       async (_url: string, init?: RequestInit) => {
         const authorization =
@@ -392,6 +396,8 @@ describe("createPythonRuntimeAdapterFoundation", () => {
         _args: readonly string[],
         options: { env?: NodeJS.ProcessEnv },
       ) => {
+        assert.equal(_command, "python"); assert.deepEqual(_args, ["main.py"]);
+        assert.equal(options.env?.SAFE_SETTING, "retained");
         activeLaunchToken = options.env?.PYTHON_RUNTIME_AUTH_TOKEN;
         spawnedTokens.push(activeLaunchToken ?? "");
         processAlive = true;
@@ -418,12 +424,13 @@ describe("createPythonRuntimeAdapterFoundation", () => {
       },
       supervisor: {
         command: "python",
-        args: ["main.py"],
-        env: { SAFE_SETTING: "retained" },
+        args: launchArgs,
+        env: launchEnvironment,
         spawnImplementation: spawnImplementation as never,
         startupTimeoutMs: 100,
         healthCheckIntervalMs: 1,
         onEvent: (event) => events.push(event),
+        get onStartupEvent() { observerReads++; launchArgs.push("diagnostic-mutation"); launchEnvironment.SAFE_SETTING = "mutated"; return event => { launchEnvironment.SAFE_SETTING = "later mutation"; diagnostics.event(event); }; },
       },
       generateAuthorizationToken: () => {
         const token = generatedTokens.shift();
@@ -433,8 +440,9 @@ describe("createPythonRuntimeAdapterFoundation", () => {
     });
 
     await foundation.supervisor.start();
-    await foundation.supervisor.stop();
     await foundation.supervisor.start();
+    expect(spawnedTokens).toEqual([TOKENS[1]]);
+    await foundation.supervisor.restart();
 
     expect(spawnedTokens).toEqual([TOKENS[1], TOKENS[2]]);
     expect(spawnedTokens[0]).not.toBe(spawnedTokens[1]);
@@ -442,6 +450,9 @@ describe("createPythonRuntimeAdapterFoundation", () => {
     expect(observedAuthorization).toContain(`Bearer ${TOKENS[1]}`);
     expect(observedAuthorization).toContain(`Bearer ${TOKENS[2]}`);
     expect(JSON.stringify(events)).not.toContain("launch-token");
+    expect(observerReads).toBe(1);
+    expect(TOKENS.some(token => JSON.stringify(diagnostics.read()).includes(token))).toBe(false);
+    await foundation.supervisor.stop();
   });
 
   it("restarts the sole worker to cancel running work and preserves idempotent status", async () => {
@@ -542,6 +553,26 @@ describe("createPythonRuntimeAdapterFoundation", () => {
       status: "cancelled",
     });
   });
+});
+
+it("does not rotate a launch token for attached, skipped or capability-refused starts", async () => {
+  for (const refused of [false, true]) {
+    let generated = 0, spawned = 0;
+    const diagnostics = createPythonRuntimeStartupDiagnostics();
+    const foundation = createPythonRuntimeAdapterFoundation({
+      client: { baseUrl: "http://127.0.0.1:43111", fetchImplementation: (async (url, init) => {
+        assert.equal((init?.headers as Record<string, string>)?.authorization, `Bearer ${TOKENS[0]}`);
+        return String(url).endsWith("/capabilities") ? response(200, { runtimeId: "fixture", capabilities: [] }) : response(200, { healthy: true, status: { runtimeId: "fixture", status: "ready" } });
+      }) as never },
+      supervisor: { command: "synthetic", requiredCapabilities: refused ? ["missing"] : [], onStartupEvent: diagnostics.event,
+        spawnImplementation: (() => { spawned++; throw new Error("must not spawn"); }) as never },
+      generateAuthorizationToken: () => { assert.equal(generated++, 0); return TOKENS[0]!; },
+    });
+    if (refused) await assert.rejects(foundation.supervisor.start(), /missing required capability/);
+    else { await foundation.supervisor.start(); await foundation.supervisor.start(); assert.equal(diagnostics.read().attempt, 1); }
+    assert.equal(generated, 1); assert.equal(spawned, 0);
+    assert.equal(JSON.stringify(diagnostics.read()).includes(TOKENS[0]!), false);
+  }
 });
 
 function ownedTaskFixture() {

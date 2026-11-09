@@ -367,6 +367,7 @@ export interface DesktopPythonRuntimeLoadedModel {
 }
 
 export interface DesktopPythonRuntimeStatusSnapshot {
+  startupDiagnostics?: import("../../../../../modules/contracts/runtime").PythonRuntimeStartupDiagnostics;
   supervisorStatus: "stopped" | "starting" | "ready" | "failed";
   healthy: boolean;
   runtimeStatus: string;

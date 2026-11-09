@@ -76,3 +76,13 @@ describe("shared real Python runtime preparation order", () => {
     expect(worker).toHaveBeenCalledTimes(1);
   });
 });
+import assert from "node:assert/strict";
+import { PythonRuntimeContextDependencyError } from "../ensurePythonRuntimeContextDependencies";
+
+it("projects the actual Context failure code without altering the original failure or running Worker", async () => {
+  const original = new PythonRuntimeContextDependencyError("unsupported-python", "synthetic private detail");
+  let workers = 0; const facts: unknown[] = [];
+  const prepare = createPythonRuntimeEnvironmentPreparer({ context: async () => { throw original; }, worker: () => { workers++; } });
+  await assert.rejects(prepare({ command: "synthetic", onDiagnosticFailure: (operation, code) => { facts.push([operation, code]); return Promise.reject(new Error("sink")); } }), error => error === original);
+  assert.deepEqual(facts, [["context", "unsupported-python"]]); assert.equal(workers, 0);
+});

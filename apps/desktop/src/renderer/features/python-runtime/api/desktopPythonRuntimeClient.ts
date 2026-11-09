@@ -1,5 +1,6 @@
 import {
   normalizeDatasetPreparationGenerationCapacitySnapshot,
+  readPythonRuntimeStartupDiagnosticsProperty,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   getDesktopApi,
@@ -30,6 +31,7 @@ function toStatusSnapshot(value: unknown): DesktopPythonRuntimeStatusSnapshot {
   const payload = value as Partial<DesktopPythonRuntimeStatusSnapshot>;
   return {
     supervisorStatus: payload.supervisorStatus && ["stopped", "starting", "ready", "failed"].includes(payload.supervisorStatus) ? payload.supervisorStatus : "failed",
+    startupDiagnostics: readPythonRuntimeStartupDiagnosticsProperty(value),
     healthy: payload.healthy === true,
     runtimeStatus: typeof payload.runtimeStatus === "string" ? payload.runtimeStatus : "unknown",
     capabilities: Array.isArray(payload.capabilities) ? payload.capabilities.filter((value): value is string => typeof value === "string") : [],

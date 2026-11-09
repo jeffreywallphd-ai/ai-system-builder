@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDesktopPythonRuntimeClient } from "../api/desktopPythonRuntimeClient";
+import { createDesktopPythonRuntimeStatusReadRequest } from "../../../../../../../modules/contracts/ipc";
+import { createDesktopPythonRuntimeStatusReadIpcHandler } from "../../../../../../../modules/adapters/transport/ipc-electron/python-runtime/registerPythonRuntimeIpc";
 
 const valid = () => ({ supervisorStatus: "ready", healthy: true, runtimeStatus: "ready", capabilities: ["prepare-training-dataset"], logs: [], loadedModels: [], activeTaskCount: 0, systemResources: { memoryUsagePercent: 20, cpuUsagePercent: 10, gpuUsagePercent: 0 } });
 let previous: typeof window.desktopApi;
@@ -57,4 +59,16 @@ describe("desktop Python runtime client", () => {
     await expect(client.readStatus()).rejects.toThrow("Python runtime status API is unavailable.");
     await expect(client.controlRuntime("stop")).rejects.toThrow("Python runtime control API is unavailable.");
   });
+});
+it("uses actual status IPC normalization and client projection for the closed optional report", async () => {
+  const report = { schemaVersion: "1", attempt: 2, outcome: "failed", phase: "worker", reason: "preparation-failed", dependencies: [], stages: [] } as const;
+  const handler = createDesktopPythonRuntimeStatusReadIpcHandler({ readPythonRuntimeStatus: async () => ({ ...valid(), supervisorStatus: "failed", startupDiagnostics: report }) as any });
+  const api = bridge(await handler({}, createDesktopPythonRuntimeStatusReadRequest({ boundary: { host: "desktop", source: "fixture" } })));
+  expect((await createDesktopPythonRuntimeClient().readStatus()).startupDiagnostics).toEqual(report);
+  expect(api.controlPythonRuntime).not.toHaveBeenCalled();
+  bridge({ ok: true, value: { ...valid(), startupDiagnostics: { ...report, token: "private" } } });
+  expect((await createDesktopPythonRuntimeClient().readStatus()).startupDiagnostics).toBeUndefined();
+  const optionalTrap = new Proxy(valid(), { getOwnPropertyDescriptor(target, key) { if (key === "startupDiagnostics") throw new Error("synthetic optional failure"); return Reflect.getOwnPropertyDescriptor(target, key); } });
+  bridge({ ok: true, value: optionalTrap });
+  expect((await createDesktopPythonRuntimeClient().readStatus()).supervisorStatus).toBe("ready");
 });

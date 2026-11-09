@@ -6,6 +6,8 @@ import { PythonRuntimeFooter } from "../components/PythonRuntimeFooter";
 import { usePythonRuntimeFooter, type UsePythonRuntimeFooterResult } from "../hooks/usePythonRuntimeFooter";
 import type { DesktopPythonRuntimeClient } from "../api/desktopPythonRuntimeClient";
 import type { DesktopPythonRuntimeStatusSnapshot } from "../../../lib/desktopApi";
+import { NotificationProvider } from "../../../../../../../modules/ui/shared/notifications/NotificationProvider";
+import { NotificationViewport } from "../../../../../../../modules/ui/shared/notifications/NotificationCenter";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 type Snapshot = DesktopPythonRuntimeStatusSnapshot;
@@ -20,6 +22,7 @@ function deferred<T>() {
 }
 function mockControl(impl: DesktopPythonRuntimeClient["controlRuntime"] = async () => snapshot()) { return vi.fn<DesktopPythonRuntimeClient["controlRuntime"]>(impl); }
 let root: Root, container: HTMLDivElement, view: UsePythonRuntimeFooterResult;
+const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
 function Probe({ client, enabled = true, pending }: { client: DesktopPythonRuntimeClient; enabled?: boolean; pending?: Promise<void> }) {
   view = usePythonRuntimeFooter({ client, enabled });
   if (pending) throw pending;
@@ -29,7 +32,7 @@ async function render(client: DesktopPythonRuntimeClient, enabled = true) {
   await act(async () => { root.render(<Probe client={client} enabled={enabled} />); });
 }
 beforeEach(() => { vi.useFakeTimers(); container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container); });
-afterEach(async () => { await act(async () => { root.unmount(); }); container.remove(); vi.useRealTimers(); });
+afterEach(async () => { await act(async () => { root.unmount(); }); container.remove(); vi.useRealTimers(); if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard); else Reflect.deleteProperty(navigator, "clipboard"); });
 
 describe("owned Python runtime controls", () => {
   it("keeps an old ready read from overwriting a later Stop result", async () => {
@@ -205,4 +208,41 @@ describe("owned Python runtime controls", () => {
     expect(view.logs.map(x => x.message)).toEqual(["Current stopped status."]);
     expect(container.textContent).not.toContain("private-retired-read-error");
   });
+});
+const startupReport = () => ({ schemaVersion: "1" as const, attempt: 1, outcome: "failed" as const, phase: "context" as const, reason: "unsupported-python" as const, dependencies: [], stages: [] });
+async function copySurface(client: DesktopPythonRuntimeClient) {
+  await act(async () => { root.render(<NotificationProvider><PythonRuntimeFooter enabled client={client}/><NotificationViewport/></NotificationProvider>); });
+  return [...container.querySelectorAll<HTMLButtonElement>("button")].find(x => x.textContent === "Copy diagnostics")!;
+}
+it("copies only cached normalized startup facts and performs no extra status/control read", async () => {
+  const writeText = vi.fn(async (_text: string) => {});
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  const client = { readStatus: vi.fn(async () => snapshot({ startupDiagnostics: startupReport(), logs: [{ timestamp: "2026-01-01", level: "info", message: "synthetic-private-legacy-log" }], loadedModels: [{ provider: "transformers", modelId: "private-model", inferenceMode: "chat", localPath: "C:\\private\\model" }] })), controlRuntime: mockControl() };
+  const button = await copySurface(client), reads = client.readStatus.mock.calls.length;
+  await act(async () => button.click());
+  expect(JSON.parse(writeText.mock.calls[0]![0])).toEqual(startupReport());
+  expect(writeText.mock.calls[0]![0]).not.toMatch(/private|logs|loadedModels|systemResources/);
+  expect(client.readStatus).toHaveBeenCalledTimes(reads); expect(client.controlRuntime).not.toHaveBeenCalled();
+  expect(container.textContent).toContain("Runtime diagnostics copied.");
+});
+it("keeps clipboard failure and unavailable-report outcomes in fixed notifications", async () => {
+  const writeText = vi.fn(async () => { throw new Error("token=private C:\\private\\file"); });
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  const client = { readStatus: vi.fn(async () => snapshot({ startupDiagnostics: startupReport() })), controlRuntime: mockControl() };
+  const firstCopy = await copySurface(client); await act(async () => firstCopy.click());
+  expect(container.textContent).toContain("Diagnostics could not be copied.");
+  expect(container.textContent).not.toMatch(/token=|C:\\private/);
+  expect(container.querySelector("footer p[role=alert]")).toBeNull();
+  const replacement = { readStatus: vi.fn(async () => snapshot()), controlRuntime: mockControl() };
+  const nextCopy = await copySurface(replacement); await act(async () => nextCopy.click());
+  expect(container.textContent).toContain("Diagnostics are unavailable."); expect(writeText).toHaveBeenCalledTimes(1);
+});
+it("does not publish a late clipboard outcome into a replacement client view", async () => {
+  const pending = deferred<void>(), writeText = vi.fn(() => pending.promise);
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  const client = { readStatus: vi.fn(async () => snapshot({ startupDiagnostics: startupReport() })), controlRuntime: mockControl() };
+  const button = await copySurface(client); await act(async () => button.click());
+  await copySurface({ readStatus: vi.fn(async () => snapshot()), controlRuntime: mockControl() });
+  await act(async () => pending.resolve());
+  expect(container.textContent).not.toContain("Runtime diagnostics copied.");
 });

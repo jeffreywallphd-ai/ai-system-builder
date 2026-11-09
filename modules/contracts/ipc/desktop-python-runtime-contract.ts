@@ -1,4 +1,5 @@
 import { createTransportOperation } from "../transport";
+import { readPythonRuntimeStartupDiagnosticsProperty, type PythonRuntimeStartupDiagnostics } from "../runtime";
 import {
   normalizeDatasetPreparationGenerationCapacitySnapshot,
   normalizeDatasetPreparationMemoryMode,
@@ -64,6 +65,7 @@ export interface DesktopSystemResourceUsage {
 }
 
 export interface DesktopPythonRuntimeStatusPayload {
+  startupDiagnostics?: PythonRuntimeStartupDiagnostics;
   supervisorStatus: DesktopPythonRuntimeSupervisorStatus;
   healthy: boolean;
   runtimeStatus: string;
@@ -140,6 +142,7 @@ function normalizeBoundary(
 function normalizeStatusPayload(
   payload: DesktopPythonRuntimeStatusPayload,
 ): DesktopPythonRuntimeStatusPayload {
+  const startupDiagnostics = readPythonRuntimeStartupDiagnosticsProperty(payload);
   const normalizedSystemResources = payload.systemResources
     ? {
       memoryUsagePercent: Number.isFinite(payload.systemResources.memoryUsagePercent) ? payload.systemResources.memoryUsagePercent : 0,
@@ -154,6 +157,7 @@ function normalizeStatusPayload(
 
   return {
     supervisorStatus: payload.supervisorStatus,
+    ...(startupDiagnostics ? { startupDiagnostics } : {}),
     healthy: payload.healthy,
     runtimeStatus: payload.runtimeStatus.trim(),
     capabilities: payload.capabilities.map((capability) => capability.trim()).filter((capability) => capability.length > 0),
