@@ -16557,7 +16557,7 @@
     },
     {
       "kind": "support-scope",
-      "source_text_sha256": "adeed0b8e96d68ec849861338ec5fd1f9b738e6671e296078912c0c959192d4b",
+      "source_text_sha256": "a288ce2a6fa24a1ce7e46db1028f3fca3c05aaaaa04d5304927e987186c15cbf",
       "user_description": {
         "owner": "agent",
         "sentences": [
@@ -16582,13 +16582,13 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "f67e3afdd76a70de6e22c4844bd66640afd2eab0e42550b03142f22a65a49975",
+      "source_text_sha256": "31954ecf739720aad3763ba3706a3b00bd948a8a646940c66d261acf50880678",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The agent found a timeout cleanup error in a synthetic test.",
-          "The caller gets a safe error, but another error can go unhandled.",
-          "The agent must fix that error and run focused tests. This work is pending. No action is needed from you."
+          "These earlier results do not cover the timeout cleanup error found later.",
+          "The agent tracks the repair in the work item \u201cHandle dataset cancellation errors at the timeout boundary.\u201d",
+          "These results do not prove that all background processes and file handles closed. No action is needed from you."
         ]
       }
     }

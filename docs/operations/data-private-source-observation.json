@@ -56,18 +56,34 @@
     "Metadata facts never qualify the real import interface, localization, large-file bounds, recovery, native process/filesystem/socket cleanup or any parent criterion.",
     "The validation result does not distinguish missing Parquet files from an invalid listing. The agent must collect bounded diagnostic facts before choosing the next fix or fixture action.",
     "An unavailable or absent selection remains pending. Preserve old failures, completed model accuracy and OCR, and deferred combined testing.",
-    "A subsequent synthetic timeout/cancellation probe exposed one unhandled promise rejection in this source snapshot. Its narrow source repair is pending. Historical checks do not qualify this unresolved edge or native cleanup."
+    "A subsequent synthetic timeout/cancellation probe exposed one unhandled rejection in this historical83c3118 snapshot. A separate repair is tracked by observe-cancellation-rejections-before-deadline-refusal. These earlier checks do not qualify that edge or native cleanup."
   ],
   "parent_qualification_granted": false,
   "known_source_findings": [
     {
       "id": "late-cancellation-promise-rejection",
-      "status": "pending-source-repair",
+      "status": "repair-tracked-separately",
       "source_commit": "83c3118ad75a8677c638d97429a9c402838c2ea8",
       "synthetic_probe_sha256": "263176ea84e27e2f4323e896f3c28c64d5624c4cddb8197201201ad48caa5944",
       "synthetic_result_sha256": "2f2eb20da7985e1face327d5297c3821007a4b31282f9c6c12a96606b4be892c",
       "unhandled_rejections_observed": 1,
-      "scope": "Synthetic local stream/clock race only. No provider, credential, model, app or native qualification effect."
+      "scope": "Synthetic local stream/clock race only. No provider, credential, model, app or native qualification effect.",
+      "status_history": [
+        {
+          "status": "pending-source-repair",
+          "committed_report_source_sha256": "092ee4589984505babb17bb89ffac20a993103683f8c07fdc328e554e2d44d8d"
+        }
+      ],
+      "repair_work_id": "observe-cancellation-rejections-before-deadline-refusal",
+      "repair_implementation": {
+        "session_source_sha256": "4a2c4c2bdabcbab761278d3778f19e84204141450297f1eb0c809abff9294497",
+        "regression_source_sha256": "8cee0eec5bf0d8ea8fb7b12248a0b5eb6fbaeb87fb6871f935a8033552b59b8a",
+        "focused_log_sha256": "9a036dbc33e873a05d8f5eb5e5f0178acaf03498287409bbb1b9abc505131edc",
+        "synthetic_probe_log_sha256": "aa47ca4873c21138aaf301645637acc22b99e62c9d4c131221d3d7c7fd1b20c9",
+        "focused_cases_passed": 80,
+        "unhandled_rejections_observed": 0,
+        "qualification_authority": "none; use the separately governed repair work record for its actual current receipt and review"
+      }
     }
   ]
 }

@@ -83,7 +83,11 @@ export function createDatasetParquetBrowseSession(options: {
       stop(); throw unavailable();
     }
   };
-  const wait = async <T>(pending: Promise<T>): Promise<T> => { live(); const value = await Promise.race([pending, deadline]); live(); return value; };
+  const wait = async <T>(pending: Promise<T>): Promise<T> => {
+    // Observe rejection before a deadline refusal can skip awaiting this promise.
+    void pending.catch(() => {});
+    live(); const value = await Promise.race([pending, deadline]); live(); return value;
+  };
   async function cancelBody(response: MetadataResponse) {
     if (response.body) await wait(response.body.cancel());
   }

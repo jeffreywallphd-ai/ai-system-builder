@@ -77,6 +77,11 @@ This module contains the first concrete artifact-repo storage provider adapter.
   and result-file limits. Abort/late-response guards stop further requests and
   fixed errors exclude raw provider/token/SDK details. These cooperative metadata
   limits do not supply a hard process-memory or native I/O guarantee.
+- The session observes pending rejections before checking deadline admission.
+  Awaited fetch, read and cancellation failures still fail the operation. A failed
+  or unconfirmed cancellation never authorizes the original-source alternative.
+  This also covers a deadline crossed while cancellation starts or before queued
+  work can run, without an unhandled secondary rejection.
 - Mutable branch names and malformed revision responses are not accepted as
   provider-ingestion evidence. The legacy converted-Parquet logical URL remains
   readable only for older callers; new browse results use exact repository paths

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listFiles } from "@huggingface/hub";
 import { createHuggingFaceArtifactRepoStorageAdapter, type HuggingFaceFetchImplementation } from "../createHuggingFaceArtifactRepoStorageAdapter";
-import { DATASET_BROWSE_LIMITS, normalizeDatasetBrowseRepository } from "../datasetParquetBrowseSession";
+import { DATASET_BROWSE_LIMITS, createDatasetParquetBrowseSession, normalizeDatasetBrowseRepository } from "../datasetParquetBrowseSession";
 
 const origin = "https://huggingface.co", repository = "fixture/private-data";
 const converted = "a".repeat(40), original = "b".repeat(40), token = "hf_synthetic_browse_only";
@@ -306,6 +306,36 @@ describe("installed Hub client through bounded Parquet browse", () => {
     let now = 0; vi.spyOn(performance, "now").mockImplementation(() => now);
     const f = fixture(defaultRoute, { accessTokenProvider: () => { now = DATASET_BROWSE_LIMITS.timeoutMs + 1; return token; } });
     expect((await f.run()).ok).toBe(false); expect(f.fetch).not.toHaveBeenCalled();
+  });
+
+  it("observes a cancellation rejection when the deadline is crossed before awaiting it", async () => {
+    let now = 0; vi.spyOn(performance, "now").mockImplementation(() => now);
+    const cancel = vi.fn(() => { now = DATASET_BROWSE_LIMITS.timeoutMs + 1; return Promise.reject(new Error("synthetic-private cancellation rejection")); });
+    const f = fixture(() => new Response(new ReadableStream({ cancel }), { status: 404 }));
+    const result = await f.run();
+    expect(result.ok).toBe(false); expect("value" in result).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("synthetic-private");
+    expect(cancel).toHaveBeenCalledTimes(1); expect(f.fetch).toHaveBeenCalledTimes(1);
+    await new Promise<void>(resolve => setImmediate(resolve));
+  });
+
+  it("still refuses fallback when an awaited cancellation rejects before the deadline", async () => {
+    const cancel = vi.fn(async () => { throw new Error("synthetic-private cancellation rejection"); });
+    const f = fixture(() => new Response(new ReadableStream({ cancel }), { status: 404 }));
+    const result = await f.run();
+    expect(result.ok).toBe(false); expect("value" in result).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("synthetic-private");
+    expect(cancel).toHaveBeenCalledTimes(1); expect(f.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("observes queued operation rejection when admission is already past the deadline", async () => {
+    let now = 0; vi.spyOn(performance, "now").mockImplementation(() => now);
+    const fetch = vi.fn(async () => json({ sha: converted }));
+    const session = createDatasetParquetBrowseSession({ repository, hubBaseUrl: origin, fetchImplementation: fetch, maximumEntries: 10 });
+    const operation = vi.fn(async () => true); now = DATASET_BROWSE_LIMITS.timeoutMs + 1;
+    await expect(session.run(operation)).rejects.toThrow("Dataset file browsing could not complete safely.");
+    expect(operation).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+    await new Promise<void>(resolve => setImmediate(resolve));
   });
 
   it("bounds an SDK-loader wait under that same deadline", async () => {
