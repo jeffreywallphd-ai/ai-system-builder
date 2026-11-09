@@ -10681,7 +10681,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -11214,7 +11214,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -16365,7 +16365,7 @@
         "owner": "agent",
         "sentences": [
           "Test navigation now uses the real sidebar or menu.",
-          "The training test uses the app’s own output folder.",
+          "The training test uses the app\u2019s own output folder.",
           "The coverage records preserve earlier work and use the correct file versions.",
           "This tested and reviewed source change is committed."
         ]
@@ -16480,6 +16480,30 @@
           "No Python startup record was written. The process that reached the limit and the browser zoom result are unknown. Desktop tests did not run.",
           "The agent will improve the startup diagnostics and finish the remaining work. No action is needed from you.",
           "This does not complete the roadmap or qualify low-memory mode. Completed model accuracy stays closed. Full software testing remains deferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f8a224b2be244f71af82c4f94d84c9c61318b7948d1519e4f6f62ab658439ae8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The dependency-startup diagnostics passed their focused checks and independent review. They are committed.",
+          "The next browser run passed its first Data screen accessibility checks and recorded startup stages through the PyTorch check."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "06d8fb48f8d84d668de0da1d7769d74c8b02fd4f6a4d274ad8889513a2c42b64",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The host test reached its per-process memory limit. It did not pass.",
+          "The PyTorch check has a start record and no return record before the stop. This does not identify the process that reached the limit or prove the cause.",
+          "All owned test processes stopped. Desktop tests did not run, and the browser zoom result is unknown.",
+          "The agent will finish the remaining startup and interface checks. No action is needed from you. Completed model accuracy stays closed. Full software testing remains deferred."
         ]
       }
     }
