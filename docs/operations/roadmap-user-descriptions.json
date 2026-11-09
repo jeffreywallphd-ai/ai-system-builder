@@ -16506,6 +16506,54 @@
           "The agent will finish the remaining startup and interface checks. No action is needed from you. Completed model accuracy stays closed. Full software testing remains deferred."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a0081e36e655ed96118e4371b0befa26c8e87a10206ce74413d0bf07101fe2ed",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed how downloads check model files already stored on this computer.",
+          "Local download tests, safety checks and independent review passed. The source changes are committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "941c03423d9e12ba940aa66fe538e9bd90c8f40ad59742a2f1429141ff705b82",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results use small synthetic files. They do not prove a real provider download or a roadmap pass.",
+          "Two Windows file-link checks could not run with the available permission. The agent will retain this test gap.",
+          "The cause on the work PC is still unknown. Completed model accuracy tests stay closed. Full software testing remains deferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a74d0044f0853165a6ac0c63b1c24bc84492fa6eeb619434c81cb1721c518e08",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app records safe facts when it attempts to start Python.",
+          "In Settings, open Software status, then Python Runtime. Copy diagnostics copies the facts already held by the app.",
+          "The copy action does not start or repair the runtime. A download-start error explains where to find the report.",
+          "The focused checks, desktop typecheck and independent review passed. The source changes are committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d8eeb0f6ff207eab17ca14d776a68edd259e17e397c635f3a145cc7df2da4e14",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The cause on the work PC is still unknown. When that computer is available, the agent can review its safe startup report.",
+          "The agent must finish the remaining host, provider and low-memory safety checks. No action is needed from you for the coding work.",
+          "These local fixes do not complete the roadmap. Earlier failures remain recorded. Completed model accuracy tests stay closed. Full software testing remains deferred."
+        ]
+      }
     }
   ]
 }

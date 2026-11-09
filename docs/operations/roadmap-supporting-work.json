@@ -11579,6 +11579,98 @@
       "limitations": [
         "V6 failed the unchanged1GiB per-process commit limit. Probe-torch has no return record; wrapper startup and final browser/nested reports are absent. Native400 is unobserved and Desktop did not start. All93 enclosing processes and original outer handles/streams retired. These facts do not identify the allocating process, establish a PyTorch cause or qualify an app journey, offload or parent roadmap. Accepted accuracy stays closed and full software tests remain deferred."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "validate-indexed-downloads-in-the-selected-hf-cache",
+      "work_criteria": [
+        "real-indexed-cache-layouts-work",
+        "untrusted-index-and-path-boundaries-stay-closed",
+        "focused-routing-and-documentation-match"
+      ],
+      "receipt_digest": "e0d37c6438bb6f308c2f1f8817135ecb8308284509cc9b294cad7129d214905d",
+      "review_digest": "8dd4e9230551dde6a28883cfda0d18e9f9a6eb00861485f1378b38d41aed380e",
+      "scope": "Reviewed selected-cache download handling accepts complete copied snapshots and same-repository blob layouts, bounds indexed manifests and rejects missing, empty, external and different-repository files. Real adapter/use-case fixtures and six registered checks passed, with independent review and an owned source commit.",
+      "limitations": [
+        "Local synthetic transfer and controlled file-layout evidence only. Two actual Windows file-symlink tests lacked privilege; those paths remain unqualified. The work-PC failure cause is unconfirmed. This recorded component snapshot supplies no real-provider, model/native, current whole-candidate, increment or roadmap pass. Accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "validate-indexed-downloads-in-the-selected-hf-cache",
+      "work_criteria": [
+        "real-indexed-cache-layouts-work",
+        "untrusted-index-and-path-boundaries-stay-closed",
+        "focused-routing-and-documentation-match"
+      ],
+      "receipt_digest": "e0d37c6438bb6f308c2f1f8817135ecb8308284509cc9b294cad7129d214905d",
+      "review_digest": "8dd4e9230551dde6a28883cfda0d18e9f9a6eb00861485f1378b38d41aed380e",
+      "scope": "Reviewed selected-cache download handling accepts complete copied snapshots and same-repository blob layouts, bounds indexed manifests and rejects missing, empty, external and different-repository files. Real adapter/use-case fixtures and six registered checks passed, with independent review and an owned source commit.",
+      "limitations": [
+        "Local synthetic transfer and controlled file-layout evidence only. Two actual Windows file-symlink tests lacked privilege; those paths remain unqualified. The work-PC failure cause is unconfirmed. This recorded component snapshot supplies no real-provider, model/native, current whole-candidate, increment or roadmap pass. Accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "daily-data-and-ai-journeys",
+      "criterion_id": "daily-errors-and-repair-loop",
+      "work_id": "qualify-model-startup-diagnostics-and-current-ui-definitions",
+      "work_criteria": [
+        "actual-start-attempt-facts-stay-honest",
+        "public-report-is-bounded-and-private",
+        "status-and-copy-add-no-runtime-effects",
+        "model-start-error-gives-a-clear-next-action",
+        "routing-and-owning-guidance-match-the-feature",
+        "launch-snapshots-preserve-authentication",
+        "current-ui-definitions-preserve-history-and-qualification-gaps"
+      ],
+      "receipt_digest": "bb1400e575ab441937697db29fda0d695ad72eca5963cbc6b52be6541e60f822",
+      "review_digest": "186bee044c8535558d19c60cf2400e60a3b5414dc07cb09c4938f208a6f67d50",
+      "scope": "Reviewed app-bound startup diagnostics retain actual accepted-attempt facts, private token rotation and late-callback isolation. The existing Python Runtime status adds a strict bounded cached Copy diagnostics report. Model-start errors give a fixed Settings action through the notification center. Full original41-path ownership, desktop noEmit, exact regression/census histories, seven registered checks and independent review passed; the source is committed.",
+      "limitations": [
+        "This local source correction neither reproduces nor diagnoses the unavailable work PC. Agent PATH is not app runtime evidence. Copying has no runtime-start, install, probe or provider effect. Preserve failed3528, all180 old source pins, unrun real-host/provider/native/file-link checks and separate low-memory protection/resource qualification. No parent or current aggregate qualification is granted; accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-model-startup-diagnostics-and-current-ui-definitions",
+      "work_criteria": [
+        "actual-start-attempt-facts-stay-honest",
+        "public-report-is-bounded-and-private",
+        "status-and-copy-add-no-runtime-effects",
+        "model-start-error-gives-a-clear-next-action",
+        "routing-and-owning-guidance-match-the-feature",
+        "launch-snapshots-preserve-authentication",
+        "current-ui-definitions-preserve-history-and-qualification-gaps"
+      ],
+      "receipt_digest": "bb1400e575ab441937697db29fda0d695ad72eca5963cbc6b52be6541e60f822",
+      "review_digest": "186bee044c8535558d19c60cf2400e60a3b5414dc07cb09c4938f208a6f67d50",
+      "scope": "Reviewed app-bound startup diagnostics retain actual accepted-attempt facts, private token rotation and late-callback isolation. The existing Python Runtime status adds a strict bounded cached Copy diagnostics report. Model-start errors give a fixed Settings action through the notification center. Full original41-path ownership, desktop noEmit, exact regression/census histories, seven registered checks and independent review passed; the source is committed.",
+      "limitations": [
+        "This local source correction neither reproduces nor diagnoses the unavailable work PC. Agent PATH is not app runtime evidence. Copying has no runtime-start, install, probe or provider effect. Preserve failed3528, all180 old source pins, unrun real-host/provider/native/file-link checks and separate low-memory protection/resource qualification. No parent or current aggregate qualification is granted; accepted model accuracy stays closed and full software testing remains deferred."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-model-startup-diagnostics-and-current-ui-definitions",
+      "work_criteria": [
+        "routing-and-owning-guidance-match-the-feature",
+        "current-ui-definitions-preserve-history-and-qualification-gaps"
+      ],
+      "receipt_digest": "bb1400e575ab441937697db29fda0d695ad72eca5963cbc6b52be6541e60f822",
+      "review_digest": "186bee044c8535558d19c60cf2400e60a3b5414dc07cb09c4938f208a6f67d50",
+      "scope": "Reviewed app-bound startup diagnostics retain actual accepted-attempt facts, private token rotation and late-callback isolation. The existing Python Runtime status adds a strict bounded cached Copy diagnostics report. Model-start errors give a fixed Settings action through the notification center. Full original41-path ownership, desktop noEmit, exact regression/census histories, seven registered checks and independent review passed; the source is committed.",
+      "limitations": [
+        "This local source correction neither reproduces nor diagnoses the unavailable work PC. Agent PATH is not app runtime evidence. Copying has no runtime-start, install, probe or provider effect. Preserve failed3528, all180 old source pins, unrun real-host/provider/native/file-link checks and separate low-memory protection/resource qualification. No parent or current aggregate qualification is granted; accepted model accuracy stays closed and full software testing remains deferred."
+      ]
     }
   ]
 }
