@@ -1,0 +1,115 @@
+{
+  "schema_version": "data-artifact-publication-denial-ui-observation-v1",
+  "status": "local-feature-passed",
+  "roadmap_support": [
+    "comprehensive-ui-automation/operational-ui-and-coverage-qualification",
+    "data-management-quality-and-usability/governed-scalable-ingestion"
+  ],
+  "summary": "The real Thin app let a paired read-only device read its local artifact and refused publication with HTTP403. The local bytes stayed unchanged after reload. No Hub or metadata-fetch transport call occurred.",
+  "source_component": {
+    "work_id": "isolate-functional-artifact-transport-and-response-contract",
+    "commit": "5170519a47d8b918394815837de47083c9b6e490",
+    "source_digest": "434db94ab6189d9a5a8a07ea3897bd38341fe90df4963ceda8181c13feee3062",
+    "receipt_digest": "162ff2e5a034f2ad0d26d085746602c1891d7484219872a3314f159d92df470e",
+    "review_digest": "7af0cce2e48e0d6eb3d406e1b7e2650921346deea68f673af698ce1cd0d9f2a5"
+  },
+  "actual_case": {
+    "work_id": "qualify-thin-readonly-artifact-publication-denial",
+    "host": "thin-chrome",
+    "scenario": "publication-denial",
+    "source_digest_before_report": "434db94ab6189d9a5a8a07ea3897bd38341fe90df4963ceda8181c13feee3062",
+    "source_head": "5170519a47d8b918394815837de47083c9b6e490",
+    "product_source_identity": "source.9b0ed30dabacd5f8641b8c5beccbafa4bd4d130d5c60cdb682991626aa2514f9",
+    "ui_run_id": "readonly-artifact-16f6b9bb4d044b419001d0b24bc4862a",
+    "case_count": 1,
+    "framework_errors": 0,
+    "skipped": 0,
+    "duration_ms": 6357,
+    "phases": [
+      "owned-artifact-imported",
+      "readonly-authenticated",
+      "publication-forbidden",
+      "local-artifact-unchanged",
+      "reload-keeps-artifact"
+    ],
+    "route_denial_status": 403,
+    "local_bytes_and_reload_qualified": true,
+    "background": true,
+    "capture": "off"
+  },
+  "controlled_provider_observation": {
+    "schema_version": "functional-artifact-provider-observation-v1",
+    "mode": "deny",
+    "transport_scope": "artifact-hub-and-metadata-fetch",
+    "run_id": "readonly-artifact-16f6b9bb4d044b419001d0b24bc4862a",
+    "source_revision": "source.9b0ed30dabacd5f8641b8c5beccbafa4bd4d130d5c60cdb682991626aa2514f9",
+    "attempts": {
+      "fetch": 0,
+      "fileExists": 0,
+      "uploadFile": 0,
+      "downloadFile": 0,
+      "commit": 0,
+      "listFiles": 0
+    },
+    "total_attempts": 0,
+    "attempt_limit_per_operation": 1024,
+    "limit_reached": false,
+    "request_arguments_recorded": false,
+    "controlled_transport_prevented": true,
+    "brokered_retrieval_qualified": false,
+    "qualification_granted": false,
+    "observation_frontier": "after-awaited-server-shutdown",
+    "guard_installed": true,
+    "server_creation_returned": true,
+    "server_shutdown_returned": true
+  },
+  "owned_execution": {
+    "original_exit_code": 0,
+    "forced_termination": false,
+    "retirement_confirmed": true,
+    "temporary_identity_absent": true,
+    "canonical_setup_returned": true,
+    "canonical_teardown_returned": true,
+    "source_and_runtime_stable": true,
+    "job_accounting": {
+      "total": 44,
+      "active": 0,
+      "terminated": 0
+    },
+    "limits": {
+      "flags": 8968,
+      "process_bytes": 1073741824,
+      "job_bytes": 3221225472,
+      "active_limit": 32
+    },
+    "peak_commit": {
+      "process_commit_bytes": 696500224,
+      "job_commit_bytes": 2330554368
+    },
+    "logs_read": false
+  },
+  "review": {
+    "outcome_review_sha256": "0f10cc855c69d799f0cfa7363c07f79b15a219fad9f868c07b04b0045aac157b",
+    "actual_observation_sha256": "4c399af70651908b59f9f83d729a3e99373e0cfa115605238452bd9536e4b469",
+    "native_result_sha256": "c11b4637b03b9a6362f7981f773a626e574c6aab6e6e36e403133c0d27999b34",
+    "execution_review_sha256": "602c267fbc51a676e2fc90062999719f9f5bcfb16a0d07141f6e60f0cc61c124",
+    "separate_invocation": true
+  },
+  "history": {
+    "earlier_local_artifact_outcomes": "docs/operations/data-local-artifact-ui-observation.json",
+    "prior_completed_journeys_repeated": false,
+    "earlier_failures_preserved": true
+  },
+  "scope_limits": {
+    "saved_or_provider_credential_used": false,
+    "external_publication_qualified": false,
+    "brokered_retrieval_or_general_network_qualified": false,
+    "managed_tenancy_or_physical_ownership_qualified": false,
+    "native_worker_offload_or_restart_qualified": false,
+    "restricted_security_owner_review_qualified": false,
+    "model_accuracy_or_ocr_rerun": false,
+    "full_system_suite_run": false,
+    "parent_or_current_candidate_qualification_granted": false
+  },
+  "remaining": "Other hosts, journeys, scope-specific resource/security checks and final combined qualification remain with their owning roadmaps. This report qualifies only the executed local feature."
+}
