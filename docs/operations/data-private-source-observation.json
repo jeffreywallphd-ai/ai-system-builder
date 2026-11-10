@@ -182,5 +182,239 @@
       "Preparing a small synthetic Parquet fixture is a separate agent action under the existing repository authority. This GET-only diagnostic grants no write, creation, credential or retry authority.",
       "Completed model accuracy and OCR stay closed. Full software testing remains deferred."
     ]
+  },
+  "sdk_fixture_followup": {
+    "work_id": "prepare-and-verify-private-parquet-with-existing-sdk",
+    "product_commit": "1baacb824d20f8a0ccd9e50975aef20999744ea1",
+    "observed_product_source_digest": "038aaaa520b4dffdaf9370e86d52e8ed7f16a77e3fb40a7a8e88da0e3eb53e42",
+    "actual_fixture_sha256": "444aa0a6a0be46fcc09f885d3c785ec5f031820b19f7774a28f58701d9b64eb6",
+    "independent_outcome_review_sha256": "2a64c808ee15bdc13d05db0313c0ffaf6891aee9200baf692d6e86c285c45b9b",
+    "effect_plan_sha256": "bb8147087e8320fc19f2e27d1a7d1e47544e4129d50f1da9bfe1651c68c4613f",
+    "observed": {
+      "schema_version": "private-sdk-fixture-result-v1",
+      "status": "fixture-and-component-byte-proof-review-required",
+      "stage": "verified",
+      "reason": "private-fixture-readback-and-selection-observed",
+      "private_before": true,
+      "private_after": true,
+      "parent_revision": "7bbc6858caacc78253a9d5123bc63b84d34c317a",
+      "commit_revision": "d2a75e1910045647183dfc26efbe428fc08f0119",
+      "fixture": {
+        "path": "qualification/native-source/f99df0c929ea4708b39de32694750bdb/dataset.parquet",
+        "size_bytes": 620,
+        "sha256": "cd6b23d43eb371599177f47aaa2de88feb0a09b08e12f74974524dcabbfcb399",
+        "rows": 2
+      },
+      "counts": {
+        "requests": 12,
+        "preupload": 1,
+        "batch": 1,
+        "refresh": 0,
+        "cas_chunk": 1,
+        "cas_xorb": 1,
+        "cas_shard": 1,
+        "commit": 1,
+        "commit_acknowledged": 1,
+        "cas_xorb_acknowledged": 1,
+        "cas_shard_acknowledged": 1,
+        "request_bytes": 2648,
+        "response_bytes": 2301
+      },
+      "statuses": [
+        {
+          "operation": "privacy",
+          "status": 200
+        },
+        {
+          "operation": "main-ref",
+          "status": 200
+        },
+        {
+          "operation": "path-absence",
+          "status": 200
+        },
+        {
+          "operation": "preupload",
+          "status": 200
+        },
+        {
+          "operation": "batch",
+          "status": 200
+        },
+        {
+          "operation": "cas-chunk",
+          "status": 404
+        },
+        {
+          "operation": "cas-xorb",
+          "status": 200
+        },
+        {
+          "operation": "cas-shard",
+          "status": 200
+        },
+        {
+          "operation": "commit",
+          "status": 200
+        },
+        {
+          "operation": "privacy",
+          "status": 200
+        },
+        {
+          "operation": "immutable-file",
+          "status": 200
+        },
+        {
+          "operation": "anonymous-file",
+          "status": 401
+        }
+      ],
+      "immutable_metadata_verified": true,
+      "anonymous_denial_verified": true,
+      "download_sha256_verified": true,
+      "exact_fixture_returned": true,
+      "elapsed_ms": 12676,
+      "qualification_granted": false,
+      "app_ui_qualified": false,
+      "native_cleanup_qualified": false,
+      "retry_allowed": false,
+      "work_id": "prepare-and-verify-private-parquet-with-existing-sdk",
+      "source_digest": "038aaaa520b4dffdaf9370e86d52e8ed7f16a77e3fb40a7a8e88da0e3eb53e42",
+      "head": "1baacb824d20f8a0ccd9e50975aef20999744ea1",
+      "effect_plan_sha256": "bb8147087e8320fc19f2e27d1a7d1e47544e4129d50f1da9bfe1651c68c4613f",
+      "operator_input_hashes": {
+        "sdk_fixture.mjs": "daed9c9a61c3fe94982f2a92cc0f4d07d0db162e22cc92b8ffbb810691eaa277",
+        "sdk_fixture.unit.test.mjs": "321c1e07a92615a8cc3b0122c0f56fd742df440bdde0166da21ea1696064808f",
+        "local-parquet-fixture.json": "7c81fe44971d8f4a6a58d68847dba499f85d7544910b0e2791c2a922244cecb6",
+        "observer_rejection_safe.mjs": "c174dd350214a0771a6ddc118ff1326d958b7b0f5d138bc1ba9c37e82d80393d",
+        "observer_rejection_safe.unit.test.mjs": "20ec912ff1f2c8b155a0047436f8560af95c82df5751f95228c82c940c6a39b9",
+        "tree_counts.mjs": "cb28955bda12a4df86117a87e0ab5bfd5b270b18e6e0a4d532a0b2aeab9f9f61",
+        "tree_counts.unit.test.mjs": "f416b685f2357fcac924cdeec8ddb2ee5f9d77ffdba657eaa2533cf736b3b186",
+        "run_sdk_fixture_round03.mjs": "2cb3472b8d348a354d8f97f50b54503697e39f0d4c584768fe9e91da57ab5002"
+      },
+      "browse_observation": {
+        "schema_version": "private-source-observer-result-v1",
+        "status": "evidence-collected-review-required",
+        "stage": "observation-finished",
+        "credential_configured": true,
+        "private_before": true,
+        "private_after": true,
+        "selection": {
+          "outcome": "immutable-parquet-selected",
+          "file_count": 1,
+          "revision": "d2a75e1910045647183dfc26efbe428fc08f0119",
+          "source": "original"
+        },
+        "counts": {
+          "requests": 5,
+          "privacy": 2,
+          "convertedRef": 1,
+          "mainRef": 1,
+          "tree": 1
+        },
+        "statuses": [
+          {
+            "operation": "privacy",
+            "status": 200
+          },
+          {
+            "operation": "converted-ref",
+            "status": 404
+          },
+          {
+            "operation": "main-ref",
+            "status": 200
+          },
+          {
+            "operation": "tree",
+            "status": 200
+          },
+          {
+            "operation": "privacy",
+            "status": 200
+          }
+        ],
+        "elapsed_ms": 447,
+        "provider_writes": 0,
+        "file_downloads": 0,
+        "qualification_granted": false,
+        "tree_summary": {
+          "schema_version": "bounded-private-tree-counts-v1",
+          "tree_requests": 1,
+          "native_tree_chunks_read": 1,
+          "native_tree_bytes_read": 1210,
+          "pages": [
+            {
+              "revision": "d2a75e1910045647183dfc26efbe428fc08f0119",
+              "has_link": false,
+              "array_valid": true,
+              "entries": 9,
+              "files": 5,
+              "directories": 4,
+              "unknown_types": 0,
+              "invalid_shapes": 0,
+              "invalid_sizes": 0,
+              "invalid_paths": 0,
+              "parquet_candidates": 1
+            }
+          ],
+          "incomplete_pages": 0,
+          "uninspected_tree_responses": 0,
+          "paths_or_payloads_in_summary": false
+        }
+      },
+      "readback_failure_code": null,
+      "suppressed_diagnostic_calls": 0,
+      "unexpected_async_failure": false,
+      "whole_system_testing_run": false
+    },
+    "operator_result_sha256": "6007ccb1d62b24b31d02f6b804e3ddfc876cd91c11505d8404d24642c84c7597",
+    "root_exit_and_output_eof_observed": true,
+    "parent_qualification_granted": false,
+    "preserved_preparation_history": [
+      {
+        "step": "regular-only fixture route",
+        "status": "refused-unqualified",
+        "actual_sha256": "0ea0831256691b3abf9c1347fde8b5e002cd5fbefac3d2730cae8e4c15e68bfc",
+        "outcome_review_sha256": "73734cbd65fa8c484010b13a423d07c662d1de4c63523fc3392343ba99c5e9c9",
+        "result": "The provider requested object storage. This helper made no upload or commit. Its marker stays consumed."
+      },
+      {
+        "step": "legacy basic-object route",
+        "status": "refused-unqualified",
+        "actual_sha256": "fc1ac1a0b0d3194ebdc450603b6289bff65b8853c1e3beb889b381adacfa1858",
+        "outcome_review_sha256": "907a08ef31a31d9b12e52a12bf7ac753bd43dc21e33b5ac8d898ff120dd0ef96",
+        "result": "The destination guard refused the current provider recipe before any PUT or commit. The original guard and consumed marker remain."
+      },
+      {
+        "step": "read-only recipe diagnostic",
+        "status": "reviewed-metadata-only",
+        "actual_sha256": "a61e5e76467d96116fd8e7af3dd47f9c6320163f78255a405a73cbbd18054599",
+        "outcome_review_sha256": "153e2c8638c4774490d3cae1e4b097b2baf2ae397a056ce83f19d5f7c4e797d6",
+        "result": "Only bounded recipe flags were retained. No file was uploaded, committed or downloaded."
+      },
+      {
+        "step": "read-only extended recipe diagnostic",
+        "status": "reviewed-metadata-only",
+        "actual_sha256": "e933fde47674e548e67bbf5033e5d4e1bbd1a44c6de9d9e3b971f3ade1626025",
+        "outcome_review_sha256": "431df4014f6368b3b266f825058e6cd766f73422b988e5f267bbbdd121f356bd",
+        "result": "New recipe flags differ from the legacy helper assumptions. They do not identify the precise cause of the earlier refused recipe. No transfer, commit or signed-address modification occurred."
+      },
+      {
+        "step": "first installed-SDK launcher",
+        "status": "failed-before-credential-or-provider-action",
+        "operator_result_sha256": "e1f90e37903d9b46361523e7b3beed70fc9c65287248773e1f299609da0c2468",
+        "outcome_review_sha256": "7ab5913502b1eb50c56540ae48fc08aefaa5562554fcc47ee37f1da81c9a0e77",
+        "result": "An isolated standalone security-adapter barrel import failed before the driver marker. A passive check confirmed that direct import of the same unchanged implementation works. The exact missing-path cause is unproven. The failed attempt and consumed operator marker remain."
+      }
+    ],
+    "limits": [
+      "This tiny synthetic file now supplies a valid source at its recorded immutable commit. It does not retroactively qualify the earlier empty-repository observations or refused preparation routes.",
+      "The installed SDK transfer, anonymous refusal, real secure-egress byte readback and production file selector are component evidence. Mounted UI registration, reference persistence and workspace isolation, localization, scale and recovery still need their own feature checks.",
+      "Observed root exit and output-stream closure are not native descendant, socket, handle, retained-tree, resource or crash-restart qualification. All genuine native and parent gaps remain pending.",
+      "No model accuracy, inference, OCR or whole-software test ran. Accepted model accuracy and OCR remain closed. The private provider website page and combined system campaign remain deferred.",
+      "All old failures, unqualified contracts and consumed markers remain. This record grants no retry, remote deletion, visibility change, new repository, old-slot/PID action or additional external authority."
+    ]
   }
 }
