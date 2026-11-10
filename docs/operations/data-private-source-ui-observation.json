@@ -266,5 +266,51 @@
     "failure_reproduced": false,
     "actual_private_ui_or_parent_qualification": false,
     "meaning": "The copied test reached its early skip. The browser control passed with the same copied fixture. This check did not start the app or use private inputs. The agent must check the worker with the app startup environment next. The real import check stays open."
+  },
+  "startupWorkerDiagnosis": {
+    "schema_version": "safe-startup-worker-diagnosis-v1",
+    "work_id": "diagnose-public-startup-bindings-in-real-worker",
+    "source_digest": "5f704b988cc0bde37a661258ccd5ab8b9aa4a493c89cca0e5f39356f57156b7c",
+    "head": "0f8eb3616381efb981519fd80bd598dbc2e5c0d3",
+    "public_worker": {
+      "observation_sha256": "65fea2bf5db1036f7de211b0f830be608b78000b834cb51268b6f4f3bccbd103",
+      "outcome_review_sha256": "5d9396b9bd0c05ee9104ce81a0c910f4e33d0e2bcccb7170216b32ccf5e633aa",
+      "actual_body_and_all_13_exact_bindings_passed": true,
+      "page_or_app_or_credential_used": false,
+      "owned_processes_total": 5
+    },
+    "local_startup": {
+      "observation_sha256": "f298eb9c142a53d0ef526dc57b712602f36b5fccff19868c235e2a9b9b58d58c",
+      "outcome_review_sha256": "54147845477579afc4b51e28b87d3fea8a2e7f015db68fa72b3307d775f5ef5e",
+      "native_command_passed": false,
+      "safe_stage_facts": {
+        "loader.json": {
+          "actual_definitions_loaded": true,
+          "executing_private_capsule_opened": false,
+          "network_calls": 0
+        },
+        "setup-returned.json": {
+          "canonical_setup_returned": true,
+          "private_input": false
+        },
+        "teardown-returned.json": {
+          "canonical_teardown_returned": true,
+          "source_stable": true,
+          "private_input": false
+        }
+      },
+      "saved_or_provider_credential_used": false,
+      "canonical_generated_local_pairing_only": true,
+      "local_pairing_file_absent_after": true,
+      "owned_processes_total": 47
+    },
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_and_runtime_stable_after": true,
+    "historical_scratch_bytes_removed": 15102569,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "next_agent_action": "The agent will prepare the normal Windows app-data folders in a new isolated test profile and test browser startup again. Both page tests failed before they could run. The app started and stopped, and its temporary local login was removed. The folder difference is a likely cause that still needs a successful test. The real private-file import test stays open.",
+    "user_action": "No action needed. The agent will continue the remaining startup checks."
   }
 }
