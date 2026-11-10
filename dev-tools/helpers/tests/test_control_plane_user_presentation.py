@@ -10,9 +10,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest
-from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
+from control_plane.projection import (CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, chunk_reference,
+    encode_review_projection, expanded_review_work_items, project, roadmap_chunk_work_items)
 from control_plane.records import Records
-from control_plane.user_presentation import REFERENCE, UNAVAILABLE, apply_user_descriptions, user_project
+from control_plane.user_presentation import REFERENCE, UNAVAILABLE, apply_user_descriptions, compact_user_project, user_project
 
 
 def hashed(value):
@@ -62,6 +63,30 @@ class UserPresentationTests(unittest.TestCase):
 
     def criterion(self, result):
         return result['roadmaps'][0]['increments'][0]['criteria'][0]
+
+    def test_compact_user_copy_keeps_exact_references_and_expands_current_plain_headings(self):
+        self.run_copy()
+        value = copy.deepcopy(self.value)
+        value['work_item_format'] = CHUNK_REFERENCE_FORMAT
+        roadmap = value['roadmaps'][0]
+        roadmap['evidence_policy'] = 'control-plane-v1'
+        increment = roadmap['increments'][0]
+        increment['number'] = 1
+        increment['chunks'] = [{'id': 'piece', 'chunk_number': 1, 'title': 'Piece', 'outcome': 'Build one useful component',
+                                'criteria_ids': ['guard'], 'status': 'planned', 'created_at': None}]
+        value['work_items'] = [chunk_reference(roadmap_chunk_work_items(value['roadmaps'])[0])]
+        original_reference = copy.deepcopy(value['work_items'])
+        with patch('control_plane.user_presentation.project', return_value=value) as project:
+            result = compact_user_project(self.root)
+        project.assert_called_once_with(self.root, compact_work_items=True)
+        self.assertEqual(result['work_items'], original_reference)
+        expanded = expanded_review_work_items(result)
+        self.assertEqual(expanded[0]['roadmap_title'], 'Clear roadmap')
+        self.assertEqual(expanded[0]['increment_title'], 'Test safe loading')
+        self.assertEqual(expanded[0]['criteria'][0]['outcome'], 'pending')
+        self.assertEqual(result['roadmaps'][0]['increments'][0]['criteria'][0]['description'],
+                         'Load the model only when enough memory is free.')
+        self.assertEqual(self.state_path.read_bytes(), self.original)
 
     def test_plain_bullets_actions_and_support_do_not_supply_a_pass(self):
         result = self.run_copy();criterion = self.criterion(result)

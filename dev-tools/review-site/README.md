@@ -25,6 +25,18 @@ saved record counts. The final content digest covers those display facts.
 If canonical details alone cannot fit, the server returns its fixed unavailable
 response. It does not present a partial roadmap as a complete one.
 
+The browser sends the exact `X-Review-Work-Items: roadmap-chunk-refs-v1`
+header on that same fixed route. This optional representation keeps complete
+chunks once under their roadmap and sends exact same-snapshot references in the
+Work items list. The browser reconstructs every original work field before it
+adopts a refresh. Missing, duplicate, ambiguous, foreign or altered references
+reject the whole refresh; they cannot select a URL or file. Ordering, dates,
+criteria, outcomes and delivery facts stay intact. The content digest covers the
+actual wire representation. The 2 MiB ceiling and explicit execution-history
+inventory still apply. No-header clients keep the legacy full representation.
+Use `review-data --compact` for the same bounded technical representation;
+`status` expands its work rows for existing operator consumers.
+
 Control-plane tests also admit the current versioned descriptions and support map
 with an empty local receipt store. This catches stale or malformed display data
 without requiring ignored historical receipts on another checkout. Missing
@@ -81,6 +93,8 @@ real committed pin at its recorded Git baseline and an explicit pending drift
 until the reviewed source is committed. Then bind the actual new commit in a
 separate metadata checkpoint. A definition inventory never supplies a host test
 or parent qualification pass.
+Historical tests use their original committed maps. New reference assertions
+have a separate exact source/facts binding; they cannot inherit an older pass.
 
 Criteria show parent qualification separately from reviewed local supporting
 work. The fixed JSON map in `docs/operations/roadmap-supporting-work.json` links

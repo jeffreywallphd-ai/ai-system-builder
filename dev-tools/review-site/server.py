@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "helpers"))
 from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, project
-from control_plane.user_presentation import user_project
+from control_plane.user_presentation import compact_user_project, user_project
 from control_plane.common import digest
 from control_plane.site import server_version
 
@@ -25,11 +25,12 @@ class Server(ThreadingHTTPServer):
     daemon_threads = True
     request_queue_size = 8
 
-    def __init__(self, address, root, projection=project):
+    def __init__(self, address, root, projection=project, compact_projection=None):
         if not ipaddress.ip_address(address[0]).is_loopback:
             raise ValueError("loopback address required")
         self.root = Path(root).resolve()
         self.projection = projection
+        self.compact_projection = compact_projection
         self.instance_id = str(uuid.uuid4())
         self.code_version = server_version()
         self.slots = threading.BoundedSemaphore(8)
@@ -84,8 +85,14 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/api/status":
             return self.reply(200, {"schema_version": "development-review-server-v1", "repository_id": digest(str(self.server.root)), "port": port, "instance_id": self.server.instance_id, "pid": os.getpid(), "server_version": self.server.code_version}, head=head)
         if url.path == "/api/review":
+            representation = self.headers.get_all("X-Review-Work-Items")
+            if representation is not None and representation != ["roadmap-chunk-refs-v1"]:
+                return self.reply(400, {"error": "review.format-unsupported"}, head=head)
             try:
-                value = self.server.projection(self.server.root)
+                projection = self.server.compact_projection if representation else self.server.projection
+                if projection is None:
+                    raise ValueError("projection unavailable")
+                value = projection(self.server.root)
                 body = encode_review_projection(value)
                 if len(body) > REVIEW_MAX_BYTES:
                     raise ValueError("projection bound")
@@ -118,7 +125,8 @@ def main():
     args = parser.parse_args()
     if not 0 <= args.port <= 65535 or not (args.repo / "AGENTS.md").is_file():
         parser.error("A repository root and valid local port are required.")
-    with Server(("127.0.0.1", args.port), args.repo, projection=user_project) as server:
+    with Server(("127.0.0.1", args.port), args.repo, projection=user_project,
+                compact_projection=compact_user_project) as server:
         print(f"http://127.0.0.1:{server.server_port}", flush=True)
         server.serve_forever(poll_interval=0.2)
 

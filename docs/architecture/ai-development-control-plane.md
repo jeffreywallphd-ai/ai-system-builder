@@ -10,6 +10,19 @@ copy uses neutral agent-owned recovery guidance. The existing2MiB HTTP response
 limit and text-only DOM rendering remain. Generated technical narratives are not
 duplicated into a second complete tree in the HTTP response.
 
+The optional `roadmap-chunk-refs-v1` wire representation stores each complete
+chunk once in its canonical roadmap. Exact work-list references retain identity,
+parent, order and creation metadata; Python and browser consumers reconstruct
+the former full work row from that same snapshot. Unknown formats and missing,
+duplicate, ambiguous or altered joins fail closed before display replacement.
+This is a transport representation, not a new authority or persistence model.
+The legacy no-header representation remains available. The browser selects the
+finite format through one exact header on the existing fixed read-only route;
+there is no caller path, query selection or new endpoint. Exact encoded-byte
+limits, complete canonical history, source-bound plain copy, qualification and
+truthful execution-record admission remain unchanged. Wire digests identify the
+transmitted object; reconstructed display rows grant no technical pass.
+
 The fixed superseded Run & Test draft may fold beneath the completed Publish
 lifecycle owner only with an exact frozen unapproved/unstarted source, dedicated
 open handoff blocker, current canonical successor approval and complete criterion

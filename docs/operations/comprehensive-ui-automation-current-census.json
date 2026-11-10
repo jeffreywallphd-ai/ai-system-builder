@@ -9557,135 +9557,139 @@
   {
    "path": "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
    "facts": {
-    "sha256": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9",
-    "bytes": 72467,
+    "sha256": "d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070",
+    "bytes": 76293,
     "cases": [
      {
       "name": "contributor control plane passes focused behavioral qualification",
       "line": 10
      },
      {
-      "name": "review notices distinguish bounded history, description maintenance and actual record failures",
+      "name": "review UI expands canonical chunk references and preserves refresh navigation and inert text",
       "line": 27
      },
      {
+      "name": "review notices distinguish bounded history, description maintenance and actual record failures",
+      "line": 72
+     },
+     {
       "name": "JSON review UI refreshes, navigates and renders hostile text inertly",
-      "line": 62
+      "line": 107
      },
      {
       "name": "review increments default closed and preserve manual choices through polling and navigation",
-      "line": 90
+      "line": 135
      },
      {
       "name": "review increments autoopen only exact active work and collapse on release unless manually opened",
-      "line": 121
+      "line": 166
      },
      {
       "name": "review increments linked navigation opens only its exact roadmap and retains that user choice",
-      "line": 148
+      "line": 193
      },
      {
       "name": "review increments in merged history retain manual choices without inferred activity",
-      "line": 172
+      "line": 217
      },
      {
       "name": "review increments do not share remembered choices across ambiguous public identities",
-      "line": 198
+      "line": 243
      },
      {
       "name": "review increments discard saved choices and navigation focus when an identity becomes ambiguous",
-      "line": 224
+      "line": 269
      },
      {
       "name": "review work items expose chunk progress, criterion links and parent navigation",
-      "line": 248
+      "line": 293
      },
      {
       "name": "review support stays separate from qualification and navigates safely",
-      "line": 300
+      "line": 345
      },
      {
       "name": "review groups roadmaps by top-level completion while preserving original creation order",
-      "line": 362
+      "line": 407
      },
      {
       "name": "roadmap section filtering and empty states preserve navigation and dynamic refresh",
-      "line": 412
+      "line": 457
      },
      {
       "name": "review defaults dark and remembers only a valid explicit color preference",
-      "line": 455
+      "line": 500
      },
      {
       "name": "review theme storage failure leaves theme action and live navigation usable",
-      "line": 487
+      "line": 532
      },
      {
       "name": "consolidated security history stays inspectable and searchable without a duplicate execution card",
-      "line": 507
+      "line": 552
      },
      {
       "name": "review color tokens preserve text and control contrast in both themes",
-      "line": 544
+      "line": 589
      },
      {
       "name": "review requirement bullets retain shared context, one qualification and canonical fallback",
-      "line": 563
+      "line": 608
      },
      {
       "name": "review shows full proposal details and honest preapproval or queued chunk planning",
-      "line": 619
+      "line": 664
      },
      {
       "name": "roadmap labels distinguish queued pending, in-progress, approval and actual blockers",
-      "line": 670
+      "line": 715
      },
      {
       "name": "review assigns agent work and human blockers clearly without displaying technical source text",
-      "line": 711
+      "line": 756
      },
      {
       "name": "review presents plain requirement bullets and actions without a technical accordion or outcome change",
-      "line": 761
+      "line": 806
      },
      {
       "name": "nested review controller honors approved progress and preserves bounded refusal",
-      "line": 810
+      "line": 855
      },
      {
       "name": "delivery time formats minutes, hours, precision and rounded carries without treating missing values as zero",
-      "line": 884
+      "line": 929
      },
      {
       "name": "increment delivery displays measured sums, pending and unavailable counts separately from chunk completion",
-      "line": 906
+      "line": 951
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "refresh",
-      "line": 101
+      "line": 146
      },
      {
       "name": "refresh",
-      "line": 129
+      "line": 174
      },
      {
       "name": "refresh",
-      "line": 180
+      "line": 225
      },
      {
       "name": "refresh",
-      "line": 231
+      "line": 276
      },
      {
       "name": "exercise",
-      "line": 849
+      "line": 894
      }
     ],
-    "assertionCount": 243,
-    "assertionDigest": "730c8ca1bcaae784405a0bbf08a82976b3d8962466167f3e90d74778a25ce194",
+    "assertionCount": 256,
+    "assertionDigest": "6e6d8147c980c1cb8a1b23d8ab2dbf8bb493864b00b2ce910876f887d6d14d4a",
     "assertionExamples": [
      {
       "line": 17,
@@ -9693,19 +9697,19 @@
       "sha256": "51758ce86254fd2d4a16f30d17e91dd13229a4df7f16a9196acc77152c6f6404"
      },
      {
-      "line": 40,
-      "kind": "assert",
-      "sha256": "9fdf8d8f7115ca0b16b3272b2d85312facf80686df2c8805d1501cc68fcf71c5"
-     },
-     {
-      "line": 41,
-      "kind": "assert",
-      "sha256": "de515514aa513a85ebe8736b0b59306dc4eca62818c496007524922a7b798414"
-     },
-     {
       "line": 44,
       "kind": "assert",
-      "sha256": "38e54e24363a705e469d12b751bf5bb1c12abb80ba658de30492600cac4bdf30"
+      "sha256": "f725a26e18e45a264a5be6bdda213d3f70247bc83735fe06f1982a4051f944cc"
+     },
+     {
+      "line": 45,
+      "kind": "assert",
+      "sha256": "115ea0d701500e1cd057883ae46e170cef877ececcbfad520d956c29442eba62"
+     },
+     {
+      "line": 46,
+      "kind": "assert",
+      "sha256": "3cd6a377ecb10657388596bf693a5abeb0c66a965ad8ad1b1223bf69e148831b"
      }
     ],
     "modifiers": []

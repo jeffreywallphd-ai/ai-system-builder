@@ -53,8 +53,18 @@ const pendingReviewDeliveryDefinition = Object.freeze({
   "candidate": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9",
   "facts": "44c5caa7ff048359ed91abf3d712d0d6b57c8deead3a2acaec6684c166a7f747"
 });
+// Exact reference-transport assertions, still prospective at this real baseline.
+// Older bindings remain historical; arbitrary future definitions stay refused.
+const pendingReviewReferenceDefinition = Object.freeze({
+  source: "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+  baseline: "608679a6095ef5617921e504bf208858df6a7c49",
+  committed: "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9",
+  candidate: "d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070",
+  facts: "32af7011bfb62cece1a5eed254c781a5b7ded8f663f5a3c5f71e63914e81fa4c",
+});
 function assertCurrentReviewSiteDrift(map, result) {
-  const pending = map.source_baseline === pendingReviewDeliveryDefinition.baseline ? pendingReviewDeliveryDefinition : pendingReviewSiteDefinition;
+  const pending = map.source_baseline === pendingReviewReferenceDefinition.baseline ? pendingReviewReferenceDefinition
+    : map.source_baseline === pendingReviewDeliveryDefinition.baseline ? pendingReviewDeliveryDefinition : pendingReviewSiteDefinition;
   const rows = map.sources.filter(row => row.path === pending.source); assert.equal(rows.length, 1);
   const source = rows[0];
   assert.match(map.source_baseline, /^[a-f0-9]{40}$/);
@@ -1145,8 +1155,8 @@ test("historical private-provider definitions bind two exact updates and retain 
   }
 });
 
-test("current workspace-confirmation definitions bind exactly three updates without weakening earlier guards",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+test("historical workspace-confirmation definitions bind exactly three updates without weakening earlier guards",()=>{
+  const map=JSON.parse(historicalSource("75efdd2456f67757fd07b749dd398128af969e03","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(map.sources.length,180);assert.equal(result.gaps.length,13);assert.equal(pendingWorkspaceSwitchDefinitions.length,3);
   assertCompleteCurrentSourceDrift(map,result);
@@ -1166,4 +1176,28 @@ test("current workspace-confirmation definitions bind exactly three updates with
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
     ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
   }
+});
+
+test("current review-reference definition binds exact new facts and preserves every earlier source guard",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(map.sources.length,180);assert.equal(result.gaps.length,14);
+  const pending=pendingReviewReferenceDefinition,target=m=>m.sources.find(row=>row.path===pending.source);
+  assert.equal(map.source_baseline,pending.baseline);
+  assert.equal(target(map).committed_sha256,pending.committed);
+  assert.equal(target(map).facts.sha256,pending.candidate);
+  assert.equal(sha(JSON.stringify(target(map).facts)),pending.facts);
+  assertCompleteCurrentSourceDrift(map,result);
+  for(const mutate of [
+    (m,r)=>{target(m).committed_sha256=pending.candidate;},
+    (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+    (m,r)=>{target(m).facts.assertionCount++;},
+    (m,r)=>{target(m).facts.extra="forged";},
+    (m,r)=>{m.source_baseline="0".repeat(40);},
+    (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.source);},
+    (m,r)=>{m.sources.push(structuredClone(target(m)));},
+    (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.source);},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.source});},
+    (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+  ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
 });

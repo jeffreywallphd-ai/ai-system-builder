@@ -39,6 +39,16 @@ The site reads versioned JSON and `/api/review` returns `development-review-v1`.
 Markdown is generated documentation and is never parsed into the site database.
 The UI refreshes every five seconds. It has no approval or mutation controls.
 
+The browser opts into `roadmap-chunk-refs-v1` with the exact
+`X-Review-Work-Items` header. Complete roadmap chunks remain in the same JSON
+snapshot; work-list references reconstruct their original fields before display.
+This removes duplicate payload without dropping requirements or raising the
+2 MiB response limit. Unknown, altered, missing or duplicate joins reject the
+refresh. Host/Origin checks, fixed routes and read-only authority are unchanged.
+No-header HTTP clients and `review-data` retain the legacy full representation.
+For large inventories, use `review-data --compact`; its explicit format marker
+identifies the references. `status` reconstructs its usual full work rows.
+
 Dark mode is the initial display. The top Light mode / Dark mode action remembers
 only an explicit validated local preference; missing, invalid or blocked storage
 cannot disable the review. This action changes no workflow records or authority.

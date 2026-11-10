@@ -15,6 +15,72 @@ from .supporting_work import enrich
 from .criterion_presentation import apply_presentations, canonical_blocker_source, apply_blocker_presentations
 
 REVIEW_MAX_BYTES = 2 * 1024 * 1024
+CHUNK_REFERENCE_FORMAT = "roadmap-chunk-refs-v1"
+CHUNK_REFERENCE_FIELDS = ("id", "source", "roadmap_id", "increment_id", "chunk_id",
+                          "increment_number", "chunk_number", "created_at")
+
+
+def roadmap_chunk_work_items(roadmaps: list) -> list:
+    """One reconstruction rule for canonical chunks and legacy work rows."""
+    works = []
+    for roadmap in roadmaps:
+        for increment in roadmap["increments"]:
+            for chunk in increment["chunks"]:
+                works.append({**chunk, "id": "/".join((roadmap["id"], increment["id"], chunk["id"])),
+                    "chunk_id": chunk["id"], "source": "roadmap-chunk", "roadmap_id": roadmap["id"],
+                    "roadmap_title": roadmap["title"], "increment_id": increment["id"],
+                    "increment_number": increment["number"], "increment_title": increment["title"],
+                    "criteria": [{key: c[key] for key in ("id", "outcome", "qualification", "evaluation_mode") if key in c}
+                                 for c in increment["criteria"] if c["id"] in chunk["criteria_ids"]],
+                    "evidence_policy": roadmap["evidence_policy"]})
+    return works
+
+
+def chunk_reference(work: dict) -> dict:
+    return {key: work[key] for key in CHUNK_REFERENCE_FIELDS}
+
+
+def expanded_review_work_items(value: dict) -> list:
+    """Expand an opted-in wire view without changing it or its wire digest.
+
+    References join only the complete canonical chunks in this same object.
+    They never select a file, URL or authority. Unknown/ambiguous/incomplete
+    joins reject the entire expansion, before callers replace displayed data.
+    """
+    if type(value) is not dict or type(value.get("work_items")) is not list:
+        raise ValueError("Invalid review work items.")
+    if "work_item_format" not in value:
+        return value["work_items"]
+    if value["work_item_format"] != CHUNK_REFERENCE_FORMAT:
+        raise ValueError("Unsupported review work-item format.")
+    try:
+        canonical = roadmap_chunk_work_items(value["roadmaps"])
+        index = {row["id"]: row for row in canonical}
+        if len(index) != len(canonical):
+            raise ValueError("Ambiguous review work items.")
+        result, seen, joined = [], set(), set()
+        for row in value["work_items"]:
+            if type(row) is not dict or type(row.get("id")) is not str or row["id"] in seen:
+                raise ValueError("Invalid review work items.")
+            seen.add(row["id"])
+            if row.get("source") == "roadmap-chunk":
+                full = index.get(row["id"])
+                if full is None or set(row) != set(CHUNK_REFERENCE_FIELDS):
+                    raise ValueError("Invalid review chunk reference.")
+                expected = chunk_reference(full)
+                if any(type(row[key]) is not type(expected[key]) or row[key] != expected[key] for key in expected):
+                    raise ValueError("Invalid review chunk reference.")
+                result.append(full)
+                joined.add(row["id"])
+            elif row.get("source") == "execution" and row["id"] not in index:
+                result.append(row)
+            else:
+                raise ValueError("Invalid review work-item source.")
+        if joined != set(index):
+            raise ValueError("Incomplete review work items.")
+        return result
+    except (KeyError, TypeError):
+        raise ValueError("Invalid review chunk reference.") from None
 
 
 def encode_review_projection(value: dict) -> bytes:
@@ -196,7 +262,9 @@ def open_blocker_details(state):
     return result
 
 
-def project(root: Path) -> dict:
+def project(root: Path, *, compact_work_items: bool = False) -> dict:
+    if type(compact_work_items) is not bool:
+        raise ValueError("Choose a supported review representation.")
     roadmaps, diagnostics, blocker_sources, increment_targets, delivery_targets = [], [], {}, {}, {}
     base = confined_path(root, ".implementation-roadmaps")
     if base.is_dir():
@@ -286,11 +354,11 @@ def project(root: Path) -> dict:
     # A complete validated consolidation folds frozen delivery history beneath
     # its sole owner; it cannot mark that history or any criterion completed.
     roadmaps = [r for r in roadmaps if r.get('execution_role') != 'merged-history']
-    works = []
-    for roadmap in roadmaps:
-        for increment in roadmap["increments"]:
-            for chunk in increment["chunks"]:
-                works.append({**chunk, "id": "/".join((roadmap["id"], increment["id"], chunk["id"])), "chunk_id": chunk["id"], "source": "roadmap-chunk", "roadmap_id": roadmap["id"], "roadmap_title": roadmap["title"], "increment_id": increment["id"], "increment_number": increment["number"], "increment_title": increment["title"], "criteria": [{key: c[key] for key in ("id", "outcome", "qualification", "evaluation_mode") if key in c} for c in increment["criteria"] if c["id"] in chunk["criteria_ids"]], "evidence_policy": roadmap["evidence_policy"]})
+    works = roadmap_chunk_work_items(roadmaps)
+    if compact_work_items:
+        if len({row["id"] for row in works}) != len(works):
+            raise ValueError("Ambiguous review work items.")
+        works = [chunk_reference(row) for row in works]
     execution_total = len(state["work_items"])
     execution_records = sorted(state["work_items"].values(), key=lambda w: w["spec"]["work_id"])
     execution_records.sort(key=lambda w: creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at")) or "", reverse=True)
@@ -311,6 +379,8 @@ def project(root: Path) -> dict:
         projected["run"] = {"model": safe_text(run.get("model", "unavailable")), "assurance": safe_text(run.get("assurance", "unavailable")), "infrastructure_status": safe_text(run.get("infrastructure_status", "unavailable")), **{k: run.get(k) for k in ("duration_ms", "retries", "input_tokens", "output_tokens", "cost_usd")}}
     feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in list(state["feedback"].values())[:200]]
     content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"], "inventory": {"execution_records_total": execution_total, "execution_records_shown": 0, "execution_records_truncated": False}}
+    if compact_work_items:
+        content["work_item_format"] = CHUNK_REFERENCE_FORMAT
     # Keep the existing 2 MiB server bound. Canonical roadmap detail is stored
     # once; newest scoped records also have a byte admission bound, with room
     # for envelope fields and an explicit truncation diagnostic.

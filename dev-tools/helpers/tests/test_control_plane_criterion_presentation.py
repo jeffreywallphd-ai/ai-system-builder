@@ -12,7 +12,7 @@ from pathlib import Path
 HELPERS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HELPERS))
 from control_plane.criterion_presentation import BLOCKER_REFERENCE, REFERENCE, apply_presentations
-from control_plane.projection import project
+from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project
 
 
 class CriterionPresentationTests(unittest.TestCase):
@@ -328,7 +328,7 @@ class CriterionPresentationTests(unittest.TestCase):
         shown = value['inventory']['execution_records_shown']
         self.assertGreater(shown, 200)
         self.assertLess(shown, 1000)
-        self.assertLess(len(json.dumps(value).encode()), 2 * 1024 * 1024)
+        self.assertLessEqual(len(encode_review_projection(value)), REVIEW_MAX_BYTES)
         self.assertEqual(value['inventory']['execution_records_total'], 1000)
         self.assertTrue(value['inventory']['execution_records_truncated'])
         self.assertEqual(value['work_items'][0]['id'], 'work-0999')
@@ -356,23 +356,28 @@ class CriterionPresentationTests(unittest.TestCase):
         self.assertEqual(works[0]['id'], 'work-0299')
         self.assertEqual(works[-1]['id'], 'work-0000')
         self.assertTrue(all(set(row['outcome']) == {'success', 'problem'} for row in works))
-        self.assertLess(len(json.dumps(value).encode()), 2 * 1024 * 1024)
+        self.assertLessEqual(len(encode_review_projection(value)), REVIEW_MAX_BYTES)
         self.assertEqual(json.dumps(records, sort_keys=True), original)
 
     def test_current_repository_response_deduplicates_linked_criteria_without_losing_canonical_detail(self):
-        value = project(Path(__file__).resolve().parents[3])
-        self.assertLess(len(json.dumps(value).encode()), 2 * 1024 * 1024)
-        for work in value['work_items']:
-            if work['source'] != 'roadmap-chunk':
-                continue
-            roadmap = next(row for row in value['roadmaps'] if row['id'] == work['roadmap_id'])
-            increment = next(row for row in roadmap['increments'] if row['id'] == work['increment_id'])
-            for criterion in work['criteria']:
-                self.assertLessEqual(set(criterion), {'id', 'outcome', 'qualification', 'evaluation_mode'})
-                original = next(row for row in increment['criteria'] if row['id'] == criterion['id'])
-                self.assertTrue(original['description'])
-                self.assertTrue(original['requirements'])
-                self.assertEqual(criterion['outcome'], original['outcome'])
+        root = Path(__file__).resolve().parents[3]
+        legacy = project(root)
+        compact = project(root, compact_work_items=True)
+        self.assertEqual(compact['roadmaps'], legacy['roadmaps'])
+        chunk_rows = lambda value: [row for row in expanded_review_work_items(value) if row['source'] == 'roadmap-chunk']
+        self.assertEqual(chunk_rows(compact), chunk_rows(legacy))
+        for value in (legacy, compact):
+            with self.subTest(format=value.get('work_item_format', 'legacy')):
+                self.assertLessEqual(len(encode_review_projection(value)), REVIEW_MAX_BYTES)
+                for work in chunk_rows(value):
+                    roadmap = next(row for row in value['roadmaps'] if row['id'] == work['roadmap_id'])
+                    increment = next(row for row in roadmap['increments'] if row['id'] == work['increment_id'])
+                    for criterion in work['criteria']:
+                        self.assertLessEqual(set(criterion), {'id', 'outcome', 'qualification', 'evaluation_mode'})
+                        original = next(row for row in increment['criteria'] if row['id'] == criterion['id'])
+                        self.assertTrue(original['description'])
+                        self.assertTrue(original['requirements'])
+                        self.assertEqual(criterion['outcome'], original['outcome'])
 
 
     def blocker_fixture(self):

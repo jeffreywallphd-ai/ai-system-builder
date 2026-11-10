@@ -202,6 +202,60 @@ class SiteTests(unittest.TestCase):
     def test_remote_binding_is_refused(self):
         with self.assertRaises(ValueError): server_module.Server(("0.0.0.0", 0), self.root)
 
+    def test_exact_reference_header_opts_in_without_changing_legacy_or_head(self):
+        calls = []
+        self.server.projection = lambda root: calls.append("legacy") or {"representation": "legacy"}
+        compact = {"work_item_format": "roadmap-chunk-refs-v1", "representation": "compact"}
+        self.server.compact_projection = lambda root: calls.append("compact") or compact
+        self.assertEqual(json.loads(self.request()[2]), {"representation": "legacy"})
+        headers = {"X-Review-Work-Items": "roadmap-chunk-refs-v1"}
+        status, response_headers, body = self.request(headers=headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), compact)
+        self.assertEqual(response_headers["Cache-Control"], "no-store")
+        head_status, head_headers, head_body = self.request(method="HEAD", headers=headers)
+        self.assertEqual(head_status, 200)
+        self.assertEqual(head_headers["Content-Length"], response_headers["Content-Length"])
+        self.assertEqual(head_body, b"")
+        self.assertEqual(calls, ["legacy", "compact", "compact"])
+
+    def test_invalid_or_duplicate_representation_headers_never_project(self):
+        calls = []
+        self.server.projection = self.server.compact_projection = lambda root: calls.append(True) or {}
+        for value in ("unknown", "", "roadmap-chunk-refs-v1,roadmap-chunk-refs-v1", "synthetic-private-note"):
+            with self.subTest(value=value):
+                status, _, body = self.request(headers={"X-Review-Work-Items": value})
+                self.assertEqual(status, 400)
+                self.assertEqual(json.loads(body), {"error": "review.format-unsupported"})
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.putrequest("GET", "/api/review")
+        for _ in range(2):
+            connection.putheader("X-Review-Work-Items", "roadmap-chunk-refs-v1")
+        connection.endheaders()
+        response = connection.getresponse()
+        self.assertEqual(response.status, 400)
+        response.read()
+        connection.close()
+        for denial in ({"Origin": "http://example.invalid"}, {"Sec-Fetch-Site": "cross-site"}, {"Host": "localhost"}):
+            status, _, _ = self.request(headers={"X-Review-Work-Items": "roadmap-chunk-refs-v1", **denial})
+            self.assertEqual(status, 403)
+        self.assertEqual(self.request("/api/review?compact=true", headers={"X-Review-Work-Items": "roadmap-chunk-refs-v1"})[0], 404)
+        self.assertEqual(calls, [])
+
+    def test_reference_representation_keeps_the_same_exact_byte_ceiling(self):
+        headers = {"X-Review-Work-Items": "roadmap-chunk-refs-v1"}
+        value = {"work_item_format": "roadmap-chunk-refs-v1", "text": ""}
+        value["text"] = "x" * (REVIEW_MAX_BYTES - len(encode_review_projection(value)))
+        self.server.compact_projection = lambda root: value
+        status, response_headers, body = self.request(headers=headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(body), REVIEW_MAX_BYTES)
+        self.assertEqual(int(response_headers["Content-Length"]), REVIEW_MAX_BYTES)
+        value["text"] += "x"
+        self.assertEqual(self.request(headers=headers)[0], 503)
+        self.server.compact_projection = None
+        self.assertEqual(json.loads(self.request(headers=headers)[2]), {"error": "review.projection-unavailable"})
+
     def test_final_wire_boundary_and_head_use_the_same_compact_bytes(self):
         overhead = len(encode_review_projection({"text": ""}))
         payload = {"text": "x" * (REVIEW_MAX_BYTES - overhead)}

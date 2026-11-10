@@ -24,6 +24,51 @@ const humanIssue = (needed, prevents, action) => ({
     done_when: "The agent has checked and recorded the requested result." },
 });
 
+test("review UI expands canonical chunk references and preserves refresh navigation and inert text", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const chunk = { id: "piece", chunk_number: 1, title: "Build a component", outcome: "<img src=x onerror=alert(1)>",
+    created_at: "2026-11-10T00:00:00Z", status: "planned", is_next: true, criteria_ids: ["guard"], tests: [], summary: "" };
+  const reference = { id: "owner/one/piece", source: "roadmap-chunk", roadmap_id: "owner", increment_id: "one", chunk_id: "piece",
+    increment_number: 1, chunk_number: 1, created_at: chunk.created_at };
+  let response = { schema_version: "development-review-v1", work_item_format: "roadmap-chunk-refs-v1", repository_id: "reference-fixture", source_digest: "reference-one",
+    roadmaps: [{ id: "owner", title: "Useful roadmap", objective: "A useful system", status: "executing", evidence_policy: "control-plane-v1", current_increment: "one",
+      increments: [{ id: "one", number: 1, title: "Useful increment", objective: "A component", status: "implementing", chunks_complete: 0, chunks_planned: 1,
+        chunks: [chunk], criteria: [{ id: "guard", description: "Preserve the guard", outcome: "pending", qualification: "controlled-environment" }] }] }],
+    work_items: [reference], evaluations: [], feedback: [], diagnostics: [] };
+  const requests = [];
+  window.fetch = async (url, options) => { requests.push({ url, options }); return { ok: true, json: async () => structuredClone(response) }; };
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.equal(requests[0].url, "/api/review");
+    assert.equal(requests[0].options.headers["X-Review-Work-Items"], "roadmap-chunk-refs-v1");
+    assert.equal(requests[0].options.credentials, "omit");
+    window.document.querySelector('[data-view="work_items"]').click();
+    assert.match(window.document.querySelector("#items").textContent, /Build a component/);
+    assert.match(window.document.querySelector("#items").textContent, /<img src=x onerror=alert\(1\)>/);
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+    response.roadmaps[0].increments[0].chunks[0].title = "Current component";
+    response.source_digest = "reference-two";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(window.document.querySelector("#items").textContent, /Current component/);
+    const parent = [...window.document.querySelectorAll("button")].find(button => button.textContent === "View parent increment");
+    assert.ok(parent); parent.click(); await pause();
+    assert.equal(window.document.querySelector("details.increment").open, true);
+    for (const mutate of [v => { v.work_item_format = "unknown"; }, v => { v.work_items = []; },
+      v => { v.work_items.push({ ...v.work_items[0] }); }, v => { v.work_items[0].roadmap_id = "foreign"; },
+      v => { v.work_items[0].extra = "synthetic-private-note"; }, v => { v.work_items[0].chunk_number = true; }]) {
+      const invalid = structuredClone(response); mutate(invalid); invalid.source_digest += "-invalid";
+      window.fetch = async () => ({ ok: true, json: async () => invalid });
+      window.document.querySelector("#refresh").click(); await pause();
+      assert.equal(window.document.querySelector("#connection").textContent, "Connection interrupted");
+      assert.match(window.document.querySelector("#items").textContent, /Current component/);
+      assert.doesNotMatch(window.document.body.textContent, /synthetic-private-note/);
+      assert.equal(window.document.querySelectorAll("img").length, 0);
+    }
+  } finally { window.close(); }
+});
+
 test("review notices distinguish bounded history, description maintenance and actual record failures", async () => {
   const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
   const { window } = dom;

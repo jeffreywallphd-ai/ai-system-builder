@@ -500,14 +500,45 @@ function reviewNotice(diagnostics) {
     messages.push("Some records are unavailable. The agent will check the saved workflow records and repair the issue. Your action: None.");
   return messages.join(" ");
 }
+function expandedReviewWorkItems(value) {
+  if (!Array.isArray(value.work_items)) throw new Error("work items");
+  if (!Object.hasOwn(value, "work_item_format")) return value.work_items;
+  if (value.work_item_format !== "roadmap-chunk-refs-v1") throw new Error("work format");
+  const fields = ["id", "source", "roadmap_id", "increment_id", "chunk_id", "increment_number", "chunk_number", "created_at"];
+  const index = new Map();
+  for (const roadmap of value.roadmaps) for (const increment of roadmap.increments) for (const chunk of increment.chunks) {
+    const id = [roadmap.id, increment.id, chunk.id].join("/");
+    if (index.has(id)) throw new Error("ambiguous work item");
+    const criteria = increment.criteria.filter(c => chunk.criteria_ids.includes(c.id))
+      .map(c => Object.fromEntries(["id", "outcome", "qualification", "evaluation_mode"].filter(k => Object.hasOwn(c, k)).map(k => [k, c[k]])));
+    index.set(id, { ...chunk, id, chunk_id: chunk.id, source: "roadmap-chunk", roadmap_id: roadmap.id,
+      roadmap_title: roadmap.title, increment_id: increment.id, increment_number: increment.number,
+      increment_title: increment.title, criteria, evidence_policy: roadmap.evidence_policy });
+  }
+  const seen = new Set(), joined = new Set();
+  const expanded = value.work_items.map(row => {
+    if (!row || typeof row !== "object" || Array.isArray(row) || typeof row.id !== "string" || seen.has(row.id)) throw new Error("work item");
+    seen.add(row.id);
+    if (row.source === "execution" && !index.has(row.id)) return row;
+    const full = index.get(row.id);
+    if (row.source !== "roadmap-chunk" || !full || Object.keys(row).length !== fields.length
+      || fields.some(k => !Object.hasOwn(row, k) || row[k] !== full[k])) throw new Error("chunk reference");
+    joined.add(row.id);
+    return full;
+  });
+  if (joined.size !== index.size) throw new Error("incomplete work items");
+  return expanded;
+}
 async function refresh() {
   if (fetching) return; fetching = true;
   try {
-    const response = await fetch("/api/review", { cache: "no-store", credentials: "omit" });
+    const response = await fetch("/api/review", { cache: "no-store", credentials: "omit",
+      headers: { "X-Review-Work-Items": "roadmap-chunk-refs-v1" } });
     if (!response.ok) throw new Error("unavailable");
     const next = await response.json();
     if (next.schema_version !== "development-review-v1") throw new Error("schema");
-    data = next;
+    const workItems = expandedReviewWorkItems(next);
+    data = { ...next, work_items: workItems };
     if (lastDigest !== data.source_digest) { lastDigest = data.source_digest; render(); }
     document.querySelector("#connection").textContent = "Live · JSON connected";
     document.querySelector("#updated").textContent = `Checked ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;

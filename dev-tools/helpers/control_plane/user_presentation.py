@@ -186,7 +186,7 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
     # The Work items view reuses parent headings; maintain the same names after
     # formatting without altering work IDs, statuses, dates or criterion links.
     for item in value['work_items']:
-        if item.get('source') == 'roadmap-chunk':
+        if item.get('source') == 'roadmap-chunk' and 'work_item_format' not in value:
             parent = headings.get(('roadmap', item['roadmap_id']))
             increment = headings.get(('increment', item['roadmap_id'], item['increment_id']))
             if parent: item['roadmap_title'] = parent['title']
@@ -199,3 +199,7 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
 
 def user_project(root: Path) -> dict:
     return bound_review_projection(apply_user_descriptions(root, project(root)))
+
+
+def compact_user_project(root: Path) -> dict:
+    return bound_review_projection(apply_user_descriptions(root, project(root, compact_work_items=True)))

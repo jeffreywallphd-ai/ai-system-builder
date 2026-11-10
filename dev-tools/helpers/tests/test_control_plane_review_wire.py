@@ -1,13 +1,18 @@
 """Final response bytes preserve canonical detail and truthful recent history."""
 import copy
+import contextlib
+import io
 import json
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from control_plane.common import digest
-from control_plane.projection import REVIEW_MAX_BYTES, bound_review_projection, encode_review_projection
+from control_plane.projection import (CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, bound_review_projection,
+    chunk_reference, encode_review_projection, expanded_review_work_items, roadmap_chunk_work_items)
 
 
 class ReviewWireTests(unittest.TestCase):
@@ -130,6 +135,113 @@ class ReviewWireTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "exceeds its bound"):
                     bound_review_projection(value)
                 self.assertEqual(value, before)
+
+
+class ChunkReferenceTests(unittest.TestCase):
+    def value(self):
+        chunks = [{"id": key, "chunk_number": number, "title": key, "outcome": "o" * 1300,
+                   "created_at": "2026-11-10T00:00:00Z", "status": status,
+                   "is_next": status == "planned", "criteria_ids": ["guard"],
+                   "completed_at": "", "summary": "s" * 500, "tests": ["check " + "x" * 150] * 6}
+                  for number, (key, status) in enumerate((("first", "completed"), ("second", "planned")), 1)]
+        roadmaps = [{"id": "owner", "title": "Roadmap", "status": "executing", "current_increment": "one",
+                     "evidence_policy": "control-plane-v1", "increments": [{"id": "one", "number": 1,
+                     "title": "Increment", "chunks": chunks, "criteria": [{"id": "guard", "outcome": "pending",
+                     "qualification": "controlled-environment", "evaluation_mode": "automated-technical-check"}]}]}]
+        return {"schema_version": "development-review-v1", "roadmaps": roadmaps,
+                "work_items": roadmap_chunk_work_items(roadmaps), "evaluations": [], "feedback": [],
+                "diagnostics": [], "local_revision": 4,
+                "inventory": {"execution_records_total": 0, "execution_records_shown": 0, "execution_records_truncated": False},
+                "repository_id": "fixture", "generated_at": "now", "source_digest": "old"}
+
+    def compact(self, value):
+        result = copy.deepcopy(value)
+        result["work_items"] = [chunk_reference(row) if row["source"] == "roadmap-chunk" else row
+                                for row in result["work_items"]]
+        result["work_item_format"] = CHUNK_REFERENCE_FORMAT
+        return result
+
+    def test_roundtrip_preserves_all_values_order_links_and_legacy_without_mutation(self):
+        original = self.value()
+        original["work_items"].insert(1, {"id": "actual-local-work", "source": "execution", "status": "complete",
+                                          "metrics": {"elapsed_ms": 61000}})
+        compact = self.compact(original)
+        saved = copy.deepcopy(compact)
+        self.assertEqual(expanded_review_work_items(compact), original["work_items"])
+        self.assertEqual(expanded_review_work_items(original), original["work_items"])
+        self.assertEqual(compact, saved)
+        self.assertEqual(compact["roadmaps"], original["roadmaps"])
+        self.assertLess(len(encode_review_projection(compact)), len(encode_review_projection(original)))
+        self.assertEqual(expanded_review_work_items(compact)[0]["criteria"][0]["outcome"], "pending")
+
+    def test_references_allow_complete_canonical_growth_without_raising_wire_limit(self):
+        full = self.value()
+        full["canonical_padding"] = "z" * (REVIEW_MAX_BYTES - len(encode_review_projection(full)) + 512)
+        before = copy.deepcopy(full)
+        with self.assertRaises(ValueError):
+            bound_review_projection(full)
+        compact = bound_review_projection(self.compact(full))
+        self.assertLessEqual(len(encode_review_projection(compact)), REVIEW_MAX_BYTES)
+        self.assertEqual(compact["roadmaps"], before["roadmaps"])
+        self.assertEqual(expanded_review_work_items(compact), before["work_items"])
+        self.assertEqual(full, before)
+        compact["canonical_padding"] += "z" * 20000
+        with self.assertRaises(ValueError):
+            bound_review_projection(compact)
+
+    def test_malformed_incomplete_ambiguous_or_foreign_joins_fail_closed(self):
+        mutations = [
+            lambda v: v.update(work_item_format="unknown"),
+            lambda v: v.update(work_item_format=None),
+            lambda v: v["work_items"].pop(),
+            lambda v: v["work_items"].append(copy.deepcopy(v["work_items"][0])),
+            lambda v: v["work_items"][0].update(id="foreign/one/first"),
+            lambda v: v["work_items"][0].update(roadmap_id="foreign"),
+            lambda v: v["work_items"][0].update(increment_number=True),
+            lambda v: v["work_items"][0].update(chunk_number=1.0),
+            lambda v: v["work_items"][0].update(extra="synthetic-private-note"),
+            lambda v: v["work_items"][0].update(source="unknown"),
+            lambda v: v["roadmaps"][0]["increments"][0]["chunks"].append(
+                copy.deepcopy(v["roadmaps"][0]["increments"][0]["chunks"][0])),
+        ]
+        for number, mutate in enumerate(mutations):
+            with self.subTest(number=number):
+                value = self.compact(self.value())
+                mutate(value)
+                saved = copy.deepcopy(value)
+                with patch.object(Path, "read_bytes", side_effect=AssertionError("reference must not read files")):
+                    with self.assertRaises(ValueError) as caught:
+                        expanded_review_work_items(value)
+                self.assertNotIn("synthetic-private-note", str(caught.exception))
+                self.assertEqual(value, saved)
+
+    def test_new_canonical_values_are_reconstructed_without_stale_duplicate_fields(self):
+        value = self.compact(self.value())
+        value["roadmaps"][0]["title"] = "Current user title"
+        value["roadmaps"][0]["increments"][0]["chunks"][0]["outcome"] = "Current result"
+        value["roadmaps"][0]["increments"][0]["criteria"][0]["outcome"] = "failed"
+        rows = expanded_review_work_items(value)
+        self.assertEqual(rows[0]["roadmap_title"], "Current user title")
+        self.assertEqual(rows[0]["outcome"], "Current result")
+        self.assertEqual(rows[0]["criteria"][0]["outcome"], "failed")
+
+    def test_cli_keeps_legacy_review_data_and_expands_status_rows(self):
+        import development_control_plane as cli
+        value = self.compact(self.value())
+        fake_work = SimpleNamespace(records=SimpleNamespace(journal=Path("missing-synthetic-journal")))
+        for arguments, expected_compact in ((["review-data"], False), (["review-data", "--compact"], True), (["status"], True)):
+            with self.subTest(arguments=arguments):
+                output = io.StringIO()
+                with patch.object(cli, "Work", return_value=fake_work), patch.object(cli, "project", return_value=value) as project, contextlib.redirect_stdout(output):
+                    code = cli.main(arguments)
+                self.assertEqual(code, 0)
+                self.assertEqual(project.call_args.kwargs, {"compact_work_items": expected_compact})
+                result = json.loads(output.getvalue())["data"]
+                if arguments == ["status"]:
+                    self.assertEqual(result["work_items"], expanded_review_work_items(value))
+                    self.assertNotIn("work_item_format", result)
+                else:
+                    self.assertEqual(result, value)
 
 
 if __name__ == "__main__":
