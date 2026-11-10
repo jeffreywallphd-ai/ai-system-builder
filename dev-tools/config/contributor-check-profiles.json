@@ -1,6 +1,23 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "artifact-confirmation-ui": {
+      "test_paths": [
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/tests/thin-client-shell-css.unit.test.ts"
+      ],
+      "source_paths": [
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/tests/thin-client-shell-css.unit.test.ts",
+        "dev-tools/helpers/control_plane/catalog.py",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/tests/test_control_plane_artifact_confirmation_profile.py"
+      ]
+    },
     "shared-forced-colors": {
       "test_paths": [
         "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.mjs",

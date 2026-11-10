@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -20,6 +21,7 @@ import {
   createUnavailableArtifactPreview,
   describeArtifactPreview,
   PanelHeading,
+  GlossaryHint,
   TermWithHint,
   TransientNotificationPublisher,
   TypeBadge,
@@ -113,6 +115,7 @@ export function ArtifactBrowserFeature({
   readContextConversionReadiness,
   onConvertToRag,
 }: ArtifactBrowserFeatureProps) {
+  const deleteConfirmationId = useId();
   const settings = useApplicationSettings({
     keys: useMemo(() => ["huggingface.defaultNamespace"], []),
   });
@@ -513,13 +516,13 @@ export function ArtifactBrowserFeature({
           <p className="ui-text-muted">
             Artifact: {pendingDeleteConfirmation?.storageKey}
           </p>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="deleteConfirmation">
-                Confirmation
-              </TermWithHint>
+          <div className="ui-stack ui-stack--sm">
+            <span className="ui-glossary-term">
+              <label htmlFor={deleteConfirmationId}>Confirmation</label>
+              <GlossaryHint termId="deleteConfirmation" />
             </span>
             <input
+              id={deleteConfirmationId}
               className="ui-input"
               value={deleteConfirmationInput}
               onChange={(event) =>
@@ -528,7 +531,7 @@ export function ArtifactBrowserFeature({
               placeholder="Delete"
               disabled={isDeleting}
             />
-          </label>
+          </div>
           <div className="ui-grid ui-grid--two">
             <button
               className="ui-button ui-button--destructive"

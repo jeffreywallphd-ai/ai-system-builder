@@ -47,6 +47,28 @@ function findArtifactDetailsButton(
   return button;
 }
 
+async function expectConfirmationLabel(input: HTMLInputElement, text: string): Promise<void> {
+  const labels = Array.from(input.labels ?? []);
+  expect(labels).toHaveLength(1);
+  const label = labels[0]!;
+  expect(label.control).toBe(input);
+  expect(label.textContent?.trim()).toBe(text);
+  expect(input.id).not.toBe("");
+  expect(label.htmlFor).toBe(input.id);
+  expect(Array.from(document.querySelectorAll("[id]")).filter((node) => node.id === input.id)).toHaveLength(1);
+  expect(label.querySelector("button")).toBeNull();
+  const hint = label.parentElement?.querySelector<HTMLButtonElement>(".ui-glossary-hint__button");
+  expect(hint).toBeInstanceOf(HTMLButtonElement);
+  if (!hint) throw new Error("The confirmation help is unavailable.");
+  const value = input.value;
+  await act(async () => { hint.click(); });
+  expect(hint.getAttribute("aria-expanded")).toBe("true");
+  expect(input.value).toBe(value);
+  await act(async () => { hint.click(); });
+  expect(hint.getAttribute("aria-expanded")).toBe("false");
+  expect(input.value).toBe(value);
+}
+
 describe("Desktop ArtifactBrowserFeature publish flow", () => {
   let mountedRoot: Root | undefined;
   let mountedContainer: HTMLDivElement | undefined;
@@ -739,6 +761,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
     setInputValue(confirmationInput, "Delete");
 
     const confirmDeleteButton = Array.from(
@@ -818,6 +841,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
     setInputValue(confirmationInput, "delete");
 
     const confirmDeleteButton = Array.from(
@@ -912,11 +936,22 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       deleteButton.click();
     });
 
-    const confirmationInput = Array.from(
+    let confirmationInput = Array.from(
       document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
+    const firstConfirmationId = confirmationInput.id;
+    const confirmationDialog = confirmationInput.closest('[role="dialog"]')!;
+    const cancel = Array.from(confirmationDialog.querySelectorAll("button")).find((button) => button.textContent === "Cancel")!;
+    await act(async () => { cancel.click(); });
+    expect(document.getElementById(firstConfirmationId)).toBeNull();
+    expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
+    await act(async () => { deleteButton.click(); });
+    confirmationInput = document.querySelector<HTMLInputElement>('input[placeholder="Delete"]')!;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
+    expect(confirmationInput.id).toBe(firstConfirmationId);
     setInputValue(confirmationInput, "DELETE");
 
     const confirmDeleteButton = Array.from(
@@ -1005,6 +1040,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
     setInputValue(confirmationInput, "Delete");
 
     const confirmDeleteButton = Array.from(

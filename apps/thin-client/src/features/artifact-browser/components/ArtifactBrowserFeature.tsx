@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import {
   deriveArtifactBackingState,
@@ -12,6 +12,7 @@ import {
   createUnavailableArtifactPreview,
   describeArtifactPreview,
   PanelHeading,
+  GlossaryHint,
   TermWithHint,
   TransientNotificationPublisher,
   TypeBadge,
@@ -96,6 +97,8 @@ export function ArtifactBrowserFeature({
   readContextConversionReadiness,
   onConvertToRag,
 }: ArtifactBrowserFeatureProps) {
+  const deleteConfirmationId = useId();
+  const bulkDeleteConfirmationId = useId();
   const [parquetPreview, setParquetPreview] = useState<ArtifactPreviewView>();
   const [contextConversion, setContextConversion] = useState<{
     status: "idle" | "loading" | "ready" | "blocked";
@@ -322,13 +325,13 @@ export function ArtifactBrowserFeature({
             backing data.
           </p>
           <p className="ui-text-muted">Artifact: {pendingDeleteStorageKey}</p>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="deleteConfirmation">
-                Confirmation
-              </TermWithHint>
+          <div className="ui-stack ui-stack--sm">
+            <span className="ui-glossary-term">
+              <label htmlFor={deleteConfirmationId}>Confirmation</label>
+              <GlossaryHint termId="deleteConfirmation" />
             </span>
             <input
+              id={deleteConfirmationId}
               className="ui-input"
               value={deleteConfirmationInput}
               onChange={(event) =>
@@ -337,7 +340,7 @@ export function ArtifactBrowserFeature({
               placeholder="Delete"
               disabled={isDeleting}
             />
-          </label>
+          </div>
           <div className="ui-grid ui-grid--two">
             <button
               className="ui-button ui-button--destructive"
@@ -579,13 +582,13 @@ export function ArtifactBrowserFeature({
             </label>
           </li>
           <li className="ui-grid ui-grid--two">
-            <label className="ui-stack ui-stack--sm">
-              <span>
-                <TermWithHint termId="deleteConfirmation">
-                  Bulk delete confirmation
-                </TermWithHint>
+            <div className="ui-stack ui-stack--sm">
+              <span className="ui-glossary-term">
+                <label htmlFor={bulkDeleteConfirmationId}>Bulk delete confirmation</label>
+                <GlossaryHint termId="deleteConfirmation" />
               </span>
               <input
+                id={bulkDeleteConfirmationId}
                 className="ui-input"
                 value={bulkDeleteConfirmationInput}
                 onChange={(event) =>
@@ -594,7 +597,7 @@ export function ArtifactBrowserFeature({
                 placeholder="Delete All"
                 disabled={isDeleting}
               />
-            </label>
+            </div>
             <div className="ui-stack ui-stack--sm">
               <button
                 className="ui-button ui-button--destructive"

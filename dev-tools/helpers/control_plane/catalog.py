@@ -11,6 +11,7 @@ from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
 QUALIFICATION_PROFILES = (
+    "artifact-confirmation-ui",
     "shared-forced-colors",
     "offload-resource-lifecycle",
     "model-qualification-scheduling",
@@ -32,6 +33,14 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "artifact-confirmation-ui": [
+        "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
+        "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",
+        "apps/thin-client/tests/thin-client-shell-css.unit.test.ts",
+        "dev-tools/helpers/tests/test_control_plane_artifact_confirmation_profile.py"
+    ],
     "shared-forced-colors": [
         "modules/ui/shared/styles/forced-colors.css",
         "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.mjs",
