@@ -84,6 +84,7 @@ interface CensusHistory {
 }
 const root=path.resolve(__dirname,"../../../.."),censusPath="docs/operations/comprehensive-ui-automation-current-census.json";
 const navigationHistoryPath="docs/operations/comprehensive-ui-automation-navigation-census-history.json";
+const notificationReferenceHistoryPath="docs/operations/comprehensive-ui-automation-notification-reference-census-history.json";
 const historyPath="docs/operations/comprehensive-ui-automation-operational-census-history.json";
 const oldHistoryPath="docs/operations/comprehensive-ui-automation-census-source-history.json";
 const diagnosticHistoryPath="docs/operations/comprehensive-ui-automation-contrast-diagnostics-census-history.json";
@@ -343,29 +344,33 @@ function expectedWorkingDrift(bundle:CensusBundle,map:CensusMap) {
     gitSource(map.source_baseline,row.path).toString("utf8").replace(/\r\n/g,"\n"))
     .map(row=>({kind:"unreviewed-source-drift",source:row.path}));
 }
-let navigationCreationCommit:string|undefined;
-function navigationHistoryBundle(bundle:CensusBundle):CensusBundle {
-  if(navigationCreationCommit === undefined) {
+const workingCreationCommits=new Map<string,string>();
+function workingHistoryBundle(bundle:CensusBundle,recordPath:string):CensusBundle {
+  if(recordPath!==navigationHistoryPath&&recordPath!==notificationReferenceHistoryPath)throw new Error("Unknown UI history creation witness.");
+  let creationCommit=workingCreationCommits.get(recordPath);
+  if(creationCommit === undefined) {
     const env={...process.env};for(const key of Object.keys(env))if(key.toUpperCase().startsWith("GIT_"))delete env[key];
     Object.assign(env,{GIT_CONFIG_NOSYSTEM:"1",GIT_CONFIG_GLOBAL:process.platform === "win32" ? "NUL" : "/dev/null",GIT_NO_REPLACE_OBJECTS:"1",GIT_OPTIONAL_LOCKS:"0"});
-    const result=spawnSync("git",["--no-pager","-c","log.showSignature=false","log","--no-show-signature","--format=%H","--diff-filter=A","--max-count=16","--",navigationHistoryPath],{cwd:root,env,windowsHide:true,timeout:20_000,maxBuffer:1024});
+    const result=spawnSync("git",["--no-pager","-c","log.showSignature=false","log","--no-show-signature","--format=%H","--diff-filter=A","--max-count=16","--",recordPath],{cwd:root,env,windowsHide:true,timeout:20_000,maxBuffer:1024});
     if(result.error||result.status!==0||!Buffer.isBuffer(result.stdout)||result.stderr.length)throw new Error("UI history creation witness is unavailable.");
     const commits=result.stdout.toString("ascii").trim().split(/\r?\n/).filter(Boolean);
     if(commits.length>1||commits.some(value=>!/^[a-f0-9]{40}$/.test(value)))throw new Error("UI history creation witness is ambiguous.");
-    navigationCreationCommit=commits[0] ?? "";
+    creationCommit=commits[0] ?? "";workingCreationCommits.set(recordPath,creationCommit);if(workingCreationCommits.size>2)throw new Error("UI history witness bound exceeded.");
   }
   // Before its first checkpoint this record describes the reviewed working
   // candidate. Once committed, its original Git tree supplies the source view.
-  const commit=navigationCreationCommit;if(!commit)return bundle;
+  const commit=creationCommit;if(!commit)return bundle;
   const map=JSON.parse(gitSource(commit,censusPath).toString("utf8")) as CensusMap;
   primeGitSources(commit,map.sources.map(row=>row.path));
   return {...bundle,map,read:(name:string)=>gitSource(commit,name)};
 }
-function checkedNavigationHistory(bundle:CensusBundle,map:CensusMap,history:Record<string,unknown>) {
+function navigationHistoryBundle(bundle:CensusBundle):CensusBundle{return workingHistoryBundle(bundle,navigationHistoryPath);}
+function notificationReferenceHistoryBundle(bundle:CensusBundle):CensusBundle{return workingHistoryBundle(bundle,notificationReferenceHistoryPath);}
+function checkedWorkingHistory(bundle:CensusBundle,map:CensusMap,history:Record<string,unknown>,priorCommit:string) {
   expect(Object.keys(history).sort()).toEqual(["schema_version","scope","roadmap_id","prior_commit","prior_census_path","prior_census_git_sha256",
     "prior_census_working_sha256","source_baseline","preserved_fields_sha256","qualification_effect","sources","unreviewed_source_drift","reason"].sort());
   expect(history.schema_version).toBe("working-ui-census-update-v1");expect(history.scope).toBe("working-source-facts-only-no-execution");
-  expect(history.roadmap_id).toBe("comprehensive-ui-automation");expect(history.prior_commit).toBe("a35834b49a9e056d49973a1377b10f819fbaa8b9");expect(history.prior_census_path).toBe(censusPath);
+  expect(history.roadmap_id).toBe("comprehensive-ui-automation");expect(history.prior_commit).toBe(priorCommit);expect(history.prior_census_path).toBe(censusPath);
   const bytes=gitSource(history.prior_commit as string,censusPath),previous=JSON.parse(bytes.toString("utf8")) as CensusMap;
   expect(history.prior_census_git_sha256).toBe(sha(bytes));expect(history.prior_census_working_sha256).toBe(sha(bytes));
   expect(map.source_baseline).toBe(previous.source_baseline);expect(history.source_baseline).toBe(previous.source_baseline);
@@ -373,11 +378,14 @@ function checkedNavigationHistory(bundle:CensusBundle,map:CensusMap,history:Reco
   expect(map.sources.map(row=>row.path)).toEqual(previous.sources.map(row=>row.path));
   const changed=previous.sources.filter((row,index)=>JSON.stringify(row)!==JSON.stringify(map.sources[index]));expect(changed.map(row=>row.path)).toEqual(diagnosticSources);
   expect(history.sources).toEqual(changed.map(row=>({path:row.path,prior_row_sha256:jsonSha(row),current_row_sha256:jsonSha(map.sources.find(item=>item.path===row.path))})));
+  for(const row of changed){const current=map.sources.find(item=>item.path===row.path)!;expect(current.facts).toEqual(bundle.api.sourceFacts(current.path,bundle.read(current.path)));}
   for(const[index,row]of map.sources.entries())expect(row.committed_sha256).toBe(previous.sources[index]!.committed_sha256);
   expect(history.unreviewed_source_drift).toEqual(expectedWorkingDrift(bundle,map).map(row=>row.source));
   expect(history.qualification_effect).toEqual({executed_tests:0,actual_host_pass:false,parent_qualification_granted:false,full_testing_status:"deferred-by-user"});
   expect(typeof history.reason).toBe("string");expect((history.reason as string).length).toBeGreaterThan(0);
 }
+function checkedNavigationHistory(bundle:CensusBundle,map:CensusMap,history:Record<string,unknown>){checkedWorkingHistory(bundle,map,history,"a35834b49a9e056d49973a1377b10f819fbaa8b9");}
+function checkedNotificationReferenceHistory(bundle:CensusBundle,map:CensusMap,history:Record<string,unknown>){checkedWorkingHistory(bundle,map,history,"6c785c91f117d816829a899428433e162accfde2");}
 function historicalWorkspaceSwitchMap() {
   return JSON.parse(gitSource(workspaceSwitchCompletedCommit,censusPath).toString("utf8")) as CensusMap;
 }
@@ -391,6 +399,8 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
   expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift")).toEqual(expectedWorkingDrift(bundle,bundle.map));
   const navigation=navigationHistoryBundle(bundle);
   checkedNavigationHistory(navigation,navigation.map,JSON.parse(bundle.read(navigationHistoryPath).toString("utf8")) as Record<string,unknown>);
+  const notification=notificationReferenceHistoryBundle(bundle);
+  checkedNotificationReferenceHistory(notification,notification.map,JSON.parse(bundle.read(notificationReferenceHistoryPath).toString("utf8")) as Record<string,unknown>);
   checkedHistory(bundle,historicalOperationalMap(),JSON.parse(bundle.read(historyPath).toString("utf8")) as CensusHistory);
   checkedDiagnosticHistory(bundle,historicalDiagnosticMap(),JSON.parse(bundle.read(diagnosticHistoryPath).toString("utf8")) as CensusHistory);
   checkedContrastV2History(bundle,historicalContrastV2Map(),JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
@@ -433,6 +443,22 @@ it.each(["prior-commit","prior-map","row-hash","missing-row","duplicate-row","co
   if(variant === "hidden-drift")history.unreviewed_source_drift=[];
   if(variant === "extra")history.extra="forged";
   expect(()=>checkedNavigationHistory(bundle,map,history)).toThrow();
+});
+
+it.each(["prior-commit","prior-map","row-hash","missing-row","duplicate-row","committed-pin","scope","qualification","hidden-drift","extra"])("refuses forged notification reference census history %s",async variant=>{
+  const current=await censusBundle();checkedCensus(current,current.map);const bundle=notificationReferenceHistoryBundle(current),map=structuredClone(bundle.map),history=JSON.parse(current.read(notificationReferenceHistoryPath).toString("utf8"));
+  checkedNotificationReferenceHistory(bundle,map,history);
+  if(variant==="prior-commit")history.prior_commit="0".repeat(40);
+  if(variant==="prior-map")history.prior_census_git_sha256="0".repeat(64);
+  if(variant==="row-hash")history.sources[0].current_row_sha256="0".repeat(64);
+  if(variant==="missing-row")history.sources.pop();
+  if(variant==="duplicate-row")history.sources.push(structuredClone(history.sources[0]));
+  if(variant==="committed-pin")map.sources.find(row=>row.path===diagnosticSources[0])!.committed_sha256="0".repeat(64);
+  if(variant==="scope")history.scope="passed";
+  if(variant==="qualification")history.qualification_effect.executed_tests=1;
+  if(variant==="hidden-drift")history.unreviewed_source_drift.pop();
+  if(variant==="extra")history.extra="forged";
+  expect(()=>checkedNotificationReferenceHistory(bundle,map,history)).toThrow();
 });
 it("keeps workspace history authentic when current review definitions change",async()=>{
   const bundle=await censusBundle(),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;

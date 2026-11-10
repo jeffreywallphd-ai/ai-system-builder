@@ -4,7 +4,7 @@ import path from "node:path";
 import type { CDPSession, Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, qualifyNativeCriticalAccessibilityReport, readCriticalAccessibilityMode, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation,
   type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type ContrastRetryDiagnostics } from "../technical-accessibility-observation";
-import { collectDocumentAccessibilityObservation, collectExpandedNavigationAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
+import { collectDocumentAccessibilityObservation, collectExpandedNavigationAccessibilityObservation, collectNotificationPopupAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
   collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference, readTechnicalAccessibilityEngine } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
@@ -127,6 +127,30 @@ async function collectClosedNavigationDocument(page: Page) {
   }
 }
 
+/** Use the real keyboard path; the popup and its opener are audited separately. */
+async function collectClosedNotificationDocument(page: Page, width: 320 | 1440) {
+  const bell = page.locator('[id="application-notification-bell"]');
+  const panel = page.locator('[id="application-notification-panel"]');
+  if (await bell.count() !== 1 || await panel.count() !== 1 || await bell.getAttribute("aria-expanded") !== "true") throw new Error();
+  try {
+    await panel.press("Escape"); await panel.waitFor({state: "hidden"});
+    if (await bell.getAttribute("aria-expanded") !== "false" || await bell.getAttribute("aria-controls") !== null) throw new Error();
+    const focus = await page.waitForFunction(() => document.activeElement === document.getElementById("application-notification-bell"), undefined, {timeout: 8000});
+    await focus.dispose();
+    return await collectDocumentAccessibilityObservation(page, width);
+  } finally {
+    const expanded = await bell.getAttribute("aria-expanded");
+    if (expanded === "false") await bell.press("Enter"); else if (expanded !== "true") throw new Error();
+    await panel.waitFor({state: "visible"});
+    if (await bell.getAttribute("aria-expanded") !== "true" || await bell.getAttribute("aria-controls") !== "application-notification-panel") throw new Error();
+    const focus = await page.waitForFunction(() => {
+      const popup = document.getElementById("application-notification-panel"), controls = popup?.querySelectorAll("[data-notification-initial-focus]");
+      return controls?.length === 1 && document.activeElement === controls[0];
+    }, undefined, {timeout: 8000});
+    await focus.dispose();
+  }
+}
+
 /** Actual Page assertions. Synthetic callback tests do not qualify a real host. */
 export async function qualifyCriticalSurfaceAccessibility(page: Page, info: TestInfo, surface: CriticalAccessibilitySurface, mode: CriticalAccessibilityMode = "standard") {
   readCriticalAccessibilityMode(mode);
@@ -139,9 +163,11 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
   const audits: ReturnType<typeof rawAudit>[] = [];
   const forcedColorsAudits: ReturnType<typeof rawAudit>[] = [];
   const navigationMenuAudits: Array<{ media: "normal" | "forced-colors"; audit: ReturnType<typeof rawAudit> }> = [];
+  const notificationPopupAudits: Array<{media: "normal" | "forced-colors"; qualification: Awaited<ReturnType<typeof collectNotificationPopupAccessibilityObservation>>["qualification"]}> = [];
   const report: Record<string, unknown> = { ...context, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: context.schemaVersion,
     status: "running", scope: "ui-accessibility-observation-only", audits, forcedColorsAudits };
   if (context.surface === "navigation-menu") report.navigationMenuAudits = navigationMenuAudits;
+  if (context.surface === "notifications") report.notificationPopupAudits = notificationPopupAudits;
   let created = false, stage = "reference-profile";
   let failedContrast: { stage: string; observation: ContrastRetryDiagnostics } | undefined;
   let originalViewport: { width: number; height: number } | undefined;
@@ -220,7 +246,8 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       report[`motion-${width}`] = readReducedMotionObservation(motion);
       stage = `control-access-${width}`; await controlAccess(width, stage);
       stage = `audit-${width}`;
-      const { audit, diagnostics } = await (context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
+      const { audit, diagnostics } = await (context.surface === "notifications" ? collectClosedNotificationDocument(page, width)
+        : context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
         : (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width));
       if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
       audits.push(rawAudit(audit)); await save();
@@ -231,6 +258,12 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
         navigationMenuAudits.push({ media: "normal", audit: rawAudit(expanded.audit) });
         if (expanded.audit.status === "failed") failedContrast = { stage, observation: expanded.diagnostics };
         await save(); if (expanded.audit.status !== "passed") throw new Error();
+      }
+      if (context.surface === "notifications") {
+        stage = `notification-popup-audit-${width}`;
+        const popup = await collectNotificationPopupAccessibilityObservation(page, width);
+        notificationPopupAudits.push({media: "normal", qualification: popup.qualification});
+        await save(); if (popup.qualification.status !== "passed") throw new Error();
       }
     }
     stage = "forced-colors-media";
@@ -244,7 +277,8 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       if (context.surface === "navigation-menu") { stage = `forced-colors-navigation-layout-${width}`; await requireNavigationLayout(page, width === 320); }
       stage = `forced-colors-control-access-${width}`; await controlAccess(width, stage);
       stage = `forced-colors-audit-${width}`;
-      const { audit, diagnostics } = await (context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
+      const { audit, diagnostics } = await (context.surface === "notifications" ? collectClosedNotificationDocument(page, width)
+        : context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
         : (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width));
       if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
       forcedColorsAudits.push(rawAudit(audit)); await save();
@@ -256,10 +290,18 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
         if (expanded.audit.status === "failed") failedContrast = { stage, observation: expanded.diagnostics };
         await save(); if (expanded.audit.status !== "passed") throw new Error();
       }
+      if (context.surface === "notifications") {
+        stage = `forced-colors-notification-popup-audit-${width}`;
+        const popup = await collectNotificationPopupAccessibilityObservation(page, width);
+        notificationPopupAudits.push({media: "forced-colors", qualification: popup.qualification});
+        await save(); if (popup.qualification.status !== "passed") throw new Error();
+      }
     }
     if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
       report.browserProcessRolesAfter = await observeOwnedBrowserProcessRoles(page);
     }
+    if (context.surface === "notifications" && (notificationPopupAudits.length !== 4 || notificationPopupAudits.some((item, index) =>
+      item.media !== (index < 2 ? "normal" : "forced-colors") || item.qualification.width !== [1440,320][index % 2] || item.qualification.status !== "passed"))) throw new Error();
     const result = qualifyCriticalAccessibilityReport(context, audits);
     Object.assign(report, result); return result;
   } catch {

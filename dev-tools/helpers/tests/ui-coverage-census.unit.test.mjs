@@ -470,7 +470,31 @@ const pendingNavigationDefinition=Object.freeze({priorCommit:"a35834b49a9e056d49
   Object.freeze({path:"dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",committed:"ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c",candidate:"1e3d7265b8fe88ddd4b1744f2ea194a50d5312a448f3c1140a91d42b52812596",facts:"1d16dd5a2cf496422ea179b705da646dee73907d436b688109f07e46635bea7b"}),
 ])});
 let navigationPriorCensus;
+// Restore the authenticated navigation epoch for its existing guards. The
+// published inventory keeps all three working gaps and grants no execution.
+const pendingNotificationDefinition=Object.freeze({priorCommit:"6c785c91f117d816829a899428433e162accfde2",priorMap:"141005a58243c93574bdfc3e57d4beb486c689b06bc3507917ee27dde6830ccf",map:"180aa692d4c09b8d62e6a8d3bd4b57a541c595efa1b88092fbd75e64de7285f1",sources:Object.freeze([
+  Object.freeze({path:"dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",committed:"1dafcde36e373a8444b0236f24c3fb9db86b8d109c07603d4e3753107820bc88",candidate:"a33f115f3603ae7d9b68ee775205c648ac7874789f915e13c7de1b5a30867083",facts:"3f50c18ac8a35a52353d830ca7f364466ca55b10e2f098e0f7412d22ace2ebcd"}),
+  Object.freeze({path:"dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",committed:"0a03d828e46601b4c69c12907aa24853e120a0395e935bdd28f9c4d1730d5257",candidate:"9b768717518c039eecb04c9f2621f7b2840da282c50113a036408e660e583e72",facts:"080ee3f999c51e39f1535867b20431e91bc2894641f2431529b6ebc1b715e6a0"}),
+  Object.freeze({path:"dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",committed:"ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c",candidate:"42e2be25e1614f2d0a300995cd422e0bb49323811ed5a1a03b4896bdf2ec6b36",facts:"e9b01755971643bfeacc6e3e51fc5cfb23fdb00fdacbf8acec784f783f873423"}),
+])});
+let notificationPriorCensus;
+function notificationCensusLegacyView(map,result){
+  const digest=sha(JSON.stringify(map));
+  if(map.source_baseline!==committedCensusDefinition.baseline||digest===committedCensusDefinition.currentMap||digest===pendingNavigationDefinition.map)return{map,result};
+  assert.equal(digest,pendingNotificationDefinition.map);
+  assert.deepEqual(result.gaps.filter(row=>row.kind==="unreviewed-source-drift"),pendingNotificationDefinition.sources.map(row=>({kind:"unreviewed-source-drift",source:row.path})));
+  if(!notificationPriorCensus){notificationPriorCensus=JSON.parse(historicalSource(pendingNotificationDefinition.priorCommit,"docs/operations/comprehensive-ui-automation-current-census.json"));assert.equal(sha(JSON.stringify(notificationPriorCensus)),pendingNotificationDefinition.priorMap);}
+  const expected=structuredClone(notificationPriorCensus);
+  for(const pending of pendingNotificationDefinition.sources){
+    const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);const row=rows[0];
+    assert.equal(row.committed_sha256,pending.committed);assert.equal(row.facts.sha256,pending.candidate);assert.equal(sha(JSON.stringify(row.facts)),pending.facts);
+    const index=expected.sources.findIndex(item=>item.path===pending.path);assert(index>=0);assert.equal(expected.sources[index].committed_sha256,row.committed_sha256);expected.sources[index]=structuredClone(row);
+  }
+  assert.deepEqual(map,expected);
+  return{map:structuredClone(notificationPriorCensus),result};
+}
 function navigationCensusLegacyView(map,result){
+  ({map,result}=notificationCensusLegacyView(map,result));
   if(map.source_baseline!==committedCensusDefinition.baseline||sha(JSON.stringify(map))===committedCensusDefinition.currentMap)return{map,result};
   // Only this exact prospective definition set is admitted. Its three gaps
   // remain in published data; this view restores authentic rows for old guards.
@@ -1374,11 +1398,29 @@ test("committed census pins every definition to its actual reviewed checkpoint w
   assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:[{kind:"unreviewed-source-drift",source:map.sources[0].path}]}));
 });
 test("pending navigation definitions retain exact working gaps and cannot weaken committed or older guards",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const map=JSON.parse(historicalSource("6c785c91f117d816829a899428433e162accfde2","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   const before=JSON.stringify({map,result});assert.equal(result.gaps.length,3);assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));assert.equal(JSON.stringify({map,result}),before);
   const old=navigationCensusLegacyView(map,result);assert.equal(sha(JSON.stringify(old.map)),committedCensusDefinition.currentMap);assert.deepEqual(old.result.gaps,[]);assert.notEqual(old.map,map);
   for(const pending of pendingNavigationDefinition.sources){
+    const target=value=>value.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},(m,r)=>{target(m).facts.sha256="0".repeat(64);},(m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},(m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},(m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},(m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.mjs"});},(m,r)=>{m.full_testing_status="passed";},
+      (m,r)=>{m.scenarios[0].execution_status="passed";},(m,r)=>{m.source_baseline="0".repeat(40);},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
+  }
+});
+
+test("pending notification definitions preserve raw gaps and every earlier source guard",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  const before=JSON.stringify({map,result});assert.equal(result.gaps.length,3);assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));assert.equal(JSON.stringify({map,result}),before);
+  const old=notificationCensusLegacyView(map,result);assert.equal(sha(JSON.stringify(old.map)),pendingNavigationDefinition.map);assert.deepEqual(old.result.gaps,result.gaps);assert.notEqual(old.map,map);
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(old.map,old.result));
+  for(const pending of pendingNotificationDefinition.sources){
     const target=value=>value.sources.find(row=>row.path===pending.path);
     for(const mutate of [
       (m,r)=>{target(m).committed_sha256=pending.candidate;},(m,r)=>{target(m).facts.sha256="0".repeat(64);},(m,r)=>{target(m).facts.assertionCount++;},

@@ -143,3 +143,34 @@ Historical inventory tests must read the source, ledger and discovery records
 from the named historical Git snapshot. They must not use today's files as proof
 of an earlier version. Keep the original snapshot and row hashes. A forged pin,
 missing or duplicate row, hidden source drift or invented qualification must fail.
+
+## Automatic notification popup reference checks
+
+The installed accessibility engine asks for review when an opener uses both
+`aria-haspopup` and `aria-controls`, even when the referenced dialog exists.
+The source regression mounts the actual shared notification components and
+reproduces that result with the installed engine. It does not measure contrast
+or qualify an application run.
+
+Standard notification qualification audits the complete page with the panel
+closed, then restores it through the real keyboard controls. A separate fixed
+audit covers both the bell and the complete dialog. The bell is in the header;
+the dialog is under the main content. Panel-only sampling misses the opener.
+The dedicated journey first marks messages read and clears completed entries.
+Its proof requires the exact `Notifications` name and a native `button` opener,
+with no overriding role or name reference. Nonempty notification journeys need
+their own declared name/state checks; this empty-state proof cannot qualify them.
+
+The additional check requires unique visible source-owned elements in the same
+shell, correct role/name/state and both ID references. It matches the exact
+engine node and `controlsWithinPopup` check, then verifies the identities again
+after asynchronous work. Reports retain the original failed generic audit beside
+the bounded reference proof. Generic readers still reject that raw audit alone.
+Every other violation, unresolved check, contrast retry and positive-sample rule
+remains required. Unknown or changed elements fail; no audit rule or product ARIA
+attribute is removed.
+
+Native zoom admission stays unchanged. Standard-width proofs do not qualify
+native400 or another host. A new actual host result, source-bound checks and
+independent review are required. Preserve all earlier failures and defer combined
+full-system testing until the approved feature work is implemented.

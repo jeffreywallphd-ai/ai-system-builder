@@ -176,6 +176,50 @@ export function readTechnicalAccessibilityAudit(value: unknown): TechnicalAccess
   } catch { throw new Error(INVALID); }
 }
 
+export interface NotificationPopupReference {
+  readonly schemaVersion: "notification-popup-reference-v1";
+  readonly width: 320 | 1440;
+  readonly sharedShells: 1; readonly bells: 1; readonly dialogs: 1; readonly headings: 1;
+  readonly namedBells: 1; readonly buttonOpeners: 1;
+  readonly matchedIdReferences: 2; readonly visibleElements: 3; readonly stableElements: 3;
+  readonly engineReviewNodes: 1;
+  readonly engineRule: "aria-valid-attr-value";
+  readonly engineMessageKey: "controlsWithinPopup";
+}
+/** Closed structural evidence, not proof that a browser or a host actually ran. */
+export function readNotificationPopupReference(value: unknown): NotificationPopupReference {
+  try {
+    const data = record(value, ["schemaVersion", "width", "sharedShells", "bells", "dialogs", "headings", "namedBells", "buttonOpeners", "matchedIdReferences",
+      "visibleElements", "stableElements", "engineReviewNodes", "engineRule", "engineMessageKey"]);
+    if (data.schemaVersion !== "notification-popup-reference-v1" || (data.width !== 320 && data.width !== 1440) ||
+        data.engineRule !== "aria-valid-attr-value" || data.engineMessageKey !== "controlsWithinPopup") throw new Error();
+    for (const key of ["sharedShells", "bells", "dialogs", "headings", "namedBells", "buttonOpeners", "engineReviewNodes"]) count(data[key], 1, 1);
+    count(data.matchedIdReferences, 2, 2); count(data.visibleElements, 3, 3); count(data.stableElements, 3, 3);
+    return Object.freeze({schemaVersion: "notification-popup-reference-v1", width: data.width,
+      sharedShells: 1, bells: 1, dialogs: 1, headings: 1, namedBells: 1, buttonOpeners: 1, matchedIdReferences: 2, visibleElements: 3, stableElements: 3,
+      engineReviewNodes: 1, engineRule: "aria-valid-attr-value", engineMessageKey: "controlsWithinPopup"});
+  } catch { throw new Error("Invalid notification popup reference."); }
+}
+/** Keep the failed generic audit intact beside one additional, fixed DOM check. */
+export function qualifyNotificationPopupAccessibilityAudit(value: unknown, referenceValue: unknown) {
+  const audit = readTechnicalAccessibilityAudit(value), reference = readNotificationPopupReference(referenceValue);
+  if (audit.width !== reference.width) throw new Error("Invalid notification popup reference.");
+  const unresolved = audit.incomplete.filter(item => item.rule !== "color-contrast");
+  const matched = unresolved.length === 1 && unresolved[0]!.rule === reference.engineRule && unresolved[0]!.nodes === reference.engineReviewNodes;
+  const qualified = matched && audit.status === "failed" && audit.failures.length === 1 && audit.failures[0] === "unresolved-rule";
+  return Object.freeze({schemaVersion: "notification-popup-qualification-v1" as const, width: audit.width,
+    rawAudit: audit, reference, status: qualified ? "passed" as const : "failed" as const,
+    failures: Object.freeze(qualified ? [] : [...audit.failures, "notification-reference-unresolved"])});
+}
+export function readNotificationPopupAccessibilityObservation(value: unknown) {
+  try {
+    const data = record(value, ["audit", "diagnostics", "reference"]);
+    const observation = readTechnicalAccessibilityObservation({audit: data.audit, diagnostics: data.diagnostics});
+    const qualification = qualifyNotificationPopupAccessibilityAudit(data.audit, data.reference);
+    return Object.freeze({...observation, reference: qualification.reference, qualification});
+  } catch { throw new Error("Invalid notification popup observation."); }
+}
+
 export type CriticalAccessibilityMode = "standard" | "native400";
 export function readCriticalAccessibilityMode(value: unknown): CriticalAccessibilityMode {
   if (value !== "standard" && value !== "native400") throw new Error("Invalid critical accessibility mode.");

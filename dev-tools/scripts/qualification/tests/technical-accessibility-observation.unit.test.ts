@@ -14,11 +14,64 @@ vi.mock("node:fs/promises", () => {
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { readTechnicalAccessibilityAudit, readContrastRetryDiagnostics, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, readCriticalAccessibilityMode,
-  qualifyNativeCriticalAccessibilityReport } from "../visual-composer/technical-accessibility-observation";
+  qualifyNativeCriticalAccessibilityReport, readNotificationPopupReference, qualifyNotificationPopupAccessibilityAudit,
+  readNotificationPopupAccessibilityObservation } from "../visual-composer/technical-accessibility-observation";
 import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, collectDocumentAccessibilityObservation, collectExpandedNavigationAccessibilityObservation,
+  collectNotificationPopupAccessibilityObservation,
   collectRuntimeAccessibilityObservation, collectNativeDocumentAccessibilityObservation, collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
 const base = () => ({ schemaVersion: "technical-accessibility-audit-v1", width: 320, violations: [] as Array<{ rule: string; nodes: number }>, incomplete: [] as Array<{ rule: string; nodes: number }>, contrastPassedNodes: 3, retries: { attempted: 0, passed: 0 } });
 const invalid = "Invalid technical accessibility observation.";
+const notificationReference = () => ({schemaVersion:"notification-popup-reference-v1",width:320,sharedShells:1,bells:1,dialogs:1,headings:1,namedBells:1,buttonOpeners:1,
+  matchedIdReferences:2,visibleElements:3,stableElements:3,engineReviewNodes:1,engineRule:"aria-valid-attr-value",engineMessageKey:"controlsWithinPopup"});
+const notificationAudit = () => ({...base(),incomplete:[{rule:"aria-valid-attr-value",nodes:1}]});
+
+describe("separate fixed notification reference qualification",()=>{
+  it("keeps the original generic audit failed and unmodified beside positive reference evidence",()=>{
+    const raw=notificationAudit(),snapshot=JSON.stringify(raw),proof=notificationReference();
+    const result=qualifyNotificationPopupAccessibilityAudit(raw,proof);
+    expect(result.status).toBe("passed");expect(result.rawAudit.status).toBe("failed");expect(result.rawAudit.failures).toEqual(["unresolved-rule"]);
+    expect(result.rawAudit.incomplete).toEqual(raw.incomplete);expect(readTechnicalAccessibilityAudit(raw).status).toBe("failed");
+    expect(JSON.stringify(raw)).toBe(snapshot);expect(Object.isFrozen(result)).toBe(true);expect(Object.isFrozen(result.reference)).toBe(true);
+    proof.visibleElements=0;expect(result.reference.visibleElements).toBe(3);
+  });
+  it.each(["sharedShells","bells","dialogs","headings","namedBells","buttonOpeners","matchedIdReferences","visibleElements","stableElements","engineReviewNodes"])("rejects incomplete or duplicate %s proof",key=>{
+    for(const value of [0,99,true,"1",NaN,Infinity,-1])expect(()=>readNotificationPopupReference({...notificationReference(),[key]:value})).toThrow("Invalid notification popup reference.");
+  });
+  it.each(["missing","extra","future","foreign-rule","foreign-check","native","width-mismatch","getter","proxy"])("refuses %s proof without publishing private text",kind=>{
+    let value:Record<string,unknown>=notificationReference();let accessed=false;
+    if(kind==="missing")delete value.engineReviewNodes;
+    if(kind==="extra")value.privatePayload="synthetic-private-content";
+    if(kind==="future")value.schemaVersion="notification-popup-reference-v999";
+    if(kind==="foreign-rule")value.engineRule="synthetic-private-rule";
+    if(kind==="foreign-check")value.engineMessageKey="synthetic-private-check";
+    if(kind==="native")value.width="native400";
+    if(kind==="width-mismatch")value.width=1440;
+    if(kind==="getter")Object.defineProperty(value,"bells",{get(){accessed=true;throw new Error("synthetic-private-getter");},enumerable:true});
+    if(kind==="proxy")value=new Proxy(value,{get(){accessed=true;throw new Error("synthetic-private-proxy");}});
+    expect(()=>qualifyNotificationPopupAccessibilityAudit(notificationAudit(),value)).toThrow("Invalid notification popup reference.");expect(accessed).toBe(false);
+  });
+  it.each(["missing-review","extra-review-node","additional-rule","violation","no-positive-contrast","unresolved-contrast","missing-retry"])("preserves %s failure despite a positive reference",kind=>{
+    const raw=notificationAudit();
+    if(kind==="missing-review")raw.incomplete=[];
+    if(kind==="extra-review-node")raw.incomplete[0]!.nodes=2;
+    if(kind==="additional-rule")raw.incomplete.push({rule:"label",nodes:1});
+    if(kind==="violation")raw.violations.push({rule:"color-contrast",nodes:1});
+    if(kind==="no-positive-contrast")raw.contrastPassedNodes=0;
+    if(kind==="unresolved-contrast"||kind==="missing-retry"){raw.incomplete.push({rule:"color-contrast",nodes:1});raw.retries={attempted:kind==="missing-retry"?0:1,passed:0};}
+    const result=qualifyNotificationPopupAccessibilityAudit(raw,notificationReference());expect(result.status).toBe("failed");expect(result.failures).toContain("notification-reference-unresolved");expect(result.rawAudit.incomplete).toEqual(raw.incomplete);
+  });
+  it("retains independently resolved contrast retries and rejects forged generic status",()=>{
+    const raw=notificationAudit();raw.incomplete.push({rule:"color-contrast",nodes:1});raw.retries={attempted:1,passed:1};
+    const result=qualifyNotificationPopupAccessibilityAudit(raw,notificationReference());expect(result.status).toBe("passed");expect(result.rawAudit.retries).toEqual({attempted:1,passed:1});expect(result.rawAudit.incomplete).toHaveLength(2);
+    expect(()=>qualifyNotificationPopupAccessibilityAudit({...raw,status:"passed"},notificationReference())).toThrow(invalid);
+  });
+  it("requires a closed complete observation and preserves diagnostics without a host pass",()=>{
+    const diagnostics={...diagnostic(),attempted:0,outcomes:{violation:0,unresolved:0,noPositiveSample:0},reasons:{...diagnostic().reasons,bgGradient:0},hints:{...diagnostic().hints,backgroundImage:0}};
+    const input={audit:notificationAudit(),diagnostics,reference:notificationReference()},result=readNotificationPopupAccessibilityObservation(input);
+    expect(result.audit.status).toBe("failed");expect(result.qualification.status).toBe("passed");expect(result.diagnostics).toEqual(diagnostics);expect(result).not.toHaveProperty("parentPass");
+    for(const value of [{...input,privatePayload:"synthetic-private-content"},{audit:input.audit,diagnostics}, {...input,reference:{...input.reference,visibleElements:0}}])expect(()=>readNotificationPopupAccessibilityObservation(value)).toThrow("Invalid notification popup observation.");
+  });
+});
 const diagnostic = () => ({ schemaVersion: "contrast-retry-diagnostics-v1", attempted: 1, passed: 0,
   outcomes: { violation: 0, unresolved: 1, noPositiveSample: 0 },
   reasons: { bgGradient: 1, bgImage: 0, imgNode: 0, outsideViewport: 0, elmPartiallyObscuring: 0, elmPartiallyObscured: 0,
@@ -317,6 +370,7 @@ describe("truthful accessibility finalization", () => {
 
 describe("browser-local contrast retry projection (synthetic DOM only)", () => {
   let oldAxe: PropertyDescriptor | undefined;
+  let notificationRootStyles: Array<{node: HTMLElement; value: string | null}> = [];
   const page = { evaluate: async (callback: (value: unknown) => unknown, value: unknown) => callback(value) } as unknown as Page;
   const node = () => ({ target: ["#synthetic-private-selector"], any: [{ message: "synthetic-private-message" }] });
   const result = () => ({ violations: [] as unknown[], incomplete: [] as unknown[], passes: [{ id: "color-contrast", nodes: [node()] }] });
@@ -332,7 +386,102 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
   });
   afterEach(() => {
     if (oldAxe) Object.defineProperty(window, "axe", oldAxe); else Reflect.deleteProperty(window, "axe");
+    for (const {node,value} of notificationRootStyles) if (value === null) node.removeAttribute("style"); else node.setAttribute("style",value);
+    notificationRootStyles = [];
     document.body.replaceChildren(); vi.unstubAllGlobals();
+  });
+  function installNotificationPopup() {
+    if (!notificationRootStyles.length) notificationRootStyles = [document.documentElement,document.body].map(node=>({node,value:node.getAttribute("style")}));
+    document.body.innerHTML='<main class="ui-shell"><header class="ui-shell__header"><button id="application-notification-bell" type="button" class="ui-shell__notification-button" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="true" aria-controls="application-notification-panel">Notifications</button></header><div class="ui-shell__main"><div id="application-notification-panel" class="ui-notification__panel" role="dialog" aria-modal="false" aria-labelledby="application-notification-heading"><h2 id="application-notification-heading">Notifications</h2><button id="synthetic-private-selector">Synthetic private text</button></div></div></main>';
+    for (const element of document.querySelectorAll("*")) {
+      Object.defineProperty(element,"getClientRects",{configurable:true,value:()=>[{width:10,height:10}]});
+      Object.defineProperty(element,"getBoundingClientRect",{configurable:true,value:()=>({left:0,right:10,top:0,bottom:10,width:10,height:10})});
+      Object.defineProperty(element,"scrollIntoView",{configurable:true,value:vi.fn()});
+      (element as HTMLElement).style.visibility="visible";(element as HTMLElement).style.opacity="1";
+    }
+  }
+  const notificationReviewNode = () => ({target:["#application-notification-bell"],any:[{id:"aria-valid-attr-value",data:{messageKey:"controlsWithinPopup",needsReview:'aria-controls="application-notification-panel"'}}],all:[],none:[]});
+  const notificationResult = () => ({...result(),incomplete:[{id:"aria-valid-attr-value",nodes:[notificationReviewNode()]}]});
+  it("audits the fixed union of bell and complete popup while preserving the raw failed generic result",async()=>{
+    installNotificationPopup();const run=vi.fn(async context=>{expect(context).toEqual({include:[["#application-notification-bell"],["#application-notification-panel"]]});return notificationResult();});install(run);
+    const observed=await collectNotificationPopupAccessibilityObservation(page,320);
+    expect(observed.audit.status).toBe("failed");expect(observed.audit.incomplete).toEqual([{rule:"aria-valid-attr-value",nodes:1}]);expect(observed.qualification.status).toBe("passed");
+    expect(observed.reference).toEqual(notificationReference());expect(run).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(observed)).not.toMatch(/synthetic-private|Synthetic private|application-notification|selector|needsReview|target|message"/);
+  });
+  it.each(["missing-shell","duplicate-shell","missing-header","missing-main","missing-bell","duplicate-bell","foreign-bell","disabled-bell","wrong-bell-name","wrong-bell-role","wrong-bell-type","missing-bell-type","bell-labelledby","bell-roledescription","missing-panel","duplicate-panel","foreign-panel","wrong-role","wrong-modal","wrong-popup","closed","wrong-controls","missing-heading","duplicate-heading","foreign-heading","wrong-label","wrong-name","hidden","transparent","empty-box","nonfinite-box"])("refuses notification %s before engine access",async fault=>{
+    installNotificationPopup();const shell=document.querySelector("main")!,header=document.querySelector("header")!,main=document.querySelector(".ui-shell__main")!,bell=document.getElementById("application-notification-bell")!,panel=document.getElementById("application-notification-panel")!,heading=document.querySelector("h2")!;
+    if(fault==="missing-shell")shell.className="other";
+    if(fault==="duplicate-shell")document.body.append(shell.cloneNode(true));
+    if(fault==="missing-header")header.className="other";
+    if(fault==="missing-main")main.className="other";
+    if(fault==="missing-bell")bell.remove();
+    if(fault==="duplicate-bell")header.append(bell.cloneNode(true));
+    if(fault==="foreign-bell")document.body.append(bell);
+    if(fault==="disabled-bell")(bell as HTMLButtonElement).disabled=true;
+    if(fault==="wrong-bell-name")bell.setAttribute("aria-label","synthetic-private-name");
+    if(fault==="wrong-bell-role")bell.setAttribute("role","link");
+    if(fault==="wrong-bell-type")bell.setAttribute("type","submit");
+    if(fault==="missing-bell-type")bell.removeAttribute("type");
+    if(fault==="bell-labelledby")bell.setAttribute("aria-labelledby","application-notification-heading");
+    if(fault==="bell-roledescription")bell.setAttribute("aria-roledescription","synthetic-private-role");
+    if(fault==="missing-panel")panel.remove();
+    if(fault==="duplicate-panel")main.append(panel.cloneNode(true));
+    if(fault==="foreign-panel")document.body.append(panel);
+    if(fault==="wrong-role")panel.setAttribute("role","menu");
+    if(fault==="wrong-modal")panel.setAttribute("aria-modal","true");
+    if(fault==="wrong-popup")bell.setAttribute("aria-haspopup","menu");
+    if(fault==="closed")bell.setAttribute("aria-expanded","false");
+    if(fault==="wrong-controls")bell.setAttribute("aria-controls","synthetic-private-target");
+    if(fault==="missing-heading")heading.remove();
+    if(fault==="duplicate-heading")panel.append(heading.cloneNode(true));
+    if(fault==="foreign-heading")document.body.append(heading);
+    if(fault==="wrong-label")panel.setAttribute("aria-labelledby","synthetic-private-label");
+    if(fault==="wrong-name")heading.textContent="synthetic-private-name";
+    if(fault==="hidden")main.setAttribute("aria-hidden","true");
+    if(fault==="transparent")(header as HTMLElement).style.opacity="0";
+    if(fault==="empty-box")Object.defineProperty(heading,"getClientRects",{value:()=>[]});
+    if(fault==="nonfinite-box")Object.defineProperty(panel,"getBoundingClientRect",{value:()=>({left:0,right:NaN,top:0,bottom:10,width:10,height:10})});
+    const run=vi.fn();install(run);await expect(collectNotificationPopupAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");expect(run).not.toHaveBeenCalled();
+  });
+  it.each(["missing-review","duplicate-review","extra-review-node","foreign-node","nested-target","wrong-check","extra-check","missing-slot","wrong-key","wrong-reference","extra-data","getter-data","foreign-positive"])("refuses notification engine %s without returning private content",async fault=>{
+    installNotificationPopup();const measured=notificationResult();const review=measured.incomplete[0]!,node=review.nodes[0]!;
+    if(fault==="missing-review")measured.incomplete=[];
+    if(fault==="duplicate-review")measured.incomplete.push({...review});
+    if(fault==="extra-review-node")review.nodes.push(notificationReviewNode());
+    if(fault==="foreign-node")node.target=["#synthetic-private-selector"];
+    if(fault==="nested-target")node.target=[["#application-notification-bell"]] as never;
+    if(fault==="wrong-check")node.any[0]!.id="color-contrast";
+    if(fault==="extra-check")node.all.push(node.any[0]! as never);
+    if(fault==="missing-slot")node.none=undefined as never;
+    if(fault==="wrong-key")node.any[0]!.data.messageKey="synthetic-private-key";
+    if(fault==="wrong-reference")node.any[0]!.data.needsReview="synthetic-private-reference";
+    if(fault==="extra-data")Object.assign(node.any[0]!.data,{privatePayload:"synthetic-private-content"});
+    if(fault==="getter-data")Object.defineProperty(node.any[0]!.data,"messageKey",{get(){throw new Error("synthetic-private-getter");}});
+    if(fault==="foreign-positive")measured.passes[0]!.nodes=[{target:["body"]}] as never;
+    install(async()=>measured);await expect(collectNotificationPopupAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");
+  });
+  it.each(["replace-bell","replace-panel","replace-heading","replace-shell","close","hide","relabel","rename-bell","retype-bell","rerole-bell"])("rejects a notification scope that changes during the audit: %s",async fault=>{
+    installNotificationPopup();install(async()=>{
+      const bell=document.getElementById("application-notification-bell")!,panel=document.getElementById("application-notification-panel")!,heading=document.querySelector("h2")!,shell=document.querySelector("main")!;
+      if(fault==="replace-bell")bell.replaceWith(bell.cloneNode(true));
+      if(fault==="replace-panel")panel.replaceWith(panel.cloneNode(true));
+      if(fault==="replace-heading")heading.replaceWith(heading.cloneNode(true));
+      if(fault==="replace-shell")shell.replaceWith(shell.cloneNode(true));
+      if(fault==="close")bell.setAttribute("aria-expanded","false");
+      if(fault==="hide")(panel as HTMLElement).style.display="none";
+      if(fault==="relabel")heading.textContent="synthetic-private-name";
+      if(fault==="rename-bell")bell.setAttribute("aria-label","synthetic-private-name");
+      if(fault==="retype-bell")bell.setAttribute("type","submit");
+      if(fault==="rerole-bell")bell.setAttribute("role","link");
+      return notificationResult();
+    });await expect(collectNotificationPopupAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");
+  });
+  it.each([0,400,"native400",null,undefined])("refuses unsupported notification width %s before Page access",async width=>{
+    const evaluate=vi.fn();await expect(collectNotificationPopupAccessibilityObservation({evaluate}as unknown as Page,width as never)).rejects.toThrow("Invalid notification popup observation.");expect(evaluate).not.toHaveBeenCalled();
+  });
+  it("rejects caller selectors and callbacks before Page access",async()=>{
+    const evaluate=vi.fn(),observer=vi.fn();for(const extra of ["body",observer,{}])await expect((collectNotificationPopupAccessibilityObservation as (...args:unknown[])=>Promise<unknown>)({evaluate},320,extra)).rejects.toThrow("Invalid notification popup observation.");expect(evaluate).not.toHaveBeenCalled();expect(observer).not.toHaveBeenCalled();
   });
   it("uses each unique visible retry target without returning its selector/message/text", async () => {
     let calls = 0;

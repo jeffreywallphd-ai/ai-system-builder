@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
 import { readFileSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
+import axe from "axe-core";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { NotificationBell, NotificationViewport, NOTIFICATION_BELL_ID, NOTIFICATION_PANEL_ID } from "../../../../modules/ui/shared/notifications/NotificationCenter";
+import { NotificationProvider } from "../../../../modules/ui/shared/notifications/NotificationProvider";
 const probe = vi.hoisted(() => ({ exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
   forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false,
   navigationFault: "", navigationAuditStates: [] as string[], navigationKeys: [] as string[],
@@ -26,7 +31,7 @@ vi.mock("node:fs/promises", () => {
   return { readFile, mkdir, writeFile, lstat: unexpectedOcrIo, realpath: unexpectedOcrIo, default: { readFile, mkdir, writeFile } };
 });
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
-import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation } from "../visual-composer/technical-accessibility-observation";
+import { qualifyCriticalAccessibilityReport, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation, readTechnicalAccessibilityAudit } from "../visual-composer/technical-accessibility-observation";
 import { navigateCriticalApplicationArea, observeOwnedBrowserProcessRoles, prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "../visual-composer/e2e/critical-surface-accessibility";
 import { prepareGuidedSystemLifecycle } from "../visual-composer/e2e/guided-system-lifecycle";
 import { qualifyOcrDatasetJourney } from "../visual-composer/e2e/ocr-dataset-journey";
@@ -34,6 +39,35 @@ import { qualifyOperationalUiJourney } from "../visual-composer/e2e/operational-
 
 const context = () => ({ schemaVersion: "critical-accessibility-context-v1", runId: "critical-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, host: "thin-chrome", surface: "settings", testKey: "b".repeat(64) });
 const audit = (width: number) => ({ schemaVersion: "technical-accessibility-audit-v1", width, violations: [], incomplete: [], contrastPassedNodes: 1, retries: { attempted: 0, passed: 0 } });
+
+it("reproduces the installed engine popup reference review on valid actual Notifications markup", async () => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const saved = Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+  Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { value: true, configurable: true, writable: true });
+  try {
+    await act(async () => root.render(createElement(NotificationProvider, { children: createElement("main", { className: "ui-shell" },
+      createElement("header", null, createElement(NotificationBell)), createElement("div", { className: "ui-shell__main" }, createElement(NotificationViewport))) })));
+    const bell = host.querySelector<HTMLButtonElement>("#" + NOTIFICATION_BELL_ID)!; expect(bell).toBeTruthy();
+    await act(async () => bell.click());
+    const panel = host.querySelector("#" + NOTIFICATION_PANEL_ID)!; expect(panel).toBeTruthy();
+    expect(bell.getAttribute("aria-controls")).toBe(panel.id); expect(bell.getAttribute("aria-haspopup")).toBe("dialog"); expect(bell.getAttribute("aria-expanded")).toBe("true");
+    expect(bell.type).toBe("button"); expect(bell.getAttribute("aria-label")).toBe("Notifications"); expect(bell.hasAttribute("role") || bell.hasAttribute("aria-labelledby")).toBe(false);
+    expect(panel.getAttribute("role")).toBe("dialog"); expect(panel.querySelector("#" + panel.getAttribute("aria-labelledby"))?.textContent).toBe("Notifications");
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Close notifications");
+    const result = await axe.run(host, { runOnly: { type: "rule", values: ["aria-valid-attr-value"] } });
+    expect(result.violations).toHaveLength(0); expect(result.incomplete).toHaveLength(1);
+    const review = result.incomplete[0]!; expect(review.id).toBe("aria-valid-attr-value"); expect(review.nodes).toHaveLength(1);
+    const node = review.nodes[0]!; expect(node.target).toHaveLength(1); expect(typeof node.target[0]).toBe("string"); expect(document.querySelector(node.target[0] as string)).toBe(bell);
+    const checks = [...node.any, ...node.all, ...node.none]; expect(checks).toHaveLength(1); expect(checks[0]!.id).toBe("aria-valid-attr-value");
+    expect(checks[0]!.data).toEqual({ messageKey: "controlsWithinPopup", needsReview: 'aria-controls="application-notification-panel"' });
+    // This one-rule source fixture measures no contrast and qualifies no host.
+    const generic = readTechnicalAccessibilityAudit({ ...audit(1440), incomplete: [{ rule: review.id, nodes: 1 }] });
+    expect(generic.status).toBe("failed"); expect(generic.failures).toEqual(["unresolved-rule"]);
+  } finally {
+    await act(async () => root.unmount()); host.remove();
+    if (saved) Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", saved); else Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+  }
+});
 
 describe("owned browser diagnostic roles", () => {
   function owned(result: unknown, fail = "") {
@@ -281,6 +315,7 @@ describe("bounded control access observations", () => {
 
 describe("critical surface Page definition with inert IO and synthetic DOM", () => {
   let oldAxe: PropertyDescriptor | undefined;
+  let notificationRootStyles: Array<{node: HTMLElement; value: string | null}> = [];
   let oldClientWidth: PropertyDescriptor | undefined, oldScrollWidth: PropertyDescriptor | undefined;
   const page = {
     viewportSize: () => ({ width: 1440, height: 1000 }),
@@ -351,7 +386,78 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     for (const [key, old] of [["clientWidth", oldClientWidth], ["scrollWidth", oldScrollWidth]] as const) {
       if (old) Object.defineProperty(document.documentElement, key, old); else Reflect.deleteProperty(document.documentElement, key);
     }
+    for (const {node,value} of notificationRootStyles) if (value === null) node.removeAttribute("style"); else node.setAttribute("style",value);
+    notificationRootStyles = [];
     document.documentElement.style.removeProperty("zoom");document.body.replaceChildren(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
+  });
+  function notificationSurface(fault="") {
+    notificationRootStyles = [document.documentElement,document.body].map(node=>({node,value:node.getAttribute("style")}));
+    document.body.innerHTML='<main class="ui-shell"><header class="ui-shell__header"><button id="application-notification-bell" type="button" class="ui-shell__notification-button" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="true" aria-controls="application-notification-panel">Notifications</button></header><div class="ui-shell__main"><button id="synthetic-private-background">Synthetic private background</button></div></main>';
+    const main=document.querySelector(".ui-shell__main")!,bell=document.getElementById("application-notification-bell")!;
+    const keys:string[]=[],states:string[]=[];let disposed=0;
+    function prepareGeometry() {
+      for(const element of document.querySelectorAll("*")) {
+        Object.defineProperty(element,"getClientRects",{configurable:true,value:()=>[{width:10,height:10}]});
+        Object.defineProperty(element,"getBoundingClientRect",{configurable:true,value:()=>({left:0,right:10,top:0,bottom:10,width:10,height:10})});
+        Object.defineProperty(element,"scrollIntoView",{configurable:true,value:vi.fn()});
+        Object.assign((element as HTMLElement).style,{visibility:"visible",opacity:"1",transitionDuration:"0s",animationName:"none"});
+      }
+    }
+    function open() {
+      const panel=document.createElement("div");panel.id="application-notification-panel";panel.className="ui-notification__panel";panel.setAttribute("role","dialog");panel.setAttribute("aria-modal","false");panel.setAttribute("aria-labelledby","application-notification-heading");
+      panel.innerHTML='<h2 id="application-notification-heading">Notifications</h2><button data-notification-initial-focus aria-label="Close notifications">Close</button><p>No notifications yet.</p>';main.append(panel);
+      bell.setAttribute("aria-expanded","true");bell.setAttribute("aria-controls",panel.id);prepareGeometry();
+      if(fault!=="reopen-focus"||keys.length===0)(panel.querySelector("button") as HTMLButtonElement).focus();
+    }
+    open();
+    Object.defineProperty(window,"axe",{configurable:true,value:{run:async(root:unknown)=>{
+      const foreground=typeof root!=="string";
+      if(foreground)expect(root).toEqual({include:[["#application-notification-bell"],["#application-notification-panel"]]});else expect(root).toBe("body");
+      states.push(`${probe.forcedColors}:${probe.widths.at(-1)}:${foreground?"popup-and-opener":"complete-closed-document"}`);
+      if(!foreground){expect(document.getElementById("application-notification-panel")).toBeNull();expect(bell.getAttribute("aria-expanded")).toBe("false");}
+      const known={id:"aria-valid-attr-value",nodes:[{target:["#application-notification-bell"],any:[{id:"aria-valid-attr-value",data:{messageKey:"controlsWithinPopup",needsReview:'aria-controls="application-notification-panel"'}}],all:[],none:[]}]};
+      if(foreground&&fault==="popup-changes")bell.setAttribute("aria-controls","synthetic-private-reference");
+      return {violations:(!foreground&&fault==="body-failed"||foreground&&fault==="popup-bell-contrast")?[{id:"color-contrast",nodes:[{}]}]:[],
+        incomplete:foreground?[known,...(fault==="popup-extra-rule"||fault==="forced-popup-extra"&&probe.forcedColors==="active"?[{id:"aria-roles",nodes:[{target:["#application-notification-panel"]}]}]:[])]:[],
+        passes:foreground&&fault==="popup-no-positive"?[]:[{id:"color-contrast",nodes:[{target:[foreground?"#application-notification-heading":"#synthetic-private-background"]}]}]};
+    }}});
+    const notificationPage={...page,
+      locator:(selector:string)=>({
+        count:async()=>document.querySelectorAll(selector).length,
+        getAttribute:async(name:string)=>document.querySelector(selector)?.getAttribute(name)??null,
+        waitFor:async({state}:{state:string})=>{if(Boolean(document.querySelector(selector))!==(state==="visible"))throw new Error("synthetic-private-state");},
+        press:async(key:string)=>{
+          keys.push(key);
+          if(key==="Escape"){
+            expect(selector).toBe('[id="application-notification-panel"]');
+            if(fault==="close-throws")throw new Error("synthetic-private-close");
+            document.getElementById("application-notification-panel")?.remove();bell.setAttribute("aria-expanded",fault==="close-state"?"true":"false");bell.removeAttribute("aria-controls");
+            if(fault!=="close-focus")(bell as HTMLButtonElement).focus();
+          }else{
+            expect(selector).toBe('[id="application-notification-bell"]');expect(key).toBe("Enter");
+            if(fault==="reopen-throws")throw new Error("synthetic-private-open");open();
+          }
+        },
+      }),
+      waitForFunction:async(callback:()=>boolean)=>{if(!callback())throw new Error("synthetic-private-focus");return{dispose:async()=>{disposed++;if(fault==="handle-close"&&disposed===1)throw new Error("synthetic-private-handle");}};},
+    } as unknown as Page;
+    return{page:notificationPage,keys,states,disposed:()=>disposed,bell};
+  }
+  it("keeps complete closed-page audits beside all four positive opener-and-popup proofs",async()=>{
+    const fixture=notificationSurface();expect((await qualifyCriticalSurfaceAccessibility(fixture.page,info,"notifications")).status).toBe("passed");
+    expect(fixture.keys).toEqual(Array.from({length:4},()=>["Escape","Enter"]).flat());expect(fixture.disposed()).toBe(8);
+    expect(fixture.states).toEqual(["none:1440:complete-closed-document","none:1440:popup-and-opener","none:320:complete-closed-document","none:320:popup-and-opener","active:1440:complete-closed-document","active:1440:popup-and-opener","active:320:complete-closed-document","active:320:popup-and-opener"]);
+    const saved=JSON.parse(probe.writes.at(-1)!);expect(saved.status).toBe("passed");expect(saved.notificationPopupAudits).toHaveLength(4);
+    for(const item of saved.notificationPopupAudits){expect(item.qualification.status).toBe("passed");expect(item.qualification.rawAudit.status).toBe("failed");expect(item.qualification.rawAudit.incomplete).toEqual([{rule:"aria-valid-attr-value",nodes:1}]);expect(item.qualification.reference.matchedIdReferences).toBe(2);expect(item.qualification.reference.namedBells).toBe(1);expect(item.qualification.reference.buttonOpeners).toBe(1);}
+    expect(saved.audits.every((item:{incomplete:unknown[]})=>item.incomplete.length===0)).toBe(true);expect(fixture.bell.getAttribute("aria-expanded")).toBe("true");expect(document.activeElement?.hasAttribute("data-notification-initial-focus")).toBe(true);
+    expect(probe.writes.join("")).not.toMatch(/synthetic-private|Synthetic private|application-notification|needsReview|selector|target"/);
+  });
+  it.each(["body-failed","popup-extra-rule","popup-no-positive","popup-bell-contrast","popup-changes","close-throws","close-state","close-focus","reopen-throws","reopen-focus","handle-close","forced-popup-extra"])("keeps notification %s failed and preserves observed evidence",async fault=>{
+    const fixture=notificationSurface(fault);await expect(qualifyCriticalSurfaceAccessibility(fixture.page,info,"notifications")).rejects.toThrow(/Critical accessibility check failed/);
+    const saved=JSON.parse(probe.writes.at(-1)!);expect(saved.status).toBe("failed");expect(saved.notificationPopupAudits).toBeInstanceOf(Array);expect(probe.motion).toBe("no-preference");expect(probe.forcedColors).toBe("none");
+    if(fault==="body-failed"){expect(fixture.keys).toEqual(["Escape","Enter"]);expect(fixture.bell.getAttribute("aria-expanded")).toBe("true");expect(saved.audits[0].status).toBeUndefined();expect(saved.audits[0].violations).toHaveLength(1);}
+    if(["popup-extra-rule","popup-no-positive","popup-bell-contrast","forced-popup-extra"].includes(fault)){expect(saved.notificationPopupAudits.at(-1).qualification.status).toBe("failed");expect(saved.notificationPopupAudits.at(-1).qualification.rawAudit.status).toBe("failed");}
+    expect(probe.writes.join("")).not.toMatch(/synthetic-private|Synthetic private|application-notification|needsReview|selector|target"/);
   });
   it("audits both declared widths and finalizes only bounded context/rule/count facts", async () => {
     const report = await qualifyCriticalSurfaceAccessibility(page, info, "settings");

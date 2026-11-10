@@ -4,6 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
+  readNotificationPopupAccessibilityObservation,
   CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS, CONTRAST_RETRY_V4_REGION_MARKERS,
   type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type Native400Frame } from "../technical-accessibility-observation";
 
@@ -49,9 +50,11 @@ export const rawNativeFrame = (frame: Native400Frame) => ({dpr:frame.dpr,cssZoom
 
 /** Selectors/messages remain browser-local, including failed contrast retries. */
 function collectAccessibilityObservation(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime" | "navigation"): Promise<ReturnType<typeof readTechnicalAccessibilityObservation>>;
+function collectAccessibilityObservation(page: Page, width: 320 | 1440, scope: "notifications"): Promise<ReturnType<typeof readNotificationPopupAccessibilityObservation>>;
 function collectAccessibilityObservation(page: Page, width: "native400", scope: "shell" | "runtime", media: "normal" | "forced-colors"): Promise<ReturnType<typeof readNativeAccessibilityObservation>>;
-async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "native400", scope: "canvas" | "shell" | "runtime" | "navigation", media: "normal" | "forced-colors" = "normal") {
+async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "native400", scope: "canvas" | "shell" | "runtime" | "navigation" | "notifications", media: "normal" | "forced-colors" = "normal") {
   if (width !== 320 && width !== 1440 && width !== "native400") throw new Error("Invalid technical accessibility observation.");
+  if (scope === "notifications" && width === "native400") throw new Error("Invalid notification popup observation.");
   if (width === "native400") {
     if (media !== "normal" && media !== "forced-colors") throw new Error("Invalid native accessibility observation.");
     const frame = await collectNative400Frame(page, scope === "runtime");
@@ -100,8 +103,70 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
             navigationPanel.getAttribute("role") !== "menu" || navigationPanel.getAttribute("aria-label") !== "Application navigation" ||
             target !== undefined && !navigationContainer.contains(target)) throw new Error();
       }
-      const result = await axe.run(scope === "canvas" ? ".system-builder" : scope === "navigation" ? ".ui-shell__menu" : "body", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
+      const notification = scope === "notifications" ? (() => {
+        if (width !== 320 && width !== 1440) throw new Error();
+        const unique = (selector: string) => { const nodes = document.querySelectorAll(selector); if (nodes.length !== 1) throw new Error(); return nodes[0]!; };
+        return {shell: unique("main.ui-shell"), header: unique("header.ui-shell__header"), main: unique(".ui-shell__main"),
+          bell: unique('[id="application-notification-bell"]'), panel: unique('[id="application-notification-panel"]'), heading: unique('[id="application-notification-heading"]')};
+      })() : undefined;
+      function requireNotificationScope(target?: Element) {
+        if (scope !== "notifications") return;
+        if (!notification) throw new Error();
+        const {shell, header, main, bell, panel, heading} = notification;
+        for (const [selector, expected] of [["main.ui-shell", shell], ["header.ui-shell__header", header], [".ui-shell__main", main],
+          ['[id="application-notification-bell"]', bell], ['[id="application-notification-panel"]', panel], ['[id="application-notification-heading"]', heading]] as const) {
+          const nodes = document.querySelectorAll(selector); if (nodes.length !== 1 || nodes[0] !== expected || !expected.isConnected) throw new Error();
+        }
+        if (!shell.contains(header) || !shell.contains(main) || !header.contains(bell) || !main.contains(panel) || !panel.contains(heading) ||
+            !(bell instanceof HTMLButtonElement) || bell.disabled || bell.type !== "button" || !bell.classList.contains("ui-shell__notification-button") ||
+            bell.getAttribute("aria-label") !== "Notifications" || bell.hasAttribute("role") || bell.hasAttribute("aria-labelledby") || bell.hasAttribute("aria-roledescription") ||
+            !panel.classList.contains("ui-notification__panel") || heading.tagName !== "H2" || heading.textContent !== "Notifications" ||
+            bell.getAttribute("aria-haspopup") !== "dialog" || bell.getAttribute("aria-expanded") !== "true" || bell.getAttribute("aria-controls") !== "application-notification-panel" ||
+            panel.getAttribute("role") !== "dialog" || panel.getAttribute("aria-modal") !== "false" || panel.getAttribute("aria-labelledby") !== "application-notification-heading" ||
+            target !== undefined && target !== bell && !panel.contains(target)) throw new Error();
+        for (const node of [bell, panel, heading]) {
+          const box = node.getBoundingClientRect();
+          if (!(node instanceof HTMLElement) || node.closest('[inert],[aria-hidden="true"]') || !node.getClientRects().length ||
+              ![box.left, box.right, box.top, box.bottom, box.width, box.height].every(Number.isFinite) || box.width <= 0 || box.height <= 0) throw new Error();
+          let ancestor: Element | null = node, depth = 0;
+          while (ancestor && depth++ < 64) {
+            const style = getComputedStyle(ancestor), opacity = Number.parseFloat(style.opacity);
+            if (style.display === "none" || style.visibility !== "visible" || !Number.isFinite(opacity) || opacity <= 0 || style.contentVisibility === "hidden") throw new Error();
+            ancestor = ancestor.parentElement;
+          }
+          if (ancestor) throw new Error();
+        }
+      }
+      requireNotificationScope();
+      const result = await axe.run(scope === "canvas" ? ".system-builder" : scope === "navigation" ? ".ui-shell__menu"
+        : scope === "notifications" ? {include: [["#application-notification-bell"], ["#application-notification-panel"]]} : "body",
+        { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
       requireNavigationScope();
+      requireNotificationScope();
+      if (scope === "notifications") {
+        if (!notification || !Array.isArray(result.incomplete) || result.incomplete.length > 512) throw new Error();
+        const reviews = result.incomplete.filter(group => group?.id === "aria-valid-attr-value");
+        if (reviews.length !== 1 || !Array.isArray(reviews[0]!.nodes) || reviews[0]!.nodes.length !== 1) throw new Error();
+        const node = reviews[0]!.nodes[0]!;
+        if (!Array.isArray(node.target) || node.target.length !== 1 || typeof node.target[0] !== "string" || !node.target[0].length || node.target[0].length > 4096) throw new Error();
+        const targets = document.querySelectorAll(node.target[0]); if (targets.length !== 1 || targets[0] !== notification.bell) throw new Error();
+        const checks: unknown[] = [];
+        for (const slot of [node.any, node.all, node.none]) { if (!Array.isArray(slot) || slot.length > 64) throw new Error(); checks.push(...slot); }
+        if (checks.length !== 1) throw new Error();
+        const check = checks[0] as {id?: unknown; data?: unknown} | null;
+        if (check?.id !== "aria-valid-attr-value" || !check.data || typeof check.data !== "object" || Object.getPrototypeOf(check.data) !== Object.prototype) throw new Error();
+        const fields = Object.getOwnPropertyDescriptors(check.data);
+        if (Reflect.ownKeys(fields).length !== 2 || !fields.messageKey || !("value" in fields.messageKey) || fields.messageKey.value !== "controlsWithinPopup" ||
+            !fields.needsReview || !("value" in fields.needsReview) || fields.needsReview.value !== 'aria-controls="application-notification-panel"') throw new Error();
+        if (!Array.isArray(result.passes) || result.passes.length > 512) throw new Error();
+        for (const group of result.passes) if (group?.id === "color-contrast") {
+          if (!Array.isArray(group.nodes) || group.nodes.length > 10000) throw new Error();
+          for (const sample of group.nodes) {
+            if (!Array.isArray(sample.target) || sample.target.length !== 1 || typeof sample.target[0] !== "string" || !sample.target[0].length || sample.target[0].length > 4096) throw new Error();
+            const matches = document.querySelectorAll(sample.target[0]); if (matches.length !== 1) throw new Error(); requireNotificationScope(matches[0]);
+          }
+        }
+      }
       const violations = groups(result.violations), incomplete = groups(result.incomplete), passes = groups(result.passes);
       let attempted = 0, passed = 0;
       const outcomes = { violation: 0, unresolved: 0, noPositiveSample: 0 };
@@ -159,16 +224,19 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
           if (matches.length !== 1) throw new Error();
           const target = matches[0]!;
           requireNavigationScope(target);
+          requireNotificationScope(target);
           target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
           await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
           if (!target.isConnected || document.querySelector(selector) !== target || !target.getClientRects().length || getComputedStyle(target).visibility !== "visible") throw new Error();
           requireNavigationScope(target);
+          requireNotificationScope(target);
           const box = target.getBoundingClientRect();
           if (!Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) throw new Error();
           const measured = await axe.run({ include: [[selector]] }, { runOnly: { type: "rule", values: ["color-contrast"] } });
           const bad = groups(measured.violations), unresolved = groups(measured.incomplete), good = groups(measured.passes);
           if (!target.isConnected || document.querySelector(selector) !== target) throw new Error();
           requireNavigationScope(target);
+          requireNotificationScope(target);
           attempted++;
           if (!bad.length && !unresolved.length && good.some(item => item.rule === "color-contrast" && item.nodes > 0)) passed++;
           else {
@@ -178,15 +246,24 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
         }
       }
       const facts = { violations, incomplete, contrastPassedNodes: passes.find(item => item.rule === "color-contrast")?.nodes ?? 0, retries: { attempted, passed } };
+      requireNotificationScope();
       return { audit: width === "native400" ? facts : { schemaVersion: "technical-accessibility-audit-v1", width, ...facts },
+        ...(scope === "notifications" ? {reference: {schemaVersion: "notification-popup-reference-v1", width, sharedShells: 1, bells: 1, dialogs: 1, headings: 1, namedBells: 1, buttonOpeners: 1,
+          matchedIdReferences: 2, visibleElements: 3, stableElements: 3, engineReviewNodes: 1, engineRule: "aria-valid-attr-value", engineMessageKey: "controlsWithinPopup"}} : {}),
         diagnostics: { schemaVersion: "contrast-retry-diagnostics-v4", attempted, passed, outcomes, reasons, hints, reasonRegions } };
     } catch { throw new Error("Computed accessibility audit failed."); }
   }, { width, ruleIds: [...TECHNICAL_ACCESSIBILITY_RULE_IDS], scope, reasonIds: [...CONTRAST_RETRY_V2_REASON_IDS], hintIds: [...CONTRAST_RETRY_HINT_IDS], regionMarkers: CONTRAST_RETRY_V4_REGION_MARKERS });
+  if (scope === "notifications") return readNotificationPopupAccessibilityObservation(observation);
   if (width === "native400") {
     const frame = await collectNative400Frame(page, scope === "runtime");
     return readNativeAccessibilityObservation(observation, media, rawNativeFrame(frame));
   }
   return readTechnicalAccessibilityObservation(observation);
+}
+/** Fixed foreground union; the separate closed-document audit remains mandatory. */
+export function collectNotificationPopupAccessibilityObservation(page: Page, width: 320 | 1440) {
+  if (arguments.length !== 2 || (width !== 320 && width !== 1440)) return Promise.reject(new Error("Invalid notification popup observation."));
+  return collectAccessibilityObservation(page, width, "notifications");
 }
 function collectStandardAudit(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime") {
   if (width !== 320 && width !== 1440) return Promise.reject(new Error("Invalid technical accessibility observation."));
