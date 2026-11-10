@@ -10,6 +10,19 @@ from pathlib import Path
 from .common import digest, fields, read_json, relative, refuse
 from .storage import confined_path
 
+# The exact regression executor already admits only a tracked test. Keep these
+# two form checks separate so one host does not select the other application's tests.
+IMAGE_FORM_CHECKS = {
+    "thin-image-form-ui": (
+        "apps/thin-client/src/features/image-generation/components/ImageGenerationFeature.tsx",
+        "apps/thin-client/src/features/image-generation/tests/image-generation-feature.unit.test.tsx",
+    ),
+    "desktop-image-form-ui": (
+        "apps/desktop/src/renderer/features/image-generation/components/ImageGenerationForm.tsx",
+        "apps/desktop/src/renderer/features/image-generation/tests/image-generation-feature.unit.test.tsx",
+    ),
+}
+
 QUALIFICATION_PROFILES = (
     "artifact-confirmation-ui",
     "shared-forced-colors",
@@ -276,6 +289,9 @@ def definitions(root: Path) -> list[dict]:
         {"id": "completion-standardande2e", "patterns": [], "argv": [node, "dev-tools/scripts/testing/run-test-suite.mjs", "--suite=standardande2e"], "timeout": 1800},
         {"id": "completion-all", "patterns": [], "argv": [node, "dev-tools/scripts/testing/run-test-suite.mjs", "--suite=all"], "timeout": 1800},
         *[{"id": name, "patterns": list(QUALIFICATION_PROFILE_PATTERNS.get(name, [])), "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--profile", name], "timeout": 660 if name == "review-site" else 300} for name in QUALIFICATION_PROFILES],
+        *[{"id": name, "patterns": [form, test],
+           "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
+           "timeout": 120} for name, (form, test) in IMAGE_FORM_CHECKS.items()],
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/config/contributor-check-profiles.json", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
@@ -314,8 +330,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     if any(not matches for matches in covered.values()):
         refuse("verification.unclassified-impact", "Every changed path must have a tracked verification rule.", "Add a bounded catalog rule and a regression test for the uncovered impact.")
     selected = [c for c in checks if c["id"] in required or any(c["id"] in matches for matches in covered.values())]
-    declared_sources = set()
     selected_ids = {c["id"] for c in selected}
+    declared_sources = {path for check, paths in IMAGE_FORM_CHECKS.items() if check in selected_ids for path in paths}
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))
@@ -334,7 +350,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                 or len(set(test_paths)) != len(test_paths)):
             refuse("verification.profile-coverage", "Use bounded explicit tests for a registered profile.")
         declared_sources.update(relative(p) for p in source_paths + test_paths)
-    # Joint ownership comes only from selected, individually valid profiles.
+    # Joint ownership comes only from selected, individually valid profiles and exact checks.
     # Unknown paths and an explicitly requested generic check retain fallback.
     focused = [p for p, matches in covered.items() if "focused-tests" in matches]
     if "focused-tests" not in required and all(p in declared_sources for p in focused):

@@ -129,6 +129,11 @@ catalog includes documentation, agent-support, control-plane, roadmap,
 architecture, source-owned focused tests, dependency security and evaluation.
 Unknown impact needs a bounded catalog rule and regression test; do not replace
 it with arbitrary shell text or an early aggregate run.
+The `thin-image-form-ui` and `desktop-image-form-ui` checks each run the exact
+Image Generation form regression for that host. They own only the named form
+component and its test. Unmapped files and an explicit request for the generic
+check still use the generic check. Documentation, architecture and other
+applicable checks remain in the plan. A pass here does not qualify a live host.
 The automatically selected `review-site` profile owns exact HTML, JavaScript,
 CSS and DOM-test paths and executes the complete fixed Node DOM/controller file.
 It substitutes coarse focused ownership only when all focused impact is explicitly
