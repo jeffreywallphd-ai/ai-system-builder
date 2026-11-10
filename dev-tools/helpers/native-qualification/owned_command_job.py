@@ -248,6 +248,17 @@ def _fixture_intent(role,folder,*,retry=None):
     return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(source),MappingProxyType({command[0]: interpreter_hash})))
 
 
+def _reviewed_host_home(candidate,env):
+    """Check the cooperative Windows profile; never fall back to a user's home."""
+    base=candidate.parent;home=base/"h"
+    need(env.get("TEMP")==env.get("TMP")==str(base/"t") and
+         env.get("HOME")==env.get("USERPROFILE")==str(home),"short-owned-temp-home")
+    need(env.get("APPDATA")==str(home/"AppData/Roaming") and
+         env.get("LOCALAPPDATA")==str(home/"AppData/Local"),"short-owned-appdata")
+    for directory in (base/"t",home,home/"AppData/Local",home/"AppData/Roaming"):
+        _regular_directory(directory,_REPO)
+
+
 def _reviewed_host_inputs(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest,consumer_files,bounded_files=False):
     """Shared passive witnesses; no intent, process or command is issued here."""
     need(candidate.is_absolute() and candidate.resolve()==candidate and re.fullmatch(r"\.local-codex/q/[a-f0-9]{8}/c",candidate.relative_to(_REPO).as_posix()),"fixed-candidate")
@@ -265,9 +276,8 @@ def _reviewed_host_inputs(phase,*,candidate,node_executable,node_sha256,run,fold
     need(all(type(key) is str and type(value) is str and "\0" not in key+value for key,value in env.items()) and len({key.upper() for key in env})==len(env) and sum(len(key)+len(value)+2 for key,value in env.items())<32760,"bounded-environment")
     forbidden=("PYTHONPATH","PYTHONSTARTUP","PYTHONINSPECT","PYTHONOPTIMIZE","LD_PRELOAD","DYLD_INSERT_LIBRARIES")
     need(not any(key in env for key in forbidden) and env.get("NODE_OPTIONS")=="" and env.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO") in ("dataset-profile", "ocr-documents") and env.get("AISB_LOCAL_DESKTOP_UI_RUN")==str(run) and env.get("HF_HUB_OFFLINE")=="1" and env.get("TRANSFORMERS_OFFLINE")=="1" and env.get("PIP_NO_INDEX")=="1" and env.get("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")=="1","fixed-controlled-environment")
-    need(env.get("TEMP")==env.get("TMP")==str(candidate.parent/"t") and env.get("HOME")==env.get("USERPROFILE")==str(candidate.parent/"h"),"short-owned-temp-home")
     need(_digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())==environment_sha256,"reviewed-environment-drift")
-    _regular_directory(folder,_REPO);_regular_directory(candidate.parent/"t",_REPO);_regular_directory(candidate.parent/"h",_REPO)
+    _reviewed_host_home(candidate,env);_regular_directory(folder,_REPO)
     bindings[str(node_executable)]=node_sha256
     return helpers,env,bindings
 
@@ -640,6 +650,8 @@ def _validate_intent(intent,folder):
             _training_empty_cache(_REPO/".local-codex/q"/intent.folder.parent.name[:8])
     else:
         need(all(_digest(Path(name))==value for name,value in intent.consumer_hashes.items()),"reviewed-consumer-drift")
+    if intent.phase in ("package",*_HOST_UI_PROJECTS,_SERIAL_PROVIDED_PHASE):
+        _reviewed_host_home(intent.cwd,intent.environment)
     _regular_directory(folder,_REPO)
 
 

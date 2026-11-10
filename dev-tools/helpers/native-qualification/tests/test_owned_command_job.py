@@ -638,7 +638,7 @@ class PortableNativePolicyTests(unittest.TestCase):
             root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
             helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
             run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32);folder=run/"serial-provided"
-            for path in (folder,candidate.parent/"t",candidate.parent/"h"):path.mkdir(parents=True,exist_ok=True)
+            for path in (folder,candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):path.mkdir(parents=True,exist_ok=True)
             node=root/"node.exe";node.write_bytes(b"inert reviewed Node image")
             base=root/"base/python.exe";base.parent.mkdir();base.write_bytes(b"inert original Python image")
             dll=base.with_name("python312.dll");dll.write_bytes(b"inert Python runtime identity")
@@ -649,7 +649,8 @@ class PortableNativePolicyTests(unittest.TestCase):
             env={"NODE_OPTIONS":"","PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"dataset-profile",
                  "AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1",
                  "PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1","TEMP":str(candidate.parent/"t"),
-                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
             args=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),python_executable=base,
                 runtime_file_hashes={str(file):job._digest(file) for file in (base,dll)},run=run,folder=folder,
                 reviewed_file_hashes=files,environment=env,
@@ -659,6 +660,68 @@ class PortableNativePolicyTests(unittest.TestCase):
                  patch.object(job,"_Win") as native,patch.object(job.subprocess,"Popen") as popen:
                 yield SimpleNamespace(root=root,candidate=candidate,helpers=helpers,run=run,folder=folder,
                     node=node,base=base,dll=dll,args=args,native=native,popen=popen)
+
+    @contextlib.contextmanager
+    def reviewed_host_profile_subject(self,phase):
+        with self.serial_provided_subject() as case:
+            if phase=="serial-provided":
+                call=job._reviewed_serial_provided_intent;args=dict(case.args);folder=case.folder
+            else:
+                folder=case.run/phase;folder.mkdir()
+                args={key:case.args[key] for key in ("candidate","node_executable","node_sha256","run","environment","environment_sha256","review_digest")}
+                args.update(folder=folder,reviewed_file_hashes={name:case.args["reviewed_file_hashes"][name] for name in job._CONSUMER_FILES})
+                def call(**values):return job._reviewed_host_intent(phase,**values)
+            yield SimpleNamespace(call=call,args=args,folder=folder,home=case.candidate.parent/"h",native=case.native,popen=case.popen)
+
+    def test_host_profile_denies_missing_or_misdirected_appdata_before_issue(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","home","other-profile"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        env=dict(case.args["environment"])
+                        if kind=="missing":del env[key]
+                        else:env[key]=str(case.home if kind=="home" else case.home.parent/"other-profile")
+                        args={**case.args,"environment":env,"environment_sha256":job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())}
+                        with patch.object(job,"_remember") as issue,self.assertRaisesRegex(job.NativeFailure,"short-owned-appdata"):
+                            case.call(**args)
+                        issue.assert_not_called();case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_denies_absent_or_file_appdata_before_issue(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","file"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        leaf=Path(case.args["environment"][key]);leaf.rmdir()
+                        if kind=="file":leaf.write_bytes(b"not a profile directory")
+                        with patch.object(job,"_remember") as issue,self.assertRaises(job.NativeFailure):
+                            case.call(**case.args)
+                        issue.assert_not_called();case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_directory_drift_is_denied_before_native_creation(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","file"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        intent=case.call(**case.args);job._validate_intent(intent,case.folder)
+                        leaf=Path(case.args["environment"][key]);leaf.rmdir()
+                        if kind=="file":leaf.write_bytes(b"replaced after intent issue")
+                        with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                        case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_reparse_directory_is_denied_at_issue_and_revalidation(self):
+        for phase in ("ui-thin","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                with self.subTest(phase=phase,key=key),self.reviewed_host_profile_subject(phase) as case:
+                    intent=case.call(**case.args);leaf=Path(case.args["environment"][key]);original=Path.lstat
+                    def inspect(path):
+                        info=original(path)
+                        if path==leaf:return SimpleNamespace(st_mode=info.st_mode,st_file_attributes=0x400)
+                        return info
+                    with patch.object(Path,"lstat",inspect):
+                        with patch.object(job,"_remember") as issue,self.assertRaises(job.NativeFailure):case.call(**case.args)
+                        issue.assert_not_called()
+                        with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                    case.native.assert_not_called();case.popen.assert_not_called()
 
     def test_serial_provided_has_one_fixed_original_python_command_and_standard_budget(self):
         with self.serial_provided_subject() as case:
@@ -839,12 +902,13 @@ class PortableNativePolicyTests(unittest.TestCase):
             for name in job._CONSUMER_FILES:
                 (helpers/name).write_bytes(b"synthetic reviewed helper identity")
                 hashes[name]=job._digest(helpers/name)
-            for folder in (run/"package",run/"ui",run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h"):
+            for folder in (run/"package",run/"ui",run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):
                 folder.mkdir(parents=True,exist_ok=True)
             env={"NODE_OPTIONS":"", "AISB_LOCAL_DESKTOP_UI_RUN":str(run),
                  "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1",
                  "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1", "TEMP":str(candidate.parent/"t"),
-                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
             with patch.object(job,"_REPO",root):
                 for scenario in ("dataset-profile","ocr-documents","ocr-document","ocr-documents --command", ""):
                     for phase in ("package","ui","ui-thin","ui-desktop"):
@@ -878,12 +942,13 @@ class PortableNativePolicyTests(unittest.TestCase):
             helper_bytes=b"synthetic reviewed helper identity"
             for name in job._CONSUMER_FILES:(helpers/name).write_bytes(helper_bytes)
             hashes={name:job._digest(helpers/name) for name in job._CONSUMER_FILES}
-            for folder in (run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h"):
+            for folder in (run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):
                 folder.mkdir(parents=True,exist_ok=True)
             env={"NODE_OPTIONS":"","AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1",
                  "TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1",
                  "TEMP":str(candidate.parent/"t"),"TMP":str(candidate.parent/"t"),
-                 "HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h")}
+                 "HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
             with patch.object(job,"_REPO",root),patch.object(job,"_Win") as native:
                 for scenario in ("dataset-profile","ocr-documents"):
                     for phase in ("ui-thin","ui-desktop"):

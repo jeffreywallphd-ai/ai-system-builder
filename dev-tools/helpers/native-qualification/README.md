@@ -162,6 +162,22 @@ not authority from an untrusted caller JSON file or proof of reviewer identity.
 No local user path is embedded in the portable helper. The committed closed
 `control_plane/qualification_job.py` fixture remains unchanged.
 
+Fixed package, UI and serial host profiles require a prepared Windows home.
+In the fresh short run root, create `h/AppData/Local` and `h/AppData/Roaming`
+as physical directories. Set `HOME` and `USERPROFILE` to `h`, `LOCALAPPDATA`
+to `h/AppData/Local`, `APPDATA` to `h/AppData/Roaming`, and both `TEMP` and
+`TMP` to the sibling `t`. Pointing both app-data values at `h` is refused.
+The launcher checks these values and directories before issuing an intent and
+again before native creation. It does not create, repair or adopt a home.
+These are cooperative path checks, not hostile namespace or offload proof.
+
+An incomplete isolated Windows profile can prevent Chrome from resolving its
+default data directory, even when Playwright supplies a separate test profile.
+Chrome's [remote-debugging protection](https://developer.chrome.com/blog/remote-debugging-port)
+must stay enabled. Prepare a new owned home; never use the user's real profile
+or disable that protection. A failed browser run stays failed until a new,
+separately reviewed run supplies actual evidence.
+
 Run portable policy checks with Python unittest discovery for
 `tests/test_owned_command_job.py`. Set `AISB_RUN_FIXED_NATIVE_QUALIFICATION=1`
 only after independent source review and controlled Windows execution authority
