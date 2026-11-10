@@ -657,6 +657,115 @@
         "Original browser/proxy/app retirement, source stability, complete compiled binding and strict network behavior pass. No retry or further effect is granted.",
         "No native400, other-host, offload, model, restricted review, parent or deferred full-system qualification follows."
       ]
+    },
+    {
+      "run_id": "operational-thin-0521f0199c794dd6b51c5c9071f087a9",
+      "status": "passed",
+      "exit_code": 0,
+      "tested_source": {
+        "head": "a93eeb306ad7352b273b4b4d83d8e176da7746ff",
+        "source_digest": "a6bc0b5a3684ad01039152e04277d56472115de819ee61447c6eb672f027a04f",
+        "app_source": "source.9ecf69a2c53472e326366d00108159edf8722ba184461a223764a2ad05b77ccf"
+      },
+      "manifest_sha256": "0d79ba78ca8c5776dfe6f2da91c5dde28a2464d9ad2678e9adb302a531ce3525",
+      "case_report_sha256": "efa08fe0d7add78c981481a24d8cc4b5c9b496a73f5aa00d2caeb52a1f183d33",
+      "teardown_sha256": "b8a1cb9bea3163f35cb15b45d5554c8ad0a044ffd8133c1ed9e9c3fce069ccc7",
+      "execution_sha256": "cc03ffb226601dfd57281cac3a6bc5f86ad2e8ddf1d8c35e236dbfa8116da59a",
+      "compiled_binding_execution_sha256": "da55c2bbfa20c91ebb0d1b28a6f9a2fe293b7ce6770a791aff6f3c39de0935a4",
+      "independent_local_outcome_review_sha256": "5e94411a3476522f2206a943d5d7eb8fb8afb2a430460f15123e0310e21bc9b0",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "78e2afa813d026acc578113fc8890acce79ffbbbe1f10d04c929103401ad1e23",
+        "settings": "c23ffc1233041b0ac78a7a52fc17ff5b902c77a2ad906795ee543efce47477b5",
+        "security": "949ddf9cf21b2dde98e5ad00922ac1c53746a8cf9e38d4e5c22416c869a5afd4",
+        "notifications": "f2c5a451b57d65b297a3aaea58997665005e0a28354878cc684a68ea71c49bbb",
+        "models-discovery": "2ec1613a27674fea14f31082c50cc2b4dca03bed5028e87a1c2676b9dc219e67",
+        "models-inventory": "b6778b66461ca68d6f9ecaa33bbad654405b1a54c9df08e75d743e3b9783d8b5",
+        "image-configuration": "62b5f5138096095cec901068dd7a201a2a418c9b8ece8f590aa07348b13a14d0"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 7510,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 40,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": null,
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": null
+      },
+      "operational_phases": {
+        "status": "passed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted",
+          "notifications-empty",
+          "notifications-focus-returned",
+          "models-discovery-opened",
+          "models-inventory-opened",
+          "image-configuration-opened",
+          "home-returned"
+        ],
+        "nextPhase": null
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security",
+        "notifications",
+        "models-discovery",
+        "models-inventory",
+        "image-configuration"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": true,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "image_configuration_observation": {
+        "prompt_edit_and_value_assertion_completed": true,
+        "audit_status": "passed",
+        "normal_widths": [
+          1440,
+          320
+        ],
+        "forced_colors_widths": [
+          1440,
+          320
+        ],
+        "normal_positive_contrast_nodes": [
+          99,
+          84
+        ],
+        "normal_violation_nodes": 0,
+        "normal_unresolved_nodes": 0
+      },
+      "limits": [
+        "One unchanged local Thin client feature test with synthetic data. All 17 steps and seven reported accessibility surfaces passed.",
+        "The prior failures and separate diagnostic remain in the record.",
+        "This test gives no Desktop, native, model, provider, full system or parent qualification."
+      ]
     }
   ],
   "limits": [
@@ -669,8 +778,8 @@
   "current_follow_up": {
     "owner": "Agent",
     "status": "pending",
-    "action": "Find the Image Generation element with low contrast. Fix its colors and repeat the affected checks. No user action is needed.",
-    "completed_preparation": "Prompt editing now works by name, and every Image field has its own label in the component tests. The live run reached the Image audit and found one contrast violation at the wide width.",
+    "action": "Continue the remaining Desktop, host and coverage checks. No user action is needed for this work.",
+    "completed_preparation": "The Thin client test now passes all 17 steps. Image Generation passes the accessibility checks at both widths in normal and forced colors.",
     "first_failures_preserved": true,
     "parent_pass": false
   },
@@ -972,5 +1081,20 @@
     "image_contrast_remaining": true,
     "whole_operational_journey_passed": false,
     "parent_qualification_granted": false
+  },
+  "image_intro_contrast_observation": {
+    "diagnostic_run_id": "operational-thin-077ee817295e4395976cf67997d29650",
+    "diagnostic_source_digest": "9dde603d24fb6403022c9919183fc18cab542b89465a7890a8012d13e085170a",
+    "diagnostic_case_passed": false,
+    "independent_diagnostic_review_sha256": "95b8a574d9df04affcc45cb1e88f4a9b35ae50f9c9f35fca522b093f381ea819",
+    "diagnostic_outcome_sha256": "64035e89825352c6ee2545194d9b4b485b3a993302c72bf5e1af74b2d5a83ea8",
+    "diagnosed_element": "First paragraph in the Image Generation form",
+    "original_contrast_ratio_milli": 4220,
+    "required_ratio_milli": 4500,
+    "computed_corrected_ratio_milli": 7095,
+    "correction": "Use the existing secondary text color for the intro. Keep the existing system color in forced colors.",
+    "original_feature_run_id": "operational-thin-0521f0199c794dd6b51c5c9071f087a9",
+    "local_feature_passed": true,
+    "parent_pass": false
   }
 }

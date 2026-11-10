@@ -170,6 +170,10 @@ Every other violation, unresolved check, contrast retry and positive-sample rule
 remains required. Unknown or changed elements fail; no audit rule or product ARIA
 attribute is removed.
 
+The Thin client Image Generation intro uses the secondary text color on its
+elevated panel. The normal-color contrast check still covers this text at both
+widths. The existing system color token applies in forced colors.
+
 Native zoom admission stays unchanged. Standard-width proofs do not qualify
 native400 or another host. A new actual host result, source-bound checks and
 independent review are required. Preserve all earlier failures and defer combined

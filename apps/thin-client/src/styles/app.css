@@ -6,3 +6,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.image-generation-workflow > .image-generation-intro {
+  color: var(--color-text-secondary);
+}

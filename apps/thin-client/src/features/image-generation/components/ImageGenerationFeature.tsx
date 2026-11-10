@@ -126,7 +126,7 @@ function WorkspaceImageGenerationFeature({
         </PanelHeading>
       </header>
       <div className="ui-panel__section-body image-generation-workflow ui-stack ui-stack--sm">
-        <p className="ui-text-muted">
+        <p className="image-generation-intro">
           Generate images from a prompt. Completed generations are registered in
           Artifacts automatically.
         </p>
