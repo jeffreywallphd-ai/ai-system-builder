@@ -5,6 +5,7 @@ export const REVIEW_SITE_ORIGIN = "http://127.0.0.1:8766";
 export const REVIEW_SITE_BROWSER_TIMEOUT_MS = 90_000;
 export const REVIEW_SITE_READ_TIMEOUT_MS = 15_000;
 export const REVIEW_SITE_MAX_BYTES = 2 * 1024 * 1024;
+export const REVIEW_SITE_WORK_ITEM_FORMAT = "roadmap-chunk-refs-v1";
 export const REVIEW_SITE_TARGET = Object.freeze({ roadmapId: "comprehensive-ui-automation", incrementId: "operational-ui-and-coverage-qualification" });
 export const REVIEW_SITE_SECURITY_HEADERS = Object.freeze({
   "cache-control": "no-store",
@@ -63,6 +64,15 @@ export function allowReviewSiteRequest(method: unknown, address: unknown, hasCre
     return url.origin === REVIEW_SITE_ORIGIN && !url.username && !url.password && !url.search && !url.hash
       && routes.has(url.pathname) && url.href === address;
   } catch { return false; }
+}
+export function reviewRouteHeaders(route: unknown): Readonly<Record<string, string>> {
+  if (typeof route !== "string" || !routes.has(route)) deny();
+  return Object.freeze({ Accept: "*/*", "Cache-Control": "no-store",
+    ...(route === "/api/review" ? { "X-Review-Work-Items": REVIEW_SITE_WORK_ITEM_FORMAT } : {}) });
+}
+export function allowReviewSiteReferenceRequest(route: unknown, representation: unknown): boolean {
+  return typeof route === "string" && routes.has(route)
+    && (route !== "/api/review" || representation === REVIEW_SITE_WORK_ITEM_FORMAT);
 }
 export function parseReviewSiteJson(bytes: Uint8Array, maximum = REVIEW_SITE_MAX_BYTES): unknown {
   try {

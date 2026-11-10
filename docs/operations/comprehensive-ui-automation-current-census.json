@@ -12708,8 +12708,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
    "facts": {
-    "sha256": "e4d72c2cb6906928bf441ba3787e7adb0c03ef6d6eee294438bb496ecf0ff67a",
-    "bytes": 16126,
+    "sha256": "bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe",
+    "bytes": 16547,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -12727,33 +12727,33 @@
      },
      {
       "name": "step",
-      "line": 73
+      "line": 74
      },
      {
       "name": "openCanonical",
-      "line": 95
+      "line": 98
      }
     ],
     "assertionCount": 34,
-    "assertionDigest": "14e16cfa3fe2964c6695a25f20adb2715c1ba6bdcb5f23aa3e77b5d9082612a0",
+    "assertionDigest": "2bbe61abbbfd52a4909425979249e76f96029ffc03d8835a0a04e27a82a3a804",
     "assertionExamples": [
      {
-      "line": 97,
+      "line": 100,
       "kind": "expect",
       "sha256": "c79960b515019279746fb34a5365467699de0147591bed4be066b5898c0db192"
      },
      {
-      "line": 98,
+      "line": 101,
       "kind": "expect",
       "sha256": "bdb3101623f4d31b34e972482c4b790583ad5472497b6ec2c88331430abcfaff"
      },
      {
-      "line": 103,
+      "line": 106,
       "kind": "expect",
       "sha256": "e8d535ab3d7b2cec16e2aea13930182ba74b6f93e51b895c4dc2c0ad3107a5d2"
      },
      {
-      "line": 104,
+      "line": 107,
       "kind": "expect",
       "sha256": "8eaafb24b6ee8dfaee5b9acac22e3bd109e8c25e93979a54101cf3a5f9272b87"
      }
@@ -12765,8 +12765,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
    "facts": {
-    "sha256": "1568ceef4d7dce87f07ae552142231b1b5feab2f1c316a7a3659f1d8daf82bf5",
-    "bytes": 12372,
+    "sha256": "42e2cbdf99dc92d9cc4d89806138b71c2123157582be11ea0bc2d7419f9107f3",
+    "bytes": 14567,
     "cases": [
      {
       "name": "matches canonical repository strings including Windows slashes, Unicode and LF",
@@ -12781,46 +12781,54 @@
       "line": 26
      },
      {
+      "name": "selects one immutable reference header only for the fixed review API route",
+      "line": 33
+     },
+     {
+      "name": "refuses missing or altered browser reference headers without coercion or route expansion",
+      "line": 51
+     },
+     {
       "name": "denies a wrong server identity or malformed status without invoking accessors",
-      "line": 32
+      "line": 59
      },
      {
       "name": "captures independent ordered records and linked work without promoting support",
-      "line": 39
+      "line": 66
      },
      {
       "name": "rejects malformed, duplicate, foreign and missing required canonical records",
-      "line": 47
+      "line": 74
      },
      {
       "name": "reports only closed phase labels; failed, incomplete and cleanup failures never pass",
-      "line": 67
+      "line": 94
      },
      {
       "name": "checks every required bullet in order, including later and nested requirements",
-      "line": 79
+      "line": 106
      },
      {
       "name": "admits exact bounded live replies and denies changed assets or weakened headers",
-      "line": 85
+      "line": 112
      },
      {
       "name": "redacts initial Page-port sync and async failures, including falsy rejection reasons",
-      "line": 97
+      "line": 124
      },
      {
       "name": "retains fixed primary and cleanup facts when report publication also fails",
-      "line": 109
+      "line": 136
      },
      {
       "name": "refuses an unknown case before key coercion, Page reads or report callbacks",
-      "line": 114
+      "line": 141
      }
     ],
     "dynamicCases": 0,
     "functions": [],
-    "assertionCount": 54,
-    "assertionDigest": "2360b2f80333b602018af22126c0519d70b5422e5bbae714725df3ab3bf8cc42",
+    "assertionCount": 69,
+    "assertionDigest": "092a0280b9691a18b27b22f55d435baca682cfdcc3f8a5683d888841e75a9f20",
     "assertionExamples": [
      {
       "line": 16,
@@ -14685,6 +14693,90 @@
     "modifiers": []
    },
    "committed_sha256": "46306c8ff6fca94353247c5e163d69d3ef96aea89392720fe6be08f5dbb50b24"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
+   "facts": {
+    "sha256": "55681ac62036d60b180316aa424871ab39775c1c358b39e9e2a35e08b12b4538",
+    "bytes": 15125,
+    "cases": [],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "deny",
+      "line": 27
+     },
+     {
+      "name": "field",
+      "line": 28
+     },
+     {
+      "name": "array",
+      "line": 34
+     },
+     {
+      "name": "id",
+      "line": 46
+     },
+     {
+      "name": "hash",
+      "line": 50
+     },
+     {
+      "name": "reviewRepositoryId",
+      "line": 54
+     },
+     {
+      "name": "allowReviewSiteRequest",
+      "line": 60
+     },
+     {
+      "name": "reviewRouteHeaders",
+      "line": 68
+     },
+     {
+      "name": "allowReviewSiteReferenceRequest",
+      "line": 73
+     },
+     {
+      "name": "parseReviewSiteJson",
+      "line": 77
+     },
+     {
+      "name": "verifyReviewSiteStatus",
+      "line": 83
+     },
+     {
+      "name": "captureReviewProjection",
+      "line": 102
+     },
+     {
+      "name": "reviewRouteMaximum",
+      "line": 167
+     },
+     {
+      "name": "assertReviewRequirementText",
+      "line": 171
+     },
+     {
+      "name": "captureReviewSiteReply",
+      "line": 179
+     },
+     {
+      "name": "reviewBrowserPhases",
+      "line": 195
+     },
+     {
+      "name": "reviewBrowserReport",
+      "line": 198
+     }
+    ],
+    "assertionCount": 0,
+    "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "assertionExamples": [],
+    "modifiers": []
+   },
+   "committed_sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e"
   }
  ],
  "scenarios": [
@@ -16711,7 +16803,8 @@
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
       "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
       "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
-      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts"
      ]
     },
     {
@@ -16720,7 +16813,8 @@
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
       "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
       "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
-      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts"
      ]
     },
     {
@@ -16729,7 +16823,8 @@
       "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
       "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
       "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
-      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts"
+      "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+      "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts"
      ]
     }
    ],

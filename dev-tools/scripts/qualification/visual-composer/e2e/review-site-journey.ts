@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { get, type ClientRequest } from "node:http";
 import path from "node:path";
-import { allowReviewSiteRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_ORIGIN, REVIEW_SITE_READ_TIMEOUT_MS, REVIEW_SITE_SECURITY_HEADERS, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, verifyReviewSiteStatus, type ReviewBrowserCase } from "../review-site-oracles";
+import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_ORIGIN, REVIEW_SITE_READ_TIMEOUT_MS, REVIEW_SITE_SECURITY_HEADERS, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus, type ReviewBrowserCase } from "../review-site-oracles";
 
 const unavailable = () => new Error("The local review browser test prerequisite is unavailable.");
 // Node's direct HTTP client has no ambient proxy/cookie/redirect behavior. Stop
@@ -14,7 +14,7 @@ async function readReviewRoute(route: string, maximum: number, owner: ReadOwner,
   return new Promise((resolve, reject) => {
     let settled = false, size = 0; const chunks: Buffer[] = [];
     const fail = () => { if (!settled) { settled = true; clearTimeout(timer); reject(unavailable()); } };
-    const request = get({ hostname: "127.0.0.1", port: 8766, path: route, method: "GET", agent: false, signal: owner.signal, maxHeaderSize: 16 * 1024, headers: { Accept: "*/*", "Cache-Control": "no-store" } }, response => {
+    const request = get({ hostname: "127.0.0.1", port: 8766, path: route, method: "GET", agent: false, signal: owner.signal, maxHeaderSize: 16 * 1024, headers: reviewRouteHeaders(route) }, response => {
       const length = response.headers["content-length"];
       if (response.statusCode !== (route === "/favicon.ico" ? 404 : 200) || response.headers["set-cookie"] || length === undefined || !/^\d+$/.test(length) || Number(length) > maximum) { response.destroy(); request.destroy(); fail(); return; }
       response.on("data", (chunk: Buffer) => {
@@ -58,12 +58,13 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       const request = route.request(), headers = request.headers();
       const credential = ["authorization", "proxy-authorization", "cookie"].some(name => Object.prototype.hasOwnProperty.call(headers, name));
       if (++requestCount > 128 || !allowReviewSiteRequest(request.method(), request.url(), credential, request.redirectedFrom() !== null)) { denied = true; await route.abort(); return; }
+      const routePath = new URL(request.url()).pathname;
+      if (!allowReviewSiteReferenceRequest(routePath, headers["x-review-work-items"])) { denied = true; await route.abort(); return; }
       if (request.url() === `${REVIEW_SITE_ORIGIN}/api/review` && fixtureBody !== undefined) {
         const body = Buffer.from(fixtureUnavailable ? '{"error":"synthetic-private-review-response"}' : fixtureBody);
         if (body.length > REVIEW_SITE_MAX_BYTES) throw unavailable();
         await route.fulfill({ status: fixtureUnavailable ? 503 : 200, headers: { ...REVIEW_SITE_SECURITY_HEADERS, "content-type": "application/json; charset=utf-8", "content-length": String(body.length) }, body });
       } else {
-        const routePath = new URL(request.url()).pathname;
         const maximum = routePath === "/api/review" ? REVIEW_SITE_MAX_BYTES : ["/api/status", "/favicon.ico"].includes(routePath) ? 4096 : 512 * 1024;
         const reply = await read(routePath, maximum);
         if (closing) await route.abort(); else await route.fulfill(reply);
@@ -88,6 +89,8 @@ export async function qualifyReviewSiteBrowser(page: Page, info: TestInfo, kind:
       }
       canonical = parseReviewSiteJson((await read("/api/review", REVIEW_SITE_MAX_BYTES)).body);
       captureReviewProjection(canonical, repositoryId);
+      const representation = Object.getOwnPropertyDescriptor(canonical as object, "work_item_format");
+      if (!representation || !("value" in representation) || !allowReviewSiteReferenceRequest("/api/review", representation.value)) throw unavailable();
     });
     const facts = captureReviewProjection(canonical, reviewRepositoryId(realpathSync.native(process.cwd())));
     const roadmapCard = () => page.locator("article.card").filter({ has: page.getByText(facts.roadmapId, { exact: true }) });

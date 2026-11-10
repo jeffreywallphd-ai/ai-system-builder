@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { allowReviewSiteRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_SECURITY_HEADERS, REVIEW_SITE_TARGET, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, verifyReviewSiteStatus } from "../visual-composer/review-site-oracles";
+import { allowReviewSiteRequest, allowReviewSiteReferenceRequest, assertReviewRequirementText, captureReviewProjection, captureReviewSiteReply, parseReviewSiteJson, REVIEW_SITE_MAX_BYTES, REVIEW_SITE_SECURITY_HEADERS, REVIEW_SITE_TARGET, REVIEW_SITE_WORK_ITEM_FORMAT, reviewBrowserPhases, reviewBrowserReport, reviewRepositoryId, reviewRouteHeaders, verifyReviewSiteStatus } from "../visual-composer/review-site-oracles";
 
 import type { Page, TestInfo } from "@playwright/test";
 import { qualifyReviewSiteBrowser } from "../visual-composer/e2e/review-site-journey";
@@ -28,6 +28,33 @@ test("bounds UTF8/JSON reads and keeps malformed response content out of errors"
   for (const bytes of [Buffer.from("synthetic-private-non-json"), Buffer.from([0xff]), Buffer.alloc(REVIEW_SITE_MAX_BYTES + 1)]) assert.throws(() => parseReviewSiteJson(bytes), error => error instanceof Error && !error.message.includes("synthetic-private"));
   assert.throws(() => parseReviewSiteJson(encode({}), REVIEW_SITE_MAX_BYTES + 1));
   assert.throws(() => parseReviewSiteJson(encode({}), 0));
+});
+
+test("selects one immutable reference header only for the fixed review API route", () => {
+  const common = { Accept: "*/*", "Cache-Control": "no-store" };
+  for (const route of ["/", "/api/status", "/app.js", "/style.css", "/favicon.ico"]) {
+    const headers = reviewRouteHeaders(route);
+    assert.deepEqual(headers, common); assert(Object.isFrozen(headers));
+    assert(!Object.keys(headers).some(name => /authorization|cookie|origin/i.test(name)));
+  }
+  const headers = reviewRouteHeaders("/api/review");
+  assert.deepEqual(headers, { ...common, "X-Review-Work-Items": "roadmap-chunk-refs-v1" });
+  assert(Object.isFrozen(headers));
+  assert.equal(Reflect.set(headers, "Authorization", "synthetic-private-credential"), false);
+  assert.equal(Object.hasOwn(headers, "Authorization"), false);
+  assert.deepEqual(reviewRouteHeaders("/api/review"), { ...common, "X-Review-Work-Items": REVIEW_SITE_WORK_ITEM_FORMAT });
+  let coerced = 0; const object = { [Symbol.toPrimitive]() { coerced++; throw undefined; } };
+  for (const route of [undefined, null, false, 0, object, "", "/api/review?x=1", "/private", "http://127.0.0.1:8766/api/review"]) assert.throws(() => reviewRouteHeaders(route));
+  assert.equal(coerced, 0);
+});
+
+test("refuses missing or altered browser reference headers without coercion or route expansion", () => {
+  assert.equal(allowReviewSiteReferenceRequest("/api/review", REVIEW_SITE_WORK_ITEM_FORMAT), true);
+  let coerced = 0; const object = { [Symbol.toPrimitive]() { coerced++; throw undefined; } };
+  for (const value of [undefined, null, false, 0, object, "", "other", "ROADMAP-CHUNK-REFS-V1", `${REVIEW_SITE_WORK_ITEM_FORMAT},other`]) assert.equal(allowReviewSiteReferenceRequest("/api/review", value), false);
+  for (const route of [undefined, null, false, 0, object, "", "/private", "/api/review?x=1"]) assert.equal(allowReviewSiteReferenceRequest(route, REVIEW_SITE_WORK_ITEM_FORMAT), false);
+  for (const route of ["/", "/api/status", "/app.js", "/style.css", "/favicon.ico"]) assert.equal(allowReviewSiteReferenceRequest(route, undefined), true);
+  assert.equal(coerced, 0);
 });
 test("denies a wrong server identity or malformed status without invoking accessors", () => {
   verifyReviewSiteStatus(status(), HASH);

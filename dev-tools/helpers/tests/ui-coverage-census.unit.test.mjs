@@ -428,9 +428,42 @@ function privateProviderLegacyView(map,result){
   // pre-revision rows, never future facts under an old baseline or a new pin.
   return{map:{...map,sources:map.sources.map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
 }
-function assertCompleteCurrentSourceDrift(map,result){
+function assertReferenceSourceDrift(map,result){
   const legacy=workspaceSwitchLegacyView(map,result);
   assertPrivateProviderSourceDrift(legacy.map,legacy.result);
+}
+const pendingReviewBrowserDefinitions=Object.freeze([
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"e4d72c2cb6906928bf441ba3787e7adb0c03ef6d6eee294438bb496ecf0ff67a",candidate:"bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe",facts_sha256:"81c1bc2d5bcd004735b62d973a7fc44cd1585ca2821f4f2184efe12f6e44014e",added:false},
+  {path:"dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e",candidate:"55681ac62036d60b180316aa424871ab39775c1c358b39e9e2a35e08b12b4538",facts_sha256:"789beb2e327687dc13ef16363df1a038e837c06f89b526a50895ee1ac9378761",added:true},
+  {path:"dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"1568ceef4d7dce87f07ae552142231b1b5feab2f1c316a7a3659f1d8daf82bf5",candidate:"42e2cbdf99dc92d9cc4d89806138b71c2123157582be11ea0bc2d7419f9107f3",facts_sha256:"7c248169ff30a3004692c3fa92532a0cdcd4894c3f95ab6334db5ae5c601d812",added:false},
+].map(Object.freeze));
+function reviewBrowserLegacyView(map,result){
+  const remaining=assertContrastDiagnosticDrift(map,result,pendingReviewBrowserDefinitions);
+  const prior=JSON.parse(historicalSource("42179ebae1106046efaa035d8c3682b974237dfb","docs/operations/comprehensive-ui-automation-current-census.json"));
+  const added="dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",previousRows=new Map();
+  assert.deepEqual(map.sources.filter(row=>row.path!==added).map(row=>row.path),prior.sources.map(row=>row.path));
+  for(const definition of pendingReviewBrowserDefinitions){
+    const row=map.sources.find(row=>row.path===definition.path);
+    assert.deepEqual(Object.keys(row).sort(),["path","facts","committed_sha256"].sort());
+    const old=prior.sources.filter(row=>row.path===definition.path);
+    if(definition.added){assert.equal(definition.path,added);assert.equal(old.length,0);}
+    else{assert.equal(old.length,1);assert.equal(old[0].facts.sha256,definition.committed);assert.equal(old[0].committed_sha256,definition.committed);previousRows.set(definition.path,old[0]);}
+  }
+  const originals=prior.scenarios.filter(row=>row.id==="contributor-review-site"),current=map.scenarios.filter(row=>row.id==="contributor-review-site");
+  assert.equal(originals.length,1);assert.equal(current.length,1);assert.equal(current[0].behavior_links.length,originals[0].behavior_links.length);
+  const scenarios=map.scenarios.map(row=>row.id!=="contributor-review-site"?row:{...row,behavior_links:row.behavior_links.map((link,index)=>{
+    const old=originals[0].behavior_links[index];assert.deepEqual(Object.keys(link).sort(),["behavior_index","assertion_sources"].sort());
+    assert.equal(link.behavior_index,old.behavior_index);assert.deepEqual(link.assertion_sources,[...old.assertion_sources,added]);
+    return{...link,assertion_sources:[...old.assertion_sources]};
+  })});
+  // Strip only the exact newly inventoried pure module and restore the two
+  // authenticated pre-change definitions/links. Forward all other rows and
+  // gaps unchanged so older guards still inspect their own current facts.
+  return{map:{...map,scenarios,sources:map.sources.filter(row=>row.path!==added).map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
+}
+function assertCompleteCurrentSourceDrift(map,result){
+  const legacy=reviewBrowserLegacyView(map,result);
+  assertReferenceSourceDrift(legacy.map,legacy.result);
 }
 function assertPrivateProviderSourceDrift(map,result){
   const legacy=privateProviderLegacyView(map,result);
@@ -658,9 +691,9 @@ test("checks the current repository map against original scope and actual source
     const source=`dev-tools/scripts/qualification/tests/${stem}-oracles.unit.test.ts`;
     const row=map.sources.find(s=>s.path===source);assert(row&&row.facts.assertionCount>0);
     if (row.facts.sha256 !== row.committed_sha256) {
-      // The composed exact SHA/full-facts/Git guard above admits this one
-      // prospective oracle definition; a pathname alone never exempts drift.
-      assert(trainingDefinitionsFor(map).some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
+      // Composed SHA/full-facts/Git guards admit only their exact prospective
+      // definitions; a pathname alone never exempts an oracle from drift.
+      assert([...trainingDefinitionsFor(map),...pendingReviewBrowserDefinitions].some(p=>p.path===source&&p.candidate===row.facts.sha256&&p.facts_sha256===sha(JSON.stringify(row.facts))));
       assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===source));
     } else assert.equal(row.facts.sha256,row.committed_sha256);
     assert(map.scenarios.find(s=>s.id===id).behavior_links.every(link=>link.assertion_sources.includes(source)));
@@ -798,6 +831,15 @@ function assertReintroducedTrainingOracle(map,archive) {
   }
 }
 
+function assertCurrentReintroducedSources(map,archive){
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  // The exact new browser definition has its own current proof. Only its
+  // authenticated legacy view reaches the older single-training-source guard.
+  // The archive itself and every unrelated archived-source refusal stay intact.
+  const legacy=reviewBrowserLegacyView(map,result);
+  assertReintroducedTrainingOracle(legacy.map,archive);
+}
+
 test("preserves exact historical versions without inheriting their current coverage or qualification",()=>{
   const read=repositoryReader(process.cwd()),map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const bytes=read("docs/operations/comprehensive-ui-automation-census-source-history.json");
@@ -814,9 +856,9 @@ test("preserves exact historical versions without inheriting their current cover
     assert.equal(sha(JSON.stringify(entry.row)),entry.prior_row_sha256);assert.match(entry.row.committed_sha256,/^[a-f0-9]{64}$/);
     assert.match(entry.row.facts.sha256,/^[a-f0-9]{64}$/);assert(entry.reason.length>0);
   }
-  // One newly used, changed oracle has its own exact current source proof.
+  // Newly used, changed oracles have their own exact current source proofs.
   // The eight old rows and their digests remain unchanged historical versions.
-  assertReintroducedTrainingOracle(map,archive);
+  assertCurrentReintroducedSources(map,archive);
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
@@ -828,7 +870,7 @@ test("reintroduced oracle coverage refuses old, missing, duplicate, future or un
   const archive=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-census-source-history.json"));
   const name="dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts";
   const row=m=>m.sources.find(value=>value.path===name);
-  assert.doesNotThrow(()=>assertReintroducedTrainingOracle(map,archive));
+  assert.doesNotThrow(()=>assertCurrentReintroducedSources(map,archive));
   for(const mutate of [
     m=>{m.sources[m.sources.findIndex(value=>value.path===name)]=structuredClone(archive.sources.find(value=>value.row.path===name).row);},
     m=>{m.sources=m.sources.filter(value=>value.path!==name);},
@@ -841,7 +883,19 @@ test("reintroduced oracle coverage refuses old, missing, duplicate, future or un
     m=>{m.scenarios.find(value=>value.id!=="desktop-model-training").behavior_links[0].assertion_sources.push(name);},
     m=>{m.sources.push(structuredClone(archive.sources.find(value=>value.row.path!==name).row));},
     m=>{m.scenarios.find(value=>value.id==="desktop-model-training").execution_status="passed";},
-  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertReintroducedTrainingOracle(current,archive));}
+  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertCurrentReintroducedSources(current,archive));}
+});
+
+test("reintroduced review guard cannot replay archived facts or bypass the earlier archive owner",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
+  const archive=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-census-source-history.json"));
+  const name="dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",old=archive.sources.filter(entry=>entry.row.path===name);
+  assert.equal(old.length,1);assertCurrentReintroducedSources(map,archive);
+  assert.throws(()=>assertReintroducedTrainingOracle(map,archive),"Historical authority cannot admit the newly used guard.");
+  const replay=structuredClone(map);replay.sources[replay.sources.findIndex(row=>row.path===name)]=structuredClone(old[0].row);
+  assert.throws(()=>assertCurrentReintroducedSources(replay,archive));
+  const prior=JSON.parse(historicalSource("42179ebae1106046efaa035d8c3682b974237dfb","docs/operations/comprehensive-ui-automation-current-census.json"));
+  assertReintroducedTrainingOracle(prior,archive);
 });
 
 test("prospective training form binding rejects forged future missing and extra drift",()=>{
@@ -1159,7 +1213,7 @@ test("historical workspace-confirmation definitions bind exactly three updates w
   const map=JSON.parse(historicalSource("75efdd2456f67757fd07b749dd398128af969e03","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(map.sources.length,180);assert.equal(result.gaps.length,13);assert.equal(pendingWorkspaceSwitchDefinitions.length,3);
-  assertCompleteCurrentSourceDrift(map,result);
+  assertReferenceSourceDrift(map,result);
   assert.throws(()=>assertPrivateProviderSourceDrift(map,result),"Earlier history must refuse the newer workspace definitions.");
   for(const pending of pendingWorkspaceSwitchDefinitions){
     const target=m=>m.sources.find(row=>row.path===pending.path);
@@ -1174,12 +1228,12 @@ test("historical workspace-confirmation definitions bind exactly three updates w
       (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
-    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertReferenceSourceDrift(m,r));}
   }
 });
 
-test("current review-reference definition binds exact new facts and preserves every earlier source guard",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+test("historical review-reference definition binds exact new facts and preserves every earlier source guard",()=>{
+  const map=JSON.parse(historicalSource("42179ebae1106046efaa035d8c3682b974237dfb","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(map.sources.length,180);assert.equal(result.gaps.length,14);
   const pending=pendingReviewReferenceDefinition,target=m=>m.sources.find(row=>row.path===pending.source);
@@ -1187,7 +1241,7 @@ test("current review-reference definition binds exact new facts and preserves ev
   assert.equal(target(map).committed_sha256,pending.committed);
   assert.equal(target(map).facts.sha256,pending.candidate);
   assert.equal(sha(JSON.stringify(target(map).facts)),pending.facts);
-  assertCompleteCurrentSourceDrift(map,result);
+  assertReferenceSourceDrift(map,result);
   for(const mutate of [
     (m,r)=>{target(m).committed_sha256=pending.candidate;},
     (m,r)=>{target(m).facts.sha256="0".repeat(64);},
@@ -1199,5 +1253,35 @@ test("current review-reference definition binds exact new facts and preserves ev
     (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.source);},
     (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.source});},
     (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
-  ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
+  ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertReferenceSourceDrift(m,r));}
+});
+
+test("current browser-reference definitions bind exact updates and one added pure guard without inheriting a pass",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(map.sources.length,181);assert.equal(result.gaps.length,17);assert.equal(pendingReviewBrowserDefinitions.length,3);
+  assertCompleteCurrentSourceDrift(map,result);
+  assert.throws(()=>assertReferenceSourceDrift(map,result),"Earlier reference history cannot qualify new browser definitions.");
+  for(const pending of pendingReviewBrowserDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{target(m).extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
+  }
+  for(const mutate of [
+    m=>m.sources.push({path:"dev-tools/unrelated.unit.test.ts",facts:{},committed_sha256:"0".repeat(64)}),
+    m=>m.scenarios.find(row=>row.id==="contributor-review-site").behavior_links[0].assertion_sources.pop(),
+    m=>m.scenarios.find(row=>row.id==="contributor-review-site").behavior_links[0].assertion_sources.shift(),
+    m=>m.scenarios.push(structuredClone(m.scenarios.find(row=>row.id==="contributor-review-site"))),
+  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertCompleteCurrentSourceDrift(current,structuredClone(result)));}
 });

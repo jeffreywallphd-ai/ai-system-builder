@@ -106,6 +106,13 @@ const privateProviderPrivacyHistoryPath="docs/operations/comprehensive-ui-automa
 const privateProviderPrivacyPriorCommit="26000fe16c1eab3b1f071960493c40b30a264fc4";
 const workspaceSwitchHistoryPath="docs/operations/comprehensive-ui-automation-workspace-switch-census-history.json";
 const workspaceSwitchPriorCommit="f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc";
+const workspaceSwitchCompletedCommit="75efdd2456f67757fd07b749dd398128af969e03";
+const reviewReferenceSources=[
+  "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
+  "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
+  "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
+  "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
+];
 const workspaceSwitchSources=[
   "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",
@@ -327,14 +334,17 @@ function checkedWorkspaceSwitchHistory(bundle:CensusBundle,map:CensusMap,history
   for(const[index,row]of map.sources.entries())expect(row.committed_sha256).toBe(preceding.sources[index]!.committed_sha256);
   for(const name of workspaceSwitchSources)expect(map.sources.find(row=>row.path===name)!.facts).toEqual(bundle.api.sourceFacts(name,bundle.read(name)));
 }
+function historicalWorkspaceSwitchMap() {
+  return JSON.parse(gitSource(workspaceSwitchCompletedCommit,censusPath).toString("utf8")) as CensusMap;
+}
 it("keeps current coverage definitions bound to real source and preserves unrun qualification",async()=>{
   const bundle=await censusBundle(),result=checkedCensus(bundle,bundle.map);
-  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:180,current_host_spec_files:29,inventory_groups:16,
+  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:181,current_host_spec_files:29,inventory_groups:16,
     definition_map_valid:true,executed_tests:0,actual_host_pass:false,parent_qualification_granted:false,full_testing_status:"deferred-by-user"});
   expect(result.gaps.filter(gap=>gap.kind === "actual-host-not-run-by-census")).toHaveLength(39);
   expect(result.gaps.some(gap=>gap.kind === "declared-test-modifier")).toBe(true);
   expect(bundle.map.sources.some(row=>row.path === "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts")).toBe(false);
-  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...responsiveSources,...modelStartupReportSources,...privateProviderPrivacySources,...workspaceSwitchSources].sort());
+  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...responsiveSources,...modelStartupReportSources,...privateProviderPrivacySources,...workspaceSwitchSources,...reviewReferenceSources].sort());
   checkedHistory(bundle,historicalOperationalMap(),JSON.parse(bundle.read(historyPath).toString("utf8")) as CensusHistory);
   checkedDiagnosticHistory(bundle,historicalDiagnosticMap(),JSON.parse(bundle.read(diagnosticHistoryPath).toString("utf8")) as CensusHistory);
   checkedContrastV2History(bundle,historicalContrastV2Map(),JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
@@ -347,10 +357,16 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
   checkedStartupHistory(bundle,historicalStartupMap(),JSON.parse(bundle.read(startupHistoryPath).toString("utf8")) as CensusHistory);
   checkedModelStartupReportHistory(bundle,historicalModelStartupReportMap(),JSON.parse(bundle.read(modelStartupReportHistoryPath).toString("utf8")) as CensusHistory);
   checkedPrivateProviderPrivacyHistory(bundle,historicalPrivateProviderPrivacyMap(),JSON.parse(bundle.read(privateProviderPrivacyHistoryPath).toString("utf8")) as CensusHistory);
-  checkedWorkspaceSwitchHistory(bundle,bundle.map,JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory);
+  checkedWorkspaceSwitchHistory(bundle,historicalWorkspaceSwitchMap(),JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory);
 // This source-only check authenticates multiple historical Git snapshots on a
 // cold filesystem. Its bounded allowance is independent of product/UI targets.
 },15_000);
+it("keeps workspace history authentic when current review definitions change",async()=>{
+  const bundle=await censusBundle(),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;
+  checkedCensus(bundle,bundle.map);
+  checkedWorkspaceSwitchHistory(bundle,historicalWorkspaceSwitchMap(),history);
+  expect(()=>checkedWorkspaceSwitchHistory(bundle,bundle.map,history)).toThrow();
+});
 it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history","prior-map","committed-pin","scope","qualification","extra"] as const)("refuses forged model startup report census history %s",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);
   const map=historicalModelStartupReportMap(),history=JSON.parse(bundle.read(modelStartupReportHistoryPath).toString("utf8")) as CensusHistory;
@@ -390,7 +406,7 @@ it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history",
 });
 it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history","prior-map","committed-pin","scope","qualification","extra","source-facts-and-hash","unrelated-field"] as const)("refuses forged workspace-confirmation census history %s",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);
-  const map=structuredClone(bundle.map),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;
+  const map=historicalWorkspaceSwitchMap(),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;
   checkedWorkspaceSwitchHistory(bundle,map,history);
   if(variant === "row-hash")history.sources[0]!.prior_row_sha256="0".repeat(64);
   if(variant === "current-row")history.sources[0]!.current_row_sha256="0".repeat(64);

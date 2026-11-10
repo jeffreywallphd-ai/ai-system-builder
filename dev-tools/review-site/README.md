@@ -279,3 +279,10 @@ the controlled refresh/error copy. The canonical journey pins the existing
 Comprehensive UI operational increment and compares every requirement bullet in
 order, including nested bullets. Initial port failures, owned-read retirement and
 report publication retain fixed primary/cleanup facts without private errors.
+
+These three cases require the current reference representation. Their fixed
+proxy adds its literal header only on `/api/review` and refuses a missing or
+altered browser header. The preflight also checks the reply's format marker.
+The separate [browser observation](../../docs/operations/review-site-browser-qualification.json)
+records only bounded source, phase and cleanup facts. Source checks and collection
+alone do not pass a browser case or the parent roadmap.
