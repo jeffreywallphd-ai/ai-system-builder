@@ -567,8 +567,8 @@
   "current_follow_up": {
     "owner": "Agent",
     "status": "pending",
-    "action": "Find which Image Generation configuration action failed. Fix any confirmed issue and test the remaining operational steps. No user action is needed.",
-    "completed_preparation": "Fifteen steps pass. Navigation, Settings, Security, Notifications and both Models pages pass normal and high-contrast checks at wide and narrow widths.",
+    "action": "Connect each Image Generation field to its label and keep its help button separate. Add a regression test, then run the affected operational journey. No user action is needed.",
+    "completed_preparation": "The Image page and workflow open. Editing Prompt by name fails. In the rendered form, the Prompt label points to the help button. Fourteen of sixteen fields lack a label and the other name attributes checked in the rendered form.",
     "first_failures_preserved": true,
     "parent_pass": false
   },
@@ -821,5 +821,42 @@
     "generic_audit_rules_and_product_aria_unchanged": true,
     "whole_operational_journey_passed": false,
     "parent_qualification_granted": false
+  },
+  "image_action_diagnosis": {
+    "run_id": "operational-thin-bb894af2358f4e87a2044bc9944ecf8b",
+    "scope": "The existing operational journey with fixed Image action checkpoints in a diagnostic copy. All original assertions are retained. This is separate from the eight original attempts.",
+    "tested_source": {
+      "head": "6b0b7b47748c0792dbacbef5c06cbf3b3e5d3ab2",
+      "source_digest": "75630dfde1cdcbfd530be25f95bf7b09ced7563511db816a844205927e6886a9",
+      "app_source": "source.5931a06a8d6f40ce62b4d281fde8667ddb4434e71e00f2cc76a920dfbae79df4"
+    },
+    "case_status": "failed",
+    "completed_ordered_steps": 15,
+    "case_duration_ms": 12942,
+    "completed_image_actions": [
+      "navigate",
+      "heading",
+      "workflow"
+    ],
+    "rejected_image_action": "prompt-edit",
+    "independent_outcome_review_sha256": "1c8e4fdf899f5f5996215e8b36fc4c482b14dda76103a0abd12ada8c477eba00",
+    "closed_action_evidence_sha256": "8a3ff0db2fe57ee89304484b630b9b405072f2629999de2bae722051b70cee75",
+    "source_label_reproduction_sha256": "65e5bb62441709350a9e3d0f9443302242a75fd16266d7ae66f651575a1a57f9",
+    "independent_source_reproduction_review_sha256": "7f4780b99d0a1d77c229681930e22ebbb65aff709e363ed920623f53a4b4283a",
+    "source_label_reproduction": {
+      "prompt_textarea_labels": 0,
+      "prompt_alternate_name_attributes": 0,
+      "implicit_label_targets_help_button": true,
+      "default_controls_measured": 16,
+      "default_controls_without_label_or_name": 14,
+      "scope": "Actual component and hook rendered as inert markup. The source defect is consistent with the failed live action; this is not a direct observation of live DOM or a corrected app pass."
+    },
+    "source_writer_cases_passed": 6,
+    "source_reader_cases_passed": 9,
+    "compiled_binding_satisfied": true,
+    "ordinary_fixture_retirement_confirmed": true,
+    "raw_app_output_read_or_hashed": false,
+    "portable_journey_pass": false,
+    "parent_pass": false
   }
 }
