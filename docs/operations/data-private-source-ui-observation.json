@@ -1,9 +1,9 @@
 {
   "schema_version": "data-private-source-ui-observation-v1",
-  "status": "failed-feature-trial-reviewed-no-ui-qualification",
+  "status": "passed-feature-trial-reviewed-parent-pending",
   "user_summary": {
-    "title": "Finish the workspace return check",
-    "description": "The latest private-file test passed ten of eleven steps. File selection, reference creation, localization, reloads and workspace isolation passed. The final return check failed. The agent found and corrected a missing Change action in the tests. A new real run must confirm that the original reference is retained. The failed run and safe shutdown remain recorded.",
+    "title": "Private file import test passed",
+    "description": "The app imported the private test file and kept it after reloads and workspace changes. All eleven automated steps passed. The run cleaned up its temporary credentials and processes. Other roadmap checks remain open.",
     "action_owner": "agent",
     "user_action": "No action needed."
   },
@@ -398,5 +398,80 @@
       "action_owner": "agent",
       "user_action": "No action needed."
     }
+  },
+  "confirmedWorkspaceReturnTrial": {
+    "schema_version": "private-source-ui-confirmed-workspace-return-v1",
+    "status": "passed-feature-trial-reviewed-parent-pending",
+    "source_fix_commit": "c116cf6b71da75df6b15442a341eaa98bda25f9d",
+    "source_digest": "7d710b49b4b7a2eaebc85bd970ff7ab61fb08536e20273ea8a02c13d45a8de8f",
+    "product_source_identity": "source.9999d2bf9efa74648118b05df9111c3687d68ad7b65af638ed53daacd9a23b25",
+    "source_files": 3934,
+    "code_fix_work_id": "qualify-workspace-journeys-with-complete-focused-owners",
+    "code_fix_receipt": "61ebae7774f88441b55e7e9e41b8acea284136cf3f2626752dd2a9a19e96ba0c",
+    "code_fix_review": "c011ce863a8cd444f315518fa95757aa027269c4499be2174706904981151aec",
+    "ui_work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+    "host": "thin-chrome",
+    "purpose": "provider-source",
+    "actual_case_status": "passed",
+    "actual_case_duration_ms": 9876,
+    "completed_phases": [
+      "fresh-provider-workspace",
+      "exact-provider-file-selected",
+      "reference-task-completed",
+      "remote-reference-confirmed",
+      "reload-keeps-reference",
+      "explicit-localization-completed",
+      "localized-bytes-confirmed",
+      "reload-keeps-localized-reference",
+      "second-workspace-empty",
+      "cross-workspace-reference-denied",
+      "original-reference-retained"
+    ],
+    "required_phase_count": 11,
+    "framework_errors": 0,
+    "actual_observation_sha256": "c386b7415ad67d4a0427e04a6afeb8653ad5c7e6fbd43d9666f1f39966c510e4",
+    "native_result_sha256": "60ef7033914a2b35d0fa29d97a680720c7e44d9eef5ac5895cad1ce8cd84ece9",
+    "independent_outcome_review_sha256": "9098b1c3129db971fc0bf3ef9a26ad6e5e0ccaf3ced7d8242f69e0327ace6a30",
+    "execution_plan_sha256": "8eca9e5e82930481f44e034dd9a031ea6003653e065cebcffb1613439b0bbcd1",
+    "execution_review_sha256": "a3a4d10c23e863ef21769560ea3bc3c6135e66bdcb1beb47bc4f8732a4fff950",
+    "actual_bound_operator_sha256": "169cebccea2fa15beafae77633015d46cc0fa94faa88ce1d0acb8076edd473c1",
+    "actual_binding_review_sha256": "db8b1318d813257515d6b1cc3670aa68d6b9ccfc2776c2cbbafa90c7d34b6066",
+    "retirement": {
+      "root_exit_code": 0,
+      "lifetime_owned_processes": 47,
+      "active_owned_processes": 0,
+      "terminated_owned_processes": 0,
+      "all_owned_handles_closed": true,
+      "streams_complete": true,
+      "forced_native_job_termination": false,
+      "explicit_input_absent": true,
+      "seeded_credential_absent": true,
+      "generated_pairing_absent": true,
+      "source_and_installed_runtime_unchanged": true,
+      "raw_private_logs_read": false,
+      "credential_content_or_hash_recorded": false
+    },
+    "prior_user_summary": {
+      "title": "Finish the workspace return check",
+      "description": "The latest private-file test passed ten of eleven steps. File selection, reference creation, localization, reloads and workspace isolation passed. The final return check failed. The agent found and corrected a missing Change action in the tests. A new real run must confirm that the original reference is retained. The failed run and safe shutdown remain recorded.",
+      "action_owner": "agent",
+      "user_action": "No action needed."
+    },
+    "prior_top_level_status": "failed-feature-trial-reviewed-no-ui-qualification",
+    "interpretation": "The actual corrected current-source journey completed all eleven steps, including original-reference retention after the real workspace Change action. The earlier ten-step failure and its generic composite diagnostic remain historical. Source inspection and this corrected passing run support the test repair; they do not prove artifact loss or the cause of every earlier startup failure.",
+    "scope_limits": {
+      "actual_private_source_thin_ui_pass": true,
+      "cold_load_benchmark": false,
+      "model_accuracy_or_ocr_rerun": false,
+      "private_provider_website_check": "deferred-by-user",
+      "managed_authorization_qualified": false,
+      "full_worker_shutdown_qualified": false,
+      "native_ownership_qualified": false,
+      "offload_or_restart_qualified": false,
+      "parent_qualification_granted": false,
+      "full_system_testing": "deferred-until-open-feature-work-is-implemented"
+    },
+    "earlier_failed_attempts_and_pending_statement_retained_as_history": true,
+    "governed_ui_work_completion_is_tracked_separately": true
   }
 }
