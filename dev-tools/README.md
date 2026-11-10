@@ -2176,3 +2176,26 @@ The 15-second deadline includes token and SDK waits. Origin/repository/commit
 checks, streamed metadata limits and shared pagination budgets are independent
 of the later secure-egress dataset download. Source tests grant no provider, UI,
 native, model or roadmap pass; completed model accuracy tests stay closed.
+
+## Private-provider UI test diagnostics
+
+The two dedicated `playwright.functional-provider-*` profiles use the three
+existing private source/publication cases with `privateProviderTest`. Its
+Playwright 1.61.1 fixture keeps test timeouts and device/download options, but
+does not create diagnostic recordings or failure-context files. The standard
+browser, context and request fixtures still close their own resources. Review
+and requalify the fixture seam before changing the installed test supplier.
+
+These profiles use one fixed-field reporter. It reports real executed, skipped
+and failed cases without reading error messages, output chunks or attachments.
+It declares its console output so Playwright cannot add a raw fallback reporter.
+Use the reviewed fixed launch arguments and closed environment for runs with
+private inputs; do not add reporter or recording overrides. Listing definitions
+and skipping an inactive purpose never supply a technical qualification pass.
+
+The focused privacy regression uses only synthetic failures. A separate test-only
+worker tripwire refuses the supplier's first error-context write and proves that
+the protected fixture makes no such attempt. It starts no browser, provider or
+model and is never installed in a live private test. It preserves nonzero failure
+results. This regression does not qualify native cleanup, private UI behavior,
+model quality or a parent roadmap.

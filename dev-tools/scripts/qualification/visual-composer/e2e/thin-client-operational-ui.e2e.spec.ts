@@ -119,7 +119,10 @@ for(const scenario of ["local lifecycle","readonly publication denial"] as const
 import {qualifyProviderSourceHostJourney} from "./provider-source-host-journey";
 import {readProviderFixtureDeclaration} from "../functional-private-provider-fixture";
 import {providerFixtureIdentity} from "../functional-provider-plan.mjs";
+import {privateProviderTest} from "../private-provider-test.mjs";
 
+{
+const test=privateProviderTest;
 test("thin client provider source registers an exact reference and optional localized bytes",async({page})=>{
   test.setTimeout(180_000);test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE!=="1","Pending the dedicated prepared private provider-source fixture.");
   if(test.info().project.name!=="thin-chrome")throw new Error("Unsupported private provider host.");
@@ -131,3 +134,4 @@ test("thin client provider source registers an exact reference and optional loca
   const {statusUrl,token}=operationalBrowserConfiguration();await page.addInitScript(value=>localStorage.setItem("ai-system-builder.paired-device-token",value),token);await page.goto(new URL("/systems",statusUrl).href);
   const report=await qualifyProviderSourceHostJourney(page,test.info(),"thin-chrome",declaration.manifest.source_file);expect(report.status).toBe("passed");
 });
+}

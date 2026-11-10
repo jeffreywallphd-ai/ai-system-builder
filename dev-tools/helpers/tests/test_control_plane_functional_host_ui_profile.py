@@ -15,6 +15,17 @@ ROOT=HELPERS.parents[1]
 CONFIG="dev-tools/config/contributor-check-profiles.json"
 CORE="dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts"
 BORROWED="dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.d.mts"
+PRIVATE_INPUTS=(
+    "dev-tools/scripts/qualification/visual-composer/private-provider-artifact-boundary.mjs",
+    "dev-tools/scripts/qualification/visual-composer/private-provider-test.mjs",
+    "dev-tools/scripts/qualification/visual-composer/private-provider-test.d.mts",
+    "dev-tools/scripts/qualification/visual-composer/fixed-private-provider-reporter.mjs",
+    "dev-tools/scripts/qualification/tests/private-provider-ui-privacy.unit.test.mjs",
+    "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe.config.mjs",
+    "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe.spec.mjs",
+    "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe-reporter.mjs",
+)
+PRIVATE_HISTORY="docs/operations/comprehensive-ui-automation-private-test-privacy-census-history.json"
 
 class FunctionalHostProfile(unittest.TestCase):
     def profile(self):
@@ -28,6 +39,33 @@ class FunctionalHostProfile(unittest.TestCase):
         target=root/CONFIG
         target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"functional-host-ui":profile}}))
+
+    def test_private_inputs_keep_exact_automatic_and_fallback_ownership(self):
+        profile=self.profile()
+        self.assertIn(PRIVATE_INPUTS[4],profile["test_paths"])
+        self.assertIn(PRIVATE_HISTORY,profile["source_paths"])
+        self.assertNotIn(PRIVATE_HISTORY,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
+        with tempfile.TemporaryDirectory(prefix="private-functional-profile-") as directory:
+            root=Path(directory)
+            for name in PRIVATE_INPUTS:
+                with self.subTest(name=name):
+                    self.assertIn(name,profile["source_paths"])
+                    self.assertIn(name,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
+                    self.fixture(root,profile)
+                    selected={x["id"] for x in catalog.plan(root,[name],["documentation"],"synthetic-candidate")["selected"]}
+                    self.assertIn("functional-host-ui",selected);self.assertNotIn("focused-tests",selected)
+                    explicit={x["id"] for x in catalog.plan(root,[name],["focused-tests"],"synthetic-candidate")["selected"]}
+                    self.assertIn("functional-host-ui",explicit);self.assertIn("focused-tests",explicit)
+                    incomplete=copy.deepcopy(profile);incomplete["source_paths"].remove(name);self.fixture(root,incomplete)
+                    if name in incomplete["test_paths"]:
+                        # A declared test remains covered when its duplicate
+                        # source declaration is absent. Remove both declarations
+                        # to exercise actual incomplete ownership.
+                        covered={x["id"] for x in catalog.plan(root,[name],["documentation"],"synthetic-candidate")["selected"]}
+                        self.assertIn("functional-host-ui",covered);self.assertNotIn("focused-tests",covered)
+                        incomplete["test_paths"].remove(name);self.fixture(root,incomplete)
+                    fallback={x["id"] for x in catalog.plan(root,[name],["documentation"],"synthetic-candidate")["selected"]}
+                    self.assertIn("functional-host-ui",fallback);self.assertIn("focused-tests",fallback)
 
     def test_complete_explicit_unknown_and_incomplete_impact_remain_distinct(self):
         profile=self.profile()

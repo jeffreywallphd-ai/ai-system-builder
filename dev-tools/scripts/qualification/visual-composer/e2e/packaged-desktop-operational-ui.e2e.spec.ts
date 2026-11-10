@@ -148,6 +148,7 @@ test("packaged desktop artifact local lifecycle preserves actual bytes and scope
 import {qualifyProviderSourceHostJourney} from "./provider-source-host-journey";
 import {prepareProviderDesktopCase,qualifyPrivatePublicationHostJourney} from "./private-publication-host-journey";
 import type {ExecutingProviderFixture} from "../functional-private-provider-fixture";
+import {privateProviderTest} from "../private-provider-test.mjs";
 
 async function runProviderDesktopCase(purpose:"provider-source"|"provider-publication",journey:(page:Page,capsule:ExecutingProviderFixture)=>ReturnType<typeof qualifyProviderSourceHostJourney>){
   if(test.info().project.name!=="packaged-desktop")throw new Error("Unsupported private provider host.");
@@ -160,6 +161,8 @@ async function runProviderDesktopCase(purpose:"provider-source"|"provider-public
   if(!report)throw new Error("The provider journey did not return evidence.");return report;
 }
 
+{
+const test=privateProviderTest;
 test("packaged desktop provider source registers an exact reference and optional localized bytes",async()=>{
   test.setTimeout(180_000);test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE!=="1","Pending the dedicated prepared private provider-source fixture.");
   const report=await runProviderDesktopCase("provider-source",async(page,capsule)=>{if(!capsule.sourceFile)throw new Error("The prepared provider source is missing.");return qualifyProviderSourceHostJourney(page,test.info(),"packaged-desktop",capsule.sourceFile);});expect(report.status).toBe("passed");
@@ -169,3 +172,4 @@ test("packaged desktop private artifact publication records local branch and rem
   test.setTimeout(180_000);test.skip(process.env.VISUAL_COMPOSER_FUNCTIONAL_READY!=="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION!=="1","Pending the dedicated existing-private-repository fixture.");
   const report=await runProviderDesktopCase("provider-publication",(page,capsule)=>qualifyPrivatePublicationHostJourney(page,test.info(),capsule));expect(report.status).toBe("passed");
 });
+}

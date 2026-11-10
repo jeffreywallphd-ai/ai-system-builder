@@ -2516,7 +2516,8 @@
         "dev-tools/scripts/qualification/tests/functional-provider-wiring.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
         "modules/application/use-cases/tests/localize-artifact-from-repo.use-case.unit.test.ts",
-        "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts"
+        "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts",
+        "dev-tools/scripts/qualification/tests/private-provider-ui-privacy.unit.test.mjs"
       ],
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
@@ -2594,7 +2595,16 @@
         "dev-tools/scripts/qualification/tests/provider-ingestion-transports.ui.test.tsx",
         "modules/application/use-cases/tests/localize-artifact-from-repo.use-case.unit.test.ts",
         "modules/application/use-cases/tests/publish-artifact-to-repo.use-case.unit.test.ts",
-        "modules/hosts/shared/huggingFaceTokenConfigStore.ts"
+        "modules/hosts/shared/huggingFaceTokenConfigStore.ts",
+        "dev-tools/scripts/qualification/visual-composer/private-provider-artifact-boundary.mjs",
+        "dev-tools/scripts/qualification/visual-composer/private-provider-test.mjs",
+        "dev-tools/scripts/qualification/visual-composer/private-provider-test.d.mts",
+        "dev-tools/scripts/qualification/visual-composer/fixed-private-provider-reporter.mjs",
+        "dev-tools/scripts/qualification/tests/private-provider-ui-privacy.unit.test.mjs",
+        "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe.config.mjs",
+        "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe.spec.mjs",
+        "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe-reporter.mjs",
+        "docs/operations/comprehensive-ui-automation-private-test-privacy-census-history.json"
       ]
     },
     "offload-restart-readiness": {

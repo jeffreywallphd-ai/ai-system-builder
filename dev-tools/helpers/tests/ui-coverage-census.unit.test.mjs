@@ -388,6 +388,40 @@ const pendingModelStartupReportDefinitions = Object.freeze([
     baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"8fd3d3fb1ed30e2a381b8b966e213825eb68fca5438934cd87874f262069e7ab",
     candidate:"55ba55112ff98432a06a16dcd80acc9b96e1c1a83bf6d05607ce9f9b83df9cea",facts_sha256:"ddadf3ed9ba19a168ee12450493a3e42a16a2ed0ae75370043dff505d8278619"},
 ].map(Object.freeze));
+// Only the current private-provider definition revision accepts these exact two facts.
+const pendingPrivateProviderDefinitions = Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "677cbba4637b13dbb4e9cb5125e3d6277cf2e43323e458b9f2cc321411cd9560",
+    "candidate": "1a62f166e93b8519dff996dabfada0d7f64ac331b2c4d5961c9533e0d64394ca",
+    "facts_sha256": "5ad129b702da68e8175a01c4f2308bcac5ded8a241337e89ed6492e4a97f3480"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+    "committed": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9",
+    "candidate": "721d0bcbf609ae7b1affb209a05f08af6de7ff5e4ad83766a63dd22bbca5db2c",
+    "facts_sha256": "ca4614d822f4629d679d6263e9b06ef651fa54629a7080707ee79710a046c595"
+  }
+].map(Object.freeze));
+function privateProviderLegacyView(map,result){
+  const remaining=assertContrastDiagnosticDrift(map,result,pendingPrivateProviderDefinitions);
+  const prior=JSON.parse(historicalSource("26000fe16c1eab3b1f071960493c40b30a264fc4","docs/operations/comprehensive-ui-automation-current-census.json"));
+  const previousRows=new Map();
+  for(const definition of pendingPrivateProviderDefinitions){
+    const rows=prior.sources.filter(row=>row.path===definition.path);assert.equal(rows.length,1);
+    assert.equal(rows[0].facts.sha256,definition.committed);assert.equal(rows[0].committed_sha256,definition.committed);
+    previousRows.set(definition.path,rows[0]);
+  }
+  // Exact new facts were checked above. Legacy owners inspect their genuine
+  // pre-revision rows, never future facts under an old baseline or a new pin.
+  return{map:{...map,sources:map.sources.map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
+}
+function assertCompleteCurrentSourceDrift(map,result){
+  const legacy=privateProviderLegacyView(map,result);
+  assertCurrentSourceDrift(legacy.map,legacy.result,true);
+}
 function assertCurrentSourceDrift(map, result, includeStartupReport = false) {
   if(includeStartupReport)result=assertContrastDiagnosticDrift(map,result,pendingModelStartupReportDefinitions);
   if(map.source_baseline===pendingResponsiveJourneyDefinitions[0].baseline) {
@@ -531,7 +565,8 @@ test("checks the current repository map against original scope and actual source
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
-  assertSettingsNavigationSourceDrift(map,result);
+  const legacy=privateProviderLegacyView(map,result);
+  assertSettingsNavigationSourceDrift(legacy.map,legacy.result);
   const base="dev-tools/scripts/qualification/visual-composer/";
   const linkedFunctional={
     "settings-public-values":["e2e/settings-host-journey.ts","settings-host-oracles.ts"],
@@ -555,7 +590,7 @@ test("checks the current repository map against original scope and actual source
     }
   }
   assert(!result.gaps.some(g=>g.kind==="host-definition-not-mapped"));
-  assertCurrentSourceDrift(map,result,true);
+  assertCompleteCurrentSourceDrift(map,result);
   assert.equal(result.gaps.filter(g=>g.kind==="actual-host-not-run-by-census").length,39);
   assert.equal(result.actual_host_pass,false);
   assert.deepEqual(map.scenarios.find(s=>s.id==="security-status-and-auth-boundaries").host_definitions,["dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]);
@@ -835,7 +870,7 @@ test("pending training-start definitions reject forged missing duplicate and unr
 test("pending asynchronous training diagnostics refuse forged future missing duplicate and extra facts",()=>{
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
-  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult,true));
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(current,currentResult));
   // Test pending-only denials against their own real history after legitimate binding.
   const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));
   map.source_baseline=pendingTrainingTaskDefinitions[0].baseline;
@@ -871,7 +906,7 @@ test("pending asynchronous training diagnostics refuse forged future missing dup
 test("pending adapter-format definitions refuse forged future missing duplicate and extra facts",()=>{
   const current=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json"));
   const currentResult={gaps:current.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
-  assert.doesNotThrow(()=>assertCurrentSourceDrift(current,currentResult,true));
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(current,currentResult));
   const map=JSON.parse(historicalSource("9585fe7f30a89b616fc8c3121da3080d02ebf6d5","docs/operations/comprehensive-ui-automation-current-census.json"));map.source_baseline=pendingTrainingAdapterDefinitions[0].baseline;
   for(const pending of pendingTrainingAdapterDefinitions){
     const rows=map.sources.filter(row=>row.path===pending.path);assert.equal(rows.length,1);
@@ -1038,8 +1073,8 @@ test("pending responsive journey facts retain four exact drifts and refuse futur
   }
 });
 
-test("current model startup report facts retain eight exact drifts and reject forged or unrelated evidence",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+test("historical model startup report facts retain eight exact drifts and reject forged or unrelated evidence",()=>{
+  const map=JSON.parse(historicalSource("26000fe16c1eab3b1f071960493c40b30a264fc4","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(pendingModelStartupReportDefinitions.length,4);assert.equal(result.gaps.length,8);
   assertCurrentSourceDrift(map,result,true);
@@ -1061,5 +1096,28 @@ test("current model startup report facts retain eight exact drifts and reject fo
       const changed=structuredClone(map),observation=structuredClone(result);mutate(changed,observation);
       assert.throws(()=>assertCurrentSourceDrift(changed,observation,true));
     }
+  }
+});
+
+test("current private-provider definitions bind two exact updates and retain every other source gap",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(map.sources.length,180);assert.equal(result.gaps.length,10);assert.equal(pendingPrivateProviderDefinitions.length,2);
+  assertCompleteCurrentSourceDrift(map,result);
+  assert.throws(()=>assertCurrentSourceDrift(map,result,true),"Earlier history must not accept a later private definition revision.");
+  for(const pending of pendingPrivateProviderDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
   }
 });

@@ -25,7 +25,8 @@ test("provider registration and publication use real distinct controls, expected
   assert.ok(publication.indexOf('await capsule.admitPublicationPath()')<publication.indexOf('getByRole("button",{name:"Publish",exact:true}).click()'));assert.doesNotMatch(publication,/\.fulfill\(|\.route\(|repositoryCreation:\s*\{|visibility:\s*"public"/);
 });
 test("dedicated case configs collect two Desktop bodies and one Thin body without capture or automatic retries",async()=>{
-  for(const host of ["desktop","thin"]){const config=await readFile(path.resolve(`dev-tools/config/playwright.functional-provider-${host}.config.ts`),"utf8");assert.match(config,/workers:1,retries:0/);assert.match(config,/screenshot:"off",trace:"off",video:"off",acceptDownloads:false/);assert.match(config,/provider source registers an exact reference/);if(host==="desktop")assert.match(config,/private artifact publication records local branch and remote commit/);else assert.doesNotMatch(config,/private artifact publication/);}
+  for(const host of ["desktop","thin"]){const config=await readFile(path.resolve(`dev-tools/config/playwright.functional-provider-${host}.config.ts`),"utf8");assert.match(config,/workers:1,retries:0/);assert.match(config,/screenshot:"off",trace:"off",video:"off",acceptDownloads:false/);assert.match(config,/provider source registers an exact reference/);assert.match(config,/fixed-private-provider-reporter\.mjs/);assert.match(config,/PLAYWRIGHT_NO_COPY_PROMPT="1"/);assert.doesNotMatch(config,/\["list"\]|sanitized-qualification-reporter/);if(host==="desktop")assert.match(config,/private artifact publication records local branch and remote commit/);else assert.doesNotMatch(config,/private artifact publication/);}
+  for(const host of ["desktop","thin"]){const body=await read(`e2e/${host==="desktop"?"packaged-desktop":"thin-client"}-operational-ui.e2e.spec.ts`);assert.match(body,/import \{privateProviderTest\} from "\.\.\/private-provider-test\.mjs"/);assert.match(body,/\{\s*const test=privateProviderTest;\s*test\("(?:packaged desktop|thin client) provider source/);}
   const reader=await read("e2e/artifact-host-browser-reads.ts");assert.match(reader,/mode==="backing"\?\["detail","content"\]/);assert.match(reader,/mode==="bytes"\?\["media"\]/);assert.match(reader,/detail\.sizeBytes!==media\.sizeBytes/);assert.doesNotMatch(reader,/token\.json|hugging-face-token\.json/);
 });
 test("actual Playwright discovery selects exactly the intended three bodies without executing setup",()=>{
@@ -34,5 +35,14 @@ test("actual Playwright discovery selects exactly the intended three bodies with
   for(const [host,count] of [["desktop",2],["thin",1]]){
     const config=`dev-tools/config/playwright.functional-provider-${host}.config.ts`,result=spawnSync(process.execPath,[cli,"test","--config",config,"--list","--reporter=list"],{cwd:process.cwd(),env,windowsHide:true,timeout:30_000,maxBuffer:65536,encoding:"utf8"});
     assert.equal(result.status,0);assert.equal(result.stderr,"");assert.match(result.stdout,new RegExp(`Total: ${count} test${count===1?"":"s"} in 1 file`));assert.match(result.stdout,/provider source registers an exact reference/);if(host==="desktop")assert.match(result.stdout,/private artifact publication records local branch and remote commit/);else assert.doesNotMatch(result.stdout,/private artifact publication/);
+  }
+});
+
+test("shared host files still collect with transformed and native ESM helper loading",()=>{
+  const require=createRequire(import.meta.url),cli=require.resolve("@playwright/test/cli");
+  const env=createFunctionalHostEnvironment(process.env,process.cwd(),"provider-discovery-unit-run-0001",`source.${"a".repeat(64)}`,"packaged-desktop");env.VISUAL_COMPOSER_FUNCTIONAL_HOST="0";
+  for(const purpose of ["functional-host","settings-host"])for(const host of ["desktop","thin"]){
+    const config=`dev-tools/config/playwright.${purpose}-${host}.config.ts`,result=spawnSync(process.execPath,[cli,"test","--config",config,"--list","--reporter=list"],{cwd:process.cwd(),env,windowsHide:true,timeout:30_000,maxBuffer:65536,encoding:"utf8"});
+    assert.equal(result.error,undefined);assert.equal(result.signal,null);assert.equal(result.status,0,`${purpose}-${host} must load its shared test file`);assert.equal(result.stderr,"");assert.match(result.stdout,/Total: [1-9]\d* tests? in 1 file/);
   }
 });

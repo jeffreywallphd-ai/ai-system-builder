@@ -8471,8 +8471,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "677cbba4637b13dbb4e9cb5125e3d6277cf2e43323e458b9f2cc321411cd9560",
-    "bytes": 15319,
+    "sha256": "1a62f166e93b8519dff996dabfada0d7f64ac331b2c4d5961c9533e0d64394ca",
+    "bytes": 15421,
     "cases": [
      {
       "name": "packaged desktop preserves operational runtime controls and shell recovery",
@@ -8496,11 +8496,11 @@
      },
      {
       "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
-      "line": 163
+      "line": 166
      },
      {
       "name": "packaged desktop private artifact publication records local branch and remote commit",
-      "line": 168
+      "line": 171
      }
     ],
     "dynamicCases": 9,
@@ -8511,11 +8511,11 @@
      },
      {
       "name": "runProviderDesktopCase",
-      "line": 152
+      "line": 153
      }
     ],
     "assertionCount": 4,
-    "assertionDigest": "fca721470a47ea0237d7b865250d4ab4ddfaca9d1971ec294ec0737e0deb8962",
+    "assertionDigest": "52e1404771945d57e242bfd8edb8e4ac61710ed180b4d8b817f2ce5e71c027f6",
     "assertionExamples": [
      {
       "line": 30,
@@ -8528,12 +8528,12 @@
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
      },
      {
-      "line": 165,
+      "line": 168,
       "kind": "expect",
       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      },
      {
-      "line": 170,
+      "line": 173,
       "kind": "expect",
       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      }
@@ -8560,11 +8560,11 @@
       "kind": "skip"
      },
      {
-      "line": 164,
+      "line": 167,
       "kind": "skip"
      },
      {
-      "line": 169,
+      "line": 172,
       "kind": "skip"
      }
     ]
@@ -9234,8 +9234,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
    "facts": {
-    "sha256": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9",
-    "bytes": 9962,
+    "sha256": "721d0bcbf609ae7b1affb209a05f08af6de7ff5e4ad83766a63dd22bbca5db2c",
+    "bytes": 10064,
     "cases": [
      {
       "name": "thin client preserves Security refresh recovery and shell controls",
@@ -9263,7 +9263,7 @@
      },
      {
       "name": "thin client provider source registers an exact reference and optional localized bytes",
-      "line": 123
+      "line": 126
      }
     ],
     "dynamicCases": 8,
@@ -9278,7 +9278,7 @@
      }
     ],
     "assertionCount": 3,
-    "assertionDigest": "568f9b35345cc296902495db8de0d9b59451f24c8c93135db3407b6a20031876",
+    "assertionDigest": "d58a39b30e7ea7ef0362f6c721c663fe5d446576d4d1eb1ccc183fc9b1434f45",
     "assertionExamples": [
      {
       "line": 75,
@@ -9291,7 +9291,7 @@
       "sha256": "b11eff56bb97648199edeafbb1b0d800f604be67d532bda2b70a0a0c33717400"
      },
      {
-      "line": 132,
+      "line": 135,
       "kind": "expect",
       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
      }
@@ -9314,7 +9314,7 @@
       "kind": "skip"
      },
      {
-      "line": 124,
+      "line": 127,
       "kind": "skip"
      }
     ]
