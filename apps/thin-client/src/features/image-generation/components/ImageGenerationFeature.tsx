@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 
 import {
   ApplicationIcon,
@@ -65,38 +65,18 @@ function GeneratedImagePreview({ src, alt }: { src: string; alt: string }) {
   return <img src={objectUrl} alt={alt} />;
 }
 
-function renderImageGenerationNumericLabel(label: string) {
-  if (label.startsWith("Seed")) {
-    return (
-      <>
-        <TermWithHint termId="seed">Seed</TermWithHint> (optional)
-      </>
-    );
-  }
-  if (label === "Steps") {
-    return <TermWithHint termId="steps">Steps</TermWithHint>;
-  }
-  if (label === "Width") {
-    return <TermWithHint termId="width">Width</TermWithHint>;
-  }
-  if (label === "Height") {
-    return <TermWithHint termId="height">Height</TermWithHint>;
-  }
-  if (label === "CFG") {
-    return <TermWithHint termId="cfg">CFG</TermWithHint>;
-  }
-  if (label === "Sampler") {
-    return <TermWithHint termId="sampler">Sampler</TermWithHint>;
-  }
-  if (label === "Scheduler") {
-    return <TermWithHint termId="scheduler">Scheduler</TermWithHint>;
-  }
-  if (label === "Number of Images") {
-    return (
-      <TermWithHint termId="numberOfImages">Number of Images</TermWithHint>
-    );
-  }
-  return label;
+function ImageFieldLabel({ controlId, termId, text }: {
+  controlId: string;
+  termId: ComponentProps<typeof TermWithHint>["termId"];
+  text: string;
+}) {
+  return (
+    <span className="ui-label">
+      <TermWithHint termId={termId}>
+        <label htmlFor={controlId}>{text}</label>
+      </TermWithHint>
+    </span>
+  );
 }
 
 export function ImageGenerationFeature(props: Parameters<typeof WorkspaceImageGenerationFeature>[0] = {}) {
@@ -157,11 +137,8 @@ function WorkspaceImageGenerationFeature({
             description="Choose an available image model and the server runtime mode."
           >
             <div className="ui-workflow__field-grid ui-workflow__field-grid--wide">
-              <label className="ui-stack ui-stack--xs">
-                <span>
-                  <TermWithHint termId="modelInventory">Model</TermWithHint>{" "}
-                  (server inventory)
-                </span>
+              <div className="ui-stack ui-stack--xs">
+                <ImageFieldLabel controlId="image-generation-model-record" termId="modelInventory" text="Model (server inventory)" />
                 <select
                   className="ui-input"
                   id="image-generation-model-record"
@@ -199,11 +176,9 @@ function WorkspaceImageGenerationFeature({
                     </optgroup>
                   ) : null}
                 </select>
-              </label>
-              <label className="ui-stack ui-stack--xs">
-                <span>
-                  <TermWithHint termId="runtime">Runtime mode</TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--xs">
+                <ImageFieldLabel controlId="image-generation-runtime-mode" termId="runtime" text="Runtime mode" />
                 <select
                   className="ui-input"
                   id="image-generation-runtime-mode"
@@ -219,7 +194,7 @@ function WorkspaceImageGenerationFeature({
                   <option value="cuda">CUDA</option>
                   <option value="directml">DirectML</option>
                 </select>
-              </label>
+              </div>
             </div>
             <div className="ui-workflow__actions">
               <button
@@ -274,12 +249,8 @@ function WorkspaceImageGenerationFeature({
             description="Describe the image and optionally provide latent or identity references."
           >
             <div className="ui-workflow__field-grid ui-workflow__field-grid--wide">
-              <label className="ui-stack ui-stack--xs">
-                <span>
-                  <TermWithHint termId="latentSourceArtifact">
-                    Latent source
-                  </TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--xs">
+                <ImageFieldLabel controlId="image-generation-latent-source" termId="latentSourceArtifact" text="Latent source" />
                 <select
                   className="ui-input"
                   id="image-generation-latent-source"
@@ -298,7 +269,7 @@ function WorkspaceImageGenerationFeature({
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
               <div className="ui-workflow__actions">
                 <button
                   type="button"
@@ -315,8 +286,9 @@ function WorkspaceImageGenerationFeature({
               <p role="alert">{feature.imageArtifactsError}</p>
             ) : null}
 
-            <label className="ui-workflow__checkbox-row">
+            <div className="ui-workflow__checkbox-row">
               <input
+                id="image-generation-face-id-enabled"
                 type="checkbox"
                 checked={feature.form.faceIdEnabled}
                 onChange={(event) =>
@@ -326,11 +298,8 @@ function WorkspaceImageGenerationFeature({
                   }))
                 }
               />
-              <span>
-                <TermWithHint termId="faceId">Enable FaceID</TermWithHint>{" "}
-                (optional)
-              </span>
-            </label>
+              <ImageFieldLabel controlId="image-generation-face-id-enabled" termId="faceId" text="Enable FaceID (optional)" />
+            </div>
             {feature.form.faceIdEnabled ? (
               <div className="ui-workflow__subpanel ui-stack ui-stack--sm">
                 <p className="ui-text-muted">
@@ -343,15 +312,15 @@ function WorkspaceImageGenerationFeature({
                     "faceIdArtifactId2",
                     "faceIdArtifactId3",
                   ].map((key, index) => (
-                    <label className="ui-stack ui-stack--xs" key={key}>
-                      <span>
-                        <TermWithHint termId="faceReferenceImage">
-                          Face reference image {index + 1}
-                        </TermWithHint>{" "}
-                        {index > 0 ? "(optional)" : null}
-                      </span>
+                    <div className="ui-stack ui-stack--xs" key={key}>
+                      <ImageFieldLabel
+                        controlId={`image-generation-${key}`}
+                        termId="faceReferenceImage"
+                        text={`Face reference image ${index + 1}${index > 0 ? " (optional)" : ""}`}
+                      />
                       <select
                         className="ui-input"
+                        id={`image-generation-${key}`}
                         value={String(
                           feature.form[key as keyof typeof feature.form],
                         )}
@@ -372,7 +341,7 @@ function WorkspaceImageGenerationFeature({
                           </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
                   ))}
                 </div>
                 <div className="ui-workflow__field-grid">
@@ -391,12 +360,11 @@ function WorkspaceImageGenerationFeature({
                       ["faceIdNoise", "faceNoise", "Face noise"],
                     ] as const
                   ).map(([key, termId, label]) => (
-                    <label className="ui-stack ui-stack--xs" key={key}>
-                      <span>
-                        <TermWithHint termId={termId}>{label}</TermWithHint>
-                      </span>
+                    <div className="ui-stack ui-stack--xs" key={key}>
+                      <ImageFieldLabel controlId={`image-generation-${key}`} termId={termId} text={label} />
                       <input
                         className="ui-input"
+                        id={`image-generation-${key}`}
                         type="number"
                         step="0.01"
                         value={String(
@@ -409,16 +377,14 @@ function WorkspaceImageGenerationFeature({
                           )
                         }
                       />
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>
             ) : null}
 
-            <label className="ui-stack ui-stack--xs">
-              <span>
-                <TermWithHint termId="prompt">Prompt</TermWithHint>
-              </span>
+            <div className="ui-stack ui-stack--xs">
+              <ImageFieldLabel controlId="image-generation-prompt" termId="prompt" text="Prompt" />
               <textarea
                 className="ui-input ui-textarea"
                 id="image-generation-prompt"
@@ -427,14 +393,9 @@ function WorkspaceImageGenerationFeature({
                   setFormValue("prompt", event.currentTarget.value)
                 }
               />
-            </label>
-            <label className="ui-stack ui-stack--xs">
-              <span>
-                <TermWithHint termId="negativePrompt">
-                  Negative Prompt
-                </TermWithHint>{" "}
-                (optional)
-              </span>
+            </div>
+            <div className="ui-stack ui-stack--xs">
+              <ImageFieldLabel controlId="image-generation-negativePrompt" termId="negativePrompt" text="Negative Prompt (optional)" />
               <textarea
                 className="ui-input ui-textarea"
                 id="image-generation-negativePrompt"
@@ -443,7 +404,7 @@ function WorkspaceImageGenerationFeature({
                   setFormValue("negativePrompt", event.currentTarget.value)
                 }
               />
-            </label>
+            </div>
           </WorkflowStep>
 
           <WorkflowStep
@@ -451,21 +412,21 @@ function WorkspaceImageGenerationFeature({
             description="Set dimensions, sampling behavior, and output count."
           >
             <div className="ui-workflow__field-grid">
-              {[
-                ["seed", "Seed (optional)", "number"],
-                ["width", "Width", "number"],
-                ["height", "Height", "number"],
-                ["steps", "Steps", "number"],
-                ["cfg", "CFG", "number"],
-                ["sampler", "Sampler", "text"],
-                ["scheduler", "Scheduler", "text"],
-                ["numImages", "Number of Images", "number"],
-              ].map(([key, label, type]) => {
+              {([
+                ["seed", "Seed (optional)", "number", "seed"],
+                ["width", "Width", "number", "width"],
+                ["height", "Height", "number", "height"],
+                ["steps", "Steps", "number", "steps"],
+                ["cfg", "CFG", "number", "cfg"],
+                ["sampler", "Sampler", "text", "sampler"],
+                ["scheduler", "Scheduler", "text", "scheduler"],
+                ["numImages", "Number of Images", "number", "numberOfImages"],
+              ] as const).map(([key, label, type, termId]) => {
                 const formKey = key as keyof typeof feature.form;
                 const id = `image-generation-${key}`;
                 return (
-                  <label key={id} className="ui-stack ui-stack--xs">
-                    <span>{renderImageGenerationNumericLabel(label)}</span>
+                  <div key={id} className="ui-stack ui-stack--xs">
+                    <ImageFieldLabel controlId={id} termId={termId} text={label} />
                     <input
                       className="ui-input"
                       id={id}
@@ -475,13 +436,11 @@ function WorkspaceImageGenerationFeature({
                         setFormValue(formKey, event.currentTarget.value)
                       }
                     />
-                  </label>
+                  </div>
                 );
               })}
-              <label className="ui-stack ui-stack--xs">
-                <span>
-                  <TermWithHint termId="denoise">Denoise</TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--xs">
+                <ImageFieldLabel controlId="image-generation-denoise" termId="denoise" text="Denoise" />
                 <input
                   className="ui-input"
                   id="image-generation-denoise"
@@ -497,17 +456,14 @@ function WorkspaceImageGenerationFeature({
                 <output htmlFor="image-generation-denoise">
                   {feature.form.denoise}
                 </output>
-              </label>
+              </div>
             </div>
             <details className="ui-workflow__subpanel">
               <summary>
                 Advanced: Manual model/checkpoint override (optional)
               </summary>
-              <label className="ui-stack ui-stack--xs">
-                <span>
-                  Manual{" "}
-                  <TermWithHint termId="model">model/checkpoint</TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--xs">
+                <ImageFieldLabel controlId="image-generation-model" termId="model" text="Manual model/checkpoint" />
                 <input
                   className="ui-input"
                   id="image-generation-model"
@@ -518,7 +474,7 @@ function WorkspaceImageGenerationFeature({
                   }
                   placeholder="checkpoint.safetensors or model record id"
                 />
-              </label>
+              </div>
             </details>
           </WorkflowStep>
 

@@ -555,6 +555,108 @@
         "Original browser/proxy/app retirement, source stability, complete7file compiled binding and zero foreign/redirect/WebSocket denials pass. No retry or additional effect is granted.",
         "No native400, other-host, offload, model, restricted security review, parent or deferred full-system qualification follows."
       ]
+    },
+    {
+      "run_id": "operational-thin-c5b5b9ac2a85475cb06a4b19c9c07842",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "e08dc32439b7cc7fb4d82f50f20d3c060c7a4dc4",
+        "source_digest": "ce617c0c043d3eabd028539bd3f5a605d40b7bd63d4977366f258aa7056beb48",
+        "app_source": "source.5053ac2f626ca468f6e783d09c86bd09635331880e565c48ed98ee9493ae154e"
+      },
+      "manifest_sha256": "32541e4e339b5d79507f3510e22ad73543ec7ddefc204c808fd4b62382856e37",
+      "case_report_sha256": "999893f85a23023aff42185c44df51f26e30e60e59395cff137b5582dca1f69a",
+      "teardown_sha256": "8ea7251c56bdc22ff4e231acefccc639ce1295da2863978d30038c9fbb9f37ee",
+      "execution_sha256": "7a862c7d10a25cdc3ff9a52d61465faf3dde60fe565b19ccdb542a2a399f4332",
+      "compiled_binding_execution_sha256": "9eb91cd3f3bf39f4be28d04ae713caf9b6d24cc8f605c99c593ae18befc72ca8",
+      "independent_local_outcome_review_sha256": "246e567d7429d0501d596f6e2e713c1e12440616a36287c76019f486d6a9823c",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "8186e41d2e5d46f780c6f4dcca4b917f60b319b243bd571b18c10b8aced56677",
+        "settings": "a05783212a738f362a58f64cd58d74cd5164dc0a36970fe7c8956b736aee6239",
+        "security": "5bf07d58fd1a37a6f366dd787f27e497e8442a0acfb50c3f2d5f143ee3f5d894",
+        "notifications": "2f6dec8dff9302688ea415bbaaae2c5797f96fd45b96eac90888da0184203478",
+        "models-discovery": "39bb4417b028f3a64ac06ff7758ada1e1ebbe6e10a3b6c686476c6caf825350d",
+        "models-inventory": "ae19a37972d7a03a4eb92d2a744abbf465423d443d9c48e640a5080e424ace24",
+        "image-configuration": "2502be206ac7c61a16aa952dcc246f7750d4d4da9f606e7c2edd67450bfb7ea3"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5366,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 38,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted",
+          "notifications-empty",
+          "notifications-focus-returned",
+          "models-discovery-opened",
+          "models-inventory-opened"
+        ],
+        "nextPhase": "image-configuration-opened"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security",
+        "notifications",
+        "models-discovery",
+        "models-inventory"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "image_configuration_observation": {
+        "prompt_edit_and_value_assertion_completed": true,
+        "proof": "The unchanged original case writes the Image audit only after its Prompt edit and value assertion both succeed.",
+        "audit_status": "failed",
+        "failure_stage": "audit-1440",
+        "violation_rule": "color-contrast",
+        "violating_nodes": 1,
+        "positive_contrast_nodes": 98,
+        "unresolved_nodes": 0,
+        "exact_contrast_element_or_cause_proved": false,
+        "narrow_or_forced_colors_executed": false,
+        "failed_audit_attachment_retained": true
+      },
+      "limits": [
+        "The live Prompt edit and value assertion pass. The original case then fails one wide Image contrast rule; the whole17step journey remains failed.",
+        "All six earlier surfaces pass both widths and normal/forced-colors. Four Notifications reference proofs pass with raw engine review preserved.",
+        "Original browser/proxy/app retirement, source stability, complete compiled binding and strict network behavior pass. No retry or further effect is granted.",
+        "No native400, other-host, offload, model, restricted review, parent or deferred full-system qualification follows."
+      ]
     }
   ],
   "limits": [
@@ -567,8 +669,8 @@
   "current_follow_up": {
     "owner": "Agent",
     "status": "pending",
-    "action": "Connect each Image Generation field to its label and keep its help button separate. Add a regression test, then run the affected operational journey. No user action is needed.",
-    "completed_preparation": "The Image page and workflow open. Editing Prompt by name fails. In the rendered form, the Prompt label points to the help button. Fourteen of sixteen fields lack a label and the other name attributes checked in the rendered form.",
+    "action": "Find the Image Generation element with low contrast. Fix its colors and repeat the affected checks. No user action is needed.",
+    "completed_preparation": "Prompt editing now works by name, and every Image field has its own label in the component tests. The live run reached the Image audit and found one contrast violation at the wide width.",
     "first_failures_preserved": true,
     "parent_pass": false
   },
@@ -858,5 +960,17 @@
     "raw_app_output_read_or_hashed": false,
     "portable_journey_pass": false,
     "parent_pass": false
+  },
+  "image_field_label_observation": {
+    "live_prompt_edit_passed": true,
+    "default_fields_with_explicit_labels_in_component_tests": 16,
+    "face_id_enabled_fields_with_explicit_labels_in_component_tests": 22,
+    "separate_help_controls": true,
+    "original_label_typography_retained": true,
+    "source_component_tests_passed": 6,
+    "model_or_generation_effects": false,
+    "image_contrast_remaining": true,
+    "whole_operational_journey_passed": false,
+    "parent_qualification_granted": false
   }
 }

@@ -3,7 +3,10 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { NotificationTestHarness, readNotificationMessages } from "../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
-const { secureFetchMock } = vi.hoisted(() => ({ secureFetchMock: vi.fn() }));
+const { secureFetchMock, formFixture } = vi.hoisted(() => ({
+  secureFetchMock: vi.fn(),
+  formFixture: { faceIdEnabled: false },
+}));
 vi.mock("../../../security/secureFetch", () => ({
   secureFetch: secureFetchMock,
 }));
@@ -24,6 +27,13 @@ vi.mock("../hooks/useImageGenerationFeature", () => ({
       model: "",
       numImages: "1",
       latentSourceArtifactId: "",
+      faceIdEnabled: formFixture.faceIdEnabled,
+      faceIdArtifactId1: "",
+      faceIdArtifactId2: "",
+      faceIdArtifactId3: "",
+      faceIdIdentityStrength: "0.85",
+      faceIdStructureStrength: "0.75",
+      faceIdNoise: "0.35",
     },
     setForm: vi.fn(),
     runtimeMode: "cpu",
@@ -167,6 +177,58 @@ describe("ImageGenerationFeature", () => {
     expect(denoise.min).toBe("0");
     expect(denoise.max).toBe("1");
     expect(c.querySelectorAll(".ui-workflow__step").length).toBeGreaterThan(4);
+  });
+
+  it.each([false, true])("associates every field with its label when FaceID is %s", async (faceIdEnabled) => {
+    const c = document.createElement("div");
+    document.body.appendChild(c);
+    const root = createRoot(c);
+    formFixture.faceIdEnabled = faceIdEnabled;
+    try {
+      await act(async () => root.render(<ImageGenerationFeature />));
+      const fields = [
+        ["model-record", "Model (server inventory)"],
+        ["runtime-mode", "Runtime mode"],
+        ["latent-source", "Latent source"],
+        ["face-id-enabled", "Enable FaceID (optional)"],
+        ["prompt", "Prompt"],
+        ["negativePrompt", "Negative Prompt (optional)"],
+        ["seed", "Seed (optional)"],
+        ["width", "Width"],
+        ["height", "Height"],
+        ["steps", "Steps"],
+        ["cfg", "CFG"],
+        ["sampler", "Sampler"],
+        ["scheduler", "Scheduler"],
+        ["numImages", "Number of Images"],
+        ["denoise", "Denoise"],
+        ["model", "Manual model/checkpoint"],
+      ];
+      if (faceIdEnabled) fields.push(
+        ["faceIdArtifactId1", "Face reference image 1"],
+        ["faceIdArtifactId2", "Face reference image 2 (optional)"],
+        ["faceIdArtifactId3", "Face reference image 3 (optional)"],
+        ["faceIdIdentityStrength", "Face identity strength"],
+        ["faceIdStructureStrength", "Face structure strength"],
+        ["faceIdNoise", "Face noise"],
+      );
+      expect(c.querySelectorAll("input, select, textarea")).toHaveLength(fields.length);
+      for (const [key, text] of fields) {
+        const id = `image-generation-${key}`;
+        const control = c.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${id}`);
+        expect(control?.labels?.length, id).toBe(1);
+        const label = control?.labels?.[0];
+        expect(label?.htmlFor).toBe(id);
+        expect(label?.control === control).toBe(true);
+        expect(label?.textContent?.trim()).toBe(text);
+        const help = control?.parentElement?.querySelector("button.ui-glossary-hint__button");
+        expect(Boolean(help), id).toBe(true);
+        expect(help?.closest("label")).toBeNull();
+      }
+    } finally {
+      try { await act(async () => root.unmount()); }
+      finally { c.remove(); formFixture.faceIdEnabled = false; }
+    }
   });
 
   it("does not import desktop/preload/ipc modules", async () => {
