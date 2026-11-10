@@ -16637,6 +16637,97 @@
           "This result gives no permission to change a provider account or production system."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1f0a7df19e77d341f918631cb59da8c32a98412575e4fedb527b7927339dc22d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent repaired the deletion confirmation fields in both interfaces.",
+          "All 32 component tests and the related stylesheet checks passed. These small tests use sample data and simulated responses; the real app test has a separate result.",
+          "The fix passed independent review and is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0ddf79beeef518c99998e8cd58483b126a8cf1b657b7cabaaefe1e888ef8157e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the small confirmation and stylesheet tests.",
+          "The agent must keep Desktop, accessibility and other app checks separate. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c3ab11b3e88c805a72af0fe3b5dbd277bed61480b8929cb0f4093b326727d6b3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is evidence for the committed source fix.",
+          "It does not complete an increment or roadmap, or qualify file protection and low-memory restart."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "69ea6845c0e16b941402786fe9807af7e8a8b96bdf1ef29e24fc2730cc049b74",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failures stay in the history. Completed model accuracy and OCR tests stay closed.",
+          "The private website test stays deferred. Full software tests follow the remaining feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e1b50a87eed338df9f3dd55cfea2d4a22dc75686b5ef365718370fd6036cadcb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent ran the real file workflow in the Thin Client in a background browser. All eleven steps passed.",
+          "Cancellation preserved the file. Exact typed confirmation deleted it, and reload kept it deleted. The second workspace kept its file.",
+          "All 54 test processes stopped and temporary identities were removed. Independent review passed, and the result is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "636fdb8245680be511eb6c8bc7db29d5d7462488b1b8b0ef92f3f92c97b7873d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only this Thin Client file workflow passed.",
+          "The agent must finish other app and Desktop checks separately. This result does not measure startup speed or model accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "840314537687fd95b1bd5ba632c350a64633214737dd7a549486089551840428",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test browser and server processes stopped correctly.",
+          "Model-worker recovery, file protection, low-memory restart and roadmap completion need their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3576751f64553a918ce964b34f6810beec59b78766f03c831db8766abad1aa59",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both earlier failed runs stay in the history; this pass does not explain every earlier failure.",
+          "Completed accuracy and OCR tests stay closed. The private website check stays deferred.",
+          "Full software tests follow the open feature work. This test gives no new permission to publish data."
+        ]
+      }
     }
   ]
 }

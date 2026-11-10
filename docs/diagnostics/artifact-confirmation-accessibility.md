@@ -37,9 +37,16 @@ configuration, incomplete ownership, unknown changes and an explicit generic
 test request. The new profile does not change other profiles or test limits.
 
 The [feature observation](../operations/data-local-artifact-ui-observation.json)
-keeps the earlier setup failure and the later real Thin Client journey. That
-journey passed seven of eleven steps before timing out at typed confirmation.
-Its processes, temporary identities, source and installed runtime were checked.
-The agent must run a separately reviewed fresh host trial after this source
-checkpoint. No user action is needed. Model accuracy and OCR checks stay closed.
+preserves the original setup failure and the later seven-step failure. A fresh
+Thin Client journey on the repaired source passed all eleven steps, including
+typed deletion, reload persistence and retention of the second workspace's file.
+All 54 owned processes stopped normally and temporary identities were removed.
+Independent review confirmed the result. The earlier failures remain unchanged;
+this pass does not establish their unique historical causes.
+
+The real journey used a background Chrome browser against the actual Thin Client
+and local server. Mounted component checks use finite sample clients. These are
+separate evidence tiers. Desktop and other pending technical checks retain their
+own requirements. Run relevant regressions when later code changes affect this
+feature. No user action is needed. Model accuracy and OCR checks stay closed.
 Full-system testing remains deferred until the open feature work is implemented.
