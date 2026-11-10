@@ -569,6 +569,17 @@ No production native backend is composed. The fixed `offload-resource-lifecycle`
 profile uses eleven model-free unit files and explicitly synthetic fresh-domain
 ports. It neither qualifies native protection nor reruns accepted accuracy.
 
+Ordinary empty-cache lease construction retains a bounded strong owner before
+staging writes. An interrupted creation or issuance keeps that owner and denies
+another ordinary cache root. Completed leases continue to charge their original
+reservations within the existing 12 GiB process-local ceiling and 64-owner bound;
+garbage collection is not cleanup. Known occupied-slot denials before a new
+acquisition preserve the original owner's normal release path. After confirmed
+original file removal, a private retirement receipt permits bookkeeping retry
+without repeating deletion or trusting a mutable `released` flag. These are
+cooperative process-local controls, not durable global accounting, native file
+protection, crash recovery or an owned model-worker qualification.
+
 
 OCR process and resource handles now keep a strong owner before close dispatch.
 Each exact handle has one close attempt. An unknown native return, interruption

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import gc
 import json
 import os
 from pathlib import Path
@@ -369,6 +370,11 @@ class OwnedOffloadLeaseTests(unittest.TestCase):
         self.temporary = TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).absolute()
+        # Each synthetic fixture owns its process-local custody domain. This
+        # never clears a product worker's retained staging or filesystem data.
+        self.custody = patch.object(offload, "_STAGING_LEASE_CUSTODY", {}, create=True)
+        self.custody.start()
+        self.addCleanup(self.custody.stop)
 
     def test_copied_loader_lease_cannot_seal_or_clean_the_ordinary_slot(self):
         def rebound(lease):
@@ -518,6 +524,200 @@ class OwnedOffloadLeaseTests(unittest.TestCase):
         with self.assertRaises(offload.OffloadAdmissionError):
             lease.cleanup(model_released=True)
         self.assertEqual(index.read_text(encoding="utf-8"), "foreign")
+
+
+class StagingConstructionCustodyTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name).absolute()
+        self.custody = patch.object(offload, "_STAGING_LEASE_CUSTODY", {}, create=True)
+        self.custody.start()
+        self.addCleanup(self.custody.stop)
+
+    def second_cache(self):
+        other = self.root / "other-cache"
+        other.mkdir()
+        return other
+
+    def test_owner_file_failure_fences_another_root_without_deleting_partial_files(self):
+        model = self.root / "original.safetensors"
+        model.write_bytes(b"synthetic-original")
+        other = self.second_cache()
+        original_open = Path.open
+        owner_path = self.root / ".aisb-offload-v1" / "active" / "owner"
+
+        def fail_owner(path, *args, **kwargs):
+            if path == owner_path:
+                raise PermissionError("synthetic owner creation failure")
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", new=fail_owner):
+            with self.assertRaises(offload.OffloadAdmissionError):
+                offload.OwnedOffloadLease(self.root, 1024)
+        self.assertTrue(owner_path.parent.is_dir())
+        with self.assertRaises(offload.OffloadAdmissionError):
+            offload.OwnedOffloadLease(other, 1024)
+        self.assertFalse((other / ".aisb-offload-v1").exists())
+        self.assertTrue(owner_path.parent.is_dir())
+        self.assertEqual(model.read_bytes(), b"synthetic-original")
+
+    def test_issuance_interrupt_keeps_the_original_wrapper_alive(self):
+        seen = []
+        other = self.second_cache()
+
+        def interrupt(lease):
+            seen.append(ref(lease))
+            raise KeyboardInterrupt("synthetic issuance interruption")
+
+        with patch.object(offload, "_record_offload_lease", side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                offload.OwnedOffloadLease(self.root, 1024)
+        gc.collect()
+        self.assertIsNotNone(seen[0]())
+        with self.assertRaises(offload.OffloadAdmissionError):
+            offload.OwnedOffloadLease(other, 1024)
+        self.assertFalse((other / ".aisb-offload-v1").exists())
+
+    def test_completed_construction_stays_owned_until_confirmed_cleanup(self):
+        lease = offload.OwnedOffloadLease(self.root, 1024)
+        owner = ref(lease)
+        lease.seal()
+        del lease
+        gc.collect()
+        self.assertIsNotNone(owner())
+        original = owner()
+        original.cleanup(model_released=True)
+        self.assertTrue(original.released)
+        del original
+        gc.collect()
+        self.assertIsNone(owner())
+
+    def test_live_reservations_cannot_exceed_the_existing_staging_ceiling(self):
+        other = self.second_cache()
+        first = offload.OwnedOffloadLease(self.root, offload.STAGING_LIMIT - 256)
+        with self.assertRaises(offload.OffloadAdmissionError):
+            offload.OwnedOffloadLease(other, 512)
+        self.assertFalse((other / ".aisb-offload-v1").exists())
+        first.seal()
+        first.cleanup(model_released=True)
+        second = offload.OwnedOffloadLease(other, 512)
+        second.seal()
+        second.cleanup(model_released=True)
+
+    def test_confirmed_removal_bookkeeping_retry_performs_no_second_delete(self):
+        lease = offload.OwnedOffloadLease(self.root, 1024)
+        (lease.path / "index.json").write_bytes(b"{}")
+        lease.seal()
+        original_setattr = offload.OwnedOffloadLease.__setattr__
+
+        def interrupt_released(owner, name, value):
+            if owner is lease and name == "released" and value is True:
+                raise KeyboardInterrupt("synthetic post-removal bookkeeping interruption")
+            return original_setattr(owner, name, value)
+
+        with patch.object(offload.OwnedOffloadLease, "__setattr__", new=interrupt_released):
+            with self.assertRaises(KeyboardInterrupt):
+                lease.cleanup(model_released=True)
+        self.assertFalse(lease.path.exists())
+        with patch.object(Path, "unlink", side_effect=AssertionError("repeated file removal")), \
+             patch.object(Path, "rmdir", side_effect=AssertionError("repeated directory removal")):
+            lease.cleanup(model_released=True)
+        self.assertTrue(lease.released)
+
+    def test_owner_record_must_fit_before_any_staging_write(self):
+        for reservation in (1, 31):
+            with self.subTest(reservation=reservation):
+                with self.assertRaises(offload.OffloadAdmissionError):
+                    offload.OwnedOffloadLease(self.root, reservation)
+                self.assertFalse((self.root / ".aisb-offload-v1").exists())
+        lease = offload.OwnedOffloadLease(self.root, 32)
+        lease.seal()
+        lease.cleanup(model_released=True)
+
+    def test_short_owner_write_retains_the_partial_bytes_and_denies_new_creation(self):
+        owner_path = self.root / ".aisb-offload-v1" / "active" / "owner"
+        other = self.second_cache()
+        original_open = Path.open
+
+        class ShortWriter:
+            def __enter__(self):
+                self.stream = original_open(owner_path, "xb")
+                return self
+
+            def write(self, data):
+                return self.stream.write(data[:1])
+
+            def __exit__(self, *args):
+                self.stream.close()
+
+        def open_short(path, *args, **kwargs):
+            return ShortWriter() if path == owner_path else original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", new=open_short):
+            with self.assertRaises(offload.OffloadAdmissionError):
+                offload.OwnedOffloadLease(self.root, 1024)
+        self.assertEqual(len(owner_path.read_bytes()), 1)
+        with self.assertRaises(offload.OffloadAdmissionError):
+            offload.OwnedOffloadLease(other, 1024)
+        self.assertFalse((other / ".aisb-offload-v1").exists())
+        self.assertEqual(len(owner_path.read_bytes()), 1)
+
+    def test_retained_partial_wrapper_cannot_be_reinitialized_or_used_for_cleanup(self):
+        seen = []
+        original_record = offload._record_offload_lease
+
+        def interrupt_after_issue(lease):
+            seen.append(ref(lease))
+            original_record(lease)
+            raise KeyboardInterrupt("synthetic interrupted issuance acknowledgment")
+
+        with patch.object(offload, "_record_offload_lease", side_effect=interrupt_after_issue):
+            with self.assertRaises(KeyboardInterrupt):
+                offload.OwnedOffloadLease(self.root, 1024)
+        owner = seen[0]()
+        self.assertIsNotNone(owner)
+        original_root = owner.root
+        other = self.second_cache()
+        with self.assertRaises(offload.OffloadAdmissionError):
+            owner.__init__(other, 1024)
+        self.assertIs(owner.root, original_root)
+        with self.assertRaises(offload.OffloadAdmissionError):
+            owner.seal()
+        with patch.object(Path, "unlink", side_effect=AssertionError("unissued deletion")), \
+             patch.object(Path, "rmdir", side_effect=AssertionError("unissued directory removal")):
+            with self.assertRaises(offload.OffloadAdmissionError):
+                owner.cleanup(model_released=True)
+        self.assertTrue((owner.path / "owner").is_file())
+        self.assertFalse((other / ".aisb-offload-v1").exists())
+
+    def test_mutable_released_flag_cannot_authorize_retirement(self):
+        lease = offload.OwnedOffloadLease(self.root, 1024)
+        lease.seal()
+        lease.released = True
+        with self.assertRaises(offload.OffloadAdmissionError):
+            lease.cleanup(model_released=True)
+        self.assertTrue(lease.path.is_dir())
+        lease.released = False
+        lease.cleanup(model_released=True)
+        self.assertTrue(lease.released)
+
+    def test_owner_bound_denies_before_writes_and_confirmed_cleanup_restores_capacity(self):
+        leases = []
+        for number in range(64):
+            cache = self.root / str(number)
+            cache.mkdir()
+            leases.append(offload.OwnedOffloadLease(cache, 1024))
+        extra = self.second_cache()
+        with self.assertRaises(offload.OffloadAdmissionError):
+            offload.OwnedOffloadLease(extra, 1024)
+        self.assertFalse((extra / ".aisb-offload-v1").exists())
+        leases[0].seal()
+        leases[0].cleanup(model_released=True)
+        replacement = offload.OwnedOffloadLease(extra, 1024)
+        for lease in [*leases[1:], replacement]:
+            lease.seal()
+            lease.cleanup(model_released=True)
 
 
 if __name__ == "__main__":

@@ -134,6 +134,23 @@ the retained record. It does not seal or delete the already released files again
 These records do not prove native worker exit, lazy-reference retirement or a
 safe restart after process loss. Those qualifications remain pending.
 
+Ordinary lease creation now retains its original owner before creating staging
+files. An interrupted owner-file write or issuance step preserves the partial
+files and denies a different ordinary cache root in that process. Live leases
+retain their reservations within the existing 12 GiB ceiling and a fixed
+64-owner bound until confirmed cleanup; losing a Python reference grants no
+space. The 32-byte owner record must fit before writing, and a short write fails
+without granting an issued lease. Existing occupied-slot denials remain safe to
+retry after the original owner completes cleanup.
+
+A private receipt records confirmed original removal before final bookkeeping.
+If that bookkeeping is interrupted, retry completes it without deleting again
+or adopting files recreated at the old pathname. A mutable completion flag is
+not that receipt. These checks use process-local cooperative ownership only.
+Native protection, durable cross-process accounting, guarded restart and actual
+offload resource/lifecycle qualification remain pending; accepted model accuracy
+is unchanged.
+
 Queued dataset work remains cancellable. Running Dataset Preparation is currently
 not force-cancellable: a request or timeout cannot declare it finished or stop the
 shared worker. Wait for observed completion before retry or unload. The desktop

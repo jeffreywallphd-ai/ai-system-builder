@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import stat
 import time
+from threading import RLock
 from collections.abc import Mapping
 import uuid
 from weakref import ReferenceType, ref
@@ -637,10 +638,46 @@ def _directory_identity(path: Path) -> tuple[int, int]:
 class _StagingLeaseIssue:
     owner: ReferenceType[OwnedOffloadLease]
     fields: tuple[tuple[str, object], ...]
+    retired: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class _StagingCustody:
+    owner: OwnedOffloadLease
+    reservation: int
+    phase: str
 
 
 _ISSUED_STAGING_LEASES: dict[int, _StagingLeaseIssue] = {}
 _MISSING_ISSUED_FIELD = object()
+_STAGING_LEASE_CUSTODY: dict[int, _StagingCustody] = {}
+_STAGING_CUSTODY_LOCK = RLock()
+_MAX_STAGING_OWNERS = 64
+
+
+def _begin_staging_construction(lease: OwnedOffloadLease, reservation: int) -> None:
+    # Pin before mkdir/open/issuance. A creating record after interruption is
+    # unknown, not permission to switch roots or reclaim its reservation.
+    with _STAGING_CUSTODY_LOCK:
+        if id(lease) in _STAGING_LEASE_CUSTODY or len(_STAGING_LEASE_CUSTODY) >= _MAX_STAGING_OWNERS:
+            raise OffloadAdmissionError()
+        total = 0
+        for key, row in _STAGING_LEASE_CUSTODY.items():
+            if (type(row) is not _StagingCustody or id(row.owner) != key or row.phase != "issued"
+                    or type(row.reservation) is not int or not 0 < row.reservation <= STAGING_LIMIT):
+                raise OffloadAdmissionError()
+            total += row.reservation
+        if total + reservation > STAGING_LIMIT:
+            raise OffloadAdmissionError()
+        _STAGING_LEASE_CUSTODY[id(lease)] = _StagingCustody(lease, reservation, "creating")
+
+
+def _staging_custody(lease: OwnedOffloadLease) -> _StagingCustody:
+    row = _STAGING_LEASE_CUSTODY.get(id(lease))
+    if (type(row) is not _StagingCustody or row.owner is not lease
+            or row.reservation is not lease.reservation):
+        raise OffloadAdmissionError()
+    return row
 
 
 def _record_offload_lease(lease: OwnedOffloadLease) -> None:
@@ -658,7 +695,7 @@ def _record_offload_lease(lease: OwnedOffloadLease) -> None:
     _ISSUED_STAGING_LEASES[key] = _StagingLeaseIssue(ref(lease, retire), fields)
 
 
-def _require_issued_offload_lease(lease: OwnedOffloadLease) -> None:
+def _issued_offload_lease(lease: OwnedOffloadLease) -> _StagingLeaseIssue:
     # Verify the exact issued wrapper and its original staging fields.
     issued = _ISSUED_STAGING_LEASES.get(id(lease))
     if issued is None or issued.owner() is not lease:
@@ -666,6 +703,53 @@ def _require_issued_offload_lease(lease: OwnedOffloadLease) -> None:
     state = vars(lease)
     if any(state.get(name, _MISSING_ISSUED_FIELD) is not original for name, original in issued.fields):
         raise OffloadAdmissionError()
+    return issued
+
+
+def _require_issued_offload_lease(lease: OwnedOffloadLease) -> None:
+    issued = _issued_offload_lease(lease)
+    if lease._guarded_lease is None:
+        with _STAGING_CUSTODY_LOCK:
+            row = _STAGING_LEASE_CUSTODY.get(id(lease))
+            if issued.retired:
+                if row is not None and _staging_custody(lease).phase != "cleanup-confirmed":
+                    raise OffloadAdmissionError()
+            elif _staging_custody(lease).phase not in ("issued", "cleanup-confirmed"):
+                raise OffloadAdmissionError()
+
+
+def _acknowledge_staging_construction(lease: OwnedOffloadLease) -> None:
+    with _STAGING_CUSTODY_LOCK:
+        if _issued_offload_lease(lease).retired or _staging_custody(lease).phase != "creating":
+            raise OffloadAdmissionError()
+        _STAGING_LEASE_CUSTODY[id(lease)] = _StagingCustody(lease, lease.reservation, "issued")
+
+
+def _confirm_staging_removal(lease: OwnedOffloadLease) -> None:
+    # Called only after the original final rmdir returned successfully. This
+    # private receipt records a completed effect; a mutable released flag cannot.
+    with _STAGING_CUSTODY_LOCK:
+        _require_issued_offload_lease(lease)
+        if _staging_custody(lease).phase != "issued":
+            raise OffloadAdmissionError()
+        _STAGING_LEASE_CUSTODY[id(lease)] = _StagingCustody(lease, lease.reservation, "cleanup-confirmed")
+
+
+def _finish_staging_retirement(lease: OwnedOffloadLease) -> None:
+    with _STAGING_CUSTODY_LOCK:
+        issued = _issued_offload_lease(lease)
+        row = _STAGING_LEASE_CUSTODY.get(id(lease))
+        if row is not None and _staging_custody(lease).phase != "cleanup-confirmed":
+            raise OffloadAdmissionError()
+        if not issued.retired:
+            if row is None:
+                raise OffloadAdmissionError()
+            _ISSUED_STAGING_LEASES[id(lease)] = _StagingLeaseIssue(issued.owner, issued.fields, True)
+        # An interruption here retains the completed receipt and original owner.
+        # Retry finishes bookkeeping only; it never repeats a file operation.
+        lease.released = True
+        if row is not None:
+            del _STAGING_LEASE_CUSTODY[id(lease)]
 
 
 class OwnedOffloadLease:
@@ -677,7 +761,7 @@ class OwnedOffloadLease:
     identity checks are cooperative, not an ACL/reparse race guarantee.
     """
     def __init__(self, cache_root: Path, reservation: int, *, _recovery=ORDINARY_OFFLOAD):
-        if id(self) in _ISSUED_STAGING_LEASES:
+        if id(self) in _ISSUED_STAGING_LEASES or id(self) in _STAGING_LEASE_CUSTODY:
             raise OffloadAdmissionError()
         if not cache_root.is_absolute() or ".." in cache_root.parts or type(reservation) is not int or not 0 < reservation <= STAGING_LIMIT:
             raise OffloadAdmissionError()
@@ -692,8 +776,18 @@ class OwnedOffloadLease:
             self.released = False
             _record_offload_lease(self)
             return
+        if reservation < 32:  # The fixed owner record must fit before its write.
+            raise OffloadAdmissionError()
         _directory_identity(cache_root)
         self.root = cache_root / ".aisb-offload-v1"
+        # A known occupied slot is a side-effect-free denial, not a failed new
+        # acquisition that could poison the existing owner's normal cleanup.
+        if self.root.exists():
+            _directory_identity(self.root)
+            if list(self.root.iterdir()):
+                raise OffloadAdmissionError()
+        self.reservation = reservation
+        _begin_staging_construction(self, reservation)
         try:
             self.root.mkdir(mode=0o700, exist_ok=True)
             self._root_identity = _directory_identity(self.root)
@@ -704,7 +798,9 @@ class OwnedOffloadLease:
             self._identity = _directory_identity(self.path)
             self._owner = uuid.uuid4().hex.encode("ascii")
             with (self.path / "owner").open("xb") as stream:
-                stream.write(self._owner)
+                written = stream.write(self._owner)
+                if type(written) is not int or written != len(self._owner):
+                    raise OffloadAdmissionError()
         except OSError:
             raise OffloadAdmissionError() from None
         self.reservation = reservation
@@ -712,6 +808,7 @@ class OwnedOffloadLease:
         self._sealed = None
         self._removed: set[str] = set()
         _record_offload_lease(self)
+        _acknowledge_staging_construction(self)
 
     def _check_identity(self) -> None:
         if self.released or _directory_identity(self.root) != self._root_identity or _directory_identity(self.path) != self._identity:
@@ -751,7 +848,15 @@ class OwnedOffloadLease:
 
     def cleanup(self, *, model_released: bool) -> None:
         _require_issued_offload_lease(self)
+        if self._guarded_lease is None and (
+                _issued_offload_lease(self).retired
+                or _staging_custody(self).phase == "cleanup-confirmed"):
+            _finish_staging_retirement(self)
+            return
         if self.released:
+            # Ordinary completion needs its private receipt, not this flag.
+            if self._guarded_lease is None:
+                raise OffloadAdmissionError()
             return
         if self._guarded_lease is not None:
             if model_released is not True:
@@ -779,7 +884,8 @@ class OwnedOffloadLease:
                 (self.path / "owner").unlink()
                 self._removed.add("owner")
             self.path.rmdir()
-            self.released = True
+            _confirm_staging_removal(self)
+            _finish_staging_retirement(self)
         except OSError:
             # Retain the slot/reservation after failed or uncertain cleanup.
             raise OffloadAdmissionError() from None
