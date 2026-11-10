@@ -11713,6 +11713,86 @@
         "Local implementation support only. Real private-source observation is recorded separately; mounted Desktop/Thin Client import and localization, large-file memory/progress/resume, robots, cancellation/cleanup and advanced runtime evidence remain separate technical work. No parent/current-aggregate pass, app/native resource or hostile filesystem/network qualification, write authority or model-quality rerun is granted. Preserve earlier failures; accepted accuracy/OCR stay closed and combined testing remains deferred.",
         "A subsequent synthetic timeout/cancellation probe exposed one unhandled rejection in this historical83c3118 snapshot. A separate repair is tracked by observe-cancellation-rejections-before-deadline-refusal. These earlier checks do not qualify that edge or native cleanup."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "source-scope-ui-remains-simple",
+      "work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+      "work_criteria": [
+        "actual-private-source-ui-eleven-phases-pass",
+        "current-source-and-private-effects-are-exactly-reviewed",
+        "owned-runtime-and-credential-retirement-are-proved",
+        "source-qualified-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "59b5378b5708974f004e269e8f5788ba9bf4032c9bcf279af07de9263e7c1f44",
+      "review_digest": "b99b3264d02206b378d5422e844d56a68a69ddaf2af0cdbb600c746966b1e00b",
+      "scope": "Committed c5a08ea records the real Thin Client private-source journey: all 11 steps passed, including localization, reloads and return to the original workspace. Independent review confirmed 47 owned processes retired, credential cleanup and unchanged source/runtime. Current documentation and all four work criteria passed. The workspace-confirmation test fix is committed c116cf6. Earlier failures remain recorded.",
+      "limitations": [
+        "This is one Thin Client feature journey with the approved synthetic private file. The Desktop equivalent and other workflows need their own evidence; this result is not a cold-load or model-quality benchmark.",
+        "Existing scale, recovery, security and runtime results remain in their own records. This local support grants no broader managed authorization, native ownership, offload, current aggregate, increment or roadmap qualification.",
+        "The private-provider website check remains explicitly deferred. Accepted model accuracy and OCR stay closed. Full software testing follows completion of the open feature work; no new provider or production authority is granted."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+      "work_criteria": [
+        "actual-private-source-ui-eleven-phases-pass",
+        "current-source-and-private-effects-are-exactly-reviewed",
+        "owned-runtime-and-credential-retirement-are-proved",
+        "source-qualified-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "59b5378b5708974f004e269e8f5788ba9bf4032c9bcf279af07de9263e7c1f44",
+      "review_digest": "b99b3264d02206b378d5422e844d56a68a69ddaf2af0cdbb600c746966b1e00b",
+      "scope": "Committed c5a08ea records the real Thin Client private-source journey: all 11 steps passed, including localization, reloads and return to the original workspace. Independent review confirmed 47 owned processes retired, credential cleanup and unchanged source/runtime. Current documentation and all four work criteria passed. The workspace-confirmation test fix is committed c116cf6. Earlier failures remain recorded.",
+      "limitations": [
+        "This is one Thin Client feature journey with the approved synthetic private file. The Desktop equivalent and other workflows need their own evidence; this result is not a cold-load or model-quality benchmark.",
+        "Existing scale, recovery, security and runtime results remain in their own records. This local support grants no broader managed authorization, native ownership, offload, current aggregate, increment or roadmap qualification.",
+        "The private-provider website check remains explicitly deferred. Accepted model accuracy and OCR stay closed. Full software testing follows completion of the open feature work; no new provider or production authority is granted."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+      "work_criteria": [
+        "actual-private-source-ui-eleven-phases-pass",
+        "current-source-and-private-effects-are-exactly-reviewed",
+        "owned-runtime-and-credential-retirement-are-proved",
+        "source-qualified-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "59b5378b5708974f004e269e8f5788ba9bf4032c9bcf279af07de9263e7c1f44",
+      "review_digest": "b99b3264d02206b378d5422e844d56a68a69ddaf2af0cdbb600c746966b1e00b",
+      "scope": "Committed c5a08ea records the real Thin Client private-source journey: all 11 steps passed, including localization, reloads and return to the original workspace. Independent review confirmed 47 owned processes retired, credential cleanup and unchanged source/runtime. Current documentation and all four work criteria passed. The workspace-confirmation test fix is committed c116cf6. Earlier failures remain recorded.",
+      "limitations": [
+        "This is one Thin Client feature journey with the approved synthetic private file. The Desktop equivalent and other workflows need their own evidence; this result is not a cold-load or model-quality benchmark.",
+        "Existing scale, recovery, security and runtime results remain in their own records. This local support grants no broader managed authorization, native ownership, offload, current aggregate, increment or roadmap qualification.",
+        "The private-provider website check remains explicitly deferred. Accepted model accuracy and OCR stay closed. Full software testing follows completion of the open feature work; no new provider or production authority is granted."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+      "work_criteria": [
+        "actual-private-source-ui-eleven-phases-pass",
+        "current-source-and-private-effects-are-exactly-reviewed",
+        "owned-runtime-and-credential-retirement-are-proved",
+        "source-qualified-report-and-owned-checkpoint"
+      ],
+      "receipt_digest": "59b5378b5708974f004e269e8f5788ba9bf4032c9bcf279af07de9263e7c1f44",
+      "review_digest": "b99b3264d02206b378d5422e844d56a68a69ddaf2af0cdbb600c746966b1e00b",
+      "scope": "Committed c5a08ea records the real Thin Client private-source journey: all 11 steps passed, including localization, reloads and return to the original workspace. Independent review confirmed 47 owned processes retired, credential cleanup and unchanged source/runtime. Current documentation and all four work criteria passed. The workspace-confirmation test fix is committed c116cf6. Earlier failures remain recorded.",
+      "limitations": [
+        "This is one Thin Client feature journey with the approved synthetic private file. The Desktop equivalent and other workflows need their own evidence; this result is not a cold-load or model-quality benchmark.",
+        "Existing scale, recovery, security and runtime results remain in their own records. This local support grants no broader managed authorization, native ownership, offload, current aggregate, increment or roadmap qualification.",
+        "The private-provider website check remains explicitly deferred. Accepted model accuracy and OCR stay closed. Full software testing follows completion of the open feature work; no new provider or production authority is granted."
+      ]
     }
   ]
 }

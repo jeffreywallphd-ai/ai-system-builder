@@ -16591,6 +16591,52 @@
           "These results do not prove that all background processes and file handles closed. No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "79867419a7a97522905a4fdc9d5049d5cd2703f3af48d5afd30db1cda20d492a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent ran the real private-file workflow in the Thin Client. All eleven steps passed.",
+          "The app kept the local file after reloads and after changing workspaces. Temporary credentials and processes were cleaned up.",
+          "Independent review passed, and the test fix and result are committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "da9d6027103b90176f373bc8d14ac6c35afca5b4dacb7d82dccb35990af53912",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only this Thin Client workflow passed. The agent must finish the Desktop version and other open workflows.",
+          "This test does not measure app startup speed or model accuracy. No action is needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b78f693f2c0faa4b22e54bbb9b3d9de71a10969b21b1852818899930db4d1b2a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Keep existing large-file, recovery, security and runtime evidence separate.",
+          "This completed test does not complete an increment or roadmap. The agent must retain the other technical checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9079559e3eb1cd8903d76c9968db2d3684a97978264763c3fce6832c42c13814",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Completed model accuracy and OCR checks stay closed.",
+          "The private website check remains deferred. Full software tests will follow the open feature work.",
+          "This result gives no permission to change a provider account or production system."
+        ]
+      }
     }
   ]
 }
