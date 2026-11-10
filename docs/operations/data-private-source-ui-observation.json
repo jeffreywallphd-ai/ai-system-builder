@@ -123,5 +123,36 @@
     "original_report_created_under_prior_agent_claim": true,
     "original_ui_criterion_remains_unqualified": true,
     "new_ui_or_parent_qualification": false
+  },
+  "inertWorkerDiagnosis": {
+    "schema_version": "private-source-inert-worker-diagnosis-v1",
+    "source_digest": "110aa5054f73a97b917530c1a18bceb44c02de8c620a907dd70d9292ab2267bf",
+    "head": "e3844a51ce16c9c3679a3070da2f6f1bc5d7f8ca",
+    "observation_sha256": "40dca5cf318e0b131f113f97436f14b104d351180a983855c006e26d25465442",
+    "test_quality_commit": "e3844a51ce16c9c3679a3070da2f6f1bc5d7f8ca",
+    "test_quality_receipt": "c4bf8baec1e6825b97de0c3ad67325a142a8519986da0985795229e9a9f22d37",
+    "test_quality_review": "a9b0fe98419b7380aa2878eb065ca92e59cc3f60a1184d07658f406755386b9b",
+    "trials": [
+      {
+        "actual_host_definitions_loaded": true,
+        "actual_setup_loader_used": false,
+        "synthetic_body_entered": true,
+        "runner_exit_code": 0,
+        "passed": true
+      },
+      {
+        "actual_host_definitions_loaded": true,
+        "actual_setup_loader_used": true,
+        "synthetic_body_entered": true,
+        "runner_exit_code": 0,
+        "passed": true
+      }
+    ],
+    "meaning": "The actual thin host test definitions reached a synthetic worker with and without the setup loader. These probes did not reproduce an import failure. They did not start a browser or app. The earlier private-file test still needs diagnosis.",
+    "private_input_used": false,
+    "browser_or_app_started": false,
+    "original_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "new_synthetic_roots_removed_after_exit": true
   }
 }
