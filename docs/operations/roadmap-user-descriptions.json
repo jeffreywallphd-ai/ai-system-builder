@@ -8867,7 +8867,7 @@
         "title": "Headless Skills and Revocable UI Takeover",
         "purpose": "Let authorized chat clients use the same application services as the UI, with optional exact-window takeover that the user can accept and immediately revoke while independent backend work continues; deliver desktop first, then server/browser support.",
         "scope": [
-          "Technical work is pending. No implementation or test pass is claimed."
+          "Roadmap approved. Implementation is on hold at the user's request."
         ]
       }
     },
@@ -8879,7 +8879,7 @@
         "title": "Use chat tools to author systems and keep saved data synchronized",
         "purpose": "Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.",
         "scope": [
-          "Technical work is pending. No implementation or test pass is claimed."
+          "Roadmap approved. Implementation is on hold at the user's request."
         ]
       },
       "increment_id": "headless-authoring-and-synchronization"
@@ -8892,7 +8892,7 @@
         "title": "Accept and revoke automation control of one desktop window",
         "purpose": "Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.",
         "scope": [
-          "Technical work is pending. No implementation or test pass is claimed."
+          "Roadmap approved. Implementation is on hold at the user's request."
         ]
       },
       "increment_id": "revocable-desktop-presentation"
@@ -8905,7 +8905,7 @@
         "title": "Deliver the same workflow through the authenticated server and browser",
         "purpose": "Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay.",
         "scope": [
-          "Technical work is pending. No implementation or test pass is claimed."
+          "Roadmap approved. Implementation is on hold at the user's request."
         ]
       },
       "increment_id": "server-browser-and-delivery-qualification"

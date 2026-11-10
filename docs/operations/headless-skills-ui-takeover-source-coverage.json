@@ -1256,6 +1256,6 @@
     "Use an existing supported observable backend operation with a bounded deterministic test runtime where needed. Substitution does not prove native model accuracy, external-provider effects or new crash recovery.",
     "Human product acceptance and revoke are simulated by UI tests. No human acceptance/study task is part of technical closure.",
     "No test, model, application, service, dependency installation or full suite was executed for this planning artifact.",
-    "The earlier ignored-only preparation constraint ended when publication was handed off. This draft is now published but unapproved. Future implementation requires a separate user request and current roadmap approval, source reconciliation, and preservation of unrelated changes, roadmap history and actual qualification."
+    "The roadmap is published and approved. The user explicitly deferred implementation. A separate explicit implementation request, current-source reconciliation and preservation of unrelated changes, roadmap history and actual qualification remain required."
   ]
 }

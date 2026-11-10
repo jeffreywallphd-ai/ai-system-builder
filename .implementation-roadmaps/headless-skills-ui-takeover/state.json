@@ -255,6 +255,16 @@
       "recordedAt": "2026-11-10T12:57:31Z",
       "summary": "The discovery constraint limiting work to ignored planning files applied before the coordinated publication handoff. That handoff is complete and the unapproved draft is now published. The earlier constraint remains dated preparation history. Future implementation must reconcile the current source and preserve unrelated changes, roadmap history and actual qualification. This clarification changes no strategy, acceptance criterion, security requirement or approval.",
       "targetIncrementId": "headless-authoring-and-synchronization"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "implementation-explicitly-deferred-by-user",
+      "impact": "within-increment",
+      "nextAction": "Keep all three increments pending and exclude this roadmap from generic open-roadmap execution. Start implementation only after a separate explicit user request. Continue other approved roadmap feature work.",
+      "recordedAt": "2026-11-10T13:38:24Z",
+      "summary": "The current roadmap is approved. The user explicitly instructed that it must not be implemented yet. Earlier discovery text about pending roadmap approval is historical preparation context.",
+      "targetIncrementId": null
     }
   ],
   "finalApproval": null,
@@ -311,6 +321,18 @@
       "eventFingerprint": "5d7a3c6f0edfd4856a33bf03e15c58220423ee98a4f329ec734bf6deeb24b62e",
       "recordedAt": "2026-11-10T12:57:31Z",
       "sequence": 9,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "6b82ec62956099dc6ef8cfbe2a87f4f8f82b137a7c1f9950192b2533a41a9a2b",
+      "recordedAt": "2026-11-10T13:38:23Z",
+      "sequence": 10,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "0f8f15c9fd9847b4bad10816b925d153d6267cc19fae0dafef388fa3b2d4f61e",
+      "recordedAt": "2026-11-10T13:38:24Z",
+      "sequence": 11,
       "type": "feedback-recorded"
     }
   ],
@@ -627,9 +649,13 @@
     "state": ".implementation-roadmaps/headless-skills-ui-takeover/state.json"
   },
   "resumeAudits": [],
-  "roadmapApproval": null,
+  "roadmapApproval": {
+    "approvedAt": "2026-11-10T13:38:23Z",
+    "fingerprint": "ea77f007a0c21162680792c1737b64583a0dd6763ec57da5b3bfed255c6b10c4",
+    "note": "The user approved the current published desktop-first then server/browser roadmap. Implementation is explicitly deferred. This approval does not authorize starting an increment, implementation work, external effects or release; continue other previously approved roadmaps with feature-level testing."
+  },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "roadmap-review",
-  "updatedAt": "2026-11-10T12:57:31Z"
+  "status": "ready",
+  "updatedAt": "2026-11-10T13:38:24Z"
 }
