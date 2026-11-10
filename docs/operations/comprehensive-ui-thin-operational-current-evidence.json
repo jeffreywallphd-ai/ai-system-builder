@@ -47,6 +47,196 @@
       "own_thin_client_and_server_processes_closed": true,
       "raw_artifacts_retained": 0,
       "verified_feature_pass": false
+    },
+    {
+      "run_id": "operational-thin-791f8197b91445388fc660d456bfb47f",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "4cee63828c3f845d49ad9b907379e5f0bb84d676f2472ef318e99c6f2cfe85b6",
+        "app_source": "source.a4dcda87c78bd4629057a53e4888325cf944aebf6a36d56dbb13117bb8bb40f4"
+      },
+      "manifest_sha256": "8a73bab29b85bcc3476acc07f9e6302b62e5c166059103579da19f0102922a5b",
+      "case_report_sha256": "41c4b20f8f7044594799b8b469c2d8d0025bc5a77118e5877ece295501780ea4",
+      "teardown_sha256": "941b020dc952215c536b60c2b8371ff38d4dbb56dfb92c86d2a1ab352d388158",
+      "execution_sha256": "97b83f82ffa5a7730a521f35e5241a956331ef6db0092b898cdc7724f8f0447a",
+      "setup": null,
+      "operational_phases": null,
+      "selected_cases": 0,
+      "case_events": 0,
+      "framework_errors": 1,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "browser_case_dispatch": "Not reached: current framework load failed before test selection/body dispatch. The conservative original fence and spent attempt stay intact.",
+      "diagnosed_failure": "The basename test selector also discovered an archived test copy in a deeper folder. That copy could not resolve its relative import. This preparation defect did not exercise the application.",
+      "source_only_reproduction": {
+        "mode": "list-only-no-global-setup-or-test-run",
+        "archived_case_load_error_reproduced": true,
+        "app_or_browser_effects": false
+      },
+      "limits": [
+        "No claim that the two November6 failures had the same cause.",
+        "No browser, operational feature, native, physical-model or parent qualification was supplied by this failed attempt.",
+        "No raw actual-app output, credential contents or provider payloads were read, retained or hashed."
+      ]
+    },
+    {
+      "run_id": "operational-thin-84a7372265424fbfad655c41226b3eb3",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "936f523a0ad1ff48f51a856d93d27939a41b99a7f63225305fa95fed13f1be2d",
+        "app_source": "source.a4dcda87c78bd4629057a53e4888325cf944aebf6a36d56dbb13117bb8bb40f4"
+      },
+      "manifest_sha256": "f410ce98053685f8d1f13c186e711794d6f82dd164dfb460aab04a521bf6aa7b",
+      "case_report_sha256": "c1d81ab6296924abc2205117526ef65b420494fe6eb114c02d85174cb514cb32",
+      "teardown_sha256": "13c85be5edd31260c93c45ea1da84334dd8b68f43ed6313e2f213d0ca445242d",
+      "execution_sha256": "3684d9af8a195355b3514fbb7ddeef0a01cc0a455105a4a5defc32d484cb75e4",
+      "independent_failure_review_sha256": "a3fe3fbec5a2f1aa0b65937c43567aa2ebb45df0b3545d319ff0cdfbc23c9453",
+      "safe_accessibility_report_sha256": "9c8d22c6e36ae43a5a1875a23a104b732a01f4eeb9c90c764f5c66ba75717bb7",
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5028,
+      "setup": {
+        "blockedRequests": 2,
+        "forwardedRequests": 566,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [],
+        "nextPhase": "navigation-menu-opened"
+      },
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "accessibility_observation": {
+        "surface": "navigation-menu",
+        "status": "failed",
+        "failure_stage": "control-access-320",
+        "wide": {
+          "width": 1440,
+          "controls": 29,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "audit_incomplete": 0,
+          "contrast_positive_nodes": 59
+        },
+        "narrow": {
+          "width": 320,
+          "controls": 25,
+          "inaccessible": 8,
+          "audit_executed": false
+        },
+        "reduced_motion_checked_at": [
+          1440,
+          320
+        ],
+        "forced_colors_executed": false
+      },
+      "limits": [
+        "Eight narrow controls were outside the viewport; exact control geometry and causal CSS relationship have not yet been proven.",
+        "Two request denials remain a separate unclassified failure; no origin/scheme exception is authorized.",
+        "A failed declared accessibility attachment set the reporter flag; no raw private artifact was retained.",
+        "Ordinary fixture retirement supplies no physical native/offload/process-tree or parent qualification."
+      ]
+    },
+    {
+      "run_id": "operational-thin-8a2e49fbec1a47889638dd8b8ee54e5a",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "175c7feb137a98183daaacbd71b64e1fc45a97f2181386328af4223ae754cf53",
+        "app_source": "source.6d4f1e9b396527e8d2e3d8270667fe3e3481cd72a8daace710ea843a2da3be71"
+      },
+      "manifest_sha256": "d91777d8e540987226c3514017b8301d4e96d669f372623e2ddfdd3b97843a3d",
+      "case_report_sha256": "5c8beaca1395b691bd8eed64a1aa4541ffc6ba86cf7735a7089a8f1856e5bfa7",
+      "teardown_sha256": "9e5d178c32458d8b18b2d8c052563f7aa30765e18f2ce0036532dc5e94b5ef6a",
+      "execution_sha256": "a0a3ea5f818be67e5ebf6ef6a45baf469ff67a7c29ebb8a5ed541f770f42ca8e",
+      "independent_local_outcome_review_sha256": "ee001d5d8e86c58d39f048b5ab57568de9a3e1d43bc40ed0c1901b6760ae18a8",
+      "safe_accessibility_report_sha256": "37105b427b39c9217b4d5b9130dcb6e5e53d9b841cb245c9e33e9348b8b3a4b9",
+      "request_diagnostics_sha256": "8aa34582bef238318e16bdc39bbc520cd9e82e5da0c15d91ab8ad887607adc7b",
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 3506,
+      "setup": {
+        "blockedRequests": 2,
+        "forwardedRequests": 566,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [],
+        "nextPhase": "navigation-menu-opened"
+      },
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "local_layout_observed_passed": true,
+      "accessibility_observation": {
+        "surface": "navigation-menu",
+        "status": "failed",
+        "failure_stage": "audit-320",
+        "wide": {
+          "width": 1440,
+          "controls": 29,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "audit_incomplete": 0,
+          "contrast_positive_nodes": 59
+        },
+        "narrow": {
+          "width": 320,
+          "controls": 25,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "contrast_positive_nodes": 43
+        },
+        "forced_colors_executed": false
+      },
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 2,
+        "endpoint_or_cause_identified": false
+      },
+      "limits": [
+        "The compact layout correction is directly observed; the overall operational test still failed.",
+        "Six unresolved contrast nodes remain in the open-menu workspace/Home/glossary regions. Their cause is not yet qualified and unresolved checks are not passes.",
+        "Only the current two denied requests are classified as WebSockets. Earlier request denials retain their original unclassified scope. No endpoint or development-client cause is asserted.",
+        "No native/offload/process-tree/physical-model or parent qualification is supplied."
+      ]
     }
   ],
   "limits": [
@@ -55,5 +245,93 @@
     "The retry stopped while launching Chrome, before app navigation. This identifies a test setup failure; the app workflow remains unobserved.",
     "Desktop, native zoom, managed environment and full-suite checks remain separate."
   ],
-  "parent_criterion_pass": false
+  "parent_criterion_pass": false,
+  "current_follow_up": {
+    "owner": "Agent",
+    "status": "pending",
+    "action": "Diagnose the six unresolved contrast checks in the open-menu state and the two denied WebSocket attempts. Keep all audit and network guards strict.",
+    "completed_preparation": "The exact-file selector and compact-menu anchor are repaired; all25actual narrow controls are within the viewport.",
+    "first_failures_preserved": true,
+    "parent_pass": false
+  },
+  "browser_launch_diagnosis": {
+    "schema_version": "fresh-browser-launch-diagnosis-summary-v1",
+    "source_digest": "4cee63828c3f845d49ad9b907379e5f0bb84d676f2472ef318e99c6f2cfe85b6",
+    "cases": [
+      {
+        "id": "old-length-isolated-os",
+        "stage": null,
+        "error": null,
+        "browserLaunched": true,
+        "contentVerified": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "deniedExternalRequests": 10,
+        "durationMs": 724,
+        "profileCharacters": 91,
+        "parentTempCharacters": 121,
+        "browserTempCharacters": 121
+      },
+      {
+        "id": "short-isolated-os",
+        "stage": null,
+        "error": null,
+        "browserLaunched": true,
+        "contentVerified": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "deniedExternalRequests": 9,
+        "durationMs": 657,
+        "profileCharacters": 91,
+        "parentTempCharacters": 85,
+        "browserTempCharacters": 85
+      }
+    ],
+    "ordinary_profiles_cleaned": true,
+    "original_failure_cause_established": false,
+    "app_or_native_or_parent_qualification": false
+  },
+  "local_layout_observation": {
+    "source_digest": "175c7feb137a98183daaacbd71b64e1fc45a97f2181386328af4223ae754cf53",
+    "implementation": "Align the compact dropdown to the full header action area instead of the first small trigger.",
+    "fixture_scope": "Six actual shared styles on inert source-owned header markup; this is not the actual app.",
+    "fixture_viewport_widths": [
+      320,
+      672,
+      1024,
+      1440
+    ],
+    "fixture_sidebar_states": [
+      "expanded",
+      "collapsed"
+    ],
+    "fixture_observations_per_source": 8,
+    "before_320": {
+      "panel_left": -32,
+      "panel_right": 208,
+      "inaccessible_menu_controls": 8
+    },
+    "after_320": {
+      "panel_left": 68,
+      "panel_right": 308,
+      "inaccessible_menu_controls": 0
+    },
+    "fixture_request_observations": {
+      "blocked_context_requests_before": 0,
+      "blocked_context_requests_after": 0,
+      "denied_proxy_requests_before": 10,
+      "denied_proxy_requests_after": 10,
+      "successful_external_dispatch_claimed": false
+    },
+    "actual_app_320": {
+      "controls": 25,
+      "inaccessible_before": 8,
+      "inaccessible_after": 0
+    },
+    "independent_local_observation_review_sha256": "ee001d5d8e86c58d39f048b5ab57568de9a3e1d43bc40ed0c1901b6760ae18a8",
+    "overall_operational_feature_pass": false,
+    "parent_qualification_granted": false
+  }
 }

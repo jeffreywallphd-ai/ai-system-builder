@@ -58,6 +58,7 @@
 }
 
 .ui-shell__header-actions {
+  position: relative;
   justify-content: flex-end;
   gap: var(--space-xs);
   padding-inline-start: var(--space-lg);
@@ -455,7 +456,8 @@
 }
 
 .ui-shell__menu {
-  position: relative;
+  /* Align the dropdown with the full toolbar, including its trailing actions. */
+  position: static;
   display: none;
 }
 
