@@ -4,12 +4,19 @@ import path from "node:path";
 import { readFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { tsImport } from "tsx/esm/api";
 import { register as registerCjs } from "tsx/cjs/api";
 import trainingHostSetup from "../visual-composer/training-host-global-setup.mjs";
 
 // This .mjs file also runs alone without the catalog's optional --import loader.
-const fixtureModule = await tsImport("../visual-composer/training-host-fixture.ts", import.meta.url);
+// Use an owned CJS scope for fixed TS sources. The namespaced ESM API can
+// interpret query text as a Windows filename on older supported Node24 builds.
+let sourceImportId = 0;
+function importTrainingSource(name) {
+  const scoped = registerCjs({ namespace: `training-source-fixture-${++sourceImportId}` });
+  try { return scoped.require(name, import.meta.url); }
+  finally { scoped.unregister(); }
+}
+const fixtureModule = importTrainingSource("../visual-composer/training-host-fixture.ts");
 const { trainingDependencyProbe, trainingReadOnlyArguments, seedTrainingDatasets } = fixtureModule.default ?? fixtureModule;
 
 test("fixed dependency probe literals match JavaScript template newline semantics", () => {
@@ -24,7 +31,7 @@ test("fixed dependency probe literals match JavaScript template newline semantic
 test("the actual Context preparer passes its exact evaluated probe to the no-install delegate", async () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
   const location = path.join(root, "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts");
-  const imported = await tsImport(pathToFileURL(location).href, import.meta.url);
+  const imported = importTrainingSource(location);
   const context = imported.default ?? imported;
   const probes = new Set([trainingDependencyProbe(readFileSync(location, "utf8"), "CONTEXT_DEPENDENCY_PROBE_SCRIPT")]);
   let calls = 0;
@@ -155,7 +162,7 @@ test("ambient package hints do not change ordinary training and declared tiny co
 
 test("the real training profile loads its helper in a worker after ESM setup preloading", async t => {
   const actualRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-  const imported = await tsImport(pathToFileURL(path.join(actualRoot, "dev-tools/config/playwright.training-host.config.ts")).href, import.meta.url);
+  const imported = importTrainingSource(path.join(actualRoot, "dev-tools/config/playwright.training-host.config.ts"));
   const config = imported.default?.default ?? imported.default ?? imported;
   assert.equal(config.globalSetup, path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs"));
   const parent = path.join(actualRoot, ".local-codex/t");

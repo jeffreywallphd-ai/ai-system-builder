@@ -2006,3 +2006,19 @@ probed or acted on; no process/memory/timeout cap changes. CDP awaits remain und
 the existing test/phase guards, without a separate diagnostic timing guarantee.
 See the [fixed fixture guide](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 and [startup diagnostic census history](../operations/comprehensive-ui-automation-startup-diagnostics-census-history.json).
+
+
+## Node 24 source-loader tests
+
+The Settings and training `.mjs` source fixtures use the installed
+`tsx/cjs/api` scoped registration to read their fixed TypeScript definitions.
+Each registration is removed in `finally`. This preserves standalone test entry
+and entry with the parent's `--import tsx` loader. The namespaced ESM import API
+can treat query text as part of a Windows filename on older Node 24 builds.
+The focused compatibility matrix uses the existing Node 24.14.0 and 24.22.1
+runtimes; dependency versions and the supported engine range stay unchanged.
+
+Keep the separate real Playwright worker checks after ESM setup preloading.
+They verify the actual helper and configuration boundary with synthetic source
+fixtures. App, browser, model, native lifecycle and whole-system qualification
+remain separate.

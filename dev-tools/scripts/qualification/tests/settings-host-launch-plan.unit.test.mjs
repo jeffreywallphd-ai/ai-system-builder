@@ -4,7 +4,7 @@ import path from "node:path";
 import {fileURLToPath,pathToFileURL} from "node:url";
 import {spawnSync} from "node:child_process";
 import {mkdirSync,mkdtempSync,readFileSync,realpathSync,rmSync,statSync,writeFileSync} from "node:fs";
-import {tsImport} from "tsx/esm/api";
+import {register as registerCjs} from "tsx/cjs/api";
 import {mkdtemp,readFile,realpath,lstat,rm} from "node:fs/promises";
 import {createSettingsHostEnvironment,createSettingsHostLaunchPlan,settingsHostLayout} from "../visual-composer/settings-host-launch-plan.mjs";
 import settingsHostSetup from "../visual-composer/settings-host-global-setup.mjs";
@@ -71,7 +71,10 @@ test("Settings setup is dormant without explicit opt-in and clears stale readine
 test("both real Settings profiles load helpers in a worker after ESM setup", async t => {
   const actualRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
   for (const host of ["desktop", "thin"]) await t.test(host, async childTest => {
-    const imported = await tsImport(pathToFileURL(path.join(actualRoot, `dev-tools/config/playwright.settings-host-${host}.config.ts`)).href, import.meta.url);
+    const scoped = registerCjs({ namespace: `settings-profile-source-${host}` });
+    let imported;
+    try { imported = scoped.require(path.join(actualRoot, `dev-tools/config/playwright.settings-host-${host}.config.ts`), import.meta.url); }
+    finally { scoped.unregister(); }
     const config = imported.default?.default ?? imported.default ?? imported;
     assert.deepEqual(config.build, { external: ["**/*.mjs"] });
     assert.equal(config.globalSetup, path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs"));
