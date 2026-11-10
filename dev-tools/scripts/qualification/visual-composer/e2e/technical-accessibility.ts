@@ -48,9 +48,9 @@ export const rawNativeFrame = (frame: Native400Frame) => ({dpr:frame.dpr,cssZoom
   outerWidth:frame.outerWidth,innerWidth:frame.innerWidth,layoutWidth:frame.layoutWidth,overflow:frame.overflow,controls:frame.controls,inaccessible:frame.inaccessible});
 
 /** Selectors/messages remain browser-local, including failed contrast retries. */
-function collectAccessibilityObservation(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime"): Promise<ReturnType<typeof readTechnicalAccessibilityObservation>>;
+function collectAccessibilityObservation(page: Page, width: 320 | 1440, scope: "canvas" | "shell" | "runtime" | "navigation"): Promise<ReturnType<typeof readTechnicalAccessibilityObservation>>;
 function collectAccessibilityObservation(page: Page, width: "native400", scope: "shell" | "runtime", media: "normal" | "forced-colors"): Promise<ReturnType<typeof readNativeAccessibilityObservation>>;
-async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "native400", scope: "canvas" | "shell" | "runtime", media: "normal" | "forced-colors" = "normal") {
+async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "native400", scope: "canvas" | "shell" | "runtime" | "navigation", media: "normal" | "forced-colors" = "normal") {
   if (width !== 320 && width !== 1440 && width !== "native400") throw new Error("Invalid technical accessibility observation.");
   if (width === "native400") {
     if (media !== "normal" && media !== "forced-colors") throw new Error("Invalid native accessibility observation.");
@@ -75,7 +75,33 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
       }
       if (scope === "shell" && document.querySelectorAll("main.ui-shell").length !== 1) throw new Error();
       if (scope === "runtime" && document.querySelectorAll("main.system-runtime-app").length !== 1) throw new Error();
-      const result = await axe.run(scope === "canvas" ? ".system-builder" : "body", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
+      let navigationShell: Element | undefined, navigationContainer: Element | undefined, navigationTrigger: Element | undefined, navigationPanel: Element | undefined;
+      if (scope === "navigation") {
+        const shells = document.querySelectorAll("main.ui-shell"), containers = document.querySelectorAll(".ui-shell__menu"), triggers = document.querySelectorAll("summary.ui-shell__menu-trigger"), panels = document.querySelectorAll(".ui-shell__menu-panel");
+        const visible = (node: Element) => node.getClientRects().length > 0 && getComputedStyle(node).visibility === "visible";
+        if (width !== 320 || shells.length !== 1 || containers.length !== 1 || triggers.length !== 1 || panels.length !== 1 ||
+            containers[0]!.tagName !== "DETAILS" || !containers[0]!.hasAttribute("open") || !shells[0]!.contains(containers[0]!) ||
+            !containers[0]!.contains(triggers[0]!) || !containers[0]!.contains(panels[0]!) ||
+            triggers[0]!.getAttribute("aria-expanded") !== "true" || !visible(triggers[0]!) || !visible(panels[0]!) ||
+            panels[0]!.getAttribute("role") !== "menu" || panels[0]!.getAttribute("aria-label") !== "Application navigation") throw new Error();
+        [navigationShell, navigationContainer, navigationTrigger, navigationPanel] = [shells[0]!, containers[0]!, triggers[0]!, panels[0]!];
+      }
+      function requireNavigationScope(target?: Element) {
+        if (scope !== "navigation") return;
+        if (!navigationShell?.isConnected || !navigationContainer?.isConnected || !navigationTrigger?.isConnected || !navigationPanel?.isConnected ||
+            document.querySelectorAll("main.ui-shell").length !== 1 || document.querySelector("main.ui-shell") !== navigationShell ||
+            document.querySelectorAll(".ui-shell__menu").length !== 1 || document.querySelector(".ui-shell__menu") !== navigationContainer ||
+            document.querySelectorAll("summary.ui-shell__menu-trigger").length !== 1 || document.querySelector("summary.ui-shell__menu-trigger") !== navigationTrigger ||
+            document.querySelectorAll(".ui-shell__menu-panel").length !== 1 || document.querySelector(".ui-shell__menu-panel") !== navigationPanel ||
+            !navigationShell.contains(navigationContainer) || !navigationContainer.contains(navigationTrigger) || !navigationContainer.contains(navigationPanel) ||
+            !navigationContainer.hasAttribute("open") ||
+            navigationTrigger.getAttribute("aria-expanded") !== "true" || !navigationTrigger.getClientRects().length || !navigationPanel.getClientRects().length ||
+            getComputedStyle(navigationTrigger).visibility !== "visible" || getComputedStyle(navigationPanel).visibility !== "visible" ||
+            navigationPanel.getAttribute("role") !== "menu" || navigationPanel.getAttribute("aria-label") !== "Application navigation" ||
+            target !== undefined && !navigationContainer.contains(target)) throw new Error();
+      }
+      const result = await axe.run(scope === "canvas" ? ".system-builder" : scope === "navigation" ? ".ui-shell__menu" : "body", { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
+      requireNavigationScope();
       const violations = groups(result.violations), incomplete = groups(result.incomplete), passes = groups(result.passes);
       let attempted = 0, passed = 0;
       const outcomes = { violation: 0, unresolved: 0, noPositiveSample: 0 };
@@ -132,14 +158,17 @@ async function collectAccessibilityObservation(page: Page, width: 320 | 1440 | "
           const selector = node.target[0], matches = document.querySelectorAll(selector);
           if (matches.length !== 1) throw new Error();
           const target = matches[0]!;
+          requireNavigationScope(target);
           target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
           await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
           if (!target.isConnected || document.querySelector(selector) !== target || !target.getClientRects().length || getComputedStyle(target).visibility !== "visible") throw new Error();
+          requireNavigationScope(target);
           const box = target.getBoundingClientRect();
           if (!Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) throw new Error();
           const measured = await axe.run({ include: [[selector]] }, { runOnly: { type: "rule", values: ["color-contrast"] } });
           const bad = groups(measured.violations), unresolved = groups(measured.incomplete), good = groups(measured.passes);
           if (!target.isConnected || document.querySelector(selector) !== target) throw new Error();
+          requireNavigationScope(target);
           attempted++;
           if (!bad.length && !unresolved.length && good.some(item => item.rule === "color-contrast" && item.nodes > 0)) passed++;
           else {
@@ -172,6 +201,11 @@ export function collectNativeRuntimeAccessibilityAudit(page: Page, media: "norma
 export function collectDocumentAccessibilityObservation(page: Page, width: 320 | 1440, ...extra: unknown[]) {
   if (extra.length || (width !== 320 && width !== 1440)) return Promise.reject(new Error("Invalid technical accessibility observation."));
   return collectAccessibilityObservation(page, width, "shell");
+}
+/** Expanded opener and panel; callers also require the complete closed-page audit. */
+export function collectExpandedNavigationAccessibilityObservation(page: Page, width: 320, ...extra: unknown[]) {
+  if (extra.length || width !== 320) return Promise.reject(new Error("Invalid technical accessibility observation."));
+  return collectAccessibilityObservation(page, width, "navigation");
 }
 export function collectRuntimeAccessibilityObservation(page: Page, width: 320 | 1440, ...extra: unknown[]) {
   if (extra.length || (width !== 320 && width !== 1440)) return Promise.reject(new Error("Invalid technical accessibility observation."));

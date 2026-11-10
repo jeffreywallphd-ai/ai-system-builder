@@ -5179,293 +5179,297 @@
   {
    "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
    "facts": {
-    "sha256": "1dafcde36e373a8444b0236f24c3fb9db86b8d109c07603d4e3753107820bc88",
-    "bytes": 59102,
+    "sha256": "c1d39d11f709e596979f6015e0cc8e25dc43f1d7d44097d45b47ed13528ea55f",
+    "bytes": 63660,
     "cases": [
      {
       "name": "uses only the existing browser session and copies bounded roles without private fields",
-      "line": 45
+      "line": 46
      },
      {
       "name": "rejects malformed, duplicate or oversized observations and always detaches",
-      "line": 55
+      "line": 56
      },
      {
       "name": "keeps missing transport, request and close errors non-authoritative and private",
-      "line": 63
+      "line": 64
      },
      {
       "name": "operates the actual native disclosure markup without inventing a button role",
-      "line": 76
+      "line": 77
      },
      {
       "name": "uses the visible sidebar for %s",
-      "line": 127
+      "line": 128
      },
      {
       "name": "uses the real responsive menu for $area, already open=$opened",
-      "line": 133
+      "line": 134
      },
      {
       "name": "rejects unknown targets before Page access %#",
-      "line": 141
+      "line": 142
      },
      {
       "name": "redacts %s and never retries activation",
-      "line": 147
+      "line": 148
      },
      {
       "name": "reports only a fixed diagnostic stage for %s",
-      "line": 159
+      "line": 160
      },
      {
       "name": "sets and verifies the fixed viewport once on the supplied Page",
-      "line": 174
+      "line": 175
      },
      {
       "name": "does not accept cached dimensions before the setter completes",
-      "line": 179
+      "line": 180
      },
      {
       "name": "does not touch Page for native or unknown mode %#",
-      "line": 187
+      "line": 188
      },
      {
       "name": "refuses unavailable or mismatched setter result %#",
-      "line": 193
+      "line": 194
      },
      {
       "name": "redacts every setup failure %# without retry",
-      "line": 198
+      "line": 199
      },
      {
       "name": "copies supported %s context and requires both exact ordered widths",
-      "line": 209
+      "line": 210
      },
      {
       "name": "rejects unsupported or private context %#",
-      "line": 219
+      "line": 220
      },
      {
       "name": "admits %s only for the desktop host",
-      "line": 226
+      "line": 227
      },
      {
       "name": "accepts the supported desktop %s observation",
-      "line": 230
+      "line": 231
      },
      {
       "name": "never qualifies missing, reordered, sparse or failed audits %#",
-      "line": 233
+      "line": 234
      },
      {
       "name": "refuses executable context and array hooks without invoking them",
-      "line": 237
+      "line": 238
      },
      {
       "name": "refuses an over-cap array before enumerating its descriptors",
-      "line": 243
+      "line": 244
      },
      {
       "name": "rejects invalid or excessive reduced motion facts %#",
-      "line": 255
+      "line": 256
      },
      {
       "name": "copies finite facts and retains a legitimate inaccessible-control failure",
-      "line": 262
+      "line": 263
      },
      {
       "name": "refuses malformed or private control facts %#",
-      "line": 268
+      "line": 269
      },
      {
       "name": "refuses executable observation hooks without invoking them",
-      "line": 272
+      "line": 273
      },
      {
       "name": "audits both declared widths and finalizes only bounded context/rule/count facts",
-      "line": 325
+      "line": 356
      },
      {
       "name": "persists owned diagnostic frontiers without changing %s audit results",
-      "line": 335
+      "line": 366
      },
      {
       "name": "keeps unavailable %s diagnostics separate from a passing accessibility audit",
-      "line": 347
+      "line": 378
      },
      {
       "name": "does not open diagnostic sessions outside the fixed dataset-profile scenario",
-      "line": 358
+      "line": 389
      },
      {
       "name": "restores the caller's narrow viewport after an audit failure=%s",
-      "line": 364
+      "line": 395
      },
      {
       "name": "persists current-version reason counters with an unchanged failed core audit",
-      "line": 371
+      "line": 402
      },
      {
       "name": "refuses an unavailable or invalid caller viewport %# before any mutation",
-      "line": 383
+      "line": 414
      },
      {
       "name": "redacts a viewport capture failure without inventing a restore target",
-      "line": 388
+      "line": 419
      },
      {
       "name": "requires wide sidebar and narrow open menu in both media profiles, then restores narrow caller",
-      "line": 412
+      "line": 446
+     },
+     {
+      "name": "keeps navigation %s failed without dropping either state",
+      "line": 456
      },
      {
       "name": "refuses wrong responsive navigation %s",
-      "line": 417
+      "line": 465
      },
      {
       "name": "reads fixed source-owned profile and engine inputs from an unrelated working folder",
-      "line": 423
+      "line": 471
      },
      {
       "name": "keeps an unavailable source-owned engine failed and redacted",
-      "line": 430
+      "line": 478
      },
      {
       "name": "audits the actual standalone mount without requiring the builder shell",
-      "line": 436
+      "line": 484
      },
      {
       "name": "refuses %s instead of auditing a different page",
-      "line": 444
+      "line": 492
      },
      {
       "name": "rejects a thin runtime before any file or Page effect",
-      "line": 453
+      "line": 501
      },
      {
       "name": "rechecks runtime identity if the document changes after initial admission",
-      "line": 458
+      "line": 506
      },
      {
       "name": "refuses a visible %s control even without document overflow",
-      "line": 468
+      "line": 516
      },
      {
       "name": "scrolls visible controls before measurement and excludes hidden or inert controls",
-      "line": 477
+      "line": 525
      },
      {
       "name": "retains a failed forced-colors %s check after both baseline widths passed",
-      "line": 493
+      "line": 541
      },
      {
       "name": "refuses a mounted document without any observable controls",
-      "line": 500
-     },
-     {
-      "name": "refuses an excessive control collection before inspecting its entries",
-      "line": 505
-     },
-     {
-      "name": "denies an existing report without overwriting, inspecting or adopting its bytes",
-      "line": 513
-     },
-     {
-      "name": "rejects unknown context before any file or Page effect",
-      "line": 518
-     },
-     {
-      "name": "preserves failed %s evidence and fixed diagnostics",
-      "line": 522
-     },
-     {
-      "name": "persists only safe failed contrast diagnostics through %s",
       "line": 548
      },
      {
-      "name": "audits native %s at its actual width without any viewport resize",
-      "line": 573
+      "name": "refuses an excessive control collection before inspecting its entries",
+      "line": 553
      },
      {
-      "name": "requires native responsive navigation in %s media",
-      "line": 582
+      "name": "denies an existing report without overwriting, inspecting or adopting its bytes",
+      "line": 561
      },
      {
-      "name": "reads the same source-owned inputs for native observations from an unrelated working folder",
-      "line": 588
+      "name": "rejects unknown context before any file or Page effect",
+      "line": 566
      },
      {
-      "name": "supports only the standalone runtime mount for native runtime observations",
+      "name": "preserves failed %s evidence and fixed diagnostics",
+      "line": 570
+     },
+     {
+      "name": "persists only safe failed contrast diagnostics through %s",
       "line": 596
      },
      {
-      "name": "denies invalid native %s before evidence writes or audits",
-      "line": 601
+      "name": "audits native %s at its actual width without any viewport resize",
+      "line": 621
      },
      {
-      "name": "keeps the standard device-scale guard unchanged",
-      "line": 615
-     },
-     {
-      "name": "retains failed native %s results and restores media without resizing",
-      "line": 619
-     },
-     {
-      "name": "rejects unsupported native hosts and unknown modes before touching Page or files",
+      "name": "requires native responsive navigation in %s media",
       "line": 630
      },
      {
+      "name": "reads the same source-owned inputs for native observations from an unrelated working folder",
+      "line": 636
+     },
+     {
+      "name": "supports only the standalone runtime mount for native runtime observations",
+      "line": 644
+     },
+     {
+      "name": "denies invalid native %s before evidence writes or audits",
+      "line": 649
+     },
+     {
+      "name": "keeps the standard device-scale guard unchanged",
+      "line": 663
+     },
+     {
+      "name": "retains failed native %s results and restores media without resizing",
+      "line": 667
+     },
+     {
+      "name": "rejects unsupported native hosts and unknown modes before touching Page or files",
+      "line": 678
+     },
+     {
       "name": "redacts an initial native Page failure %# before effects",
-      "line": 639
+      "line": 687
      },
      {
       "name": "rejects missing or invalid mode before Page access %#",
-      "line": 655
+      "line": 703
      },
      {
       "name": "refuses unsupported or mismatched transport/project before file or Page work %#",
-      "line": 663
+      "line": 711
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "owned",
-      "line": 38
+      "line": 39
      },
      {
       "name": "driver",
-      "line": 102
+      "line": 103
      },
      {
       "name": "installNavigation",
-      "line": 393
+      "line": 424
      },
      {
       "name": "installNativeFrame",
-      "line": 536
+      "line": 584
      }
     ],
-    "assertionCount": 259,
-    "assertionDigest": "931309cf2def76804f6034fa96879a15f3be2b05d5e35ae66a3bafd5c7875fd2",
+    "assertionCount": 273,
+    "assertionDigest": "8e54962120b83e9d4a231917e9763c451658876475758b9b4477fdab2ad905e8",
     "assertionExamples": [
      {
-      "line": 48,
+      "line": 49,
       "kind": "expect",
       "sha256": "ee91d9e18f7ccba53d5f0332a0883e34fd230afebfdb937bf06e7a88abb472a9"
      },
      {
-      "line": 48,
+      "line": 49,
       "kind": "expect",
       "sha256": "25a26a0388f670caf41df1b3b919d95621c192e133573896ee496c035c7ad591"
      },
      {
-      "line": 49,
+      "line": 50,
       "kind": "expect",
       "sha256": "f764efb2e02aff09674d4f89a7f04da4594a1be1bc21e0ae96fa6cdc9b0b8710"
      },
      {
-      "line": 50,
+      "line": 51,
       "kind": "expect",
       "sha256": "c19b075150413ae4801abafb1f30b3b789bc66f21217440024e67c4595939ad0"
      }
@@ -6926,8 +6930,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
    "facts": {
-    "sha256": "0a03d828e46601b4c69c12907aa24853e120a0395e935bdd28f9c4d1730d5257",
-    "bytes": 46559,
+    "sha256": "71f74976798b4f2a01a4a9d35d914e68854be021a3b7415b04c647f46570f7b7",
+    "bytes": 53696,
     "cases": [
      {
       "name": "preserves original v1 serialized shape without inserting newer reason keys",
@@ -7074,66 +7078,103 @@
       "line": 348
      },
      {
-      "name": "refuses runtime %s at the actual browser collection boundary",
-      "line": 360
-     },
-     {
-      "name": "keeps builder-shell admission separate from the standalone runtime",
+      "name": "audits the fixed expanded opener and panel while the original collector still audits the full body",
       "line": 369
      },
      {
-      "name": "refuses an unsupported viewport before browser evaluation",
+      "name": "refuses expanded navigation %s before engine dispatch",
       "line": 375
      },
      {
+      "name": "refuses unsupported expanded-menu width %s before Page access",
+      "line": 397
+     },
+     {
+      "name": "refuses caller selectors or executable observers before Page access",
+      "line": 400
+     },
+     {
+      "name": "retains expanded-panel contrast retry success=%s without changing the rule",
+      "line": 403
+     },
+     {
+      "name": "rejects a contrast retry that escapes the fixed expanded menu",
+      "line": 411
+     },
+     {
+      "name": "keeps bad expanded-opener contrast failed even when the panel alone passes",
+      "line": 416
+     },
+     {
+      "name": "keeps a changing expanded-menu scope failed: %s",
+      "line": 421
+     },
+     {
+      "name": "refuses runtime %s at the actual browser collection boundary",
+      "line": 434
+     },
+     {
+      "name": "keeps builder-shell admission separate from the standalone runtime",
+      "line": 443
+     },
+     {
+      "name": "refuses an unsupported viewport before browser evaluation",
+      "line": 449
+     },
+     {
       "name": "keeps native mode out of standard collector entry points %#",
-      "line": 380
+      "line": 454
      },
      {
       "name": "retains failed retry evidence for %s",
-      "line": 384
-     },
-     {
-      "name": "projects only the fixed engine reason for %s",
-      "line": 396
-     },
-     {
-      "name": "pairs actual retry reasons with the nearest fixed region without disclosing target details",
-      "line": 414
-     },
-     {
-      "name": "partitions the actual %s retry without adding an audit, scroll or wait",
       "line": 458
      },
      {
-      "name": "bounds diagnostic ancestry and engine-check inspection without suppressing the failed retry",
-      "line": 472
+      "name": "projects only the fixed engine reason for %s",
+      "line": 470
      },
      {
-      "name": "retains the exact successful core audit and an independent zero-count projection",
-      "line": 484
+      "name": "pairs actual retry reasons with the nearest fixed region without disclosing target details",
+      "line": 488
      },
      {
-      "name": "rejects extra observer arguments before Page effects %#",
-      "line": 491
-     },
-     {
-      "name": "reports a fixed browser-stage failure for %s",
-      "line": 500
-     },
-     {
-      "name": "normalizes %s setup errors without opening a browser",
+      "name": "partitions the actual %s retry without adding an audit, scroll or wait",
       "line": 532
      },
      {
+      "name": "bounds diagnostic ancestry and engine-check inspection without suppressing the failed retry",
+      "line": 546
+     },
+     {
+      "name": "retains the exact successful core audit and an independent zero-count projection",
+      "line": 558
+     },
+     {
+      "name": "rejects extra observer arguments before Page effects %#",
+      "line": 565
+     },
+     {
+      "name": "reports a fixed browser-stage failure for %s",
+      "line": 574
+     },
+     {
+      "name": "normalizes %s setup errors without opening a browser",
+      "line": 606
+     },
+     {
       "name": "does not persist invalid browser scale data %#",
-      "line": 537
+      "line": 611
      }
     ],
     "dynamicCases": 0,
-    "functions": [],
-    "assertionCount": 166,
-    "assertionDigest": "2ee2d9c292680f99e90d45d3fd35d5a81f451377b96139d7431d49f73317b0c2",
+    "functions": [
+     {
+      "name": "installExpandedMenu",
+      "line": 360
+     }
+    ],
+    "assertionCount": 189,
+    "assertionDigest": "d343b04da4943cd4320d7dc11a7c697adb58e037ffb9630548eae51bfac58a96",
     "assertionExamples": [
      {
       "line": 36,
@@ -8870,8 +8911,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
    "facts": {
-    "sha256": "ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c",
-    "bytes": 23302,
+    "sha256": "1e3d7265b8fe88ddd4b1744f2ea194a50d5312a448f3c1140a91d42b52812596",
+    "bytes": 26893,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -8892,86 +8933,94 @@
       "line": 67
      },
      {
+      "name": "requireNavigationScope",
+      "line": 89
+     },
+     {
       "name": "diagnose",
-      "line": 87
+      "line": 113
      },
      {
       "name": "collectStandardAudit",
-      "line": 162
+      "line": 191
      },
      {
       "name": "collectSystemBuilderAccessibilityAudit",
-      "line": 166
+      "line": 195
      },
      {
       "name": "collectDocumentAccessibilityAudit",
-      "line": 167
+      "line": 196
      },
      {
       "name": "collectRuntimeAccessibilityAudit",
-      "line": 168
+      "line": 197
      },
      {
       "name": "collectNativeDocumentAccessibilityAudit",
-      "line": 169
+      "line": 198
      },
      {
       "name": "collectNativeRuntimeAccessibilityAudit",
-      "line": 170
+      "line": 199
      },
      {
       "name": "collectDocumentAccessibilityObservation",
-      "line": 172
+      "line": 201
      },
      {
-      "name": "collectRuntimeAccessibilityObservation",
-      "line": 176
-     },
-     {
-      "name": "collectNativeDocumentAccessibilityObservation",
-      "line": 180
-     },
-     {
-      "name": "collectNativeRuntimeAccessibilityObservation",
-      "line": 184
-     },
-     {
-      "name": "loadTechnicalAccessibilityReference",
-      "line": 190
-     },
-     {
-      "name": "finalizeTechnicalAccessibilityEvidence",
+      "name": "collectExpandedNavigationAccessibilityObservation",
       "line": 206
      },
      {
+      "name": "collectRuntimeAccessibilityObservation",
+      "line": 210
+     },
+     {
+      "name": "collectNativeDocumentAccessibilityObservation",
+      "line": 214
+     },
+     {
+      "name": "collectNativeRuntimeAccessibilityObservation",
+      "line": 218
+     },
+     {
+      "name": "loadTechnicalAccessibilityReference",
+      "line": 224
+     },
+     {
+      "name": "finalizeTechnicalAccessibilityEvidence",
+      "line": 240
+     },
+     {
       "name": "qualifyTechnicalAccessibility",
-      "line": 222
+      "line": 256
      },
      {
       "name": "save",
-      "line": 242
+      "line": 276
      }
     ],
     "assertionCount": 18,
-    "assertionDigest": "838c7a58148dc22a2f6db382496c21978a0ced6a4c3784a723d7100fd41eb4c5",
+    "assertionDigest": "a6c480254a489e012b350abbf72a5ed34f7f80e8030946b932a4210d315045ba",
     "assertionExamples": [
      {
-      "line": 196,
+      "line": 230,
       "kind": "expect",
       "sha256": "6452cef7dcfbdf8d4e7209eeba712f326e610568ab670147bca737f4d057207d"
      },
      {
-      "line": 196,
+      "line": 230,
       "kind": "expect",
       "sha256": "cffe78dc9431c5ddcd7c456f95a6471ca94c6f731aedca9fbcd3aadad0cf0eed"
      },
      {
-      "line": 198,
+      "line": 232,
       "kind": "expect",
       "sha256": "fa15139d2f47e28f2b857519090635c6e6061291c6b049e4ac8737a6dd245d49"
      },
      {
-      "line": 199,
+      "line": 233,
       "kind": "expect",
       "sha256": "e40427724aa405be98139f78c28869f949cfa2c3dcac85cc999034a99d7a48dd"
      }

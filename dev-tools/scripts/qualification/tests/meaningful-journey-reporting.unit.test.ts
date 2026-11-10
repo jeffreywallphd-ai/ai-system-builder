@@ -83,6 +83,7 @@ interface CensusHistory {
   sources:Array<{path:string;prior_row_sha256:string;prior_row:CensusMap["sources"][number];current_row_sha256:string}>;
 }
 const root=path.resolve(__dirname,"../../../.."),censusPath="docs/operations/comprehensive-ui-automation-current-census.json";
+const navigationHistoryPath="docs/operations/comprehensive-ui-automation-navigation-census-history.json";
 const historyPath="docs/operations/comprehensive-ui-automation-operational-census-history.json";
 const oldHistoryPath="docs/operations/comprehensive-ui-automation-census-source-history.json";
 const diagnosticHistoryPath="docs/operations/comprehensive-ui-automation-contrast-diagnostics-census-history.json";
@@ -320,7 +321,7 @@ function checkedPrivateProviderPrivacyHistory(bundle:CensusBundle,map:CensusMap,
   expect(history.prior_history).toEqual({path:modelStartupReportHistoryPath,sha256:sha(prior),bytes:prior.length});
   const preceding=historicalModelStartupReportMap();expect(map.sources).toHaveLength(180);
   for(const[index,row]of map.sources.entries())expect(row.committed_sha256).toBe(preceding.sources[index]!.committed_sha256);
-  for(const name of privateProviderPrivacySources)expect(map.sources.find(row=>row.path===name)!.facts).toEqual(bundle.api.sourceFacts(name,bundle.read(name)));
+  for(const name of privateProviderPrivacySources)expect(map.sources.find(row=>row.path===name)!.facts).toEqual(bundle.api.sourceFacts(name,gitSource(workspaceSwitchPriorCommit,name)));
 }
 function checkedWorkspaceSwitchHistory(bundle:CensusBundle,map:CensusMap,history:CensusHistory) {
   expect(Object.keys(history).sort()).toEqual(["schema_version","scope","roadmap_id","prior_commit","prior_census_path",
@@ -332,7 +333,50 @@ function checkedWorkspaceSwitchHistory(bundle:CensusBundle,map:CensusMap,history
   expect(history.prior_history).toEqual({path:privateProviderPrivacyHistoryPath,sha256:sha(prior),bytes:prior.length});
   const preceding=historicalPrivateProviderPrivacyMap();expect(map.sources).toHaveLength(180);
   for(const[index,row]of map.sources.entries())expect(row.committed_sha256).toBe(preceding.sources[index]!.committed_sha256);
-  for(const name of workspaceSwitchSources)expect(map.sources.find(row=>row.path===name)!.facts).toEqual(bundle.api.sourceFacts(name,bundle.read(name)));
+  for(const name of workspaceSwitchSources)expect(map.sources.find(row=>row.path===name)!.facts).toEqual(bundle.api.sourceFacts(name,gitSource(workspaceSwitchCompletedCommit,name)));
+}
+function expectedWorkingDrift(bundle:CensusBundle,map:CensusMap) {
+  // Derive the expectation from authenticated Git bytes, independently of the
+  // validator's stored hash comparison. Working edits remain explicit gaps.
+  primeGitSources(map.source_baseline,map.sources.map(row=>row.path));
+  return map.sources.filter(row=>bundle.read(row.path).toString("utf8").replace(/\r\n/g,"\n") !==
+    gitSource(map.source_baseline,row.path).toString("utf8").replace(/\r\n/g,"\n"))
+    .map(row=>({kind:"unreviewed-source-drift",source:row.path}));
+}
+let navigationCreationCommit:string|undefined;
+function navigationHistoryBundle(bundle:CensusBundle):CensusBundle {
+  if(navigationCreationCommit === undefined) {
+    const env={...process.env};for(const key of Object.keys(env))if(key.toUpperCase().startsWith("GIT_"))delete env[key];
+    Object.assign(env,{GIT_CONFIG_NOSYSTEM:"1",GIT_CONFIG_GLOBAL:process.platform === "win32" ? "NUL" : "/dev/null",GIT_NO_REPLACE_OBJECTS:"1",GIT_OPTIONAL_LOCKS:"0"});
+    const result=spawnSync("git",["--no-pager","-c","log.showSignature=false","log","--no-show-signature","--format=%H","--diff-filter=A","--max-count=16","--",navigationHistoryPath],{cwd:root,env,windowsHide:true,timeout:20_000,maxBuffer:1024});
+    if(result.error||result.status!==0||!Buffer.isBuffer(result.stdout)||result.stderr.length)throw new Error("UI history creation witness is unavailable.");
+    const commits=result.stdout.toString("ascii").trim().split(/\r?\n/).filter(Boolean);
+    if(commits.length>1||commits.some(value=>!/^[a-f0-9]{40}$/.test(value)))throw new Error("UI history creation witness is ambiguous.");
+    navigationCreationCommit=commits[0] ?? "";
+  }
+  // Before its first checkpoint this record describes the reviewed working
+  // candidate. Once committed, its original Git tree supplies the source view.
+  const commit=navigationCreationCommit;if(!commit)return bundle;
+  const map=JSON.parse(gitSource(commit,censusPath).toString("utf8")) as CensusMap;
+  primeGitSources(commit,map.sources.map(row=>row.path));
+  return {...bundle,map,read:(name:string)=>gitSource(commit,name)};
+}
+function checkedNavigationHistory(bundle:CensusBundle,map:CensusMap,history:Record<string,unknown>) {
+  expect(Object.keys(history).sort()).toEqual(["schema_version","scope","roadmap_id","prior_commit","prior_census_path","prior_census_git_sha256",
+    "prior_census_working_sha256","source_baseline","preserved_fields_sha256","qualification_effect","sources","unreviewed_source_drift","reason"].sort());
+  expect(history.schema_version).toBe("working-ui-census-update-v1");expect(history.scope).toBe("working-source-facts-only-no-execution");
+  expect(history.roadmap_id).toBe("comprehensive-ui-automation");expect(history.prior_commit).toBe("a35834b49a9e056d49973a1377b10f819fbaa8b9");expect(history.prior_census_path).toBe(censusPath);
+  const bytes=gitSource(history.prior_commit as string,censusPath),previous=JSON.parse(bytes.toString("utf8")) as CensusMap;
+  expect(history.prior_census_git_sha256).toBe(sha(bytes));expect(history.prior_census_working_sha256).toBe(sha(bytes));
+  expect(map.source_baseline).toBe(previous.source_baseline);expect(history.source_baseline).toBe(previous.source_baseline);
+  expect(invariantFields(map)).toEqual(invariantFields(previous));expect(history.preserved_fields_sha256).toBe(jsonSha(invariantFields(previous)));
+  expect(map.sources.map(row=>row.path)).toEqual(previous.sources.map(row=>row.path));
+  const changed=previous.sources.filter((row,index)=>JSON.stringify(row)!==JSON.stringify(map.sources[index]));expect(changed.map(row=>row.path)).toEqual(diagnosticSources);
+  expect(history.sources).toEqual(changed.map(row=>({path:row.path,prior_row_sha256:jsonSha(row),current_row_sha256:jsonSha(map.sources.find(item=>item.path===row.path))})));
+  for(const[index,row]of map.sources.entries())expect(row.committed_sha256).toBe(previous.sources[index]!.committed_sha256);
+  expect(history.unreviewed_source_drift).toEqual(expectedWorkingDrift(bundle,map).map(row=>row.source));
+  expect(history.qualification_effect).toEqual({executed_tests:0,actual_host_pass:false,parent_qualification_granted:false,full_testing_status:"deferred-by-user"});
+  expect(typeof history.reason).toBe("string");expect((history.reason as string).length).toBeGreaterThan(0);
 }
 function historicalWorkspaceSwitchMap() {
   return JSON.parse(gitSource(workspaceSwitchCompletedCommit,censusPath).toString("utf8")) as CensusMap;
@@ -344,7 +388,9 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
   expect(result.gaps.filter(gap=>gap.kind === "actual-host-not-run-by-census")).toHaveLength(39);
   expect(result.gaps.some(gap=>gap.kind === "declared-test-modifier")).toBe(true);
   expect(bundle.map.sources.some(row=>row.path === "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts")).toBe(false);
-  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift")).toEqual([]);
+  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift")).toEqual(expectedWorkingDrift(bundle,bundle.map));
+  const navigation=navigationHistoryBundle(bundle);
+  checkedNavigationHistory(navigation,navigation.map,JSON.parse(bundle.read(navigationHistoryPath).toString("utf8")) as Record<string,unknown>);
   checkedHistory(bundle,historicalOperationalMap(),JSON.parse(bundle.read(historyPath).toString("utf8")) as CensusHistory);
   checkedDiagnosticHistory(bundle,historicalDiagnosticMap(),JSON.parse(bundle.read(diagnosticHistoryPath).toString("utf8")) as CensusHistory);
   checkedContrastV2History(bundle,historicalContrastV2Map(),JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
@@ -362,10 +408,31 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
 // cold filesystem. Its bounded allowance is independent of product/UI targets.
 },15_000);
 it("preserves the exact earlier17-source drift inventory without treating it as current",async()=>{
-  const bundle=await censusBundle(),map=JSON.parse(gitSource("be0a48e241ca94d1ad18fda89ffa8f095d98e56c",censusPath).toString("utf8")) as CensusMap;
-  const result=checkedCensus(bundle,map);
+  const bundle=await censusBundle(),commit="be0a48e241ca94d1ad18fda89ffa8f095d98e56c",map=JSON.parse(gitSource(commit,censusPath).toString("utf8")) as CensusMap;
+  primeGitSources(commit,[censusPath,...map.sources.map(row=>row.path),"docs/operations/comprehensive-ui-automation-coverage.json","docs/operations/comprehensive-ui-automation-discovery.json"]);
+  const historical={...bundle,read:(name:string)=>gitSource(commit,name),map,
+    ledgerText:gitSource(commit,"docs/operations/comprehensive-ui-automation-coverage.json").toString("utf8"),
+    discoveryText:gitSource(commit,"docs/operations/comprehensive-ui-automation-discovery.json").toString("utf8"),hostSpecPaths:map.host_spec_files as string[]};
+  const result=checkedCensus(historical,map);
   expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...responsiveSources,...modelStartupReportSources,...privateProviderPrivacySources,...workspaceSwitchSources,...reviewReferenceSources].sort());
   expect(result).toMatchObject({source_files:181,executed_tests:0,actual_host_pass:false,parent_qualification_granted:false});
+// Source-only cold Git reads use the same finite budget as the main history
+// check. This does not change any app, model, native or UI performance target.
+},15_000);
+it.each(["prior-commit","prior-map","row-hash","missing-row","duplicate-row","committed-pin","scope","qualification","hidden-drift","extra"])("refuses forged navigation working-census history %s",async variant=>{
+  const current=await censusBundle();checkedCensus(current,current.map);const bundle=navigationHistoryBundle(current),map=structuredClone(bundle.map),history=JSON.parse(current.read(navigationHistoryPath).toString("utf8"));
+  checkedNavigationHistory(bundle,map,history);
+  if(variant === "prior-commit")history.prior_commit="0".repeat(40);
+  if(variant === "prior-map")history.prior_census_git_sha256="0".repeat(64);
+  if(variant === "row-hash")history.sources[0].current_row_sha256="0".repeat(64);
+  if(variant === "missing-row")history.sources.pop();
+  if(variant === "duplicate-row")history.sources.push(structuredClone(history.sources[0]));
+  if(variant === "committed-pin")map.sources.find(row=>row.path===diagnosticSources[0])!.committed_sha256="0".repeat(64);
+  if(variant === "scope")history.scope="execution-pass";
+  if(variant === "qualification")history.qualification_effect.parent_qualification_granted=true;
+  if(variant === "hidden-drift")history.unreviewed_source_drift=[];
+  if(variant === "extra")history.extra="forged";
+  expect(()=>checkedNavigationHistory(bundle,map,history)).toThrow();
 });
 it("keeps workspace history authentic when current review definitions change",async()=>{
   const bundle=await censusBundle(),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;

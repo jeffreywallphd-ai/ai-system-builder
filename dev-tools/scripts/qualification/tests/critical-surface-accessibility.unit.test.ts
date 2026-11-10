@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 const probe = vi.hoisted(() => ({ exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0,
   forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false,
+  navigationFault: "", navigationAuditStates: [] as string[], navigationKeys: [] as string[],
   reads: [] as string[], writes: [] as string[], flags: [] as string[], attachments: [] as string[], widths: [] as number[], motion: "no-preference" }));
 vi.mock("node:fs/promises", () => {
   const readFile = async (name: string) => {
@@ -290,12 +291,30 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
       if (options.forcedColors) probe.forcedColors = options.forcedColors;
     },
     setViewportSize: async (value: { width: number }) => { probe.widths.push(value.width); },
+    locator: (selector: string) => ({
+      press: async (key: string) => {
+        expect(selector).toBe("summary.ui-shell__menu-trigger");
+        probe.navigationKeys.push(key);
+        if (probe.navigationFault === (key === "Escape" ? "close-throws" : "reopen-throws")) throw new Error("synthetic-private-keyboard");
+        if (probe.navigationFault !== "close-state") {
+          const trigger=document.querySelector(selector)!;trigger.setAttribute("aria-expanded", key === "Escape" ? "false" : "true");
+          (trigger.closest("details") as HTMLDetailsElement).open=key !== "Escape";
+        }
+      },
+      waitFor: async ({ state }: { state: string }) => {
+        expect(selector).toBe('.ui-shell__menu-panel[role="menu"]');
+        const panel = document.querySelector(selector)!;
+        expect(Boolean(panel.getClientRects().length)).toBe(state === "visible");
+      },
+      getAttribute: async (name: string) => document.querySelector(selector)!.getAttribute(name),
+    }),
   } as unknown as Page;
   const info = { title: "Fixed critical UI fixture", project: { name: "thin-chrome" }, attach: async (_name: string, value: { body: string }) => {
     if (probe.attachFails) throw new Error("synthetic-private-attachment"); probe.attachments.push(value.body);
   } } as unknown as TestInfo;
   beforeEach(() => {
-    Object.assign(probe, { exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false });
+    Object.assign(probe, { exists: false, readFails: false, engineReadFails: false, attachFails: false, restoreFails: false, auditFails: false, calls: 0, motion: "no-preference", forcedAuditFails: false, forcedMediaFails: false, forcedColors: "none", saveFails: false, navigationFault: "" });
+    probe.navigationAuditStates.length = probe.navigationKeys.length = 0;
     probe.writes.length = probe.flags.length = probe.attachments.length = probe.widths.length = 0;
     probe.reads.length = 0;
     vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_RUN_ID", context().runId); vi.stubEnv("VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION", context().sourceRevision);
@@ -305,7 +324,19 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
     for (const key of ["clientWidth", "scrollWidth"]) Object.defineProperty(document.documentElement, key, { configurable: true, get: () => probe.widths[probe.widths.length - 1] ?? 1440 });
     oldAxe = Object.getOwnPropertyDescriptor(window, "axe");
     Object.defineProperty(window, "axe", { configurable: true, value: { run: async (root: string) => {
-      expect(root).toBe("body"); probe.calls++;
+      expect(["body", ".ui-shell__menu"]).toContain(root); probe.calls++;
+      const expanded = root === ".ui-shell__menu";
+      const trigger = document.querySelector("summary.ui-shell__menu-trigger");
+      if (trigger && (probe.widths.at(-1) === 320 || expanded)) {
+        expect(trigger.getAttribute("aria-expanded")).toBe(expanded ? "true" : "false");
+        probe.navigationAuditStates.push(`${probe.forcedColors}:${expanded ? "expanded-menu" : "closed-document"}`);
+      }
+      if (expanded && (probe.navigationFault === "panel-failed" || probe.navigationFault === "forced-panel-failed" && probe.forcedColors === "active") ||
+          trigger && !expanded && probe.widths.at(-1) === 320 && probe.navigationFault === "closed-document-failed") {
+        return { violations: [{ id: "color-contrast", nodes: [{}] }], incomplete: [], passes: [{ id: "color-contrast", nodes: [{}] }] };
+      }
+      if (expanded && probe.navigationFault === "panel-unresolved") return { violations: [], incomplete: [{ id: "aria-roles", nodes: [{}] }], passes: [{ id: "color-contrast", nodes: [{}] }] };
+      if (expanded && probe.navigationFault === "panel-no-positive") return { violations: [], incomplete: [], passes: [] };
       return { violations: probe.auditFails || (probe.forcedAuditFails && probe.forcedColors === "active") ? [{ id: "button-name", nodes: [{}] }] : [], incomplete: [], passes: [{ id: "color-contrast", nodes: [{}] }] };
     } } });
     document.body.innerHTML = '<main class="ui-shell" style="visibility:visible;transition-duration:0s;animation-name:none"><button style="visibility:visible;transition-duration:0s;animation-name:none">Synthetic private label</button></main>';
@@ -392,27 +423,44 @@ describe("critical surface Page definition with inert IO and synthetic DOM", () 
   });
   function installNavigation(fault?: "missing" | "duplicate" | "wide-menu" | "narrow-menu" | "forced-menu") {
     const main=document.querySelector("main")!;
+    const menu=document.createElement("details");menu.className="ui-shell__menu";menu.open=true;main.append(menu);
     for(const [tag,className] of [["aside","ui-shell__sidebar"],["summary","ui-shell__menu-trigger"],["div","ui-shell__menu-panel"]]) {
       if(fault === "missing" && tag === "aside")continue;
       const node=document.createElement(tag!);node.className=className!;
       Object.assign(node.style,{visibility:"visible",transitionDuration:"0s",animationName:"none"});
       node.setAttribute("aria-expanded","true");
+      if (tag === "div") { node.setAttribute("role", "menu"); node.setAttribute("aria-label", "Application navigation"); }
       Object.defineProperty(node,"getClientRects",{value:()=>{
         const narrow=(probe.widths.at(-1) ?? (devicePixelRatio === 4 ? 356 : 1440))<=1024;
         let visible=tag === "aside" ? !narrow : narrow;
+        if (tag === "div" && document.querySelector("summary.ui-shell__menu-trigger")?.getAttribute("aria-expanded") === "false") visible=false;
         if(fault === "wide-menu" && !narrow && tag !== "aside")visible=true;
         if((fault === "narrow-menu" || fault === "forced-menu" && probe.forcedColors === "active") && narrow && tag === "div")visible=false;
         return visible ? [{width:1,height:1}] : [];
       }});
       Object.defineProperty(node,"getBoundingClientRect",{value:()=>({width:1,height:1,left:0,right:1})});
-      main.append(node);
+      (tag === "aside" ? main : menu).append(node);
       if(fault === "duplicate" && tag === "aside")main.append(node.cloneNode(true));
     }
   }
   it("requires wide sidebar and narrow open menu in both media profiles, then restores narrow caller",async()=>{
     installNavigation();const narrow={...page,viewportSize:()=>({width:320,height:720})} as Page;
     expect((await qualifyCriticalSurfaceAccessibility(narrow,info,"navigation-menu")).status).toBe("passed");
-    expect(probe.calls).toBe(4);expect(probe.widths).toEqual([1440,320,1440,320,320]);
+    expect(probe.calls).toBe(6);expect(probe.widths).toEqual([1440,320,1440,320,320]);
+    expect(probe.navigationKeys).toEqual(["Escape", "ArrowDown", "Escape", "ArrowDown"]);
+    expect(probe.navigationAuditStates).toEqual(["none:closed-document", "none:expanded-menu", "active:closed-document", "active:expanded-menu"]);
+    const saved=JSON.parse(probe.writes.at(-1)!);
+    expect(saved.navigationMenuAudits.map((item: {media:string;audit:{width:number}})=>[item.media,item.audit.width])).toEqual([["normal",320],["forced-colors",320]]);
+    expect(document.querySelector("summary.ui-shell__menu-trigger")!.getAttribute("aria-expanded")).toBe("true");
+  });
+  it.each(["closed-document-failed", "panel-failed", "panel-unresolved", "panel-no-positive", "forced-panel-failed", "close-throws", "reopen-throws", "close-state"])("keeps navigation %s failed without dropping either state",async fault=>{
+    installNavigation();probe.navigationFault=fault;
+    const stage=fault === "forced-panel-failed" ? "forced-colors-expanded-navigation-audit-320" : fault.startsWith("panel-") ? "expanded-navigation-audit-320" : "audit-320";
+    await expect(qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu")).rejects.toThrow(`Critical accessibility check failed at ${stage}.`);
+    const saved=JSON.parse(probe.writes.at(-1)!);expect(saved.status).toBe("failed");expect(probe.widths.at(-1)).toBe(1440);
+    expect(probe.writes.join("")).not.toContain("synthetic-private");
+    if(fault === "closed-document-failed")expect(document.querySelector("summary.ui-shell__menu-trigger")!.getAttribute("aria-expanded")).toBe("true");
+    if(fault.startsWith("panel-")||fault === "forced-panel-failed")expect(saved.navigationMenuAudits.at(-1).audit[ fault === "panel-unresolved" ? "incomplete" : fault === "panel-no-positive" ? "contrastPassedNodes" : "violations"]).not.toBeUndefined();
   });
   it.each(["missing","duplicate","wide-menu","narrow-menu","forced-menu"] as const)("refuses wrong responsive navigation %s",async fault=>{
     installNavigation(fault);

@@ -106,3 +106,40 @@ and metadata-fetch ports; they do not qualify brokered downloads or general
 network isolation. Completed model accuracy and OCR checks stay closed. No user
 action is needed for this completed local test. Full software tests follow the
 remaining open feature work.
+
+## Compact navigation accessibility sampling
+
+The standard navigation journey measures the complete page with the compact
+menu closed. It then measures the expanded menu, including its opener and panel.
+Both measurements must pass in normal and forced-colors modes. The page audit
+keeps every document region; the menu audit keeps its expanded opener and every
+menu item. Neither measurement can replace the other. The agent must retain positive contrast samples, resolve each
+incomplete check, and preserve any violation or failed measurement.
+
+The driver uses Escape and ArrowDown to change the real menu state. It checks
+visibility and `aria-expanded`, and restores the open menu even when the page
+audit fails. The menu collector accepts only the fixed 320-pixel observation.
+It requires one open menu container with a visible panel and trigger inside the
+mounted shell. It accepts no caller selector or observer. Contrast retry targets
+must remain inside that menu, including its opener. Other document, runtime and
+native-zoom collectors retain
+their existing scope and requirements.
+
+This avoids measuring background text while a dropdown covers it. The earlier
+open-page failures remain in the evidence history. A source test or a closed-page
+pass does not qualify the expanded menu, the actual host journey, native zoom or
+the parent roadmap. The agent must execute the focused real-app journey after
+this correction. No user action is needed.
+
+## Current definitions and historical source
+
+The UI coverage inventory records source definitions. It grants no test execution,
+host pass or roadmap completion. When definitions change, update their working
+source facts and keep their authentic committed pins. Report each difference from
+the pinned Git version as source drift. Independent current-source checks and
+review remain necessary. A working fact is not a committed version or a test pass.
+
+Historical inventory tests must read the source, ledger and discovery records
+from the named historical Git snapshot. They must not use today's files as proof
+of an earlier version. Keep the original snapshot and row hashes. A forged pin,
+missing or duplicate row, hidden source drift or invented qualification must fail.

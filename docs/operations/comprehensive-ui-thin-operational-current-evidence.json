@@ -237,6 +237,93 @@
         "Only the current two denied requests are classified as WebSockets. Earlier request denials retain their original unclassified scope. No endpoint or development-client cause is asserted.",
         "No native/offload/process-tree/physical-model or parent qualification is supplied."
       ]
+    },
+    {
+      "run_id": "operational-thin-952e4e8417574df68f6bb3aacafad2d5",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "a35834b49a9e056d49973a1377b10f819fbaa8b9",
+        "source_digest": "83f7a76805a4b1930ca54043f9713b2a78fa842fe48079a12e19f4b513dd63b2",
+        "app_source": "source.40547c57154d3a16751c259b8285ffa5c32a5f6ca9091213c335f7712aa1541b"
+      },
+      "manifest_sha256": "3bfa63ab7b3fecf0f780db8e4d1af42c83aba54bf3a45e5a5ffb7b7b5ccb8880",
+      "case_report_sha256": "50e4fe1a95355fae0d854c68883dedd39067aa42eba3e67428fc04d0ba7dc440",
+      "teardown_sha256": "c4abb2a03356891eec99e739384710faefcf61f04ab7572a22598087906fa32e",
+      "execution_sha256": "e7f3779d7a933679ce9a8314b382ac583f6cda2ebd790dfb30b20e63483372d8",
+      "compiled_binding_execution_sha256": "f03e6ae27690ced90a0c691dddba09e63861056759c9d3d225b702a755ea264b",
+      "independent_local_outcome_review_sha256": "bd76bd7be344fef1e75bafcf7bf29cbb60737eb0b4497febbfb12dd1552317db",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "1f7f59718c9da2a822c1a99074b42a602d7fb6dfc2efae8792e4258830bd8770",
+        "settings": "f1fd8e51582b91dfdb712a08e7187529768eb5d0be2204d8558f2e6f43c82db9",
+        "security": "c16a9e0c62acc69bbbd19b0a710718126f940a9815e86a1e2c75efe42d66c35e"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5267,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 27,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened"
+        ],
+        "nextPhase": "security-known"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0,
+        "prior_development_websocket_provenance_proved": false
+      },
+      "security_observation": {
+        "status": "failed",
+        "failure_stage": "audit-1440",
+        "controls": 20,
+        "inaccessible": 0,
+        "positive_contrast_nodes": 30,
+        "violations": 0,
+        "unresolved_contrast_nodes": 4,
+        "resolved_retries": 0,
+        "fixed_reason": "elmPartiallyObscured",
+        "fixed_region": "shellContent",
+        "narrow_or_forced_colors_executed": false,
+        "precise_layout_cause_proved": false
+      },
+      "limits": [
+        "Six of17ordered phases completed; Security and all later phases remain pending.",
+        "Navigation includes the complete closed document and expanded opener plus panel in normal and forced-colors media; both pass. Settings also passes both widths and media. These are local actual observations, not parent/current aggregate qualification.",
+        "Current production-preview request denial counts are zero and the compiled7-file set matches before/after ordinary retirement. Earlier two Vite-shaped denied WebSockets remain historical; provenance is not inferred from shape.",
+        "No native zoom, protected-file ownership, offload, model, managed/restricted review or whole-system qualification is supplied."
+      ]
     }
   ],
   "limits": [
@@ -249,8 +336,8 @@
   "current_follow_up": {
     "owner": "Agent",
     "status": "pending",
-    "action": "Diagnose the six unresolved contrast checks in the open-menu state and the two denied WebSocket attempts. Keep all audit and network guards strict.",
-    "completed_preparation": "The exact-file selector and compact-menu anchor are repaired; all25actual narrow controls are within the viewport.",
+    "action": "Diagnose four partially obscured Security text checks, repair any confirmed layout fault, then continue the remaining operational steps. Security narrow and forced-colors checks still need evidence.",
+    "completed_preparation": "All six navigation/Settings steps pass; both critical surfaces pass normal and forced-colors audits. Current production-preview connections meet the existing zero-denial rule.",
     "first_failures_preserved": true,
     "parent_pass": false
   },
@@ -333,5 +420,123 @@
     "independent_local_observation_review_sha256": "ee001d5d8e86c58d39f048b5ab57568de9a3e1d43bc40ed0c1901b6760ae18a8",
     "overall_operational_feature_pass": false,
     "parent_qualification_granted": false
+  },
+  "focused_diagnostics": [
+    {
+      "kind": "navigation-menu-state-diagnostic",
+      "run_id": "operational-thin-d47200129e0c43cfa3968f74c070e2a1",
+      "tested_source": {
+        "head": "a35834b49a9e056d49973a1377b10f819fbaa8b9",
+        "source_digest": "0b3d5502b0a755c4dc1c37d1d91ae03627e5fd0e5905497ae4fff098a5a3ef71",
+        "app_source": "source.6d4f1e9b396527e8d2e3d8270667fe3e3481cd72a8daace710ea843a2da3be71"
+      },
+      "audit_state_report_sha256": "d6e4baba9365050c0955afb81670159d062b35a103e61bd2ee6a19c129817f67",
+      "websocket_shape_report_sha256": "07deab881d06d5cd9ab60a1f928017995246524c63c3453883c5c080cfc244f2",
+      "execution_sha256": "a420c39257c7118d7b535bcf04652e263906ddccc6f992a0d0dd3aa5499e94a8",
+      "independent_outcome_review_sha256": "7c0ca270779dbe3c51ce3756ae4cb145dcae5dbe36d0fee209ae2e82cc9dff8e",
+      "observations": [
+        {
+          "media": "normal",
+          "menu_state": "closed-before",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "normal",
+          "menu_state": "open",
+          "status": "failed",
+          "positive_contrast_nodes": 43,
+          "violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "resolved_retries": 0
+        },
+        {
+          "media": "normal",
+          "menu_state": "closed-after",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "closed-before",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "open",
+          "status": "failed",
+          "positive_contrast_nodes": 43,
+          "violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "closed-after",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        }
+      ],
+      "request_counts": {
+        "denied_websockets": 2,
+        "fixed_loopback_root_token_key_shape": 2,
+        "other_websocket_shapes": 0,
+        "foreign_http": 0,
+        "redirects": 0,
+        "client_provenance_proved": false
+      },
+      "ordinary_fixture_retirement_confirmed": true,
+      "generated_identity_absence_metadata_only": true,
+      "raw_artifacts_retained": 0,
+      "whole_operational_journey_executed": false,
+      "whole_operational_feature_pass": false,
+      "parent_qualification_granted": false,
+      "interpretation": "The full page has positive contrast in both closed states; only an open covering menu yields unresolved background checks. These diagnostic observations do not pass the menu or waive any unresolved check. New source tests require both the complete closed-page audit and a separate fixed expanded-menu audit covering its opener and panel. A fresh actual journey still must pass. Vite-shaped refused connections are consistent with development-client traffic; shape alone does not prove provenance."
+    }
+  ],
+  "standard_navigation_local_observation": {
+    "tested_source_digest": "83f7a76805a4b1930ca54043f9713b2a78fa842fe48079a12e19f4b513dd63b2",
+    "actual_host": "thin-chrome",
+    "status": "passed-local-observation",
+    "wide_and_narrow_controls_accessible": true,
+    "complete_page_positive_contrast_nodes": [
+      59,
+      41
+    ],
+    "complete_page_forced_colors_positive_contrast_nodes": [
+      59,
+      41
+    ],
+    "expanded_menu_includes_opener_and_panel": true,
+    "expanded_positive_contrast_nodes_by_media": [
+      8,
+      8
+    ],
+    "unresolved_or_violating_nodes": 0,
+    "settings_positive_contrast_nodes_by_width": [
+      87,
+      70
+    ],
+    "settings_forced_colors_positive_contrast_nodes_by_width": [
+      87,
+      70
+    ],
+    "current_request_denials": 0,
+    "compiled_source_files_bound_before_and_after": 7,
+    "independent_local_review_sha256": "bd76bd7be344fef1e75bafcf7bf29cbb60737eb0b4497febbfb12dd1552317db",
+    "whole_journey_or_parent_pass": false
   }
 }

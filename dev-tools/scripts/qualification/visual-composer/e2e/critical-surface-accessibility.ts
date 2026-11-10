@@ -4,7 +4,7 @@ import path from "node:path";
 import type { CDPSession, Page, TestInfo } from "@playwright/test";
 import { qualifyCriticalAccessibilityReport, qualifyNativeCriticalAccessibilityReport, readCriticalAccessibilityMode, readCriticalAccessibilityContext, readReducedMotionObservation, readControlAccessObservation,
   type CriticalAccessibilityContext, type CriticalAccessibilityMode, type CriticalAccessibilitySurface, type TechnicalAccessibilityAudit, type NativeAccessibilityAudit, type ContrastRetryDiagnostics } from "../technical-accessibility-observation";
-import { collectDocumentAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
+import { collectDocumentAccessibilityObservation, collectExpandedNavigationAccessibilityObservation, collectRuntimeAccessibilityObservation, collectNative400Frame, rawNativeFrame, collectNativeDocumentAccessibilityObservation,
   collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, loadTechnicalAccessibilityReference, readTechnicalAccessibilityEngine } from "./technical-accessibility";
 
 const rawAudit = (audit: TechnicalAccessibilityAudit) => ({ schemaVersion: audit.schemaVersion, width: audit.width, violations: audit.violations,
@@ -112,6 +112,21 @@ async function requireNavigationLayout(page: Page, narrow: boolean) {
   if (observed !== true) throw new Error("Critical navigation layout observation failed.");
 }
 
+/** Measure the whole page without covered text, then restore the actual menu. */
+async function collectClosedNavigationDocument(page: Page) {
+  const trigger = page.locator("summary.ui-shell__menu-trigger");
+  const panel = page.locator('.ui-shell__menu-panel[role="menu"]');
+  await trigger.press("Escape");
+  await panel.waitFor({ state: "hidden" });
+  if (await trigger.getAttribute("aria-expanded") !== "false") throw new Error();
+  try { return await collectDocumentAccessibilityObservation(page, 320); }
+  finally {
+    await trigger.press("ArrowDown");
+    await panel.waitFor({ state: "visible" });
+    if (await trigger.getAttribute("aria-expanded") !== "true") throw new Error();
+  }
+}
+
 /** Actual Page assertions. Synthetic callback tests do not qualify a real host. */
 export async function qualifyCriticalSurfaceAccessibility(page: Page, info: TestInfo, surface: CriticalAccessibilitySurface, mode: CriticalAccessibilityMode = "standard") {
   readCriticalAccessibilityMode(mode);
@@ -123,8 +138,10 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
   const folder = path.resolve("artifacts/qualification/visual-composer/runs", context.runId, "critical-accessibility", context.host, context.testKey, context.surface);
   const audits: ReturnType<typeof rawAudit>[] = [];
   const forcedColorsAudits: ReturnType<typeof rawAudit>[] = [];
+  const navigationMenuAudits: Array<{ media: "normal" | "forced-colors"; audit: ReturnType<typeof rawAudit> }> = [];
   const report: Record<string, unknown> = { ...context, schemaVersion: "critical-surface-accessibility-v1", contextSchemaVersion: context.schemaVersion,
     status: "running", scope: "ui-accessibility-observation-only", audits, forcedColorsAudits };
+  if (context.surface === "navigation-menu") report.navigationMenuAudits = navigationMenuAudits;
   let created = false, stage = "reference-profile";
   let failedContrast: { stage: string; observation: ContrastRetryDiagnostics } | undefined;
   let originalViewport: { width: number; height: number } | undefined;
@@ -203,10 +220,18 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       report[`motion-${width}`] = readReducedMotionObservation(motion);
       stage = `control-access-${width}`; await controlAccess(width, stage);
       stage = `audit-${width}`;
-      const { audit, diagnostics } = await (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width);
+      const { audit, diagnostics } = await (context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
+        : (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width));
       if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
       audits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
+      if (context.surface === "navigation-menu" && width === 320) {
+        stage = "expanded-navigation-audit-320";
+        const expanded = await collectExpandedNavigationAccessibilityObservation(page, width);
+        navigationMenuAudits.push({ media: "normal", audit: rawAudit(expanded.audit) });
+        if (expanded.audit.status === "failed") failedContrast = { stage, observation: expanded.diagnostics };
+        await save(); if (expanded.audit.status !== "passed") throw new Error();
+      }
     }
     stage = "forced-colors-media";
     await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" });
@@ -219,10 +244,18 @@ export async function qualifyCriticalSurfaceAccessibility(page: Page, info: Test
       if (context.surface === "navigation-menu") { stage = `forced-colors-navigation-layout-${width}`; await requireNavigationLayout(page, width === 320); }
       stage = `forced-colors-control-access-${width}`; await controlAccess(width, stage);
       stage = `forced-colors-audit-${width}`;
-      const { audit, diagnostics } = await (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width);
+      const { audit, diagnostics } = await (context.surface === "navigation-menu" && width === 320 ? collectClosedNavigationDocument(page)
+        : (runtime ? collectRuntimeAccessibilityObservation : collectDocumentAccessibilityObservation)(page, width));
       if (audit.status === "failed") failedContrast = { stage, observation: diagnostics };
       forcedColorsAudits.push(rawAudit(audit)); await save();
       if (audit.status !== "passed") throw new Error();
+      if (context.surface === "navigation-menu" && width === 320) {
+        stage = "forced-colors-expanded-navigation-audit-320";
+        const expanded = await collectExpandedNavigationAccessibilityObservation(page, width);
+        navigationMenuAudits.push({ media: "forced-colors", audit: rawAudit(expanded.audit) });
+        if (expanded.audit.status === "failed") failedContrast = { stage, observation: expanded.diagnostics };
+        await save(); if (expanded.audit.status !== "passed") throw new Error();
+      }
     }
     if (context.host === "thin-chrome" && process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "dataset-profile") {
       report.browserProcessRolesAfter = await observeOwnedBrowserProcessRoles(page);

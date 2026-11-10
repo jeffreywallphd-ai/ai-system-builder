@@ -15,7 +15,7 @@ vi.mock("node:fs/promises", () => {
 vi.mock("node:os", () => { const methods = { cpus: () => new Array(20).fill({}), totalmem: () => 16 * 1024 ** 3 }; return { ...methods, default: methods }; });
 import { readTechnicalAccessibilityAudit, readContrastRetryDiagnostics, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, readCriticalAccessibilityMode,
   qualifyNativeCriticalAccessibilityReport } from "../visual-composer/technical-accessibility-observation";
-import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, collectDocumentAccessibilityObservation,
+import { collectSystemBuilderAccessibilityAudit, collectRuntimeAccessibilityAudit, collectDocumentAccessibilityAudit, collectDocumentAccessibilityObservation, collectExpandedNavigationAccessibilityObservation,
   collectRuntimeAccessibilityObservation, collectNativeDocumentAccessibilityObservation, collectNativeRuntimeAccessibilityObservation, finalizeTechnicalAccessibilityEvidence, qualifyTechnicalAccessibility } from "../visual-composer/e2e/technical-accessibility";
 const base = () => ({ schemaVersion: "technical-accessibility-audit-v1", width: 320, violations: [] as Array<{ rule: string; nodes: number }>, incomplete: [] as Array<{ rule: string; nodes: number }>, contrastPassedNodes: 3, retries: { attempted: 0, passed: 0 } });
 const invalid = "Invalid technical accessibility observation.";
@@ -356,6 +356,80 @@ describe("browser-local contrast retry projection (synthetic DOM only)", () => {
     const report = await collectRuntimeAccessibilityAudit(page, 320);
     expect(calls).toBe(2); expect(report.status).toBe("passed"); expect(report.retries).toEqual({ attempted: 1, passed: 1 });
     expect(JSON.stringify(report)).not.toContain("synthetic-private");
+  });
+  function installExpandedMenu() {
+    document.body.innerHTML='<main class="ui-shell"><details class="ui-shell__menu" open><summary class="ui-shell__menu-trigger" aria-expanded="true">Synthetic trigger</summary><div class="ui-shell__menu-panel" role="menu" aria-label="Application navigation"><button id="synthetic-private-selector" role="menuitem">Synthetic private label</button></div></details></main>';
+    for(const element of document.querySelectorAll("summary,.ui-shell__menu-panel,button")) {
+      Object.defineProperty(element,"getClientRects",{configurable:true,value:()=>[{width:10,height:10}]});
+      Object.defineProperty(element,"getBoundingClientRect",{configurable:true,value:()=>({width:10,height:10})});
+      Object.defineProperty(element,"scrollIntoView",{configurable:true,value:vi.fn()});
+      (element as HTMLElement).style.visibility="visible";
+    }
+  }
+  it("audits the fixed expanded opener and panel while the original collector still audits the full body",async()=>{
+    installExpandedMenu();const contexts:unknown[]=[];install(async context=>{contexts.push(context);return result();});
+    expect((await collectExpandedNavigationAccessibilityObservation(page,320)).audit.status).toBe("passed");
+    expect((await collectDocumentAccessibilityObservation(page,320)).audit.status).toBe("passed");
+    expect(contexts).toEqual([".ui-shell__menu","body"]);
+  });
+  it.each(["missing-shell","duplicate-shell","missing-container","duplicate-container","closed-container","outside-container","missing-trigger","duplicate-trigger","outside-trigger","closed","hidden-trigger","missing-panel","duplicate-panel","outside-panel","hidden-panel","wrong-role","wrong-name"])("refuses expanded navigation %s before engine dispatch",async fault=>{
+    installExpandedMenu();const trigger=document.querySelector("summary")!,panel=document.querySelector(".ui-shell__menu-panel")!,main=document.querySelector("main")!;
+    if(fault === "missing-shell")main.className="other";
+    if(fault === "duplicate-shell")document.body.append(main.cloneNode(true));
+    const container=document.querySelector("details")!;
+    if(fault === "missing-container")container.className="other";
+    if(fault === "duplicate-container")main.append(container.cloneNode(true));
+    if(fault === "closed-container")container.open=false;
+    if(fault === "outside-container")document.body.append(container);
+    if(fault === "missing-trigger")trigger.remove();
+    if(fault === "duplicate-trigger")main.append(trigger.cloneNode(true));
+    if(fault === "outside-trigger")document.body.append(trigger);
+    if(fault === "closed")trigger.setAttribute("aria-expanded","false");
+    if(fault === "hidden-trigger")Object.defineProperty(trigger,"getClientRects",{value:()=>[]});
+    if(fault === "missing-panel")panel.remove();
+    if(fault === "duplicate-panel")main.append(panel.cloneNode(true));
+    if(fault === "outside-panel")document.body.append(panel);
+    if(fault === "hidden-panel")(panel as HTMLElement).style.visibility="hidden";
+    if(fault === "wrong-role")panel.setAttribute("role","dialog");
+    if(fault === "wrong-name")panel.setAttribute("aria-label","synthetic-private-name");
+    const run=vi.fn();install(run);await expect(collectExpandedNavigationAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");expect(run).not.toHaveBeenCalled();
+  });
+  it.each([1440,400,"native400",null,undefined])("refuses unsupported expanded-menu width %s before Page access",async width=>{
+    const evaluate=vi.fn();await expect(collectExpandedNavigationAccessibilityObservation({evaluate} as unknown as Page,width as never)).rejects.toThrow(invalid);expect(evaluate).not.toHaveBeenCalled();
+  });
+  it("refuses caller selectors or executable observers before Page access",async()=>{
+    const evaluate=vi.fn(),observer=vi.fn();for(const extra of ["body",observer,{}])await expect(collectExpandedNavigationAccessibilityObservation({evaluate} as unknown as Page,320,extra)).rejects.toThrow(invalid);expect(evaluate).not.toHaveBeenCalled();expect(observer).not.toHaveBeenCalled();
+  });
+  it.each([false,true])("retains expanded-panel contrast retry success=%s without changing the rule",async success=>{
+    installExpandedMenu();let calls=0;install(async context=>{
+      if(++calls===1){expect(context).toBe(".ui-shell__menu");return {...result(),incomplete:[{id:"color-contrast",nodes:[node()]}]};}
+      expect(context).toEqual({include:[["#synthetic-private-selector"]]});
+      return success?result():{...result(),incomplete:[{id:"color-contrast",nodes:[node()]}]};
+    });
+    const observed=await collectExpandedNavigationAccessibilityObservation(page,320);expect(observed.audit.status).toBe(success?"passed":"failed");expect(observed.audit.retries).toEqual({attempted:1,passed:success?1:0});expect(calls).toBe(2);expect(JSON.stringify(observed)).not.toMatch(/synthetic-private|Synthetic private|selector|message/);
+  });
+  it("rejects a contrast retry that escapes the fixed expanded menu",async()=>{
+    installExpandedMenu();const target=document.querySelector("button")!;document.body.append(target);
+    const run=vi.fn(async()=>({...result(),incomplete:[{id:"color-contrast",nodes:[node()]}]}));install(run);
+    await expect(collectExpandedNavigationAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");expect(run).toHaveBeenCalledTimes(1);expect(target.scrollIntoView).not.toHaveBeenCalled();
+  });
+  it("keeps bad expanded-opener contrast failed even when the panel alone passes",async()=>{
+    installExpandedMenu();const contexts:unknown[]=[];
+    install(async context=>{contexts.push(context);return context === ".ui-shell__menu"?{...result(),violations:[{id:"color-contrast",nodes:[{target:["summary.ui-shell__menu-trigger"]}]}]}:result();});
+    const observed=await collectExpandedNavigationAccessibilityObservation(page,320);expect(observed.audit.status).toBe("failed");expect(observed.audit.violations).toEqual([{rule:"color-contrast",nodes:1}]);expect(contexts).toEqual([".ui-shell__menu"]);
+  });
+  it.each(["close","hide","replace-panel","replace-trigger","replace-shell","relabel"])("keeps a changing expanded-menu scope failed: %s",async fault=>{
+    installExpandedMenu();const panel=document.querySelector(".ui-shell__menu-panel")!,trigger=document.querySelector("summary")!,shell=document.querySelector("main")!;
+    install(async()=>{
+      if(fault === "close")trigger.setAttribute("aria-expanded","false");
+      if(fault === "hide")(panel as HTMLElement).style.visibility="hidden";
+      if(fault === "replace-panel")panel.replaceWith(panel.cloneNode(true));
+      if(fault === "replace-trigger")trigger.replaceWith(trigger.cloneNode(true));
+      if(fault === "replace-shell")shell.replaceWith(shell.cloneNode(true));
+      if(fault === "relabel")panel.setAttribute("aria-label","synthetic-private-label");
+      return result();
+    });
+    await expect(collectExpandedNavigationAccessibilityObservation(page,320)).rejects.toThrow("Computed accessibility audit failed.");
   });
   it.each(["missing", "wrong-shell", "duplicate"] as const)("refuses runtime %s at the actual browser collection boundary", async fault => {
     if (fault !== "missing") {
