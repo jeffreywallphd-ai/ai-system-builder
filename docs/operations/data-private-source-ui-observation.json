@@ -154,5 +154,46 @@
     "original_failure_cause_confirmed": false,
     "actual_private_ui_or_parent_qualification": false,
     "new_synthetic_roots_removed_after_exit": true
+  },
+  "nativeBrowserDiagnosis": {
+    "schema_version": "private-source-native-browser-diagnosis-v1",
+    "source_digest": "c5786bf42c4bc2bead0f083da5d5f14b69be9b0e12b7d37e5a0f589b621ff7e2",
+    "head": "7263c2927e43c99c98e6d2470b61dd922a9b768b",
+    "observation_sha256": "903fd732ee0fc552322306ecea5aee9fc5ed3a23154359237cce3ff60dfe82ee",
+    "native_result_sha256": "cae35da80a5c413dfeb4850e2da0e990d161da5a074087b2f84c576357924875",
+    "outcome_review_sha256": "81ed15e57ba9e41beeb66b48e5133bb52925f193267cb8c6c80af0e39fc81869",
+    "selected_cases": [
+      {
+        "purpose": "worker",
+        "status": "passed",
+        "duration_ms": 1
+      },
+      {
+        "purpose": "browser",
+        "status": "passed",
+        "duration_ms": 184
+      }
+    ],
+    "real_host_definitions_loaded": true,
+    "recording_free_page_fixture_returned": true,
+    "static_local_content_visible": true,
+    "empty_node_options_retained_in_worker": true,
+    "owned_processes_total": 11,
+    "owned_processes_active_after": 0,
+    "forced_termination": false,
+    "all_owned_handles_and_streams_closed": true,
+    "peak_active_observed": 11,
+    "peak_process_commit_bytes": 199974912,
+    "peak_job_commit_bytes": 603144192,
+    "process_limit_bytes": 1073741824,
+    "job_limit_bytes": 3221225472,
+    "absence_of_all_limit_hits_claimed": false,
+    "source_and_runtime_stable_after": true,
+    "scratch_bytes_removed": 1751224,
+    "meaning": "Both diagnostic tests passed. The worker loaded the real host tests. Chrome displayed local test content under the fixed process limits. This check did not start the app or import a private file. The original private-file test still needs diagnosis.",
+    "credential_used": false,
+    "app_or_provider_started": false,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false
   }
 }
