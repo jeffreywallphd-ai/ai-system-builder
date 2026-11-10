@@ -312,5 +312,31 @@
     "actual_private_ui_or_parent_qualification": false,
     "next_agent_action": "The agent will prepare the normal Windows app-data folders in a new isolated test profile and test browser startup again. Both page tests failed before they could run. The app started and stopped, and its temporary local login was removed. The folder difference is a likely cause that still needs a successful test. The real private-file import test stays open.",
     "user_action": "No action needed. The agent will continue the remaining startup checks."
+  },
+  "correctedWindowsStartup": {
+    "schema_version": "corrected-isolated-windows-startup-v1",
+    "work_id": "qualify-local-browser-startup-with-isolated-appdata",
+    "source_digest": "5c3f18fe30757501166795eaa39df830ac5a149e7fe40f11b5155393b24332b8",
+    "head": "705aaa5bc86460a2ade0102af7fdfd57e11b7336",
+    "product_source_identity": "source.2a1dbeadd8b58dfdfb1bf181de42240ac9baa90a1ff8c49192edaff8ba824c95",
+    "observation_sha256": "d2d9221b851ef12bd0d39dfa2f70f44df5857581ae0c0326c9c3b9d19e1dd97e",
+    "outcome_review_sha256": "7f6d9643c26fbae9900ce444d5825c66aa8533348a815cf307a2b6e7b78a844a",
+    "guard_checkpoint": "705aaa5bc86460a2ade0102af7fdfd57e11b7336",
+    "canonical_physical_appdata_roots_used": true,
+    "app_setup_and_awaited_shutdown_passed": true,
+    "existing_inactive_case": "skipped-after-page-and-original-fixed-writer",
+    "separate_static_page_case": "passed",
+    "failed_or_unexecuted_private_step_credited": false,
+    "saved_or_provider_credential_used": false,
+    "generated_local_pairing_file_absent_after": true,
+    "owned_processes_total": 42,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_copy_current_source_and_runtime_stable_after": true,
+    "historical_scratch_bytes_removed": 10082175,
+    "prior_failed_runs_preserved": true,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The app and browser start with the corrected Windows test profile. The page fixtures and evidence writer work. The real private-file import test is next. No action is needed from the user."
   }
 }
