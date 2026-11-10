@@ -40,6 +40,7 @@ Current scope:
 - artifact-browser published-backing re-check state orchestration uses a shared cross-host hook from `modules/ui/shared`
 - settings page server restart control that calls `POST /api/server/restart`
 - token-first style baseline under `src/styles/`
+- Security restart examples preserve whitespace and wrap long commands inside the panel, including at narrow widths.
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester and Artifact Browser; panel headers stay title-only, with actions such as Artifact Browser refresh placed in the body.
 - Dataset Preparation colocates its optional meaningful save name with final approval; one approval saves the complete curated ready set and opens the exact saved dataset in Artifact Browser, without a post-save Saved versions section. Dataset Review persists rejections and approved edits as immutable minor versions.
 - Saved versions offer **Use this setup again**. The page waits for current source

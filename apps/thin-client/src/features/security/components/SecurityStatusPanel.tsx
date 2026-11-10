@@ -5,7 +5,7 @@ export function SecurityStatusPanel() {
   const security = useThinClientSecurity();
   const status = security.status;
   const listenerLabel = status ? (status.httpsEnabled ? "HTTPS enabled" : "HTTP only") : "Not available";
-  return <section className="ui-panel ui-stack"><h2>Security</h2>
+  return <section className="ui-panel ui-stack security-status-panel"><h2>Security</h2>
     {security.loading ? <p role="status">Checking security status…</p> : null}
     {security.error ? <p role="alert">{security.guidance ?? STATUS_FAILURE}</p> : null}
     <button className="ui-button" type="button" disabled={security.loading || security.pairingBusy} onClick={() => void security.refreshStatus()}>Refresh status</button>

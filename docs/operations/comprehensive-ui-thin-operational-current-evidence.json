@@ -324,6 +324,119 @@
         "Current production-preview request denial counts are zero and the compiled7-file set matches before/after ordinary retirement. Earlier two Vite-shaped denied WebSockets remain historical; provenance is not inferred from shape.",
         "No native zoom, protected-file ownership, offload, model, managed/restricted review or whole-system qualification is supplied."
       ]
+    },
+    {
+      "run_id": "operational-thin-fb9aa257544a4e94b0ae5a18c1efb67f",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "7ca6a0167677efd43ebd2595ac1d63e93609576d",
+        "source_digest": "845f80bf57e6d76a2e9c918454f5b664e7912d5e0ba0ec90c1093f43b3618939",
+        "app_source": "source.5c236d2b36d53c84eeeaf36cfb8541d918f0e59b7eca73faff452324294206a6"
+      },
+      "manifest_sha256": "890198750ac8a07335a56a9188bc39544538e8fee4550f44a2f59217a973c72c",
+      "case_report_sha256": "632a7dadf38f156dc91f677294d9aac201ae4ba17915fe1e1d68845be16fa88b",
+      "teardown_sha256": "9f8d43d8acf2098ae408abc2ed815ad0db40224de3bee865313b5e801957044e",
+      "execution_sha256": "7fa8bb91a4f805c2acfcfc895cbcce6a7b4089afe70abb0afd87fb76e63f6724",
+      "compiled_binding_execution_sha256": "0b29ceec2de4be97106e25d0a1e0c5c147a5c68ed9a105fb07598653d5f4979d",
+      "independent_local_outcome_review_sha256": "1b9c5dd3b9b95370a0a2d174bd956a6d6e1c64812c3163d08348072f42049037",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "98f6b5750da2936c548771ef04b9b8f4fe6c467db80d7a91ef86889bf94ae050",
+        "settings": "0a2c3d3d7022ada2076e5542725a77f058598a2a63517d18c9f65b54d60e7881",
+        "security": "e10bd181d1d7534511bea6f795075421f90f0170e723476a0f1150842d5f725c",
+        "notifications": "8dbacad4a49880ad5857acd3c5b04d6784f259d856a76e4fb3cfbf677e45e580"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 6641,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 29,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted"
+        ],
+        "nextPhase": "notifications-empty"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "security_observation": {
+        "status": "passed-local-observation",
+        "workflow_phases_passed": [
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted"
+        ],
+        "widths": [
+          1440,
+          320
+        ],
+        "positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "forced_colors_positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "violations": 0,
+        "unresolved_nodes": 0
+      },
+      "notifications_observation": {
+        "status": "failed",
+        "failure_stage": "audit-1440",
+        "unresolved_rule": "aria-valid-attr-value",
+        "unresolved_nodes": 1,
+        "positive_contrast_nodes": 37,
+        "violations": 0,
+        "narrow_or_forced_colors_executed": false,
+        "precise_element_or_cause_proved": false
+      },
+      "limits": [
+        "The first11of17ordered steps completed. All five Security workflow steps and its normal/forced-colors audits pass at both widths; the entire operational case remains failed.",
+        "Notifications retains one unresolved ARIA check. The exact element and cause need evidence; no attribute removal or audit waiver follows.",
+        "Current request denials are zero; original process/browser/proxy retirement and the complete7file compiled binding pass. No retry or further effect is granted by this record.",
+        "No native400, other-host, offload, model, restricted security review, parent or deferred full-system qualification follows."
+      ]
     }
   ],
   "limits": [
@@ -336,8 +449,8 @@
   "current_follow_up": {
     "owner": "Agent",
     "status": "pending",
-    "action": "Diagnose four partially obscured Security text checks, repair any confirmed layout fault, then continue the remaining operational steps. Security narrow and forced-colors checks still need evidence.",
-    "completed_preparation": "All six navigation/Settings steps pass; both critical surfaces pass normal and forced-colors audits. Current production-preview connections meet the existing zero-denial rule.",
+    "action": "Check the notification popup reference with an automated test. Fix any confirmed issue, then continue the remaining operational steps. No user action is needed.",
+    "completed_preparation": "Eleven navigation, Settings and Security steps pass. All three surfaces pass normal and forced-colors audits at both widths. Security refresh, safe failure, retry and restricted controls pass.",
     "first_failures_preserved": true,
     "parent_pass": false
   },
@@ -538,5 +651,35 @@
     "compiled_source_files_bound_before_and_after": 7,
     "independent_local_review_sha256": "bd76bd7be344fef1e75bafcf7bf29cbb60737eb0b4497febbfb12dd1552317db",
     "whole_journey_or_parent_pass": false
+  },
+  "security_command_layout_observation": {
+    "before_source_digest": "01a38536d66bbcae08f697c773743b3180c99451a9f4da4d0ad011a5196aa138",
+    "after_source_digest": "845f80bf57e6d76a2e9c918454f5b664e7912d5e0ba0ec90c1093f43b3618939",
+    "implementation": "Wrap long Security restart examples within their existing panel while preserving whitespace and every command character.",
+    "fixture_scope": "Actual SecurityPage/component with one fixed synthetic status hook and the full actual styles, on inert source-owned shell structure. This fixture is separate from the real app result.",
+    "widths": [
+      1440,
+      320
+    ],
+    "media": [
+      "normal",
+      "forced-colors"
+    ],
+    "positively_measurable_commands_per_row": 5,
+    "clipped_examples_before": [
+      4,
+      5
+    ],
+    "clipped_examples_after": [
+      0,
+      0
+    ],
+    "same_command_text_lengths": true,
+    "ordinary_browser_and_proxy_retirement_confirmed": true,
+    "fresh_owned_profiles_removed_bytes": 1114112,
+    "independent_geometry_outcome_review_sha256": "d39c57d0a635fb7baed33ad427275a96a9ad4c123c266a5188075f2b8e62a6de",
+    "actual_security_surface_passed": true,
+    "actual_whole_operational_journey_passed": false,
+    "parent_qualification_granted": false
   }
 }
