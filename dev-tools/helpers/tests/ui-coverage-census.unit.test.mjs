@@ -461,7 +461,51 @@ function reviewBrowserLegacyView(map,result){
   // gaps unchanged so older guards still inspect their own current facts.
   return{map:{...map,scenarios,sources:map.sources.filter(row=>row.path!==added).map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
 }
+// Committed definitions are authenticated against one actual reviewed source
+// checkpoint. This source-only transition executes and qualifies no host.
+const committedCensusDefinition=Object.freeze({baseline:"be0a48e241ca94d1ad18fda89ffa8f095d98e56c",priorMap:"926343f38eab0c2b1ca4870461ea9ab72a26d46a78f4df6f948a35f6670e4fc8",currentMap:"cde1583cb3a8130985f6a161a6a729e732b7a82afab8eeffd853c7fbc26ce04e"});
+let committedCensusWitness;
+function committedCensusLegacyView(map,result){
+  if(map.source_baseline!==committedCensusDefinition.baseline){
+    assert.equal(map.source_baseline,"608679a6095ef5617921e504bf208858df6a7c49");
+    return{map,result};
+  }
+  // Reject changed/future definitions before requesting any Git witness.
+  assert.equal(sha(JSON.stringify(map)),committedCensusDefinition.currentMap);
+  assert.deepEqual(result.gaps.filter(g=>g.kind==="unreviewed-source-drift"),[]);
+  if(!committedCensusWitness){
+    const prior=JSON.parse(historicalSource(committedCensusDefinition.baseline,"docs/operations/comprehensive-ui-automation-current-census.json"));
+    assert.equal(sha(JSON.stringify(prior)),committedCensusDefinition.priorMap);
+    assert.equal(prior.sources.length,181);const expected=structuredClone(prior);
+    const names=prior.sources.map(row=>censusPath(row.path));assert.equal(new Set(names).size,names.length);
+    const env={...process.env};for(const key of Object.keys(env))if(key.toUpperCase().startsWith("GIT_"))delete env[key];
+    Object.assign(env,{GIT_CONFIG_NOSYSTEM:"1",GIT_NO_REPLACE_OBJECTS:"1",GIT_OPTIONAL_LOCKS:"0"});
+    const bytes=execFileSync("git",["--no-optional-locks","cat-file","--batch"],{env,windowsHide:true,timeout:20000,maxBuffer:CENSUS_LIMITS.totalBytes+192*256,input:names.map(name=>committedCensusDefinition.baseline+":"+name).join("\n")+"\n"});
+    let offset=0,total=0;const decoder=new TextDecoder("utf-8",{fatal:true});
+    for(const row of expected.sources){
+      const end=bytes.indexOf(10,offset);assert(end>=offset&&end-offset<=200);
+      const header=/^[a-f0-9]{40,64} blob (0|[1-9][0-9]*)$/.exec(bytes.subarray(offset,end).toString("ascii"));assert(header);
+      const size=Number(header[1]);assert(Number.isSafeInteger(size)&&size<=CENSUS_LIMITS.sourceBytes&&end+1+size<bytes.length&&bytes[end+1+size]===10);
+      const source=bytes.subarray(end+1,end+1+size);total+=size;assert(total<=CENSUS_LIMITS.totalBytes);offset=end+size+2;
+      assert.deepEqual(sourceFacts(row.path,source),row.facts);
+      row.committed_sha256=sha(decoder.decode(source).replace(/\r\n/g,"\n"));assert.equal(row.committed_sha256,row.facts.sha256);
+    }
+    assert.equal(offset,bytes.length);expected.source_baseline=committedCensusDefinition.baseline;
+    assert.equal(sha(JSON.stringify(expected)),committedCensusDefinition.currentMap);
+    const gaps=prior.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}));assert.equal(gaps.length,17);
+    committedCensusWitness={prior,expected,gaps};
+  }
+  assert.deepEqual(map,committedCensusWitness.expected);
+  // Only this exact internal historical view reaches the unchanged older
+  // validators. Published current source gaps remain empty, not historical17.
+  return{map:structuredClone(committedCensusWitness.prior),result:{...result,gaps:[...result.gaps,...structuredClone(committedCensusWitness.gaps)]}};
+}
 function assertCompleteCurrentSourceDrift(map,result){
+  const historical=committedCensusLegacyView(map,result);
+  assertBrowserReferenceSourceDrift(historical.map,historical.result);
+}
+
+function assertBrowserReferenceSourceDrift(map,result){
   const legacy=reviewBrowserLegacyView(map,result);
   assertReferenceSourceDrift(legacy.map,legacy.result);
 }
@@ -630,7 +674,8 @@ test("checks the current repository map against original scope and actual source
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
-  const workspaceLegacy=workspaceSwitchLegacyView(map,result);
+  const committedHistory=committedCensusLegacyView(map,result);
+  const workspaceLegacy=workspaceSwitchLegacyView(committedHistory.map,committedHistory.result);
   const legacy=privateProviderLegacyView(workspaceLegacy.map,workspaceLegacy.result);
   assertSettingsNavigationSourceDrift(legacy.map,legacy.result);
   const base="dev-tools/scripts/qualification/visual-composer/";
@@ -836,7 +881,8 @@ function assertCurrentReintroducedSources(map,archive){
   // The exact new browser definition has its own current proof. Only its
   // authenticated legacy view reaches the older single-training-source guard.
   // The archive itself and every unrelated archived-source refusal stay intact.
-  const legacy=reviewBrowserLegacyView(map,result);
+  const historical=committedCensusLegacyView(map,result);
+  const legacy=reviewBrowserLegacyView(historical.map,historical.result);
   assertReintroducedTrainingOracle(legacy.map,archive);
 }
 
@@ -1256,11 +1302,11 @@ test("historical review-reference definition binds exact new facts and preserves
   ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertReferenceSourceDrift(m,r));}
 });
 
-test("current browser-reference definitions bind exact updates and one added pure guard without inheriting a pass",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+test("historical browser-reference definitions bind exact updates and one added pure guard without inheriting a pass",()=>{
+  const map=JSON.parse(historicalSource("be0a48e241ca94d1ad18fda89ffa8f095d98e56c","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(map.sources.length,181);assert.equal(result.gaps.length,17);assert.equal(pendingReviewBrowserDefinitions.length,3);
-  assertCompleteCurrentSourceDrift(map,result);
+  assertBrowserReferenceSourceDrift(map,result);
   assert.throws(()=>assertReferenceSourceDrift(map,result),"Earlier reference history cannot qualify new browser definitions.");
   for(const pending of pendingReviewBrowserDefinitions){
     const target=m=>m.sources.find(row=>row.path===pending.path);
@@ -1276,12 +1322,27 @@ test("current browser-reference definitions bind exact updates and one added pur
       (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
       (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
-    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertBrowserReferenceSourceDrift(m,r));}
   }
   for(const mutate of [
     m=>m.sources.push({path:"dev-tools/unrelated.unit.test.ts",facts:{},committed_sha256:"0".repeat(64)}),
     m=>m.scenarios.find(row=>row.id==="contributor-review-site").behavior_links[0].assertion_sources.pop(),
     m=>m.scenarios.find(row=>row.id==="contributor-review-site").behavior_links[0].assertion_sources.shift(),
     m=>m.scenarios.push(structuredClone(m.scenarios.find(row=>row.id==="contributor-review-site"))),
-  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertCompleteCurrentSourceDrift(current,structuredClone(result)));}
+  ]){const current=structuredClone(map);mutate(current);assert.throws(()=>assertBrowserReferenceSourceDrift(current,structuredClone(result)));}
+});
+
+// Current source-only binding does not certify any of the39 host families.
+test("current census pins every definition to its actual reviewed commit without passing hosts",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(map.source_baseline,committedCensusDefinition.baseline);assert.equal(map.sources.length,181);assert.equal(result.gaps.length,0);assert.equal(map.scenarios.length,39);
+  assertCompleteCurrentSourceDrift(map,result);assert.throws(()=>assertBrowserReferenceSourceDrift(map,result));
+  for(const mutate of [
+    m=>{m.source_baseline="0".repeat(40);},m=>{m.source_baseline="608679a6095ef5617921e504bf208858df6a7c49";},
+    m=>{m.sources[0].committed_sha256="0".repeat(64);},m=>{m.sources[0].facts.sha256="0".repeat(64);},m=>{m.sources[0].facts.assertionCount++;},
+    m=>{m.sources.pop();},m=>{m.sources.push(structuredClone(m.sources[0]));},m=>{m.sources[0].extra="forged";},
+    m=>{m.scenarios[0].behavior_links[0].assertion_sources.pop();},m=>{m.scenarios[0].execution_status="passed";},m=>{m.full_testing_status="passed";},m=>{m.extra="forged";},
+  ]){const changed=structuredClone(map);mutate(changed);assert.throws(()=>assertCompleteCurrentSourceDrift(changed,structuredClone(result)));}
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:[{kind:"unreviewed-source-drift",source:map.sources[0].path}]}));
 });

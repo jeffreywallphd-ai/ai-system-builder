@@ -2,7 +2,7 @@
  "schema_version": "current-ui-definition-census-v1",
  "roadmap_id": "comprehensive-ui-automation",
  "scope": "definitions-only-no-execution-pass",
- "source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "source_baseline": "be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
  "full_testing_status": "deferred-by-user",
  "sources": [
   {
@@ -818,7 +818,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "a109963772541a400749dbbaa06307888a1440c75b5efed8237a0fdfe4b8806c"
+   "committed_sha256": "238fa423bc56cdef9bbcd6feaf207a363e37ba40c28751cb4c2ceef778905abd"
   },
   {
    "path": "apps/desktop/src/renderer/features/models/tests/desktop-model-preload.ui.test.tsx",
@@ -1018,7 +1018,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "22452d5e28d03e26605aa5be1c186a1fb622b9927c1e6f49836eaa55d7b135af"
+   "committed_sha256": "235adf27c2e5b1b2120b3d15af98f7192addfc114304a4b37fcf9a8a5f6c2d74"
   },
   {
    "path": "apps/desktop/src/renderer/features/models/tests/model-training-notification-bridge.unit.test.tsx",
@@ -1400,7 +1400,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "0461d04977a6958768c694ea1bda292c1808d5cd3654f94180674eee881fe88b"
+   "committed_sha256": "8ad89c8b89bf025756e7effc7038a357790b8b781faaf20f18506c03e26e6634"
   },
   {
    "path": "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
@@ -1534,7 +1534,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "1d36083da854d78f668e320d1b7871778e8e309ec80005370a0fbaf5ee96c355"
+   "committed_sha256": "365bc8c8e66de96974ee658c9a2e006769e6b3cc5fb812d0a32a9d864806dded"
   },
   {
    "path": "apps/desktop/src/renderer/features/python-runtime/tests/use-python-runtime-footer.unit.test.tsx",
@@ -5472,7 +5472,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "dc0a02cd9c1fa62e818971385d85000494f4104c395e5f1e51139dd94c7a7470"
+   "committed_sha256": "1dafcde36e373a8444b0236f24c3fb9db86b8d109c07603d4e3753107820bc88"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/dataset-approval-ui-transports-storage.ui.test.tsx",
@@ -6153,7 +6153,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "8fd3d3fb1ed30e2a381b8b966e213825eb68fca5438934cd87874f262069e7ab"
+   "committed_sha256": "55ba55112ff98432a06a16dcd80acc9b96e1c1a83bf6d05607ce9f9b83df9cea"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
@@ -8299,7 +8299,7 @@
      }
     ]
    },
-   "committed_sha256": "43a30f579f680cd402e3922b906d5adf36fa1b157780990877c5a0140cb801be"
+   "committed_sha256": "5efd9d07a41b128ec2a2c1d600443cb92df32316d91bc7faa61a995c4ce86cb2"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
@@ -8569,7 +8569,7 @@
      }
     ]
    },
-   "committed_sha256": "677cbba4637b13dbb4e9cb5125e3d6277cf2e43323e458b9f2cc321411cd9560"
+   "committed_sha256": "1a62f166e93b8519dff996dabfada0d7f64ac331b2c4d5961c9533e0d64394ca"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-owned-tasks.e2e.spec.ts",
@@ -9063,7 +9063,7 @@
      }
     ]
    },
-   "committed_sha256": "2947ecc6d7eff93cbbfe4f500416db347c78393eb3a2f582b24904fdc13954bf"
+   "committed_sha256": "db47b2ad96970f22ebe60bb87077f89d496a85858ae0cac8d004dfba3d9fcb47"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts",
@@ -9319,7 +9319,7 @@
      }
     ]
    },
-   "committed_sha256": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9"
+   "committed_sha256": "721d0bcbf609ae7b1affb209a05f08af6de7ff5e4ad83766a63dd22bbca5db2c"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-structured-output.e2e.spec.ts",
@@ -9714,7 +9714,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "e3b69488b90c33157905b797a3526a02a09185d9bab372ff4877236191022db9"
+   "committed_sha256": "d7e8ae80ae01a66e8503a2433cfc3007910ed048e29826d37683fad54707c070"
   },
   {
    "path": "modules/adapters/transport/ipc-electron/asset-authoring/tests/register-asset-authoring-ipc.unit.test.ts",
@@ -12760,7 +12760,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "e4d72c2cb6906928bf441ba3787e7adb0c03ef6d6eee294438bb496ecf0ff67a"
+   "committed_sha256": "bc5bd6a1b736fd0196371ad532a3998edc3eff78fa9d7ef200b2881ab86bbafe"
   },
   {
    "path": "dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts",
@@ -12853,7 +12853,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "1568ceef4d7dce87f07ae552142231b1b5feab2f1c316a7a3659f1d8daf82bf5"
+   "committed_sha256": "42e2cbdf99dc92d9cc4d89806138b71c2123157582be11ea0bc2d7419f9107f3"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts",
@@ -14313,7 +14313,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "9ddcfcbe620a754857065c4d28c7368d3bf4f870d0b0ce32771c8e87a0780662"
+   "committed_sha256": "fb15317d72ee375047c5cb24e16d417a96e8fa7781fe2ba0839caa452575915a"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/functional-provider-oracles.ts",
@@ -14438,7 +14438,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "14225c5974a305f52ad7ff64dfdc4bbd0bc6a28836d58986859d3fa55c787dfd"
+   "committed_sha256": "a2eb97b9689441fd53b5d3a8b1fecf2decf5cc84b66bb6bd507344b1552a4565"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/functional-artifact-oracles.ts",
@@ -14592,7 +14592,7 @@
     ],
     "modifiers": []
    },
-   "committed_sha256": "890e4a512bc30ee63f50d27a6686e0c713869df3bfb42ff6bad6fc4a9aff1ae7"
+   "committed_sha256": "f79ed0d780918fa0ac45b75439cd7d26d7e8b5190dd6e218492b9214c43d065a"
   },
   {
    "path": "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
@@ -14776,7 +14776,7 @@
     "assertionExamples": [],
     "modifiers": []
    },
-   "committed_sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e"
+   "committed_sha256": "55681ac62036d60b180316aa424871ab39775c1c358b39e9e2a35e08b12b4538"
   }
  ],
  "scenarios": [

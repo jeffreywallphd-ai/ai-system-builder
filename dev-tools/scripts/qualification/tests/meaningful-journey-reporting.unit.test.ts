@@ -344,7 +344,7 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
   expect(result.gaps.filter(gap=>gap.kind === "actual-host-not-run-by-census")).toHaveLength(39);
   expect(result.gaps.some(gap=>gap.kind === "declared-test-modifier")).toBe(true);
   expect(bundle.map.sources.some(row=>row.path === "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts")).toBe(false);
-  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...responsiveSources,...modelStartupReportSources,...privateProviderPrivacySources,...workspaceSwitchSources,...reviewReferenceSources].sort());
+  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift")).toEqual([]);
   checkedHistory(bundle,historicalOperationalMap(),JSON.parse(bundle.read(historyPath).toString("utf8")) as CensusHistory);
   checkedDiagnosticHistory(bundle,historicalDiagnosticMap(),JSON.parse(bundle.read(diagnosticHistoryPath).toString("utf8")) as CensusHistory);
   checkedContrastV2History(bundle,historicalContrastV2Map(),JSON.parse(bundle.read(contrastV2HistoryPath).toString("utf8")) as CensusHistory);
@@ -361,6 +361,12 @@ it("keeps current coverage definitions bound to real source and preserves unrun 
 // This source-only check authenticates multiple historical Git snapshots on a
 // cold filesystem. Its bounded allowance is independent of product/UI targets.
 },15_000);
+it("preserves the exact earlier17-source drift inventory without treating it as current",async()=>{
+  const bundle=await censusBundle(),map=JSON.parse(gitSource("be0a48e241ca94d1ad18fda89ffa8f095d98e56c",censusPath).toString("utf8")) as CensusMap;
+  const result=checkedCensus(bundle,map);
+  expect(result.gaps.filter(gap=>gap.kind === "unreviewed-source-drift").map(gap=>gap.source).sort()).toEqual([...responsiveSources,...modelStartupReportSources,...privateProviderPrivacySources,...workspaceSwitchSources,...reviewReferenceSources].sort());
+  expect(result).toMatchObject({source_files:181,executed_tests:0,actual_host_pass:false,parent_qualification_granted:false});
+});
 it("keeps workspace history authentic when current review definitions change",async()=>{
   const bundle=await censusBundle(),history=JSON.parse(bundle.read(workspaceSwitchHistoryPath).toString("utf8")) as CensusHistory;
   checkedCensus(bundle,bundle.map);

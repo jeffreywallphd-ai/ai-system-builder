@@ -2267,7 +2267,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -2286,7 +2286,7 @@
       "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
       "limitations": [
         "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
-        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9–12of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
         "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
       ]
     },
@@ -12116,6 +12116,194 @@
         "Only this tiny local Thin artifact workflow and explicit read-only route refusal passed. Other hosts, large inputs, websites and private-provider publication retain their own checks. No brokered retrieval or general network result is asserted.",
         "The44-process observation proves only this fixture lifetime and cleanup. It does not qualify general model-worker/crash recovery, managed or physical ownership, retained-tree protection, native offload/restart, restricted security review or a parent roadmap.",
         "The earlier local lifecycle and private-source journeys were not repeated; earlier failures remain preserved. Accepted model accuracy/OCR stay closed and the private website check stays deferred. Final full-software qualification remains separate."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "work_id": "retain-partial-ordinary-offload-lease-construction",
+      "work_criteria": [
+        "interrupted-creation-retains-original-owner",
+        "finite-custody-and-confirmed-retirement",
+        "scoped-tests-docs-and-pending-native-gaps"
+      ],
+      "receipt_digest": "ac308788642a096747cdd300d9416b8c92326400fb4eb6d9ce5561e084894e0f",
+      "review_digest": "71a7dccc4920e687879ad14bfa1c02c14f8d0cf18e962d995e3f39ded8817421",
+      "scope": "Commit 75efdd2 retains ordinary staging ownership before construction, keeps interrupted creation charged to its process-local limit and requires acknowledged cleanup before retirement. Its focused source regressions cover constructor interruption and prevent repeated cleanup from deleting a replacement folder. This is ordinary in-process component evidence.",
+      "limitations": [
+        "These checks do not compose or qualify native retained-tree protection, protected durable/shared accounting, cached-model/borrower ownership, owned-worker exit or actual offload/restart resources. Unknown old staging and all existing guards remain untouched.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "retain-partial-ordinary-offload-lease-construction",
+      "work_criteria": [
+        "interrupted-creation-retains-original-owner",
+        "finite-custody-and-confirmed-retirement",
+        "scoped-tests-docs-and-pending-native-gaps"
+      ],
+      "receipt_digest": "ac308788642a096747cdd300d9416b8c92326400fb4eb6d9ce5561e084894e0f",
+      "review_digest": "71a7dccc4920e687879ad14bfa1c02c14f8d0cf18e962d995e3f39ded8817421",
+      "scope": "Commit 75efdd2 retains ordinary staging ownership before construction, keeps interrupted creation charged to its process-local limit and requires acknowledged cleanup before retirement. Its focused source regressions cover constructor interruption and prevent repeated cleanup from deleting a replacement folder. This is ordinary in-process component evidence.",
+      "limitations": [
+        "These checks do not compose or qualify native retained-tree protection, protected durable/shared accounting, cached-model/borrower ownership, owned-worker exit or actual offload/restart resources. Unknown old staging and all existing guards remain untouched.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "retain-partial-ordinary-offload-lease-construction",
+      "work_criteria": [
+        "interrupted-creation-retains-original-owner",
+        "finite-custody-and-confirmed-retirement",
+        "scoped-tests-docs-and-pending-native-gaps"
+      ],
+      "receipt_digest": "ac308788642a096747cdd300d9416b8c92326400fb4eb6d9ce5561e084894e0f",
+      "review_digest": "71a7dccc4920e687879ad14bfa1c02c14f8d0cf18e962d995e3f39ded8817421",
+      "scope": "Commit 75efdd2 retains ordinary staging ownership before construction, keeps interrupted creation charged to its process-local limit and requires acknowledged cleanup before retirement. Its focused source regressions cover constructor interruption and prevent repeated cleanup from deleting a replacement folder. This is ordinary in-process component evidence.",
+      "limitations": [
+        "These checks do not compose or qualify native retained-tree protection, protected durable/shared accounting, cached-model/borrower ownership, owned-worker exit or actual offload/restart resources. Unknown old staging and all existing guards remain untouched.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "review-site-ui-regressions",
+      "work_id": "qualify-review-reference-transport-and-census",
+      "work_criteria": [
+        "complete-roundtrip-and-existing-wire-bounds",
+        "compatible-read-only-endpoint-and-cli",
+        "browser-refresh-navigation-and-inert-data",
+        "owned-docs-census-and-genuine-review"
+      ],
+      "receipt_digest": "139ef5e4a6b4aef145dba2ed8b6ea90f69222575e1fa43e38a69020b41f49e30",
+      "review_digest": "b1ffda4b96a3682fd874cc94682d6a64147c2f235b486750b2f65006f2ad2d86",
+      "scope": "Commit 42179eb qualifies the bounded same-response work-reference transport and strict source history. All canonical roadmap/chunk details stay present; missing, duplicate, foreign or changed references are refused before refresh adoption. The fixed response limit, read-only routes and host/origin/security controls stay intact.",
+      "limitations": [
+        "This source/transport component alone supplies no actual browser, product-host, model/provider, native or parent qualification. The separately executed review-browser results have their own exact source and evidence links.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-review-reference-transport-and-census",
+      "work_criteria": [
+        "complete-roundtrip-and-existing-wire-bounds",
+        "compatible-read-only-endpoint-and-cli",
+        "browser-refresh-navigation-and-inert-data",
+        "owned-docs-census-and-genuine-review"
+      ],
+      "receipt_digest": "139ef5e4a6b4aef145dba2ed8b6ea90f69222575e1fa43e38a69020b41f49e30",
+      "review_digest": "b1ffda4b96a3682fd874cc94682d6a64147c2f235b486750b2f65006f2ad2d86",
+      "scope": "Commit 42179eb qualifies the bounded same-response work-reference transport and strict source history. All canonical roadmap/chunk details stay present; missing, duplicate, foreign or changed references are refused before refresh adoption. The fixed response limit, read-only routes and host/origin/security controls stay intact.",
+      "limitations": [
+        "This source/transport component alone supplies no actual browser, product-host, model/provider, native or parent qualification. The separately executed review-browser results have their own exact source and evidence links.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "review-site-ui-regressions",
+      "work_id": "qualify-review-browser-and-reporting-history",
+      "work_criteria": [
+        "exact-read-only-reference-proxy",
+        "precise-definition-history-and-denials",
+        "three-actual-review-browser-cases",
+        "owned-reviewed-checkpoint-and-preserved-gaps"
+      ],
+      "receipt_digest": "dcb892659afbe0eff3571897201599eb0c376f4022b8bc6d47fedea3982ece81",
+      "review_digest": "15f5ea5ca00fbfa398ee1bc55f062bda6789ffdc78e8df361657775b9133838b",
+      "scope": "Commit d41d6a7 records three actual Chrome review-site journeys passed once with zero failures, skips or retries: complete details/linked work, refresh/refusal recovery, and theme/storage/keyboard/narrow layout. The exact read-only proxy/header/source checks, fixed phase reports and confirmed fixture/request cleanup are retained. Total recorded run time was 29516 ms. Related reporting history and current pinned-runtime source gates also passed independent review.",
+      "limitations": [
+        "These are local read-only review-page observations at the recorded code source, before the report was added. They do not supply final-current-source parent qualification, application-host accessibility/performance, physical process-tree/worker crash ownership, file protection or offload evidence. Controlled refresh/refusal used a declared synthetic copy.",
+        "The failed original reporting receipt and two wrong-runtime verification receipts stay preserved. An exact diagnostic reproduced the older Node 24.14 namespace import failure; pinned24.22 qualification passed. The subsequent scoped loader component supplies its own compatibility evidence without rewriting any failed attempt.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "qualify-review-browser-and-reporting-history",
+      "work_criteria": [
+        "exact-read-only-reference-proxy",
+        "precise-definition-history-and-denials",
+        "three-actual-review-browser-cases",
+        "owned-reviewed-checkpoint-and-preserved-gaps"
+      ],
+      "receipt_digest": "dcb892659afbe0eff3571897201599eb0c376f4022b8bc6d47fedea3982ece81",
+      "review_digest": "15f5ea5ca00fbfa398ee1bc55f062bda6789ffdc78e8df361657775b9133838b",
+      "scope": "Commit d41d6a7 records three actual Chrome review-site journeys passed once with zero failures, skips or retries: complete details/linked work, refresh/refusal recovery, and theme/storage/keyboard/narrow layout. The exact read-only proxy/header/source checks, fixed phase reports and confirmed fixture/request cleanup are retained. Total recorded run time was 29516 ms. Related reporting history and current pinned-runtime source gates also passed independent review.",
+      "limitations": [
+        "These are local read-only review-page observations at the recorded code source, before the report was added. They do not supply final-current-source parent qualification, application-host accessibility/performance, physical process-tree/worker crash ownership, file protection or offload evidence. Controlled refresh/refusal used a declared synthetic copy.",
+        "The failed original reporting receipt and two wrong-runtime verification receipts stay preserved. An exact diagnostic reproduced the older Node 24.14 namespace import failure; pinned24.22 qualification passed. The subsequent scoped loader component supplies its own compatibility evidence without rewriting any failed attempt.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "qualify-review-browser-and-reporting-history",
+      "work_criteria": [
+        "exact-read-only-reference-proxy",
+        "precise-definition-history-and-denials",
+        "three-actual-review-browser-cases",
+        "owned-reviewed-checkpoint-and-preserved-gaps"
+      ],
+      "receipt_digest": "dcb892659afbe0eff3571897201599eb0c376f4022b8bc6d47fedea3982ece81",
+      "review_digest": "15f5ea5ca00fbfa398ee1bc55f062bda6789ffdc78e8df361657775b9133838b",
+      "scope": "Commit d41d6a7 records three actual Chrome review-site journeys passed once with zero failures, skips or retries: complete details/linked work, refresh/refusal recovery, and theme/storage/keyboard/narrow layout. The exact read-only proxy/header/source checks, fixed phase reports and confirmed fixture/request cleanup are retained. Total recorded run time was 29516 ms. Related reporting history and current pinned-runtime source gates also passed independent review.",
+      "limitations": [
+        "These are local read-only review-page observations at the recorded code source, before the report was added. They do not supply final-current-source parent qualification, application-host accessibility/performance, physical process-tree/worker crash ownership, file protection or offload evidence. Controlled refresh/refusal used a declared synthetic copy.",
+        "The failed original reporting receipt and two wrong-runtime verification receipts stay preserved. An exact diagnostic reproduced the older Node 24.14 namespace import failure; pinned24.22 qualification passed. The subsequent scoped loader component supplies its own compatibility evidence without rewriting any failed attempt.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "fix-node24-ui-profile-source-loader",
+      "work_criteria": [
+        "fixed-scoped-source-imports",
+        "preserved-assertions-and-node24-matrix",
+        "documented-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "16da2731022ab1accd7587485b058ccc2b8c32770ecde05f8067b4461b1658f7",
+      "review_digest": "40e34b85aa8c13ae516eaab2c75873b3c42c63e07f5b4efc5f19aa2128128429",
+      "scope": "Commit be0a48e repairs only fixed TypeScript imports in two MJS source fixtures using the already installed scoped CJS API with finally-unregister. Every prior assertion and actual test-worker-after-ESM-setup check remains. All22cases passed in each of four standalone/global-loader observations across existing hash-verified Node 24.14.0 and 24.22.1; the complete operational source profile also passed on both. Dependencies, supported engines and application/config behavior remain unchanged.",
+      "limitations": [
+        "This qualifies fixed test-source loading and test-worker setup only. It starts no product app, browser or model and does not qualify actual product workflows, provider semantics, native lifecycle/offload, measured resource budgets or a parent roadmap.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "fix-node24-ui-profile-source-loader",
+      "work_criteria": [
+        "fixed-scoped-source-imports",
+        "preserved-assertions-and-node24-matrix",
+        "documented-reviewed-owned-checkpoint"
+      ],
+      "receipt_digest": "16da2731022ab1accd7587485b058ccc2b8c32770ecde05f8067b4461b1658f7",
+      "review_digest": "40e34b85aa8c13ae516eaab2c75873b3c42c63e07f5b4efc5f19aa2128128429",
+      "scope": "Commit be0a48e repairs only fixed TypeScript imports in two MJS source fixtures using the already installed scoped CJS API with finally-unregister. Every prior assertion and actual test-worker-after-ESM-setup check remains. All22cases passed in each of four standalone/global-loader observations across existing hash-verified Node 24.14.0 and 24.22.1; the complete operational source profile also passed on both. Dependencies, supported engines and application/config behavior remain unchanged.",
+      "limitations": [
+        "This qualifies fixed test-source loading and test-worker setup only. It starts no product app, browser or model and does not qualify actual product workflows, provider semantics, native lifecycle/offload, measured resource budgets or a parent roadmap.",
+        "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
       ]
     }
   ]

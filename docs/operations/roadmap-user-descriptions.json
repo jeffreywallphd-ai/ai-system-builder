@@ -11238,7 +11238,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder\u2019s installed packages.",
+          "The dependency audit passed in the working folder. A separate snapshot check failed because it shares that folder’s installed packages.",
           "Independent review confirmed that the same fourteen dependency inputs and installed packages apply to both copies.",
           "The snapshot failure remains recorded. These checks do not prove a fresh installation."
         ]
@@ -11771,7 +11771,7 @@
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The Desktop app can find original files that are outside the file browser\u2019s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
+          "The Desktop app can find original files that are outside the file browser’s first 250 results. It checks file identity and all saved settings before changing the form. A slow or old request cannot replace newer edits.",
           "The remaining Data work and final tests stay open. No action needed."
         ]
       }
@@ -16922,7 +16922,7 @@
         "owner": "agent",
         "sentences": [
           "Test navigation now uses the real sidebar or menu.",
-          "The training test uses the app\u2019s own output folder.",
+          "The training test uses the app’s own output folder.",
           "The coverage records preserve earlier work and use the correct file versions.",
           "This tested and reviewed source change is committed."
         ]
@@ -17144,7 +17144,7 @@
         "owner": "agent",
         "sentences": [
           "These earlier results do not cover the timeout cleanup error found later.",
-          "The agent tracks the repair in the work item \u201cHandle dataset cancellation errors at the timeout boundary.\u201d",
+          "The agent tracks the repair in the work item “Handle dataset cancellation errors at the timeout boundary.”",
           "These results do not prove that all background processes and file handles closed. No action is needed from you."
         ]
       }
@@ -17373,6 +17373,124 @@
         "sentences": [
           "Previously completed file and private-source tests were not repeated. Earlier failures stay in the history.",
           "Completed model accuracy and OCR tests stay closed. The private website test stays deferred. Full software tests follow the open feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6d35c409a2c1bcb282bc2cfb659bf32bec00492ca6456662a118fdac4ff94079",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Temporary model folders remain tracked if their creation stops unexpectedly.",
+          "Confirmed cleanup cannot delete a replacement folder.",
+          "These local component checks passed. No user action is needed for them."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ab5faaf27c334ed8d61ecf5bcb0e39d04b42d7ddeee02f710673c1f0d5d1e9f4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still finish and test file protection, shared disk accounting, cached-model ownership, worker shutdown and low-memory restart.",
+          "Old files and existing safety checks remain unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6c50a79e6b680790855cf75e0df5de30d2aada2af17aaf69f9cab5beafd1119b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Completed model accuracy and OCR checks stay closed.",
+          "The private website test stays deferred.",
+          "The agent must still finish the remaining file protection, low-memory restart, host, performance and scale checks.",
+          "Full software tests follow the remaining feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "161aed5853f5ab30e68fb818c4be5bd9ffbd722bb3231b8f6c63d3404e9b2276",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The review feed keeps complete roadmap and work-chunk details.",
+          "It checks each linked work item before using a refresh.",
+          "Its existing size limit and read-only protections remain in force."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "889767743d045d70604d5ad07caae9ea7a8982d1887264e531d1c736761824ae",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers the review feed.",
+          "Browser results are recorded separately. Application, platform and roadmap qualification still need their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e5a9f06d9afdcc2b121c4e49ba2083ce8e7cb47d939479522d294dd7ad581db4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All three review-page browser journeys passed without retries or skipped cases.",
+          "They checked complete details and links, refresh and connection recovery, and theme, storage, keyboard and narrow layout.",
+          "The test fixtures closed correctly. No user action is needed for these checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9ca6bfa0731e4314ddbd0d1c525bfbdc39771b2fe31899bdff66ac1672115120",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers the local review page at its recorded code version.",
+          "Refresh and connection-refusal checks used a declared test copy.",
+          "The agent still needs final roadmap evidence and separate application, accessibility, performance, process recovery and low-memory checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d24322124bc94a886b595db80f07b75ac085e37c1b3cc68db234358e733824b3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed runs remain in the history.",
+          "The source checks passed with the verified runtime.",
+          "The later loader fix has separate results for both installed Node 24 versions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8f15fc18e978932238595d4529e6e090acebb06b0e27f432ed093f2e545ac09d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The source tests now load on both installed Node 24 versions.",
+          "All 22 tests passed in each of four entry and runtime combinations. The related source profile also passed on both versions.",
+          "The existing assertions and real test-worker setup checks remain. Dependency versions and application behavior did not change."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c654e21216c1278634ab931133b166a23a507531e6e22d67b4a727f53036993b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers source-test loading and test-worker setup.",
+          "Application workflows, providers, model resources, platform recovery and roadmap completion still need their own automated evidence."
         ]
       }
     }

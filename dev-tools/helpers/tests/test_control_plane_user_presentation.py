@@ -240,7 +240,23 @@ class CurrentVersionedPresentationTests(unittest.TestCase):
         self.assertTrue(all(p.stat().st_size <= 2 * 1024 * 1024 for p in sources))
         before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
         with patch('control_plane.projection.Records.load', side_effect=lambda: Records.empty()):
-            technical, user = project(repository), user_project(repository)
+            technical = project(repository, compact_work_items=True)
+            user = compact_user_project(repository)
+            # The browser requests references. The older duplicated format
+            # must refuse when even its essential canonical rows cannot fit.
+            essential_legacy = {
+                'roadmaps': technical['roadmaps'],
+                'work_items': expanded_review_work_items(technical),
+            }
+            if len(encode_review_projection(essential_legacy)) > REVIEW_MAX_BYTES:
+                with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
+                    project(repository)
+            else:
+                legacy = project(repository)
+                self.assertEqual(legacy['roadmaps'], technical['roadmaps'])
+                self.assertEqual(expanded_review_work_items(legacy), expanded_review_work_items(technical))
+        self.assertEqual(technical['work_item_format'], CHUNK_REFERENCE_FORMAT)
+        self.assertEqual(user['work_item_format'], CHUNK_REFERENCE_FORMAT)
         self.assertEqual(technical['diagnostics'], [])
         self.assertEqual(user['diagnostics'], [])
         self.assertLessEqual(len(encode_review_projection(user)), REVIEW_MAX_BYTES)

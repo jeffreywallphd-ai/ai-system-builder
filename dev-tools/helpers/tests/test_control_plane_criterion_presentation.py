@@ -12,7 +12,7 @@ from pathlib import Path
 HELPERS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HELPERS))
 from control_plane.criterion_presentation import BLOCKER_REFERENCE, REFERENCE, apply_presentations
-from control_plane.projection import REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project
+from control_plane.projection import CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, encode_review_projection, expanded_review_work_items, project
 
 
 class CriterionPresentationTests(unittest.TestCase):
@@ -361,12 +361,21 @@ class CriterionPresentationTests(unittest.TestCase):
 
     def test_current_repository_response_deduplicates_linked_criteria_without_losing_canonical_detail(self):
         root = Path(__file__).resolve().parents[3]
-        legacy = project(root)
         compact = project(root, compact_work_items=True)
-        self.assertEqual(compact['roadmaps'], legacy['roadmaps'])
         chunk_rows = lambda value: [row for row in expanded_review_work_items(value) if row['source'] == 'roadmap-chunk']
-        self.assertEqual(chunk_rows(compact), chunk_rows(legacy))
-        for value in (legacy, compact):
+        self.assertEqual(compact['work_item_format'], CHUNK_REFERENCE_FORMAT)
+        self.assertTrue(chunk_rows(compact))
+        formats = [compact]
+        essential_legacy = {'roadmaps': compact['roadmaps'], 'work_items': chunk_rows(compact)}
+        if len(encode_review_projection(essential_legacy)) > REVIEW_MAX_BYTES:
+            with self.assertRaisesRegex(ValueError, r'^Review projection exceeds its bound\.$'):
+                project(root)
+        else:
+            legacy = project(root)
+            self.assertEqual(compact['roadmaps'], legacy['roadmaps'])
+            self.assertEqual(chunk_rows(compact), chunk_rows(legacy))
+            formats.insert(0, legacy)
+        for value in formats:
             with self.subTest(format=value.get('work_item_format', 'legacy')):
                 self.assertLessEqual(len(encode_review_projection(value)), REVIEW_MAX_BYTES)
                 for work in chunk_rows(value):
