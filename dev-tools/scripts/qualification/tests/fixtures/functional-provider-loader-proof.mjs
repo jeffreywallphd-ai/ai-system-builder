@@ -5,6 +5,21 @@ import {syncBuiltinESMExports} from "node:module";
 import {functionalHostLayout} from "../../visual-composer/functional-host-launch-plan.mjs";
 import {FUNCTIONAL_PROVIDER_REPOSITORY,providerFixtureIdentity,providerFixturePlan,safeProviderFixturePlan} from "../../visual-composer/functional-provider-plan.mjs";
 
+/** Inert setup/worker composition proof. Never opens or seeds a provider fixture. */
+export default async function syntheticLoaderSetup(config){
+  const root=process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT;
+  if(process.env.AISB_PRIVATE_PROVIDER_LOADER_PROBE!=="1"||!["control","protected"].includes(process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE)||process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST==="1"||process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG!==undefined||!root||!path.isAbsolute(root)||fs.realpathSync(root)!==root||!fs.lstatSync(root).isDirectory()||!path.basename(root).startsWith("private-provider-privacy-")||config.projects.length!==1||config.projects[0].name!=="thin-chrome")throw Error("The inert provider loader was not admitted.");
+  const originalFetch=globalThis.fetch;let networkCalls=0;
+  globalThis.fetch=async()=>{networkCalls++;throw Error("Network is not permitted in the inert loader proof.");};
+  try{
+    const setup=await import("../../visual-composer/functional-host-global-setup.mjs");
+    const helper=await setup.loadFunctionalPrivateProviderFixture();
+    if(typeof helper.beginProviderFixtureAdmission!=="function"||networkCalls!==0)throw Error("The inert provider definitions did not load.");
+    fs.writeFileSync(path.join(root,"loader-observation.json"),JSON.stringify({schema_version:"private-provider-inert-loader-v1",actual_mjs_ts_loader_returned:true,definition_exports_available:true,executing_fixture_opened:false,network_calls:networkCalls})+"\n",{flag:"wx"});
+  }finally{globalThis.fetch=originalFetch;}
+  return async()=>{};
+}
+
 /** Fixed synthetic loader proof. This entry cannot select an operator credential. */
 async function main(){
   if(process.argv.length!==4||!["execute","inactive","plan"].includes(process.argv[3]))throw Error("Invalid proof invocation.");

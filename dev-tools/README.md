@@ -2193,9 +2193,14 @@ Use the reviewed fixed launch arguments and closed environment for runs with
 private inputs; do not add reporter or recording overrides. Listing definitions
 and skipping an inactive purpose never supply a technical qualification pass.
 
-The focused privacy regression uses only synthetic failures. A separate test-only
-worker tripwire refuses the supplier's first error-context write and proves that
-the protected fixture makes no such attempt. It starts no browser, provider or
-model and is never installed in a live private test. It preserves nonzero failure
-results. This regression does not qualify native cleanup, private UI behavior,
-model quality or a parent roadmap.
+The focused privacy regression uses only synthetic failures. It requires a test-body
+entry marker and the exact fake error before crediting failure coverage. A deliberate
+setup failure must not supply that proof. A separate worker tripwire refuses the
+supplier's first error-context write; the protected fixture must make no attempt.
+The one-case probe keeps a finite timeout, one worker and no retries. It uses no
+maximum-failure stop notice, which would add a runner error for its intended failure.
+Only its gated synthetic reporter compares fake error text; the live reporter still
+ignores errors. An optional inert setup loads the actual MJS/TypeScript definitions
+before the test worker, without opening an executing provider fixture. The original
+standalone loader-proof modes remain available. These checks start no browser,
+provider or model and grant no private UI, native, model or parent qualification.

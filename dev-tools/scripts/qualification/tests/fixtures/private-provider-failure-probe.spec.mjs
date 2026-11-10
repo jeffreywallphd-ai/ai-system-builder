@@ -6,8 +6,11 @@ import {privateProviderTest} from "../../visual-composer/private-provider-test.m
 const mode=process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE,root=process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT;
 if(!["control","protected"].includes(mode)||!root)throw new Error("The synthetic probe input is missing.");
 const selected=mode==="protected"?privateProviderTest:base;
+let bodyEntered=false;
+let fixtureSetups=0;
 const test=selected.extend({
   _syntheticWriteTripwire:[async({},use)=>{
+    fixtureSetups++;
     let writeAttempts=0;
     const original=fs.promises.writeFile;
     fs.promises.writeFile=async function(file,...args){
@@ -20,12 +23,14 @@ const test=selected.extend({
     // Keep the synthetic-only tripwire armed through the default recorder's
     // later fixture teardown. This one-test worker exits after its failure.
     process.once("exit",()=>{
-      try{fs.writeFileSync(path.join(root,"worker-observation.json"),JSON.stringify({schema_version:"private-provider-synthetic-write-tripwire-v1",mode,error_context_write_attempts:writeAttempts,no_browser_requested:true,no_credentials_read:true})+"\n",{flag:"wx"});}
+      try{fs.writeFileSync(path.join(root,"worker-observation.json"),JSON.stringify({schema_version:"private-provider-synthetic-write-tripwire-v1",mode,error_context_write_attempts:writeAttempts,body_entered:bodyEntered,fixture_setup_count:fixtureSetups,no_browser_requested:true,no_credentials_read:true})+"\n",{flag:"wx"});}
       catch{process.exitCode=1;}
     });
+    if(process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE_BEFORE_BODY==="1")throw new Error("SYNTHETIC_BEFORE_BODY_SETUP_FAILURE");
     await use();
   },{auto:"all-hooks-included",timeout:0}],
 });
 test("thin client provider source registers an exact reference and optional localized bytes",async()=>{
+  bodyEntered=true;
   throw new Error("SYNTHETIC_PRIVATE_FAILURE_CANARY_NOT_A_CREDENTIAL");
 });

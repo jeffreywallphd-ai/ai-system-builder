@@ -7,6 +7,7 @@ import {createRequire} from "node:module";
 import {spawnSync} from "node:child_process";
 import {runPrivateProviderArtifactBoundary} from "../visual-composer/private-provider-artifact-boundary.mjs";
 import Reporter,{summarizePrivateProviderRun} from "../visual-composer/fixed-private-provider-reporter.mjs";
+import SyntheticProbeReporter from "./fixtures/private-provider-failure-probe-reporter.mjs";
 const root=process.cwd(),here=path.join(root,"dev-tools/scripts/qualification/tests/fixtures"),require=createRequire(import.meta.url);
 const title="thin client provider source registers an exact reference and optional localized bytes";
 const passed={id:"thin-source",status:"passed",duration_ms:1};
@@ -56,17 +57,49 @@ test("installed reporter composition adds no raw fallback; false metadata reprod
   try{process.env.AISB_PRIVATE_PROVIDER_FALLBACK_CONTROL="1";const actual=await createReporters(config,"test",[[control]]);assert.equal(actual.length,2,"installed supplier must reproduce its raw fallback for false metadata");}
   finally{if(prior===undefined)delete process.env.AISB_PRIVATE_PROVIDER_FALLBACK_CONTROL;else process.env.AISB_PRIVATE_PROVIDER_FALLBACK_CONTROL=prior;}
 });
+
+test("synthetic reporter refuses real-host inputs before callbacks or zero-case output",()=>{
+  const keys=["AISB_PRIVATE_PROVIDER_FAILURE_PROBE","AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT","VISUAL_COMPOSER_FUNCTIONAL_HOST","VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG"],prior=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+  const temp=fs.realpathSync(os.tmpdir()),folder=fs.mkdtempSync(path.join(temp,"private-provider-privacy-"));let passed=false;
+  try{
+    process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE="protected";process.env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT=folder;
+    for(const input of ["host","manifest"]){
+      delete process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST;delete process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG;
+      if(input==="host")process.env.VISUAL_COMPOSER_FUNCTIONAL_HOST="1";else process.env.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_CONFIG="synthetic-forbidden-manifest";
+      const reporter=new SyntheticProbeReporter();
+      assert.throws(()=>reporter.onTestEnd({},{}),/Only isolated synthetic failures/);
+      assert.throws(()=>reporter.onEnd({status:"failed"}),/Only isolated synthetic failures/);
+      assert.deepEqual(fs.readdirSync(folder),[]);
+    }
+    passed=true;
+  }finally{
+    for(const key of keys)if(prior[key]===undefined)delete process.env[key];else process.env[key]=prior[key];
+    if(passed){assert.equal(fs.realpathSync(folder),folder);assert.equal(path.dirname(folder),temp);fs.rmdirSync(folder);}
+  }
+});
 test("actual failed no-page supplier runs retain failure and eliminate raw error-context write attempts",{timeout:90000},()=>{
   const cli=require.resolve("@playwright/test/cli"),temp=fs.realpathSync(os.tmpdir());
-  for(const mode of ["control","protected"]){
+  for(const [mode,beforeBody,loader] of [["control",false,false],["protected",false,false],["protected",true,false],["control",false,true],["protected",false,true]]){
     const folder=fs.mkdtempSync(path.join(temp,"private-provider-privacy-"));let proven=false;
     const env={};for(const key of ["PATH","PATHEXT","SystemRoot","WINDIR","COMSPEC","SYSTEMDRIVE","PROCESSOR_ARCHITECTURE","NUMBER_OF_PROCESSORS","TEMP","TMP","HOME","USERPROFILE","APPDATA","LOCALAPPDATA"])if(typeof process.env[key]==="string")env[key]=process.env[key];
-    Object.assign(env,{NODE_OPTIONS:"",NODE_NO_WARNINGS:"1",PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:"1",PLAYWRIGHT_NO_COPY_PROMPT:"1",AISB_PRIVATE_PROVIDER_FAILURE_PROBE:mode,AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT:folder,VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1"});
+    Object.assign(env,{NODE_OPTIONS:"",NODE_NO_WARNINGS:"1",TSX_DISABLE_CACHE:"1",PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:"1",PLAYWRIGHT_NO_COPY_PROMPT:"1",AISB_PRIVATE_PROVIDER_FAILURE_PROBE:mode,AISB_PRIVATE_PROVIDER_FAILURE_PROBE_ROOT:folder,VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1"});
+    if(beforeBody)env.AISB_PRIVATE_PROVIDER_FAILURE_PROBE_BEFORE_BODY="1";
+    if(loader)env.AISB_PRIVATE_PROVIDER_LOADER_PROBE="1";
     try{
       const result=spawnSync(process.execPath,[cli,"test","--config",path.join(here,"private-provider-failure-probe.config.mjs")],{cwd:root,env,windowsHide:true,timeout:30000,maxBuffer:65536,encoding:"utf8"});
       assert.equal(result.error,undefined);assert.equal(result.signal,null);assert.equal(result.status,1);assert.equal(result.stderr,"");assert(!result.stdout.includes("SYNTHETIC_PRIVATE_FAILURE_CANARY"));
       const worker=JSON.parse(fs.readFileSync(path.join(folder,"worker-observation.json"),"utf8")),reporter=JSON.parse(fs.readFileSync(path.join(folder,"reporter-observation.json"),"utf8"));
+      if(loader){const loaded=JSON.parse(fs.readFileSync(path.join(folder,"loader-observation.json"),"utf8"));assert.deepEqual(loaded,{schema_version:"private-provider-inert-loader-v1",actual_mjs_ts_loader_returned:true,definition_exports_available:true,executing_fixture_opened:false,network_calls:0});}
       assert.equal(worker.mode,mode);assert.equal(worker.no_browser_requested,true);assert.equal(worker.no_credentials_read,true);
+      assert.equal(worker.body_entered,!beforeBody);
+      assert.equal(reporter.expected_body_errors,beforeBody?0:1);assert.equal(reporter.synthetic_error_compared,true);assert.equal(reporter.raw_error_persisted,false);
+      assert.equal(reporter.cases.length,1,"the fixed reporter must retain the actual failed case result");
+      const deliberateBodyFailureProved=worker.body_entered===true&&reporter.expected_body_errors===1;
+      assert.equal(deliberateBodyFailureProved,!beforeBody,"a setup failure must not count as evidence for the deliberate body failure");
+      if(mode==="protected"){
+        assert.equal(reporter.error_count,1,"the protected failure must not hide an unrelated fixture failure");
+        assert.equal(reporter.framework_errors,0,`the protected fixture must preserve the deliberate failure without a framework error; synthetic fixture setups=${worker.fixture_setup_count}`);
+      }
       if(mode==="control")assert(worker.error_context_write_attempts>0,"positive control must reach the real supplier writer");else assert.equal(worker.error_context_write_attempts,0);
       assert.equal(reporter.suite_status,"failed");assert.equal(reporter.cases.length,1);assert.equal(reporter.cases[0].status,"failed");
       const outputs=fs.readdirSync(folder,{recursive:true});assert(outputs.length<=64);assert(!outputs.some(name=>String(name).endsWith("error-context.md")));
