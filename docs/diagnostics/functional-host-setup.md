@@ -174,6 +174,11 @@ The Thin client Image Generation intro uses the secondary text color on its
 elevated panel. The normal-color contrast check still covers this text at both
 widths. The existing system color token applies in forced colors.
 
+The Desktop Image Generation form gives each input its own label and keeps
+glossary help separate. Focused component tests check the default fields, the
+extra FaceID fields and the separate checkbox and help actions. These tests do
+not qualify the packaged Desktop app.
+
 Native zoom admission stays unchanged. Standard-width proofs do not qualify
 native400 or another host. A new actual host result, source-bound checks and
 independent review are required. Preserve all earlier failures and defer combined

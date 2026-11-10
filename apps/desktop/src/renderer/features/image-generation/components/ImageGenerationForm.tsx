@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { useId, type ChangeEvent, type ComponentProps } from "react";
 
 import {
   ApplicationIcon,
@@ -26,6 +26,26 @@ export interface ImageGenerationFormProps {
   readonly modelLoadMessage?: string;
 }
 
+function ImageFieldLabel({
+  controlId,
+  termId,
+  text,
+  checkbox = false,
+}: {
+  controlId: string;
+  termId: ComponentProps<typeof TermWithHint>["termId"];
+  text: string;
+  checkbox?: boolean;
+}) {
+  return (
+    <span className={checkbox ? undefined : "ui-label"}>
+      <TermWithHint termId={termId}>
+        <label htmlFor={controlId}>{text}</label>
+      </TermWithHint>
+    </span>
+  );
+}
+
 export function ImageGenerationForm({
   form,
   setForm,
@@ -38,7 +58,10 @@ export function ImageGenerationForm({
   modelLoadStatus,
   modelLoadMessage,
 }: ImageGenerationFormProps) {
+  const formId = useId();
+  const fieldId = (key: keyof ImageGenerationFormValues) => `${formId}-${key}`;
   const bindText = (key: keyof ImageGenerationFormValues) => ({
+    id: fieldId(key),
     value: form[key] as string,
     onChange: (event: ChangeEvent<HTMLInputElement>) =>
       setForm({ ...form, [key]: event.target.value }),
@@ -53,11 +76,10 @@ export function ImageGenerationForm({
         description="Choose the model and source imagery, then describe the image to create."
       >
         <div className="ui-workflow__field-grid ui-workflow__field-grid--wide">
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="model">Model/Checkpoint</TermWithHint>
-            </span>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("model")} termId="model" text="Model/Checkpoint" />
             <select
+              id={fieldId("model")}
               className="ui-input"
               value={form.model}
               onChange={(event) => setText("model", event.target.value)}
@@ -74,14 +96,11 @@ export function ImageGenerationForm({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="latentSourceArtifact">
-                Latent Source
-              </TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("latentSourceArtifactId")} termId="latentSourceArtifact" text="Latent Source" />
             <select
+              id={fieldId("latentSourceArtifactId")}
               className="ui-input"
               value={form.latentSourceArtifactId}
               onChange={(event) =>
@@ -95,7 +114,7 @@ export function ImageGenerationForm({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </div>
 
         {modelLoadMessage ? (
@@ -119,41 +138,42 @@ export function ImageGenerationForm({
           </p>
         ) : null}
 
-        <label className="ui-stack ui-stack--sm">
-          <span>
-            <TermWithHint termId="prompt">Prompt</TermWithHint>
-          </span>
+        <div className="ui-stack ui-stack--sm">
+          <ImageFieldLabel controlId={fieldId("prompt")} termId="prompt" text="Prompt" />
           <textarea
+            id={fieldId("prompt")}
             className="ui-input ui-textarea"
             data-testid="image-prompt"
             value={form.prompt}
             onChange={(event) => setText("prompt", event.target.value)}
           />
-        </label>
-        <label className="ui-stack ui-stack--sm">
-          <span>
-            <TermWithHint termId="negativePrompt">Negative Prompt</TermWithHint>
-          </span>
+        </div>
+        <div className="ui-stack ui-stack--sm">
+          <ImageFieldLabel controlId={fieldId("negativePrompt")} termId="negativePrompt" text="Negative Prompt" />
           <textarea
+            id={fieldId("negativePrompt")}
             className="ui-input ui-textarea"
             value={form.negativePrompt}
             onChange={(event) => setText("negativePrompt", event.target.value)}
           />
-        </label>
+        </div>
 
-        <label className="ui-workflow__checkbox-row">
+        <div className="ui-workflow__checkbox-row">
           <input
+            id={fieldId("faceIdEnabled")}
             type="checkbox"
             checked={form.faceIdEnabled}
             onChange={(event) =>
               setForm({ ...form, faceIdEnabled: event.target.checked })
             }
           />
-          <span>
-            <TermWithHint termId="faceId">Enable FaceID</TermWithHint>{" "}
-            (optional)
-          </span>
-        </label>
+          <ImageFieldLabel
+            controlId={fieldId("faceIdEnabled")}
+            termId="faceId"
+            text="Enable FaceID (optional)"
+            checkbox
+          />
+        </div>
         {form.faceIdEnabled ? (
           <div className="ui-workflow__subpanel ui-stack ui-stack--sm">
             <p className="ui-text-muted">
@@ -161,27 +181,22 @@ export function ImageGenerationForm({
               runtime will attempt setup when required.
             </p>
             <div className="ui-workflow__field-grid">
-              {[
+              {([
                 "faceIdArtifactId1",
                 "faceIdArtifactId2",
                 "faceIdArtifactId3",
-              ].map((key, index) => (
-                <label className="ui-stack ui-stack--sm" key={key}>
-                  <span>
-                    <TermWithHint termId="faceReferenceImage">
-                      Face reference image {index + 1}
-                    </TermWithHint>{" "}
-                    {index > 0 ? "(optional)" : null}
-                  </span>
+              ] as const).map((key, index) => (
+                <div className="ui-stack ui-stack--sm" key={key}>
+                  <ImageFieldLabel
+                    controlId={fieldId(key)}
+                    termId="faceReferenceImage"
+                    text={`Face reference image ${index + 1}${index > 0 ? " (optional)" : ""}`}
+                  />
                   <select
+                    id={fieldId(key)}
                     className="ui-input"
-                    value={String(form[key as keyof ImageGenerationFormValues])}
-                    onChange={(event) =>
-                      setText(
-                        key as keyof ImageGenerationFormValues,
-                        event.target.value,
-                      )
-                    }
+                    value={String(form[key])}
+                    onChange={(event) => setText(key, event.target.value)}
                   >
                     <option value="">Select image artifact</option>
                     {availableImageArtifacts.map((artifact) => (
@@ -193,47 +208,37 @@ export function ImageGenerationForm({
                       </option>
                     ))}
                   </select>
-                </label>
+                </div>
               ))}
             </div>
             <div className="ui-workflow__field-grid">
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="faceIdentityWeight">
-                    Face identity weight
-                  </TermWithHint>
-                </span>
+              <div className="ui-stack ui-stack--sm">
+                <ImageFieldLabel controlId={fieldId("faceIdIdentityStrength")} termId="faceIdentityWeight" text="Face identity weight" />
                 <input
                   className="ui-input"
                   type="number"
                   step="0.01"
                   {...bindText("faceIdIdentityStrength")}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="faceStructureWeight">
-                    Face structure weight
-                  </TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <ImageFieldLabel controlId={fieldId("faceIdStructureStrength")} termId="faceStructureWeight" text="Face structure weight" />
                 <input
                   className="ui-input"
                   type="number"
                   step="0.01"
                   {...bindText("faceIdStructureStrength")}
                 />
-              </label>
-              <label className="ui-stack ui-stack--sm">
-                <span>
-                  <TermWithHint termId="faceNoise">Face noise</TermWithHint>
-                </span>
+              </div>
+              <div className="ui-stack ui-stack--sm">
+                <ImageFieldLabel controlId={fieldId("faceIdNoise")} termId="faceNoise" text="Face noise" />
                 <input
                   className="ui-input"
                   type="number"
                   step="0.01"
                   {...bindText("faceIdNoise")}
                 />
-              </label>
+              </div>
             </div>
           </div>
         ) : null}
@@ -244,40 +249,28 @@ export function ImageGenerationForm({
         description="Set the image dimensions, sampling behavior, and output count."
       >
         <div className="ui-workflow__field-grid">
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="seed">Seed</TermWithHint>
-            </span>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("seed")} termId="seed" text="Seed" />
             <input className="ui-input" {...bindText("seed")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="width">Width</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("width")} termId="width" text="Width" />
             <input className="ui-input" type="number" {...bindText("width")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="height">Height</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("height")} termId="height" text="Height" />
             <input className="ui-input" type="number" {...bindText("height")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="steps">Steps</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("steps")} termId="steps" text="Steps" />
             <input className="ui-input" type="number" {...bindText("steps")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="cfg">CFG</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("cfg")} termId="cfg" text="CFG" />
             <input className="ui-input" type="number" {...bindText("cfg")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="denoise">Denoise</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("denoise")} termId="denoise" text="Denoise" />
             <input
               className="ui-input"
               type="number"
@@ -286,31 +279,23 @@ export function ImageGenerationForm({
               step="0.01"
               {...bindText("denoise")}
             />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="sampler">Sampler</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("sampler")} termId="sampler" text="Sampler" />
             <input className="ui-input" {...bindText("sampler")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="scheduler">Scheduler</TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("scheduler")} termId="scheduler" text="Scheduler" />
             <input className="ui-input" {...bindText("scheduler")} />
-          </label>
-          <label className="ui-stack ui-stack--sm">
-            <span>
-              <TermWithHint termId="numberOfImages">
-                Number of Images
-              </TermWithHint>
-            </span>
+          </div>
+          <div className="ui-stack ui-stack--sm">
+            <ImageFieldLabel controlId={fieldId("numImages")} termId="numberOfImages" text="Number of Images" />
             <input
               className="ui-input"
               type="number"
               {...bindText("numImages")}
             />
-          </label>
+          </div>
         </div>
       </WorkflowStep>
 
