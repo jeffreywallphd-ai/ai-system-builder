@@ -1,0 +1,127 @@
+{
+  "schema_version": "data-private-source-ui-observation-v1",
+  "status": "failed-feature-trial-reviewed-no-ui-qualification",
+  "user_summary": {
+    "title": "Private file import test needs diagnosis",
+    "description": "The test app started and shut down. The run produced a failed test result but no workflow step report. Its two temporary credential files are gone. The agent must diagnose the failure before this UI check can pass.",
+    "action_owner": "agent",
+    "user_action": "No action needed."
+  },
+  "roadmap_scope": {
+    "primary": "data-management-quality-and-usability",
+    "increment": "governed-scalable-ingestion",
+    "supporting": "comprehensive-ui-automation:operational-ui-and-coverage-qualification",
+    "full_system_testing": "deferred-until-open-feature-work-is-implemented",
+    "private_provider_website_check": "remains-explicitly-deferred",
+    "accepted_model_accuracy_and_ocr": "closed-not-rerun"
+  },
+  "source": {
+    "original_commit": "d2bfc695f5a006d8a194c57c40e584743b296920",
+    "original_source_digest": "7dee0cddeef205bc90dce74a69bb04dedf7351c3f1aa837eae88ac695f6a0ba1",
+    "source_file_count": 3932,
+    "product_source_identity": "source.b7fbf908323f7577697a4737270b480df768a9680c61fd1968a4b44ea81aeb26",
+    "current_product_preserved": true,
+    "installed_runtime_unchanged": true
+  },
+  "attempt": {
+    "run_id": "private-source-safe-a89189918e5d487e8e85b5e30203e9b1",
+    "host": "thin-chrome",
+    "purpose": "provider-source",
+    "root_exit_code": 1,
+    "result_records": [
+      {
+        "id": "thin-source",
+        "status": "failed",
+        "duration_ms": 0
+      }
+    ],
+    "framework_error_count": 1,
+    "journey_report_present": false,
+    "test_body_entry": "not-observed",
+    "ui_phases_qualified": 0,
+    "failure_cause": "unconfirmed",
+    "automatic_retry_allowed": false,
+    "original_one_use_authorization_consumed": true
+  },
+  "observed_support": {
+    "functional_setup_returned": true,
+    "canonical_awaited_teardown_returned": true,
+    "source_after_teardown_verified": true,
+    "raw_shutdown_ack_recorded": false,
+    "original_created_job_only": true,
+    "known_original_retirement": true,
+    "all_owned_handles_and_stdio_closed": true,
+    "job_accounting": {
+      "total": 38,
+      "active": 0,
+      "terminated": 0
+    },
+    "peak_active_observed": 16,
+    "peak_commit": {
+      "process_commit_bytes": 545468416,
+      "job_commit_bytes": 1721163776
+    },
+    "limits": {
+      "flags": 8968,
+      "process_bytes": 1073741824,
+      "job_bytes": 3221225472,
+      "active_limit": 32
+    },
+    "observed_limit_message_count": 0,
+    "observed_limit_notification_count": 0,
+    "absence_of_limit_hits_claimed": false,
+    "forced_owned_job_termination": false,
+    "explicit_input_created": true,
+    "explicit_input_copy_completed": true,
+    "explicit_input_retired": true,
+    "explicit_input_present_after": false,
+    "seeded_credential_file_absent_after_owned_exit": true,
+    "seeded_retirement_authority": "existing-canonical-fixture-only-no-separate-delete",
+    "credential_content_or_hash_recorded": false
+  },
+  "test_quality_finding": {
+    "status": "pending-agent-source-work",
+    "finding": "The synthetic privacy probe checks a failed result and zero protected recording writes, but does not prove that its deliberate test body failure occurred. Add a body-entry observation and a fixed expected-sentinel match.",
+    "actual_failure_attribution": false,
+    "preserved_evidence": "The real failed trial remains failed. The synthetic gap does not prove its cause.",
+    "required_followup": [
+      "Add a synthetic body-entry and expected-error identity check without raw error persistence.",
+      "Diagnose where the run stopped before its workflow report, using synthetic inputs.",
+      "Fix the identified cause and run its focused regression checks.",
+      "Prepare a new source-bound reviewed UI attempt after preserving this failure and its one-use marker."
+    ]
+  },
+  "evidence": {
+    "work_id": "observe-private-source-ui-with-recording-free-tests",
+    "area": ".local-codex/private-provider-source-ui-safe-20261110",
+    "actual_observation_sha256": "08f2aa47536c9017c59f4ee301b5525d683001820a2e24f2f976cee0ce4ddbff",
+    "original_native_result_sha256": "2e9b293eb0494f28fa42da3a822a52fde9d78d20f6b997ab094612ecfc6eb5a3",
+    "independent_outcome_review_sha256": "833aa2abaf3befcd6ef8e24f32ff3563f083e44610cd6fded021540afa6922f0",
+    "independent_execution_review_sha256": "2305f0644e08e9bbee295cb0b3a13a607a929fc82809d3e645ef6cce8b7622a2",
+    "bound_operator_sha256": "99369828752a15121d807848d45a5ca21686a3ec3f7f5a6723d933752eeb129d",
+    "runtime_witness_sha256": "f49f9cb1abb82bcc6e07fccb769c26c44d39a7c57621d82600faee21151bc70a",
+    "privacy_source_checkpoint": "d2bfc695f5a006d8a194c57c40e584743b296920",
+    "privacy_source_receipt": "5507939fd786f4719618858f9255c5db843b00caba64d4cb8b50302b7815f5eb",
+    "privacy_source_review": "11e7111ddd15ff3debf6c7e13206d632dde59e5f40776f82ef5314f54366e4ce"
+  },
+  "qualification_limits": {
+    "real_private_ui_pass": false,
+    "test_body_entry_proved": false,
+    "model_or_worker_outcomes_qualified": false,
+    "native_retained_tree_or_offload_qualified": false,
+    "managed_or_workspace_authorization_qualified": false,
+    "parent_roadmap_or_increment_qualified": false,
+    "restricted_security_review_performed": false,
+    "other_desktop_scale_crash_runtime_and_final_qualification": "pending-as-previously-recorded"
+  },
+  "publication": {
+    "work_id": "publish-reviewed-private-source-ui-failure",
+    "scope": "Reviewed failed-observation publication only. The UI check remains pending.",
+    "original_unqualified_work_id": "observe-private-source-ui-with-recording-free-tests",
+    "original_changes_requested_review": "4131cba2be452a9a1426b1417febeee8eade1d757cb8b3aab9152ba9065816db",
+    "original_report_preimage_sha256": "f8af3420a508e7ec806b712e1d95831b4f0b87ae2911465fc4497aedb79a00d3",
+    "original_report_created_under_prior_agent_claim": true,
+    "original_ui_criterion_remains_unqualified": true,
+    "new_ui_or_parent_qualification": false
+  }
+}
