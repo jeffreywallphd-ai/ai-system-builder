@@ -12305,6 +12305,88 @@
         "This qualifies fixed test-source loading and test-worker setup only. It starts no product app, browser or model and does not qualify actual product workflows, provider semantics, native lifecycle/offload, measured resource budgets or a parent roadmap.",
         "Previously completed model accuracy and OCR checks stay closed. The private-provider website check stays deferred. Native protection, optional offload/restart, other host, performance/scale and final full-system qualification keep their separate owning-roadmap status."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "repair-thin-image-contrast",
+      "work_criteria": [
+        "verified-contrast-cause-and-correction",
+        "original-feature-regression-and-remaining-gaps"
+      ],
+      "receipt_digest": "45b0793d7e1b7d1a18d14c0c4eeda7ea29c3768afcd27b5ce96ea8bd100da7b8",
+      "review_digest": "295d9049f67829e020f303e85a92d6f5afaa6d7df88d6947447155f453d71adb",
+      "scope": "Image Generation passed its normal and forced color checks at 1440 and 320 pixels. The fix changed only the intro text color. All seven accessibility surfaces passed in the same local test.",
+      "limitations": [
+        "One local Thin client Chrome test used synthetic data. Desktop, native zoom, managed environments and final qualification remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "repair-thin-image-contrast",
+      "work_criteria": [
+        "original-feature-regression-and-remaining-gaps"
+      ],
+      "receipt_digest": "45b0793d7e1b7d1a18d14c0c4eeda7ea29c3768afcd27b5ce96ea8bd100da7b8",
+      "review_digest": "295d9049f67829e020f303e85a92d6f5afaa6d7df88d6947447155f453d71adb",
+      "scope": "The original local Thin client test passed all 17 steps, including Security recovery, shell navigation, notifications, model page navigation, editing the Image Generation prompt and returning Home.",
+      "limitations": [
+        "One local Thin client Chrome test used synthetic data. Desktop, native zoom, managed environments and final qualification remain pending.",
+        "The case does not exercise all settings mutations, task families or runtime controls."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "safe-repeatable-ui-runs",
+      "work_id": "repair-thin-image-contrast",
+      "work_criteria": [
+        "original-feature-regression-and-remaining-gaps",
+        "security-impact-and-owned-checkpoint"
+      ],
+      "receipt_digest": "45b0793d7e1b7d1a18d14c0c4eeda7ea29c3768afcd27b5ce96ea8bd100da7b8",
+      "review_digest": "295d9049f67829e020f303e85a92d6f5afaa6d7df88d6947447155f453d71adb",
+      "scope": "The local test ran one background browser case with zero retries. The runner confirmed browser, proxy and app fixture cleanup. It kept all nine earlier attempts and the separate contrast diagnostic.",
+      "limitations": [
+        "One local Thin client Chrome test used synthetic data. Desktop, native zoom, managed environments and final qualification remain pending.",
+        "Ordinary test cleanup gives no Windows native process or file protection evidence."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "automated-accessibility-and-local-host-observation",
+      "work_id": "repair-desktop-image-field-labels",
+      "work_criteria": [
+        "desktop-image-fields-have-native-labels",
+        "desktop-image-controls-keep-behavior"
+      ],
+      "receipt_digest": "feb976f9408873e76d2ce2093c71c55e732e1c289c95a0ce9da05247a80ac7c5",
+      "review_digest": "eacb712eec22deba23ffa56bf808b92cde7afa18be8734ac40fcfb2dff662d0d",
+      "scope": "Desktop Image Generation component tests found a native label for each of 14 default fields and 20 fields with FaceID enabled. Clicking the help button opened help without toggling FaceID. Clicking the checkbox label enabled it.",
+      "limitations": [
+        "Component tests use synthetic form data. Packaged Desktop behavior, actual image generation and final qualification remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "coverage-complete-and-honest",
+      "work_id": "repair-desktop-image-field-labels",
+      "work_criteria": [
+        "desktop-image-fields-have-native-labels",
+        "desktop-image-focused-checkpoint"
+      ],
+      "receipt_digest": "feb976f9408873e76d2ce2093c71c55e732e1c289c95a0ce9da05247a80ac7c5",
+      "review_digest": "eacb712eec22deba23ffa56bf808b92cde7afa18be8734ac40fcfb2dff662d0d",
+      "scope": "The exact Desktop Image Generation component file passed four tests. Three new tests failed as expected before the fix. The documented scope and reviewed checks cover only the Image Generation form.",
+      "limitations": [
+        "Component tests use synthetic form data. Packaged Desktop behavior, actual image generation and final qualification remain pending.",
+        "This does not complete the supported-functionality census."
+      ]
     }
   ]
 }

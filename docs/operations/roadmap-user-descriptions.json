@@ -17493,6 +17493,117 @@
           "Application workflows, providers, model resources, platform recovery and roadmap completion still need their own automated evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "12ac9f2a0d562e6113f4e39830e5129a20518e983785f3d7b02e1327cd2d7b64",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Image Generation passed the accessibility checks at both screen widths in normal and forced colors.",
+          "The fix changes only the intro text color.",
+          "All seven areas in the same browser test passed their accessibility checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "401bfc2d559dab242cf4b6dc47dc9257dbfdb510b6379431554f9ed62a98f7ef",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The local Chrome test used made-up data.",
+          "The Desktop app, Windows zoom, managed environments and final checks still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b727de5a30d65196b483e84dfc8d70c8662ce472821a778b583c8f747bd367c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Thin client browser test passed all 17 steps.",
+          "It tested Security recovery, navigation, notifications, opening model pages, editing the image prompt and returning Home."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f2cbbae98e49e603f18cf49fd311291f051a6e930d5d8cbea8f5c11bd863e0e8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Other settings changes, task types and runtime controls still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4548cfd03ca59405e69ae0daa5a60825c39371147d97f4fbc5c67d4b512dc1e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test used one background browser and did not retry.",
+          "It confirmed that the browser and test services stopped.",
+          "It kept all nine earlier attempts and the separate contrast test."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "43b83517d1d70d14412d3203f28b352ab29d98c610ff03648d1972a9e4117f88",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This cleanup check does not test Windows process or file protection."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a1079b0533aba5ffc700c666760c02d9c557e9df028b30e861aee134a6d0d5fe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop form tests checked labels for 14 default fields and 20 fields with FaceID enabled.",
+          "The help button opens help without changing FaceID.",
+          "The checkbox label turns FaceID on."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "32c81a6743d893b769d5995baa6ce8f15dd5fd0928e630793b5eb5346bda7b34",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The form tests used made-up data.",
+          "The packaged Desktop app, actual image generation and final checks still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1cb9839bf284646bb6b1de8aaea162f7b8da56bd2781daafaee0f4d13ef5caa9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop Image Generation form passed four tests.",
+          "Three of those tests reproduced the label problems before the fix.",
+          "The tests cover the Image Generation form only."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ac3a82055f09f3de9fec57adbab4ca35421781a6d5a0be2a4146780fab7c1ca0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The other software functions still need to be checked against the test list."
+        ]
+      }
     }
   ]
 }
