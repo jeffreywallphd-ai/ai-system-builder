@@ -7140,6 +7140,512 @@
           "This historical requirement does not create a current result or a new completion."
         ]
       }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "same-host-and-finite-tool-boundary",
+      "source_description_sha256": "2dfb61f29e9be778da7121084a05286922cdc795083098fa52de62559285dfe7",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Connect chat to the same running application.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The adapter must identify the running host incarnation, contract compatibility, authorized organization/workspaces and supported capabilities, then read the same saved resources as the open desktop UI with no UI lease.",
+          "IPC and connector calls must use the same lazy application providers and persistence owners. Starting the MCP adapter must not start a second application host, open its own desktop database or start a model on a passive read.",
+          "Only the finite typed tool catalog is exposed. Incompatible versions, unknown tools/fields and unsupported execution, cancellation or streaming must fail clearly. No arbitrary HTTP executor, code, selector or shell capability is permitted."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "revision-safe-semantic-authoring",
+      "source_description_sha256": "307f8241d6b22e1911ea7d7e10003fb61d44f60afa11633f3dd70825342e13c4",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Save useful system changes through shared rules.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Tools must resolve explicit workspace, system, template and exact asset IDs before mutation, then support available template creation, rename, clone and bounded preview/apply composition edits.",
+          "Semantic batches must validate add, allowed configuration, compatible connections, placement changes and removal consequences in the application. Preview has no side effect; applying one valid batch creates one immutable revision against the supplied original base.",
+          "The same application validation and authorization must apply to UI and agent calls. Stale bases, wrong ownership, incompatible ports, protected nodes, invalid configuration and malformed or oversized batches must fail without a partial mutation."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "durable-retries-and-current-authority",
+      "source_description_sha256": "8752f627970bed6d018631aa6913cf94505342bf4800041a85374b060572285d",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Retry uncertain operations without duplicating them.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Supported retriable mutations must store a durable receipt under verified organization, stable principal, registered client, workspace, operation kind and idempotency key, with a canonical input fingerprint and result or task handle.",
+          "A reconnect or new chat session must keep that receipt identity. Equal input returns the original result or in-progress handle; different input under the same key is rejected. Uncertain external effects must reconcile an operation record before another side effect.",
+          "The current caller must be authorized before any saved receipt or result is returned, including after membership revocation. Guessed keys and cross-tenant/client/workspace requests must disclose no result.",
+          "For supported transactional mutations, business writes, receipt and outbox commit or roll back together. Advertise bounded retention and an explicit expired-key reconciliation response; never claim universal exactly-once effects or retry an expired unknown operation automatically."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "committed-change-delivery",
+      "source_description_sha256": "85cffc02eff32f9c413c83ae871dd2311c08abe117de5460b748640396fff9b0",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep normal saved data current without steering the window.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "IPC, API, agent and supported background mutations must publish scoped committed resource metadata through one application/persistence seam. A rollback emits no committed event, and events must omit drafts, prompts, credentials and arbitrary instructions.",
+          "A transactionally persisted outbox must recover after a commit followed by dispatcher failure. At-least-once consumers deduplicate IDs and older revisions, and snapshot/cursor setup must close the initial read/subscription race.",
+          "Valid scoped cursors replay retained events; gaps, expired retention and invalid cursors require a scoped authoritative resynchronization. Subscriptions, replay and refetch recheck current read authorization.",
+          "Normal data events may refresh lists and task status but must not open resources, change navigation, move focus or select previews as an indirect automation path."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "draft-base-and-refetch-ownership",
+      "source_description_sha256": "03b411cc45eb181e49f3e2db8407edde88fc8969bfd76f25d0064795d6c6e42d",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Preserve drafts during concurrent saved changes.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "A loaded draft must retain immutable base record revision and revision ID until an explicit successful save, reload or rebase. New list metadata must never advance that base.",
+          "Clean editors may install current saved state while preserving compatible selection. Dirty editors retain draft and undo history and show a newer saved revision; archived or unavailable resources retain recoverable work. A stale save must conflict without overwriting either writer.",
+          "Saving and refetch results must match the captured workspace, resource, subscription and request generation. Reverse-order replies cannot regress the displayed saved revision, cross a workspace switch, overwrite a dirty draft or update a newer operation."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "workflow-and-task-truth",
+      "source_description_sha256": "52617dfe0f32b1ec90ca5875812c3d4a9953a768024b8e25d838ff1fc7c63bec",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Expose supported work and truthful task status.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The adapter must reuse current workflow summaries, typed fields, blockers, exact approved-release or reviewed-plan identity and expected snapshot revisions. Confirmation metadata must not replace backend authorization or exact approval.",
+          "Expose only granted read/mutate/execute actions that are already supported. Routine published lifecycle stays on its existing application facade; this work must not restore the removed advanced Run & Test tab or grant publish/deploy/install authority by default.",
+          "Supported asynchronous work returns an authoritative task/run handle discoverable to both UI and agent even when started externally. Status polling must be scoped and non-starting, and cancellation is exposed only where the operation really implements it.",
+          "Document actual synchronous, recovery and host-lifetime limits. UI absence, MCP disconnect or presentation failure must not be treated as task cancellation or justify starting duplicate work."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "portable-skill-and-result-contract",
+      "source_description_sha256": "742ee1812081da63e6448874b59073852e127a793bf82b5c9f0ab229499158cc",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Teach agents to use the tool boundary correctly.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The portable skill must discover capabilities, resolve stable targets, inspect state, supply revisions and keys, obey denials/approvals and report authoritative results. Its metadata, references, routing, installation instructions and behavioral tests must stay portable.",
+          "Headless work must succeed without attachment. The skill must keep backend operation and presentation outcomes separate and must not repeat a successful mutation just to reveal it.",
+          "The skill and generated tool reference must contain no credentials and grant no authority. Untrusted resource text or tool output cannot extend tool scope, request secrets or authorize publication, execution or policy changes."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "desktop-headless-real-host",
+      "source_description_sha256": "a743ff7212022d04ba619280a805a8baf13ada99e03130829325b14960215203",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Prove headless work on the packaged desktop.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "An automated journey must launch the current packaged Windows Electron app with an isolated data root, connect an actual MCP stdio client to that running host and create a system from a discovered available template without a UI lease.",
+          "The real UI must reflect external rename and saved composition changes without manual reload, preserve a dirty draft and original base during a competing save, and return a stale-write conflict. A visible toast or canned response alone cannot pass.",
+          "Lose a create response, retry through the connector and verify one durable resource/revision result; restart the isolated host and verify persisted receipt/outbox recovery without inventing task recovery. Close owned processes and retain only bounded synthetic observations."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "headless-observation-targets",
+      "source_description_sha256": "dc227d861a5659fe0b7b6d547074b665bc3f68651033b58240835253d842e42f",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Measure headless synchronization on named hosts.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Record the current packaged Windows build, CPU/RAM, Node/Electron versions, isolated fixture sizes and repeat counts before measurement. Establish an actual baseline; all numeric values here are prospective acceptance targets, not measured results.",
+          "With 100 bounded local authoring mutations after warm-up and a healthy connector, commit-to-current-visible-state p95 must be at most 1000 ms. Disconnect and reconnect with a retained cursor must recover scoped current state within 5000 ms after the connector is healthy.",
+          "Report p50/p95/max, failures and queue/resource observations separately from runtime/model execution. A missed target stays pending or failed and needs an explicit acceptance-policy change; tests may not silently relax it."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "headless-authoring-and-synchronization",
+      "criterion_id": "security-headless-reviewed",
+      "source_description_sha256": "730df7e8a196ca2078ee9460561178d611755ee1cbb8ecae707226aa89da6b0c",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep the new headless boundary narrow and private.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Record a current security impact and threat/control review for connector pairing, finite delegation, semantic mutation, receipts, outbox, context and tool outputs. Host-derived principal/organization and current workspace policy must remain authoritative.",
+          "Desktop pairing must require an explicit interactive action and issue a bounded credential for a registered client; loopback binding alone is insufficient. Validate host/origin, authenticate every request, cap attempts and payloads, keep credentials host-owned and allow exact client revocation.",
+          "Agent grants must exclude UI acceptance authority, admin, credentials, policy mutation, release/publication/deployment and arbitrary execution. New privileged work requires its own explicit authority and existing application approvals.",
+          "Focused tests must deny missing/stale/revoked credentials, spoofed caller identity, foreign organization/workspace, malformed and oversized input, DNS-rebinding/origin variants, unavailable policy and sensitive diagnostic leakage. Rollback disables the connector and revokes credentials while retaining secure persistence and ordinary UI behavior."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "exact-window-acceptance-and-reservation",
+      "source_description_sha256": "cbcfe6efdf314dbcd7d3a4147f1868afb556d1554d9e8f997e40fc326ad6ebf8",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Require acceptance for the exact window and request.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Only an authenticated interactive UI session from the exact live owned window main frame may accept or signal readiness for its displayed current request. Ordinary agent credentials must be unable to invoke these operations.",
+          "A grant must bind host incarnation, UI incarnation, stable agent session, verified principal/organization, workspace, request, acceptance attempt, lease generation, allowed actions/context and expiry. A lease ID by itself is not authorization.",
+          "Grant creation must atomically reserve one window through awaiting-readiness and active states. A second agent cannot displace an active or activating reservation. Readiness must match the current unexpired, unrevoked reservation and local attempt/fence before either gate becomes active.",
+          "Pending, declined, expired, failed and not-ready requests provide no presentation or fresh UI context. Workspace changes end the scope or require a fresh explicitly accepted request."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "dirty-handoff-and-reachable-controls",
+      "source_description_sha256": "155f6176fc70888e62afc45b78c4c20d35c80705b2f3a5a05eb5f691be64c24b",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep takeover controls explicit and drafts safe.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The app shell must show the identified session, task, workspace and exact window request with Accept automation takeover and Decline controls. Activating and active states must retain a Revoke automation takeover control outside managed feature content.",
+          "A clean draft may proceed. A dirty editor must offer Save changes and accept takeover or Cancel takeover, with no silent save, discard or unsupported preserved-draft claim. A save conflict, validation failure or transport failure keeps manual control and the complete draft.",
+          "During takeover one controller owns navigation and editing in the managed work area; competing human edits are disabled while reading/status and revoke stay usable. Revoke needs no confirmation and remains keyboard reachable across loading, ordinary dialogs, feature navigation and backend failure.",
+          "After revoke, restore human controls in place without reverting saved changes, replacing the route or discarding work, and state that independent chat work may continue. Automated tests must verify focus, native control semantics, keyboard reachability and bounded narrow layouts."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "immediate-local-revocation-and-exact-retry",
+      "source_description_sha256": "517886c50833bd5261dc51847698e029d3cc5f2a39b8e7f288dd5f505ba489e1",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Return window control before waiting for the host.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "When the revoke handler runs, capture the exact immutable request/attempt/lease target, mark control inactive, increment the local fence, clear the presentation gate, discard queues and unsent context, invalidate producers, abort presentation-only work where supported and restore human controls before any awaited transport call.",
+          "Host revoke must be idempotent and serialize against acceptance for the same attempt, including cancellation before the UI knows a lease ID. Reject partial or contradictory targets; never broaden cancellation or substitute a later current lease during retries.",
+          "Late grants, old acceptance retries, delayed readiness, heartbeat/reconnect and queued messages must never recreate ended authority. Sufficient terminal request/lease state and unknown-ID refusal must preserve this property within the advertised retry/retention policy.",
+          "An old revoke for lease A must not end later accepted lease B. Network loss may leave host acknowledgment pending but local human control remains immediate; reconnect retries only the captured target. New control needs a fresh accepted request."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "presentation-effect-fencing",
+      "source_description_sha256": "93a547c262770a8a26c608ecf89f14d149cd77b5289d73b445349c673875a580",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Discard every stale presentation effect.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Initial presentation is a finite validated action family: open system, select component, show run, show artifact and show validation results using explicit authorized resource IDs. No DOM selector, route executor, JavaScript or business mutation is permitted in a presentation handler.",
+          "Before starting and immediately before every visible side effect, each handler must verify exact host/UI/workspace/lease/generation, local fence and command execution generation plus cancellation, expiry and preconditions. No asynchronous gap may follow the final effect guard.",
+          "Held reads, preview preparation, navigation completions, timers, animation callbacks and late result handlers from ended or superseded commands must remain inert even if an abort fails. A removed resource returns a bounded failure without replacement navigation.",
+          "Events, default-selection effects and successful backend callbacks must not become indirect focus/navigation paths outside the gate, including after revoke or a workspace change."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "serial-delivery-and-independent-deduplication",
+      "source_description_sha256": "4ae8575dad7a1770d1c4569b39ca4e07fcfc1f7fb88dccce83a1b0c9ade42028",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Order window commands separately from business retries.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Use a bounded serial per-lease queue with host-assigned increasing sequences and finite command ID/payload receipts. The same ID/payload returns its recorded status without a repeated effect; changed payload under the same ID is rejected.",
+          "Completed lower sequences do not reapply. A bounded higher-sequence gap requests missing positions from the host buffer; it must not silently skip actions. Unrecoverable gaps end attachment and return human control while backend work continues.",
+          "A timeout or expired command records a terminal result, invalidates its own execution generation and only then advances the queue. A callback from that command cannot override later presentation under the same still-active lease.",
+          "No implicit last-request-wins coalescing or replay into a newer lease is allowed. Acknowledgments must distinguish host acceptance, delivery, applied/already-applied, rejected and discarded; business idempotency never substitutes for presentation ordering."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "context-minimization-and-revoke-fence",
+      "source_description_sha256": "66065ca0678a56c0e2b94ebd1246f8bdaeedf30485e14662d0eb6f9932199f80",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Stop fresh window observation at local revocation.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Accepted context initially contains only permitted workspace/resource IDs, supported view, attached-window readiness and dirty-navigation blocking. Unsaved text, form contents, screenshots, secrets and protected prompts are not implicitly shared.",
+          "Context producers must check current lease/scope/fence before collection and again before publication. Local revoke prevents new work, discards unsent values and suppresses held async results; host revoke stops forwarding and discards its queued values.",
+          "Fresh context requests after revoke must be denied even when the client ignores notifications. Bytes already transmitted may still arrive and cannot be recalled; this limit must be clear without treating independent authorized backend reads as window observation.",
+          "The skill must receive or poll truthful attachment status, stop trying presentation after detach and avoid repeated takeover requests after explicit revoke unless the user asks to attach again."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "source_description_sha256": "ef9d1f5740e3a54d9f6ec16e44a19b3044b6d40a5328d7791e385078e484b667",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep independent work separate from window control.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "A backend save finishing after revoke and another permitted backend command afterward must succeed under current backend authority; ordinary UI data/task updates continue without forced focus, selection or navigation.",
+          "A supported long-running backend operation must retain its existing task lifecycle and remain inspectable by chat and UI after revoke. UI revocation must not call task cancellation or close the chat connection. Agent targets stay explicit when the human selects another workspace.",
+          "Reload/new window incarnation, host restart, lease expiry, voluntary release and control-connection loss must return or default to human control without old-lease replay. Heartbeats can renew only the same current active grant, never ended authority.",
+          "Different windows may hold independent leases; revoking one leaves the other unchanged. Logout or backend access loss applies the existing broader access policy and ends attachment; continuation after UI revoke never permits unauthorized backend work.",
+          "A successful backend mutation with detached or failed reveal must report two outcomes and never retry the mutation to obtain a UI success. Host-exit task durability and physical cancellation remain outside this guarantee."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "desktop-takeover-real-host",
+      "source_description_sha256": "d3576120588cb616d046e7b3d1e994208f1517245132c053df91fbbf292e4169",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Prove takeover and revocation on the real desktop.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "An automated isolated packaged Windows journey must use a real MCP client and live host connector to request the identified window, click Accept automation takeover, reveal a newly created saved system and start an existing supported observable backend operation.",
+          "The test must hold a presentation response/context producer, click Revoke automation takeover, navigate and edit as the user, finish the backend operation and another scoped save, then verify ordinary data refresh without old preview/focus/navigation or fresh context.",
+          "Exercise revoke during a loading view and ordinary dialog, host-unreachable revoke, cancel-before-grant, delayed readiness, old-revoke-after-new-acceptance, a second agent and two windows. Use deterministic scheduling for exhaustive race permutations and actual host transport for focused representative journeys.",
+          "Reload and restart the isolated app, prove fresh human control and durable saved data, and close only owned processes. A synthetic state-machine pass alone does not establish packaged host/window identity, actual focus or native lifecycle."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "source_description_sha256": "10ef3d335a93b5c2ba625ec24491697b1a86c4ef41e8c25f9c002171f13446b6",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Measure immediate local control and bounded delivery.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The local revoke gate must close synchronously in the event handler with no network dependency; deterministic tests must prove zero later revoked effects or fresh context publications at every scheduled boundary.",
+          "On the recorded packaged Windows foreground fixture, 100 automated revokes across normal, loading and dialog states must restore enabled human controls at p95 at most 100 ms and maximum 250 ms after the revoke handler begins. Presentation application p95 must be at most 500 ms for warm local supported reveals without intentionally held I/O.",
+          "Record actual baseline, distribution, dropped/stale counts, queue peak and host versions. Initial proposed limits are 32 queued commands, 16 gap-buffer positions and 256 terminal outcomes per lease, with at most 8 KiB per command and 4 KiB per context projection; denial tests must prove every bound.",
+          "Readiness/request/lease/liveness timeouts and retention must be documented, finite, tested with fake clocks and then measured with background throttling. Expiry may protect abandoned authority but may not delay explicit local revoke. Any missed prospective target remains pending or failed."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "security-ui-control-reviewed",
+      "source_description_sha256": "da717f2c08d02ed8cc23ad79a833a894baad0d357d1f08879f2f36e9e3eb37ec",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Review exact-window authority and privacy controls.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Update the security impact and canonical threat/control model for acceptance, reservations, exact revoke, local and per-command fencing, context, bounds, lifecycle and audit. Acceptance grants presentation only and never increases backend permissions or bypasses application approval.",
+          "Focused denial tests must cover agent self-acceptance, foreign/destroyed/subframe windows, forged identities, wrong scopes, replayed attempts, stale generations, missing policy, malformed targets, expired authority and cross-window/org/workspace command or context access.",
+          "Audit must separately record request, acceptance, activation, local revoke, host acknowledgment, command delivery/application, conflicts and backend outcome using bounded metadata. Tests must prove that authentication tokens, draft/form/prompt contents, raw exceptions and protected resource payloads do not enter logs or status.",
+          "Rollback must locally close gates and return controls, terminate pending/active attachment authority and disable new takeover surfaces while retaining backend work, saved data, normal synchronization and secure denial. Never restore an ungated presentation path."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "same-server-authority-and-route-parity",
+      "source_description_sha256": "c77c71bc775f284ff58cd5c8042be14c9ca7c3b693f6fb7318b2716cfd4899bd",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Connect the browser and agent to the same authorized server.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "The browser and agent adapter must identify and use the same server deployment and application providers. Each agent request uses existing supported bearer/OIDC identity, explicit organization selection, active membership and application workspace authorization.",
+          "New finite API/stream routes must be registered in the existing deny-by-default policy with matching operation envelopes and runtime validation. Interactive acceptance/readiness/revoke credentials must remain distinct from ordinary agent grants.",
+          "Server, IPC and MCP mappings must preserve the same semantic authoring, expected revisions, task/approval denials and separate operation/presentation outcomes. No new OAuth issuer, identity system, external relay, direct desktop database connection or desktop-server synchronization is introduced."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "source_description_sha256": "9afb842d2c309795b8be3bd749e41e4d4d01c92efa0535b9fe2171090e98fb85",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep browser updates scoped and safe through reconnects.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Use an authenticated header-capable HTTP stream for application changes and separate logical presentation/context channels, with bounded scoped polling/resynchronization when streaming is unavailable. Never put long-lived credentials in stream URLs.",
+          "Snapshot/cursor setup, replay, resource refetch and permission changes must preserve organization/workspace isolation, immutable dirty-draft bases, monotonic saved state and subscription/request generation guards.",
+          "Duplicate events, replay gaps, expired cursors, reverse-order reads, abandoned subscriptions and background-tab resume must converge to authorized current saved state without implicit reveal/focus/navigation after detach."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "postgres-atomicity-and-worker-delivery",
+      "source_description_sha256": "10a4215479417b0d10791dc0076b2707d8904f44de7f756c54571fb2056c6910",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Recover committed changes across server workers.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "PostgreSQL business mutation, receipt and outbox must commit consistently under current organization scope and row security; failed or retried serializable callbacks must not duplicate side effects.",
+          "A controlled fixture with two real server workers sharing the same test PostgreSQL must deliver committed notifications to subscribers connected to either worker. Kill dispatch after commit, restart it and prove retained replay or scoped resync without a lost committed result.",
+          "Worker claim/retry/expiry and retention must be finite and fail closed. Duplicate dispatch is allowed only under at-least-once semantics with idempotent consumers; no universal exactly-once, external-effect recovery or model-job durability is claimed.",
+          "A two-worker fixture does not authorize deployment scaling. Existing single-replica templates stay unchanged until the target ingress, identity provider, RLS runtime role, database and worker topology have actual qualification."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "browser-real-host-and-parity",
+      "source_description_sha256": "c43f9d435076fe171bf2efa6d3331a3564af9268a1298ae6e0fc9b169e82f3df",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Prove acceptance and revocation in the real browser.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "An automated local Chrome journey must use the built thin client, a real authenticated test server and PostgreSQL, and an actual stdio MCP client forwarding to that same server. Use synthetic accounts and isolated organization/workspaces without production credentials.",
+          "Discover a supported template, create and edit its saved system headlessly, click Accept automation takeover in the target tab, reveal saved work, start an existing observable operation, click Revoke automation takeover and continue backend work while the human navigates/edits elsewhere.",
+          "Prove dirty-base conflict, no stale preview/focus/navigation, no fresh context after revoke, lost-response retry, reverse refetch, readiness/grant/revoke races, multi-tab isolation, expiration, disconnect and fresh acceptance after reload. Drive product human buttons automatically.",
+          "Reexecute the focused packaged desktop journey on the same final candidate to establish retained desktop behavior. Complete the 18-invariant/41-scenario crosswalk with exact test and host owners; deterministic substitutes must state their limits and cannot stand in for real host, persistence or native evidence."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "host-specific-targets-and-bounds",
+      "source_description_sha256": "842734cdf4d47791cdb6cbfd144b90689c7a8c05f01d85674ddf06953597eb76",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Measure both supported interfaces and recovery.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Record Windows/Electron and Chrome/server/PostgreSQL versions, machine resources, foreground/background status, network fixture and sample counts. Collect a baseline and report actual p50/p95/max separately for each host; no draft number is a measured claim.",
+          "For 100 bounded local Chrome mutations after warm-up, commit-to-current-visible-state p95 must be at most 2000 ms and warm allowed presentation p95 at most 1000 ms. For 100 local revokes, restored human controls must meet p95 at most 100 ms and maximum 250 ms after the handler begins, independent of server acknowledgment.",
+          "Healthy local reconnect/replay/resync must yield authorized current state within 5000 ms. Retest background-throttled expiry/liveness and both UI command/context size and queue bounds; zero old-generation effects and zero newly published revoked context are absolute correctness requirements.",
+          "Measure queue depth, duplicate suppression, conflicts, retry receipts and sanitized audit counters. Failed targets remain failed or pending and require explicit policy revision; local timing does not qualify WAN or cloud latency."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "security-managed-parity-reviewed",
+      "source_description_sha256": "60f657f6ff69f4f130e68cadeab7ca0968e61e0b2494eb5378ebd5aeef186e21",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep server and browser authority isolated.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Update and review the security delta for API routes, stream authentication, interactive UI acceptance, managed identity, PostgreSQL outbox/receipts and worker delivery. Existing OIDC, membership, RLS and secret boundaries remain authoritative.",
+          "Automated denial/failure tests must cover absent/revoked/wrong-audience credentials, wrong role or organization/workspace/window, agent self-acceptance, changed membership before replay/receipt reads, unknown/noncanonical route variants, malformed/oversized traffic and policy/stream/database failures.",
+          "Verify current access before returning replayed events, receipts or refetched resources. Failed authorization ends attachment and prevents new backend operations under existing policy, unlike ordinary UI-only revoke.",
+          "Credential-bearing traces, screenshots and raw logs must not be retained; tests use bounded synthetic evidence. Rollback disables the new routes/stream/control surface and ends leases while retaining existing secure APIs, data/receipts/audit, drafts and normal authorized UI access."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "complete-contract-and-final-qualification",
+      "source_description_sha256": "300d9457f2b1e99ade55c1950e504febcd921b3d8aa0d1440ab04d846f88b627",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Close only with complete current technical evidence.",
+        "owner": "agent",
+        "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
+        "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
+        "requirements": [
+          "Every INV-01 through INV-18 and AT-01 through AT-41 must map to an owning criterion, executable test and applicable host. No race, draft, privacy, retry, delivery, authority or business/presentation distinction may disappear when scenarios are grouped.",
+          "After every implementation chunk in all three increments is recorded and relevant checks pass, run npm run test:all once, followed by applicable docs:check, architecture:check, agent-support:check, dependency security and server/thin-client/desktop build-package gates on the current candidate.",
+          "Record real command outcomes, immutable sanitized reports, exact-target receipts and a separate-invocation review. Unavailable native, IdP, ingress, PostgreSQL or runtime evidence stays pending and prevents the corresponding supported deployment claim and final closure.",
+          "Keep human studies and manual acceptance offline; all retained technical UI checks are automated. User roadmap approval is separate from permission to implement, final overall approval and production/release authority."
+        ]
+      }
     }
   ],
   "headings": [
@@ -8352,6 +8858,57 @@
         ]
       },
       "increment_id": "active-release-workflow-eligibility"
+    },
+    {
+      "record_type": "roadmap",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "ea364b17c27eec52c636a3764c0f8834add6dd37591b7d67700295d5de704dbe",
+      "user_description": {
+        "title": "Headless Skills and Revocable UI Takeover",
+        "purpose": "Let authorized chat clients use the same application services as the UI, with optional exact-window takeover that the user can accept and immediately revoke while independent backend work continues; deliver desktop first, then server/browser support.",
+        "scope": [
+          "Technical work is pending. No implementation or test pass is claimed."
+        ]
+      }
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "b9646fee6b938a216ebc60a2d92a6ce79026a77e4361640331fb8b413c2a948a",
+      "user_description": {
+        "title": "Use chat tools to author systems and keep saved data synchronized",
+        "purpose": "Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.",
+        "scope": [
+          "Technical work is pending. No implementation or test pass is claimed."
+        ]
+      },
+      "increment_id": "headless-authoring-and-synchronization"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "29c85f167b68bc17f9032904ff87ce460d6be822f7c5fe6c8b643d084325478c",
+      "user_description": {
+        "title": "Accept and revoke automation control of one desktop window",
+        "purpose": "Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.",
+        "scope": [
+          "Technical work is pending. No implementation or test pass is claimed."
+        ]
+      },
+      "increment_id": "revocable-desktop-presentation"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "e9cc1889d52ded3bc23312d67bf8f7c336aa950e4d474efbdc42c4d56f84612c",
+      "user_description": {
+        "title": "Deliver the same workflow through the authenticated server and browser",
+        "purpose": "Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay.",
+        "scope": [
+          "Technical work is pending. No implementation or test pass is claimed."
+        ]
+      },
+      "increment_id": "server-browser-and-delivery-qualification"
     }
   ],
   "support": [

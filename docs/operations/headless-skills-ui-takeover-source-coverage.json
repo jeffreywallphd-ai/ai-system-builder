@@ -1,0 +1,1261 @@
+{
+  "schemaVersion": 1,
+  "roadmapId": "headless-skills-ui-takeover",
+  "status": "planned-not-run",
+  "source": "Supplied Headless Skills and Revocable UI Takeover design v1.0, 2026-11-10",
+  "sourceBaseline": "3f35f581c92a30f5bdb4f3368afedc9fce4526ee (historical reference)",
+  "discoveryBaseline": "3272dc4d54a0247aa9bf8544330a60efb83bb70e; source37dba8a596abcffe5191f70b7d4a7141f18c242cdf740022780b7c2d67a0923b with unrelated dirty work preserved; recheck before implementation",
+  "invariants": [
+    {
+      "sourceId": "INV-01",
+      "requirement": "UI and chat share authoritative application services.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "same-host-and-finite-tool-boundary",
+      "executableTestOwner": "host-provider identity integration plus real stdio/UI journey",
+      "assertions": [
+        "same host incarnation",
+        "same resource/revision",
+        "no independent database or second host"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-02",
+      "requirement": "Window lease does not authorize backend work or own task execution.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and connector integration",
+      "assertions": [
+        "backend read/mutation works with no lease",
+        "revocation does not invoke task cancellation",
+        "lease grant changes no backend permissions"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-03",
+      "requirement": "Only interactive UI authority can accept.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts plus IPC/API credential denial",
+      "assertions": [
+        "agent credential denied",
+        "exact interactive principal/window accepted",
+        "forged body identity ineffective"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-04",
+      "requirement": "Each lease binds exact host, UI, agent and scope.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "wrong host/UI incarnation, session, scope or generation rejected",
+        "lease ID alone rejected"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-05",
+      "requirement": "A window has at most one activating or active controller.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "parallel accepts have one reservation winner",
+        "awaiting-ready reservation blocks silent displacement"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-06",
+      "requirement": "Local revoke returns manual controls before host acknowledgment.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "gate/fence/control state changes before deferred transport settles",
+        "host-unreachable path remains manual"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-07",
+      "requirement": "No delayed revoked presentation effect may apply.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "presentation-effect-fencing",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx and prospective modules/application/services/ui-control/tests/presentation-delivery.unit.test.ts",
+      "assertions": [
+        "held prepare/read/navigation/timer/animation effects suppressed",
+        "abort failure is harmless",
+        "new lease cannot consume old queue"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-08",
+      "requirement": "Revoking the window preserves independently authorized backend work/chat.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts and connector task integration",
+      "assertions": [
+        "same running handle completes",
+        "chat connection/status usable",
+        "new authorized backend command succeeds"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-09",
+      "requirement": "Normal UI data updates continue after detach.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "committed-change-delivery",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/change-outbox.integration.test.ts and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "lists/tasks update from saved state",
+        "route/focus/selection unchanged by update"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-10",
+      "requirement": "Local revoke stops new context and pending producers.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "context-minimization-and-revoke-fence",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/context-publisher.unit.test.ts",
+      "assertions": [
+        "no producer starts after fence",
+        "held producer publishes zero fresh context",
+        "queued-unsent discarded",
+        "already transmitted bytes explicitly outside guarantee"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-11",
+      "requirement": "Ended leases are terminal; fresh control needs fresh acceptance.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "reconnect/heartbeat/retry/replay cannot revive",
+        "new request and click create new authority"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-12",
+      "requirement": "Late grants and stale revokes cannot override newer local decisions.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "attempt plus captured local fence rejects late grant",
+        "old immutable revoke target does not end new lease"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-13",
+      "requirement": "Dirty drafts retain their immutable base until explicit resolution.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "draft-base-and-refetch-ownership",
+      "executableTestOwner": "extend modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "assertions": [
+        "new list metadata cannot update draft base",
+        "undo/draft preserved",
+        "stale write returns conflict"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-14",
+      "requirement": "Backend targets are explicit after detach.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts plus skill behavior tests",
+      "assertions": [
+        "human workspace switch changes no agent task target",
+        "missing workspace fails closed"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-15",
+      "requirement": "Business and presentation outcomes remain separate.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "portable-skill-and-result-contract",
+      "executableTestOwner": "prospective MCP result mapping/skill tests and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "saved mutation stays succeeded when reveal detached",
+        "no business retry for presentation failure"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-16",
+      "requirement": "Business retry and UI delivery use distinct deduplication.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "serial-delivery-and-independent-deduplication",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/operation-receipts.integration.test.ts and prospective modules/application/services/ui-control/tests/presentation-delivery.unit.test.ts",
+      "assertions": [
+        "stable principal/client receipt survives reconnect",
+        "command dedup scoped to lease/generation",
+        "same ID changed payload denied"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-17",
+      "requirement": "Takeover adds no backend permission and bypasses no approval.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "security-ui-control-reviewed",
+      "executableTestOwner": "application authorization and exact-source workflow denial tests",
+      "assertions": [
+        "same denial before/after lease",
+        "confirmation description is not authorization",
+        "routine skill lacks privileged grants"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "INV-18",
+      "requirement": "Recovery defaults to manual unless current authority is proven.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts and prospective dev-tools/scripts/qualification/visual-composer/e2e/thin-client-headless-takeover.e2e.spec.ts",
+      "assertions": [
+        "new UI incarnation rejects old traffic",
+        "host restart invalidates old leases",
+        "liveness loss/expiry returns manual"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    }
+  ],
+  "acceptanceScenarios": [
+    {
+      "sourceId": "AT-01",
+      "requirement": "Authorized read without a UI lease.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "same-host-and-finite-tool-boundary",
+      "executableTestOwner": "MCP/connector headless read integration",
+      "assertions": [
+        "read succeeds",
+        "no attachment/context opened"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-02",
+      "requirement": "Authorized mutation without an attachment.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "revision-safe-semantic-authoring",
+      "executableTestOwner": "MCP/connector authoring integration",
+      "assertions": [
+        "one authoritative saved result returned",
+        "UI absence is allowed"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-03",
+      "requirement": "Takeover requested but unaccepted.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "presentation rejected",
+        "fresh context denied"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-04",
+      "requirement": "Agent tries interactive acceptance.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "IPC/API role separation tests",
+      "assertions": [
+        "agent credential denied before reservation mutation"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-05",
+      "requirement": "Current request accepted.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "exact window/workspace activated only after ready",
+        "automated product Accept click"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-06",
+      "requirement": "Second agent requests a controlled window.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "active/activating controller retained",
+        "no silent displacement"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-07",
+      "requirement": "Normal revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "manual controls before acknowledgment",
+        "no confirmation required"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-08",
+      "requirement": "Revoke while host is unreachable.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "local gate stays closed",
+        "exact target retained for retry",
+        "human actions work"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-09",
+      "requirement": "Revoke races with grant creation.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "cancel-before-grant and grant-before-cancel permutations",
+        "late grant cannot activate"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-10",
+      "requirement": "Retry old acceptance after cancellation.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "terminal attempt/unknown old target rejected",
+        "no recreated lease"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-11",
+      "requirement": "Old revoke arrives after new accepted lease.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "assertions": [
+        "new generation remains active",
+        "old target receives terminal/stale result"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-12",
+      "requirement": "Delivered command reaches effect after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "presentation-effect-fencing",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "captured local fence fails at final effect commit",
+        "no route/focus/selection change"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-13",
+      "requirement": "Preview preparation finishes after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "presentation-effect-fencing",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx and prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "preview does not open or steal focus",
+        "backend result remains available"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-14",
+      "requirement": "Timer or animation survives abort.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "presentation-effect-fencing",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "generation guard suppresses effect even when cancellation double does not abort"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-15",
+      "requirement": "Backend save completes after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "held real connector save plus UI journey",
+      "assertions": [
+        "saved revision commits",
+        "result reports detached presentation",
+        "no forced reveal"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-16",
+      "requirement": "Long-running operation survives revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "existing task use-case/connector integration and real host journey",
+      "assertions": [
+        "same authoritative task handle continues",
+        "chat status remains readable",
+        "task cancellation not called"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-17",
+      "requirement": "Another backend command after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "current-authority permitted command succeeds",
+        "lease is not required"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-18",
+      "requirement": "Fresh context requested after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "context-minimization-and-revoke-fence",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/context-publisher.unit.test.ts plus host context denial",
+      "assertions": [
+        "new collection and publication denied",
+        "independent backend read unchanged"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-19",
+      "requirement": "Created-data event arrives after revoke.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "committed-change-delivery",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/change-outbox.integration.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "normal data updates",
+        "no implicit focus/route/selection/preview"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-20",
+      "requirement": "Human changes workspace after revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "assertions": [
+        "agent work remains scoped to original explicit workspace",
+        "human selection retained"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-21",
+      "requirement": "New metadata/revision reaches a dirty editor.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "draft-base-and-refetch-ownership",
+      "executableTestOwner": "extend modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "assertions": [
+        "exact dirty values and undo preserved",
+        "original record revision/revision ID retained",
+        "new saved revision indicated"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-22",
+      "requirement": "Human saves an outdated draft.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "draft-base-and-refetch-ownership",
+      "executableTestOwner": "extend modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx plus repository integration",
+      "assertions": [
+        "expected original revision causes conflict",
+        "neither draft nor other writer overwritten"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-23",
+      "requirement": "Save-before-accept conflicts.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "dirty-handoff-and-reachable-controls",
+      "executableTestOwner": "extend modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx plus takeover shell interaction",
+      "assertions": [
+        "manual state retained",
+        "no ready/lease gate",
+        "draft preserved"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-24",
+      "requirement": "Create response lost, then retried.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "durable-retries-and-current-authority",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/operation-receipts.integration.test.ts and real connector lost-response test",
+      "assertions": [
+        "same result identity",
+        "one logical create",
+        "restart persistence where claimed"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-25",
+      "requirement": "Idempotency key reused for changed input.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "durable-retries-and-current-authority",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/operation-receipts.integration.test.ts",
+      "assertions": [
+        "fingerprint mismatch rejected",
+        "no second effect or result disclosure"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-26",
+      "requirement": "Duplicate and out-of-order presentation.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "serial-delivery-and-independent-deduplication",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/presentation-delivery.unit.test.ts",
+      "assertions": [
+        "same command no repeat",
+        "payload mismatch denied",
+        "serial gap replay bounded",
+        "unrecoverable gap detaches"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-27",
+      "requirement": "Old queued messages meet a new lease.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "serial-delivery-and-independent-deduplication",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/presentation-delivery.unit.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "old binding/generation refused",
+        "no replay into new lease"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-28",
+      "requirement": "Window reload or host restart.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts and prospective dev-tools/scripts/qualification/visual-composer/e2e/thin-client-headless-takeover.e2e.spec.ts",
+      "assertions": [
+        "new UI/host incarnation starts manual",
+        "old grant/readiness/queue rejected",
+        "saved data retained"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-29",
+      "requirement": "Lease expiry or control disconnect.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and liveness UI integration",
+      "assertions": [
+        "manual controls restored",
+        "heartbeat cannot revive ended lease",
+        "backend task lifecycle unchanged"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-30",
+      "requirement": "Two windows; revoke one.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts and multi-tab browser journey",
+      "assertions": [
+        "only exact lease ends",
+        "other controller/window unaffected"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-31",
+      "requirement": "Command or replay targets foreign scope.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "security-ui-control-reviewed",
+      "executableTestOwner": "transport/application scope denial and managed RLS tests",
+      "assertions": [
+        "cross-org/workspace/window denied",
+        "no protected payload or identity leak"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-32",
+      "requirement": "Subscriber reconnects after missing events.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "committed-change-delivery",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/change-outbox.integration.test.ts and authenticated stream integration",
+      "assertions": [
+        "valid cursor replays",
+        "expired/invalid/gapped cursor resyncs",
+        "current authorization applied"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-33",
+      "requirement": "Commit succeeds and dispatcher fails.",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "criterionId": "postgres-atomicity-and-worker-delivery",
+      "executableTestOwner": "prospective PostgreSQL two-worker crash/replay integration; SQLite restart integration",
+      "assertions": [
+        "committed outbox survives",
+        "dispatch resumes to subscribers on both workers",
+        "consumer deduplication tolerates repeats"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-34",
+      "requirement": "Save succeeds and reveal fails.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "portable-skill-and-result-contract",
+      "executableTestOwner": "MCP result mapping and skill behavior tests",
+      "assertions": [
+        "business success + failed/detached presentation reported separately",
+        "mutation call count remains one"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-35",
+      "requirement": "Backend authorization is lost.",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "criterionId": "security-managed-parity-reviewed",
+      "executableTestOwner": "managed permission-revocation integration",
+      "assertions": [
+        "new reads/writes/replay/receipt access denied",
+        "attachment ends",
+        "in-flight work uses existing policy"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-36",
+      "requirement": "Revoke during loading and ordinary dialogs.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "dirty-handoff-and-reachable-controls",
+      "executableTestOwner": "prospective dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts and prospective dev-tools/scripts/qualification/visual-composer/e2e/thin-client-headless-takeover.e2e.spec.ts",
+      "assertions": [
+        "keyboard-visible shell revoke remains reachable",
+        "click executes without confirmation",
+        "manual controls/focus restored"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-37",
+      "requirement": "Refetch replies complete in reverse order.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "draft-base-and-refetch-ownership",
+      "executableTestOwner": "extend modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx plus shared synchronization held-response tests",
+      "assertions": [
+        "no revision regression",
+        "old workspace/subscription ignored",
+        "dirty base unchanged"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-38",
+      "requirement": "Readiness arrives for ended/superseded reservation.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "old ready cannot activate/displace current reservation",
+        "exact local attempt/fence also required"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-39",
+      "requirement": "Async context completes after local revoke.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "context-minimization-and-revoke-fence",
+      "executableTestOwner": "prospective modules/ui/shared/automation/tests/context-publisher.unit.test.ts",
+      "assertions": [
+        "held result publishes zero new values",
+        "pretransmitted bytes explicitly not recalled",
+        "host queued values discarded once revoke processed"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-40",
+      "requirement": "Retry after reconnect or changed permissions.",
+      "incrementId": "headless-authoring-and-synchronization",
+      "criterionId": "durable-retries-and-current-authority",
+      "executableTestOwner": "prospective modules/adapters/persistence/automation/tests/operation-receipts.integration.test.ts plus managed authorization integration",
+      "assertions": [
+        "stable tenant/principal/client namespace deduplicates",
+        "new chat-session ID does not duplicate",
+        "current access rechecked before result"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    },
+    {
+      "sourceId": "AT-41",
+      "requirement": "Timed-out command finishes after queue advances.",
+      "incrementId": "revocable-desktop-presentation",
+      "criterionId": "serial-delivery-and-independent-deduplication",
+      "executableTestOwner": "prospective modules/application/services/ui-control/tests/presentation-delivery.unit.test.ts and prospective modules/ui/shared/automation/tests/presentation-gate.interaction.ui.test.tsx",
+      "assertions": [
+        "old command generation invalidated before advancing",
+        "same valid lease cannot authorize obsolete callback",
+        "later presentation retained"
+      ],
+      "applicableHosts": [
+        "packaged-windows-desktop",
+        "authenticated-server-local-chrome"
+      ],
+      "serverParityCriterion": "browser-real-host-and-parity",
+      "evidenceStatus": "planned-not-run"
+    }
+  ],
+  "sections": [
+    {
+      "section": "1",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Headless authority, saved-state independence and separate lifecycles"
+    },
+    {
+      "section": "2",
+      "increments": [
+        "headless-authoring-and-synchronization"
+      ],
+      "coverage": "Revalidate current host, API, persistence, Composer and workflow seams"
+    },
+    {
+      "section": "3",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "All18 invariant rows above"
+    },
+    {
+      "section": "4",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Application ownership, thin adapters, independent change/presentation/context channels"
+    },
+    {
+      "section": "5",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Same running desktop then same managed server; no hybrid sync/relay"
+    },
+    {
+      "section": "6",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Stable principal/client receipt identity versus live host/UI/agent/attempt/lease identity"
+    },
+    {
+      "section": "7",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Separate logical channels, finite actions and metadata-only context"
+    },
+    {
+      "section": "8",
+      "increments": [
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Explicit product accept/revoke shell and automated tests of its lifecycle"
+    },
+    {
+      "section": "9",
+      "increments": [
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Atomic awaiting-ready reservation and cancellation/grant/readiness race handling"
+    },
+    {
+      "section": "10",
+      "increments": [
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Synchronous local fencing, immutable exact revoke and late callback suppression"
+    },
+    {
+      "section": "11",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Versioned validated contracts, operation-derived transports and separated caller surfaces"
+    },
+    {
+      "section": "12",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Finite tool catalog, portable skill and truthful workflow/task capabilities"
+    },
+    {
+      "section": "13",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation"
+      ],
+      "coverage": "Shared semantic edits, immutable draft base and save-or-cancel handoff"
+    },
+    {
+      "section": "14",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Committed outbox, scoped snapshot/cursor/replay/resync and guarded refetch"
+    },
+    {
+      "section": "15",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Durable business retry identity versus per-lease serial presentation dedup"
+    },
+    {
+      "section": "16",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Authentication, delegation, exact scope, privacy, injection resistance and redaction"
+    },
+    {
+      "section": "17",
+      "increments": [
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Expiry, disconnect, new incarnations, multi-window isolation and authorization loss"
+    },
+    {
+      "section": "18",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Deterministic failure oracles mapped to AT cases; no optimistic pass"
+    },
+    {
+      "section": "19",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Existing family seams first, new adapters/ports only with owned responsibilities"
+    },
+    {
+      "section": "20",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Bounded outcome/audit events and host-specific prospective measured targets"
+    },
+    {
+      "section": "21",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "All41 scenario rows above with executable ownership"
+    },
+    {
+      "section": "22",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Six reference phases consolidated into three cohesive useful increments"
+    },
+    {
+      "section": "23",
+      "increments": [
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Actual MCP/client + real UI template/task/accept/revoke/continue demonstration automated on both hosts"
+    },
+    {
+      "section": "24",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Recommended defaults are proposal choices; exclusions remain explicit"
+    },
+    {
+      "section": "25",
+      "increments": [
+        "headless-authoring-and-synchronization",
+        "revocable-desktop-presentation",
+        "server-browser-and-delivery-qualification"
+      ],
+      "coverage": "Current source discovery and current primary protocol/skill documentation"
+    }
+  ],
+  "qualificationRules": [
+    "All test paths marked prospective must be implemented and executed after separate implementation authorization.",
+    "Shared deterministic tests prove protocol logic; real packaged Windows and Chrome/server/PostgreSQL tests prove host behavior.",
+    "Use an existing supported observable backend operation with a bounded deterministic test runtime where needed. Substitution does not prove native model accuracy, external-provider effects or new crash recovery.",
+    "Human product acceptance and revoke are simulated by UI tests. No human acceptance/study task is part of technical closure.",
+    "No test, model, application, service, dependency installation or full suite was executed for this planning artifact.",
+    "The earlier ignored-only preparation constraint ended when publication was handed off. This draft is now published but unapproved. Future implementation requires a separate user request and current roadmap approval, source reconciliation, and preservation of unrelated changes, roadmap history and actual qualification."
+  ]
+}
