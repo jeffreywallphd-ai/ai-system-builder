@@ -1,6 +1,37 @@
 import {expect,type Page} from "@playwright/test";
 import type {FunctionalHost} from "../functional-host-oracles";
 
+/** A pending selection is not the active workspace. Confirm and await the UI commit. */
+export async function confirmFunctionalWorkspaceSwitch(controls:{
+  choose:(workspaceId:string)=>Promise<void>;
+  canConfirm:()=>Promise<boolean>;
+  confirm:()=>Promise<void>;
+  waitForCommitted:(workspaceId:string)=>Promise<void>;
+},workspaceId:string){
+  await controls.choose(workspaceId);
+  if(await controls.canConfirm())await controls.confirm();
+  await controls.waitForCommitted(workspaceId);
+}
+
+export async function switchFunctionalWorkspace(page:Page,workspaceId:string){
+  const header=page.getByRole("region",{name:"Current workspace",exact:true});
+  const select=header.getByLabel("Select current workspace",{exact:true});
+  const change=header.getByRole("button",{name:"Change",exact:true});
+  await expect(select).toBeVisible({timeout:60_000});
+  await confirmFunctionalWorkspaceSwitch({
+    choose:async id=>{await select.selectOption(id);await expect(select).toHaveValue(id);},
+    canConfirm:()=>change.isEnabled(),
+    confirm:()=>change.click(),
+    waitForCommitted:async id=>{
+      // During a real transition the header can show Loading instead of controls.
+      // Change is disabled only when the selected ID equals the active ID.
+      await expect(change).toBeVisible({timeout:60_000});
+      await expect(change).toBeDisabled({timeout:60_000});
+      await expect(select).toHaveValue(id);
+    },
+  },workspaceId);
+}
+
 export async function createFunctionalWorkspace(page:Page,name:"Model reference fixture"|"Model isolation fixture"|"Settings public-values fixture"|"Settings secret-defaults fixture"|"Operational browser fixture"){
   const select=page.getByLabel("Select current workspace",{exact:true});
   await expect(select).toBeVisible({timeout:60_000});const previous=await select.inputValue();

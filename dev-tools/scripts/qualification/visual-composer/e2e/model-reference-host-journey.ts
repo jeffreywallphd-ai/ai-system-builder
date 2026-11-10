@@ -1,7 +1,7 @@
 import {expect,type Page,type TestInfo,type Locator} from "@playwright/test";
 import {FUNCTIONAL_REFERENCE_MODEL,MODEL_REFERENCE_PHASES,functionalHostIdentity,captureModelReferenceInventory,modelReferenceHostReport,type FunctionalHost} from "../functional-host-oracles";
 import {safeQualificationFailureType} from "../qualification-reporting";
-import {createFunctionalWorkspace,readFunctionalModelInventory} from "./functional-host-common";
+import {createFunctionalWorkspace,readFunctionalModelInventory,switchFunctionalWorkspace} from "./functional-host-common";
 
 /** The real mounted search and Save controls. Never click Download or inject success. */
 export async function qualifyModelReferenceHostJourney(page:Page,info:TestInfo,host:FunctionalHost){
@@ -64,7 +64,7 @@ export async function qualifyModelReferenceHostJourney(page:Page,info:TestInfo,h
       await expect(await inventoryCard()).toHaveCount(0);workspace=original;
     });
     await step("original-workspace-confirmed",async()=>{
-      await page.getByLabel("Select current workspace",{exact:true}).selectOption(workspace);await openModels();
+      await switchFunctionalWorkspace(page,workspace);await openModels();
       const rows=await read();expect(rows).toHaveLength(1);expect(rows[0]!.modelRecordId).toBe(record);await expectSavedDetails();
     });
   }catch(error){failed=true;failure=error;}

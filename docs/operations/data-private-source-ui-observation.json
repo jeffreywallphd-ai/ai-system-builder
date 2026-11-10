@@ -2,8 +2,8 @@
   "schema_version": "data-private-source-ui-observation-v1",
   "status": "failed-feature-trial-reviewed-no-ui-qualification",
   "user_summary": {
-    "title": "Private file import test needs diagnosis",
-    "description": "The test app started and shut down. The run produced a failed test result but no workflow step report. Its two temporary credential files are gone. The agent must diagnose the failure before this UI check can pass.",
+    "title": "Finish the workspace return check",
+    "description": "The latest private-file test passed ten of eleven steps. File selection, reference creation, localization, reloads and workspace isolation passed. The final return check failed. The agent found and corrected a missing Change action in the tests. A new real run must confirm that the original reference is retained. The failed run and safe shutdown remain recorded.",
     "action_owner": "agent",
     "user_action": "No action needed."
   },
@@ -338,5 +338,65 @@
     "original_private_failure_cause_confirmed": false,
     "actual_private_ui_or_parent_qualification": false,
     "meaning": "The app and browser start with the corrected Windows test profile. The page fixtures and evidence writer work. The real private-file import test is next. No action is needed from the user."
+  },
+  "workspaceConfirmationDiagnosis": {
+    "schema_version": "private-source-workspace-confirmation-diagnosis-v1",
+    "status": "failed-ten-phase-attempt-reviewed-corrected-journey-pending",
+    "source_commit": "f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc",
+    "source_digest": "6ab409a38358b92c8d5a9bdb812f08aba3f8d896cb04e1de113082ec51119ab7",
+    "actual_observation_sha256": "9a930fc7315329da84a922192e040fa7d5991047a846ce5214996d1d5a6d5d00",
+    "native_result_sha256": "a6da70b6f561cf004a79555dfd8beff4ee9b5ce9cc94358cfbdda4ced5fc7211",
+    "independent_outcome_review_sha256": "55e2115f34ea5fb63a5f947a594843716d53a5cc8d9f961ce6d51ca454e2100e",
+    "canonical_changes_requested_review": "456666281de625368896b1e26c3e1b6bcc531d210ebf3ce1ea2db6214a0553b5",
+    "actual_case_status": "failed",
+    "actual_case_duration_ms": 15072,
+    "completed_phases": [
+      "fresh-provider-workspace",
+      "exact-provider-file-selected",
+      "reference-task-completed",
+      "remote-reference-confirmed",
+      "reload-keeps-reference",
+      "explicit-localization-completed",
+      "localized-bytes-confirmed",
+      "reload-keeps-localized-reference",
+      "second-workspace-empty",
+      "cross-workspace-reference-denied"
+    ],
+    "required_phase_count": 11,
+    "remaining_composite_phase": "original-reference-retained",
+    "fixed_failure_types": [
+      "Error"
+    ],
+    "fixed_failure_stage": "provider-test-failed",
+    "static_test_defect": "Three test journeys select a pending workspace but omit the Change action that commits it. The application deliberately requires confirmation.",
+    "remediation": "Use the real header Change control and wait for the active-workspace UI state. Preserve subsequent exact inventory, artifact and provider retention assertions.",
+    "causal_limit": "Source inspection proves the test omission. The fixed private report does not identify which subcall in the last composite phase failed, prove artifact loss or establish a corrected pass.",
+    "retirement": {
+      "active_owned_processes": 0,
+      "all_owned_handles_closed": true,
+      "streams_complete": true,
+      "explicit_input_absent": true,
+      "seeded_credential_absent": true,
+      "generated_pairing_absent": true,
+      "raw_private_logs_read": false,
+      "credential_content_or_hash_recorded": false,
+      "source_and_runtime_unchanged": true
+    },
+    "automatic_retry_allowed": false,
+    "prior_attempt_consumed": true,
+    "actual_corrected_ui_pass": false,
+    "parent_qualification_granted": false,
+    "scope_limits": [
+      "Actual corrected eleven-phase host journey remains pending.",
+      "Private-provider website check remains deferred.",
+      "Accepted model accuracy and OCR remain closed.",
+      "Managed authorization, native staging, offload, crash and final cross-roadmap qualification remain separate."
+    ],
+    "prior_user_summary": {
+      "title": "Private file import test needs diagnosis",
+      "description": "The test app started and shut down. The run produced a failed test result but no workflow step report. Its two temporary credential files are gone. The agent must diagnose the failure before this UI check can pass.",
+      "action_owner": "agent",
+      "user_action": "No action needed."
+    }
   }
 }

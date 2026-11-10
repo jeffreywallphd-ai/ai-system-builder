@@ -1,9 +1,45 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {FUNCTIONAL_REFERENCE_MODEL,MODEL_REFERENCE_PHASES,captureModelReferenceInventory,functionalHostIdentity,modelReferenceHostReport} from "../visual-composer/functional-host-oracles";
-import {readFunctionalModelInventoryInBrowser} from "../visual-composer/e2e/functional-host-common";
+import {confirmFunctionalWorkspaceSwitch,readFunctionalModelInventoryInBrowser} from "../visual-composer/e2e/functional-host-common";
 const run="functional-model-fixture-20261029",source="source."+"a".repeat(64),workspace="workspace.functional-test";
 const row=()=>({modelRecordId:"model.reference-test",modelId:FUNCTIONAL_REFERENCE_MODEL,workspaceId:workspace,provider:"huggingface",source:"huggingface",lifecycleStatus:"saved-reference",artifactForm:"full-model",localFilesAvailable:false});
+function workspaceControls(active="workspace.original"){
+  const state={active,pending:active,confirmations:0};
+  return {state,controls:{
+    choose:async(id:string)=>{state.pending=id;},
+    canConfirm:async()=>state.pending!==state.active,
+    confirm:async()=>{state.confirmations++;state.active=state.pending;},
+    waitForCommitted:async(id:string)=>{assert.equal(state.active,id);},
+  }};
+}
+test("workspace switching confirms pending selection before observing the active workspace",async()=>{
+  const {state,controls}=workspaceControls();
+  await confirmFunctionalWorkspaceSwitch(controls,"workspace.destination");
+  assert.equal(state.active,"workspace.destination");assert.equal(state.confirmations,1);
+  await confirmFunctionalWorkspaceSwitch(controls,"workspace.destination");
+  assert.equal(state.confirmations,1);
+});
+test("workspace switching stays pending until the asynchronous active-workspace commit",async()=>{
+  const {state,controls}=workspaceControls();let commit!:()=>void,completed=false;
+  const committed=new Promise<void>(resolve=>{commit=()=>{state.active=state.pending;resolve();};});
+  controls.confirm=async()=>{state.confirmations++;};
+  controls.waitForCommitted=async id=>{await committed;assert.equal(state.active,id);};
+  const switching=confirmFunctionalWorkspaceSwitch(controls,"workspace.destination").then(()=>{completed=true;});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(state.active,"workspace.original");assert.equal(state.confirmations,1);assert.equal(completed,false);
+  commit();await switching;assert.equal(state.active,"workspace.destination");assert.equal(completed,true);
+});
+test("workspace switching propagates refused selection, confirmation and uncommitted state",async()=>{
+  for(const failure of ["choose","confirm","waitForCommitted"] as const){
+    const {state,controls}=workspaceControls();
+    if(failure==="waitForCommitted")controls.confirm=async()=>{state.confirmations++;};
+    else if(failure==="choose")controls.choose=async()=>{throw new Error("Selection refused.");};
+    else controls.confirm=async()=>{throw new Error("Confirmation refused.");};
+    await assert.rejects(confirmFunctionalWorkspaceSwitch(controls,"workspace.destination"));
+    assert.equal(state.active,"workspace.original");
+  }
+});
 test("only the exact saved reference in the exact workspace is accepted without local files",()=>{
   assert.deepEqual(captureModelReferenceInventory([],workspace),[]);
   const result=captureModelReferenceInventory([row()],workspace);assert.equal(result.length,1);assert.equal(result[0].modelRecordId,"model.reference-test");assert.equal(Object.isFrozen(result),true);

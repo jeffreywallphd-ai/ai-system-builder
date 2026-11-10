@@ -375,6 +375,13 @@ parent completion or release.
 
 ## Roadmaps and qualification
 
+Functional host journeys must distinguish the selected workspace from the active
+workspace. Use `switchFunctionalWorkspace` to select a workspace, press the header's
+**Change** button when needed, and wait for the committed UI state. Selecting an
+option alone does not switch workspace. Keep the real inventory and retention
+checks after the transition; a helper regression test does not qualify an actual
+host or a private-provider journey.
+
 Before requesting roadmap approval, publish the complete unapproved draft through
 the skill engine and verify the live JSON projection against the canonical
 roadmap: expected nonzero increments, objectives, criterion IDs/counts and full

@@ -8,6 +8,7 @@ import {captureProviderBacking,captureProviderBytes,capturePrivatePublicationWit
 import {privateProviderFailureStage} from "../functional-private-provider-fixture";
 import {finalizeQualificationEvidence,safeQualificationFailureType} from "../qualification-reporting";
 import {readArtifactHostState} from "./artifact-host-browser-reads";
+import {switchFunctionalWorkspace} from "./functional-host-common";
 
 /** Actual controls shared by the two provider cases; no writes through a private bridge. */
 export function providerArtifactUi(page:Page,host:FunctionalHost){
@@ -37,7 +38,7 @@ export function providerArtifactUi(page:Page,host:FunctionalHost){
   }
   return{select,detail,closeDetail,workspace,list,ingestion,notificationCount,completedNotification,open,uploadInventory,
     async reload(scope:string){await page.reload();await expect(select()).toHaveValue(scope,{timeout:60_000});},
-    async switchTo(scope:string){await closeDetail();await select().selectOption(scope);await expect(select()).toHaveValue(scope);},
+    async switchTo(scope:string){await closeDetail();await switchFunctionalWorkspace(page,scope);},
   };
 }
 

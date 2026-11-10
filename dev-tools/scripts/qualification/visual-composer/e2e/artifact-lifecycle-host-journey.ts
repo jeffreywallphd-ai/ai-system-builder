@@ -4,6 +4,7 @@ import {functionalHostIdentity,type FunctionalHost} from "../functional-host-ora
 import {ARTIFACT_SAMPLE_NAME,ARTIFACT_SAMPLE_TEXT,ARTIFACT_SAMPLE_BYTES,ARTIFACT_SAMPLE_SHA256,artifactWorkspace,artifactKey,captureLocalArtifactState,artifactHostPhases,artifactHostReport,type ArtifactHostCase} from "../functional-artifact-oracles";
 import {safeQualificationFailureType} from "../qualification-reporting";
 import {readArtifactHostState} from "./artifact-host-browser-reads";
+import {switchFunctionalWorkspace} from "./functional-host-common";
 
 /** Real local UI, task, public reads and one genuine LAN permission refusal. */
 export async function qualifyArtifactLifecycleHostJourney(page:Page,info:TestInfo,host:FunctionalHost,scenario:ArtifactHostCase){
@@ -50,7 +51,7 @@ export async function qualifyArtifactLifecycleHostJourney(page:Page,info:TestInf
     const rows=await list(scope);expect(rows).toHaveLength(1);expect(rows[0]!.originalName).toBe(ARTIFACT_SAMPLE_NAME);return artifactKey(rows[0]!.storageKey);
   }
   async function reload(scope:string){await page.reload();await expect(select()).toHaveValue(scope,{timeout:60_000});}
-  async function switchTo(scope:string){await closeDetail();await select().selectOption(scope);await expect(select()).toHaveValue(scope);}
+  async function switchTo(scope:string){await closeDetail();await switchFunctionalWorkspace(page,scope);}
   try{
     await step("owned-artifact-imported",async()=>{workspace=await makeWorkspace(scenario==="publication-denial"?"Artifact route denial fixture":"Artifact lifecycle fixture");key=await upload(workspace);});
     if(scenario==="publication-denial"){

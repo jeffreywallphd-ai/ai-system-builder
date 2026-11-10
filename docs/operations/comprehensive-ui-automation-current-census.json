@@ -14217,84 +14217,84 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",
    "facts": {
-    "sha256": "9ddcfcbe620a754857065c4d28c7368d3bf4f870d0b0ce32771c8e87a0780662",
-    "bytes": 11862,
+    "sha256": "fb15317d72ee375047c5cb24e16d417a96e8fa7781fe2ba0839caa452575915a",
+    "bytes": 11897,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "providerArtifactUi",
-      "line": 13
+      "line": 14
      },
      {
       "name": "closeDetail",
-      "line": 16
-     },
-     {
-      "name": "workspace",
       "line": 17
      },
      {
-      "name": "list",
-      "line": 21
+      "name": "workspace",
+      "line": 18
      },
      {
-      "name": "ingestion",
+      "name": "list",
       "line": 22
      },
      {
-      "name": "notificationCount",
+      "name": "ingestion",
       "line": 23
      },
      {
+      "name": "notificationCount",
+      "line": 24
+     },
+     {
       "name": "completedNotification",
-      "line": 26
+      "line": 27
      },
      {
       "name": "open",
-      "line": 29
+      "line": 30
      },
      {
       "name": "uploadInventory",
-      "line": 34
+      "line": 35
      },
      {
       "name": "publishProviderHostEvidence",
-      "line": 45
+      "line": 46
      },
      {
       "name": "qualifyProviderSourceHostJourney",
-      "line": 60
+      "line": 61
      },
      {
       "name": "step",
-      "line": 63
+      "line": 64
      },
      {
       "name": "check",
-      "line": 64
+      "line": 65
      }
     ],
-    "assertionCount": 25,
-    "assertionDigest": "b633e80f0500a4b2b3c202e4342df285036b71c0010ea70e2d1259cc93cf647d",
+    "assertionCount": 24,
+    "assertionDigest": "438547e386c4977c34a66b7b761bf162af04aaddcb0b9e16cd7674cb43e5e4fd",
     "assertionExamples": [
      {
-      "line": 18,
+      "line": 19,
       "kind": "expect",
       "sha256": "cc6cedf61e81d1e229dab367883eff9949597e7d9f6e37d388387cfe31004944"
      },
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
      },
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "7e834bea6cada968ceada9b2b47a886c8b3903cb45e83ebebca519af3e266fda"
      },
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "c7232a477505f246242709a97942adf1a5b80e1698d20fa642b19a8906efdcd5"
      }
@@ -14350,76 +14350,76 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",
    "facts": {
-    "sha256": "14225c5974a305f52ad7ff64dfdc4bbd0bc6a28836d58986859d3fa55c787dfd",
-    "bytes": 11778,
+    "sha256": "a2eb97b9689441fd53b5d3a8b1fecf2decf5cc84b66bb6bd507344b1552a4565",
+    "bytes": 11813,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "qualifyArtifactLifecycleHostJourney",
-      "line": 9
+      "line": 10
      },
      {
       "name": "step",
-      "line": 19
-     },
-     {
-      "name": "makeWorkspace",
       "line": 20
      },
      {
+      "name": "makeWorkspace",
+      "line": 21
+     },
+     {
       "name": "list",
-      "line": 27
+      "line": 28
      },
      {
       "name": "inspect",
-      "line": 30
-     },
-     {
-      "name": "openBrowser",
       "line": 31
      },
      {
-      "name": "closeDetail",
+      "name": "openBrowser",
       "line": 32
      },
      {
-      "name": "openExact",
+      "name": "closeDetail",
       "line": 33
      },
      {
+      "name": "openExact",
+      "line": 34
+     },
+     {
       "name": "upload",
-      "line": 41
+      "line": 42
      },
      {
       "name": "reload",
-      "line": 52
+      "line": 53
      },
      {
       "name": "switchTo",
-      "line": 53
+      "line": 54
      }
     ],
-    "assertionCount": 42,
-    "assertionDigest": "7e4df6a6f3410b2b25eea651c104c6af851897ce513891247341a68ea2d6e78f",
+    "assertionCount": 41,
+    "assertionDigest": "4d67a708cbb7fc0d32cce0e2eefe0ff2e2af078a8036f3370e813a0ac0ddc688",
     "assertionExamples": [
      {
-      "line": 21,
+      "line": 22,
       "kind": "expect",
       "sha256": "cc6cedf61e81d1e229dab367883eff9949597e7d9f6e37d388387cfe31004944"
      },
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
      },
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "7e834bea6cada968ceada9b2b47a886c8b3903cb45e83ebebca519af3e266fda"
      },
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "c7232a477505f246242709a97942adf1a5b80e1698d20fa642b19a8906efdcd5"
      }
@@ -14528,8 +14528,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts",
    "facts": {
-    "sha256": "890e4a512bc30ee63f50d27a6686e0c713869df3bfb42ff6bad6fc4a9aff1ae7",
-    "bytes": 6563,
+    "sha256": "f79ed0d780918fa0ac45b75439cd7d26d7e8b5190dd6e218492b9214c43d065a",
+    "bytes": 6550,
     "cases": [],
     "dynamicCases": 0,
     "functions": [

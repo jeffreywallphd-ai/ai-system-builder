@@ -419,8 +419,30 @@ function privateProviderLegacyView(map,result){
   return{map:{...map,sources:map.sources.map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
 }
 function assertCompleteCurrentSourceDrift(map,result){
+  const legacy=workspaceSwitchLegacyView(map,result);
+  assertPrivateProviderSourceDrift(legacy.map,legacy.result);
+}
+function assertPrivateProviderSourceDrift(map,result){
   const legacy=privateProviderLegacyView(map,result);
   assertCurrentSourceDrift(legacy.map,legacy.result,true);
+}
+// This current revision adds exactly three workspace-confirmation definitions.
+// Historical validators receive only their authentic pre-revision rows.
+const pendingWorkspaceSwitchDefinitions=Object.freeze([
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"9ddcfcbe620a754857065c4d28c7368d3bf4f870d0b0ce32771c8e87a0780662",candidate:"fb15317d72ee375047c5cb24e16d417a96e8fa7781fe2ba0839caa452575915a",facts_sha256:"50fea604b766b5546beb69be6efa047cebcb7b99817964f59f09354a2d85d9b5"},
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"14225c5974a305f52ad7ff64dfdc4bbd0bc6a28836d58986859d3fa55c787dfd",candidate:"a2eb97b9689441fd53b5d3a8b1fecf2decf5cc84b66bb6bd507344b1552a4565",facts_sha256:"2bd02edb40f67f5d5d42bc507cc204b7723f59af45127da7f3d763fffc694770"},
+  {path:"dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts",baseline:"608679a6095ef5617921e504bf208858df6a7c49",committed:"890e4a512bc30ee63f50d27a6686e0c713869df3bfb42ff6bad6fc4a9aff1ae7",candidate:"f79ed0d780918fa0ac45b75439cd7d26d7e8b5190dd6e218492b9214c43d065a",facts_sha256:"4dc68fc764a67672c972fa02bb2c5878f7eb9c99495ff62816e5b40a5e720bc7"},
+].map(Object.freeze));
+function workspaceSwitchLegacyView(map,result){
+  const remaining=assertContrastDiagnosticDrift(map,result,pendingWorkspaceSwitchDefinitions);
+  const prior=JSON.parse(historicalSource("f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc","docs/operations/comprehensive-ui-automation-current-census.json"));
+  const previousRows=new Map();
+  for(const definition of pendingWorkspaceSwitchDefinitions){
+    const rows=prior.sources.filter(row=>row.path===definition.path);assert.equal(rows.length,1);
+    assert.equal(rows[0].facts.sha256,definition.committed);assert.equal(rows[0].committed_sha256,definition.committed);
+    previousRows.set(definition.path,rows[0]);
+  }
+  return{map:{...map,sources:map.sources.map(row=>previousRows.has(row.path)?structuredClone(previousRows.get(row.path)):row)},result:remaining};
 }
 function assertCurrentSourceDrift(map, result, includeStartupReport = false) {
   if(includeStartupReport)result=assertContrastDiagnosticDrift(map,result,pendingModelStartupReportDefinitions);
@@ -565,7 +587,8 @@ test("checks the current repository map against original scope and actual source
   assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
-  const legacy=privateProviderLegacyView(map,result);
+  const workspaceLegacy=workspaceSwitchLegacyView(map,result);
+  const legacy=privateProviderLegacyView(workspaceLegacy.map,workspaceLegacy.result);
   assertSettingsNavigationSourceDrift(legacy.map,legacy.result);
   const base="dev-tools/scripts/qualification/visual-composer/";
   const linkedFunctional={
@@ -584,7 +607,7 @@ test("checks the current repository map against original scope and actual source
       assert(source,"Each body and oracle must be inventoried.");
       if(name.startsWith("e2e/"))assert(source.facts.assertionCount>0,"Each journey body contains meaningful assertions.");
       else assert(source.facts.functions.length>0,"Inert oracle guards are separate functions, not executed test assertions.");
-      if(![...pendingSettingsNavigationDefinitions,...pendingSettingsEmptyDefinitions].some(p=>p.path===source.path&&source.facts.sha256!==source.committed_sha256))
+      if(![...pendingSettingsNavigationDefinitions,...pendingSettingsEmptyDefinitions,...pendingWorkspaceSwitchDefinitions].some(p=>p.path===source.path&&source.facts.sha256!==source.committed_sha256))
       assert.equal(source.facts.sha256,source.committed_sha256,"Each new definition must already be committed after review.");
       assert(row.behavior_links.every(link=>link.assertion_sources.includes(source.path)));
     }
@@ -1099,13 +1122,36 @@ test("historical model startup report facts retain eight exact drifts and reject
   }
 });
 
-test("current private-provider definitions bind two exact updates and retain every other source gap",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+test("historical private-provider definitions bind two exact updates and retain every other source gap",()=>{
+  const map=JSON.parse(historicalSource("f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc","docs/operations/comprehensive-ui-automation-current-census.json"));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   assert.equal(map.sources.length,180);assert.equal(result.gaps.length,10);assert.equal(pendingPrivateProviderDefinitions.length,2);
-  assertCompleteCurrentSourceDrift(map,result);
+  assertPrivateProviderSourceDrift(map,result);
   assert.throws(()=>assertCurrentSourceDrift(map,result,true),"Earlier history must not accept a later private definition revision.");
   for(const pending of pendingPrivateProviderDefinitions){
+    const target=m=>m.sources.find(row=>row.path===pending.path);
+    for(const mutate of [
+      (m,r)=>{target(m).committed_sha256=pending.candidate;},
+      (m,r)=>{target(m).facts.sha256="0".repeat(64);},
+      (m,r)=>{target(m).facts.assertionCount++;},
+      (m,r)=>{target(m).facts.extra="forged";},
+      (m,r)=>{m.source_baseline="0".repeat(40);},
+      (m,r)=>{m.sources=m.sources.filter(row=>row.path!==pending.path);},
+      (m,r)=>{m.sources.push(structuredClone(target(m)));},
+      (m,r)=>{r.gaps=r.gaps.filter(row=>row.source!==pending.path);},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:pending.path});},
+      (m,r)=>{r.gaps.push({kind:"unreviewed-source-drift",source:"dev-tools/unrelated.unit.test.ts"});},
+    ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertPrivateProviderSourceDrift(m,r));}
+  }
+});
+
+test("current workspace-confirmation definitions bind exactly three updates without weakening earlier guards",()=>{
+  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
+  assert.equal(map.sources.length,180);assert.equal(result.gaps.length,13);assert.equal(pendingWorkspaceSwitchDefinitions.length,3);
+  assertCompleteCurrentSourceDrift(map,result);
+  assert.throws(()=>assertPrivateProviderSourceDrift(map,result),"Earlier history must refuse the newer workspace definitions.");
+  for(const pending of pendingWorkspaceSwitchDefinitions){
     const target=m=>m.sources.find(row=>row.path===pending.path);
     for(const mutate of [
       (m,r)=>{target(m).committed_sha256=pending.candidate;},
