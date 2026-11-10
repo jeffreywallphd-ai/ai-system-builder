@@ -195,5 +195,76 @@
     "app_or_provider_started": false,
     "original_private_failure_cause_confirmed": false,
     "actual_private_ui_or_parent_qualification": false
+  },
+  "currentPrivateAttempt": {
+    "schema_version": "private-source-current-failed-attempt-v1",
+    "work_id": "qualify-current-private-source-ui-with-safe-stage-facts",
+    "source_digest": "9d5de24072ccb2837bc4ea9cb1759cdd406ec69aee78b72cbf347a570c0e4c42",
+    "head": "62506087769f45712a721298b2cca4fdff854efa",
+    "observation_sha256": "d5020dbc13aa2e101cc6db3e61800421d012b059311ce15727ec27a1c3ba4b39",
+    "outcome_review_sha256": "4ef00d7162489b93b48456055982280989d2fea4cda3d3c03e5c5b70408f6953",
+    "changes_requested_review": "98e4c88dfaec240a348a0245a4eb0c61140d1852fd01da7f957b7bef5dd535ef",
+    "runner_summary": {
+      "schema_version": "fixed-private-provider-run-v1",
+      "mode": "test",
+      "host": "thin-chrome",
+      "expected_cases": [
+        "thin-source"
+      ],
+      "results": [
+        {
+          "id": "thin-source",
+          "status": "failed",
+          "duration_ms": 0
+        }
+      ],
+      "framework_errors": 1,
+      "suite_status": "failed",
+      "executed": 1,
+      "skipped": 0,
+      "local_case_outcomes_satisfied": false,
+      "raw_failure_text_recorded": false,
+      "raw_output_forwarded": false,
+      "qualification_granted": false
+    },
+    "parent_and_worker_admission_checks_passed": true,
+    "app_setup_shutdown_and_source_checks_returned": true,
+    "page_readiness_report_present": false,
+    "body_entry_confirmed": false,
+    "journey_report_present": false,
+    "qualified_journey_phases": 0,
+    "required_journey_phases": 11,
+    "owned_processes_total": 38,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "explicit_and_seeded_credential_inputs_absent_after": true,
+    "source_and_runtime_stable_after": true,
+    "raw_private_log_read_for_diagnosis": false,
+    "cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The app started and stopped. The worker settings passed their checks. The test did not record page readiness or any qualified import steps. Its cause is still unknown. No action is needed from the user."
+  },
+  "copiedFixtureControl": {
+    "schema_version": "credential-free-copied-private-fixture-control-v1",
+    "work_id": "diagnose-copied-private-case-fixtures-without-credentials",
+    "source_digest": "9d5de24072ccb2837bc4ea9cb1759cdd406ec69aee78b72cbf347a570c0e4c42",
+    "head": "62506087769f45712a721298b2cca4fdff854efa",
+    "observation_sha256": "5f8ca7846a9b28bdae25c33eaadcad052cc26b1a8d2ce1ad7d80ca29b4c4558f",
+    "outcome_review_sha256": "f38fdf6767458607c789408736caf155cc023d7676ce07cab1a97fa13ad91574",
+    "inactive_existing_case": "skipped-at-known-in-body-gate-after-page-hook",
+    "separate_static_page_control": "passed",
+    "copied_fixture_and_desktop_chrome_options_used": true,
+    "inert_copied_definitions_loaded": true,
+    "executing_private_capsule_opened": false,
+    "provider_network_calls": 0,
+    "credential_or_app_server_used": false,
+    "owned_processes_total": 16,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_copy_and_current_source_and_runtime_stable_after": true,
+    "scratch_bytes_removed": 1753556,
+    "failure_reproduced": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The copied test reached its early skip. The browser control passed with the same copied fixture. This check did not start the app or use private inputs. The agent must check the worker with the app startup environment next. The real import check stays open."
   }
 }
