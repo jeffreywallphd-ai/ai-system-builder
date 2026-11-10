@@ -87,3 +87,22 @@ Use the existing `functional-host-ui` profile explicitly for helper-only changes
 The exact new helper/test pair is declared in the Functional profile. Unknown,
 incomplete and explicitly generic impacts retain generic checks. A new actual
 journey still needs its own reviewed, one-use execution plan.
+
+## Current local artifact results
+
+The [local lifecycle result](../operations/data-local-artifact-ui-observation.json)
+records all eleven Thin Client steps passing. The separate
+[read-only publication result](../operations/data-artifact-publication-denial-ui-observation.json)
+records all five steps passing in a background browser. The read-only test sign-in
+could read the local file. The actual server refused publication with HTTP 403.
+The local bytes stayed unchanged after reload, and the six controlled provider
+counters stayed at zero. All 44 owned test processes stopped normally and the
+temporary identity was removed. Independent review confirmed these results.
+
+These are separate focused results. Earlier failures stay in the history. Other
+hosts, large inputs, websites, managed policy, native protection and final combined
+qualification keep their own requirements. The counters cover the injected Hub
+and metadata-fetch ports; they do not qualify brokered downloads or general
+network isolation. Completed model accuracy and OCR checks stay closed. No user
+action is needed for this completed local test. Full software tests follow the
+remaining open feature work.

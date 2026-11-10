@@ -31,7 +31,7 @@ Production requires `DEPLOYMENT_SHAPE=campus-server`, `corporate-server`, or
 `cloud`; each selects PostgreSQL and requires `DATABASE_URL`. Startup validates
 configuration and schema, imports only allowlisted legacy JSON before API
 registration, and never falls back to JSON after a managed shape is selected.
-Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token`.
+Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer`.
 
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and

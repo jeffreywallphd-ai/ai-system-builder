@@ -16728,6 +16728,96 @@
           "Full software tests follow the open feature work. This test gives no new permission to publish data."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3b369a04f647d7c655b1df02e226f27be14e83330a4b5343b4112b60947dfc74",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent added a test guard for publication and related provider calls.",
+          "The source checks and server build passed. Independent review passed, and the fix is committed.",
+          "The real read-only app test has a separate result."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c396aa0d3e05127a4493b013986c511ac1aa42483c80eef214cf3249b0e7004a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the test guard and its source tests.",
+          "It does not prove download or general network protection. The real app test is separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "717887995456154e5fe6b216e72b1b90f853127a25dbbd0c8c0f1ea53d0ef6c9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is evidence for one committed source change.",
+          "It does not finish Desktop, file protection, low-memory restart or an entire roadmap. No user action is needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ad0dee0ce0e3c8415b5fd234b2b20e40c0ff2d276afe00dcfb1b6ebd291fe41d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed checks remain in the history. Completed model accuracy and OCR tests stay closed.",
+          "The private website check stays deferred. Full software tests follow the remaining feature work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ed7bab0ac6c41365a8594bc9c3d679124e779c8581a3044c8c0aa8abbcece180",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent ran the real Thin Client test in a background browser. All five steps passed.",
+          "A read-only test sign-in could read the file. The server refused its publication request, and reload kept the file unchanged.",
+          "All 44 test processes stopped and the temporary sign-in was removed. Independent review passed, and the result is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9df4e79782642fd3dda1290e8db767660435db56cf1574e6fdeacb7c9207574e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only this small local-file test passed.",
+          "The agent must check other interfaces, large files and external publication separately. The counters do not prove general network protection."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b50048ab0784ccef1d870a34b0027662c0e5fc1fd06b91fba240dfb8928603f6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser and test server stopped correctly.",
+          "Model-worker recovery, file protection, low-memory restart and roadmap completion need separate evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d676d831a8198f0252f0af5c42b55fa569eae43ed8199d1cc5bf1686b5a5bfe3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Previously completed file and private-source tests were not repeated. Earlier failures stay in the history.",
+          "Completed model accuracy and OCR tests stay closed. The private website test stays deferred. Full software tests follow the open feature work."
+        ]
+      }
     }
   ]
 }
