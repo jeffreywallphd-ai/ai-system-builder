@@ -1,21 +1,24 @@
 {
-  "schema_version": "local-artifact-ui-feature-history-v2",
-  "status": "technical-check-pending",
-  "title": "Confirmation labels repaired; real file test pending",
+  "schema_version": "local-artifact-ui-feature-history-v3",
+  "status": "passed-feature-trial-reviewed-parent-pending",
+  "title": "Local file import and confirmed deletion passed",
   "user_summary": {
-    "description": "The real file test passed seven of eleven steps, then stopped at typed confirmation. Mounted tests reproduced missing labels on the confirmation boxes. The labels are repaired and all 32 related component tests pass. A fresh real-host test is still required.",
+    "description": "The app imported a test file and kept it after reload. Cancellation preserved the file. Exact typed confirmation deleted it, and reload kept it deleted. The second workspace kept its own file. All eleven steps passed. The test processes stopped and temporary identities were removed. Other roadmap checks remain open.",
     "action_owner": "agent",
     "user_action": "No action needed."
   },
   "latest_actual_trial": {
-    "status": "failed-before-typed-confirmation-completed",
-    "source_head": "3f35f581c92a30f5bdb4f3368afedc9fce4526ee",
-    "source_digest": "8c19fb3bf0958bb55cc68366f371c886300cbb477e5b665106ba0e6cc05fa6f4",
-    "product_source_identity": "source.785944fbb7e986e013d6ff22d7a37ad2393d81ee074c85677c8d4fa452782a1f",
+    "status": "passed-feature-trial-reviewed-parent-pending",
+    "work_id": "qualify-thin-artifact-lifecycle-after-confirmation-label-repair",
+    "source_head": "2ea31f20fad81a213b82c6ff44a808069e8e35c8",
+    "source_digest": "aecaad9413a68ac5c88d3d6f48fbe132867ccec91d595d36c3e7e64334d59113",
+    "source_files": 3938,
+    "product_source_identity": "source.7a34686640e6483409c4e87bec1ed8c2f7c560253b8c500508a177bce7fd5402",
     "host": "thin-chrome",
     "scenario": "local-lifecycle",
+    "background_browser": true,
     "actual_case_executed": true,
-    "actual_case_duration_ms": 16618,
+    "actual_case_duration_ms": 6407,
     "completed_phases": [
       "owned-artifact-imported",
       "local-readback-confirmed",
@@ -23,25 +26,35 @@
       "second-workspace-owned",
       "cross-workspace-read-denied",
       "second-artifact-imported",
-      "cancel-preserves-artifact"
+      "cancel-preserves-artifact",
+      "typed-confirmation-required",
+      "local-deletion-confirmed",
+      "reload-keeps-deletion",
+      "second-workspace-retained"
     ],
     "required_phase_count": 11,
-    "next_phase": "typed-confirmation-required",
-    "safe_failure_types": [
-      "TimeoutError"
-    ],
-    "framework_errors": 1,
+    "next_phase": "complete",
+    "safe_failure_types": [],
+    "framework_errors": 0,
+    "skipped_cases": 0,
+    "source_repair": {
+      "work_id": "qualify-artifact-confirmations-with-source-only-ui-ownership",
+      "commit": "2ea31f20fad81a213b82c6ff44a808069e8e35c8",
+      "receipt_digest": "495ab96d73680f19bb818368faa6a3ac9903b16b89cb3c6442afd1eb3f795786",
+      "review_digest": "f8ac3a412e98cf8272fdaa1b35c47c454879593efa7295e26d63a71a574e69dc"
+    },
     "evidence": {
-      "actual_observation_sha256": "ad46f0994c4449fab64b612c5c3e8c95144659950162ba83c00fc2c859c9b048",
-      "native_result_sha256": "bd009d52845843c89a99392491917cba854d867e2f1ed726b92a7dc31be1d859",
-      "independent_outcome_review_sha256": "b858dcddb73c4ca1ef04d9abe59ffb0e7a9dbe2f4e36f21920c2bb148e50115a",
-      "execution_review_sha256": "8933e0cba299b710a9a0b18e7c52b4d3c58a79c1ccce10a898e7d3bb396c0c77",
-      "bound_operator_sha256": "97cc919f79f2e848f85ec398428f989739c39ef96addc671687429cd5a000ca0",
-      "execution_binding_review_sha256": "4f8bfdd8abf390c57f1deb24d87e5592ba5c68e6162903d9427b2fc8339baeb3"
+      "actual_observation_sha256": "bb8bfe7ac6b046585335cc1ad60eedcc20b58fd65e800b6f9d5d5f7d633910ae",
+      "native_result_sha256": "8e7285fe524dde91659a31e58681fa527b614305e8c9495f696b7cfe980a9785",
+      "independent_outcome_review_sha256": "70c6f0bf4333b86351344436de59f91dba4150f1753f0867e537c4e48c3e8284",
+      "execution_plan_sha256": "4a5c9de4292121f9a92caffc2253c4c6fd91466d7ce9e6b8f7573d1b8f8fd22e",
+      "execution_review_sha256": "c1658a2ef75026155f10db70a3ff629d00cbca6e63e2fcd8039970e9b3d6950a",
+      "bound_operator_sha256": "e43084bfbb11818f200979ff9f47bb51a1371a891f3f51166e8788864a5026b7",
+      "execution_binding_review_sha256": "1530fed12d47e78c727eb7e63cac799526e8db9ccb0d9f9a9033ae9b751aac3c"
     },
     "retirement": {
-      "root_exit_code": 1,
-      "lifetime_owned_processes": 52,
+      "root_exit_code": 0,
+      "lifetime_owned_processes": 54,
       "active_owned_processes": 0,
       "terminated_owned_processes": 0,
       "all_owned_handles_closed": true,
@@ -55,78 +68,222 @@
     },
     "attempt_consumed": true,
     "automatic_retry_allowed": false,
-    "work_released_unqualified": true,
+    "governed_work_completion_tracked_separately": true,
     "parent_qualification_granted": false
   },
   "prior_observations": [
     {
-      "original_document_sha256": "bf40c4e228a28d21bd922e055e0dc3621394e481479901c3a88445fd1b465e14",
+      "original_document_sha256": "c10d105802df33b26479fd0ccf3d9c547970f7440a6fbbb89d17e8ed020ec5e5",
       "original_document": {
-        "schema_version": "local-artifact-ui-feature-observation-v1",
+        "schema_version": "local-artifact-ui-feature-history-v2",
         "status": "technical-check-pending",
-        "title": "Local file test needs startup diagnosis",
+        "title": "Confirmation labels repaired; real file test pending",
         "user_summary": {
-          "description": "App setup failed before the local file test began. No import, reload or deletion step ran. All test processes stopped and the temporary local identities were removed. The cause is not yet known.",
+          "description": "The real file test passed seven of eleven steps, then stopped at typed confirmation. Mounted tests reproduced missing labels on the confirmation boxes. The labels are repaired and all 32 related component tests pass. A fresh real-host test is still required.",
           "action_owner": "agent",
-          "user_action": "No action needed. The agent will use the new startup diagnostics in a separately reviewed fresh test."
+          "user_action": "No action needed."
         },
-        "work_id": "qualify-thin-local-artifact-lifecycle-and-workspace-retention",
-        "actual_source_head": "17f9a37497b2ebdd2dd02ae34a37c86c94783024",
-        "actual_source_digest": "e64cd8a9ec9f28cde1d4e2ae4a71354a51c09be2ec882c1667bb094cb5c64f88",
-        "host": "thin-chrome",
-        "scenario": "local-lifecycle",
-        "actual_case_executed": false,
-        "actual_case_duration_ms": null,
-        "completed_phases": [],
-        "required_phase_count": 11,
-        "runner_framework_errors": 1,
-        "underlying_setup_stage": "unavailable-in-this-historical-attempt",
-        "underlying_setup_error_type": "unavailable-in-this-historical-attempt",
-        "cause_established": false,
-        "evidence": {
-          "actual_observation_sha256": "27f83329376304c0f54c02cc7d855afa4048f4a061974c3b87dc3fb7da536108",
-          "native_result_sha256": "2c30aefc0b897df81a3455b2263acf644b3568c96a7adc0c11f56ebbf585063a",
-          "independent_failed_outcome_review_sha256": "1b05b2d6fb84eb9691120447cc19eddab86c1f13520beaffa819f8037d8055d1",
-          "execution_plan_sha256": "09600099a152e330766ad5a6eedb2189b561b2ccfa72045519d852196f48d9df",
-          "execution_review_sha256": "9a921ba29125eb5020160a02129ebcf560e00680a2526ef8e4260655c419ec2b",
-          "bound_operator_sha256": "8a17622aad87a213a22fe945cfebdb027ab4320416b4d63cc72a7961c2e40ea5",
-          "emitted_operator_binding_review_sha256": "015196b3f471a06374dfe99648bd901051643eb4bcd04eebe28b7addc1883854"
-        },
-        "retirement": {
-          "root_exit_code": 1,
-          "lifetime_owned_processes": 17,
-          "active_owned_processes": 0,
-          "terminated_owned_processes": 0,
-          "all_owned_handles_closed": true,
-          "stdout_stderr_eof_complete": true,
-          "pending_and_live_registries_clear": true,
-          "forced_native_job_termination": false,
-          "generated_local_pairing_and_artifact_read_identity_file_absent": true,
-          "source_and_installed_runtime_unchanged": true,
-          "canonical_setup_return_observed": false,
-          "canonical_awaited_teardown_return_observed": false,
-          "raw_output_or_error_logs_read": false,
-          "saved_or_provider_credential_used": false
-        },
-        "history_policy": {
+        "latest_actual_trial": {
+          "status": "failed-before-typed-confirmation-completed",
+          "source_head": "3f35f581c92a30f5bdb4f3368afedc9fce4526ee",
+          "source_digest": "8c19fb3bf0958bb55cc68366f371c886300cbb477e5b665106ba0e6cc05fa6f4",
+          "product_source_identity": "source.785944fbb7e986e013d6ff22d7a37ad2393d81ee074c85677c8d4fa452782a1f",
+          "host": "thin-chrome",
+          "scenario": "local-lifecycle",
+          "actual_case_executed": true,
+          "actual_case_duration_ms": 16618,
+          "completed_phases": [
+            "owned-artifact-imported",
+            "local-readback-confirmed",
+            "reload-confirmed",
+            "second-workspace-owned",
+            "cross-workspace-read-denied",
+            "second-artifact-imported",
+            "cancel-preserves-artifact"
+          ],
+          "required_phase_count": 11,
+          "next_phase": "typed-confirmation-required",
+          "safe_failure_types": [
+            "TimeoutError"
+          ],
+          "framework_errors": 1,
+          "evidence": {
+            "actual_observation_sha256": "ad46f0994c4449fab64b612c5c3e8c95144659950162ba83c00fc2c859c9b048",
+            "native_result_sha256": "bd009d52845843c89a99392491917cba854d867e2f1ed726b92a7dc31be1d859",
+            "independent_outcome_review_sha256": "b858dcddb73c4ca1ef04d9abe59ffb0e7a9dbe2f4e36f21920c2bb148e50115a",
+            "execution_review_sha256": "8933e0cba299b710a9a0b18e7c52b4d3c58a79c1ccce10a898e7d3bb396c0c77",
+            "bound_operator_sha256": "97cc919f79f2e848f85ec398428f989739c39ef96addc671687429cd5a000ca0",
+            "execution_binding_review_sha256": "4f8bfdd8abf390c57f1deb24d87e5592ba5c68e6162903d9427b2fc8339baeb3"
+          },
+          "retirement": {
+            "root_exit_code": 1,
+            "lifetime_owned_processes": 52,
+            "active_owned_processes": 0,
+            "terminated_owned_processes": 0,
+            "all_owned_handles_closed": true,
+            "streams_complete": true,
+            "registries_clear": true,
+            "forced_native_job_termination": false,
+            "generated_local_identity_file_absent": true,
+            "canonical_setup_and_awaited_teardown_returned": true,
+            "source_and_full_installed_runtime_unchanged": true,
+            "raw_logs_or_saved_provider_credentials_read": false
+          },
           "attempt_consumed": true,
           "automatic_retry_allowed": false,
-          "original_work_released_unqualified": true,
-          "all_native_source_and_safe_evidence_preserved": true,
-          "historical_missing_details_not_backfilled": true
+          "work_released_unqualified": true,
+          "parent_qualification_granted": false
+        },
+        "prior_observations": [
+          {
+            "original_document_sha256": "bf40c4e228a28d21bd922e055e0dc3621394e481479901c3a88445fd1b465e14",
+            "original_document": {
+              "schema_version": "local-artifact-ui-feature-observation-v1",
+              "status": "technical-check-pending",
+              "title": "Local file test needs startup diagnosis",
+              "user_summary": {
+                "description": "App setup failed before the local file test began. No import, reload or deletion step ran. All test processes stopped and the temporary local identities were removed. The cause is not yet known.",
+                "action_owner": "agent",
+                "user_action": "No action needed. The agent will use the new startup diagnostics in a separately reviewed fresh test."
+              },
+              "work_id": "qualify-thin-local-artifact-lifecycle-and-workspace-retention",
+              "actual_source_head": "17f9a37497b2ebdd2dd02ae34a37c86c94783024",
+              "actual_source_digest": "e64cd8a9ec9f28cde1d4e2ae4a71354a51c09be2ec882c1667bb094cb5c64f88",
+              "host": "thin-chrome",
+              "scenario": "local-lifecycle",
+              "actual_case_executed": false,
+              "actual_case_duration_ms": null,
+              "completed_phases": [],
+              "required_phase_count": 11,
+              "runner_framework_errors": 1,
+              "underlying_setup_stage": "unavailable-in-this-historical-attempt",
+              "underlying_setup_error_type": "unavailable-in-this-historical-attempt",
+              "cause_established": false,
+              "evidence": {
+                "actual_observation_sha256": "27f83329376304c0f54c02cc7d855afa4048f4a061974c3b87dc3fb7da536108",
+                "native_result_sha256": "2c30aefc0b897df81a3455b2263acf644b3568c96a7adc0c11f56ebbf585063a",
+                "independent_failed_outcome_review_sha256": "1b05b2d6fb84eb9691120447cc19eddab86c1f13520beaffa819f8037d8055d1",
+                "execution_plan_sha256": "09600099a152e330766ad5a6eedb2189b561b2ccfa72045519d852196f48d9df",
+                "execution_review_sha256": "9a921ba29125eb5020160a02129ebcf560e00680a2526ef8e4260655c419ec2b",
+                "bound_operator_sha256": "8a17622aad87a213a22fe945cfebdb027ab4320416b4d63cc72a7961c2e40ea5",
+                "emitted_operator_binding_review_sha256": "015196b3f471a06374dfe99648bd901051643eb4bcd04eebe28b7addc1883854"
+              },
+              "retirement": {
+                "root_exit_code": 1,
+                "lifetime_owned_processes": 17,
+                "active_owned_processes": 0,
+                "terminated_owned_processes": 0,
+                "all_owned_handles_closed": true,
+                "stdout_stderr_eof_complete": true,
+                "pending_and_live_registries_clear": true,
+                "forced_native_job_termination": false,
+                "generated_local_pairing_and_artifact_read_identity_file_absent": true,
+                "source_and_installed_runtime_unchanged": true,
+                "canonical_setup_return_observed": false,
+                "canonical_awaited_teardown_return_observed": false,
+                "raw_output_or_error_logs_read": false,
+                "saved_or_provider_credential_used": false
+              },
+              "history_policy": {
+                "attempt_consumed": true,
+                "automatic_retry_allowed": false,
+                "original_work_released_unqualified": true,
+                "all_native_source_and_safe_evidence_preserved": true,
+                "historical_missing_details_not_backfilled": true
+              },
+              "scope_limits": {
+                "artifact_behavior_qualified": false,
+                "memory_or_cold_start_cause_proven": false,
+                "private_source_ui": "passed-separately-and-not-rerun",
+                "private_provider_website": "deferred-by-user",
+                "accepted_model_accuracy_and_ocr": "closed-not-rerun",
+                "restricted_assets_security_review_qualified": false,
+                "native_ownership_offload_or_restart_qualified": false,
+                "parent_qualification_granted": false,
+                "full_system_testing": "deferred-until-open-feature-work-is-implemented"
+              },
+              "diagnostic_source_work": "retain-fixed-functional-host-setup-failure-stages"
+            }
+          }
+        ],
+        "component_repair": {
+          "work_id": "qualify-artifact-confirmations-with-source-only-ui-ownership",
+          "supported_fields": [
+            "Desktop shared registered/unregistered single confirmation",
+            "Thin Client single confirmation",
+            "Thin Client bulk confirmation"
+          ],
+          "desktop_bulk_ui_added": false,
+          "explicit_unique_labels_and_separate_glossary_help": true,
+          "exact_confirmation_words_and_workspace_guards_preserved": true,
+          "baseline": {
+            "exact_files": 2,
+            "total_tests": 32,
+            "passed": 26,
+            "failed_missing_label_cases": 6,
+            "report_sha256": "1101254e56cc29591893929c22768cabe9fdeb7f401c71b7863dfb27eb36b900"
+          },
+          "after_repair": {
+            "exact_files": 2,
+            "tests_passed": 32,
+            "tests_failed": 0,
+            "unhandled_errors": 0,
+            "report_sha256": "51e6c71bb1228726e6918060c402fc7e1be59644c050d713d6181d65a9d31022"
+          },
+          "governed_receipt_and_review_tracked_separately": true,
+          "actual_fixed_host_trial_qualified": false,
+          "source_authoring_work_id": "restore-accessible-artifact-delete-confirmation-fields",
+          "previous_qualification_work_id": "qualify-artifact-confirmation-with-owning-feature-profiles",
+          "previous_seven_path_work_id": "qualify-artifact-confirmations-and-shared-style-guard"
+        },
+        "execution_context_controls": {
+          "restricted_own_listener_started": true,
+          "restricted_own_http_denied_code": "EACCES",
+          "permitted_own_http_roundtrip_passed": true,
+          "both_owned_listeners_closed": true,
+          "scope": "Current capability controls only. They do not establish the unique cause of the first historical setup failure.",
+          "default_control_sha256": "6f40fd3783ce9183b48efaa935257890626b4d206d0774881b9100c4f0ff93ac",
+          "permitted_control_sha256": "0fde4ed96d98f62aa74557c029637a1b02158e89d9cb54b590ec3d93859a7e57"
         },
         "scope_limits": {
-          "artifact_behavior_qualified": false,
-          "memory_or_cold_start_cause_proven": false,
-          "private_source_ui": "passed-separately-and-not-rerun",
-          "private_provider_website": "deferred-by-user",
-          "accepted_model_accuracy_and_ocr": "closed-not-rerun",
+          "earlier_setup_failure_cause_proven": false,
+          "typed_phase_unique_historical_cause_proven": false,
+          "current_label_defect_reproduced_by_mounted_tests": true,
+          "full_artifact_journey_qualified": false,
+          "desktop_actual_host_qualified": false,
+          "physical_shared_object_or_general_workspace_authority_qualified": false,
           "restricted_assets_security_review_qualified": false,
-          "native_ownership_offload_or_restart_qualified": false,
+          "native_offload_or_restart_qualified": false,
+          "private_source_ui": "passed-separately-not-rerun",
+          "accepted_model_accuracy_and_ocr": "closed-not-rerun",
+          "private_provider_website": "deferred-by-user",
           "parent_qualification_granted": false,
           "full_system_testing": "deferred-until-open-feature-work-is-implemented"
         },
-        "diagnostic_source_work": "retain-fixed-functional-host-setup-failure-stages"
+        "source_profile_repair": {
+          "profile": "artifact-confirmation-ui",
+          "exact_existing_test_files": 3,
+          "scope": "Mounted confirmation components on both hosts and the shared stylesheet import guard.",
+          "prior_failed_receipt": "ae997b4bf5838d44cb191941b7a731d04cead984417aeaac6459a801828dd49c",
+          "prior_receipt_source_digest": "d7d43320ec564be5b236ec65ce8ee82c1fa9439376305725182714204616fa21",
+          "independent_failed_assessment_sha256": "8d89ba87cfce7a8b48b7402d51f14adf8567232668f47cd4cff4c52846244162",
+          "later_diagnostic_source_digest": "b58b48e6959192f589390f503c25a81c8ce4259b8e08217141bb1380991d1a10",
+          "later_diagnostic": "The broad outcomes profile reached nine native tests. All nine stopped at their Python-selection assertion before the native builder call. The stylesheet correction passed its focused tests. These diagnostic counts do not replace the earlier receipt's results.",
+          "existing_profiles_and_native_assertions_changed": false,
+          "native_qualification_granted": false,
+          "current_receipt_and_independent_review_required": true,
+          "actual_host_and_parent_qualification_granted": false
+        },
+        "shared_style_guard_repair": {
+          "failed_prior_receipt": "074a1700a6aa6e00f5055662fa206788ae298f36bcbae92666a8c9788de3df05",
+          "independent_assessment_sha256": "02cffc25e8192aa8a075d26d7f2e4b3e2cfbcc05ef91ffd1fd42dafb8eeeea76",
+          "diagnosis": "An existing one-line assertion did not admit the already committed shared forced-colors import.",
+          "repair": "Assert exact shared application then forced-colors imports and reject missing, duplicate, local, unknown and reordered layers. Keep token-copy denial.",
+          "stylesheets_changed": false,
+          "forced_colors_removed": false,
+          "focused_guard_tests_passed": 10,
+          "actual_visual_or_parent_qualification": false
+        }
       }
     }
   ],
@@ -155,10 +312,12 @@
       "report_sha256": "51e6c71bb1228726e6918060c402fc7e1be59644c050d713d6181d65a9d31022"
     },
     "governed_receipt_and_review_tracked_separately": true,
-    "actual_fixed_host_trial_qualified": false,
+    "actual_fixed_host_trial_qualified": true,
     "source_authoring_work_id": "restore-accessible-artifact-delete-confirmation-fields",
     "previous_qualification_work_id": "qualify-artifact-confirmation-with-owning-feature-profiles",
-    "previous_seven_path_work_id": "qualify-artifact-confirmations-and-shared-style-guard"
+    "previous_seven_path_work_id": "qualify-artifact-confirmations-and-shared-style-guard",
+    "actual_qualified_host": "thin-chrome",
+    "desktop_actual_host_still_pending": true
   },
   "execution_context_controls": {
     "restricted_own_listener_started": true,
@@ -173,7 +332,7 @@
     "earlier_setup_failure_cause_proven": false,
     "typed_phase_unique_historical_cause_proven": false,
     "current_label_defect_reproduced_by_mounted_tests": true,
-    "full_artifact_journey_qualified": false,
+    "full_artifact_journey_qualified": true,
     "desktop_actual_host_qualified": false,
     "physical_shared_object_or_general_workspace_authority_qualified": false,
     "restricted_assets_security_review_qualified": false,
@@ -182,7 +341,10 @@
     "accepted_model_accuracy_and_ocr": "closed-not-rerun",
     "private_provider_website": "deferred-by-user",
     "parent_qualification_granted": false,
-    "full_system_testing": "deferred-until-open-feature-work-is-implemented"
+    "full_system_testing": "deferred-until-open-feature-work-is-implemented",
+    "qualified_host": "thin-chrome",
+    "qualified_scenario": "local-lifecycle",
+    "cold_load_benchmark": false
   },
   "source_profile_repair": {
     "profile": "artifact-confirmation-ui",
@@ -196,7 +358,12 @@
     "existing_profiles_and_native_assertions_changed": false,
     "native_qualification_granted": false,
     "current_receipt_and_independent_review_required": true,
-    "actual_host_and_parent_qualification_granted": false
+    "actual_host_and_parent_qualification_granted": false,
+    "source_qualification_complete": true,
+    "source_checkpoint": "2ea31f20fad81a213b82c6ff44a808069e8e35c8",
+    "source_receipt_digest": "495ab96d73680f19bb818368faa6a3ac9903b16b89cb3c6442afd1eb3f795786",
+    "source_review_digest": "f8ac3a412e98cf8272fdaa1b35c47c454879593efa7295e26d63a71a574e69dc",
+    "report_qualification_tracked_separately": true
   },
   "shared_style_guard_repair": {
     "failed_prior_receipt": "074a1700a6aa6e00f5055662fa206788ae298f36bcbae92666a8c9788de3df05",
@@ -207,5 +374,6 @@
     "forced_colors_removed": false,
     "focused_guard_tests_passed": 10,
     "actual_visual_or_parent_qualification": false
-  }
+  },
+  "interpretation": "The current-source Thin Client local workflow passed all eleven steps after the confirmation-label repair. Mounted regressions separately established the labeling defect. This passing trial does not prove the unique cause of the older zero-case or seven-step failures. Both entire historical documents remain intact. This case does not qualify Desktop, physical shared-file ownership, private provider operations, model quality, general worker shutdown, native offload/restart or parent completion. Accepted accuracy/OCR stay closed; the private website check stays deferred. Full-system testing remains deferred until open feature implementation is done."
 }
