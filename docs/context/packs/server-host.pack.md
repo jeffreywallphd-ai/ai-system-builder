@@ -30,6 +30,11 @@
 - Keep HTTP request/response details out of domain/application models.
 - Pass small JSON-serializable host context inward; do not pass framework/session/window objects.
 - Compose provider-backed storage, runtime readiness, security, and feature use cases explicitly in host wiring.
+- Controlled tests may inject the existing artifact fetch/complete Hub client pair
+  through the nonproduction `createServer` constructor. Both production settings
+  refuse it before initialization. No API/env option enables the seam; normal
+  composition is unchanged. Local Functional tests use throwing counters, while
+  separately authorized private-source tests retain their real provider path.
 - Thin-client is a server-backed surface over server capabilities; it must consume API clients rather than server internals.
 
 ## Host-Owned Runtime And Storage Roots

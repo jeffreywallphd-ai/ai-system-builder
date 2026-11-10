@@ -8,6 +8,7 @@ import {
 import {
   createHuggingFaceArtifactRepoStorageAdapter,
   type HuggingFaceFetchImplementation,
+  type HuggingFaceFetchResponse,
 } from "../createHuggingFaceArtifactRepoStorageAdapter";
 import { SecureEgressBroker } from "../../../security/egress";
 
@@ -62,6 +63,22 @@ function createEgressBrokerDouble(
 }
 
 describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
+  it("accepts native Response without claiming that arbitrary provider JSON has a trusted shape", async () => {
+    for (const value of [null, 42, "SYNTHETIC_PRIVATE_PROVIDER_CANARY", { unexpected: "SYNTHETIC_PRIVATE_PROVIDER_CANARY" }]) {
+      const response: HuggingFaceFetchResponse = new Response(JSON.stringify(value), {
+        status: 200, headers: { "content-type": "application/json" },
+      });
+      const fetchImplementation: HuggingFaceFetchImplementation = async () => response;
+      const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+        hubClient: createHubClientDouble(), accessToken: "hf_synthetic_type_contract_only", fetchImplementation,
+      });
+      const result = await adapter.listNamespaceDatasets("synthetic-fixture");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("SYNTHETIC_PRIVATE_PROVIDER_CANARY");
+      expect(JSON.stringify(result)).not.toContain("hf_synthetic_type_contract_only");
+    }
+  });
+
   it("rejects Private publication to an existing Public repository before commit", async () => {
     const hubClient = createHubClientDouble();
     const fetchImplementation = testDouble.fn(async () => visibilityResponse({ private: false }));

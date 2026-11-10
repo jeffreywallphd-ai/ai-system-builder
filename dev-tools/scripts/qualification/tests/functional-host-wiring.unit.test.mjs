@@ -20,6 +20,12 @@ test("functional canonical composition drains owned children before persistence 
   assert.match(entry,/await listenQualificationHostOnLoopback\(listener,owner\.config\.port\)/);
   assert.doesNotMatch(entry,/\.listen\(/);
   assert.doesNotMatch(entry,/\.ensureInstalled\(|\.repairInstall\(|setSecret\(|setToken\(/);
+  assert.match(entry,/artifactMode!=="deny"&&artifactMode!=="private-source"/);
+  assert.match(entry,/if\(artifactMode==="deny"\)artifactTripwire=createFunctionalArtifactProviderTripwire/);
+  assert.match(entry,/controlledHuggingFaceArtifactTransport:artifactTripwire\.transport/);
+  assert.ok(entry.indexOf("await shutdownServerResources")<entry.indexOf("if(owner)await artifactTripwire?.writeObservation()"));
+  assert.match(entry,/closing\?\?=\(async\(\)=>/);
+  assert.doesNotMatch(entry,/console\.|artifactTripwire.*process\.stdout|writeObservation.*finally/);
 });
 
 test("setup diagnostics report only immutable closed stage and native type fields",()=>{

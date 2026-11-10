@@ -1557,6 +1557,7 @@
         "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts"
       ],
       "source_paths": [
+        "apps/server/README.md",
         "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
         "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
         "modules/adapters/storage/ingestion-checkpoint/createFilesystemIngestionCheckpointStorage.ts",
@@ -2508,6 +2509,7 @@
     },
     "functional-host-ui": {
       "test_paths": [
+        "dev-tools/scripts/qualification/tests/functional-artifact-provider-tripwire.unit.test.ts",
         "dev-tools/scripts/qualification/tests/functional-host-oracles.unit.test.ts",
         "dev-tools/scripts/qualification/tests/functional-host-launch-plan.unit.test.mjs",
         "dev-tools/scripts/qualification/tests/functional-host-wiring.unit.test.mjs",
@@ -2538,6 +2540,8 @@
       ],
       "source_paths": [
         "dev-tools/scripts/qualification/visual-composer/functional-host-oracles.ts",
+        "dev-tools/scripts/qualification/visual-composer/functional-artifact-provider-tripwire.ts",
+        "dev-tools/scripts/qualification/tests/functional-artifact-provider-tripwire.unit.test.ts",
         "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.mjs",
         "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs",
         "dev-tools/scripts/qualification/visual-composer/functional-host-launch-plan.d.mts",

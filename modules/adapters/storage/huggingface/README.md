@@ -8,6 +8,9 @@ This module contains the first concrete artifact-repo storage provider adapter.
 
 - Implements `ArtifactRepoStoragePort` for `provider = "huggingface"`.
 - Keeps provider-specific auth, path/repository validation, and provider status mapping inside the adapter boundary.
+- Fetch responses accept native `Response`. JSON resolves to `unknown`; a caller
+  cannot select an arbitrary trusted result type through `json<T>()`. Existing
+  operation-specific shape validation and bounded metadata reads still apply.
 - Supports:
   - `hasArtifactInRepo` via official Hub client `fileExists`,
   - `storeArtifactInRepo` via official Hub client `uploadFile`,

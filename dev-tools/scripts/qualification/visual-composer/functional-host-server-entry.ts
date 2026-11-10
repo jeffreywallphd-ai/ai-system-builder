@@ -9,11 +9,16 @@ import {createControlledRuntimeEnvironmentPreparer} from "./controlled-runtime-p
 import {functionalHostLayout} from "./functional-host-launch-plan.mjs";
 import {installOwnedHostShutdown} from "./owned-host-shutdown.mjs";
 import {listenSettingsHostOnLoopback as listenQualificationHostOnLoopback} from "./settings-host-listener.mjs";
+import {createFunctionalArtifactProviderTripwire} from "./functional-artifact-provider-tripwire";
 
 let owner:Awaited<ReturnType<typeof createServer>>|undefined,listener:ReturnType<typeof createServerListener>|undefined,closing:Promise<void>|undefined;
+let artifactTripwire:ReturnType<typeof createFunctionalArtifactProviderTripwire>|undefined;
 async function close(){
-  closing??=shutdownServerResources({listener:listener?.listening?listener:undefined,
-    shutdownBackgroundTasks:async()=>{await owner?.shutdownBackgroundTasks();},closePersistence:async()=>{await owner?.closePersistence();}});
+  closing??=(async()=>{
+    await shutdownServerResources({listener:listener?.listening?listener:undefined,
+      shutdownBackgroundTasks:async()=>{await owner?.shutdownBackgroundTasks();},closePersistence:async()=>{await owner?.closePersistence();}});
+    if(owner)await artifactTripwire?.writeObservation();
+  })();
   await closing;
 }
 async function start(){
@@ -22,8 +27,12 @@ async function start(){
     process.env.AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID!=="qualification.local"||process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO!=="immediate"||
     Object.keys(process.env).some(key=>/^(?:HF_TOKEN|HUGGING_FACE_TOKEN|AI_SYSTEM_BUILDER_PROVIDER_CREDENTIAL_MIGRATION_ORGANIZATION_ID)$/i.test(key)))throw new Error("Fixed isolated Functional composition is required.");
   const documents=createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("qualification.local"));
+  const artifactMode=process.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT;
+  if(artifactMode!=="deny"&&artifactMode!=="private-source")throw new Error("A fixed Functional artifact transport mode is required.");
+  if(artifactMode==="deny")artifactTripwire=createFunctionalArtifactProviderTripwire(process.cwd(),process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!,process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION!);
   try{
     owner=await createServer({env:process.env,structuredDocuments:documents,runtimeDatabases:createVisualComposerQualificationRuntimeDatabase(),
+      ...(artifactTripwire?{controlledHuggingFaceArtifactTransport:artifactTripwire.transport}:{}),
       pythonRuntimeEnvironmentPreparer:createControlledRuntimeEnvironmentPreparer({repoRoot:process.cwd(),runRoot:layout.serverRuntimeRoot,environment:process.env})});
     if(owner.config.storageRootDirectory!==path.resolve(layout.serverStorageRoot))throw new Error("Fixed Functional storage root is required.");
     listener=createServerListener(owner);

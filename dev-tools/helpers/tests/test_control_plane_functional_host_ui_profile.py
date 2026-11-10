@@ -26,6 +26,8 @@ PRIVATE_INPUTS=(
     "dev-tools/scripts/qualification/tests/fixtures/private-provider-failure-probe-reporter.mjs",
 )
 PRIVATE_HISTORY="docs/operations/comprehensive-ui-automation-private-test-privacy-census-history.json"
+TRIPWIRE="dev-tools/scripts/qualification/visual-composer/functional-artifact-provider-tripwire.ts"
+TRIPWIRE_TEST="dev-tools/scripts/qualification/tests/functional-artifact-provider-tripwire.unit.test.ts"
 
 class FunctionalHostProfile(unittest.TestCase):
     def profile(self):
@@ -102,5 +104,30 @@ class FunctionalHostProfile(unittest.TestCase):
             self.assertLessEqual(len([item for item in command if isinstance(item,str) and item.endswith((".ts",".tsx",".mjs"))]),12)
         self.assertTrue(any("--test" in command and any("functional-host-oracles.unit.test.ts" in value for value in command) for command in commands))
         self.assertTrue(any("dev-tools/helpers/run_vitest_checks.mjs" in command and any("model-reference-http.ui.test.tsx" in value for value in command) for command in commands))
+
+    def test_tripwire_explicit_owner_preserves_generic_unknown_and_incomplete_fallback(self):
+        profile=self.profile()
+        configuration=json.loads((ROOT/CONFIG).read_bytes())["profiles"]
+        self.assertIn("apps/server/README.md",configuration["ingestion-publication"]["source_paths"])
+        self.assertIn(TRIPWIRE,profile["source_paths"])
+        self.assertIn(TRIPWIRE_TEST,profile["source_paths"])
+        self.assertIn(TRIPWIRE_TEST,profile["test_paths"])
+        self.assertNotIn(TRIPWIRE,catalog.QUALIFICATION_PROFILE_PATTERNS["functional-host-ui"])
+        with tempfile.TemporaryDirectory(prefix="functional-tripwire-profile-") as directory:
+            root=Path(directory);self.fixture(root,profile)
+            for names,required,generic in [
+                ([TRIPWIRE,TRIPWIRE_TEST],["functional-host-ui"],False),
+                ([TRIPWIRE],["focused-tests","functional-host-ui"],True),
+                ([TRIPWIRE,"modules/unknown/new.ts"],["functional-host-ui"],True),
+                ([TRIPWIRE],["documentation"],True),
+            ]:
+                ids={x["id"] for x in catalog.plan(root,names,required,"synthetic-candidate")["selected"]}
+                self.assertEqual("focused-tests" in ids,generic)
+                if "functional-host-ui" in required:self.assertIn("functional-host-ui",ids)
+            incomplete=copy.deepcopy(profile);incomplete["source_paths"].remove(TRIPWIRE);self.fixture(root,incomplete)
+            ids={x["id"] for x in catalog.plan(root,[TRIPWIRE],["functional-host-ui"],"synthetic-candidate")["selected"]}
+            self.assertIn("functional-host-ui",ids);self.assertIn("focused-tests",ids)
+        commands=run_focused_checks.commands(ROOT,profile["test_paths"],exact=True)
+        self.assertTrue(any("--test" in command and TRIPWIRE_TEST in command for command in commands))
 
 if __name__=="__main__":unittest.main()

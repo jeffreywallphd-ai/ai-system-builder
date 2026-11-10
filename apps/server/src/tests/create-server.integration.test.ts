@@ -17,6 +17,7 @@ import {
 } from "../../../../modules/adapters/persistence/shared";
 import type { StructuredLogEvent } from "../../../../modules/contracts/logging";
 import { createServer } from "../createServer";
+import { createFunctionalArtifactProviderTripwire } from "../../../../dev-tools/scripts/qualification/visual-composer/functional-artifact-provider-tripwire";
 
 const tempRoots: string[] = [];
 
@@ -50,6 +51,130 @@ async function seedActiveWorkspace(
 }
 
 describe("server app artifact upload route", () => {
+  it("wires controlled artifact provider transport through real authorized routes without network fallback", async () => {
+    const root = await createTempRoot();
+    const guard = createFunctionalArtifactProviderTripwire(root, "functional-provider-route-control-20261110", "source." + "b".repeat(64));
+    const localFetch = globalThis.fetch;
+    let fallbackCalls = 0;
+    let lateMutationCalls = 0;
+    const transport = { fetchImplementation: guard.transport.fetchImplementation, hubClient: { ...guard.transport.hubClient } };
+    // Install before composition. Even broken forwarding must never send a provider request.
+    globalThis.fetch = async () => { fallbackCalls++; throw new Error("SYNTHETIC_EXTERNAL_FALLBACK_REFUSED"); };
+    let created: Awaited<ReturnType<typeof createServer>> | undefined;
+    let server: import("node:http").Server | undefined;
+    try {
+      const pendingServer = createServer({
+        env: { NODE_ENV: "test", SERVER_STORAGE_ROOT: root, SERVER_RUNTIME_ROOT: path.join(root, "runtime"),
+          AI_SYSTEM_BUILDER_SECURITY_MODE: "disabled-dev", HF_TOKEN: "hf_SYNTHETIC_PUBLIC_TEST_ONLY" },
+        structuredDocuments: createInMemoryStructuredDocumentStore(),
+        controlledHuggingFaceArtifactTransport: transport,
+        logSink: () => {},
+      });
+      const lateMutation = async () => { lateMutationCalls++; throw new Error("SYNTHETIC_LATE_MUTATION_REFUSED"); };
+      transport.fetchImplementation = lateMutation;
+      transport.hubClient.fileExists = lateMutation; transport.hubClient.uploadFile = lateMutation;
+      transport.hubClient.downloadFile = lateMutation; transport.hubClient.commit = lateMutation;
+      transport.hubClient.listFiles = async function* () { lateMutationCalls++; throw new Error("SYNTHETIC_LATE_MUTATION_REFUSED"); };
+      created = await pendingServer;
+      const app = created.app;
+      server = await new Promise(resolve => { const listening = app.listen(0, "127.0.0.1", () => resolve(listening)); });
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Expected an owned local test port.");
+      const target = { provider: "huggingface", repository: "synthetic-fixture/not-a-real-test-repository", path: "synthetic.json" };
+      for (const [route, body] of [
+        ["/api/artifact-repo/has", { target }],
+        ["/api/artifact-repo/store", { target, contentBase64: Buffer.from("{}").toString("base64"), mediaType: "application/json" }],
+        ["/api/huggingface/namespace/datasets", { namespace: "synthetic-fixture" }],
+      ] as const) {
+        const response = await localFetch(`http://127.0.0.1:${address.port}${route}`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+        });
+        expect(response.status).toBe(500);
+        const text = await response.text();
+        expect(JSON.parse(text).ok).toBe(false);
+        expect(text.includes("hf_SYNTHETIC_PUBLIC_TEST_ONLY")).toBe(false);
+        expect(text.includes("SYNTHETIC_EXTERNAL_FALLBACK_REFUSED")).toBe(false);
+      }
+      expect(guard.snapshot().attempts).toEqual({ fetch: 1, fileExists: 1, uploadFile: 1, downloadFile: 0, commit: 0, listFiles: 0 });
+      expect(fallbackCalls).toBe(0);
+      expect(lateMutationCalls).toBe(0);
+    } finally {
+      try {
+        if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
+        await created?.shutdownBackgroundTasks(); await created?.closePersistence();
+      } finally { globalThis.fetch = localFetch; }
+    }
+  });
+
+  it("rejects controlled artifact provider transport before production configuration or I/O", async () => {
+    const root = await createTempRoot();
+    let calls = 0;
+    const denied = async () => { calls += 1; throw new Error("synthetic transport must not run"); };
+    const transport = { fetchImplementation: denied, hubClient: {
+      fileExists: denied, uploadFile: denied, downloadFile: denied, commit: denied,
+      listFiles: async function* () { calls += 1; throw new Error("synthetic listing must not run"); },
+    } };
+    await expect(createServer({
+      env: { NODE_ENV: "production", SERVER_STORAGE_ROOT: path.join(root, "unused"),
+        AI_SYSTEM_BUILDER_SECURITY_MODE: "invalid-sentinel-before-initialization" },
+      controlledHuggingFaceArtifactTransport: transport,
+    } as never)).rejects.toThrow("The controlled artifact provider transport is unavailable in production.");
+    const { readdir } = await import("node:fs/promises");
+    expect(await readdir(root)).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
+  it("rejects controlled artifact provider transport when the actual process is production", async () => {
+    const root = await createTempRoot();
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      await expect(createServer({
+        env: { NODE_ENV: "test", SERVER_STORAGE_ROOT: path.join(root, "unused"),
+          AI_SYSTEM_BUILDER_SECURITY_MODE: "invalid-sentinel-before-initialization" },
+        controlledHuggingFaceArtifactTransport: {},
+      } as never)).rejects.toThrow("The controlled artifact provider transport is unavailable in production.");
+      const { readdir } = await import("node:fs/promises");
+      expect(await readdir(root)).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previous;
+    }
+  });
+
+  it("rejects malformed controlled artifact provider transport without reading getters or proxies", async () => {
+    const root = await createTempRoot();
+    let reads = 0;
+    const inaccessible = () => { reads += 1; throw new Error("synthetic property must not be read"); };
+    const getter = Object.defineProperty({}, "fetchImplementation", { get: inaccessible });
+    const proxy = new Proxy({}, { get: inaccessible, ownKeys: inaccessible, getPrototypeOf: inaccessible });
+    const denied = async () => { throw new Error("synthetic transport must not run"); };
+    const hub = { fileExists: denied, uploadFile: denied, downloadFile: denied,
+      commit: denied, listFiles: async function* () { throw new Error("synthetic listing must not run"); } };
+    const proxyFunction = new Proxy(denied, { apply: inaccessible, get: inaccessible });
+    const revoked = Proxy.revocable({}, {}); revoked.revoke();
+    for (const value of [null, false, 0, "", [], {}, getter, proxy,
+      revoked.proxy, Object.create({ fetchImplementation: denied, hubClient: hub }),
+      { fetchImplementation: denied }, { hubClient: hub },
+      { fetchImplementation: proxyFunction, hubClient: hub },
+      { fetchImplementation: denied, hubClient: hub, unexpected: true },
+      { fetchImplementation: denied, hubClient: { ...hub, commit: proxyFunction } },
+      { fetchImplementation: denied, hubClient: null },
+      { fetchImplementation: denied, hubClient: { ...hub, commit: undefined } },
+      { fetchImplementation: denied, hubClient: proxy },
+      { fetchImplementation: denied, hubClient: Object.defineProperty({ ...hub }, "fileExists", { get: inaccessible }) },
+    ]) {
+      await expect(createServer({
+        env: { NODE_ENV: "test", SERVER_STORAGE_ROOT: path.join(root, "unused"),
+          AI_SYSTEM_BUILDER_SECURITY_MODE: "invalid-sentinel-before-initialization" },
+        controlledHuggingFaceArtifactTransport: value,
+      } as never)).rejects.toThrow("Controlled artifact provider transport requires complete data-only dependencies.");
+    }
+    const { readdir } = await import("node:fs/promises");
+    expect(await readdir(root)).toEqual([]);
+    expect(reads).toBe(0);
+  });
+
   it("rejects malformed controlled runtime preparation before other configuration or I/O", async () => {
     const root = await createTempRoot();
     for (const mode of ["production", "test"]) {

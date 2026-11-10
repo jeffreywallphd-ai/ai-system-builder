@@ -37,7 +37,8 @@ export interface HuggingFaceFetchResponse {
   statusText: string;
   headers: HuggingFaceFetchResponseHeaders;
   arrayBuffer: () => Promise<ArrayBuffer>;
-  json: <T = unknown>() => Promise<T>;
+  /** Provider JSON is untrusted until the owning operation validates its shape. */
+  json: () => Promise<unknown>;
   readonly url?: string;
   readonly redirected?: boolean;
   readonly body?: ReadableStream<Uint8Array> | null;

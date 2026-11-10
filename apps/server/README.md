@@ -70,6 +70,21 @@ drain the database pool idempotently. Deployment templates live under
 
 ## Local runtime state
 
+Controlled artifact tests may supply `controlledHuggingFaceArtifactTransport`
+to `createServer`. It forwards the existing artifact adapter's fetch and complete
+Hub client ports. Either production environment rejects the option before
+initialization. Incomplete bundles, accessors and proxies are refused without
+reading their fields. The constructor captures the validated functions once.
+Omission preserves ordinary provider composition. No API or production
+environment setting enables this constructor option.
+
+The Functional local artifact fixture uses throwing Hub/metadata-fetch transports
+with bounded, argument-free counters. Brokered retrieval is a separate path and
+is outside this guarantee. Its private-source fixture retains the existing separately
+authorized provider path. These test ports do not replace permission checks or
+provide an OS network sandbox. See [Functional host setup](../../docs/diagnostics/functional-host-setup.md)
+for observation scope and the required real-route controls.
+
 Controlled tests may supply the typed `pythonRuntimeEnvironmentPreparer`
 composition callback. Both server entry points reject it in production before
 initialization. It is never read from an API or environment flag; omitting it

@@ -23,6 +23,41 @@ test("functional plans use their truthful Server entry without changing reviewed
   assert.match(plan.server.args.at(-1),/functional-host-server-entry\.ts$/);assert.equal(plan.server.env.HF_TOKEN,undefined);
   assert.equal(plan.server.env.SERVER_STORAGE_ROOT,plan.paths.thinStorageRoot);assert.equal(plan.server.env.SERVER_RUNTIME_ROOT,plan.paths.thinRuntimeRoot);assert.equal(plan.server.env.AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE,"dedicated");
   assert.equal(plan.desktop.seed.env.ELECTRON_RUN_AS_NODE,"1");assert.equal(plan.desktop.env.HF_HUB_OFFLINE,"1");
+  assert.equal(plan.server.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT,"deny");
+});
+test("only explicit private source intent retains real artifact transport in the child",async()=>{
+  const options={repoRoot:root,runId:run,sourceRevision:source,target:"thin-chrome"};
+  for(const environment of [{},{VISUAL_COMPOSER_FUNCTIONAL_METADATA:"1"},{VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT:"1"},
+    {VISUAL_COMPOSER_FUNCTIONAL_METADATA:"0",VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"0"}]){
+    const plan=await createFunctionalHostLaunchPlan({...options,environment});
+    assert.equal(plan.server.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT,"deny");
+    assert.equal(plan.server.env.VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT,undefined);
+  }
+  const environment={VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1",HF_TOKEN:"SYNTHETIC_TOKEN",DATABASE_URL:"SYNTHETIC_DATABASE",HTTPS_PROXY:"SYNTHETIC_PROXY",
+    AI_SYSTEM_BUILDER_PROVIDER_CREDENTIAL_MIGRATION_ORGANIZATION_ID:"SYNTHETIC_ORGANIZATION"};
+  const pending=createFunctionalHostLaunchPlan({...options,environment});
+  environment.VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE="0";
+  const plan=await pending;
+  assert.equal(plan.server.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT,"private-source");
+  for(const key of Object.keys(environment))assert.equal(plan.server.env[key],undefined,key);
+  const publication=await createFunctionalHostLaunchPlan({...options,target:"packaged-desktop",environment:{VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION:"1"}});
+  assert.equal(publication.server.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT,"deny");
+  // Desktop runs these as separate owned cases and never starts this Server plan.
+  const both=await createFunctionalHostLaunchPlan({...options,target:"packaged-desktop",environment:{VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1",VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION:"1"}});
+  assert.equal(both.server.env.VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT,"deny");
+});
+test("provider mode contradictions and malformed input fail without invoking getters or proxies",async()=>{
+  const options={repoRoot:root,runId:run,sourceRevision:source,target:"thin-chrome"};
+  let reads=0;const forbidden=()=>{reads++;throw new Error("SYNTHETIC_SELECTOR_CANARY");};
+  const getter=Object.defineProperty({},"VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE",{get:forbidden});
+  const proxy=new Proxy({},{get:forbidden,ownKeys:forbidden,getPrototypeOf:forbidden});
+  for(const environment of [null,proxy,getter,{VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:true},
+    {VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"yes"},{VISUAL_COMPOSER_FUNCTIONAL_ARTIFACT_TRANSPORT:"private-source"},
+    {VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1",VISUAL_COMPOSER_FUNCTIONAL_LOCAL_ARTIFACT:"1"},
+    {VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1",VISUAL_COMPOSER_FUNCTIONAL_METADATA:"1"},
+    {VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_SOURCE:"1",VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION:"1"},
+    {VISUAL_COMPOSER_FUNCTIONAL_PROVIDER_PUBLICATION:"1"}])await assert.rejects(createFunctionalHostLaunchPlan({...options,environment}));
+  assert.equal(reads,0);
 });
 test("the two thin test plans ignore operator dotenv and use a run-owned cache in Vite resolution",async()=>{
   const input={repoRoot:root,runId:run,sourceRevision:source,target:"thin-chrome",environment:{VITE_QUALIFICATION_DOTENV_PROBE:"ambient"}};

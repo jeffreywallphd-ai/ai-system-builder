@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
+import { types } from "node:util";
 
 import express from "express";
 
@@ -63,6 +64,12 @@ export interface ResolvedServerRuntimePaths {
   runtimeRootDirectory: string;
 }
 
+type ArtifactRepoComposition = NonNullable<NonNullable<Parameters<typeof composeServerHost>[0]>["artifactRepo"]>;
+export interface ControlledHuggingFaceArtifactTransport {
+  readonly fetchImplementation: NonNullable<ArtifactRepoComposition["huggingFaceFetchImplementation"]>;
+  readonly hubClient: Required<NonNullable<ArtifactRepoComposition["huggingFaceHubClient"]>>;
+}
+
 export interface CreateServerOptions {
   env?: NodeJS.ProcessEnv;
   logSink?: StructuredLogSink;
@@ -75,6 +82,40 @@ export interface CreateServerOptions {
   runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
   /** Explicit nonproduction composition seam; never configurable by an API or environment flag. */
   pythonRuntimeEnvironmentPreparer?: ServerPythonRuntimeEnvironmentPreparer;
+  /** Trusted nonproduction transport only; never supplied by API or environment data. */
+  controlledHuggingFaceArtifactTransport?: ControlledHuggingFaceArtifactTransport;
+}
+
+function resolveControlledArtifactTransport(
+  value: unknown,
+  env: NodeJS.ProcessEnv,
+): ControlledHuggingFaceArtifactTransport | undefined {
+  if (value === undefined) return undefined;
+  if (env.NODE_ENV === "production" || process.env.NODE_ENV === "production") {
+    throw new Error("The controlled artifact provider transport is unavailable in production.");
+  }
+  const invalid = () => new TypeError("Controlled artifact provider transport requires complete data-only dependencies.");
+  function fields(input: unknown, names: readonly string[]) {
+    if (!input || typeof input !== "object" || types.isProxy(input) || Array.isArray(input)) throw invalid();
+    const prototype = Object.getPrototypeOf(input);
+    if (prototype !== Object.prototype && prototype !== null) throw invalid();
+    const descriptors = Object.getOwnPropertyDescriptors(input);
+    const keys = Reflect.ownKeys(descriptors);
+    if (keys.length !== names.length || keys.some(key => typeof key !== "string" || !names.includes(key))) throw invalid();
+    if (names.some(name => !descriptors[name] || !("value" in descriptors[name]))) throw invalid();
+    return descriptors;
+  }
+  const bundle = fields(value, ["fetchImplementation", "hubClient"]);
+  const methods = ["fileExists", "uploadFile", "downloadFile", "commit", "listFiles"] as const;
+  const hub = fields(bundle.hubClient.value, methods);
+  for (const callback of [bundle.fetchImplementation.value, ...methods.map(name => hub[name].value)]) {
+    if (typeof callback !== "function" || types.isProxy(callback)) throw invalid();
+  }
+  // Capture validated values once. Later caller mutation cannot introduce a fallback.
+  return Object.freeze({
+    fetchImplementation: bundle.fetchImplementation.value,
+    hubClient: Object.freeze(Object.fromEntries(methods.map(name => [name, hub[name].value]))),
+  }) as ControlledHuggingFaceArtifactTransport;
 }
 
 export interface CreatedServer {
@@ -241,6 +282,7 @@ export async function createServer(
   options: CreateServerOptions = {},
 ): Promise<CreatedServer> {
   const env = options.env ?? process.env;
+  const controlledArtifactTransport = resolveControlledArtifactTransport(options.controlledHuggingFaceArtifactTransport, env);
   const pythonRuntimeEnvironmentPreparer = options.pythonRuntimeEnvironmentPreparer;
   if (pythonRuntimeEnvironmentPreparer !== undefined) {
     if (env.NODE_ENV === "production" || process.env.NODE_ENV === "production") {
@@ -361,6 +403,10 @@ export async function createServer(
           }
         : {}),
       artifactRepo: {
+        ...(controlledArtifactTransport ? {
+          huggingFaceFetchImplementation: controlledArtifactTransport.fetchImplementation,
+          huggingFaceHubClient: controlledArtifactTransport.hubClient,
+        } : {}),
         huggingFaceAccessToken:
           options.env?.HF_TOKEN ?? options.env?.HUGGING_FACE_TOKEN,
         huggingFaceTokenConfigFilePath: path.join(
